@@ -19,7 +19,6 @@ use cloned::cloned;
 use configerator::ConfigLoader;
 use context::{CoreContext, LoggingContainer, Metric, PerfCounterType, SessionContainer};
 use failure::{err_msg, format_err};
-use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
@@ -27,7 +26,7 @@ use futures_ext::{
     select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt,
     StreamExt, StreamTimeoutError,
 };
-use futures_stats::{StreamStats, Timed, TimedStreamTrait};
+use futures_stats::{Timed, TimedStreamTrait};
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::{HookExecution, HookManager};
 use itertools::Itertools;
@@ -43,18 +42,16 @@ use mercurial_types::{
     HgBlobNode, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type,
     NULL_CSID, NULL_HASH,
 };
+use metaconfig_types::RepoReadOnly;
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
-
-use metaconfig_types::{RepoReadOnly, WireprotoLoggingConfig};
 use rand::{self, Rng};
 use remotefilelog::{
     create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
     get_unordered_file_history_for_multiple_nodes,
 };
 use revisionstore::Metadata;
-use scribe::ScribeClient;
-use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::ScubaSampleBuilderExt;
 use serde_json::{self, json};
 use slog::{debug, info, o};
 use stats::{define_stats, DynamicTimeseries, Histogram, Timeseries};
@@ -69,6 +66,11 @@ use time_ext::DurationExt;
 use tokio::timer::timeout::Error as TimeoutError;
 use tokio::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
+
+mod logging;
+
+use logging::CommandLogger;
+pub use logging::WireprotoLogging;
 
 const MAX_NODES_TO_LOG: usize = 5;
 
@@ -240,103 +242,9 @@ pub struct RepoClient {
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     support_bundle2_listkeys: bool,
-    wireproto_logging: Option<WireprotoLoggingConfig>,
+    wireproto_logging: Option<Arc<WireprotoLogging>>,
     maybe_repo_sync_target: Option<RepoSyncTarget>,
     pushredirect_config: Option<ConfigLoader>,
-}
-
-// Logs wireproto requests both to scuba and scribe.
-// Scuba logs are used for analysis of performance of both shadow and prod Mononoke tiers
-// Scribe logs are used for replaying prod wireproto requests on shadow tier. So
-// Scribe logging should be disabled on shadow tier.
-struct WireprotoLogger {
-    scuba_logger: ScubaSampleBuilder,
-    scribe_client: Arc<ScribeClientImplementation>,
-    // This scribe category main purpose is to tail the prod requests and replay them
-    // on shadow tier.
-    wireproto_logging: Option<WireprotoLoggingConfig>,
-    wireproto_command: &'static str,
-    reponame: String,
-}
-
-impl WireprotoLogger {
-    fn new(
-        fb: FacebookInit,
-        scuba_logger: ScubaSampleBuilder,
-        wireproto_command: &'static str,
-        wireproto_logging: Option<WireprotoLoggingConfig>,
-        reponame: String,
-    ) -> Self {
-        let mut logger = Self {
-            scuba_logger,
-            scribe_client: Arc::new(ScribeClientImplementation::new(fb)),
-            wireproto_logging,
-            wireproto_command,
-            reponame,
-        };
-        logger.scuba_logger.add("command", logger.wireproto_command);
-
-        logger.scuba_logger.log_with_msg("Start processing", None);
-        logger
-    }
-
-    fn add_command_args_to_scuba(&mut self, args: serde_json::Value) {
-        if let Ok(args) = serde_json::to_string(&args) {
-            self.add_trimmed_scuba_field("command_args", args);
-        }
-    }
-
-    fn add_trimmed_scuba_field(&mut self, args_name: &str, args: String) {
-        // Scuba does not support columns that are too long, we have to trim it
-        let limit = ::std::cmp::min(args.len(), 1000);
-        self.scuba_logger.add(args_name, &args[..limit]);
-    }
-
-    fn add_perf_counters_from_ctx(&mut self, ctx: CoreContext) {
-        ctx.perf_counters()
-            .insert_perf_counters(&mut self.scuba_logger);
-    }
-
-    fn finish_stream_wireproto_processing(
-        &mut self,
-        stats: &StreamStats,
-        ctx: CoreContext,
-        args: Option<serde_json::Value>,
-    ) {
-        self.scuba_logger
-            .add_stream_stats(&stats)
-            .log_with_msg("Command processed", None);
-
-        if let Some(WireprotoLoggingConfig {
-            ref scribe_category,
-            ..
-        }) = self.wireproto_logging
-        {
-            let mut builder = ScubaSampleBuilder::with_discard();
-            builder.add_common_server_data();
-            match args {
-                Some(ref args) => {
-                    builder.add("args", args.to_string());
-                }
-                None => {
-                    builder.add("args", "");
-                }
-            };
-            builder.add("command", self.wireproto_command);
-            builder.add("duration", stats.completion_time.as_millis_unchecked());
-            builder.add("source_control_server_type", "mononoke");
-            builder.add("mononoke_session_uuid", ctx.session_id().to_string());
-            builder.add("reponame", self.reponame.as_str());
-
-            // We can't really do anything with the errors, so let's ignore it
-            let sample = builder.get_sample();
-            if let Ok(sample_json) = sample.to_json() {
-                let _ = self
-                    .scribe_client
-                    .offer(&scribe_category, &sample_json.to_string());
-            }
-        }
-    }
 }
 
 impl RepoClient {
@@ -349,7 +257,7 @@ impl RepoClient {
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
-        wireproto_logging: Option<WireprotoLoggingConfig>,
+        wireproto_logging: Option<Arc<WireprotoLogging>>,
         maybe_repo_sync_target: Option<RepoSyncTarget>,
         pushredirect_config: Option<ConfigLoader>,
     ) -> Self {
@@ -369,7 +277,9 @@ impl RepoClient {
         }
     }
 
-    fn command_ctx(&self, command: &str) -> CoreContext {
+    fn start_command(&self, command: &str) -> (CoreContext, CommandLogger) {
+        info!(self.logging.logger(), "{}", command);
+
         let logger = self
             .logging
             .logger()
@@ -379,7 +289,15 @@ impl RepoClient {
         scuba.add("command", command);
         scuba.log_with_msg("Start processing", None);
 
-        self.session.context(logger, scuba)
+        let ctx = self.session.new_context(logger, scuba);
+
+        let command_logger = CommandLogger::new(
+            ctx.clone(),
+            command.to_owned(),
+            self.wireproto_logging.clone(),
+        );
+
+        (ctx, command_logger)
     }
 
     fn get_pull_default_bookmarks_maybe_stale(
@@ -533,7 +451,6 @@ impl RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
         handler: GetpackHandler,
-        mut wireproto_logger: WireprotoLogger,
         name: &'static str,
     ) -> BoxStream<Bytes, Error>
     where
@@ -545,10 +462,11 @@ impl RepoClient {
                 + Send
                 + 'static,
     {
+        let (ctx, command_logger) = self.start_command(name);
+
         // We buffer all parameters in memory so that we can log them.
         // That shouldn't be a problem because requests are quite small
         let getpack_params = Arc::new(Mutex::new(vec![]));
-        let ctx = self.command_ctx(name);
         let repo = self.repo.blobrepo().clone();
 
         let lfs_threshold = self.repo.lfs_params().threshold;
@@ -705,12 +623,8 @@ impl RepoClient {
                             encoded_params.len() as i64,
                         );
 
-                        wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                        wireproto_logger.finish_stream_wireproto_processing(
-                            &stats,
-                            ctx,
-                            Some(json! {encoded_params}),
-                        );
+                        command_logger.finalize_command(&stats, Some(&json! {encoded_params}));
+
                         Ok(())
                     }
                 })
@@ -724,19 +638,8 @@ impl RepoClient {
         )
     }
 
-    fn wireproto_logger(&self, wireproto_command: &'static str) -> WireprotoLogger {
-        WireprotoLogger::new(
-            self.session.fb(),
-            self.logging.scuba().clone(),
-            wireproto_command,
-            self.wireproto_logging.clone(),
-            self.repo.reponame().clone(),
-        )
-    }
-
     /// Returns Some(repo_sync_target) if pushredirect should redirect this push
     /// via the repo sync target, None if this should be a direct push
-    #[allow(dead_code)]
     fn maybe_get_repo_sync_target_for_action(
         &self,
         action: &bundle2_resolver::PostResolveAction,
@@ -873,7 +776,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        let ctx = self.command_ctx(ops::BETWEEN);
+        let (ctx, command_logger) = self.start_command(ops::BETWEEN);
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
@@ -902,10 +805,7 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::BETWEEN, trace_args!())
             .timed(move |stats, _| {
-                ctx.scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -921,17 +821,17 @@ impl HgCommands for RepoClient {
             Err(_) => fallback_hostname.to_string(),
         };
 
-        let mut scuba = self.command_ctx(ops::CLIENTTELEMETRY).scuba().clone();
+        let (_ctx, mut command_logger) = self.start_command(ops::CLIENTTELEMETRY);
 
         if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
-            scuba.add(
+            command_logger.add_scuba_extra(
                 "client_correlator",
                 String::from_utf8_lossy(client_correlator).into_owned(),
             );
         }
 
         if let Some(command) = args.get(b"command" as &[u8]) {
-            scuba.add(
+            command_logger.add_scuba_extra(
                 "hg_short_command",
                 String::from_utf8_lossy(command).into_owned(),
             );
@@ -942,9 +842,7 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
             .timed(move |stats, _| {
-                scuba
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -954,8 +852,7 @@ impl HgCommands for RepoClient {
     fn heads(&self) -> HgCommandRes<HashSet<HgChangesetId>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
-        info!(self.logging.logger(), "heads");
-        let ctx = self.command_ctx(ops::HEADS);
+        let (ctx, command_logger) = self.start_command(ops::HEADS);
 
         // We get all bookmarks while handling heads to fix the race demonstrated in
         // test-bookmark-race.t - this fixes bookmarks at the moment the client starts discovery
@@ -975,10 +872,7 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::HEADS, trace_args!())
             .timed(move |stats, _| {
-                ctx.scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -986,10 +880,11 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
+        let (ctx, command_logger) = self.start_command(ops::LOOKUP);
+
         info!(self.logging.logger(), "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support prefixes
         let repo = self.repo.blobrepo().clone();
-        let ctx = self.command_ctx(ops::LOOKUP);
 
         fn generate_resp_buf(success: bool, message: &[u8]) -> Bytes {
             let mut buf = BytesMut::with_capacity(message.len() + 3);
@@ -1050,10 +945,7 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
-                ctx.scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -1061,6 +953,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
+        let (ctx, mut command_logger) = self.start_command(ops::KNOWN);
+
         if nodes.len() > MAX_NODES_TO_LOG {
             info!(
                 self.logging.logger(),
@@ -1071,8 +965,6 @@ impl HgCommands for RepoClient {
             info!(self.logging.logger(), "known: {:?}", nodes);
         }
         let blobrepo = self.repo.blobrepo().clone();
-
-        let ctx = self.command_ctx(ops::KNOWN);
 
         let nodes_len = nodes.len();
 
@@ -1113,30 +1005,24 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
-                let mut scuba = ctx.scuba().clone();
-
                 if let Ok(known) = known_nodes {
                     let extra_context = json!({
                         "num_known": known.len(),
                         "num_unknown": nodes_len - known.len(),
                     })
                     .to_string();
-
-                    scuba.add("extra_context", extra_context);
+                    command_logger.add_scuba_extra("extra_context", extra_context);
                 }
-
-                scuba
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
     }
 
     fn knownnodes(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let blobrepo = self.repo.blobrepo().clone();
+        let (ctx, mut command_logger) = self.start_command(ops::KNOWNNODES);
 
-        let ctx = self.command_ctx(ops::KNOWNNODES);
+        let blobrepo = self.repo.blobrepo().clone();
 
         let nodes_len = nodes.len();
 
@@ -1153,21 +1039,15 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
             .timed(move |stats, known_nodes| {
-                let mut scuba_logger = ctx.scuba().clone();
-
                 if let Ok(known) = known_nodes {
                     let extra_context = json!({
                         "num_known": known.len(),
                         "num_unknown": nodes_len - known.len(),
                     })
                     .to_string();
-
-                    scuba_logger.add("extra_context", extra_context);
+                    command_logger.add_scuba_extra("extra_context", extra_context);
                 }
-
-                scuba_logger
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -1175,8 +1055,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getbundle', '*')
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
+        let (ctx, command_logger) = self.start_command(ops::GETBUNDLE);
         info!(self.logging.logger(), "Getbundle: {:?}", args);
-        let ctx = self.command_ctx(ops::GETBUNDLE);
 
         let value = json!({
             "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
@@ -1185,7 +1065,6 @@ impl HgCommands for RepoClient {
             "listkeys": format_utf8_bytes_list(&args.listkeys),
         });
         let value = json!(vec![value]);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE);
 
         let s = match self.create_bundle(ctx.clone(), args) {
             Ok(res) => res.boxify(),
@@ -1196,8 +1075,7 @@ impl HgCommands for RepoClient {
         .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-            wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, Some(value));
+            command_logger.finalize_command(&stats, Some(&value));
             Ok(())
         })
         .boxify();
@@ -1212,8 +1090,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('hello')
     fn hello(&self) -> HgCommandRes<HashMap<String, Vec<String>>> {
+        let (_ctx, command_logger) = self.start_command(ops::HELLO);
         info!(self.logging.logger(), "Hello -> capabilities");
-        let ctx = self.command_ctx(ops::HELLO);
 
         let mut res = HashMap::new();
         let mut caps = wireprotocaps();
@@ -1228,10 +1106,7 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::HELLO, trace_args!())
             .timed(move |stats, _| {
-                ctx.scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -1241,15 +1116,12 @@ impl HgCommands for RepoClient {
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
         info!(self.logging.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
-            let ctx = self.command_ctx(ops::LISTKEYS);
+            let (ctx, command_logger) = self.start_command(ops::LISTKEYS);
 
             self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
                 .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
-                    ctx.scuba()
-                        .clone()
-                        .add_future_stats(&stats)
-                        .log_with_msg("Command processed", None);
+                    command_logger.without_wireproto().finalize_command(&stats);
                     Ok(())
                 })
                 .boxify()
@@ -1284,7 +1156,7 @@ impl HgCommands for RepoClient {
             .boxify();
         }
 
-        let ctx = self.command_ctx(ops::LISTKEYSPATTERNS);
+        let (ctx, command_logger) = self.start_command(ops::LISTKEYSPATTERNS);
 
         let queries = patterns.into_iter().map({
             cloned!(ctx);
@@ -1320,10 +1192,7 @@ impl HgCommands for RepoClient {
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
             .timed(move |stats, _| {
-                ctx.scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
             })
             .boxify()
@@ -1354,7 +1223,7 @@ impl HgCommands for RepoClient {
             // Assume read only if we have an error.
             .or_else(|_| ok(RepoReadOnly::ReadOnly("Failed to fetch repo lock status".to_string())))
             .and_then(move |read_write| {
-                let ctx = client.command_ctx(ops::UNBUNDLE);
+                let (ctx, command_logger) = client.start_command(ops::UNBUNDLE);
                 let blobrepo = client.repo.blobrepo().clone();
                 let bookmark_attrs = client.repo.bookmark_attrs();
                 let lca_hint = client.repo.lca_hint().clone();
@@ -1364,7 +1233,7 @@ impl HgCommands for RepoClient {
                 let pushrebase_params = client.repo.pushrebase_params().clone();
 
                 let res = bundle2_resolver::resolve(
-                    ctx.with_logger_kv(o!("command" => "unbundle")),
+                    ctx.clone(),
                     client.repo.blobrepo().clone(),
                     infinitepush_writes_allowed,
                     stream,
@@ -1447,13 +1316,7 @@ impl HgCommands for RepoClient {
                     .inspect(move |_| STATS::push_success.add_value(1, (reponame, )))
                     .traced(client.session.trace(), ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
-                        let mut scuba_logger = ctx.scuba().clone();
-
-                        ctx.perf_counters().insert_perf_counters(&mut scuba_logger);
-
-                        scuba_logger
-                            .add_future_stats(&stats)
-                            .log_with_msg("Command processed", None);
+                        command_logger.without_wireproto().finalize_command(&stats);
                         Ok(())
                     })
             })
@@ -1469,8 +1332,7 @@ impl HgCommands for RepoClient {
             "directories": format_utf8_bytes_list(&params.directories),
         });
         let args = json!(vec![args]);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK);
-        let ctx = self.command_ctx(ops::GETTREEPACK);
+        let (ctx, mut command_logger) = self.start_command(ops::GETTREEPACK);
 
         let s = self
             .gettreepack_untimed(ctx.clone(), params)
@@ -1491,16 +1353,13 @@ impl HgCommands for RepoClient {
                 }
             })
             .timed({
-                cloned!(ctx);
                 move |stats, _| {
                     if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
-                        // Log parameters to scuba only if a request was too slow
-                        wireproto_logger.add_command_args_to_scuba(args.clone());
+                        command_logger.add_trimmed_scuba_extra("command_args", &args);
                     }
                     STATS::gettreepack_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, Some(args));
+                    command_logger.finalize_command(&stats, Some(&args));
                     Ok(())
                 }
             });
@@ -1517,8 +1376,7 @@ impl HgCommands for RepoClient {
     fn getfiles(&self, params: BoxStream<(HgFileNodeId, MPath), Error>) -> BoxStream<Bytes, Error> {
         info!(self.logging.logger(), "getfiles");
 
-        let mut wireproto_logger = self.wireproto_logger(ops::GETFILES);
-        let ctx = self.command_ctx(ops::GETFILES);
+        let (ctx, command_logger) = self.start_command(ops::GETFILES);
         let this = self.clone();
         // TODO(stash): make it configurable
         let getfiles_buffer_size = 100;
@@ -1609,12 +1467,8 @@ impl HgCommands for RepoClient {
                         ctx.perf_counters()
                             .add_to_counter(PerfCounterType::GetfilesNumFiles, stats.count as i64);
 
-                        wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                        wireproto_logger.finish_stream_wireproto_processing(
-                            &stats,
-                            ctx,
-                            Some(json! {encoded_params}),
-                        );
+                        command_logger.finalize_command(&stats, Some(&json! {encoded_params}));
+
                         Ok(())
                     }
                 })
@@ -1632,8 +1486,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
         info!(self.logging.logger(), "{}", ops::STREAMOUTSHALLOW);
-        let ctx = self.command_ctx(ops::STREAMOUTSHALLOW);
-        let mut wireproto_logger = self.wireproto_logger(ops::STREAMOUTSHALLOW);
+        let (ctx, command_logger) = self.start_command(ops::STREAMOUTSHALLOW);
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
             Some(SqlStreamingCloneConfig {
@@ -1739,10 +1592,8 @@ impl HgCommands for RepoClient {
             .whole_stream_timeout(*CLONE_TIMEOUT)
             .map_err(process_stream_timeout_error)
             .timed({
-                cloned!(ctx);
                 move |stats, _| {
-                    wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, None);
+                    command_logger.finalize_command(&stats, None);
                     Ok(())
                 }
             })
@@ -1754,9 +1605,6 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        info!(self.logging.logger(), "{}", ops::GETPACKV1);
-        let wireproto_logger = self.wireproto_logger(ops::GETPACKV1);
-
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
@@ -1766,7 +1614,6 @@ impl HgCommands for RepoClient {
                     (size, fut)
                 })
             },
-            wireproto_logger,
             ops::GETPACKV1,
         )
     }
@@ -1776,9 +1623,6 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        info!(self.logging.logger(), "{}", ops::GETPACKV2);
-        let wireproto_logger = self.wireproto_logger(ops::GETPACKV2);
-
         self.getpack(
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
@@ -1790,7 +1634,6 @@ impl HgCommands for RepoClient {
                     },
                 )
             },
-            wireproto_logger,
             ops::GETPACKV2,
         )
     }

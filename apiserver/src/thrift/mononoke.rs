@@ -132,7 +132,7 @@ impl MononokeAPIServiceImpl {
             None,
         );
 
-        session.context(self.logger.clone(), scuba)
+        session.new_context(self.logger.clone(), scuba)
     }
 }
 

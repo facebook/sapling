@@ -146,7 +146,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             None,
         );
 
-        let ctx = session.context(self.logger.clone(), scuba);
+        let ctx = session.new_context(self.logger.clone(), scuba);
 
         req.extensions_mut().insert(ctx);
         self.start_timer(req);

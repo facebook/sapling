@@ -26,7 +26,6 @@ use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncDirection, MetadataDBConfig, RepoConfig, StorageConfig,
-    WireprotoLoggingConfig,
 };
 use mononoke_types::RepositoryId;
 use movers::{get_large_to_small_mover, get_small_to_large_mover};
@@ -34,7 +33,9 @@ use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
-use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher, RepoSyncTarget};
+use repo_client::{
+    streaming_clone, MononokeRepo, RepoReadWriteFetcher, RepoSyncTarget, WireprotoLogging,
+};
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::fetch_skiplist_index;
@@ -53,7 +54,7 @@ use crate::errors::ErrorKind;
 struct IncompleteRepoHandler {
     logger: Logger,
     scuba: ScubaSampleBuilder,
-    wireproto_logging: Option<WireprotoLoggingConfig>,
+    wireproto_logging: Option<Arc<WireprotoLogging>>,
     repo: MononokeRepo,
     hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
@@ -104,7 +105,7 @@ struct RepoSyncTargetArgs {
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
-    pub wireproto_logging: Option<WireprotoLoggingConfig>,
+    pub wireproto_logging: Option<Arc<WireprotoLogging>>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
@@ -466,6 +467,14 @@ pub fn repo_handlers(
                                                     maybe_myrouter_port: myrouter_port,
                                                 }
                                             });
+
+                                        let wireproto_logging = wireproto_logging.map(|config| {
+                                            Arc::new(WireprotoLogging::new(
+                                                fb,
+                                                reponame.clone(),
+                                                config,
+                                            ))
+                                        });
 
                                         (
                                             ctx,

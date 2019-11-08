@@ -245,7 +245,7 @@ impl SourceControlServiceImpl {
             None,
         );
 
-        session.context(self.logger.clone(), scuba)
+        session.new_context(self.logger.clone(), scuba)
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.

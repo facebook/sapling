@@ -26,7 +26,7 @@ use futures_ext::FutureExt;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use scuba_ext::ScubaSampleBuilder;
 pub use session_id::SessionId;
-use slog::{info, o, warn, Logger, OwnedKV, SendSyncRefUnwindSafeKV};
+use slog::{info, o, warn, Logger};
 use sshrelay::SshEnvVars;
 use tracing::{generate_trace_id, TraceContext};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
@@ -354,8 +354,9 @@ impl SessionContainer {
         }
     }
 
-    pub fn context(&self, logger: Logger, scuba: ScubaSampleBuilder) -> CoreContext {
+    pub fn new_context(&self, logger: Logger, scuba: ScubaSampleBuilder) -> CoreContext {
         let logging = LoggingContainer::new(logger, scuba);
+
         CoreContext {
             fb: self.fb,
             logging,
@@ -459,7 +460,7 @@ impl CoreContext {
             None,
         );
 
-        session.context(logger, ScubaSampleBuilder::with_discard())
+        session.new_context(logger, ScubaSampleBuilder::with_discard())
     }
 
     pub fn test_mock(fb: FacebookInit) -> Self {
@@ -472,26 +473,10 @@ impl CoreContext {
             None,
         );
 
-        session.context(
+        session.new_context(
             Logger::root(::slog::Discard, o!()),
             ScubaSampleBuilder::with_discard(),
         )
-    }
-
-    pub fn with_logger_kv<T>(&self, values: OwnedKV<T>) -> Self
-    where
-        T: SendSyncRefUnwindSafeKV + 'static,
-    {
-        let logging = LoggingContainer {
-            logger: self.logging.logger.new(values),
-            scuba: self.logging.scuba.clone(),
-        };
-
-        Self {
-            fb: self.fb,
-            session: self.session.clone(),
-            logging,
-        }
     }
 
     pub fn session_id(&self) -> &SessionId {

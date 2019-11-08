@@ -17,7 +17,7 @@ mod mononoke_repo;
 mod push_redirector;
 mod unbundle;
 
-pub use client::{gettreepack_entries, RepoClient};
+pub use client::{gettreepack_entries, RepoClient, WireprotoLogging};
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
 pub use push_redirector::RepoSyncTarget;
 pub use repo_read_write_status::RepoReadWriteFetcher;
