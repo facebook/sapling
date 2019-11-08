@@ -8,9 +8,9 @@
 
 use std::sync::Arc;
 
-use futures_ext::BoxFuture;
+use futures_ext::{BoxFuture, FutureExt};
 
-use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
+use apiserver_thrift::client_async::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
     MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeDirectoryUnodes,
     MononokeFileHistory, MononokeGetBlobParams, MononokeGetBranchesParams,
@@ -20,6 +20,7 @@ use apiserver_thrift::types::{
     MononokeRevision, MononokeTreeHash,
 };
 use fbinit::FacebookInit;
+use futures_preview::future::TryFutureExt;
 use srclient::SRChannelBuilder;
 
 pub struct MononokeAPIClient {
@@ -54,27 +55,36 @@ impl MononokeAPIClient {
             MononokeRevision::commit_hash(revision)
         };
 
-        self.inner.get_raw(&MononokeGetRawParams {
-            repo: self.repo.clone(),
-            revision: rev,
-            path: path.into_bytes(),
-        })
+        self.inner
+            .get_raw(&MononokeGetRawParams {
+                repo: self.repo.clone(),
+                revision: rev,
+                path: path.into_bytes(),
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn get_changeset(
         &self,
         revision: String,
     ) -> BoxFuture<MononokeChangeset, failure_ext::Error> {
-        self.inner.get_changeset(&MononokeGetChangesetParams {
-            repo: self.repo.clone(),
-            revision: MononokeRevision::commit_hash(revision),
-        })
+        self.inner
+            .get_changeset(&MononokeGetChangesetParams {
+                repo: self.repo.clone(),
+                revision: MononokeRevision::commit_hash(revision),
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn get_branches(&self) -> BoxFuture<MononokeBranches, failure_ext::Error> {
-        self.inner.get_branches(&MononokeGetBranchesParams {
-            repo: self.repo.clone(),
-        })
+        self.inner
+            .get_branches(&MononokeGetBranchesParams {
+                repo: self.repo.clone(),
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn get_file_history(
@@ -84,13 +94,16 @@ impl MononokeAPIClient {
         limit: i32,
         skip: i32,
     ) -> BoxFuture<MononokeFileHistory, failure_ext::Error> {
-        self.inner.get_file_history(&MononokeGetFileHistoryParams {
-            repo: self.repo.clone(),
-            revision: MononokeRevision::commit_hash(revision),
-            path: path.into_bytes(),
-            limit,
-            skip,
-        })
+        self.inner
+            .get_file_history(&MononokeGetFileHistoryParams {
+                repo: self.repo.clone(),
+                revision: MononokeRevision::commit_hash(revision),
+                path: path.into_bytes(),
+                limit,
+                skip,
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn get_last_commit_on_path(
@@ -104,6 +117,8 @@ impl MononokeAPIClient {
                 revision: MononokeRevision::commit_hash(revision),
                 path: path.into_bytes(),
             })
+            .compat()
+            .boxify()
     }
 
     pub fn list_directory(
@@ -111,11 +126,14 @@ impl MononokeAPIClient {
         revision: String,
         path: String,
     ) -> BoxFuture<MononokeDirectory, failure_ext::Error> {
-        self.inner.list_directory(&MononokeListDirectoryParams {
-            repo: self.repo.clone(),
-            revision: MononokeRevision::commit_hash(revision),
-            path: path.into_bytes(),
-        })
+        self.inner
+            .list_directory(&MononokeListDirectoryParams {
+                repo: self.repo.clone(),
+                revision: MononokeRevision::commit_hash(revision),
+                path: path.into_bytes(),
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn list_directory_unodes(
@@ -129,6 +147,8 @@ impl MononokeAPIClient {
                 revision: MononokeRevision::commit_hash(revision),
                 path: path.into_bytes(),
             })
+            .compat()
+            .boxify()
     }
 
     pub fn is_ancestor(
@@ -136,24 +156,33 @@ impl MononokeAPIClient {
         ancestor: String,
         descendant: String,
     ) -> BoxFuture<bool, failure_ext::Error> {
-        self.inner.is_ancestor(&MononokeIsAncestorParams {
-            repo: self.repo.clone(),
-            ancestor: MononokeRevision::commit_hash(ancestor),
-            descendant: MononokeRevision::commit_hash(descendant),
-        })
+        self.inner
+            .is_ancestor(&MononokeIsAncestorParams {
+                repo: self.repo.clone(),
+                ancestor: MononokeRevision::commit_hash(ancestor),
+                descendant: MononokeRevision::commit_hash(descendant),
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn get_blob(&self, hash: String) -> BoxFuture<MononokeBlob, failure_ext::Error> {
-        self.inner.get_blob(&MononokeGetBlobParams {
-            repo: self.repo.clone(),
-            blob_hash: MononokeNodeHash { hash },
-        })
+        self.inner
+            .get_blob(&MononokeGetBlobParams {
+                repo: self.repo.clone(),
+                blob_hash: MononokeNodeHash { hash },
+            })
+            .compat()
+            .boxify()
     }
 
     pub fn get_tree(&self, hash: String) -> BoxFuture<MononokeDirectory, failure_ext::Error> {
-        self.inner.get_tree(&MononokeGetTreeParams {
-            repo: self.repo.clone(),
-            tree_hash: MononokeTreeHash { hash },
-        })
+        self.inner
+            .get_tree(&MononokeGetTreeParams {
+                repo: self.repo.clone(),
+                tree_hash: MononokeTreeHash { hash },
+            })
+            .compat()
+            .boxify()
     }
 }
