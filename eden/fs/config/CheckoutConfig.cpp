@@ -75,7 +75,9 @@ ParentCommits CheckoutConfig::getParentCommits() const {
 #ifdef _WIN32
   readFile(snapshotFile.c_str(), snapshotFileContents);
 #else
-  folly::readFile(snapshotFile.c_str(), snapshotFileContents);
+  if (!folly::readFile(snapshotFile.c_str(), snapshotFileContents)) {
+    folly::throwSystemErrorExplicit(errno, "error reading eden SNAPSHOT file");
+  }
 #endif
 
   StringPiece contents{snapshotFileContents};
