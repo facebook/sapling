@@ -23,13 +23,13 @@ use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use slog::Logger;
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 
 use crate::dechunker::Dechunker;
 use crate::errors::*;
 use crate::{GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
-use context::CoreContext;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_bundles::Bundle2Item;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
@@ -37,13 +37,13 @@ use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
 const HASH_SIZE: usize = 40;
 
 pub struct HgCommandHandler<H> {
-    ctx: CoreContext,
+    logger: Logger,
     commands: H,
 }
 
 impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
-    pub fn new(ctx: CoreContext, commands: H) -> Self {
-        HgCommandHandler { ctx, commands }
+    pub fn new(logger: Logger, commands: H) -> Self {
+        HgCommandHandler { logger, commands }
     }
 
     /// Handles a single command (not batched) by returning a stream of responses and a future
@@ -193,7 +193,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     (dechunker, None)
                 };
 
-                let bundle2stream = Bundle2Stream::new(self.ctx.clone(), dechunker);
+                let bundle2stream = Bundle2Stream::new(self.logger.clone(), dechunker);
                 let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
 
                 let remainder = remainder
@@ -759,9 +759,8 @@ mod test {
     use super::*;
 
     use bytes::{BufMut, BytesMut};
-    use context::CoreContext;
-    use fbinit::FacebookInit;
     use futures::{future, stream};
+    use slog::{o, Discard};
 
     struct Dummy;
     impl HgCommands for Dummy {
@@ -786,10 +785,10 @@ mod test {
         HgFileNodeId::new("2222222222222222222222222222222222222222".parse().unwrap())
     }
 
-    #[fbinit::test]
-    fn hello(fb: FacebookInit) {
-        let ctx = CoreContext::test_mock(fb);
-        let handler = HgCommandHandler::new(ctx, Dummy);
+    #[test]
+    fn hello() {
+        let logger = Logger::root(Discard, o!());
+        let handler = HgCommandHandler::new(logger, Dummy);
 
         let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -804,10 +803,10 @@ mod test {
         }
     }
 
-    #[fbinit::test]
-    fn unimpl(fb: FacebookInit) {
-        let ctx = CoreContext::test_mock(fb);
-        let handler = HgCommandHandler::new(ctx, Dummy);
+    #[test]
+    fn unimpl() {
+        let logger = Logger::root(Discard, o!());
+        let handler = HgCommandHandler::new(logger, Dummy);
 
         let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());

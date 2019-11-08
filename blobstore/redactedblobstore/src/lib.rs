@@ -135,7 +135,7 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
 
             if res.is_ok() {
                 let mut scuba_builder = self.scuba_builder.clone();
-                let session = &ctx.session();
+                let session = &ctx.session_id();
                 scuba_builder
                     .add("time", curr_timestamp)
                     .add("operation", operation)

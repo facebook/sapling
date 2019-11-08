@@ -17,6 +17,7 @@ use futures::{Async, Poll, Stream};
 
 use futures_ext::io::Either;
 use futures_ext::BoxFuture;
+use slog::Logger;
 use tokio_codec::{Framed, FramedParts};
 use tokio_io::AsyncRead;
 
@@ -25,7 +26,6 @@ use crate::part_inner::inner_stream;
 use crate::part_outer::{outer_stream, OuterFrame, OuterStream};
 use crate::stream_start::StartDecoder;
 use crate::Bundle2Item;
-use context::CoreContext;
 
 pub enum StreamEvent<I, S> {
     Next(I),
@@ -64,7 +64,7 @@ where
 
 #[derive(Debug)]
 struct Bundle2StreamInner {
-    ctx: CoreContext,
+    logger: Logger,
     app_errors: Vec<ErrorKind>,
 }
 
@@ -127,10 +127,10 @@ impl<R> Bundle2Stream<R>
 where
     R: AsyncRead + BufRead + 'static + Send,
 {
-    pub fn new(ctx: CoreContext, read: R) -> Bundle2Stream<R> {
+    pub fn new(logger: Logger, read: R) -> Bundle2Stream<R> {
         Bundle2Stream {
             inner: Bundle2StreamInner {
-                ctx,
+                logger,
                 app_errors: Vec::new(),
             },
             current_stream: CurrentStream::Start(Framed::from_parts(FramedParts::new(
@@ -193,7 +193,7 @@ impl Bundle2StreamInner {
                         );
 
                         match outer_stream(
-                            self.ctx.clone(),
+                            self.logger.clone(),
                             &start,
                             Cursor::new(read_buf).chain(io),
                         ) {
@@ -234,7 +234,7 @@ impl Bundle2StreamInner {
                     }
                     Ok(Async::Ready(Some(OuterFrame::Header(header)))) => {
                         let (bundle2item, remainder) =
-                            inner_stream(self.ctx.clone(), header, stream);
+                            inner_stream(self.logger.clone(), header, stream);
                         (
                             Ok(Async::Ready(Some(StreamEvent::Next(bundle2item)))),
                             CurrentStream::Inner(remainder),

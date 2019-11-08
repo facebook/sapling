@@ -16,7 +16,7 @@ use std::mem;
 use async_compression::Decompressor;
 use bytes::{Bytes, BytesMut};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
-use slog::{debug, o};
+use slog::{debug, o, Logger};
 use tokio_codec::{Decoder, Framed, FramedParts};
 use tokio_io::AsyncRead;
 
@@ -25,10 +25,9 @@ use crate::part_header::{self, PartHeader, PartHeaderType, PartId};
 use crate::part_inner::validate_header;
 use crate::types::StreamHeader;
 use crate::utils::{get_decompressor_type, BytesExt};
-use context::CoreContext;
 
 pub fn outer_stream<R: AsyncRead + BufRead + Send>(
-    ctx: CoreContext,
+    logger: Logger,
     stream_header: &StreamHeader,
     r: R,
 ) -> Result<OuterStream<R>> {
@@ -44,7 +43,7 @@ pub fn outer_stream<R: AsyncRead + BufRead + Send>(
             None => UncompressedRead(r),
             Some(decompressor_type) => CompressedRead(Decompressor::new(r, decompressor_type)),
         },
-        OuterDecoder::new(ctx.with_logger_kv(o!("stream" => "outer"))),
+        OuterDecoder::new(logger.new(o!("stream" => "outer"))),
     )))
 }
 
@@ -95,7 +94,7 @@ impl OuterState {
 
 #[derive(Debug)]
 pub struct OuterDecoder {
-    ctx: CoreContext,
+    logger: Logger,
     state: OuterState,
 }
 
@@ -104,22 +103,22 @@ impl Decoder for OuterDecoder {
     type Error = Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
-        let (ret, next_state) = Self::decode_next(&self.ctx, buf, self.state.take());
+        let (ret, next_state) = Self::decode_next(&self.logger, buf, self.state.take());
         self.state = next_state;
         ret
     }
 }
 
 impl OuterDecoder {
-    pub fn new(ctx: CoreContext) -> Self {
+    pub fn new(logger: Logger) -> Self {
         OuterDecoder {
-            ctx,
+            logger,
             state: OuterState::Header,
         }
     }
 
     fn decode_next(
-        ctx: &CoreContext,
+        logger: &Logger,
         buf: &mut BytesMut,
         mut state: OuterState,
     ) -> (Result<Option<OuterFrame>>, OuterState) {
@@ -148,7 +147,7 @@ impl OuterDecoder {
                     return (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd);
                 }
 
-                let part_header = Self::decode_header(ctx, buf.split_to(header_len).freeze());
+                let part_header = Self::decode_header(logger, buf.split_to(header_len).freeze());
                 if let Err(e) = part_header {
                     let next = match e.downcast::<ErrorKind>() {
                         Ok(ek) => {
@@ -192,9 +191,9 @@ impl OuterDecoder {
         }
     }
 
-    fn decode_header(ctx: &CoreContext, header_bytes: Bytes) -> Result<Option<PartHeader>> {
+    fn decode_header(logger: &Logger, header_bytes: Bytes) -> Result<Option<PartHeader>> {
         let header = part_header::decode(header_bytes)?;
-        debug!(ctx.logger(), "Decoded header: {:?}", header);
+        debug!(logger, "Decoded header: {:?}", header);
         match validate_header(header)? {
             Some(header) => Ok(Some(header)),
             None => {

@@ -53,7 +53,7 @@ pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
 
 // Re-export types that are useful for clients.
-pub type CoreContext = context::CoreContext;
+pub use context::{CoreContext, LoggingContainer, SessionContainer};
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {

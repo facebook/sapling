@@ -19,7 +19,7 @@ use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
 use lazy_static::lazy_static;
 use maplit::hashset;
-use slog::{o, warn};
+use slog::{o, warn, Logger};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 
@@ -32,7 +32,6 @@ use crate::part_outer::{OuterFrame, OuterStream};
 use crate::pushrebase;
 use crate::wirepack;
 use crate::Bundle2Item;
-use context::CoreContext;
 use futures_ext::{StreamExt, StreamLayeredExt};
 
 // --- Part parameters
@@ -108,24 +107,24 @@ pub fn get_cg_version(header: PartHeader, field: &str) -> Result<changegroup::un
 }
 
 pub fn get_cg_unpacker(
-    ctx: CoreContext,
+    logger: Logger,
     header: PartHeader,
     field: &str,
 ) -> changegroup::unpacker::CgUnpacker {
     // TODO(anastasiyaz): T34812941 return Result here, no default packer (version should be specified)
     get_cg_version(header, field)
-    .map(|version| changegroup::unpacker::CgUnpacker::new(ctx.clone(), version))
+    .map(|version| changegroup::unpacker::CgUnpacker::new(logger.clone(), version))
     // ChangeGroup2 by default
     .unwrap_or_else(|e| {
-        warn!(ctx.logger(), "{:?}", e);
+        warn!(logger, "{:?}", e);
         let default_version = changegroup::unpacker::CgVersion::Cg2Version;
-        changegroup::unpacker::CgUnpacker::new(ctx, default_version)
+        changegroup::unpacker::CgUnpacker::new(logger, default_version)
     })
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.
 pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
-    ctx: CoreContext,
+    logger: Logger,
     header: PartHeader,
     stream: OuterStream<R>,
 ) -> (Bundle2Item, BoxFuture<OuterStream<R>, Error>) {
@@ -137,7 +136,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
     let bundle2item = match header.part_type() {
         &PartHeaderType::Changegroup => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
-                ctx.with_logger_kv(o!("stream" => "changegroup")),
+                logger.new(o!("stream" => "changegroup")),
                 header.clone(),
                 "version",
             ));
@@ -149,7 +148,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xInfinitepush => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
-                ctx.with_logger_kv(o!("stream" => "b2xinfinitepush")),
+                logger.new(o!("stream" => "b2xinfinitepush")),
                 header.clone(),
                 "cgversion",
             ));
@@ -162,7 +161,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
-                ctx.with_logger_kv(o!("stream" => "wirepack")),
+                logger.new(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.
                 // TODO: add support for file wirepacks once that's a thing
                 wirepack::Kind::Tree,
@@ -181,7 +180,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xRebasePack => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
-                ctx.with_logger_kv(o!("stream" => "wirepack")),
+                logger.new(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.
                 // TODO: add support for file wirepacks once that's a thing
                 wirepack::Kind::Tree,
@@ -190,7 +189,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xRebase => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
-                ctx.with_logger_kv(o!("stream" => "bx2rebase")),
+                logger.new(o!("stream" => "bx2rebase")),
                 header.clone(),
                 "cgversion",
             ));

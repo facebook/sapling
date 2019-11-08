@@ -10,7 +10,6 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use cloned::cloned;
 use configerator::ConfigLoader;
 use context::{generate_session_id, SessionId};
 use failure_ext::{prelude::*, SlogKVError};
@@ -35,7 +34,7 @@ use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 
 use crate::repo_handlers::RepoHandler;
 
-use context::{is_quicksand, CoreContext, Metric};
+use context::{is_quicksand, LoggingContainer, Metric, SessionContainer};
 use hooks::HookManager;
 
 lazy_static! {
@@ -61,7 +60,7 @@ pub fn request_handler(
     fb: FacebookInit,
     RepoHandler {
         logger,
-        scuba,
+        mut scuba,
         wireproto_logging,
         repo,
         hash_validation_percentage,
@@ -75,7 +74,6 @@ pub fn request_handler(
     load_limiting_config: Option<(ConfigLoader, String)>,
     pushredirect_config: Option<ConfigLoader>,
 ) -> impl Future<Item = (), Error = ()> {
-    let mut scuba_logger = scuba;
     let Stdio {
         stdin,
         stdout,
@@ -128,7 +126,7 @@ pub fn request_handler(
         Logger::root(drain, o!("session_uuid" => format!("{}", session_id)))
     };
 
-    scuba_logger.log_with_msg("Connection established", None);
+    scuba.log_with_msg("Connection established", None);
     let client_hostname = preamble
         .misc
         .get("source_hostname")
@@ -141,24 +139,25 @@ pub fn request_handler(
             .map(|limits| (limits, category))
     });
 
-    let ctx = CoreContext::new(
+    let session = SessionContainer::new(
         fb,
         session_id,
-        conn_log,
-        scuba_logger.clone(),
         trace.clone(),
         preamble.misc.get("unix_username").cloned(),
         ssh_env_vars,
         load_limiting_config,
     );
 
+    let logging = LoggingContainer::new(conn_log.clone(), scuba.clone());
+
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
-        ctx.clone(),
+        conn_log.clone(),
         stdin,
         RepoClient::new(
             repo.clone(),
-            ctx.clone(),
+            session.clone(),
+            logging,
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
@@ -175,10 +174,7 @@ pub fn request_handler(
 
     // send responses back
     let endres = proto_handler
-        .inspect({
-            cloned!(ctx);
-            move |bytes| ctx.bump_load(Metric::EgressBytes, bytes.len() as f64)
-        })
+        .inspect(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
         .map_err(Error::from)
         .forward(stdout)
         .map(|_| ());
@@ -191,20 +187,23 @@ pub fn request_handler(
             let wireproto_calls = mem::replace(&mut *wireproto_calls, Vec::new());
 
             STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            scuba_logger
+
+            let mut scuba = scuba.clone();
+
+            scuba
                 .add_future_stats(&stats)
                 .add("wireproto_commands", wireproto_calls);
 
             match result {
-                Ok(_) => scuba_logger.log_with_msg("Request finished - Success", None),
+                Ok(_) => scuba.log_with_msg("Request finished - Success", None),
                 Err(err) => {
-                    scuba_logger.log_with_msg("Request finished - Failure", format!("{:#?}", err));
+                    scuba.log_with_msg("Request finished - Failure", format!("{:#?}", err));
                 }
             }
-            scuba_logger.log_with_trace(&trace)
+            scuba.log_with_trace(&trace)
         })
         .map_err(move |err| {
-            error!(ctx.logger(), "Command failed";
+            error!(&conn_log, "Command failed";
                 SlogKVError(err),
                 "remote" => "true"
             );

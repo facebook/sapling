@@ -27,7 +27,8 @@ use mercurial_types::Globalrev;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetPathDiffContext,
     ChangesetSpecifier, CoreContext, FileContext, FileId, FileMetadata, FileType, HgChangesetId,
-    Mononoke, MononokeError, PathEntry, RepoContext, TreeContext, TreeEntry, TreeId,
+    Mononoke, MononokeError, PathEntry, RepoContext, SessionContainer, TreeContext, TreeEntry,
+    TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
@@ -232,18 +233,19 @@ impl SourceControlServiceImpl {
                 scuba.add("path", path);
             }
         }
-        let session = generate_session_id();
-        scuba.add("session_uuid", session.to_string());
-        CoreContext::new(
+        let session_id = generate_session_id();
+        scuba.add("session_uuid", session_id.to_string());
+
+        let session = SessionContainer::new(
             self.fb,
-            session,
-            self.logger.clone(),
-            scuba,
+            session_id,
             TraceContext::default(),
             None,
             SshEnvVars::default(),
             None,
-        )
+        );
+
+        session.context(self.logger.clone(), scuba)
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.

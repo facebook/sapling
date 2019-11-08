@@ -17,7 +17,7 @@ use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use configerator::ConfigLoader;
-use context::{CoreContext, Metric, PerfCounterType};
+use context::{CoreContext, LoggingContainer, Metric, PerfCounterType, SessionContainer};
 use failure::{err_msg, format_err};
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
@@ -219,7 +219,11 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
 #[derive(Clone)]
 pub struct RepoClient {
     repo: MononokeRepo,
-    ctx: CoreContext,
+    // The session for this repo access.
+    session: SessionContainer,
+    // A base logging container. This will be combined with the Session container for each command
+    // to produce a CoreContext.
+    logging: LoggingContainer,
     // Percent of returned entries (filelogs, manifests, changesets) which content
     // will be hash validated
     hash_validation_percentage: usize,
@@ -321,7 +325,7 @@ impl WireprotoLogger {
             builder.add("command", self.wireproto_command);
             builder.add("duration", stats.completion_time.as_millis_unchecked());
             builder.add("source_control_server_type", "mononoke");
-            builder.add("mononoke_session_uuid", ctx.session().to_string());
+            builder.add("mononoke_session_uuid", ctx.session_id().to_string());
             builder.add("reponame", self.reponame.as_str());
 
             // We can't really do anything with the errors, so let's ignore it
@@ -338,7 +342,8 @@ impl WireprotoLogger {
 impl RepoClient {
     pub fn new(
         repo: MononokeRepo,
-        ctx: CoreContext,
+        session: SessionContainer,
+        logging: LoggingContainer,
         hash_validation_percentage: usize,
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
@@ -350,7 +355,8 @@ impl RepoClient {
     ) -> Self {
         RepoClient {
             repo,
-            ctx,
+            session,
+            logging,
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
@@ -363,21 +369,22 @@ impl RepoClient {
         }
     }
 
-    fn prepared_ctx(&self, op: &str, args: Option<String>) -> CoreContext {
-        self.ctx.with_scuba_initialization(|mut scuba_logger| {
-            scuba_logger.add("command", op);
+    fn command_ctx(&self, command: &str) -> CoreContext {
+        let logger = self
+            .logging
+            .logger()
+            .new(o!("command" => command.to_owned()));
 
-            if let Some(args) = args {
-                scuba_logger.add("command_args", args);
-            }
+        let mut scuba = self.logging.scuba().clone();
+        scuba.add("command", command);
+        scuba.log_with_msg("Start processing", None);
 
-            scuba_logger.log_with_msg("Start processing", None);
-            scuba_logger
-        })
+        self.session.context(logger, scuba)
     }
 
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
+        ctx: CoreContext,
     ) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
         let maybe_cache = self
             .cached_pull_default_bookmarks_maybe_stale
@@ -388,7 +395,7 @@ impl RepoClient {
             None => self
                 .repo
                 .blobrepo()
-                .get_pull_default_bookmarks_maybe_stale(self.ctx.clone())
+                .get_pull_default_bookmarks_maybe_stale(ctx)
                 .map(|(book, cs): (Bookmark, HgChangesetId)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                     (book.into_name(), hash)
@@ -422,7 +429,11 @@ impl RepoClient {
         }
     }
 
-    fn create_bundle(&self, args: GetbundleArgs) -> Result<BoxStream<Bytes, Error>> {
+    fn create_bundle(
+        &self,
+        ctx: CoreContext,
+        args: GetbundleArgs,
+    ) -> Result<BoxStream<Bytes, Error>> {
         let blobrepo = self.repo.blobrepo();
         let mut bundle2_parts = vec![];
 
@@ -442,7 +453,7 @@ impl RepoClient {
         }
 
         bundle2_parts.append(&mut getbundle_response::create_getbundle_response(
-            self.ctx.clone(),
+            ctx.clone(),
             blobrepo.clone(),
             args.common,
             args.heads,
@@ -460,7 +471,7 @@ impl RepoClient {
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
             let items = self
-                .get_pull_default_bookmarks_maybe_stale()
+                .get_pull_default_bookmarks_maybe_stale(ctx)
                 .map(|bookmarks| stream::iter_ok(bookmarks))
                 .flatten_stream();
             bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
@@ -471,17 +482,21 @@ impl RepoClient {
         Ok(create_bundle_stream(bundle2_parts, compression).boxify())
     }
 
-    fn gettreepack_untimed(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
-        debug!(self.ctx.logger(), "gettreepack");
+    fn gettreepack_untimed(
+        &self,
+        ctx: CoreContext,
+        params: GettreepackArgs,
+    ) -> BoxStream<Bytes, Error> {
+        debug!(self.logging.logger(), "gettreepack");
 
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
-        let changed_entries = gettreepack_entries(self.ctx.clone(), self.repo.blobrepo(), params)
+        let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blobrepo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
                 move |entry| used_hashes.insert(entry.0.get_hash())
             })
             .map({
-                cloned!(self.ctx);
+                cloned!(ctx);
                 let blobrepo = self.repo.blobrepo().clone();
                 move |(entry, basepath)| {
                     ctx.perf_counters()
@@ -533,7 +548,7 @@ impl RepoClient {
         // We buffer all parameters in memory so that we can log them.
         // That shouldn't be a problem because requests are quite small
         let getpack_params = Arc::new(Mutex::new(vec![]));
-        let ctx = self.ctx.clone();
+        let ctx = self.command_ctx(name);
         let repo = self.repo.blobrepo().clone();
 
         let lfs_threshold = self.repo.lfs_params().threshold;
@@ -545,6 +560,7 @@ impl RepoClient {
         // That's prevents deadlocks, because hg client doesn't start reading the response
         // before all the arguments were sent.
         let request_stream = move || {
+            cloned!(ctx);
             let s = params
                 .collect()
                 .map(|v| stream::iter_ok(v.into_iter()))
@@ -701,7 +717,7 @@ impl RepoClient {
         };
 
         throttle_stream(
-            self.ctx.clone(),
+            &self.session,
             Metric::EgressGetpackFiles,
             name,
             request_stream,
@@ -710,8 +726,8 @@ impl RepoClient {
 
     fn wireproto_logger(&self, wireproto_command: &'static str) -> WireprotoLogger {
         WireprotoLogger::new(
-            self.ctx.fb,
-            self.ctx.scuba().clone(),
+            self.session.fb(),
+            self.logging.scuba().clone(),
             wireproto_command,
             self.wireproto_logging.clone(),
             self.repo.reponame().clone(),
@@ -769,7 +785,7 @@ fn maybe_pushredirect_action(
 }
 
 fn throttle_stream<F, S, V>(
-    ctx: CoreContext,
+    session: &SessionContainer,
     metric: Metric,
     name: &'static str,
     func: F,
@@ -778,7 +794,8 @@ where
     F: FnOnce() -> S + Send + 'static,
     S: Stream<Item = V, Error = Error> + Send + 'static,
 {
-    ctx.should_throttle(metric, *LOAD_LIMIT_TIMEFRAME)
+    session
+        .should_throttle(metric, *LOAD_LIMIT_TIMEFRAME)
         .then(move |throttle| match throttle {
             Ok(throttle) => {
                 if throttle {
@@ -803,7 +820,7 @@ impl HgCommands for RepoClient {
         &self,
         pairs: Vec<(HgChangesetId, HgChangesetId)>,
     ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
-        info!(self.ctx.logger(), "between pairs {:?}", pairs);
+        info!(self.logging.logger(), "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
             ctx: CoreContext,
@@ -856,33 +873,37 @@ impl HgCommands for RepoClient {
             }
         }
 
-        let mut scuba_logger = self.prepared_ctx(ops::BETWEEN, None).scuba().clone();
+        let ctx = self.command_ctx(ops::BETWEEN);
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
-        cloned!(self.ctx, self.repo);
+        cloned!(self.repo);
         stream::iter_ok(pairs.into_iter())
-            .and_then(move |(top, bottom)| {
-                let mut f = 1;
-                ParentStream::new(ctx.clone(), &repo, top, bottom)
-                    .enumerate()
-                    .filter(move |&(i, _)| {
-                        if i == f {
-                            f *= 2;
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .map(|(_, v)| v)
-                    .collect()
+            .and_then({
+                cloned!(ctx);
+                move |(top, bottom)| {
+                    let mut f = 1;
+                    ParentStream::new(ctx.clone(), &repo, top, bottom)
+                        .enumerate()
+                        .filter(move |&(i, _)| {
+                            if i == f {
+                                f *= 2;
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                        .map(|(_, v)| v)
+                        .collect()
+                }
             })
             .collect()
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::BETWEEN, trace_args!())
+            .traced(self.session.trace(), ops::BETWEEN, trace_args!())
             .timed(move |stats, _| {
-                scuba_logger
+                ctx.scuba()
+                    .clone()
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -892,7 +913,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        info!(self.ctx.logger(), "clienttelemetry");
+        info!(self.logging.logger(), "clienttelemetry");
 
         let fallback_hostname = "<no hostname found>";
         let hostname = match FbWhoAmI::new() {
@@ -900,20 +921,17 @@ impl HgCommands for RepoClient {
             Err(_) => fallback_hostname.to_string(),
         };
 
-        let mut scuba_logger = self
-            .prepared_ctx(ops::CLIENTTELEMETRY, None)
-            .scuba()
-            .clone();
+        let mut scuba = self.command_ctx(ops::CLIENTTELEMETRY).scuba().clone();
 
         if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
-            scuba_logger.add(
+            scuba.add(
                 "client_correlator",
                 String::from_utf8_lossy(client_correlator).into_owned(),
             );
         }
 
         if let Some(command) = args.get(b"command" as &[u8]) {
-            scuba_logger.add(
+            scuba.add(
                 "hg_short_command",
                 String::from_utf8_lossy(command).into_owned(),
             );
@@ -922,9 +940,9 @@ impl HgCommands for RepoClient {
         future::ok(hostname)
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::CLIENTTELEMETRY, trace_args!())
+            .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
             .timed(move |stats, _| {
-                scuba_logger
+                scuba
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -936,18 +954,18 @@ impl HgCommands for RepoClient {
     fn heads(&self) -> HgCommandRes<HashSet<HgChangesetId>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
-        info!(self.ctx.logger(), "heads");
-        let mut scuba_logger = self.prepared_ctx(ops::HEADS, None).scuba().clone();
+        info!(self.logging.logger(), "heads");
+        let ctx = self.command_ctx(ops::HEADS);
 
         // We get all bookmarks while handling heads to fix the race demonstrated in
         // test-bookmark-race.t - this fixes bookmarks at the moment the client starts discovery
         // NB: Getting bookmarks is only done here to ensure that they are cached at the beginning
         // of discovery - this function is meant to get heads only.
-        self.get_pull_default_bookmarks_maybe_stale()
+        self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
             .join(
                 self.repo
                     .blobrepo()
-                    .get_heads_maybe_stale(self.ctx.clone())
+                    .get_heads_maybe_stale(ctx.clone())
                     .collect()
                     .map(|v| v.into_iter().collect())
                     .from_err(),
@@ -955,9 +973,10 @@ impl HgCommands for RepoClient {
             .map(|(_, r)| r)
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::HEADS, trace_args!())
+            .traced(self.session.trace(), ops::HEADS, trace_args!())
             .timed(move |stats, _| {
-                scuba_logger
+                ctx.scuba()
+                    .clone()
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -967,10 +986,10 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
-        info!(self.ctx.logger(), "lookup: {:?}", key);
+        info!(self.logging.logger(), "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support prefixes
         let repo = self.repo.blobrepo().clone();
-        let mut scuba_logger = self.prepared_ctx(ops::LOOKUP, None).scuba().clone();
+        let ctx = self.command_ctx(ops::LOOKUP);
 
         fn generate_resp_buf(success: bool, message: &[u8]) -> Bytes {
             let mut buf = BytesMut::with_capacity(message.len() + 3);
@@ -1004,9 +1023,9 @@ impl HgCommands for RepoClient {
         let lookup_fut = match (node, bookmark) {
             (Some(node), Some(bookmark)) => {
                 let csid = node;
-                repo.changeset_exists(self.ctx.clone(), csid)
+                repo.changeset_exists(ctx.clone(), csid)
                     .and_then({
-                        cloned!(self.ctx);
+                        cloned!(ctx);
                         move |exists| {
                             if exists {
                                 Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
@@ -1019,7 +1038,7 @@ impl HgCommands for RepoClient {
                     })
                     .boxify()
             }
-            (None, Some(bookmark)) => check_bookmark_exists(self.ctx.clone(), repo, bookmark),
+            (None, Some(bookmark)) => check_bookmark_exists(ctx.clone(), repo, bookmark),
             // Failed to parse as a hash or bookmark.
             _ => Ok(generate_resp_buf(false, "invalid input".as_bytes()))
                 .into_future()
@@ -1029,9 +1048,10 @@ impl HgCommands for RepoClient {
         lookup_fut
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::LOOKUP, trace_args!())
+            .traced(self.session.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
-                scuba_logger
+                ctx.scuba()
+                    .clone()
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -1043,22 +1063,21 @@ impl HgCommands for RepoClient {
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
         if nodes.len() > MAX_NODES_TO_LOG {
             info!(
-                self.ctx.logger(),
+                self.logging.logger(),
                 "known: {:?}...",
                 &nodes[..MAX_NODES_TO_LOG]
             );
         } else {
-            info!(self.ctx.logger(), "known: {:?}", nodes);
+            info!(self.logging.logger(), "known: {:?}", nodes);
         }
         let blobrepo = self.repo.blobrepo().clone();
 
-        let mut scuba_logger = self.prepared_ctx(ops::KNOWN, None).scuba().clone();
+        let ctx = self.command_ctx(ops::KNOWN);
 
         let nodes_len = nodes.len();
 
         let phases_hint = self.repo.phases_hint().clone();
 
-        cloned!(self.ctx);
         blobrepo
             .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
             .map(|hg_bcs_mapping| {
@@ -1071,15 +1090,18 @@ impl HgCommands for RepoClient {
                 }
                 (bcs_ids, bcs_hg_mapping)
             })
-            .and_then(move |(bcs_ids, bcs_hg_mapping)| {
-                phases_hint
-                    .get_public(ctx, blobrepo, bcs_ids)
-                    .map(move |public_csids| {
-                        public_csids
-                            .into_iter()
-                            .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
-                            .collect::<HashSet<_>>()
-                    })
+            .and_then({
+                cloned!(ctx);
+                move |(bcs_ids, bcs_hg_mapping)| {
+                    phases_hint
+                        .get_public(ctx, blobrepo, bcs_ids)
+                        .map(move |public_csids| {
+                            public_csids
+                                .into_iter()
+                                .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
+                                .collect::<HashSet<_>>()
+                        })
+                }
             })
             .map(move |found_hg_changesets| {
                 nodes
@@ -1089,8 +1111,10 @@ impl HgCommands for RepoClient {
             })
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
+            .traced(self.session.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
+                let mut scuba = ctx.scuba().clone();
+
                 if let Ok(known) = known_nodes {
                     let extra_context = json!({
                         "num_known": known.len(),
@@ -1098,10 +1122,10 @@ impl HgCommands for RepoClient {
                     })
                     .to_string();
 
-                    scuba_logger.add("extra_context", extra_context);
+                    scuba.add("extra_context", extra_context);
                 }
 
-                scuba_logger
+                scuba
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -1112,12 +1136,12 @@ impl HgCommands for RepoClient {
     fn knownnodes(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
         let blobrepo = self.repo.blobrepo().clone();
 
-        let mut scuba_logger = self.prepared_ctx(ops::KNOWNNODES, None).scuba().clone();
+        let ctx = self.command_ctx(ops::KNOWNNODES);
 
         let nodes_len = nodes.len();
 
         blobrepo
-            .get_hg_bonsai_mapping(self.ctx.clone(), nodes.clone())
+            .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
             .map(|hg_bcs_mapping| {
                 let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
                 nodes
@@ -1127,8 +1151,10 @@ impl HgCommands for RepoClient {
             })
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::KNOWNNODES, trace_args!())
+            .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
             .timed(move |stats, known_nodes| {
+                let mut scuba_logger = ctx.scuba().clone();
+
                 if let Ok(known) = known_nodes {
                     let extra_context = json!({
                         "num_known": known.len(),
@@ -1149,7 +1175,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getbundle', '*')
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "Getbundle: {:?}", args);
+        info!(self.logging.logger(), "Getbundle: {:?}", args);
+        let ctx = self.command_ctx(ops::GETBUNDLE);
 
         let value = json!({
             "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
@@ -1159,15 +1186,14 @@ impl HgCommands for RepoClient {
         });
         let value = json!(vec![value]);
         let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE);
-        cloned!(self.ctx);
 
-        let s = match self.create_bundle(args) {
+        let s = match self.create_bundle(ctx.clone(), args) {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
         }
         .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
         .map_err(process_stream_timeout_error)
-        .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
+        .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
             wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
@@ -1177,7 +1203,7 @@ impl HgCommands for RepoClient {
         .boxify();
 
         throttle_stream(
-            self.ctx.clone(),
+            &self.session,
             Metric::EgressCommits,
             ops::GETBUNDLE,
             move || s,
@@ -1186,7 +1212,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('hello')
     fn hello(&self) -> HgCommandRes<HashMap<String, Vec<String>>> {
-        info!(self.ctx.logger(), "Hello -> capabilities");
+        info!(self.logging.logger(), "Hello -> capabilities");
+        let ctx = self.command_ctx(ops::HELLO);
 
         let mut res = HashMap::new();
         let mut caps = wireprotocaps();
@@ -1196,14 +1223,13 @@ impl HgCommands for RepoClient {
         ));
         res.insert("capabilities".to_string(), caps);
 
-        let mut scuba_logger = self.prepared_ctx(ops::HELLO, None).scuba().clone();
-
         future::ok(res)
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::HELLO, trace_args!())
+            .traced(self.session.trace(), ops::HELLO, trace_args!())
             .timed(move |stats, _| {
-                scuba_logger
+                ctx.scuba()
+                    .clone()
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -1213,14 +1239,15 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('listkeys', 'namespace')
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
-        info!(self.ctx.logger(), "listkeys: {}", namespace);
+        info!(self.logging.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
-            let mut scuba_logger = self.prepared_ctx(ops::LISTKEYS, None).scuba().clone();
+            let ctx = self.command_ctx(ops::LISTKEYS);
 
-            self.get_pull_default_bookmarks_maybe_stale()
-                .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
+            self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
+                .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
-                    scuba_logger
+                    ctx.scuba()
+                        .clone()
                         .add_future_stats(&stats)
                         .log_with_msg("Command processed", None);
                     Ok(())
@@ -1228,7 +1255,7 @@ impl HgCommands for RepoClient {
                 .boxify()
         } else {
             info!(
-                self.ctx.logger(),
+                self.logging.logger(),
                 "unsupported listkeys namespace: {}", namespace
             );
             future::ok(HashMap::new()).boxify()
@@ -1242,12 +1269,12 @@ impl HgCommands for RepoClient {
         patterns: Vec<String>,
     ) -> HgCommandRes<BTreeMap<String, HgChangesetId>> {
         info!(
-            self.ctx.logger(),
+            self.logging.logger(),
             "listkeyspatterns: {} {:?}", namespace, patterns
         );
         if namespace != "bookmarks" {
             info!(
-                self.ctx.logger(),
+                self.logging.logger(),
                 "unsupported listkeyspatterns namespace: {}", namespace,
             );
             return future::err(format_err!(
@@ -1257,15 +1284,12 @@ impl HgCommands for RepoClient {
             .boxify();
         }
 
-        let mut scuba_logger = self
-            .prepared_ctx(ops::LISTKEYSPATTERNS, None)
-            .scuba()
-            .clone();
+        let ctx = self.command_ctx(ops::LISTKEYSPATTERNS);
 
         let queries = patterns.into_iter().map({
+            cloned!(ctx);
             let max = self.repo.list_keys_patterns_max();
             let repo = self.repo.blobrepo();
-            cloned!(self.ctx);
             move |pattern| {
                 if pattern.ends_with("*") {
                     // prefix match
@@ -1294,9 +1318,10 @@ impl HgCommands for RepoClient {
             .map(|bookmarks| bookmarks.into_iter().collect())
             .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
+            .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
             .timed(move |stats, _| {
-                scuba_logger
+                ctx.scuba()
+                    .clone()
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
@@ -1329,8 +1354,7 @@ impl HgCommands for RepoClient {
             // Assume read only if we have an error.
             .or_else(|_| ok(RepoReadOnly::ReadOnly("Failed to fetch repo lock status".to_string())))
             .and_then(move |read_write| {
-                let ctx = client.prepared_ctx(ops::UNBUNDLE, None);
-                let mut scuba_logger = ctx.scuba().clone();
+                let ctx = client.command_ctx(ops::UNBUNDLE);
                 let blobrepo = client.repo.blobrepo().clone();
                 let bookmark_attrs = client.repo.bookmark_attrs();
                 let lca_hint = client.repo.lca_hint().clone();
@@ -1421,8 +1445,10 @@ impl HgCommands for RepoClient {
                     .timeout(*TIMEOUT)
                     .map_err(process_timeout_error)
                     .inspect(move |_| STATS::push_success.add_value(1, (reponame, )))
-                    .traced(client.ctx.trace(), ops::UNBUNDLE, trace_args!())
+                    .traced(client.session.trace(), ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
+                        let mut scuba_logger = ctx.scuba().clone();
+
                         ctx.perf_counters().insert_perf_counters(&mut scuba_logger);
 
                         scuba_logger
@@ -1444,14 +1470,15 @@ impl HgCommands for RepoClient {
         });
         let args = json!(vec![args]);
         let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK);
+        let ctx = self.command_ctx(ops::GETTREEPACK);
 
         let s = self
-            .gettreepack_untimed(params)
+            .gettreepack_untimed(ctx.clone(), params)
             .whole_stream_timeout(*TIMEOUT)
             .map_err(process_stream_timeout_error)
-            .traced(self.ctx.trace(), ops::GETTREEPACK, trace_args!())
+            .traced(self.session.trace(), ops::GETTREEPACK, trace_args!())
             .inspect({
-                cloned!(self.ctx);
+                cloned!(ctx);
                 move |bytes| {
                     ctx.perf_counters().add_to_counter(
                         PerfCounterType::GettreepackResponseSize,
@@ -1464,7 +1491,7 @@ impl HgCommands for RepoClient {
                 }
             })
             .timed({
-                cloned!(self.ctx);
+                cloned!(ctx);
                 move |stats, _| {
                     if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
                         // Log parameters to scuba only if a request was too slow
@@ -1479,7 +1506,7 @@ impl HgCommands for RepoClient {
             });
 
         throttle_stream(
-            self.ctx.clone(),
+            &self.session,
             Metric::EgressTotalManifests,
             ops::GETTREEPACK,
             move || s,
@@ -1488,9 +1515,10 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, params: BoxStream<(HgFileNodeId, MPath), Error>) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "getfiles");
+        info!(self.logging.logger(), "getfiles");
 
         let mut wireproto_logger = self.wireproto_logger(ops::GETFILES);
+        let ctx = self.command_ctx(ops::GETFILES);
         let this = self.clone();
         // TODO(stash): make it configurable
         let getfiles_buffer_size = 100;
@@ -1499,8 +1527,9 @@ impl HgCommands for RepoClient {
         let getfiles_params = Arc::new(Mutex::new(vec![]));
 
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
-        cloned!(self.ctx);
+
         let request_stream = move || {
+            cloned!(ctx);
             params
                 .map({
                     cloned!(getfiles_params);
@@ -1524,7 +1553,7 @@ impl HgCommands for RepoClient {
                             validate_hash,
                         )
                         .traced(
-                            this.ctx.trace(),
+                            this.session.trace(),
                             ops::GETFILES,
                             trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
                         )
@@ -1593,7 +1622,7 @@ impl HgCommands for RepoClient {
         };
 
         throttle_stream(
-            self.ctx.clone(),
+            &self.session,
             Metric::EgressGetfilesFiles,
             ops::GETFILES,
             request_stream,
@@ -1602,7 +1631,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "{}", ops::STREAMOUTSHALLOW);
+        info!(self.logging.logger(), "{}", ops::STREAMOUTSHALLOW);
+        let ctx = self.command_ctx(ops::STREAMOUTSHALLOW);
         let mut wireproto_logger = self.wireproto_logger(ops::STREAMOUTSHALLOW);
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
@@ -1611,13 +1641,13 @@ impl HgCommands for RepoClient {
                 fetcher,
                 repoid,
             }) => fetcher
-                .fetch_changelog(self.ctx.clone(), *repoid, blobstore.clone())
+                .fetch_changelog(ctx.clone(), *repoid, blobstore.clone())
                 .right_future(),
         };
 
         changelog
             .map({
-                let ctx = self.ctx.clone();
+                cloned!(ctx);
                 move |chunk| {
                     let data_blobs = chunk
                         .data_blobs
@@ -1662,7 +1692,7 @@ impl HgCommands for RepoClient {
                 }
             })
             .map({
-                let ctx = self.ctx.clone();
+                cloned!(ctx);
                 move |changelog_chunks| {
                     debug!(
                         ctx.logger(),
@@ -1709,7 +1739,7 @@ impl HgCommands for RepoClient {
             .whole_stream_timeout(*CLONE_TIMEOUT)
             .map_err(process_stream_timeout_error)
             .timed({
-                let ctx = self.ctx.clone();
+                cloned!(ctx);
                 move |stats, _| {
                     wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
                     wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, None);
@@ -1724,7 +1754,7 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "{}", ops::GETPACKV1);
+        info!(self.logging.logger(), "{}", ops::GETPACKV1);
         let wireproto_logger = self.wireproto_logger(ops::GETPACKV1);
 
         self.getpack(
@@ -1746,7 +1776,7 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "{}", ops::GETPACKV2);
+        info!(self.logging.logger(), "{}", ops::GETPACKV2);
         let wireproto_logger = self.wireproto_logger(ops::GETPACKV2);
 
         self.getpack(

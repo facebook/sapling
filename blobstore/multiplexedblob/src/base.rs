@@ -113,7 +113,7 @@ impl MultiplexedBlobstoreBase {
                     .timed({
                         cloned!(key);
                         {
-                            let session = ctx.session().clone();
+                            let session = ctx.session_id().clone();
                             cloned!(mut self.scuba);
                             move |stats, result| {
                                 if !should_log {
@@ -282,7 +282,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let size = value.len();
         let write_order = Arc::new(AtomicUsize::new(0));
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-        let session = ctx.session();
+        let session = ctx.session_id();
 
         let puts = self
             .blobstores

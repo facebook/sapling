@@ -151,12 +151,6 @@ pub fn is_quicksand(ssh_env_vars: &SshEnvVars) -> bool {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct CoreContext {
-    pub fb: FacebookInit,
-    inner: Arc<Inner>,
-}
-
 macro_rules! enum_str {
     (enum $name:ident {
         $($variant:ident),*,
@@ -317,160 +311,92 @@ pub fn generate_session_id() -> SessionId {
     SessionId::from_string(s)
 }
 
-#[derive(Clone)]
-struct Inner {
-    session: SessionId,
-    logger: Logger,
-    scuba: ScubaSampleBuilder,
+#[derive(Debug)]
+pub struct SessionContainerInner {
+    session_id: SessionId,
     trace: TraceContext,
     perf_counters: PerfCounters,
     user_unix_name: Option<String>,
     ssh_env_vars: SshEnvVars,
-    load_limiter: Option<Arc<LoadLimiter>>,
+    load_limiter: Option<LoadLimiter>,
 }
 
-impl ::std::fmt::Debug for Inner {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        write!(
-            f,
-            "CoreContext::Inner
-            session: {:?}
-            perf counters: {:?}
-            user unix name: {:?}
-            ssh_env_vars: {:?}
-            load_limiter: {:?}
-            ",
-            self.session,
-            self.perf_counters,
-            self.user_unix_name,
-            self.ssh_env_vars,
-            self.load_limiter,
-        )
-    }
+#[derive(Debug, Clone)]
+pub struct SessionContainer {
+    fb: FacebookInit,
+    inner: Arc<SessionContainerInner>,
 }
 
-impl CoreContext {
+impl SessionContainer {
     pub fn new(
         fb: FacebookInit,
-        session: SessionId,
-        logger: Logger,
-        scuba: ScubaSampleBuilder,
+        session_id: SessionId,
         trace: TraceContext,
         user_unix_name: Option<String>,
         ssh_env_vars: SshEnvVars,
         load_limiter: Option<(MononokeThrottleLimit, String)>,
     ) -> Self {
-        Self {
-            fb,
-            inner: Arc::new(Inner {
-                session,
-                logger,
-                scuba,
-                trace,
-                perf_counters: PerfCounters::new(),
-                user_unix_name,
-                ssh_env_vars,
-                load_limiter: load_limiter
-                    .map(|(limits, category)| Arc::new(LoadLimiter::new(fb, limits, category))),
-            }),
-        }
-    }
+        let load_limiter =
+            load_limiter.map(|(limits, category)| LoadLimiter::new(fb, limits, category));
 
-    pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
-        let trace = TraceContext::new(generate_trace_id(), Instant::now());
-
-        Self::new(
-            fb,
-            generate_session_id(),
-            logger,
-            ScubaSampleBuilder::with_discard(),
+        let inner = SessionContainerInner {
+            session_id,
             trace,
-            None,
-            SshEnvVars::default(),
-            None,
-        )
-    }
+            perf_counters: PerfCounters::new(),
+            user_unix_name,
+            ssh_env_vars,
+            load_limiter,
+        };
 
-    pub fn with_logger_kv<T>(&self, values: OwnedKV<T>) -> Self
-    where
-        T: SendSyncRefUnwindSafeKV + 'static,
-    {
         Self {
-            fb: self.fb,
-            inner: Arc::new(Inner {
-                session: self.inner.session.clone(),
-                logger: self.inner.logger.new(values),
-                scuba: self.inner.scuba.clone(),
-                trace: self.inner.trace.clone(),
-                perf_counters: self.inner.perf_counters.clone(),
-                user_unix_name: self.inner.user_unix_name.clone(),
-                ssh_env_vars: self.inner.ssh_env_vars.clone(),
-                load_limiter: self.inner.load_limiter.clone(),
-            }),
-        }
-    }
-
-    pub fn with_scuba_initialization<F>(&self, init: F) -> Self
-    where
-        F: FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,
-    {
-        Self {
-            fb: self.fb,
-            inner: Arc::new(Inner {
-                session: self.inner.session.clone(),
-                logger: self.inner.logger.clone(),
-                scuba: init(self.inner.scuba.clone()),
-                trace: self.inner.trace.clone(),
-                perf_counters: self.inner.perf_counters.clone(),
-                user_unix_name: self.inner.user_unix_name.clone(),
-                ssh_env_vars: self.inner.ssh_env_vars.clone(),
-                load_limiter: self.inner.load_limiter.clone(),
-            }),
-        }
-    }
-
-    pub fn test_mock(fb: FacebookInit) -> Self {
-        Self::new(
             fb,
-            generate_session_id(),
-            Logger::root(::slog::Discard, o!()),
-            ScubaSampleBuilder::with_discard(),
-            TraceContext::default(),
-            None,
-            SshEnvVars::default(),
-            None,
-        )
+            inner: Arc::new(inner),
+        }
     }
 
-    pub fn session(&self) -> &SessionId {
-        &self.inner.session
+    pub fn context(&self, logger: Logger, scuba: ScubaSampleBuilder) -> CoreContext {
+        let logging = LoggingContainer::new(logger, scuba);
+        CoreContext {
+            fb: self.fb,
+            logging,
+            session: self.clone(),
+        }
     }
-    pub fn logger(&self) -> &Logger {
-        &self.inner.logger
+
+    pub fn fb(&self) -> FacebookInit {
+        self.fb
     }
-    pub fn scuba(&self) -> &ScubaSampleBuilder {
-        &self.inner.scuba
+
+    pub fn session_id(&self) -> &SessionId {
+        &self.inner.session_id
     }
+
     pub fn trace(&self) -> &TraceContext {
         &self.inner.trace
     }
+
     pub fn perf_counters(&self) -> &PerfCounters {
         &self.inner.perf_counters
     }
+
     pub fn user_unix_name(&self) -> &Option<String> {
         &self.inner.user_unix_name
     }
+
     pub fn ssh_env_vars(&self) -> &SshEnvVars {
         &self.inner.ssh_env_vars
     }
+
     pub fn is_quicksand(&self) -> bool {
-        is_quicksand(self.ssh_env_vars())
+        is_quicksand(&self.inner.ssh_env_vars)
     }
+
     pub fn bump_load(&self, metric: Metric, load: LoadCost) {
         if let Some(limiter) = &self.inner.load_limiter {
             limiter.bump_load(metric, load)
         }
     }
+
     pub fn should_throttle(
         &self,
         metric: Metric,
@@ -489,6 +415,110 @@ impl CoreContext {
                 .left_future(),
             None => Ok(false).into_future().right_future(),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LoggingContainer {
+    logger: Logger,
+    scuba: Arc<ScubaSampleBuilder>,
+}
+
+impl LoggingContainer {
+    pub fn new(logger: Logger, scuba: ScubaSampleBuilder) -> Self {
+        Self {
+            logger,
+            scuba: Arc::new(scuba),
+        }
+    }
+
+    pub fn logger(&self) -> &Logger {
+        &self.logger
+    }
+
+    pub fn scuba(&self) -> &ScubaSampleBuilder {
+        &self.scuba
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CoreContext {
+    pub fb: FacebookInit,
+    session: SessionContainer,
+    logging: LoggingContainer,
+}
+
+impl CoreContext {
+    pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
+        let session = SessionContainer::new(
+            fb,
+            generate_session_id(),
+            TraceContext::new(generate_trace_id(), Instant::now()),
+            None,
+            SshEnvVars::default(),
+            None,
+        );
+
+        session.context(logger, ScubaSampleBuilder::with_discard())
+    }
+
+    pub fn test_mock(fb: FacebookInit) -> Self {
+        let session = SessionContainer::new(
+            fb,
+            generate_session_id(),
+            TraceContext::default(),
+            None,
+            SshEnvVars::default(),
+            None,
+        );
+
+        session.context(
+            Logger::root(::slog::Discard, o!()),
+            ScubaSampleBuilder::with_discard(),
+        )
+    }
+
+    pub fn with_logger_kv<T>(&self, values: OwnedKV<T>) -> Self
+    where
+        T: SendSyncRefUnwindSafeKV + 'static,
+    {
+        let logging = LoggingContainer {
+            logger: self.logging.logger.new(values),
+            scuba: self.logging.scuba.clone(),
+        };
+
+        Self {
+            fb: self.fb,
+            session: self.session.clone(),
+            logging,
+        }
+    }
+
+    pub fn session_id(&self) -> &SessionId {
+        &self.session.session_id()
+    }
+
+    pub fn logger(&self) -> &Logger {
+        &self.logging.logger()
+    }
+
+    pub fn scuba(&self) -> &ScubaSampleBuilder {
+        &self.logging.scuba()
+    }
+
+    pub fn trace(&self) -> &TraceContext {
+        &self.session.trace()
+    }
+    pub fn perf_counters(&self) -> &PerfCounters {
+        &self.session.perf_counters()
+    }
+
+    pub fn user_unix_name(&self) -> &Option<String> {
+        &self.session.user_unix_name()
+    }
+
+    pub fn ssh_env_vars(&self) -> &SshEnvVars {
+        &self.session.ssh_env_vars()
     }
 
     pub fn trace_upload(&self) -> impl Future<Item = (), Error = Error> {
@@ -510,5 +540,13 @@ impl CoreContext {
                     Ok(())
                 }
             })
+    }
+
+    pub fn is_quicksand(&self) -> bool {
+        self.session.is_quicksand()
+    }
+
+    pub fn bump_load(&self, metric: Metric, load: LoadCost) {
+        self.session.bump_load(metric, load)
     }
 }

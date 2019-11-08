@@ -10,12 +10,12 @@ use crate::commands::HgCommandHandler;
 use crate::errors::*;
 use crate::{HgCommands, Request, Response};
 use bytes::Bytes;
-use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
 use futures::{stream, Future, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use slog::Logger;
 use std::io;
 use std::sync::{Arc, Mutex};
 use tokio_io::codec::Decoder;
@@ -39,7 +39,7 @@ struct HgProtoHandlerInner<H, Dec, Enc> {
 
 impl HgProtoHandler {
     pub fn new<'a, In, H, Dec, Enc>(
-        ctx: CoreContext,
+        logger: Logger,
         input: In,
         commands: H,
         reqdec: Dec,
@@ -55,7 +55,7 @@ impl HgProtoHandler {
         Error: From<Dec::Error>,
     {
         let inner = Arc::new(HgProtoHandlerInner {
-            commands_handler: HgCommandHandler::new(ctx, commands),
+            commands_handler: HgCommandHandler::new(logger, commands),
             reqdec,
             respenc,
             wireproto_calls,

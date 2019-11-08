@@ -16,7 +16,7 @@ use actix_web::{
     middleware::{Finished, Middleware, Response, Started},
     HttpRequest, HttpResponse,
 };
-use context::{generate_session_id, CoreContext};
+use context::{generate_session_id, CoreContext, SessionContainer};
 use failure::{format_err, Error};
 use fbinit::FacebookInit;
 use json_encoded::get_identities;
@@ -137,16 +137,16 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             .add("reponame", repo_name)
             .add("session_uuid", session_id.to_string());
 
-        let ctx = CoreContext::new(
+        let session = SessionContainer::new(
             self.fb,
             session_id,
-            self.logger.clone(),
-            scuba,
             TraceContext::default(),
             None,
             SshEnvVars::default(),
             None,
         );
+
+        let ctx = session.context(self.logger.clone(), scuba);
 
         req.extensions_mut().insert(ctx);
         self.start_timer(req);
@@ -156,7 +156,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
 
     fn response(&self, req: &HttpRequest<S>, mut resp: HttpResponse) -> ActixResult<Response> {
         if let Some(ctx) = req.extensions_mut().get_mut::<CoreContext>() {
-            if let Ok(session_header) = HeaderValue::from_str(&ctx.session().to_string()) {
+            if let Ok(session_header) = HeaderValue::from_str(&ctx.session_id().to_string()) {
                 resp.headers_mut().insert("X-Session-ID", session_header);
             }
         }

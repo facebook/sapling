@@ -60,7 +60,7 @@ mod test {
 
     use crate::chunk::{ChunkDecoder, ChunkEncoder};
     use crate::quickcheck_types::CgPartSequence;
-    use context::CoreContext;
+    use slog::{o, Discard, Logger};
 
     use super::*;
 
@@ -105,9 +105,6 @@ mod test {
         write_ops: PartialWithErrors<GenWouldBlock>,
         read_ops: PartialWithErrors<GenWouldBlock>,
     ) -> TestResult {
-        // TODO: this needs to be passed down from #[fbinit::test] instead.
-        let fb = *fbinit::FACEBOOK;
-
         // Encode this sequence.
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let partial_write = PartialAsyncWrite::new(cursor, write_ops);
@@ -128,8 +125,8 @@ mod test {
                 let chunks = FramedRead::new(partial_read, ChunkDecoder)
                     .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
 
-                let ctx = CoreContext::test_mock(fb);
-                let unpacker = unpacker::CgUnpacker::new(ctx, unpacker_version);
+                let logger = Logger::root(Discard, o!());
+                let unpacker = unpacker::CgUnpacker::new(logger, unpacker_version);
                 let part_stream = chunks.decode(unpacker);
 
                 let parts = Vec::new();

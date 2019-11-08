@@ -13,10 +13,9 @@ use std::mem;
 
 use bytes::BytesMut;
 use failure_ext::bail_err;
-use slog::trace;
+use slog::{trace, Logger};
 use tokio_codec::Decoder;
 
-use context::CoreContext;
 use mercurial_types::RepoPath;
 
 use super::{DataEntry, DataEntryVersion, HistoryEntry, Kind, Part, WIREPACK_END};
@@ -76,16 +75,16 @@ impl Decoder for WirePackUnpacker {
     }
 }
 
-pub fn new(ctx: CoreContext, kind: Kind) -> WirePackUnpacker {
+pub fn new(logger: Logger, kind: Kind) -> WirePackUnpacker {
     WirePackUnpacker {
         state: State::Filename,
-        inner: UnpackerInner { ctx, kind },
+        inner: UnpackerInner { logger, kind },
     }
 }
 
 #[derive(Debug)]
 struct UnpackerInner {
-    ctx: CoreContext,
+    logger: Logger,
     kind: Kind,
 }
 
@@ -95,7 +94,7 @@ impl UnpackerInner {
         let mut state = state;
 
         loop {
-            trace!(self.ctx.logger(), "state: {:?}", state);
+            trace!(&self.logger, "state: {:?}", state);
             match state {
                 Filename => match self.decode_filename(buf)? {
                     DecodeRes::None => return Ok((None, State::Filename)),
@@ -210,11 +209,7 @@ impl UnpackerInner {
             .with_context(|_| ErrorKind::WirePackDecode("invalid filename".into()))?
         };
 
-        trace!(
-            self.ctx.logger(),
-            "decoding entries for filename: {}",
-            filename
-        );
+        trace!(&self.logger, "decoding entries for filename: {}", filename);
 
         Ok(DecodeRes::Some(filename))
     }
@@ -265,19 +260,19 @@ enum DecodeRes<T> {
 mod test {
     use std::io::Cursor;
 
-    use fbinit::FacebookInit;
     use futures::{Future, Stream};
+    use slog::{o, Discard};
     use tokio_codec::FramedRead;
 
     use super::*;
 
-    #[fbinit::test]
-    fn test_empty(fb: FacebookInit) {
-        let ctx = CoreContext::test_mock(fb);
+    #[test]
+    fn test_empty() {
+        let logger = Logger::root(Discard, o!());
 
         // Absolutely nothing in here.
         let empty_1 = Cursor::new(WIREPACK_END);
-        let unpacker = new(ctx.clone(), Kind::Tree);
+        let unpacker = new(logger.clone(), Kind::Tree);
         let stream = FramedRead::new(empty_1, unpacker);
         let collect_fut = stream.collect();
 
@@ -291,7 +286,7 @@ mod test {
                 // - data count: b"\0\0\0\0"
                 // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
                 let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-                let unpacker = new(ctx.clone(), Kind::File);
+                let unpacker = new(logger.clone(), Kind::File);
                 let stream = FramedRead::new(empty_2, unpacker);
                 stream.collect()
             })
