@@ -73,6 +73,9 @@ def _cleanuplanded(repo, dryrun=False, skipnodes=None):
         publicnode = difftopublic.get(diffid)
         if publicnode is None or publicnode not in unfi:
             continue
+        # skip it if the local repo does not think it's a public commit.
+        if unfi[publicnode].phase() != phases.public:
+            continue
         # sanity check - the public commit should have a sane commit message.
         if diffprops.parserevfromcommitmsg(unfi[publicnode].description()) != diffid:
             continue
