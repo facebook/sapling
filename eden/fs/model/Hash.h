@@ -70,8 +70,9 @@ class Hash : boost::totally_ordered<Hash> {
  private:
   static constexpr Storage constructFromByteRange(folly::ByteRange bytes) {
     if (bytes.size() != RAW_SIZE) {
-      throw std::invalid_argument(
-          "incorrect data size for Hash constructor from bytes");
+      throwInvalidArgument(
+          "incorrect data size for Hash constructor from bytes: ",
+          bytes.size());
     }
     return {
         bytes.data()[0],  bytes.data()[1],  bytes.data()[2],  bytes.data()[3],
@@ -82,8 +83,8 @@ class Hash : boost::totally_ordered<Hash> {
   }
   static constexpr Storage constructFromHex(folly::StringPiece hex) {
     if (hex.size() != (RAW_SIZE * 2)) {
-      throw std::invalid_argument(
-          "incorrect data size for Hash constructor from string");
+      throwInvalidArgument(
+          "incorrect data size for Hash constructor from string: ", hex.size());
     }
     return {
         hexByteAt(hex, 0),  hexByteAt(hex, 1),  hexByteAt(hex, 2),
@@ -107,10 +108,14 @@ class Hash : boost::totally_ordered<Hash> {
     } else if ('A' <= c && c <= 'F') {
       return 10 + c - 'A';
     } else {
-      throw std::invalid_argument(
-          "invalid hex digit supplied to Hash constructor from string");
+      throwInvalidArgument(
+          "invalid hex digit supplied to Hash constructor from string: ", c);
     }
   }
+
+  [[noreturn]] static void throwInvalidArgument(
+      const char* message,
+      size_t number);
 
   Storage bytes_;
 };

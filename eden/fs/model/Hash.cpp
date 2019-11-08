@@ -65,6 +65,10 @@ Hash Hash::sha1(ByteRange data) {
   return Hash{hashBytes};
 }
 
+void Hash::throwInvalidArgument(const char* message, size_t number) {
+  throw std::invalid_argument(folly::to<std::string>(message, number));
+}
+
 std::ostream& operator<<(std::ostream& os, const Hash& hash) {
   os << hash.toString();
   return os;
