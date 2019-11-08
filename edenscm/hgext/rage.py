@@ -367,8 +367,9 @@ def _makerage(ui, repo, **opts):
                         % (
                             path,
                             shcmd(
-                                ("dir /o-s %s" if pycompat.iswindows else "ls -lhS %s")
-                                % path
+                                "dir /o-s %s" % os.path.normpath(path)
+                                if pycompat.iswindows
+                                else "ls -lhS %s" % path
                             ),
                         ),
                     )
