@@ -17,17 +17,32 @@ use std::{
 /// Sort nodes of DAG topologically. Implemented as depth-first search with tail-call
 /// eliminated. Complexity: `O(N)` from number of nodes.
 /// It returns None if graph has a cycle.
+/// Nodes with no outgoing edges will be *last* in the resulting vector
 pub fn sort_topological<T>(dag: &HashMap<T, Vec<T>>) -> Option<Vec<T>>
 where
     T: Clone + Eq + Hash,
 {
+    /// Current state of the node in the DAG
     enum Mark {
-        Temporary,
-        Marked,
+        /// DFS is currently visiting the sub-DAG, reachable from this node
+        /// *and* it entered this sub-DAG from this node. (the node is present
+        /// deeper in the stack with `Action::Mark`). If there is an
+        /// `InProgress` node at the end of the edge we are traversing,
+        /// this means that the graph has a cycle.
+        InProgress,
+        /// The node has been visited before, and we have already visited
+        /// the entire sub-DAG, reachable from this node
+        Visited,
     }
 
+    /// Action to be applied to the node, once we pop it from the stack
     enum Action<T> {
+        /// Visit the node and every node, reachable from it, which has
+        /// not been visited yet. Mark the node as `Mark::InProgress`
         Visit(T),
+        /// Mark the node `Mark::Visited`, as we have just finished
+        /// processing the entire sub-DAG reachable from it. This node
+        /// no longer needs visiting
         Mark(T),
     }
 
@@ -45,11 +60,11 @@ where
                 Action::Visit(node) => {
                     if let Some(mark) = marks.get(node) {
                         match mark {
-                            Mark::Temporary => return None, // cycle
-                            Mark::Marked => continue,
+                            Mark::InProgress => return None, // cycle
+                            Mark::Visited => continue,
                         }
                     }
-                    marks.insert(node, Mark::Temporary);
+                    marks.insert(node, Mark::InProgress);
                     stack.push(Action::Mark(node));
                     if let Some(children) = dag.get(node) {
                         for child in children {
@@ -58,7 +73,7 @@ where
                     }
                 }
                 Action::Mark(node) => {
-                    marks.insert(node, Mark::Marked);
+                    marks.insert(node, Mark::Visited);
                     output.push(node.clone());
                 }
             }
