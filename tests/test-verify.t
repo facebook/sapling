@@ -230,9 +230,10 @@ Changelog missing entry
   3 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
-  abort: 00changelog.i@c5ddb05ab828: no node!
-  [255]
+  warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent
   $ hg verify -q -r 1
+  warning: failed to inspect working copy parent
   abort: 00changelog.i@c5ddb05ab828: no node!
   [255]
   $ cp -R .hg/store-full/. .hg/store
@@ -282,9 +283,10 @@ Changelog and manifest log missing entry
   2 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
-  abort: 00changelog.i@c5ddb05ab828: no node!
-  [255]
+  warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent
   $ hg verify -q -r 1
+  warning: failed to inspect working copy parent
   abort: 00changelog.i@c5ddb05ab828: no node!
   [255]
   $ cp -R .hg/store-full/. .hg/store
@@ -300,9 +302,10 @@ Changelog and filelog missing entry
   3 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
-  abort: 00changelog.i@c5ddb05ab828: no node!
-  [255]
+  warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent
   $ hg verify -q -r 1
+  warning: failed to inspect working copy parent
   abort: 00changelog.i@c5ddb05ab828: no node!
   [255]
   $ cp -R .hg/store-full/. .hg/store

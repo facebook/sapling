@@ -495,12 +495,20 @@ class changectx(basectx):
                 self._node = repo.changelog.tip()
                 self._rev = repo.changelog.rev(self._node)
                 return
-            if changeid == "." or repo.local() and changeid == repo.dirstate.p1():
-                # this is a hack to delay/avoid loading obsmarkers
-                # when we know that '.' won't be hidden
-                self._node = repo.dirstate.p1()
-                self._rev = repo.unfiltered().changelog.rev(self._node)
-                return
+            try:
+                if changeid == "." or repo.local() and changeid == repo.dirstate.p1():
+                    # this is a hack to delay/avoid loading obsmarkers
+                    # when we know that '.' won't be hidden
+                    self._node = repo.dirstate.p1()
+                    self._rev = repo.unfiltered().changelog.rev(self._node)
+                    return
+            except Exception:
+                self._repo.ui.warn(
+                    _("warning: failed to inspect working copy parent\n")
+                )
+                # we failed on our optimization pass
+                # this can happen when dirstate is broken
+                pass
             if len(changeid) == 20:
                 try:
                     self._node = changeid
