@@ -48,8 +48,24 @@ def _cleanuplanded(repo, dryrun=False, skipnodes=None):
             difftodraft.setdefault(diffid, []).append(ctx.node())
 
     client = graphql.Client(repo=repo)
-    difftopublic = client.getlandednodes(list(difftodraft.keys()))
     ui = repo.ui
+    try:
+        difftopublic = client.getlandednodes(list(difftodraft.keys()))
+    except KeyboardInterrupt:
+        ui.warn(
+            _(
+                "reading from Phabricator was interrupted, not marking commits as landed\n"
+            )
+        )
+        return
+    except Exception as ex:
+        ui.warn(
+            _(
+                "warning: failed to read from Phabricator for landed commits (%r), not marking commits as landed\n"
+            )
+            % ex
+        )
+        return
     unfi = repo.unfiltered()
     mutationentries = []
     tohide = set()
