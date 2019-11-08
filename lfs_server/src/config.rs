@@ -7,21 +7,19 @@
  */
 
 use cloned::cloned;
-use configerator::{ConfigeratorAPI, Entity};
+use configerator::{ConfigLoader, ConfigSource, Entity};
 use failure::{format_err, Error};
 use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
 use slog::{debug, info, warn, Logger};
 use std::default::Default;
-use std::fmt;
-use std::fs;
 use std::result::Result;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, RwLock,
 };
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 const FETCH_TIMEOUT: u64 = 10;
 
@@ -123,90 +121,6 @@ impl ServerConfigHandle {
     }
 }
 
-enum ConfigLoader {
-    Configerator(ConfigeratorAPI, String),
-    File(String),
-    Default,
-}
-
-impl fmt::Debug for ConfigLoader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ConfigLoader::*;
-
-        match self {
-            Configerator(_, ref spec) => write!(f, "Configerator({})", spec),
-            File(ref path) => write!(f, "File({})", path),
-            Default => write!(f, "Default"),
-        }
-    }
-}
-
-impl ConfigLoader {
-    fn new(fb: FacebookInit, source_spec: Option<&str>) -> Result<Self, Error> {
-        use ConfigLoader::*;
-
-        let source_spec = match source_spec {
-            Some(source_spec) => source_spec,
-            None => return Ok(Default),
-        };
-
-        // NOTE: This means we don't support file paths with ":" in them, but it also means we can
-        // add other options after the first ":" later if we want.
-        let mut iter = source_spec.split(":");
-
-        // NOTE: We match None as the last element to make sure the input doesn't contain
-        // disallowed trailing parts.
-        match (iter.next(), iter.next(), iter.next()) {
-            (Some("configerator"), Some(source), None) => {
-                let cfgr = ConfigeratorAPI::new(fb)?;
-                Ok(Configerator(cfgr, source.to_string()))
-            }
-            (Some("file"), Some(file), None) => Ok(File(file.to_string())),
-            (Some("default"), None, None) => Ok(Default),
-            _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
-        }
-    }
-
-    // NOTE: Returning Configerator API's Entity here is a bit awkkward since we don't own that
-    // type, but considering it's everything we want, it's pretty nice.
-    fn load(&self, timeout: Duration) -> Result<Entity, Error> {
-        use ConfigLoader::*;
-
-        match self {
-            Configerator(cfgr, spec) => cfgr.get_entity(spec, timeout).map_err(Error::from),
-            File(path) => {
-                // NOTE: We pass the version as the contents here, so if the file is changing more
-                // often than 1 second, we still see it's changed.
-                let contents = fs::read_to_string(path)?;
-                let version = Some(contents.clone());
-
-                let mod_time = fs::metadata(path)?
-                    .modified()?
-                    .duration_since(SystemTime::UNIX_EPOCH)?
-                    .as_secs();
-
-                Ok(Entity {
-                    contents,
-                    mod_time,
-                    version,
-                })
-            }
-            Default => {
-                // This is a bit clowny since we serialize something only to deserialize it later,
-                // but since we don't do this in prod and serialize at most once every
-                // FETCH_INTERVAL seconds, that's fine.
-                let contents = serde_json::to_string(&ServerConfig::default())?;
-
-                Ok(Entity {
-                    contents,
-                    mod_time: 0,
-                    version: None,
-                })
-            }
-        }
-    }
-}
-
 pub fn spawn_config_poller(
     fb: FacebookInit,
     logger: Logger,
@@ -216,7 +130,33 @@ pub fn spawn_config_poller(
 ) -> Result<(JoinHandle<()>, ServerConfigHandle), Error> {
     let timeout = Duration::from_secs(FETCH_TIMEOUT);
 
-    let loader = ConfigLoader::new(fb, source_spec)?;
+    let loader = {
+        match source_spec {
+            Some(source_spec) => {
+                // NOTE: This means we don't support file paths with ":" in them, but it also means we can
+                // add other options after the first ":" later if we want.
+                let mut iter = source_spec.split(":");
+
+                // NOTE: We match None as the last element to make sure the input doesn't contain
+                // disallowed trailing parts.
+                match (iter.next(), iter.next(), iter.next()) {
+                    (Some("configerator"), Some(source), None) => {
+                        let config_source = ConfigSource::configerator(fb)?;
+                        ConfigLoader::new(config_source, source.to_string())?
+                    }
+                    (Some("file"), Some(file), None) => {
+                        let config_source = ConfigSource::file();
+                        ConfigLoader::new(config_source, file.to_string())?
+                    }
+                    (Some("default"), None, None) => ConfigLoader::default_content(
+                        serde_json::to_string(&ServerConfig::default())?,
+                    ),
+                    _ => return Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
+                }
+            }
+            None => ConfigLoader::default_content(serde_json::to_string(&ServerConfig::default())?),
+        }
+    };
 
     info!(
         &logger,
