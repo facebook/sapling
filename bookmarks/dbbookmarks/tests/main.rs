@@ -16,6 +16,7 @@ use bookmarks::{
 };
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, Stream};
 use maplit::hashmap;
@@ -25,6 +26,7 @@ use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, SIXES_CSID, THREES_CSID, TWOS_CSID,
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
+use sql::mysql_async::{prelude::ConvIr, Value};
 use std::collections::HashMap;
 
 fn create_bookmark_name(book: &str) -> BookmarkName {
@@ -1235,6 +1237,46 @@ fn test_read_log_entry_many_repos(fb: FacebookInit) {
             .len(),
         0
     );
+}
+
+#[fbinit::test]
+fn test_update_reason_conversion(_fb: FacebookInit) -> Result<(), Error> {
+    let unusedreason = BookmarkUpdateReason::TestMove {
+        bundle_replay_data: None,
+    };
+
+    use BookmarkUpdateReason::*;
+    match unusedreason {
+        Backsyncer { .. } => {}
+        Blobimport => {}
+        ManualMove => {}
+        Push { .. } => {}
+        Pushrebase { .. } => {}
+        TestMove { .. } => {} // PLEASE ADD A TEST FOR A NEW BOOKMARK UPDATE REASON
+    };
+
+    let reasons = vec![
+        Backsyncer {
+            bundle_replay_data: None,
+        },
+        Blobimport,
+        ManualMove,
+        Push {
+            bundle_replay_data: None,
+        },
+        Pushrebase {
+            bundle_replay_data: None,
+        },
+        TestMove {
+            bundle_replay_data: None,
+        },
+    ];
+    for reason in reasons {
+        let value = Value::from(reason);
+        BookmarkUpdateReason::new(value)?;
+    }
+
+    Ok(())
 }
 
 #[fbinit::test]

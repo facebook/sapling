@@ -770,6 +770,9 @@ impl SqlBookmarksTransaction {
             }
             | TestMove {
                 bundle_replay_data: Some(bundle_replay_data),
+            }
+            | Backsyncer {
+                bundle_replay_data: Some(bundle_replay_data),
             } => {
                 let BundleReplayData {
                     bundle_handle,
@@ -784,7 +787,20 @@ impl SqlBookmarksTransaction {
                 .map(move |(sql_transaction, _)| sql_transaction)
                 .boxify()
             }
-            _ => future::ok(sql_transaction).boxify(),
+            Pushrebase {
+                bundle_replay_data: None,
+            }
+            | Push {
+                bundle_replay_data: None,
+            }
+            | TestMove {
+                bundle_replay_data: None,
+            }
+            | Backsyncer {
+                bundle_replay_data: None,
+            }
+            | ManualMove
+            | Blobimport => future::ok(sql_transaction).boxify(),
         }
     }
 

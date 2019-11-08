@@ -518,6 +518,9 @@ impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
             Value::Bytes(ref b) if b == &b"testmove" => Ok(BookmarkUpdateReason::TestMove {
                 bundle_replay_data: None,
             }),
+            Value::Bytes(ref b) if b == &b"backsyncer" => Ok(BookmarkUpdateReason::Backsyncer {
+                bundle_replay_data: None,
+            }),
             v => Err(FromValueError(v)),
         }
     }
