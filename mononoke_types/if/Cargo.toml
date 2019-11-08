@@ -1,5 +1,5 @@
 # @autocargo from //scm/mononoke/mononoke_types:mononoke_types-thrift
-# Signature<<5eb81eee7f7a502b027f1b5cd4e97bcf7b7243cd>>
+# Signature<<86bf3692adf43bc84709b100dc7d96693d051e71>>
 [package]
 name = "mononoke_types-thrift"
 edition = "2018"
@@ -19,9 +19,9 @@ fbthrift = { path = "../../../../thrift/lib/rust" }
 async-trait = { version = "*", features = ["support_old_nightly"] }
 failure = "*"
 futures = "0.1"
+futures-preview = { package = "futures-preview", version = "=0.3.0-alpha.18", features = ["async-await", "compat", "nightly"] } # prerelease using standard library futures
 lazy_static = "*"
 serde = "*"
 serde_derive = "*"
 tokio-service = "0.1"
-futures-preview = { package = "futures-preview", version = "=0.3.0-alpha.18", features = ["async-await", "compat", "nightly"] } # prerelease using standard library futures
-# @end of Signature<<5eb81eee7f7a502b027f1b5cd4e97bcf7b7243cd>>
+# @end of Signature<<86bf3692adf43bc84709b100dc7d96693d051e71>>
