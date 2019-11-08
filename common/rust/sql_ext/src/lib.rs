@@ -105,8 +105,14 @@ where
 
     let tier: &str = tier.as_ref();
 
-    let write_connection =
-        raw::RawConnection::new_from_tier(fb, tier, raw::InstanceRequirement::Master, None, None);
+    let write_connection = raw::RawConnection::new_from_tier(
+        fb,
+        tier,
+        raw::InstanceRequirement::Master,
+        None,
+        None,
+        None,
+    );
 
     let read_connection = raw::RawConnection::new_from_tier(
         fb,
@@ -114,10 +120,17 @@ where
         raw::InstanceRequirement::ReplicaFirst,
         None,
         None,
+        None,
     );
 
-    let read_master_connection =
-        raw::RawConnection::new_from_tier(fb, tier, raw::InstanceRequirement::Master, None, None);
+    let read_master_connection = raw::RawConnection::new_from_tier(
+        fb,
+        tier,
+        raw::InstanceRequirement::Master,
+        None,
+        None,
+        None,
+    );
 
     (write_connection, read_connection, read_master_connection)
         .into_future()
