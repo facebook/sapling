@@ -1162,9 +1162,7 @@ class EdenCheckout:
         snapshot_path = self.state_dir / SNAPSHOT
         assert len(commid_id) == 40
         commit_bin = binascii.unhexlify(commid_id)
-        # TODO: It would be nicer to write this out atomically using a temporary file
-        # followed by a rename.
-        snapshot_path.write_bytes(SNAPSHOT_MAGIC + commit_bin)
+        write_file_atomically(snapshot_path, SNAPSHOT_MAGIC + commit_bin)
 
 
 def find_eden(
