@@ -19,7 +19,7 @@ use crate::acl::VALID_ACL_MEMBER_TYPES;
 use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
 use cloned::cloned;
-use configerator::ConfigeratorAPI;
+use configerator::{ConfigLoader, ConfigSource};
 use failure_ext::{err_msg, SlogKVError};
 use fbinit::FacebookInit;
 use futures::sync::mpsc;
@@ -46,7 +46,7 @@ use crate::request_handler::request_handler;
 
 const CHUNK_SIZE: usize = 10000;
 const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
-
+const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
 lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }
@@ -69,19 +69,30 @@ pub fn connection_acceptor(
         .expect("failed to create listener")
         .map_err(Error::from);
 
-    let configerator_api = if !test_instance {
-        let api = Arc::new(ConfigeratorAPI::new(fb).expect("failed to create cfgr api"));
-        api.subscribe_to_config(CONFIGERATOR_LIMITS_CONFIG)
-            .expect("can't subscribe to configerator config");
-        Some(api)
+    let (load_limiting_config, pushredirect_config) = if test_instance {
+        (None, None)
     } else {
-        None
+        let config_source = ConfigSource::configerator(fb).expect("can't set up configerator API");
+
+        let load_limiting_config = {
+            let config_loader = ConfigLoader::new(
+                config_source.clone(),
+                CONFIGERATOR_LIMITS_CONFIG.to_string(),
+            )
+            .expect("can't get limits configerator config");
+            common_config
+                .loadlimiter_category
+                .clone()
+                .map(|category| (config_loader, category))
+        };
+
+        let pushredirect_config = Some(
+            ConfigLoader::new(config_source, CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())
+                .expect("can't get pushredirect configerator config"),
+        );
+        (load_limiting_config, pushredirect_config)
     };
 
-    let load_limiting_config = common_config
-        .loadlimiter_category
-        .clone()
-        .and_then(|category| configerator_api.map(|api| (api, category)));
     let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(fb, common_config)
         .map_err(|err| {
             let e: Error =
@@ -96,6 +107,7 @@ pub fn connection_acceptor(
             // Accept the request without blocking the listener
             cloned!(
                 load_limiting_config,
+                pushredirect_config,
                 root_log,
                 repo_handlers,
                 tls_acceptor,
@@ -111,6 +123,7 @@ pub fn connection_acceptor(
                     tls_acceptor,
                     security_checker.clone(),
                     load_limiting_config.clone(),
+                    pushredirect_config.clone(),
                 )
                 .then(|res| {
                     OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
@@ -139,7 +152,8 @@ fn accept(
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
     tls_acceptor: Arc<SslAcceptor>,
     security_checker: Arc<ConnectionsSecurityChecker>,
-    load_limiting_config: Option<(Arc<ConfigeratorAPI>, String)>,
+    load_limiting_config: Option<(ConfigLoader, String)>,
+    pushredirect_config: Option<ConfigLoader>,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();
 
@@ -223,6 +237,7 @@ fn accept(
                             stdio,
                             handler.repo.hook_manager(),
                             load_limiting_config,
+                            pushredirect_config,
                         )
                         .left_future()
                     } else {

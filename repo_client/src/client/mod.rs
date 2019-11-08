@@ -16,6 +16,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
+use configerator::ConfigLoader;
 use context::{CoreContext, Metric, PerfCounterType};
 use failure::{err_msg, format_err};
 use fbinit::FacebookInit;
@@ -42,6 +43,9 @@ use mercurial_types::{
     HgBlobNode, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type,
     NULL_CSID, NULL_HASH,
 };
+use mononoke_types::RepositoryId;
+use pushredirect_enable::types::MononokePushRedirectEnable;
+
 use metaconfig_types::{RepoReadOnly, WireprotoLoggingConfig};
 use rand::{self, Rng};
 use remotefilelog::{
@@ -67,6 +71,8 @@ use tokio::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
 
 const MAX_NODES_TO_LOG: usize = 5;
+
+const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 
 define_stats! {
     prefix = "mononoke.repo_client";
@@ -232,6 +238,7 @@ pub struct RepoClient {
     support_bundle2_listkeys: bool,
     wireproto_logging: Option<WireprotoLoggingConfig>,
     maybe_repo_sync_target: Option<RepoSyncTarget>,
+    pushredirect_config: Option<ConfigLoader>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -339,6 +346,7 @@ impl RepoClient {
         support_bundle2_listkeys: bool,
         wireproto_logging: Option<WireprotoLoggingConfig>,
         maybe_repo_sync_target: Option<RepoSyncTarget>,
+        pushredirect_config: Option<ConfigLoader>,
     ) -> Self {
         RepoClient {
             repo,
@@ -351,6 +359,7 @@ impl RepoClient {
             support_bundle2_listkeys,
             wireproto_logging,
             maybe_repo_sync_target,
+            pushredirect_config,
         }
     }
 
@@ -709,20 +718,54 @@ impl RepoClient {
         )
     }
 
-    /// This function exists to provide per-unbundle control
-    /// of whether the push-redirector should be used
+    /// Returns Some(repo_sync_target) if pushredirect should redirect this push
+    /// via the repo sync target, None if this should be a direct push
+    #[allow(dead_code)]
     fn maybe_get_repo_sync_target_for_action(
         &self,
-        _action: &bundle2_resolver::PostResolveAction,
-    ) -> Option<RepoSyncTarget> {
-        // TODO(ikostia): here we should differentiate between infinitepush,
-        //                pushrebase and push unbundles. Also here we should
-        //                verify if push redirection is not disabled in some
-        //                override system (configerator?)
-        // Until push redirector is either ready or gated
-        // this should only be returning `None`.
-        None
+        action: &bundle2_resolver::PostResolveAction,
+    ) -> Result<Option<RepoSyncTarget>> {
+        // Don't query configerator if we lack config
+        if self.maybe_repo_sync_target.is_none() {
+            return Ok(None);
+        }
+        if maybe_pushredirect_action(
+            self.repo.blobrepo().get_repoid(),
+            self.pushredirect_config.as_ref(),
+            action,
+        )? {
+            Ok(self.maybe_repo_sync_target.clone())
+        } else {
+            Ok(None)
+        }
     }
+}
+
+fn maybe_pushredirect_action(
+    repo_id: RepositoryId,
+    pushredirect_config: Option<&ConfigLoader>,
+    action: &bundle2_resolver::PostResolveAction,
+) -> Result<bool> {
+    let maybe_config: Option<MononokePushRedirectEnable> = match pushredirect_config {
+        // If you chose not to give us configerator, we will allow redirect based purely on config
+        None => return Ok(true),
+        Some(ref pushredirect_config) => {
+            let data = pushredirect_config.load(CONFIGERATOR_TIMEOUT)?;
+            serde_json::from_str(&data.contents)?
+        }
+    };
+
+    let enabled = maybe_config.and_then(move |config| {
+        config.per_repo.get(&(repo_id.id() as i64)).map(|enables| {
+            use bundle2_resolver::PostResolveAction::*;
+
+            match action {
+                InfinitePush(_) => enables.draft_push,
+                Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => enables.public_push,
+            }
+        })
+    });
+    Ok(enabled.unwrap_or(false))
 }
 
 fn throttle_stream<F, S, V>(
@@ -1313,7 +1356,7 @@ impl HgCommands for RepoClient {
                 }).and_then({
                     cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint, phases_hint);
                     move |action| {
-                        match client.maybe_get_repo_sync_target_for_action(&action) {
+                        match try_boxfuture!(client.maybe_get_repo_sync_target_for_action(&action)) {
                             Some(repo_sync_target) => repo_sync_target
                                 .run_redirected_post_resolve_action_compat(ctx, action)
                                 .boxify(),
@@ -1970,60 +2013,4 @@ fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, Has
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use maplit::hashset;
-
-    #[test]
-    fn test_parsing_caps_simple() {
-        assert_eq!(
-            parse_utf8_getbundle_caps(b"cap"),
-            Some((String::from("cap"), HashMap::new())),
-        );
-
-        let caps = b"bundle2=HG20";
-
-        assert_eq!(
-            parse_utf8_getbundle_caps(caps),
-            Some((
-                String::from("bundle2"),
-                hashmap! { "HG20".to_string() => hashset!{} }
-            )),
-        );
-
-        let caps = b"bundle2=HG20%0Ab2x%253Ainfinitepush%0Ab2x%253Ainfinitepushscratchbookmarks\
-        %0Ab2x%253Arebase%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0A\
-        error%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0A\
-        pushkey%0Aremote-changegroup%3Dhttp%2Chttps%0Aremotefilelog%3DTrue%0Atreemanifest%3DTrue%0Atreeonly%3DTrue";
-
-        assert_eq!(
-            parse_utf8_getbundle_caps(caps),
-            Some((
-                String::from("bundle2"),
-                hashmap! {
-                    "HG20".to_string() => hashset!{},
-                    "b2x:rebase".to_string() => hashset!{},
-                    "digests".to_string() => hashset!{"md5".to_string(), "sha512".to_string(), "sha1".to_string()},
-                    "listkeys".to_string() => hashset!{},
-                    "remotefilelog".to_string() => hashset!{"True".to_string()},
-                    "hgtagsfnodes".to_string() => hashset!{},
-                    "bookmarks".to_string() => hashset!{},
-                    "b2x:infinitepushscratchbookmarks".to_string() => hashset!{},
-                    "treeonly".to_string() => hashset!{"True".to_string()},
-                    "pushkey".to_string() => hashset!{},
-                    "error".to_string() => hashset!{
-                        "pushraced".to_string(),
-                        "pushkey".to_string(),
-                        "unsupportedcontent".to_string(),
-                        "abort".to_string(),
-                    },
-                    "b2x:infinitepush".to_string() => hashset!{},
-                    "changegroup".to_string() => hashset!{"01".to_string(), "02".to_string()},
-                    "remote-changegroup".to_string() => hashset!{"http".to_string(), "https".to_string()},
-                    "treemanifest".to_string() => hashset!{"True".to_string()},
-                }
-            )),
-        );
-    }
-
-}
+mod tests;

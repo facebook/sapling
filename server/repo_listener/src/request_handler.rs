@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cloned::cloned;
-use configerator::ConfigeratorAPI;
+use configerator::ConfigLoader;
 use context::{generate_session_id, SessionId};
 use failure_ext::{prelude::*, SlogKVError};
 use fbinit::FacebookInit;
@@ -48,8 +48,6 @@ lazy_static! {
     };
 }
 
-// It's made public so that the code that creates ConfigeratorAPI can subscribe to this category
-pub const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
 const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 const DEFAULT_PERCENTAGE: f64 = 100.0;
 
@@ -74,7 +72,8 @@ pub fn request_handler(
     }: RepoHandler,
     stdio: Stdio,
     hook_manager: Arc<HookManager>,
-    load_limiting_config: Option<(Arc<ConfigeratorAPI>, String)>,
+    load_limiting_config: Option<(ConfigLoader, String)>,
+    pushredirect_config: Option<ConfigLoader>,
 ) -> impl Future<Item = (), Error = ()> {
     let mut scuba_logger = scuba;
     let Stdio {
@@ -137,13 +136,10 @@ pub fn request_handler(
         .unwrap_or("".to_string());
 
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
-    let load_limiting_config = match load_limiting_config {
-        Some((configerator_api, category)) => {
-            loadlimiting_configs(configerator_api, client_hostname, &ssh_env_vars)
-                .map(|limits| (limits, category))
-        }
-        None => None,
-    };
+    let load_limiting_config = load_limiting_config.and_then(|(config_loader, category)| {
+        loadlimiting_configs(config_loader.clone(), client_hostname, &ssh_env_vars)
+            .map(|limits| (limits, category))
+    });
 
     let ctx = CoreContext::new(
         fb,
@@ -170,6 +166,7 @@ pub fn request_handler(
             support_bundle2_listkeys,
             wireproto_logging,
             maybe_repo_sync_target,
+            pushredirect_config,
         ),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
@@ -215,15 +212,13 @@ pub fn request_handler(
 }
 
 fn loadlimiting_configs(
-    configerator_api: Arc<ConfigeratorAPI>,
+    config: ConfigLoader,
     client_hostname: String,
     ssh_env_vars: &SshEnvVars,
 ) -> Option<MononokeThrottleLimit> {
     let is_quicksand = is_quicksand(&ssh_env_vars);
 
-    let data = configerator_api
-        .get_entity(CONFIGERATOR_LIMITS_CONFIG, CONFIGERATOR_TIMEOUT)
-        .ok();
+    let data = config.load(CONFIGERATOR_TIMEOUT).ok();
     data.and_then(|data| {
         let config: Option<MononokeThrottleLimits> = serde_json::from_str(&data.contents).ok();
         config
