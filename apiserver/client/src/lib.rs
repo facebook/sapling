@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use futures_ext::{BoxFuture, FutureExt};
 
-use apiserver_thrift::client_async::{make_MononokeAPIService, MononokeAPIService};
+use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
     MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeDirectoryUnodes,
     MononokeFileHistory, MononokeGetBlobParams, MononokeGetBranchesParams,
