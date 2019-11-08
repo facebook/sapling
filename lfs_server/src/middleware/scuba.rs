@@ -31,6 +31,8 @@ pub enum ScubaKey {
     HttpStatus,
     /// The HTTP Path requested by the client.
     HttpPath,
+    /// The HTTP Query string provided by the client.
+    HttpQuery,
     /// The HTTP Method requested by the client.
     HttpMethod,
     /// The Http "Host" header sent by the client.
@@ -80,6 +82,7 @@ impl AsRef<str> for ScubaKey {
         match self {
             HttpStatus => "http_status",
             HttpPath => "http_path",
+            HttpQuery => "http_query",
             HttpMethod => "http_method",
             HttpHost => "http_host",
             RequestContentLength => "request_content_length",
@@ -169,6 +172,9 @@ fn log_stats(
 
     if let Some(uri) = Uri::try_borrow_from(&state) {
         scuba.add(ScubaKey::HttpPath, uri.path());
+        if let Some(query) = uri.query() {
+            scuba.add(ScubaKey::HttpQuery, query);
+        }
     }
 
     if let Some(method) = Method::try_borrow_from(&state) {

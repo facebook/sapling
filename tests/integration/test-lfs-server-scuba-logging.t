@@ -7,22 +7,25 @@
 # Start a LFS server for this repository (no upstream, but we --always-wait-for-upstream to get logging consistency)
   $ SCUBA="$TESTTMP/scuba.json"
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_uri="$(
+  $ lfs_root="$(
   > SMC_TIERS=foo.bar \
   > TW_TASK_ID=123 \
   > TW_CANARY_ID=canary \
   > TW_JOB_CLUSTER=foo \
   > TW_JOB_USER=bar \
   > TW_JOB_NAME=qux \
-  > lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-log-file "$SCUBA")/lfs1"
+  > lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-log-file "$SCUBA")"
 
 # Send some data
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "$lfs_uri"
+  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_root}/lfs1"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Read it back
-  $ hg --config extensions.lfs= debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$lfs_uri" | sha256sum
+  $ hg --config extensions.lfs= debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "${lfs_root}/lfs1" | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
+
+# Finally, send an extra query to do a little more ad-hoc testing
+  $ curl -fsSL -o /dev/null "${lfs_root}/config?foo=bar"
 
 # Check that Scuba logs are present
   $ jq -S . < "$SCUBA"
@@ -134,6 +137,31 @@
       "repository": "lfs1",
       "request_id": "*", (glob)
       "server_hostname": "*", (glob)
+      "server_tier": "foo.bar",
+      "tw_canary_id": "canary",
+      "tw_handle": "foo/bar/qux",
+      "tw_task_id": "123"
+    }
+  }
+  {
+    "int": {
+      "duration_ms": *, (glob)
+      "headers_duration_ms": *, (glob)
+      "http_status": 200,
+      "request_load": *, (glob)
+      "response_bytes_sent": *, (glob)
+      "response_content_length": *, (glob)
+      "time": * (glob)
+    },
+    "normal": {
+      "client_hostname": "localhost",
+      "client_ip": "$LOCALIP",
+      "http_host": *, (glob)
+      "http_method": "GET",
+      "http_path": "/config",
+      "http_query": "foo=bar",
+      "request_id": *, (glob)
+      "server_hostname": *, (glob)
       "server_tier": "foo.bar",
       "tw_canary_id": "canary",
       "tw_handle": "foo/bar/qux",
