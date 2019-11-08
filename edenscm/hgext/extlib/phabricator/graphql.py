@@ -198,9 +198,13 @@ class Client(object):
             try:
                 diffid = "%s" % result["number"]
                 nodes = result["phabricator_diff_commit"]["nodes"]
-                if nodes:
-                    difftonode[diffid] = bin(nodes[0]["commit_identifier"])
-            except (KeyError, IndexError):
+                for n in nodes:
+                    identifier = n["commit_identifier"]
+                    # commit_identifier could be svn revision numbers, ignore
+                    # them.
+                    if len(identifier) == 40:
+                        difftonode[diffid] = bin(identifier)
+            except (KeyError, IndexError, TypeError):
                 # Not fatal.
                 continue
 
