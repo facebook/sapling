@@ -659,7 +659,7 @@ def showgraphnode(repo, ctx, **args):
         wpnodes = wpnodes[:1]
     if ctx.node() in wpnodes:
         return "@"
-    elif ctx.obsolete():
+    elif ctx.invisible() or ctx.obsolete():
         return "x"
     elif ctx.closesbranch():
         return "_"
