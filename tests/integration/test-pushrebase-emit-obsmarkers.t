@@ -72,8 +72,8 @@ Push commits that will be obsoleted
   added 2 changesets with 0 changes to 0 files
   2 new obsolescence markers
   updating bookmark master_bookmark
-  obsoleted 2 changesets
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 2 changesets
   $ log -r ":"
   @  2 [public;rev=6;dc31470c8386] default/master_bookmark
   |
