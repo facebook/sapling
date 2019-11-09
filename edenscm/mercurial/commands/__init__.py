@@ -1903,7 +1903,16 @@ def continuecmd(ui, repo):
             args = shlex.split(cmd)
             return bindings.commands.run(args, ui.fin, ui.fout, ui.ferr)
     else:
-        raise error.Abort(_("nothing to continue"))
+        ms = mergemod.mergestate.read(repo)
+        if ms.files():
+            if ms.unresolvedcount() == 0:
+                # no command support --continue, just delete the merge state.
+                ui.status(_("(exiting merge state)\n"))
+                ms.reset()
+            else:
+                raise error.Abort(_("outstanding merge conflicts"))
+        else:
+            raise error.Abort(_("nothing to continue"))
 
 
 @command(

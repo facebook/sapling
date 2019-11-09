@@ -12,7 +12,7 @@ sh % "enable morestatus"
 sh % "setconfig morestatus.show=True ui.origbackuppath=.hg/origs"
 
 
-def createstate():
+def createstate(command="update"):
     """Create an interrupted state resolving 'hg update --merge' conflicts"""
 
     sh % "newrepo"
@@ -22,11 +22,23 @@ def createstate():
     A
     """
 
-    sh % 'hg up -C "$C" -q'
-    sh % "echo C" > "A"
-    sh % 'hg up --merge "$B" -q' == r"""
-        warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
-        [1]"""
+    if command == "update":
+        sh % 'hg up -C "$C" -q'
+        sh % "echo C" > "A"
+
+        sh % 'hg up --merge "$B" -q' == r"""
+            warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+            [1]"""
+    elif command == "backout":
+        sh % "drawdag" << r"""
+        D   # D/A=D\n
+        |
+        desc(B)
+        """
+        sh % 'hg up -C "$D" -q'
+        sh % 'hg backout "$B" -q' == r"""
+            warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+            [1]"""
 
 
 createstate()
@@ -91,3 +103,23 @@ sh % "hg resolve -m A" == r"""
     continue: hg update --continue"""
 
 sh % "hg continue"
+
+
+# Test 'hg continue' in a context that does not implement --continue.
+# Choose 'backout' for this test. The 'backout' command does not have
+# --continue.
+
+createstate(command="backout")
+sh % "hg continue" == r"""
+    abort: outstanding merge conflicts
+    [255]"""
+sh % "hg resolve --all -t :local" == "(no more unresolved files)"
+sh % "hg status" == r"""
+    R B
+
+    # The repository is in an unfinished *merge* state.
+    # No unresolved merge conflicts."""
+
+# The state is confusing, but 'hg continue' can resolve it.
+sh % "hg continue" == "(exiting merge state)"
+sh % "hg status" == "R B"
