@@ -107,5 +107,5 @@ Push treeonly merge commit to a treeonly server
   added 4 changesets with 9 changes to 9 files
   3 new obsolescence markers
   updating bookmark foo
-  obsoleted 3 changesets
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 3 changesets

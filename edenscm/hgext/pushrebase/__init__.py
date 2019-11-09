@@ -456,11 +456,12 @@ def _push(orig, ui, repo, *args, **opts):
     else:
         tracker = util.nullcontextmanager()
 
-    with ui.configoverride(overrides, "pushrebase"), tracker:
+    with ui.configoverride(
+        overrides, "pushrebase"
+    ), tracker, repo.wlock(), repo.lock(), repo.transaction("push") as tr:
         result = orig(ui, repo, *args, **opts)
 
-    if onto and tracker.replacementsreceived:
-        with repo.wlock(), repo.lock(), repo.transaction("push") as tr:
+        if onto and tracker.replacementsreceived:
             # move working copy parent
             if wnode in tracker.mapping:
                 hg.update(repo, tracker.mapping[wnode])

@@ -89,8 +89,8 @@ The first client works on several diffs while the second client lands one of her
   added 4 changesets with 1 changes to 4 files
   3 new obsolescence markers
   updating bookmark master
-  obsoleted 3 changesets
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 3 changesets
 
 Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
 push doesn't directly go to the server

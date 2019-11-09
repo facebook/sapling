@@ -114,10 +114,10 @@
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
   updating bookmark master
-  obsoleted 1 changesets
   fetching tree '' eda1f7bdb1c764a4e03857a25db3d6cad9d25088, based on a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via 12f14bedbd28
   1 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 1 changesets
   $ hg log -r .
   changeset:   4:12f14bedbd28
   tag:         tip

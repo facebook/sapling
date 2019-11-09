@@ -101,8 +101,8 @@ Push in from the client.
   added 4 changesets with 1 changes to 3 files
   3 new obsolescence markers
   updating bookmark @
-  obsoleted 3 changesets
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 3 changesets
   $ log
   @    merge alpha and beta [public:9:8c1abab9fd04]
   |\

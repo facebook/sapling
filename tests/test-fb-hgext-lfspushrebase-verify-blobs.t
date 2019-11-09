@@ -151,8 +151,8 @@
   adding file changes
   added 1 changesets with 0 changes to 1 files
   1 new obsolescence markers
-  obsoleted 1 changesets
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 1 changesets
 
   $ cd $TESTTMP/client
 
@@ -175,8 +175,8 @@
   adding file changes
   added 1 changesets with 0 changes to 1 files
   1 new obsolescence markers
-  obsoleted 1 changesets
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 1 changesets
 
 
 # Check content

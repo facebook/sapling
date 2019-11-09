@@ -51,8 +51,8 @@ Make server treeonly and push trees to it
   added 2 changesets with 2 changes to 1 files
   2 new obsolescence markers
   updating bookmark foo
-  obsoleted 2 changesets
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  obsoleted 2 changesets
 
   $ tglog --stat -l 2
   @  5: d9ee86e3acc1 'D'   sub/C |  1 +
