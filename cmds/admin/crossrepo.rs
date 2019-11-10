@@ -215,7 +215,11 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
     let maybe_sync_outcome = commit_syncer
         .get_commit_sync_outcome(ctx.clone(), hash)
         .await?;
-    let sync_outcome = maybe_sync_outcome.ok_or(format_err!("No sync outcome for {}", hash))?;
+    let sync_outcome = maybe_sync_outcome.ok_or(format_err!(
+        "No sync outcome for {} in {:?}",
+        hash,
+        commit_syncer
+    ))?;
 
     use CommitSyncOutcome::*;
     match sync_outcome {
