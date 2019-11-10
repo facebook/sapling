@@ -153,6 +153,14 @@ impl MononokeApp {
                     .help("print debug output"),
             )
             .arg(
+                Arg::with_name("log-level")
+                    .long("log-level")
+                    .help("log level to use (does not work with --debug)")
+                    .takes_value(true)
+                    .possible_values(&["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"])
+                    .conflicts_with("debug"),
+            )
+            .arg(
                 Arg::with_name("mononoke-config-path")
                     .long("mononoke-config-path")
                     .value_name("MONONOKE_CONFIG_PATH")
@@ -274,7 +282,11 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
     let level = if matches.is_present("debug") {
         Level::Debug
     } else {
-        Level::Info
+        match matches.value_of("log-level") {
+            Some(log_level_str) => Level::from_str(log_level_str)
+                .expect(&format!("Unknown log level: {}", log_level_str)),
+            None => Level::Info,
+        }
     };
 
     let glog_drain = Arc::new(glog_drain());
