@@ -13,14 +13,15 @@
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/Subprocess.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/test/TestLogHandler.h>
+#include <folly/synchronization/test/Barrier.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
-#include "eden/fs/utils/PathFuncs.h"
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -33,6 +34,7 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 using namespace folly::string_piece_literals;
 using folly::Subprocess;
@@ -315,6 +317,127 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   folly::test::TemporaryDirectory testDir_;
   std::shared_ptr<Overlay> overlay;
 };
+
+TEST_P(RawOverlayTest, closed_overlay_stress_test) {
+  constexpr unsigned kThreadCount = 10;
+  auto executor = folly::CPUThreadPoolExecutor(kThreadCount + 1);
+
+  std::vector<folly::Future<folly::Unit>> futures;
+  futures.reserve(kThreadCount);
+  folly::test::Barrier gate{kThreadCount + 1};
+
+  for (unsigned i = 0; i < kThreadCount; ++i) {
+    futures.emplace_back(folly::via(&executor, [&] {
+      auto ino = overlay->allocateInodeNumber();
+      OverlayFile result;
+      try {
+        result =
+            overlay->createOverlayFile(ino, folly::ByteRange{"contents"_sp});
+      } catch (std::system_error& e) {
+        if ("cannot access overlay after it is closed: Input/output error"_sp !=
+            e.what()) {
+          printf("createOverlayFile failed: %s\n", e.what());
+          throw e;
+        }
+      }
+
+      // Block until after overlay has closed
+      gate.wait();
+
+      try {
+        char data[] = "new contents";
+        struct iovec iov;
+        iov.iov_base = data;
+        iov.iov_len = sizeof(data);
+        result.pwritev(&iov, 1, FsOverlay::kHeaderLength);
+        throw std::system_error(
+            EIO,
+            std::generic_category(),
+            "should not be able to successfully write to overlay");
+      } catch (std::system_error& e) {
+        if (strcmp(
+                e.what(),
+                "cannot access overlay after it is closed: Input/output error")) {
+          printf("pwritev failed: %s\n", e.what());
+          throw e;
+        }
+      }
+    }));
+  }
+
+  overlay->close();
+
+  // Wake the waiting threads
+  gate.wait();
+
+  auto finished = folly::collectAll(futures).get();
+  for (auto& f : finished) {
+    EXPECT_FALSE(f.hasException());
+  }
+}
+
+TEST_P(RawOverlayTest, cannot_create_overlay_file_in_corrupt_overlay) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+
+  // Remove the overlay directory in order to make file creation fail.
+  auto path = testDir_.path();
+  boost::filesystem::remove_all(path);
+
+  EXPECT_THROW(
+      overlay->createOverlayFile(ino2, folly::ByteRange{"contents"_sp}),
+      std::system_error);
+
+  // Restore the overlay directory and make sure we can create an overlay file
+  // and close the overlay.
+  boost::filesystem::create_directory(path);
+  loadOverlay();
+
+  ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+
+  EXPECT_NO_THROW(
+      overlay->createOverlayFile(ino2, folly::ByteRange{"contents"_sp}));
+  overlay->close();
+}
+
+TEST_P(RawOverlayTest, cannot_save_overlay_dir_when_closed) {
+  overlay->close();
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+
+  DirContents dir;
+  EXPECT_THROW_RE(
+      overlay->saveOverlayDir(ino2, dir),
+      std::system_error,
+      "cannot access overlay after it is closed");
+}
+
+TEST_P(RawOverlayTest, cannot_create_overlay_file_when_closed) {
+  overlay->close();
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+
+  EXPECT_THROW_RE(
+      overlay->createOverlayFile(ino2, folly::ByteRange{"contents"_sp}),
+      std::system_error,
+      "cannot access overlay after it is closed");
+}
+
+TEST_P(RawOverlayTest, cannot_remove_overlay_file_when_closed) {
+  auto ino2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, ino2);
+
+  EXPECT_NO_THROW(
+      overlay->createOverlayFile(ino2, folly::ByteRange{"contents"_sp}));
+
+  overlay->close();
+
+  EXPECT_THROW_RE(
+      overlay->removeOverlayData(ino2),
+      std::system_error,
+      "cannot access overlay after it is closed");
+}
 
 TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());

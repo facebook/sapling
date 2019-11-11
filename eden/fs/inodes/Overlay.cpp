@@ -70,11 +70,13 @@ void Overlay::close() {
     optNextInodeNumber = InodeNumber{nextInodeNumber};
   }
 
+  closeAndWaitForOutstandingIO();
   inodeMetadataTable_.reset();
   fsOverlay_.close(optNextInodeNumber);
 }
 
-struct statfs Overlay::statFs() const {
+struct statfs Overlay::statFs() {
+  IORequest req{this};
   return fsOverlay_.statFs();
 }
 
@@ -103,6 +105,7 @@ folly::SemiFuture<Unit> Overlay::initialize() {
 }
 
 void Overlay::initOverlay() {
+  IORequest req{this};
   auto optNextInodeNumber = fsOverlay_.initOverlay(true);
   if (!optNextInodeNumber.has_value()) {
     // If the next-inode-number data is missing it means that this overlay was
@@ -149,6 +152,7 @@ InodeNumber Overlay::allocateInodeNumber() {
 }
 
 optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
+  IORequest req{this};
   auto dirData = fsOverlay_.loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
     return std::nullopt;
@@ -189,6 +193,7 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 }
 
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
+  IORequest req{this};
   auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
   CHECK_LT(inodeNumber.get(), nextInodeNumber)
       << "saveOverlayDir called with unallocated inode number";
@@ -229,12 +234,14 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
 }
 
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
+  IORequest req{this};
   // TODO: batch request during GC
   getInodeMetadataTable()->freeInode(inodeNumber);
   fsOverlay_.removeOverlayFile(inodeNumber);
 }
 
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
+  IORequest req{this};
   auto dirData = fsOverlay_.loadOverlayDir(inodeNumber);
 
   // This inode's data must be removed from the overlay before
@@ -260,6 +267,7 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
 }
 
 bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
+  IORequest req{this};
   return fsOverlay_.hasOverlayData(inodeNumber);
 }
 
@@ -268,11 +276,13 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
 OverlayFile Overlay::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
+  IORequest req{this};
   return OverlayFile(
       fsOverlay_.openFile(inodeNumber, headerId), weak_from_this());
 }
 
 OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
+  IORequest req{this};
   return OverlayFile(
       fsOverlay_.openFileNoVerify(inodeNumber), weak_from_this());
 }
@@ -280,6 +290,7 @@ OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
 OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     folly::ByteRange contents) {
+  IORequest req{this};
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
@@ -289,6 +300,7 @@ OverlayFile Overlay::createOverlayFile(
 OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     const folly::IOBuf& contents) {
+  IORequest req{this};
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
@@ -299,6 +311,55 @@ InodeNumber Overlay::getMaxInodeNumber() {
   auto ino = nextInodeNumber_.load(std::memory_order_relaxed);
   CHECK_GT(ino, 1);
   return InodeNumber{ino - 1};
+}
+
+static constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
+static constexpr uint64_t ioClosedMask = 1ull << 63;
+
+bool Overlay::tryIncOutstandingIORequests() {
+  uint64_t currentOutstandingIO =
+      outstandingIORequests_.load(std::memory_order_seq_cst);
+
+  // Retry incrementing the IO count while we have not either successfully
+  // updated outstandingIORequests_ or closed the overlay
+  while (!(currentOutstandingIO & ioClosedMask)) {
+    // If not closed, currentOutstandingIO now holds what
+    // outstandingIORequests_ actually contained
+    if (outstandingIORequests_.compare_exchange_weak(
+            currentOutstandingIO,
+            currentOutstandingIO + 1,
+            std::memory_order_seq_cst)) {
+      return true;
+    }
+  }
+
+  // If we have broken out of the above loop, the overlay is closed and we
+  // been unable to increment outstandingIORequests_.
+  return false;
+}
+
+void Overlay::decOutstandingIORequests() {
+  uint64_t outstanding =
+      outstandingIORequests_.fetch_sub(1, std::memory_order_seq_cst);
+  XCHECK_NE(0ull, outstanding) << "Decremented too far!";
+  // If the overlay is closed and we just finished our last IO request (meaning
+  // the previous value of outstandingIORequests_ was 1), then wake the waiting
+  // thread.
+  if ((outstanding & ioClosedMask) && (outstanding & ioCountMask) == 1) {
+    lastOutstandingRequestIsComplete_.post();
+  }
+}
+
+void Overlay::closeAndWaitForOutstandingIO() {
+  uint64_t outstanding =
+      outstandingIORequests_.fetch_or(ioClosedMask, std::memory_order_seq_cst);
+
+  // If we have outstanding IO requests, wait for them. This should not block if
+  // this baton has already been posted between the load in the fetch_or and
+  // this if statement.
+  if (outstanding & ioCountMask) {
+    lastOutstandingRequestIsComplete_.wait();
+  }
 }
 
 void Overlay::gcThread() noexcept {
@@ -329,6 +390,7 @@ void Overlay::gcThread() noexcept {
 }
 
 void Overlay::handleGCRequest(GCRequest& request) {
+  IORequest req{this};
   if (request.flush) {
     request.flush->setValue();
     return;

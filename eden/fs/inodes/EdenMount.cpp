@@ -561,6 +561,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
         // released the lock before the new edenfs process begins to take over
         // the mount point.
         overlay_->close();
+        XLOG(DBG1) << "successfully closed overlay at " << getPath();
         auto oldState =
             state_.exchange(State::SHUT_DOWN, std::memory_order_acq_rel);
         if (oldState == State::DESTROYING) {

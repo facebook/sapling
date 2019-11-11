@@ -18,6 +18,12 @@ OverlayFile::OverlayFile(folly::File file, std::weak_ptr<Overlay> overlay)
     : file_{std::move(file)}, overlay_{overlay} {}
 
 folly::Expected<struct stat, int> OverlayFile::fstat() const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   struct stat st {};
   if (::fstat(file_.fd(), &st)) {
     return folly::makeUnexpected(errno);
@@ -27,6 +33,12 @@ folly::Expected<struct stat, int> OverlayFile::fstat() const {
 
 folly::Expected<ssize_t, int>
 OverlayFile::preadNoInt(void* buf, size_t n, off_t offset) const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   auto ret = folly::preadNoInt(file_.fd(), buf, n, offset);
   if (ret == -1) {
     return folly::makeUnexpected(errno);
@@ -35,6 +47,12 @@ OverlayFile::preadNoInt(void* buf, size_t n, off_t offset) const {
 }
 
 folly::Expected<off_t, int> OverlayFile::lseek(off_t offset, int whence) const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   auto ret = ::lseek(file_.fd(), offset, whence);
   if (ret == -1) {
     return folly::makeUnexpected(errno);
@@ -44,6 +62,12 @@ folly::Expected<off_t, int> OverlayFile::lseek(off_t offset, int whence) const {
 
 folly::Expected<ssize_t, int>
 OverlayFile::pwritev(const iovec* iov, int iovcnt, off_t offset) const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   auto ret = folly::pwritevNoInt(file_.fd(), iov, iovcnt, offset);
   if (ret == -1) {
     return folly::makeUnexpected(errno);
@@ -52,6 +76,12 @@ OverlayFile::pwritev(const iovec* iov, int iovcnt, off_t offset) const {
 }
 
 folly::Expected<int, int> OverlayFile::ftruncate(off_t length) const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   auto ret = ::ftruncate(file_.fd(), length);
   if (ret == -1) {
     return folly::makeUnexpected(errno);
@@ -60,6 +90,12 @@ folly::Expected<int, int> OverlayFile::ftruncate(off_t length) const {
 }
 
 folly::Expected<int, int> OverlayFile::fsync() const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   auto ret = ::fsync(file_.fd());
   if (ret == -1) {
     return folly::makeUnexpected(errno);
@@ -69,6 +105,12 @@ folly::Expected<int, int> OverlayFile::fsync() const {
 
 folly::Expected<int, int> OverlayFile::fdatasync() const {
 #ifndef __APPLE__
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   auto ret = ::fdatasync(file_.fd());
   if (ret == -1) {
     return folly::makeUnexpected(errno);
@@ -80,6 +122,12 @@ folly::Expected<int, int> OverlayFile::fdatasync() const {
 }
 
 folly::Expected<std::string, int> OverlayFile::readFile() const {
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
   std::string out;
   if (!folly::readFile(file_.fd(), out)) {
     return folly::makeUnexpected(errno);

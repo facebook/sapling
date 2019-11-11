@@ -11,6 +11,7 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <array>
+#include <atomic>
 #include <condition_variable>
 #include <optional>
 #include <thread>
@@ -183,7 +184,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   /**
    * call statfs(2) on the filesystem in which the overlay is located
    */
-  struct statfs statFs() const;
+  struct statfs statFs();
 
  private:
   explicit Overlay(AbsolutePathPiece localDir);
@@ -218,6 +219,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 
+  bool tryIncOutstandingIORequests();
+  void decOutstandingIORequests();
+  void closeAndWaitForOutstandingIO();
+
   /**
    * The next inode number to allocate.  Zero indicates that neither
    * initializeFromTakeover nor getMaxRecordedInode have been called.
@@ -242,6 +247,50 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::thread gcThread_;
   folly::Synchronized<GCQueue, std::mutex> gcQueue_;
   std::condition_variable gcCondVar_;
+
+  /**
+   * This uint64_t holds two values, a single bit on the MSB that
+   * acts a boolean closed: True if the the Overlay has been closed with
+   * calling setClosed(). When this is true, reads and writes will throw an
+   * error instead of applying an overlay change or read. On the rest of the
+   * bits, the actual number of outstanding IO requests is held. This has been
+   * done in order to synchronize these two variables and treat checking if the
+   * overlay is closed and incrementing the IO reference count as a single
+   * atomic action.
+   */
+  mutable std::atomic<uint64_t> outstandingIORequests_{0};
+
+  folly::Baton<> lastOutstandingRequestIsComplete_;
+
+  friend class IORequest;
+};
+
+/**
+ * Used to reference count IO requests. In any place that there
+ * is an overlay read or write, this struct should be constructed in order to
+ * properly reference count and to properly deny overlay reads and
+ * modifications in the case that the overlay is closed.
+ */
+class IORequest {
+ public:
+  explicit IORequest(Overlay* o) : overlay_{o} {
+    if (!overlay_->tryIncOutstandingIORequests()) {
+      throw std::system_error(
+          EIO,
+          std::generic_category(),
+          folly::to<std::string>("cannot access overlay after it is closed"));
+    }
+  }
+
+  ~IORequest() {
+    overlay_->decOutstandingIORequests();
+  }
+
+ private:
+  IORequest(IORequest&&) = delete;
+  IORequest& operator=(IORequest&&) = delete;
+
+  Overlay* const overlay_;
 };
 
 } // namespace eden
