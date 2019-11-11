@@ -460,8 +460,6 @@ fn main(fb: FacebookInit) -> Fallible<()> {
         .arg(Arg::with_name("with-scuba").long("with-scuba"))
         .arg(Arg::with_name("debug").short("p").long("debug"))
         .arg(Arg::with_name("without-skiplist").long("without-skiplist"))
-        // T55640932 - remove unused --stdlog parameter
-        .arg(Arg::with_name("stdlog").long("stdlog").help("Unused"))
         .arg(
             Arg::with_name("mononoke-config-path")
                 .long("mononoke-config-path")
