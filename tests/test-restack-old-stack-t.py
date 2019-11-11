@@ -37,8 +37,4 @@ sh % 'hg up -q "$D2"'
 
 # Restack should not rebase C1 to B2, since the user is not on the B2 stack.
 
-sh % "hg rebase --restack" == r"""
-    rebasing c50a8ec9c544 "C1"
-    rebasing 87d9afc4bc4e "E1" (tip)"""
-
-# BUG: C1 should not be rebased.
+sh % "hg rebase --restack" == 'rebasing 87d9afc4bc4e "E1" (tip)'

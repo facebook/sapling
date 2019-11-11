@@ -37,7 +37,7 @@ def restack(ui, repo, **rebaseopts):
             # 2. Connect revs via obsolete graph
             revs = list(repo.revs("successors(%ld)+predecessors(%ld)", revs, revs))
             # 3. Connect revs via changelog again to cover missing revs
-            revs = list(repo.revs("(draft() & ::%ld)::", revs))
+            revs = list(repo.revs("draft() & ((draft() & %ld)::)", revs))
 
             rebaseopts["rev"] = [ctx.hex() for ctx in repo.set("%ld", revs)]
 
