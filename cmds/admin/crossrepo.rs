@@ -28,7 +28,7 @@ use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use mononoke_types::{ChangesetId, MPath, RepositoryId};
 use movers::{get_large_to_small_mover, Mover};
-use slog::{debug, info, warn, Logger};
+use slog::{debug, info, Logger};
 use std::collections::{HashMap, HashSet};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -185,13 +185,13 @@ async fn subcommand_verify_wc(
 
     for (path, _) in small_repo_entries {
         if moved_large_repo_entries.get(&path).is_none() {
-            warn!(
-                ctx.logger(),
-                "{:?} is present in small repo, but not in large", path,
+            return Err(
+                format_err!("{:?} is present in small repo, but not in large", path).into(),
             );
         }
     }
 
+    info!(ctx.logger(), "all is well!");
     Ok(())
 }
 
@@ -255,10 +255,10 @@ async fn compare_contents(
                     ));
                 }
                 None => {
-                    warn!(
-                        ctx.logger(),
-                        "{:?} exists in large repo but not in small repo", path
-                    );
+                    return Err(format_err!(
+                        "{:?} exists in large repo but not in small repo",
+                        path
+                    ));
                 }
             }
         }
@@ -293,14 +293,13 @@ async fn compare_contents(
 
     for (path, small_content_id, large_content_id) in fetched_content_ids {
         if small_content_id != large_content_id {
-            warn!(
-                ctx.logger(),
+            return Err(format_err!(
                 "different contents for {:?}: {} vs {}, {}",
                 path,
                 small_content_id,
                 large_content_id,
                 large_hash,
-            );
+            ));
         }
     }
 
