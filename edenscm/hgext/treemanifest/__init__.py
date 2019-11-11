@@ -497,7 +497,7 @@ def wraprepo(repo):
                 self.prefetchtrees([c.manifestnode() for c in draftparents])
 
         @perftrace.tracefunc("Prefetch Trees")
-        def prefetchtrees(self, mfnodes, basemfnodes=None):
+        def prefetchtrees(self, mfnodes, basemfnodes=None, depth=None):
             if not treeenabled(self.ui):
                 return
 
@@ -526,7 +526,7 @@ def wraprepo(repo):
                 changeloglen = len(self.changelog) - 1
                 basemfnodes = _findrecenttree(self, changeloglen, mfnodes)
 
-            self._prefetchtrees("", mfnodes, basemfnodes, [])
+            self._prefetchtrees("", mfnodes, basemfnodes, [], depth)
 
         @perftrace.tracefunc("Fetch Trees")
         def _prefetchtrees(
