@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
-use bookmark_renaming::BookmarkRenamer;
+use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use failure::{err_msg, Error, Fail};
@@ -23,11 +23,11 @@ use futures_preview::{
     stream::{futures_unordered::FuturesUnordered, TryStreamExt},
 };
 use maplit::hashmap;
-use metaconfig_types::PushrebaseParams;
+use metaconfig_types::{CommitSyncConfig, PushrebaseParams};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
-use movers::Mover;
+use movers::{get_large_to_small_mover, get_small_to_large_mover, Mover};
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
 use std::fmt;
 use synced_commit_mapping::{
@@ -952,4 +952,55 @@ pub fn sync_commit_compat<M: SyncedCommitMapping + Clone + 'static>(
     async move { sync_commit(ctx, cs, &config, bookmark).await }
         .boxed()
         .compat()
+}
+
+pub struct Syncers<M: SyncedCommitMapping + Clone + 'static> {
+    pub large_to_small: CommitSyncer<M>,
+    pub small_to_large: CommitSyncer<M>,
+}
+
+pub fn create_commit_syncers<M>(
+    small_repo: BlobRepo,
+    large_repo: BlobRepo,
+    commit_sync_config: &CommitSyncConfig,
+    mapping: M,
+) -> Result<Syncers<M>, Error>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+{
+    let small_repo_id = small_repo.get_repoid();
+
+    let small_to_large_mover = get_small_to_large_mover(commit_sync_config, small_repo_id)?;
+    let large_to_small_mover = get_large_to_small_mover(commit_sync_config, small_repo_id)?;
+
+    let small_to_large_renamer = get_small_to_large_renamer(commit_sync_config, small_repo_id)?;
+    let large_to_small_renamer = get_large_to_small_renamer(commit_sync_config, small_repo_id)?;
+
+    let small_to_large_commit_sync_repos = CommitSyncRepos::SmallToLarge {
+        small_repo: small_repo.clone(),
+        large_repo: large_repo.clone(),
+        mover: small_to_large_mover.clone(),
+        bookmark_renamer: small_to_large_renamer.clone(),
+    };
+
+    let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
+        small_repo,
+        large_repo,
+        mover: large_to_small_mover,
+        bookmark_renamer: large_to_small_renamer,
+    };
+
+    let large_to_small_commit_syncer = CommitSyncer {
+        mapping: mapping.clone(),
+        repos: large_to_small_commit_sync_repos,
+    };
+    let small_to_large_commit_syncer = CommitSyncer {
+        mapping,
+        repos: small_to_large_commit_sync_repos,
+    };
+
+    Ok(Syncers {
+        large_to_small: large_to_small_commit_syncer,
+        small_to_large: small_to_large_commit_syncer,
+    })
 }

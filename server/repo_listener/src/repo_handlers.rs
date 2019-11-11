@@ -17,10 +17,9 @@ use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
 use blobrepo_factory::{open_blobrepo, Caching};
-use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
 use cache_warmup::cache_warmup;
 use context::CoreContext;
-use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::create_commit_syncers;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
@@ -28,7 +27,6 @@ use metaconfig_types::{
     CommitSyncConfig, CommitSyncDirection, MetadataDBConfig, RepoConfig, StorageConfig,
 };
 use mononoke_types::RepositoryId;
-use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -137,7 +135,6 @@ fn create_repo_sync_target(
     source_repo: &MononokeRepo,
     target_incomplete_repo_handler: &IncompleteRepoHandler,
     repo_sync_target_args: RepoSyncTargetArgs,
-    small_repo_id: RepositoryId,
 ) -> BoxFuture<RepoSyncTarget, Error> {
     let RepoSyncTargetArgs {
         commit_sync_config,
@@ -146,46 +143,18 @@ fn create_repo_sync_target(
         maybe_myrouter_port,
     } = repo_sync_target_args;
 
-    let small_to_large_mover =
-        try_boxfuture!(get_small_to_large_mover(&commit_sync_config, small_repo_id));
-    let large_to_small_mover =
-        try_boxfuture!(get_large_to_small_mover(&commit_sync_config, small_repo_id));
-    let small_to_large_renamer = try_boxfuture!(get_small_to_large_renamer(
-        &commit_sync_config,
-        small_repo_id
-    ));
-    let large_to_small_renamer = try_boxfuture!(get_large_to_small_renamer(
-        &commit_sync_config,
-        small_repo_id
-    ));
-
     let small_repo = source_repo.blobrepo().clone();
     let large_repo = target_incomplete_repo_handler.repo.blobrepo().clone();
-
-    let small_to_large_commit_sync_repos = CommitSyncRepos::SmallToLarge {
-        small_repo: small_repo.clone(),
-        large_repo: large_repo.clone(),
-        mover: small_to_large_mover.clone(),
-        bookmark_renamer: small_to_large_renamer.clone(),
-    };
-
-    let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
+    let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
+    let syncers = try_boxfuture!(create_commit_syncers(
         small_repo,
         large_repo,
-        mover: large_to_small_mover,
-        bookmark_renamer: large_to_small_renamer,
-    };
+        &commit_sync_config,
+        mapping.clone()
+    ));
 
-    let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
-
-    let small_to_large_commit_syncer = CommitSyncer {
-        mapping: mapping.clone(),
-        repos: small_to_large_commit_sync_repos,
-    };
-    let large_to_small_commit_syncer = CommitSyncer {
-        mapping,
-        repos: large_to_small_commit_sync_repos,
-    };
+    let small_to_large_commit_syncer = syncers.small_to_large;
+    let large_to_small_commit_syncer = syncers.large_to_small;
 
     let repo = target_incomplete_repo_handler.repo.clone();
 
@@ -233,7 +202,6 @@ fn get_maybe_create_repo_sync_target_fut(
                 current_repo,
                 target_incomplete_repo_handler,
                 repo_sync_target_args,
-                current_repo_id,
             )
             .map(Some)
             .boxify()
