@@ -1154,3 +1154,12 @@ function read_blobstore_sync_queue_size() {
 
   return 1
 }
+
+function get_bonsai_bookmark() {
+  local bookmark repoid_backup
+  repoid_backup=$REPOID
+  export REPOID="$1"
+  bookmark="$2"
+  mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
+  export REPOID=$repoid_backup
+}
