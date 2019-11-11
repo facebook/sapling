@@ -9,14 +9,15 @@
 #![deny(warnings)]
 
 use bookmarks::BookmarkName;
-use bundle2_resolver::{BundleResolverError, PostResolveAction, PostResolvePushRebase};
+use bundle2_resolver::{
+    BundleResolverError, PostResolveAction, PostResolvePushRebase, UploadedHgChangesetIds,
+};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::ok;
 use futures::{stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
-use mercurial_types::HgChangesetId;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -38,7 +39,7 @@ fn run_pushrebase_hooks(
     action: &PostResolvePushRebase,
     hook_manager: Arc<HookManager>,
 ) -> BoxFuture<(), BundleResolverError> {
-    let changesets: Vec<_> = action.uploaded_hg_bonsai_map.keys().cloned().collect();
+    let changesets: Vec<_> = action.uploaded_hg_changeset_ids.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
     let bookmark = action.bookmark_spec.get_bookmark_name();
     run_pushrebase_hooks_impl(ctx, changesets, maybe_pushvars, &bookmark, hook_manager)
@@ -46,7 +47,7 @@ fn run_pushrebase_hooks(
 
 fn run_pushrebase_hooks_impl(
     ctx: CoreContext,
-    changesets: Vec<HgChangesetId>,
+    changesets: UploadedHgChangesetIds,
     pushvars: Option<HashMap<String, Bytes>>,
     onto_bookmark: &BookmarkName,
     hook_manager: Arc<HookManager>,

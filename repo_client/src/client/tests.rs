@@ -95,7 +95,7 @@ fn test_pushredirect_config() {
         bookmark_pushes: Vec::new(),
         maybe_raw_bundle2_id: None,
         non_fast_forward_policy: NonFastForwardPolicy::Allowed,
-        uploaded_hg_bonsai_map: HashMap::new(),
+        uploaded_bonsais: Vec::new(),
     });
     let infinitepush_action = PostResolveAction::InfinitePush(PostResolveInfinitePush {
         changegroup_id: None,
@@ -107,7 +107,7 @@ fn test_pushredirect_config() {
             new: ONES_CSID,
         },
         maybe_raw_bundle2_id: None,
-        uploaded_hg_bonsai_map: HashMap::new(),
+        uploaded_bonsais: Vec::new(),
     });
     let pushrebase_action = PostResolveAction::PushRebase(PostResolvePushRebase {
         any_merges: true,
@@ -121,7 +121,8 @@ fn test_pushredirect_config() {
         maybe_raw_bundle2_id: None,
         maybe_pushvars: None,
         commonheads: CommonHeads { heads: Vec::new() },
-        uploaded_hg_bonsai_map: HashMap::new(),
+        uploaded_bonsais: Vec::new(),
+        uploaded_hg_changeset_ids: Vec::new(),
     });
     let bookmark_only_action =
         PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {

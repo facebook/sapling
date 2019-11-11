@@ -111,7 +111,7 @@ fn run_push(
         bookmark_pushes,
         maybe_raw_bundle2_id,
         non_fast_forward_policy,
-        uploaded_hg_bonsai_map: _,
+        uploaded_bonsais: _,
     } = action;
 
     ({
@@ -169,7 +169,7 @@ fn run_infinitepush(
         changegroup_id,
         bookmark_push,
         maybe_raw_bundle2_id,
-        uploaded_hg_bonsai_map: _,
+        uploaded_bonsais: _,
     } = action;
 
     ({
@@ -220,7 +220,8 @@ fn run_pushrebase(
         maybe_raw_bundle2_id,
         maybe_pushvars: _,
         commonheads,
-        uploaded_hg_bonsai_map,
+        uploaded_bonsais,
+        uploaded_hg_changeset_ids: _,
     } = action;
 
     let bookmark = bookmark_spec.get_bookmark_name();
@@ -235,10 +236,7 @@ fn run_pushrebase(
             ctx.clone(),
             repo.clone(),
             pushrebase_params.clone(),
-            uploaded_hg_bonsai_map
-                .into_iter()
-                .map(|(_, bcs)| bcs)
-                .collect(),
+            uploaded_bonsais,
             any_merges,
             &onto_params,
             maybe_raw_bundle2_id,

@@ -22,7 +22,7 @@ use bundle2_resolver::PlainBookmarkPush;
 use bundle2_resolver::PushrebaseBookmarkSpec;
 use bundle2_resolver::{
     BundleResolverError, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
-    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedHgBonsaiMap,
+    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedBonsais,
 };
 use cloned::cloned;
 use context::CoreContext;
@@ -32,10 +32,9 @@ use futures::Future;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::try_join_all;
 use futures_util::{future::FutureExt, try_future::TryFutureExt, try_join};
-use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
@@ -161,11 +160,11 @@ impl RepoSyncTarget {
             bookmark_pushes,
             maybe_raw_bundle2_id,
             non_fast_forward_policy,
-            uploaded_hg_bonsai_map,
+            uploaded_bonsais,
         } = orig;
 
-        let uploaded_hg_bonsai_map = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_hg_bonsai_map)
+        let uploaded_bonsais = self
+            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
             .await?;
 
         let bookmark_pushes = try_join_all(bookmark_pushes.into_iter().map(|bookmark_push| {
@@ -178,7 +177,7 @@ impl RepoSyncTarget {
             bookmark_pushes,
             maybe_raw_bundle2_id,
             non_fast_forward_policy,
-            uploaded_hg_bonsai_map,
+            uploaded_bonsais,
         })
     }
 
@@ -203,11 +202,12 @@ impl RepoSyncTarget {
             maybe_raw_bundle2_id,
             maybe_pushvars,
             commonheads,
-            uploaded_hg_bonsai_map,
+            uploaded_bonsais,
+            uploaded_hg_changeset_ids,
         } = orig;
 
-        let uploaded_hg_bonsai_map = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_hg_bonsai_map)
+        let uploaded_bonsais = self
+            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
             .await?;
         let bookmark_spec = self
             .convert_pushrebase_bookmark_spec(ctx.clone(), bookmark_spec)
@@ -220,7 +220,8 @@ impl RepoSyncTarget {
             maybe_raw_bundle2_id,
             maybe_pushvars,
             commonheads,
-            uploaded_hg_bonsai_map,
+            uploaded_bonsais,
+            uploaded_hg_changeset_ids,
         })
     }
 
@@ -236,10 +237,10 @@ impl RepoSyncTarget {
             changegroup_id,
             bookmark_push,
             maybe_raw_bundle2_id,
-            uploaded_hg_bonsai_map,
+            uploaded_bonsais,
         } = orig;
-        let uploaded_hg_bonsai_map = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_hg_bonsai_map)
+        let uploaded_bonsais = self
+            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
             .await?;
         let bookmark_push = self
             .convert_infinite_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
@@ -248,7 +249,7 @@ impl RepoSyncTarget {
             changegroup_id,
             bookmark_push,
             maybe_raw_bundle2_id,
-            uploaded_hg_bonsai_map,
+            uploaded_bonsais,
         })
     }
 
@@ -602,23 +603,22 @@ impl RepoSyncTarget {
     async fn sync_uploaded_changesets(
         &self,
         ctx: CoreContext,
-        uploaded_map: UploadedHgBonsaiMap,
-    ) -> Result<UploadedHgBonsaiMap, Error> {
+        uploaded_map: UploadedBonsais,
+    ) -> Result<UploadedBonsais, Error> {
         let target_repo = self.small_to_large_commit_syncer.get_target_repo();
-
-        let bonsai_hg_map: HashMap<ChangesetId, HgChangesetId> = uploaded_map
+        let uploaded_ids: HashSet<ChangesetId> = uploaded_map
             .iter()
-            .map(|(hg_cs_id, bcs)| (bcs.get_changeset_id(), hg_cs_id.clone()))
+            .map(|bcs| bcs.get_changeset_id())
             .collect();
 
         let to_sync: HashMap<ChangesetId, Vec<ChangesetId>> = uploaded_map
             .iter()
-            .map(|(_, bcs)| {
+            .map(|bcs| {
                 // For the toposort purposes, let's only collect parents, uploaded
                 // as part of this push
                 let uploaded_parents: Vec<ChangesetId> = bcs
                     .parents()
-                    .filter(|bcs_id| bonsai_hg_map.contains_key(bcs_id))
+                    .filter(|bcs_id| uploaded_ids.contains(bcs_id))
                     .collect();
                 (bcs.get_changeset_id(), uploaded_parents)
             })
@@ -630,7 +630,7 @@ impl RepoSyncTarget {
             .rev()
             .collect();
 
-        let mut synced_ids: HashMap<ChangesetId, ChangesetId> = HashMap::new();
+        let mut synced_ids: Vec<ChangesetId> = Vec::new();
 
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
@@ -641,36 +641,18 @@ impl RepoSyncTarget {
                     "{} was rewritten into nothingness during uploaded changesets sync",
                     bcs_id
                 ))?;
-            synced_ids.insert(*bcs_id, synced_bcs_id);
+            synced_ids.push(synced_bcs_id);
         }
 
-        try_join_all(
-            synced_ids
-                .into_iter()
-                .map(|(source_repo_bcs_id, target_repo_bcs_id)| {
-                    let maybe_hg_cs_id = bonsai_hg_map.get(&source_repo_bcs_id);
-                    (source_repo_bcs_id, target_repo_bcs_id, maybe_hg_cs_id)
-                })
-                .map(
-                    move |(source_repo_bcs_id, target_repo_bcs_id, maybe_hg_cs_id)| {
-                        cloned!(ctx, target_repo);
-                        async move {
-                            let hg_cs_id = maybe_hg_cs_id.ok_or(format_err!(
-                                "ProgrammerError: we synced a commit we weren't supposed to: {}",
-                                source_repo_bcs_id
-                            ))?;
-
-                            let bcs = target_repo
-                                .get_bonsai_changeset(ctx, target_repo_bcs_id)
-                                .compat()
-                                .await?;
-
-                            let res: Result<_, Error> = Ok((hg_cs_id.clone(), bcs));
-                            res
-                        }
-                    },
-                ),
-        )
+        try_join_all(synced_ids.into_iter().map(move |target_repo_bcs_id| {
+            cloned!(ctx, target_repo);
+            async move {
+                target_repo
+                    .get_bonsai_changeset(ctx, target_repo_bcs_id)
+                    .compat()
+                    .await
+            }
+        }))
         .await
         .map(|v| v.into_iter().collect())
     }
