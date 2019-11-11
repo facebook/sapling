@@ -1,6 +1,6 @@
 #testcases withpytz withoutpytz
 #if withpytz
-  $ python -c "import pytz" || exit 80
+  $ hg debugshell -c "import pytz; pytz.__name__" || exit 80
 #endif
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
