@@ -116,33 +116,13 @@ Normal pushrebase with one commit
 - compare the working copies
   $ verify_wc master_bookmark
 
-Force pushrebase
-  $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark^
-  $ echo 3 > 3 && hg add 3 && hg ci -q -m "Master after non-forward move"
-  $ REPONAME=small-mon hgmn push --to master_bookmark --force --pushvar NON_FAST_FORWARD=true | grep updating
-  updating bookmark master_bookmark
-  $ log -r master_bookmark
-  @  Master after non-forward move [public;rev=3;e5ca36a3d680] default/master_bookmark
-  |
-  ~
--- it should also be present in a large repo
-  $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
-  $ log -r master_bookmark
-  o  Master after non-forward move [public;rev=4;373fa4f55174] default/master_bookmark
-  |
-  ~
-- compare the working copies
-  $ verify_wc master_bookmark
-
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn push -r master_bookmark^ --to master_bookmark_2 --create | grep exporting
   exporting bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   3:e5ca36a3d680
+     default/master_bookmark   2:ce81c7d38286
      default/master_bookmark_2 1:11f848659bfc
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
@@ -151,7 +131,7 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ hg book --all
   no bookmarks set
      default/bookprefix/master_bookmark_2 2:bfcfb674663c
-     default/master_bookmark   4:373fa4f55174
+     default/master_bookmark   3:819e91b238b7
 - compare the working copies
   $ verify_wc bookprefix/master_bookmark_2
 
@@ -161,13 +141,13 @@ Delete a bookmark
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   3:e5ca36a3d680
+     default/master_bookmark   2:ce81c7d38286
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   4:373fa4f55174
+     default/master_bookmark   3:819e91b238b7
 
 Normal pushrebase with many commits
   $ cd "$TESTTMP/small-hg-client"
@@ -178,7 +158,7 @@ Normal pushrebase with many commits
   $ createfile 7 && hg ci -qm "The staunchest tramp to ply his trade"
 
   $ REPONAME=small-mon hgmn push --to master_bookmark
-  pushing rev 5448ef1ede9d to destination ssh://user@dummy/small-mon bookmark master_bookmark
+  pushing rev beb30dc3a35c to destination ssh://user@dummy/small-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -186,14 +166,14 @@ Normal pushrebase with many commits
   added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ log -r master_bookmark
-  @  The staunchest tramp to ply his trade [public;rev=7;5448ef1ede9d] default/master_bookmark
+  @  The staunchest tramp to ply his trade [public;rev=6;beb30dc3a35c] default/master_bookmark
   |
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
-  o  The staunchest tramp to ply his trade [public;rev=8;73bd0869f142] default/master_bookmark
+  o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] default/master_bookmark
   |
   ~
   $ verify_wc master_bookmark
@@ -208,14 +188,14 @@ Pushrebase, which deletes and removes files
   $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
   updating bookmark master_bookmark
   $ log -r master_bookmark
-  @  Moves, renames and copies [public;rev=8;ed440ae481ea] default/master_bookmark
+  @  Moves, renames and copies [public;rev=7;b888ee4f19b5] default/master_bookmark
   |
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
-  o  Moves, renames and copies [public;rev=9;ba47ebe8e77d] default/master_bookmark
+  o  Moves, renames and copies [public;rev=8;b4e3e504160c] default/master_bookmark
   |
   ~
   $ verify_wc master_bookmark
@@ -229,14 +209,14 @@ Pushrebase, which replaces a directory with a file
   $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
   updating bookmark master_bookmark
   $ log -r master_bookmark
-  @  Replace a directory with a file [public;rev=9;e8e60f4bf53e] default/master_bookmark
+  @  Replace a directory with a file [public;rev=8;e72ee383159a] default/master_bookmark
   |
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
-  o  Replace a directory with a file [public;rev=10;63366cd3030b] default/master_bookmark
+  o  Replace a directory with a file [public;rev=9;6ac00e7afd93] default/master_bookmark
   |
   ~
   $ verify_wc master_bookmark

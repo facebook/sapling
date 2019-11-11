@@ -195,6 +195,7 @@ fn create_repo_sync_target(
             small_to_large_commit_syncer,
             large_to_small_commit_syncer,
             target_repo_dbs,
+            commit_sync_config,
         })
         .boxify()
 }

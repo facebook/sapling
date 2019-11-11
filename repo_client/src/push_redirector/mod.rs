@@ -32,6 +32,7 @@ use futures::Future;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::try_join_all;
 use futures_util::{future::FutureExt, try_future::TryFutureExt, try_join};
+use metaconfig_types::CommitSyncConfig;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
 use std::collections::{HashMap, HashSet};
@@ -52,6 +53,8 @@ pub struct RepoSyncTarget {
     pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
     // A struct, needed to backsync commits
     pub target_repo_dbs: TargetRepoDbs,
+    // Config for commit sync functionality
+    pub commit_sync_config: CommitSyncConfig,
 }
 
 impl RepoSyncTarget {
@@ -502,6 +505,17 @@ impl RepoSyncTarget {
             old: maybe_old,
             new: maybe_new,
         } = orig;
+
+        if self
+            .commit_sync_config
+            .common_pushrebase_bookmarks
+            .contains(&name)
+        {
+            return Err(format_err!(
+                "cannot force pushrebase to shared bookmark {}",
+                name
+            ));
+        }
 
         let (old, new) = try_join!(
             async {
