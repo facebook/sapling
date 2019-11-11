@@ -155,7 +155,12 @@ async fn subcommand_verify_wc(
                 .compat()
                 .await?;
 
-        move_all_paths(large_repo_entries, commit_syncer.get_mover())
+        if large_hash == small_hash {
+            // No need to move any paths, because this commit was preserved as is
+            Ok(large_repo_entries)
+        } else {
+            move_all_paths(large_repo_entries, commit_syncer.get_mover())
+        }
     };
 
     let small_repo_entries = async {
