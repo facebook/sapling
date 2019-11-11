@@ -67,6 +67,7 @@ ignore = [
     "_scandir",  # for IPython
     "collections.abc",  # for IPython - pickleshare
     "sqlite3",  # for IPython to detect missing sqlite
+    "pyreadline",  # for IPython on Windows to detect missing pyreadline
 ]
 
 _pypy = "__pypy__" in sys.builtin_module_names
