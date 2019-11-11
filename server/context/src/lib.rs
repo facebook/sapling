@@ -352,6 +352,17 @@ impl SessionContainer {
         }
     }
 
+    pub fn new_with_defaults(fb: FacebookInit) -> Self {
+        Self::new(
+            fb,
+            generate_session_id(),
+            TraceContext::new(generate_trace_id(), Instant::now()),
+            None,
+            SshEnvVars::default(),
+            None,
+        )
+    }
+
     pub fn new_context(&self, logger: Logger, scuba: ScubaSampleBuilder) -> CoreContext {
         let logging = LoggingContainer::new(logger, scuba);
 
@@ -451,14 +462,7 @@ pub struct CoreContext {
 
 impl CoreContext {
     pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
-        let session = SessionContainer::new(
-            fb,
-            generate_session_id(),
-            TraceContext::new(generate_trace_id(), Instant::now()),
-            None,
-            SshEnvVars::default(),
-            None,
-        );
+        let session = SessionContainer::new_with_defaults(fb);
 
         session.new_context(logger, ScubaSampleBuilder::with_discard())
     }
