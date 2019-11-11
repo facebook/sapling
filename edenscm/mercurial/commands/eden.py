@@ -494,22 +494,15 @@ class HgServer(object):
 
     def _fetch_tree_impl(self, path, manifest_node):
         mfnodes = set([manifest_node])
-
-        # It would be nice to initially only fetch the one tree that we need
-        # immediately, and fetch the rest of the subtree later, in the
-        # background.  Unfortunately the wire protocol API does not support a
-        # mechanism to do this yet.  In the future it's probably worth adding a
-        # "depth" parameter requesting data only down to a specific depth.
-
         if path:
             # We have to call repo._prefetchtrees() directly if we have a path.
             # We cannot compute the set of base nodes in this case.
-            self.repo._prefetchtrees(path, mfnodes, [], [])
+            self.repo._prefetchtrees(path, mfnodes, [], [], depth=1)
             self.repo.commitpending()
         else:
             # When querying the top-level node use repo.prefetchtrees()
             # It will compute a reasonable set of base nodes to send in the query.
-            self.repo.prefetchtrees(mfnodes)
+            self.repo.prefetchtrees(mfnodes, depth=1)
             self.repo.commitpending()
 
     def send_chunk(self, request, *data, **kwargs):
