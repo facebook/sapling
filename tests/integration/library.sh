@@ -98,6 +98,14 @@ function megarepo_tool {
     "$@"
 }
 
+
+function megarepo_tool_multirepo {
+  GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
+    "${CACHING_ARGS[@]}" \
+    --mononoke-config-path mononoke-config  \
+    "$@"
+}
+
 function mononoke_x_repo_sync_once() {
   source_repo_id=$1
   target_repo_id=$2
@@ -1124,6 +1132,15 @@ EOF
       VALUES (CAST('$repo' AS BLOB), '$bookmark', '$node', '$bookmark');
 EOF
 fi
+}
+
+function get_bonsai_bookmark() {
+   local bookmark repoid_backup
+   repoid_backup=$REPOID
+   export REPOID="$1"
+   bookmark="$2"
+   mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
+   export REPOID=$repoid_backup
 }
 
 function add_synced_commit_mapping_entry() {
