@@ -45,6 +45,7 @@
 ///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
@@ -1018,36 +1019,20 @@ async fn generate_additional_bonsai_file_changes(
         let mut new_file_changes = vec![];
         for res in bonsai_diff {
             match res {
-                BonsaiDiffResult::Changed(path, ty, node_id)
-                | BonsaiDiffResult::ChangedReusedId(path, ty, node_id) => {
-                    if !stale_entries.contains(&path) {
+                BonsaiDiffResult::Changed(ref path, ..)
+                | BonsaiDiffResult::ChangedReusedId(ref path, ..)
+                | BonsaiDiffResult::Deleted(ref path) => {
+                    if !stale_entries.contains(path) {
                         continue;
                     }
-                    let content_id_fut = repo.get_file_content_id(ctx.clone(), node_id);
-                    let file_size_fut = repo.get_file_size(ctx.clone(), node_id);
-
-                    let f =
-                        content_id_fut
-                            .join(file_size_fut)
-                            .map(move |(content_id, file_size)| {
-                                // Note that we intentionally do not set copy-from info,
-                                // even if a file has been copied from somewhere.
-                                // BonsaiChangeset requires that copy_from cs id points to one of
-                                // the parents of the commit, so if we just fetch the latest copy
-                                // info for a file change, then it might point to one of the
-                                // ancestors of `onto`, but not necessarily to the onto.
-                                let file_change = FileChange::new(content_id, ty, file_size, None);
-                                (path, Some(file_change))
-                            });
-                    new_file_changes.push(f.left_future());
-                }
-                BonsaiDiffResult::Deleted(path) => {
-                    if !stale_entries.contains(&path) {
-                        continue;
-                    }
-                    new_file_changes.push(ok((path, None)).right_future());
                 }
             }
+
+            new_file_changes.push(convert_diff_result_into_file_change_for_diamond_merge(
+                ctx.clone(),
+                &repo,
+                res,
+            ));
         }
 
         stream::futures_unordered(new_file_changes)
