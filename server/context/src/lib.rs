@@ -483,6 +483,14 @@ impl CoreContext {
         )
     }
 
+    pub fn with_mutated_scuba(
+        &self,
+        sample: impl FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,
+    ) -> Self {
+        self.session
+            .new_context(self.logger().clone(), sample(self.scuba().clone()))
+    }
+
     pub fn session_id(&self) -> &SessionId {
         &self.session.session_id()
     }

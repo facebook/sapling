@@ -1250,9 +1250,17 @@ impl HgCommands for RepoClient {
                     cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint, phases_hint);
                     move |action| {
                         match try_boxfuture!(client.maybe_get_repo_sync_target_for_action(&action)) {
-                            Some(repo_sync_target) => repo_sync_target
-                                .run_redirected_post_resolve_action_compat(ctx, action)
-                                .boxify(),
+                            Some(repo_sync_target) => {
+                                let ctx = ctx.with_mutated_scuba(|mut sample| {
+                                    sample.add("target_repo_name", repo_sync_target.repo.reponame().as_ref());
+                                    sample.add("target_repo_id", repo_sync_target.repo.repoid().id());
+                                    sample
+                                });
+                                ctx.scuba().clone().log_with_msg("Push redirected to large repo", None);
+                                repo_sync_target
+                                    .run_redirected_post_resolve_action_compat(ctx, action)
+                                    .boxify()
+                            }
                             None => run_post_resolve_action(
                                 ctx,
                                 blobrepo,
