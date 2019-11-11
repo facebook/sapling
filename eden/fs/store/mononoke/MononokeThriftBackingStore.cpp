@@ -161,7 +161,7 @@ MononokeThriftBackingStore::withClient(Func&& func) {
 
     auto client =
         servicerouter::cpp2::getClientFactory()
-            .getClientUnique<MononokeAPIServiceAsyncClient>(serviceName_);
+            .getSRClientUnique<MononokeAPIServiceAsyncClient>(serviceName_);
     return func(client.get());
   });
 }
