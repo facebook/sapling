@@ -38,15 +38,13 @@ def logexception(ui, exc, quiet=False):
     """Log an exception to Mercurial's telemetry and print a user warning."""
     exctype = type(exc).__name__
     excmsg = str(exc)
-
+    exctb = traceback.format_exc()
     if not quiet or debug(ui):
         ui.warn("%s: %s\n" % (exctype, excmsg))
-
+    if debug(ui):
+        ui.warn("%s\n" % exctb)
     ui.log(
-        "edenapi_error",
-        exception_msg=excmsg,
-        exception_type=exctype,
-        traceback=traceback.format_exc(),
+        "edenapi_error", exception_msg=excmsg, exception_type=exctype, traceback=exctb
     )
 
 

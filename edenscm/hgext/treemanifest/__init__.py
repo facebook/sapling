@@ -600,6 +600,24 @@ def wraprepo(repo):
                 for node in mfnodes:
                     rustmanifest.prefetch(store, node, rootdir, depth)
 
+        def httpgettrees(self, keys):
+            """
+            Fetch the specified tree nodes over HTTP via the Eden API.
+
+            Wrapper around _httpgettrees() that catches any exceptions
+            and returns False if fetching failed for any reason, including
+            HTTP fetching being disabled.
+            """
+            if _usehttp(self.ui):
+                try:
+                    self._httpgettrees(keys)
+                    return True
+                except Exception as e:
+                    self.ui.warn(_("encountered error during HTTPS fetching;"))
+                    self.ui.warn(_(" falling back to SSH\n"))
+                    edenapi.logexception(self.ui, e)
+            return False
+
         def _httpgettrees(self, keys):
             """
             Fetch the specified tree nodes over HTTP via the Eden API.
@@ -2555,18 +2573,11 @@ class generatingdatastore(object):
 
 class remotetreestore(generatingdatastore):
     def _generatetrees(self, name, node):
-        # If configured, attempt to fetch the tree via HTTP, falling
-        # back to the old prefetch-based fetching behavior if the
-        # HTTP fetch fails. Unlike _prefetch(), the HTTP fetching
-        # only fetches the individually requested tree node.
-        if _usehttp(self._repo.ui):
-            try:
-                self._repo._httpgettrees([(name, node)])
-                return
-            except Exception as e:
-                self._repo.ui.warn(_("encountered error during HTTPS fetching;"))
-                self._repo.ui.warn(_(" falling back to SSH\n"))
-                edenapi.logexception(self._repo.ui, e)
+        # First attempt to fetch the single tree node over HTTP.
+        # If that fails, fall back to SSH and perform a full
+        # (and likely slow) recursive prefetch of the entire tree.
+        if self._repo.httpgettrees([(name, node)]):
+            return
 
         # Only look at the server if not root or is public
         basemfnodes = []
@@ -2609,11 +2620,7 @@ class remotetreestore(generatingdatastore):
     def prefetch(self, keys):
         if _usehttp(self._repo.ui):
             keys = self._shareddata.getmissing(keys)
-            try:
-                self._repo._httpgettrees(keys)
-            except Exception as e:
-                self._repo.ui.warn(_("failed to prefetch trees over HTTPS"))
-                edenapi.logexception(self._repo.ui, e)
+            self._repo._httpgettrees(keys)
 
 
 class ondemandtreedatastore(generatingdatastore):
