@@ -457,32 +457,6 @@ impl MononokeRepo {
         futures_ordered(cs_futs).collect().boxify()
     }
 
-    fn get_rename_info(
-        &self,
-        ctx: CoreContext,
-        changeset_id: ChangesetId,
-        path: Option<MPath>,
-    ) -> BoxFuture<Option<(MPath, ChangesetId)>, ErrorKind> {
-        match path {
-            None => Box::new(ok(None)),
-            Some(path) => {
-                cloned!(ctx, self.repo);
-                repo.get_bonsai_changeset(ctx.clone(), changeset_id.clone())
-                    .from_err()
-                    .map(move |changeset| {
-                        let file_changes: HashMap<_, _> = changeset.file_changes().collect();
-                        if let Some(maybe_change) = file_changes.get(&path) {
-                            if let Some(change) = maybe_change {
-                                return change.copy_from().cloned();
-                            }
-                        }
-                        None
-                    })
-                    .boxify()
-            }
-        }
-    }
-
     fn prefetch_history_batch(
         &self,
         ctx: CoreContext,
@@ -546,56 +520,13 @@ impl MononokeRepo {
         total_length: usize,
         history_graph: Arc<Mutex<HashMap<ChangesetId, Option<Vec<ChangesetId>>>>>,
         global_stage: Arc<Mutex<i32>>,
-    ) -> BoxFuture<
-        (
-            Option<GraphUnfoldNode>,
-            Vec<(Option<MPath>, GraphUnfoldNode)>,
-        ),
-        ErrorKind,
-    > {
+    ) -> BoxFuture<(Option<GraphUnfoldNode>, Vec<GraphUnfoldNode>), ErrorKind> {
         cloned!(ctx);
-        self.prefetch_history_batch(ctx.clone(), changeset_id, path.clone())
-            .and_then({
-                // find potential renames
-                cloned!(ctx, path);
-                let this = self.clone();
-                move |history_batch: Vec<_>| {
-                    let mut check_renames = vec![];
-                    for (cs_id, parents) in history_batch.iter() {
-                        if parents.is_empty() {
-                            // check file for a rename if the changeset doesn't have parents
-                            check_renames.push(
-                                this.get_rename_info(ctx.clone(), cs_id.clone(), path.clone())
-                                    .map({
-                                        cloned!(cs_id);
-                                        move |maybe_rename| {
-                                            if let Some(rename) = maybe_rename {
-                                                Some((cs_id.clone(), rename))
-                                            } else {
-                                                None
-                                            }
-                                        }
-                                    }),
-                            )
-                        }
-                    }
 
-                    futures_ordered(check_renames)
-                        .collect()
-                        .map(move |renames| {
-                            (
-                                history_batch,
-                                renames
-                                    .into_iter()
-                                    .filter_map(|maybe_rename| maybe_rename)
-                                    .collect::<HashMap<ChangesetId, (MPath, ChangesetId)>>(),
-                            )
-                        })
-                }
-            })
+        self.prefetch_history_batch(ctx.clone(), changeset_id, path.clone())
             .map({
                 // construct the history graph
-                move |(history_batch, renames_info)| {
+                move |history_batch: Vec<_>| {
                     // keeping potential source changeset for the graph traversal later
                     let mut source_on_stage = None;
                     if let Some((source_id, _)) = history_batch.first() {
@@ -620,7 +551,7 @@ impl MononokeRepo {
                         if let Some(maybe_parents) = graph.get(&cs_id) {
                             // history graph has the changeset
                             if maybe_parents.is_none() && !has_unknown_parent {
-                                // the node was visited but had unknown parents or rename happened
+                                // the node was visited but had unknown parents
                                 // let's update the graph
                                 graph.insert(cs_id, Some(known_parents.clone()));
                             }
@@ -634,23 +565,9 @@ impl MononokeRepo {
                                 // changeset as visited for other traversal branches
                                 graph.insert(cs_id, None);
                                 // the changeset hasn't been visited before
-                                next.push((path.clone(), GraphUnfoldNode(cs_id, stage + 1)));
+                                next.push(GraphUnfoldNode(cs_id, stage + 1));
                             } else {
-                                if !known_parents.is_empty() {
-                                    graph.insert(cs_id, Some(known_parents.clone()));
-                                } else {
-                                    // keep space for a potential parents if there was a rename
-                                    graph.insert(cs_id, None);
-                                    // if the changeset doesn't have parents, we need to check
-                                    // if rename happened here
-                                    if let Some((rename_path, rename_cs)) = renames_info.get(&cs_id)
-                                    {
-                                        next.push((
-                                            Some(rename_path.clone()),
-                                            GraphUnfoldNode(*rename_cs, stage + 1),
-                                        ))
-                                    }
-                                }
+                                graph.insert(cs_id, Some(known_parents.clone()));
                             }
                         }
                     }
@@ -765,17 +682,17 @@ impl MononokeRepo {
                 move |bcs_id| {
                     bounded_traversal_dag(
                         256,
-                        (mpath.clone(), GraphUnfoldNode(bcs_id.clone(), 0)),
+                        GraphUnfoldNode(bcs_id.clone(), 0),
                         // unfold
                         {
-                            cloned!(ctx);
+                            cloned!(ctx, mpath);
                             let this = this.clone();
-                            move |(path, GraphUnfoldNode(changeset_id, stage))| {
+                            move |GraphUnfoldNode(changeset_id, stage)| {
                                 this.do_history_graph_unfold(
                                     ctx.clone(),
                                     changeset_id,
                                     stage,
-                                    path,
+                                    mpath.clone(),
                                     skip + limit,
                                     history_graph.clone(),
                                     global_stage.clone(),
