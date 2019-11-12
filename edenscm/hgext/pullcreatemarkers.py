@@ -47,9 +47,9 @@ def _cleanuplanded(repo, dryrun=False, skipnodes=None):
         if diffid:
             difftodraft.setdefault(diffid, []).append(ctx.node())
 
-    client = graphql.Client(repo=repo)
     ui = repo.ui
     try:
+        client = graphql.Client(repo=repo)
         difftopublic = client.getlandednodes(list(difftodraft.keys()))
     except KeyboardInterrupt:
         ui.warn(
