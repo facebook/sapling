@@ -1000,6 +1000,7 @@ def _wraprepo(ui, repo):
                 return result, key
 
             matchers = []
+            isalways = False
             for rev in revs:
                 try:
                     includes, excludes, profiles = self.getsparsepatterns(rev, config)
@@ -1014,16 +1015,15 @@ def _wraprepo(ui, repo):
                             default="relpath",
                         )
                         matchers.append(matcher)
+                    else:
+                        isalways = True
                 except IOError:
                     pass
 
-            result = None
-            if not matchers:
+            if isalways:
                 result = matchmod.always(self.root, "")
-            elif len(matchers) == 1:
-                result = matchers[0]
             else:
-                result = unionmatcher(matchers)
+                result = matchmod.union(matchers, self.root, "")
 
             if kwargs.get("includetemp", True):
                 tempincludes = self.gettemporaryincludes()
