@@ -13,7 +13,6 @@ use bytes::Bytes;
 use failure::Error;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
-use hostname::get_hostname;
 use serde::{Deserialize, Serialize};
 
 use types::{
@@ -77,10 +76,14 @@ pub enum MononokeRepoResponse {
     EdenPrefetchTreesStream(StreamingDataResponse),
 }
 
+fn hostname() -> Option<String> {
+    hostname::get().ok()?.into_string().ok()
+}
+
 fn binary_response(content: Bytes) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/octet-stream")
-        .header("x-served-by", get_hostname().unwrap_or_default())
+        .header("x-served-by", hostname().unwrap_or_default())
         .body(Body::Binary(content.into()))
 }
 
@@ -88,7 +91,7 @@ fn cbor_response(content: impl Serialize) -> HttpResponse {
     let content = serde_cbor::to_vec(&content).unwrap();
     HttpResponse::Ok()
         .content_type("application/cbor")
-        .header("x-served-by", get_hostname().unwrap_or_default())
+        .header("x-served-by", hostname().unwrap_or_default())
         .body(Body::Binary(content.into()))
 }
 
@@ -104,7 +107,7 @@ where
         .boxify();
     HttpResponse::Ok()
         .content_type("application/cbor")
-        .header("x-served-by", get_hostname().unwrap_or_default())
+        .header("x-served-by", hostname().unwrap_or_default())
         .body(Body::Streaming(stream as BodyStream))
 }
 
@@ -113,7 +116,7 @@ fn streaming_binary_response(stream: FileStream) -> HttpResponse {
 
     HttpResponse::Ok()
         .content_type("application/octet-stream")
-        .header("x-served-by", get_hostname().unwrap_or_default())
+        .header("x-served-by", hostname().unwrap_or_default())
         .body(Body::Streaming(stream))
 }
 

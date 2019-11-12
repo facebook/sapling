@@ -17,7 +17,6 @@ use failure::Fallible;
 use fbinit::FacebookInit;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;
-use hostname::get_hostname;
 use tokio::runtime::Runtime;
 
 use blobrepo_factory::Caching;
@@ -638,7 +637,8 @@ fn main(fb: FacebookInit) -> Fallible<()> {
                 "/hostname",
                 http::Method::GET,
                 |_req: HttpRequest<HttpServerState>| {
-                    if let Some(hostname) = get_hostname() {
+                    if let Some(hostname) = hostname::get().ok().and_then(|s| s.into_string().ok())
+                    {
                         HttpResponse::Ok().body(hostname)
                     } else {
                         HttpResponse::InternalServerError().body("Failed to get hostname")
