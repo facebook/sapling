@@ -65,8 +65,7 @@ std::unordered_set<std::string> getAvailablePackFileNames(
 DatapackStore::DatapackStore(
     const std::string& path,
     bool removeDeadPackFilesOnRefresh)
-    : path_(path),
-      removeOnRefresh_(removeDeadPackFilesOnRefresh) {
+    : path_(path), removeOnRefresh_(removeDeadPackFilesOnRefresh) {
   // Find pack files in path
   auto files = getAvailablePackFileNames(path);
   for (const auto& packpath : files) {

@@ -1,8 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# Copyright (c) Mercurial Contributors.
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# Copyright (c) Mercurial Contributors.
 
 from __future__ import absolute_import
 
@@ -128,7 +129,7 @@ sh % "hg locate b" == r"""
 sh % "hg locate '*.h'" == r"""
     ../t.h
     ../t/e.h"""
-sh % "hg locate 'path:t/x'" == '../t/x'
+sh % "hg locate 'path:t/x'" == "../t/x"
 sh % "hg locate 're:.*\\.h$'" == r"""
     ../t.h
     ../t/e.h"""
