@@ -614,6 +614,20 @@ impl BlobRepo {
             .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit, freshness)
     }
 
+    pub fn count_further_bookmark_log_entries(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        exclude_reason: Option<BookmarkUpdateReason>,
+    ) -> impl Future<Item = u64, Error = Error> {
+        self.bookmarks.count_further_bookmark_log_entries(
+            ctx,
+            id,
+            self.get_repoid(),
+            exclude_reason,
+        )
+    }
+
     /// Get Pull-Default (Pull-Default is a Mercurial concept) bookmarks by prefix, they will be
     /// read from cache or a replica, so they might be stale.
     pub fn get_pull_default_bookmarks_maybe_stale(
