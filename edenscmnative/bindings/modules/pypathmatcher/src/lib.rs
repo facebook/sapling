@@ -13,13 +13,21 @@ use cpython::*;
 use cpython_ext::Bytes;
 
 use encoding::local_bytes_to_path;
-use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher};
+use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pathmatcher"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<gitignorematcher>(py)?;
+    m.add_class::<treematcher>(py)?;
+    m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
+    m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
+    m.add(
+        py,
+        "expandcurlybrackets",
+        py_fn!(py, expand_curly_brackets(path: &str)),
+    )?;
     Ok(m)
 }
 
@@ -50,6 +58,42 @@ py_class!(class gitignorematcher |py| {
         Ok(self.matcher(py).explain(&path, is_dir).into())
     }
 });
+
+py_class!(class treematcher |py| {
+    data matcher: TreeMatcher;
+
+    def __new__(_cls, rules: Vec<String>) -> PyResult<Self> {
+        let matcher = TreeMatcher::from_rules(rules.into_iter());
+        Self::create_instance(py, matcher)
+    }
+
+    def matches(&self, path: &str) -> PyResult<bool> {
+        Ok(self.matcher(py).matches(path))
+    }
+
+    def match_recursive(&self, path: &str) -> PyResult<Option<bool>> {
+        if path.is_empty() {
+            Ok(None)
+        } else {
+            Ok(self.matcher(py).match_recursive(path))
+        }
+    }
+});
+
+fn normalize_glob(_py: Python, path: &str) -> PyResult<Bytes> {
+    Ok(pathmatcher::normalize_glob(path).into())
+}
+
+fn plain_to_glob(_py: Python, path: &str) -> PyResult<Bytes> {
+    Ok(pathmatcher::plain_to_glob(path).into())
+}
+
+fn expand_curly_brackets(_py: Python, pattern: &str) -> PyResult<Vec<Bytes>> {
+    Ok(pathmatcher::expand_curly_brackets(pattern)
+        .into_iter()
+        .map(Bytes::from)
+        .collect())
+}
 
 pub struct PythonMatcher<'a> {
     py: Python<'a>,

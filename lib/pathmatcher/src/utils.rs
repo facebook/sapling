@@ -129,3 +129,72 @@ pub fn expand_curly_brackets(pat: &str) -> Vec<String> {
     visit(&dag, &mut result, String::new(), 0);
     result
 }
+
+/// Normalize a less strict glob pattern to a strict glob pattern.
+///
+/// In a strict glob pattern, `**` can only be a single directory component.
+pub fn normalize_glob(pat: &str) -> String {
+    let mut result = String::with_capacity(pat.len());
+    let chars: Vec<_> = pat.chars().collect();
+    for (i, &ch) in chars.iter().enumerate() {
+        if ch == '*'
+            && chars.get(i + 1).cloned() == Some('*')
+            && !result.ends_with('\\')
+            && !result.is_empty()
+            && !result.ends_with('/')
+        {
+            // Change 'a**' to 'a*/**'
+            result += "*/";
+        }
+        result.push(ch);
+        if ch == '*'
+            && i > 0
+            && chars[i - 1] == '*'
+            && chars.get(i + 1) != None
+            && chars.get(i + 1).cloned() != Some('/')
+        {
+            // Change '**a' to '**/*a'
+            result += "/*";
+        }
+    }
+    result
+}
+
+/// Escape special characters in a plain pattern so it can be used
+/// as a glob pattern.
+pub fn plain_to_glob(plain: &str) -> String {
+    let mut result = String::with_capacity(plain.len());
+    if plain.starts_with("!") {
+        result.push('\\');
+    }
+    for ch in plain.chars() {
+        match ch {
+            '\\' | '*' | '{' | '}' | '[' | ']' => result.push('\\'),
+            _ => (),
+        }
+        result.push(ch);
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_glob() {
+        assert_eq!(normalize_glob("**"), "**");
+        assert_eq!(normalize_glob("a/**"), "a/**");
+        assert_eq!(normalize_glob("a/b**"), "a/b*/**");
+        assert_eq!(normalize_glob("a/b\\**"), "a/b\\**");
+        assert_eq!(normalize_glob("a/**/c"), "a/**/c");
+        assert_eq!(normalize_glob("a/**c"), "a/**/*c");
+    }
+
+    #[test]
+    fn test_plain_to_glob() {
+        assert_eq!(plain_to_glob("a[b{c*d\\e}]"), "a\\[b\\{c\\*d\\\\e\\}\\]");
+        assert_eq!(plain_to_glob(""), "");
+        assert_eq!(plain_to_glob("!a!"), "\\!a!");
+    }
+}

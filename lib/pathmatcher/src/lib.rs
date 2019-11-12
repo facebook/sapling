@@ -86,4 +86,4 @@ impl Matcher for NeverMatcher {
 
 pub use gitignore_matcher::GitignoreMatcher;
 pub use tree_matcher::TreeMatcher;
-pub use utils::expand_curly_brackets;
+pub use utils::{expand_curly_brackets, normalize_glob, plain_to_glob};

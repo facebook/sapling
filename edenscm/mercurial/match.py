@@ -757,6 +757,34 @@ class gitignorematcher(basematcher):
         return "<gitignorematcher>"
 
 
+class treematcher(basematcher):
+    """Match glob patterns with negative pattern support.
+    Have a smarter 'visitdir' implementation.
+    """
+
+    def __init__(self, root, cwd, badfn=None, rules=[]):
+        super(treematcher, self).__init__(root, cwd, badfn)
+        rules = list(rules)
+        self._matcher = pathmatcher.treematcher(rules)
+        self._rules = rules
+
+    def matchfn(self, f):
+        return self._matcher.matches(f)
+
+    def visitdir(self, dir):
+        matched = self._matcher.match_recursive(dir)
+        if matched is None:
+            return True
+        elif matched is True:
+            return "all"
+        else:
+            assert matched is False
+            return False
+
+    def __repr__(self):
+        return "<treematcher rules=%r>" % self._rules
+
+
 def normalizerootdir(dir, funcname):
     if dir == ".":
         util.nouideprecwarn(
