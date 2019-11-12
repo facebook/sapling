@@ -1027,7 +1027,8 @@ def _wraprepo(ui, repo):
 
             if kwargs.get("includetemp", True):
                 tempincludes = self.gettemporaryincludes()
-                result = forceincludematcher(result, tempincludes)
+                if tempincludes:
+                    result = forceincludematcher(result, tempincludes)
 
             self.sparsecache[key] = result
 
@@ -2484,7 +2485,7 @@ class forceincludematcher(matchmod.basematcher):
         self._matcher = matcher
         self._includes = set(includes).union([""])
 
-    def __call__(self, value):
+    def matchfn(self, value):
         return bool(value in self._includes or self._matcher(value))
 
     def __repr__(self):
