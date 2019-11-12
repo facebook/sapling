@@ -82,6 +82,9 @@ class FakeCtx(object):
     def date(self):
         return (self._nodeinfo.date, 0)
 
+    def extra(self):
+        return {}
+
 
 def topological(graph):
     tovisit = sorted(graph.keys())
