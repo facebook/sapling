@@ -10,7 +10,15 @@ import json
 import re
 from urllib import urlencode
 
-from edenscm.mercurial import extensions, namespaces, node, registrar, revset, templater
+from edenscm.mercurial import (
+    extensions,
+    namespaces,
+    node,
+    registrar,
+    revset,
+    smartset,
+    templater,
+)
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin
 from edenscm.mercurial.pycompat import range
@@ -229,7 +237,7 @@ def gitnode(repo, subset, x):
         return subset.filter(lambda r: False)
 
     rn = repo[node.bin(hghash)].rev()
-    return subset.filter(lambda r: r == rn)
+    return subset & smartset.baseset([rn])
 
 
 @namespacepredicate("conduit", priority=70)
