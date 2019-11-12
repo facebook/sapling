@@ -469,7 +469,7 @@ where
     C: AsRef<[u8]>,
 {
     match file {
-        Some(file) => file.contents.as_ref().contains(&b'\0'),
+        Some(file) => file.contents.as_ref().contains(&0),
         None => false,
     }
 }
