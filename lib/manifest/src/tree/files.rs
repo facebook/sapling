@@ -163,7 +163,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["a2/b2"].iter()))
+            tree.files(&TreeMatcher::from_rules(["a2/b2/**"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -172,7 +172,7 @@ mod tests {
             )
         );
         assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["a1/*/c1"].iter()))
+            tree.files(&TreeMatcher::from_rules(["a1/*/c1/**"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!((repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),)

@@ -24,6 +24,9 @@ bitflags! {
 
         // Auto-generated rule because the user specified a subpath.
         const PARENT = 2;
+
+        // Mark a rule as "recursive" (ex. ending with "/**").
+        const RECURSIVE = 4;
     }
 }
 
@@ -60,13 +63,14 @@ impl TreeMatcher {
     /// Unlike gitignore, all patterns are treated as using absolute paths.
     /// That is, `*.c` is treated the same as `/*.c` and does not match `a/b.c`.
     /// Similarly, `!*.c` will be treated as `!/*.c`, in gitignore's sense.
-    /// Use `**/*.c` to match files recursively. Note the `**` pattern
-    /// effectively disable fast paths provided by `match_recursive`.
+    /// Use `**/*.c` to match files recursively. Note the `**` in the middle
+    /// of a pattern effectively disable fast paths provided by `match_recursive`.
     ///
-    /// Patterns match recursively. For example, both `/a/b` and `/a*/b*` match
-    /// `/a/b/c/d`. This is consistent with gitignore - once a directory is ignored,
-    /// everything inside the directory is ignored recursively. To match
-    /// non-recursively, append a new rule `!<PATTERN>/*` after `<PATTERN>`.
+    /// Patterns do not match recursively.
+    ///
+    /// For example, both `/a/b` and `/a*/b*` do NOT match `/a/b/c/d`. Append
+    /// `/**` to make rules recursive. The matcher works best if all rules end
+    /// with `**`.
     pub fn from_rules(rules: impl Iterator<Item = impl AsRef<str>>) -> Self {
         let mut builder = GlobSetBuilder::new();
         let mut rule_flags = Vec::new();
@@ -97,7 +101,7 @@ impl TreeMatcher {
             let rule = escape_curly_brackets(rule);
 
             // Add flags to the rule_id
-            let flag = if negative {
+            let mut flag = if negative {
                 RuleFlags::NEGATIVE
             } else {
                 RuleFlags::empty()
@@ -118,16 +122,16 @@ impl TreeMatcher {
                 sep_index = index + 1;
             }
             // Insert the rule. Currently, invalid rules are discarded.
-            // Append "/**" to make the rule recursive, if not already
-            let pat = if rule.ends_with("/**") || rule == "**" {
-                rule.to_string()
-            } else {
-                // "a/b" still matches for rule "a/b/**".
-                format!("{}/**", rule)
-            };
             // TODO: Proper error handling
-            if let Some(glob) = build_glob(&pat) {
+            // NOTE: This crate depends on the fact that "a/**" matches "a", although
+            // the documentation of globset might say otherwise.
+            if let Some(glob) = build_glob(&rule) {
                 builder.add(glob);
+                // Mark the rule as recursive so fast paths (i.e. claim everything
+                // matches or nothing matches) can be used.
+                if rule.ends_with("/**") || rule.ends_with("**/*") || rule == "**" {
+                    flag |= RuleFlags::RECURSIVE;
+                }
                 rule_flags.push(flag);
             }
         }
@@ -173,8 +177,13 @@ impl TreeMatcher {
                     subpath_may_match = true;
                 }
             } else {
+                // If it is not RECURSIVE, then fast paths (i.e. claim everything
+                // matches, or nothing matches) cannot be used.
+                if !flag.contains(RuleFlags::RECURSIVE) {
+                    subpath_may_match = true;
+                    subpath_may_mismatch = true;
+                }
                 // A non-parent rule matches.
-                // All rules are recursive so we can make a decision.
                 if flag.contains(RuleFlags::NEGATIVE) {
                     if subpath_may_match {
                         return None;
@@ -317,7 +326,7 @@ mod tests {
 
     #[test]
     fn test_literal_paths() {
-        let m = TreeMatcher::from_rules(["/a", "b/c/d", "\\e/\\f"].iter());
+        let m = TreeMatcher::from_rules(["/a/**", "b/c/d/**", "\\e/\\f/**"].iter());
         assert_eq!(m.match_recursive(""), None);
         assert_eq!(m.match_recursive("a"), Some(true));
         assert_eq!(m.match_recursive("a/b"), Some(true));
@@ -339,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_simple_glob() {
-        let m = TreeMatcher::from_rules(["a/*[cd][ef]"].iter());
+        let m = TreeMatcher::from_rules(["a/*[cd][ef]/**"].iter());
         assert_eq!(m.match_recursive("a"), None);
         assert_eq!(m.match_recursive("b"), Some(false));
         assert_eq!(m.match_recursive("a/x"), Some(false));
@@ -351,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_complex_glob() {
-        let m = TreeMatcher::from_rules(["a/v/**/*.c", "a/**/w/*.c"].iter());
+        let m = TreeMatcher::from_rules(["a/v/**/*.c/**", "a/**/w/*.c/**"].iter());
         assert_eq!(m.match_recursive("a"), None);
         assert_eq!(m.match_recursive("b"), Some(false));
         assert_eq!(m.match_recursive("a/v/.c"), Some(true));
@@ -365,7 +374,7 @@ mod tests {
         assert_eq!(m.matches("a/w/v/w.c"), false);
 
         // "{" has no special meaning
-        let m = TreeMatcher::from_rules(["a/{b,c/d}"].iter());
+        let m = TreeMatcher::from_rules(["a/{b,c/d}/**"].iter());
         assert_eq!(m.match_recursive("a/{b,c/d}"), Some(true));
         assert_eq!(m.match_recursive("a/{b,c"), None);
         assert_eq!(m.match_recursive("a/{b,d"), Some(false));
@@ -373,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_mixed_literal_and_simple_glob() {
-        let m = TreeMatcher::from_rules(["b/c/d", "b/*c", "b/1c"].iter());
+        let m = TreeMatcher::from_rules(["b/c/d/**", "b/*c/**", "b/1c/**"].iter());
         assert_eq!(m.match_recursive(""), None);
         assert_eq!(m.match_recursive("b/c/d/e"), Some(true));
         assert_eq!(m.match_recursive("b/1c"), Some(true));
@@ -388,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_mixed_literal_and_complex_glob() {
-        let m = TreeMatcher::from_rules(["b/c/d", "b/**/c/**"].iter());
+        let m = TreeMatcher::from_rules(["b/c/d/**", "b/**/c/**"].iter());
         assert_eq!(m.match_recursive("b/c/d/e"), Some(true));
         assert_eq!(m.match_recursive("b/d"), None);
         assert_eq!(m.match_recursive("b/c"), Some(true));
@@ -402,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_empty_negative() {
-        let m = TreeMatcher::from_rules(["!a"].iter());
+        let m = TreeMatcher::from_rules(["!a/**"].iter());
         assert_eq!(m.match_recursive(""), None); // better answer is Some(false)
         assert_eq!(m.match_recursive("a"), Some(false));
         assert_eq!(m.match_recursive("a/b"), Some(false));
@@ -412,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_literal_negative() {
-        let m = TreeMatcher::from_rules(["a", "!a/b", "a/b/c"].iter());
+        let m = TreeMatcher::from_rules(["a/**", "!a/b/**", "a/b/c/**"].iter());
         assert_eq!(m.match_recursive("a"), None);
         assert_eq!(m.match_recursive("a/c"), Some(true));
         assert_eq!(m.match_recursive("a/b"), None);
@@ -428,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_negative_override() {
-        let m = TreeMatcher::from_rules(["a", "!a", "!b", "b"].iter());
+        let m = TreeMatcher::from_rules(["a/**", "!a/**", "!b/**", "b/**"].iter());
         assert_eq!(m.match_recursive("a/b"), Some(false));
         assert_eq!(m.match_recursive("b/c"), Some(true));
         assert_eq!(m.matches("a"), false);
@@ -437,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_mixed_negative_literal_simple_glob() {
-        let m = TreeMatcher::from_rules(["a*", "!a1", "a1/a", "!a1/a*c"].iter());
+        let m = TreeMatcher::from_rules(["a*/**", "!a1/**", "a1/a/**", "!a1/a*c/**"].iter());
         assert_eq!(m.match_recursive("b"), Some(false));
         assert_eq!(m.match_recursive("a1/a"), Some(true));
         assert_eq!(m.matches("a"), true);
@@ -452,13 +461,43 @@ mod tests {
     #[test]
     fn test_fast_paths() {
         // Some interesting fast paths
-        let m = TreeMatcher::from_rules(["a/**/b"].iter());
+        let m = TreeMatcher::from_rules(["a/**/b/**"].iter());
         assert_eq!(m.match_recursive("a/b"), Some(true));
         assert_eq!(m.match_recursive("a/1/2/3/b"), Some(true));
 
-        let m = TreeMatcher::from_rules(["a/**/b", "!a/**/b/*"].iter());
+        let m = TreeMatcher::from_rules(["a/**/b/**", "!a/**/b/*/**"].iter());
         assert_eq!(m.match_recursive("a/b/1"), Some(false));
         assert_eq!(m.match_recursive("a/1/2/3/b/2"), Some(false));
+    }
+
+    #[test]
+    fn test_non_recursive_patterns() {
+        let m = TreeMatcher::from_rules(["a/*"].iter());
+        assert!(m.matches("a/a"));
+        assert!(!m.matches("b/a"));
+        assert!(!m.matches("a"));
+        assert_eq!(m.match_recursive("a"), None);
+        assert_eq!(m.match_recursive("a/b"), None);
+        assert_eq!(m.match_recursive("a/b/c"), Some(false));
+        assert_eq!(m.match_recursive("b"), Some(false));
+
+        let m = TreeMatcher::from_rules(["*a"].iter());
+        assert!(m.matches("aa"));
+        assert!(!m.matches("aa/b"));
+        assert!(!m.matches("b"));
+        assert_eq!(m.match_recursive("aa"), None);
+        assert_eq!(m.match_recursive("a/a"), Some(false));
+        assert_eq!(m.match_recursive("b"), Some(false));
+
+        let m = TreeMatcher::from_rules(["b*/**/*a"].iter());
+        assert!(m.matches("b1/aa"));
+        assert!(!m.matches("c/aa"));
+        assert!(!m.matches("b1/aa/11"));
+        assert!(!m.matches("b/a/b"));
+        assert!(m.matches("b/a/b/a"));
+        assert_eq!(m.match_recursive("aa"), Some(false));
+        assert_eq!(m.match_recursive("b/a/b"), None);
+        assert_eq!(m.match_recursive("b/a/b/a"), None);
     }
 
     #[test]

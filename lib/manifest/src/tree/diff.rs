@@ -628,7 +628,7 @@ mod tests {
             ("same", "1"),
         ]);
 
-        let matcher = TreeMatcher::from_rules(["d1"].iter());
+        let matcher = TreeMatcher::from_rules(["d1/**"].iter());
         let diff = Diff::new(&ltree, &rtree, &matcher);
         let entries = diff
             .collect::<Fallible<Vec<_>>>()
@@ -796,7 +796,7 @@ mod tests {
         let right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
 
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1/**"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(DiffEntry::new(
@@ -814,7 +814,7 @@ mod tests {
             ),)
         );
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["a2/b2"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["a2/b2/**"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(DiffEntry::new(
@@ -823,7 +823,7 @@ mod tests {
             ),)
         );
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["*/b2"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["*/b2/**"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
