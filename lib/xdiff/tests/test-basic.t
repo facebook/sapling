@@ -29,6 +29,7 @@ Generate test files
   $ printf "a\0" > binary_a
   $ printf "b\0" > binary_b
   $ cp a a_exec
+  $ cp a copied_a
   $ chmod +x a_exec
 
 
@@ -181,3 +182,10 @@ Test symlinks
   +f
 
   $ xdiff link_to_a a
+
+Test copy with no changes
+  $ cp a copy_of_a
+  $ xdiff -c a copy_of_a
+  diff --git a/a b/copy_of_a
+  copy from a
+  copy to copy_of_a

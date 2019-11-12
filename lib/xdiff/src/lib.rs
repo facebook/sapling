@@ -107,11 +107,13 @@ where
     return result;
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HeaderlessDiffOpts {
     /// Number of context lines
     pub context: usize,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CopyInfo {
     /// File was modified, added or removed.
     None,
@@ -121,6 +123,7 @@ pub enum CopyInfo {
     Copy,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct DiffOpts {
     /// Number of context lines
     pub context: usize,
@@ -424,7 +427,7 @@ where
     })
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FileType {
     Regular,
     Executable,
@@ -433,7 +436,7 @@ pub enum FileType {
 
 /// Struct representing the diffed file. Contains all the information
 /// needed for header-generation.
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct DiffFile<P, C>
 where
     P: AsRef<[u8]>,
@@ -504,14 +507,18 @@ where
     if let (None, None) = (&old_file, &new_file) {
         return state.collect();
     }
-    // When the files have no differences the output should be empty.
+
+    // When the files have no content differences and no metadata differences the output should be empty.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
-        let old_contents = old_file.contents.as_ref();
-        let new_contents = new_file.contents.as_ref();
-        if old_contents.len() == new_contents.len() && old_contents == new_contents {
-            return state.collect();
+        if &old_file.file_type == &new_file.file_type && diff_opts.copy_info == CopyInfo::None {
+            let old_contents = old_file.contents.as_ref();
+            let new_contents = new_file.contents.as_ref();
+            if old_contents.len() == new_contents.len() && old_contents == new_contents {
+                return state.collect();
+            }
         }
     }
+
     let old_name = &(old_file.as_ref()).or((&new_file).as_ref()).unwrap().path;
     let new_name = &(new_file.as_ref()).or((&old_file).as_ref()).unwrap().path;
     state.emit(b"diff --git a/");
@@ -562,6 +569,17 @@ where
         // Impossible here.
         (None, None) => (),
     }
+
+    // When the files have no differences we shouldn't print any further
+    // headers - those are reserved for changed files.
+    if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
+        let old_contents = old_file.contents.as_ref();
+        let new_contents = new_file.contents.as_ref();
+        if old_contents.len() == new_contents.len() && old_contents == new_contents {
+            return state.collect();
+        }
+    }
+
     // Header for binary files
     if file_is_binary(&old_file) || file_is_binary(&new_file) {
         match (old_file, new_file) {
