@@ -1131,6 +1131,7 @@ def manifestmerge(
     boolbm = pycompat.bytestr(bool(branchmerge))
     boolf = pycompat.bytestr(bool(force))
     boolm = pycompat.bytestr(bool(matcher))
+    sparsematch = getattr(repo, "sparsematch", None)
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n" % (boolbm, boolf, boolm))
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
@@ -1157,6 +1158,40 @@ def manifestmerge(
             relevantfiles.add(movedirkey)
         filesmatcher = scmutil.matchfiles(repo, relevantfiles)
         matcher = matchmod.intersectmatchers(matcher, filesmatcher)
+
+    # For sparse repos, attempt to use the sparsematcher to narrow down
+    # calculation.  Consider a typical rebase:
+    #
+    #     o new master (m1, wctx, rebase destination)
+    #     .
+    #     . o (m2, rebase source)
+    #     |/
+    #     o (ma)
+    #
+    # Split diff(m1, m2) into 2 parts:
+    # - diff(m2, ma) is small, and cannot use sparseamtcher for correctness.
+    #   (see test-sparse-rebase.t)
+    # - diff(m1, ma) is potentially huge, and can use sparsematcher.
+    elif sparsematch is not None and not forcefulldiff:
+        if branchmerge:
+            relevantfiles = set(ma.diff(m2).keys())
+            for copykey, copyvalue in copy.iteritems():
+                if copyvalue in relevantfiles:
+                    relevantfiles.add(copykey)
+            for movedirkey in movewithdir:
+                relevantfiles.add(movedirkey)
+            filesmatcher = scmutil.matchfiles(repo, relevantfiles)
+        else:
+            filesmatcher = None
+
+        revs = {repo.dirstate.p1(), repo.dirstate.p2(), pa.node(), p2.node()}
+        revs -= {nullid, None}
+        sparsematcher = sparsematch(*list(revs))
+
+        # use sparsematcher to make diff(m1, ma) less expensive.
+        if filesmatcher is not None:
+            sparsematcher = matchmod.unionmatcher([sparsematcher, filesmatcher])
+        matcher = matchmod.intersectmatchers(matcher, sparsematcher)
 
     diff = m1.diff(m2, matcher=matcher)
 

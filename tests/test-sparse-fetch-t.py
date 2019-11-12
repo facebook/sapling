@@ -69,14 +69,11 @@ A  # A/x/x/y/z=A1
 
 sh % "hg sparse include x"
 
-# Suboptimal: Updating to A should avoid downloading y/ or z/
-eq(
-    collectprefetch("hg update -q $A"),
-    ["x", "x/x", "x/x/y", "y", "y/x", "y/x/y", "z", "z/x", "z/x/y"],
-)
+# Good: Updating to A should avoid downloading y/ or z/
+eq(collectprefetch("hg update -q $A"), ["x", "x/x", "x/x/y"])
 
-# Suboptimal: Updating to B should avoid downloading y/
-eq(collectprefetch("hg update -q $B"), ["x", "x/x", "x/x/y", "y", "y/x", "y/x/y"])
+# Good: Updating to B should avoid downloading y/
+eq(collectprefetch("hg update -q $B"), ["x", "x/x", "x/x/y"])
 
 
 sh % "hg update -q $D"
@@ -133,11 +130,11 @@ idtopath = getidtopath()
 
 eq(collectprefetch("hg sparse enable profile"), [])
 
-# Suboptimal: Updating to A should avoid downloading y/ or z/
-eq(collectprefetch("hg update -q $A"), ["x", "x/x", "y", "y/y", "z", "z/z"])
+# Good: Updating to A should avoid downloading y/ or z/
+eq(collectprefetch("hg update -q $A"), ["x", "x/x"])
 
-# Suboptimal: Updating to B should avoid downloading z/
-eq(collectprefetch("hg update -q $B"), ["x", "x/x", "y", "y/y", "z", "z/z"])
+# Good: Updating to B should avoid downloading z/
+eq(collectprefetch("hg update -q $B"), ["x", "x/x", "y", "y/y"])
 
 
 # Test 'status'.
