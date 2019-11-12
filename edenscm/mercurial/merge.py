@@ -929,11 +929,6 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
 
 def _checkcollision(repo, wmf, actions):
-    # The case collision check can be disabled because it can be very slow in
-    # large repos.
-    if repo.ui.configbool("perftweaks", "disablecasecheck"):
-        return
-
     # build provisional merged manifest up
     pmmf = set(wmf)
 
@@ -2247,7 +2242,11 @@ def update(
                 actions[m] = []
             actions[m].append((f, args, msg))
 
-        if not util.fscasesensitive(repo.path):
+        # The case collision check can be disabled because it can be very slow in
+        # large repos.
+        if not repo.ui.configbool(
+            "perftweaks", "disablecasecheck"
+        ) and not util.fscasesensitive(repo.path):
             # check collision between files only in p2 for clean update
             if not branchmerge and (force or not wc.dirty(missing=True, branch=False)):
                 _checkcollision(repo, p2.manifest(), None)
