@@ -51,6 +51,7 @@ from .. import (
     json,
     localrepo,
     lock as lockmod,
+    match as matchmod,
     merge as mergemod,
     mutation,
     obsolete,
@@ -1759,6 +1760,31 @@ def debuglocks(ui, repo, **opts):
         0,
     )
     return held
+
+
+@command("debugmanifestdirs", [("r", "rev", [], _("revisions to show"))], "")
+def debugmanifestdirs(ui, repo, rev):
+    """print treemanifest id, and paths
+
+    Example output:
+
+        0000000000000000000000000000000000000000 /
+        1111111111111111111111111111111111111111 a
+        2222222222222222222222222222222222222222 a/b
+
+    This is for debugging purpose. If an id is used by multiple paths, only
+    one path will be printed.
+    """
+    revs = scmutil.revrange(repo, rev)
+    matcher = matchmod.always(repo.root, "")
+    idtopath = {}
+    for ctx in repo.set("%ld", revs):
+        tree = ctx.manifest()
+        idtopath[ctx.manifestnode()] = "/"
+        for path, hgid in tree.walkdirs(matcher):
+            idtopath[hgid] = path
+    for hgid, path in sorted(idtopath.items()):
+        ui.write(_("%s %s\n") % (hex(hgid), path))
 
 
 @command("debugmergestate", [], "")

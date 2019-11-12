@@ -997,6 +997,8 @@ Test list of internal help commands
    debuginstall  test Mercurial installation
    debugknown    test whether node ids are known to a repo
    debuglocks    show or modify state of locks
+   debugmanifestdirs
+                 print treemanifest id, and paths
    debugmergestate
                  print merge state
    debugmutation

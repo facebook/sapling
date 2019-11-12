@@ -124,6 +124,7 @@ Show debug commands if there are no other candidates
   debugknown
   debuglabelcomplete
   debuglocks
+  debugmanifestdirs
   debugmergestate
   debugmutation
   debugmutationfromobsmarkers
@@ -319,6 +320,7 @@ Show all commands + options
   debugknown: 
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
+  debugmanifestdirs: rev
   debugmergestate: 
   debugmutation: successors
   debugmutationfromobsmarkers: 

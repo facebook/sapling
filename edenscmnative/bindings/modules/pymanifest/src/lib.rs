@@ -176,6 +176,20 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
+    /// Returns [(path, id)] for directories.
+    def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyBytes, Option<PyBytes>)>> {
+        let mut result = Vec::new();
+        let tree = self.underlying(py).borrow();
+        for entry in tree.dirs(&PythonMatcher::new(py, pymatcher)) {
+            let dir = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push((
+                path_to_pybytes(py, &dir.path),
+                dir.hgid.map(|id| PyBytes::new(py, id.as_ref())),
+            ));
+        }
+        Ok(result)
+    }
+
     def listdir(&self, path: &PyBytes) -> PyResult<Vec<PyBytes>> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
