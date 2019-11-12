@@ -43,16 +43,35 @@ impl InnerStore {
     }
 
     pub fn get_entry(&self, path: &RepoPath, hgid: HgId) -> Fallible<Entry> {
-        let bytes = self.tree_store.get(path, hgid)?;
-        Ok(Entry(bytes))
+        tracing::debug_span!(
+            "tree::store::get",
+            id = AsRef::<str>::as_ref(&hgid.to_hex())
+        )
+        .in_scope(|| {
+            let bytes = self.tree_store.get(path, hgid)?;
+            Ok(Entry(bytes))
+        })
     }
 
     pub fn insert_entry(&self, path: &RepoPath, hgid: HgId, entry: Entry) -> Fallible<()> {
-        self.tree_store.insert(path, hgid, entry.0)
+        tracing::debug_span!(
+            "tree::store::insert",
+            path = path.as_str(),
+            id = AsRef::<str>::as_ref(&hgid.to_hex())
+        )
+        .in_scope(|| self.tree_store.insert(path, hgid, entry.0))
     }
 
     pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<()> {
-        self.tree_store.prefetch(keys.into_iter().collect())
+        let keys: Vec<Key> = keys.into_iter().collect();
+        tracing::debug_span!(
+            "tree::store::prefetch",
+            ids = {
+                let ids: Vec<String> = keys.iter().map(|k| k.hgid.to_hex()).collect();
+                &AsRef::<str>::as_ref(&ids.join(" "))
+            }
+        )
+        .in_scope(|| self.tree_store.prefetch(keys))
     }
 }
 

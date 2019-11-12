@@ -229,6 +229,8 @@ impl<'a> Iterator for Diff<'a> {
     type Item = Fallible<DiffEntry>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let span = tracing::debug_span!("tree::diff::next", path = "");
+        let _scope = span.enter();
         while self.output.is_empty() {
             match self.process_next_item() {
                 Ok(true) => continue,
@@ -236,7 +238,13 @@ impl<'a> Iterator for Diff<'a> {
                 Err(e) => return Some(Err(e)),
             }
         }
-        self.output.pop_front().map(Ok)
+        let result = self.output.pop_front();
+        if !span.is_disabled() {
+            if let Some(ref result) = result {
+                span.record("path", &result.path.as_repo_path().as_str());
+            }
+        }
+        result.map(Ok)
     }
 }
 
