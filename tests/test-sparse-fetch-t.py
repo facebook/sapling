@@ -88,27 +88,8 @@ eq(
     ["x", "x/x", "x/x/y", "y", "y/x", "y/x/y"],
 )
 
-# Suboptimal: Changing sparse profile should not download everything.
-eq(
-    collectprefetch("hg sparse exclude y"),
-    [
-        "c",
-        "c/c",
-        "c/c/c",
-        "d",
-        "d/d",
-        "d/d/d",
-        "x",
-        "x/x",
-        "x/x/y",
-        "y",
-        "y/x",
-        "y/x/y",
-        "z",
-        "z/x",
-        "z/x/y",
-    ],
-)
+# Good: Changing sparse profile should not download everything.
+eq(collectprefetch("hg sparse exclude y"), ["x", "x/x", "x/x/y"])
 
 
 # Test sparse profile change.

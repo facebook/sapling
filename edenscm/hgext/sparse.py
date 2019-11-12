@@ -2059,7 +2059,10 @@ def _refreshsubcmd(ui, repo, *pats, **opts):
 
     force = opts.get("force")
     with repo.wlock():
-        c = _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
+        # Since we don't know the "original" sparse matcher, use the
+        # always matcher so it checks everything.
+        origmatcher = matchmod.always(repo.root, "")
+        c = _refresh(ui, repo, repo.status(), origmatcher, force)
         fcounts = map(len, c)
         _verbose_output(ui, opts, 0, 0, 0, *fcounts)
 
@@ -2312,7 +2315,9 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         lookup = []
         dropped = []
         mf = ctx.manifest()
-        files = set(mf)
+        # Only care about files covered by the old or the new matcher.
+        unionedmatcher = matchmod.unionmatcher([origsparsematch, sparsematch])
+        files = set(mf.walk(unionedmatcher))
 
     actions = {}
 

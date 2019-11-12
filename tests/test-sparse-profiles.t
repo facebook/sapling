@@ -121,6 +121,7 @@ Introduce a conflicting .hgsparse change
   $ hg ci -qAm "edit profile other"
   $ ls
   backend.sparse
+  data.py
   index.html
   webpage.sparse
 
