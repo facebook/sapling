@@ -23,7 +23,7 @@ use slog::error;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
-    ADD_PUBLIC_PHASES, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO,
+    ADD_PUBLIC_PHASES, BLAME, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO,
     FETCH_PHASE, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF,
     HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED,
     HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, LIST_PUBLIC, PHASES, REDACTION, REDACTION_ADD,
@@ -55,6 +55,7 @@ mod hg_sync;
 mod phases;
 mod redaction;
 mod skiplist_subcommand;
+mod subcommand_blame;
 mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -368,6 +369,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(filestore::build_subcommand(FILESTORE))
         .subcommand(subcommand_unodes::subcommand_unodes_build(UNODES))
         .subcommand(crossrepo::build_subcommand(CROSSREPO))
+        .subcommand(subcommand_blame::subcommand_blame_build(BLAME))
 }
 
 #[fbinit::main]
@@ -399,6 +401,7 @@ fn main(fb: FacebookInit) -> ExitCode {
         (PHASES, Some(sub_m)) => phases::subcommand_phases(fb, logger, &matches, sub_m),
         (UNODES, Some(sub_m)) => subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m),
         (CROSSREPO, Some(sub_m)) => subcommand_crossrepo(fb, logger, &matches, sub_m),
+        (BLAME, Some(sub_m)) => subcommand_blame::subcommand_blame(fb, logger, &matches, sub_m),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };
 

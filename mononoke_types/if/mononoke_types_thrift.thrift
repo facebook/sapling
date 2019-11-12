@@ -50,7 +50,7 @@ typedef IdType MPathHash (rust.newtype)
 
 typedef IdType ContentMetadataId (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
-
+typedef IdType BlameId (rust.newtype)
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary. Could also be used for
@@ -315,4 +315,27 @@ struct CompressedHashAndParents {
   1: ChangesetId cs_id,
   # Offsets can be negative!
   2: list<ParentOffset> parent_offsets,
+}
+
+typedef i32 BlamePath (rust.newtype)
+
+struct BlameRange {
+  1: i32 length,
+  2: ChangesetId csid,
+  3: BlamePath path,
+}
+
+struct Blame {
+  1: list<BlameRange> ranges,
+  2: list<MPath> paths,
+}
+
+enum BlameRejected {
+  TooBig = 0,
+  Binary = 1,
+}
+
+union BlameMaybeRejected {
+  1: Blame Blame,
+  2: BlameRejected Rejected,
 }

@@ -11,6 +11,7 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 
+pub mod blame;
 pub mod blob;
 pub mod bonsai_changeset;
 pub mod content_chunk;
@@ -31,6 +32,7 @@ pub mod sql_types;
 pub mod typed_hash;
 pub mod unode;
 
+pub use blame::{Blame, BlameId, BlameRange};
 pub use blob::{Blob, BlobstoreValue, ChangesetBlob, ContentBlob, RawBundle2Blob};
 pub use blobstore::BlobstoreBytes;
 pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};

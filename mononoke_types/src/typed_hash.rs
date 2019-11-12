@@ -100,6 +100,9 @@ pub struct FsnodeId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FastlogBatchId(Blake2);
 
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct BlameId(Blake2);
+
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash_no_context {
     {

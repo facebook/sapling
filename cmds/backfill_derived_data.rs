@@ -8,6 +8,7 @@
 
 #![deny(warnings)]
 
+use blame::{BlameRoot, BlameRootMapping};
 use blobrepo::{BlobRepo, DangerousOverride};
 use blobstore::Blobstore;
 use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
@@ -65,6 +66,7 @@ const POSSIBLE_TYPES: &[&str] = &[
     RootFastlog::NAME,
     MappedHgChangesetId::NAME,
     RootFsnodeId::NAME,
+    BlameRoot::NAME,
 ];
 
 /// Derived data types that are permitted to access redacted files. This list
@@ -79,6 +81,8 @@ const UNREDACTED_TYPES: &[&str] = &[
     // tree hashes. Redacted content is only hashed, and so cannot be
     // discovered via the fsnode tree.
     RootFsnodeId::NAME,
+    // Blame does not contain any content of the file itself
+    BlameRoot::NAME,
 ];
 
 fn open_repo_maybe_unredacted<'a>(
@@ -372,6 +376,10 @@ fn derived_data_utils(
         }
         RootFsnodeId::NAME => {
             let mapping = RootFsnodeMapping::new(repo.get_blobstore());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        BlameRoot::NAME => {
+            let mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),
