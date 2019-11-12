@@ -10,21 +10,32 @@ use std::{collections::VecDeque, mem};
 use failure::Fallible;
 
 use pathmatcher::{DirectoryMatch, Matcher};
+use types::{HgId, RepoPathBuf};
 
 use crate::{
     tree::{store::InnerStore, Directory, Tree},
     File,
 };
 
-pub struct Files<'a> {
-    output: VecDeque<File>,
+pub struct Items<'a, T> {
+    output: VecDeque<T>,
     current: VecDeque<Directory<'a>>,
     next: VecDeque<Directory<'a>>,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
 }
 
-impl<'a> Files<'a> {
+// This is a subset of Directory<'a> that hides the internal "link" field.
+/// Directory information.
+pub struct DirInfo {
+    pub path: RepoPathBuf,
+    pub hgid: Option<HgId>,
+}
+
+pub type Files<'a> = Items<'a, File>;
+pub type Dirs<'a> = Items<'a, DirInfo>;
+
+impl<'a, T: ItemOutput<'a>> Items<'a, T> {
     pub fn new(tree: &'a Tree, matcher: &'a dyn Matcher) -> Self {
         let root = Directory::from_root(&tree.root).expect("manifest root is not a directory");
         Self {
@@ -53,11 +64,12 @@ impl<'a> Files<'a> {
         // Use the matcher to determine which files to output and which directories to visit.
         let matcher = self.matcher;
         let files = files.into_iter().filter(|f| matcher.matches_file(&f.path));
-        let dirs = dirs
+        let dirs: Vec<_> = dirs
             .into_iter()
-            .filter(|d| matcher.matches_directory(&d.path) != DirectoryMatch::Nothing);
+            .filter(|d| matcher.matches_directory(&d.path) != DirectoryMatch::Nothing)
+            .collect();
 
-        self.output.extend(files);
+        T::extend_output(self, files, &dirs);
         self.next.extend(dirs);
         Ok(true)
     }
@@ -69,8 +81,8 @@ impl<'a> Files<'a> {
     }
 }
 
-impl<'a> Iterator for Files<'a> {
-    type Item = Fallible<File>;
+impl<'a, T: ItemOutput<'a>> Iterator for Items<'a, T> {
+    type Item = Fallible<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.output.is_empty() {
@@ -81,6 +93,37 @@ impl<'a> Iterator for Files<'a> {
             }
         }
         self.output.pop_front().map(Ok)
+    }
+}
+
+pub trait ItemOutput<'a>: Sized {
+    fn extend_output(
+        items: &mut Items<'a, Self>,
+        files: impl IntoIterator<Item = File>,
+        dirs: &[Directory<'a>],
+    );
+}
+
+impl<'a> ItemOutput<'a> for File {
+    fn extend_output(
+        items: &mut Items<'a, Self>,
+        files: impl IntoIterator<Item = File>,
+        _dirs: &[Directory<'a>],
+    ) {
+        items.output.extend(files);
+    }
+}
+
+impl<'a> ItemOutput<'a> for DirInfo {
+    fn extend_output(
+        items: &mut Items<'a, Self>,
+        _files: impl IntoIterator<Item = File>,
+        dirs: &[Directory<'a>],
+    ) {
+        items.output.extend(dirs.iter().map(|d| DirInfo {
+            path: d.path.clone(),
+            hgid: d.hgid.clone(),
+        }));
     }
 }
 
@@ -96,13 +139,14 @@ mod tests {
     use crate::tree::{store::TestStore, testutil::*, Manifest};
 
     #[test]
-    fn test_files_empty() {
+    fn test_items_empty() {
         let tree = Tree::ephemeral(Arc::new(TestStore::new()));
         assert!(tree.files(&AlwaysMatcher::new()).next().is_none());
+        assert!(tree.dirs(&AlwaysMatcher::new()).next().is_none());
     }
 
     #[test]
-    fn test_files_ephemeral() {
+    fn test_items_ephemeral() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
@@ -121,10 +165,21 @@ mod tests {
                 (repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),
             )
         );
+
+        assert_eq!(
+            dirs(&tree, &AlwaysMatcher::new()),
+            [
+                "Ephemeral a1",
+                "Ephemeral a2",
+                "Ephemeral a1/b1",
+                "Ephemeral a2/b2",
+                "Ephemeral a1/b1/c1"
+            ]
+        );
     }
 
     #[test]
-    fn test_files_durable() {
+    fn test_items_durable() {
         let store = Arc::new(TestStore::new());
         let mut tree = Tree::ephemeral(store.clone());
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
@@ -146,10 +201,21 @@ mod tests {
                 (repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),
             )
         );
+
+        assert_eq!(
+            dirs(&tree, &AlwaysMatcher::new()),
+            [
+                "Durable   a1",
+                "Durable   a2",
+                "Durable   a1/b1",
+                "Durable   a2/b2",
+                "Durable   a1/b1/c1"
+            ]
+        );
     }
 
     #[test]
-    fn test_files_matcher() {
+    fn test_items_matcher() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
@@ -186,6 +252,26 @@ mod tests {
                 (repo_path_buf("a3/b2/c3"), make_meta("50").into()).into()
             )
         );
+
+        // A prefix matcher works as expected.
+        assert_eq!(
+            dirs(&tree, &TreeMatcher::from_rules(["a1/**"].iter())),
+            ["Ephemeral a1", "Ephemeral a1/b1", "Ephemeral a1/b1/c1"]
+        );
+
+        // A suffix matcher is not going to be effective.
+        assert_eq!(
+            dirs(&tree, &TreeMatcher::from_rules(["**/c2"].iter())),
+            [
+                "Ephemeral a1",
+                "Ephemeral a2",
+                "Ephemeral a3",
+                "Ephemeral a1/b1",
+                "Ephemeral a2/b2",
+                "Ephemeral a3/b2",
+                "Ephemeral a1/b1/c1"
+            ]
+        );
     }
 
     #[test]
@@ -200,4 +286,22 @@ mod tests {
             .collect::<Result<Vec<_>, _>>();
         assert!(files_result.is_err());
     }
+
+    fn dirs(tree: &Tree, matcher: &dyn Matcher) -> Vec<String> {
+        tree.dirs(&matcher)
+            .map(|t| {
+                let t = t.unwrap();
+                format!(
+                    "{:9} {}",
+                    if t.hgid.is_some() {
+                        "Durable"
+                    } else {
+                        "Ephemeral"
+                    },
+                    t.path
+                )
+            })
+            .collect::<Vec<_>>()
+    }
+
 }

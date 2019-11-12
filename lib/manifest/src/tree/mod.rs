@@ -30,7 +30,7 @@ use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use self::cursor::{Cursor, Step};
 pub use self::diff::{Diff, DiffEntry, DiffType};
-pub use self::files::Files;
+pub use self::files::{Dirs, Files};
 pub(crate) use self::link::Link;
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf};
 use self::store::InnerStore;
@@ -69,6 +69,18 @@ impl Tree {
         M: Matcher,
     {
         Files::new(self, matcher)
+    }
+
+    /// Returns an iterator over all the directories that are present in the
+    /// tree.
+    ///
+    /// Note: the matcher should be a prefix matcher, other kinds of matchers
+    /// could be less effective than expected.
+    pub fn dirs<'a, M>(&'a self, matcher: &'a M) -> Dirs<'a>
+    where
+        M: Matcher,
+    {
+        Dirs::new(self, matcher)
     }
 
     fn root_cursor<'a>(&'a self) -> Cursor<'a> {
@@ -624,9 +636,9 @@ pub fn prefetch(
 /// state on disk. If the directory has in-memory modifications that have not
 /// been persisted to disk, it will not have an hgid.
 #[derive(Clone, Debug)]
-pub(crate) struct Directory<'a> {
-    path: RepoPathBuf,
-    hgid: Option<HgId>,
+pub struct Directory<'a> {
+    pub(crate) path: RepoPathBuf,
+    pub(crate) hgid: Option<HgId>,
     link: &'a Link,
 }
 
