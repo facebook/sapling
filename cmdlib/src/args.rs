@@ -145,27 +145,12 @@ impl MononokeApp {
 
     /// Build a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> App<'a, 'b> {
-        let mut app = App::new(self.name)
-            .arg(
-                Arg::with_name("debug")
-                    .short("d")
-                    .long("debug")
-                    .help("print debug output"),
-            )
-            .arg(
-                Arg::with_name("log-level")
-                    .long("log-level")
-                    .help("log level to use (does not work with --debug)")
-                    .takes_value(true)
-                    .possible_values(&["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"])
-                    .conflicts_with("debug"),
-            )
-            .arg(
-                Arg::with_name("mononoke-config-path")
-                    .long("mononoke-config-path")
-                    .value_name("MONONOKE_CONFIG_PATH")
-                    .help("Path to the Mononoke configs"),
-            );
+        let mut app = App::new(self.name).arg(
+            Arg::with_name("mononoke-config-path")
+                .long("mononoke-config-path")
+                .value_name("MONONOKE_CONFIG_PATH")
+                .help("Path to the Mononoke configs"),
+        );
 
         if !self.all_repos {
             let conflicts = &[
@@ -257,6 +242,20 @@ pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("logview-category")
             .takes_value(true)
             .help("logview category to log to. Logview is not used if not set"),
+    )
+    .arg(
+        Arg::with_name("debug")
+            .short("d")
+            .long("debug")
+            .help("print debug output"),
+    )
+    .arg(
+        Arg::with_name("log-level")
+            .long("log-level")
+            .help("log level to use (does not work with --debug)")
+            .takes_value(true)
+            .possible_values(&["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"])
+            .conflicts_with("debug"),
     )
 }
 
