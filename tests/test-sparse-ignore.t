@@ -7,5 +7,5 @@
 
 The root directory ("") should not be ignored
 
-  $ hg debugshell -c 'print(repo.dirstate._ignore(""))'
-  False
+  $ hg debugshell -c 'print(repo.dirstate._ignore.visitdir(""))'
+  True

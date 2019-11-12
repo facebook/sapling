@@ -4496,7 +4496,7 @@ def parents(ui, repo, file_=None, **opts):
 
     if file_:
         m = scmutil.match(ctx, (file_,), opts)
-        if m.anypats() or len(m.files()) != 1:
+        if len(m.files()) != 1:
             raise error.Abort(_("can only specify an explicit filename"))
         file_ = m.files()[0]
         filenodes = []

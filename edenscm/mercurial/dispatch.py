@@ -1173,9 +1173,10 @@ def _dispatch(req):
             elif rpath:
                 ui.warn(_("warning: --repository ignored\n"))
 
-            from . import mdiff
+            from . import mdiff, match as matchmod
 
             mdiff.init(ui)
+            matchmod.init(ui)
 
             ui.log("command", "%s\n", msg)
             if repo:

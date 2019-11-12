@@ -93,8 +93,11 @@ cd dir; hg parents -r 2 ../a
   $ cd ..
 
   $ hg parents -r 2 glob:a
-  abort: can only specify an explicit filename
-  [255]
+  changeset:   1:d786049f033a
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
+  
 
 
 merge working dir with 2 parents, hg parents c

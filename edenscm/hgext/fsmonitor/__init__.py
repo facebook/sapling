@@ -365,7 +365,7 @@ def _walk(self, match, event):
         ignorevisitdir = self.dirstate._ignore.visitdir
 
         def dirfilter(path):
-            result = ignorevisitdir(path)
+            result = ignorevisitdir(path.rstrip("/"))
             return result == "all"
 
         nonnormalset = self.dirstate._map.nonnormalsetfiltered(dirfilter)

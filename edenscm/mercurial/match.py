@@ -794,13 +794,109 @@ def normalizerootdir(dir, funcname):
     return dir
 
 
+def _kindpatstoglobs(kindpats, recursive=False):
+    """Attempt to convert 'kindpats' to glob patterns that can be used in a
+    treematcher.
+
+    kindpats should be already normalized to be relative to repo root.
+
+    If recursive is True, `glob:a*` will match both `a1/b` and `a1`, otherwise
+    `glob:a*` will only match `a1` but not `a1/b`.
+
+    Return None if there are unsupported patterns (ex. regular expressions).
+    """
+    if not _usetreematcher:
+        return None
+    globs = []
+    for kindpat in kindpats:
+        kind, pat = kindpat[0:2]
+        if kind == "re":
+            # Attempt to convert the re pat to globs
+            reglobs = _convertretoglobs(pat)
+            if reglobs is not None:
+                globs += reglobs
+            else:
+                return None
+        elif kind == "glob":
+            # The treematcher (man gitignore) does not support csh-style
+            # brackets (ex. "{a,b,c}"). Expand the brackets to patterns.
+            for subpat in pathmatcher.expandcurlybrackets(pat):
+                normalized = pathmatcher.normalizeglob(subpat)
+                if recursive:
+                    normalized = _makeglobrecursive(normalized)
+                globs.append(normalized)
+        elif kind == "path":
+            if pat == ".":
+                # Special case. Comes from `util.normpath`.
+                pat = ""
+            else:
+                pat = pathmatcher.plaintoglob(pat)
+            pat = _makeglobrecursive(pat)
+            globs.append(pat)
+        else:
+            return None
+    return globs
+
+
+def _makeglobrecursive(pat):
+    """Make a glob pattern recursive by appending "/**" to it"""
+    if pat.endswith("/") or not pat:
+        return pat + "**"
+    else:
+        return pat + "/**"
+
+
+# re:x/(?!y/)
+# meaning: include x, but not x/y.
+_repat1 = re.compile(r"^\^?([\w._/]+)/\(\?\!([\w._/]+)/?\)$")
+
+# re:x/(?:.*/)?y
+# meaning: glob:x/**/y
+_repat2 = re.compile(r"^\^?([\w._/]+)/\(\?:\.\*/\)\?([\w._]+)(?:\(\?\:\/\|\$\))?$")
+
+
+def _convertretoglobs(repat):
+    """Attempt to convert a regular expression pattern to glob patterns.
+
+    A single regular expression pattern might be converted into multiple
+    glob patterns.
+
+    Return None if conversion is unsupported.
+
+    >>> _convertretoglobs("abc*") is None
+    True
+    >>> _convertretoglobs("xx/yy/(?!zz/kk)")
+    ['xx/yy/**', '!xx/yy/zz/kk/**']
+    >>> _convertretoglobs("x/y/(?:.*/)?BUCK")
+    ['x/y/**/BUCK']
+    """
+    m = _repat1.match(repat)
+    if m:
+        prefix, excluded = m.groups()
+        return ["%s/**" % prefix, "!%s/%s/**" % (prefix, excluded)]
+    m = _repat2.match(repat)
+    if m:
+        prefix, name = m.groups()
+        return ["%s/**/%s" % (prefix, name)]
+    return None
+
+
 class patternmatcher(basematcher):
     def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
+        # kindpats are already normalized to be relative to repo-root.
+        # Can we use tree matcher?
+        rules = _kindpatstoglobs(kindpats, recursive=False)
+        if rules is not None:
+            matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
+            # Replace self to 'matcher'.
+            self.__dict__ = matcher.__dict__
+            self.__class__ = matcher.__class__
+        else:
+            self._prefix = _prefix(kindpats)
+            self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
 
         self._files = _explicitfiles(kindpats)
-        self._prefix = _prefix(kindpats)
-        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
 
     @propertycache
     def _dirs(self):
@@ -829,27 +925,35 @@ class includematcher(basematcher):
     def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(includematcher, self).__init__(root, cwd, badfn)
 
-        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
-        # prefix is True if all patterns are recursive, so certain fast paths
-        # can be enabled. Unfortunately, it's too easy to break it (ex. by
-        # using "glob:*.c", "re:...", etc).
-        self._prefix = _prefix(kindpats)
-        roots, dirs = _rootsanddirs(kindpats)
-        # roots are directories which are recursively included.
-        # If self._prefix is True, then _roots can have a fast path for
-        # visitdir to return "all", marking things included unconditionally.
-        # If self._prefix is False, then that optimization is unsound because
-        # "roots" might contain entries that is not recursive (ex. roots will
-        # include "foo/bar" for pattern "glob:foo/bar/*.c").
-        self._roots = set(roots)
-        # dirs are directories which are non-recursively included.
-        # That is, files under that directory are included. But not
-        # subdirectories.
-        self._dirs = set(dirs)
-        # Try to use a more efficient visitdir implementation
-        visitdir = _buildvisitdir(kindpats)
-        if visitdir:
-            self.visitdir = visitdir
+        # Can we use tree matcher?
+        rules = _kindpatstoglobs(kindpats, recursive=True)
+        if rules is not None:
+            matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
+            # Replace self to 'matcher'.
+            self.__dict__ = matcher.__dict__
+            self.__class__ = matcher.__class__
+        else:
+            self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
+            # prefix is True if all patterns are recursive, so certain fast paths
+            # can be enabled. Unfortunately, it's too easy to break it (ex. by
+            # using "glob:*.c", "re:...", etc).
+            self._prefix = _prefix(kindpats)
+            roots, dirs = _rootsanddirs(kindpats)
+            # roots are directories which are recursively included.
+            # If self._prefix is True, then _roots can have a fast path for
+            # visitdir to return "all", marking things included unconditionally.
+            # If self._prefix is False, then that optimization is unsound because
+            # "roots" might contain entries that is not recursive (ex. roots will
+            # include "foo/bar" for pattern "glob:foo/bar/*.c").
+            self._roots = set(roots)
+            # dirs are directories which are non-recursively included.
+            # That is, files under that directory are included. But not
+            # subdirectories.
+            self._dirs = set(dirs)
+            # Try to use a more efficient visitdir implementation
+            visitdir = _buildvisitdir(kindpats)
+            if visitdir:
+                self.visitdir = visitdir
 
     def visitdir(self, dir):
         dir = normalizerootdir(dir, "visitdir")
@@ -1518,3 +1622,11 @@ def readpatternfile(filepath, warn, sourceinfo=False):
             patterns.append(linesyntax + line)
     fp.close()
     return patterns
+
+
+_usetreematcher = True
+
+
+def init(ui):
+    global _usetreematcher
+    _usetreematcher = ui.configbool("experimental", "treematcher")
