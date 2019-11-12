@@ -13,7 +13,8 @@ use futures::{future::IntoFuture, stream, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 
 use blobrepo::BlobRepo;
-use bookmark_renaming::get_large_to_small_renamer;
+use bookmark_renaming::{get_large_to_small_renamer, BookmarkRenamer};
+use bookmarks::BookmarkName;
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -22,13 +23,16 @@ use futures_preview::{
     compat::Future01CompatExt,
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
 };
-use futures_util::try_join;
+use futures_util::{
+    stream::{self as new_stream, StreamExt as NewStreamExt},
+    try_join, TryStreamExt,
+};
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use mononoke_types::{ChangesetId, MPath, RepositoryId};
 use movers::{get_large_to_small_mover, Mover};
-use slog::{debug, info, Logger};
+use slog::{debug, info, warn, Logger};
 use std::collections::{HashMap, HashSet};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -36,6 +40,7 @@ use crate::error::SubcommandError;
 
 const MAP_SUBCOMMAND: &str = "map";
 const VERIFY_WC_SUBCOMMAND: &str = "verify-wc";
+const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
 const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "LARGE_REPO_HASH";
 
@@ -84,6 +89,28 @@ pub fn subcommand_crossrepo(
                         target_repo,
                         mapping,
                         hash,
+                    )
+                    .boxed()
+                    .compat()
+                })
+                .boxify()
+        }
+        (VERIFY_BOOKMARKS_SUBCOMMAND, Some(_sub_sub_m)) => {
+            let (_, source_repo_config) =
+                try_boxfuture!(args::get_config_by_repoid(matches, source_repo_id));
+            let target_repo_fut =
+                args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
+
+            source_repo
+                .join3(target_repo_fut, mapping)
+                .from_err()
+                .and_then(move |(source_repo, target_repo, mapping)| {
+                    subcommand_verify_bookmarks(
+                        ctx,
+                        source_repo,
+                        source_repo_config,
+                        target_repo,
+                        mapping,
                     )
                     .boxed()
                     .compat()
@@ -193,6 +220,117 @@ async fn subcommand_verify_wc(
 
     info!(ctx.logger(), "all is well!");
     Ok(())
+}
+
+async fn subcommand_verify_bookmarks(
+    ctx: CoreContext,
+    source_repo: BlobRepo,
+    source_repo_config: RepoConfig,
+    target_repo: BlobRepo,
+    mapping: SqlSyncedCommitMapping,
+) -> Result<(), SubcommandError> {
+    let commit_sync_repos = get_large_to_small_commit_sync_repos(
+        source_repo.clone(),
+        target_repo.clone(),
+        &source_repo_config,
+    )?;
+    let commit_syncer = CommitSyncer::new(mapping, commit_sync_repos);
+    let large_repo = commit_syncer.get_large_repo();
+    let small_repo = commit_syncer.get_small_repo();
+
+    let small_bookmarks = small_repo
+        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+        .collect_to::<HashMap<_, _>>()
+        .compat()
+        .await?;
+
+    let large_repo_bookmarks = large_repo
+        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+        .collect()
+        .compat()
+        .await?;
+
+    let large_repo_bookmarks = rename_large_repo_bookmarks(
+        ctx.clone(),
+        &commit_syncer,
+        commit_syncer.get_bookmark_renamer(),
+        large_repo_bookmarks,
+    )
+    .await?;
+
+    let mut failed = false;
+    for (small_book, small_value) in &small_bookmarks {
+        let maybe_large_value = large_repo_bookmarks.get(small_book);
+        if maybe_large_value != Some(small_value) {
+            failed = true;
+            warn!(
+                ctx.logger(),
+                "inconsistent value of {}: small repo {}, large repo {:?}",
+                small_book,
+                small_value,
+                maybe_large_value,
+            );
+        }
+    }
+
+    for large_book in large_repo_bookmarks.keys() {
+        if !small_bookmarks.contains_key(large_book) {
+            failed = true;
+            warn!(
+                ctx.logger(),
+                "large repo bookmark {} not found in small repo", large_book,
+            );
+        }
+    }
+
+    if failed {
+        Err(format_err!("inconsistent bookmarks").into())
+    } else {
+        Ok(())
+    }
+}
+
+async fn rename_large_repo_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
+    ctx: CoreContext,
+    commit_syncer: &CommitSyncer<M>,
+    bookmark_renamer: &BookmarkRenamer,
+    large_repo_bookmarks: impl IntoIterator<Item = (BookmarkName, ChangesetId)>,
+) -> Result<HashMap<BookmarkName, ChangesetId>, Error> {
+    let mut renamed_large_repo_bookmarks = vec![];
+    for (bookmark, cs_id) in large_repo_bookmarks {
+        if let Some(bookmark) = bookmark_renamer(&bookmark) {
+            let maybe_sync_outcome = commit_syncer
+                .get_commit_sync_outcome(ctx.clone(), cs_id)
+                .map(move |maybe_sync_outcome| {
+                    let maybe_sync_outcome = maybe_sync_outcome?;
+                    use CommitSyncOutcome::*;
+                    let remapped_cs_id = match maybe_sync_outcome {
+                        Some(Preserved) => cs_id,
+                        Some(RewrittenAs(cs_id)) | Some(EquivalentWorkingCopyAncestor(cs_id)) => {
+                            cs_id
+                        }
+                        Some(NotSyncCandidate) => {
+                            return Err(format_err!("{} is not a sync candidate", cs_id));
+                        }
+                        None => {
+                            return Err(format_err!("{} is not remapped for {}", cs_id, bookmark));
+                        }
+                    };
+                    Ok((bookmark, remapped_cs_id))
+                })
+                .boxed();
+            renamed_large_repo_bookmarks.push(maybe_sync_outcome);
+        }
+    }
+
+    let large_repo_bookmarks = new_stream::iter(renamed_large_repo_bookmarks)
+        .buffer_unordered(100)
+        .try_collect::<HashMap<_, _>>()
+        .await?;
+
+    Ok(large_repo_bookmarks)
 }
 
 fn move_all_paths(
@@ -367,9 +505,14 @@ pub fn build_subcommand(name: &str) -> App {
                 .help("bonsai changeset hash from large repo to verify"),
         );
 
+    let verify_bookmarks_subcommand = SubCommand::with_name(VERIFY_BOOKMARKS_SUBCOMMAND).about(
+        "verify that bookmarks are the same in small and large repo (subject to bookmark renames)",
+    );
+
     SubCommand::with_name(name)
         .subcommand(map_subcommand)
         .subcommand(verify_wc_subcommand)
+        .subcommand(verify_bookmarks_subcommand)
 }
 
 fn get_large_to_small_commit_sync_repos(
