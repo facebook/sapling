@@ -534,11 +534,11 @@ async fn changeset_path_diff(
     ) -> bool {
         old_diff_file
             .as_ref()
-            .map(|f| f.contents.contains(&b'\0'))
+            .map(|f| f.contents.contains(&0))
             .unwrap_or(false)
             || new_diff_file
                 .as_ref()
-                .map(|f| f.contents.contains(&b'\0'))
+                .map(|f| f.contents.contains(&0))
                 .unwrap_or(false)
     }
 

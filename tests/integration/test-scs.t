@@ -12,7 +12,7 @@ Setup testing repo for mononoke:
 Helper for making commit:
   $ function commit() { # the arg is used both for commit message and variable name
   >   hg commit -Am $1 # create commit
-  >   declare $COMMIT_$1="$(hg --debug id -i)" # save hash to variable
+  >   export COMMIT_$1="$(hg --debug id -i)" # save hash to variable
   > }
 
 First two simple commits and bookmark:
@@ -24,7 +24,15 @@ First two simple commits and bookmark:
   $ commit B
   adding b
 
-  $ hg bookmark BOOKMARK_B
+  $ hg bookmark -i BOOKMARK_B
+
+A commit with a file change and binary file
+
+  $ echo -e "b\nc\nd\ne\nf" > b
+  $ echo -e "\0 10" > binary
+  $ commit C
+  adding binary
+
 
 import testing repo to mononoke
   $ cd ..
@@ -45,3 +53,19 @@ repos
 lookup
   $ scsc lookup --repo repo  -B BOOKMARK_B
   323afe77a1b1e632e54e8d5a683ba2cc8511f299
+
+diff
+  $ scsc diff --repo repo -B BOOKMARK_B -i $COMMIT_C
+  diff --git a/b b/b
+  --- a/b
+  +++ b/b
+  @@ -1,5 +1,5 @@
+  -a
+   b
+  +c
+   d
+   e
+   f
+  diff --git a/binary b/binary
+  new file mode 100644
+  Binary file binary has changed
