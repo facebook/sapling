@@ -199,9 +199,12 @@ impl Blackbox {
         if let Some(buf) = Entry::to_vec(data, now, self.session_id) {
             self.log.append(&buf).unwrap();
 
-            // Skip sync() for frequent writes (within 10ms).
+            // Skip sync() for frequent writes (within a threshold).
             let last = self.last_write_time.get();
-            let threshold = 10;
+            // On Linux, sync() takes 1-2ms. On Windows, sync() takes 100ms
+            // (atomicwrite a file takes 20ms. That adds up).
+            // Threshold is set so the sync() overhead is <2%.
+            let threshold = if cfg!(windows) { 5000 } else { 100 };
             if last <= now && now - last < threshold {
                 return;
             }
