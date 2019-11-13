@@ -17,6 +17,7 @@ use slog::{debug, info};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 use blobrepo::BlobRepo;
+use blobrepo_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use changesets::SqlConstructors;
 use context::CoreContext;
@@ -271,6 +272,7 @@ pub fn csid_resolve(
 pub fn open_sql_with_config_and_myrouter_port<T>(
     dbconfig: MetadataDBConfig,
     maybe_myrouter_port: Option<u16>,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<T, Error>
 where
     T: SqlConstructors,
@@ -281,7 +283,7 @@ where
             .into_future()
             .boxify(),
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            T::with_xdb(db_address, maybe_myrouter_port)
+            T::with_xdb(db_address, maybe_myrouter_port, readonly_storage.0)
         }
         MetadataDBConfig::Mysql { .. } => Err(err_msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",

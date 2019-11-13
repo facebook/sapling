@@ -16,7 +16,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
-use blobrepo_factory::{open_blobrepo, Caching};
+use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
@@ -115,13 +115,14 @@ pub struct RepoHandler {
 fn open_db_from_config<S: SqlConstructors>(
     dbconfig: &MetadataDBConfig,
     myrouter_port: Option<u16>,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<S, Error> {
     match dbconfig {
         MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join("sqlite_dbs"))
             .into_future()
             .boxify(),
         MetadataDBConfig::Mysql { ref db_address, .. } => {
-            S::with_xdb(db_address.clone(), myrouter_port)
+            S::with_xdb(db_address.clone(), myrouter_port, readonly_storage.0)
         }
     }
 }
@@ -135,6 +136,7 @@ fn create_repo_sync_target(
     source_repo: &MononokeRepo,
     target_incomplete_repo_handler: &IncompleteRepoHandler,
     repo_sync_target_args: RepoSyncTargetArgs,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<RepoSyncTarget, Error> {
     let RepoSyncTargetArgs {
         commit_sync_config,
@@ -158,15 +160,20 @@ fn create_repo_sync_target(
 
     let repo = target_incomplete_repo_handler.repo.clone();
 
-    open_backsyncer_dbs_compat(ctx.clone(), db_config, maybe_myrouter_port)
-        .map(move |target_repo_dbs| RepoSyncTarget {
-            repo,
-            small_to_large_commit_syncer,
-            large_to_small_commit_syncer,
-            target_repo_dbs,
-            commit_sync_config,
-        })
-        .boxify()
+    open_backsyncer_dbs_compat(
+        ctx.clone(),
+        db_config,
+        maybe_myrouter_port,
+        readonly_storage,
+    )
+    .map(move |target_repo_dbs| RepoSyncTarget {
+        repo,
+        small_to_large_commit_syncer,
+        large_to_small_commit_syncer,
+        target_repo_dbs,
+        commit_sync_config,
+    })
+    .boxify()
 }
 
 fn get_maybe_create_repo_sync_target_fut(
@@ -174,6 +181,7 @@ fn get_maybe_create_repo_sync_target_fut(
     incomplete_repo_handler: &IncompleteRepoHandler,
     repo_sync_target_args: RepoSyncTargetArgs,
     lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Option<RepoSyncTarget>, Error> {
     let large_repo_id = repo_sync_target_args.commit_sync_config.large_repo_id;
     let current_repo_id = incomplete_repo_handler.repo.repoid();
@@ -202,6 +210,7 @@ fn get_maybe_create_repo_sync_target_fut(
                 current_repo,
                 target_incomplete_repo_handler,
                 repo_sync_target_args,
+                readonly_storage,
             )
             .map(Some)
             .boxify()
@@ -216,6 +225,7 @@ pub fn repo_handlers(
     caching: Caching,
     disabled_hooks: &HashSet<String>,
     scuba_censored_table: Option<String>,
+    readonly_storage: ReadOnlyStorage,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
@@ -262,6 +272,7 @@ pub fn repo_handlers(
                 config.redaction,
                 scuba_censored_table.clone(),
                 config.filestore.clone(),
+                readonly_storage,
                 logger.clone(),
             )
             .and_then(move |blobrepo| {
@@ -305,29 +316,42 @@ pub fn repo_handlers(
                 ));
 
                 let streaming_clone = if let Some(db_address) = dbconfig.get_db_address() {
-                    streaming_clone(blobrepo.clone(), db_address, myrouter_port, repoid)
-                        .map(Some)
-                        .left_future()
+                    streaming_clone(
+                        blobrepo.clone(),
+                        db_address,
+                        myrouter_port,
+                        repoid,
+                        readonly_storage.0,
+                    )
+                    .map(Some)
+                    .left_future()
                 } else {
                     Ok(None).into_future().right_future()
                 };
 
                 // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
                 let sql_read_write_status = if let Some(addr) = write_lock_db_address {
-                    SqlRepoReadWriteStatus::with_xdb(addr, myrouter_port)
+                    SqlRepoReadWriteStatus::with_xdb(addr, myrouter_port, readonly_storage.0)
                         .map(Some)
                         .left_future()
                 } else {
                     Ok(None).into_future().right_future()
                 };
 
-                let sql_mutable_counters =
-                    open_db_from_config::<SqlMutableCounters>(&dbconfig, myrouter_port);
+                let sql_mutable_counters = open_db_from_config::<SqlMutableCounters>(
+                    &dbconfig,
+                    myrouter_port,
+                    readonly_storage,
+                );
 
-                let phases_hint = open_db_from_config::<SqlPhases>(&dbconfig, myrouter_port);
+                let phases_hint =
+                    open_db_from_config::<SqlPhases>(&dbconfig, myrouter_port, readonly_storage);
 
-                let sql_commit_sync_mapping =
-                    open_db_from_config::<SqlSyncedCommitMapping>(&dbconfig, myrouter_port);
+                let sql_commit_sync_mapping = open_db_from_config::<SqlSyncedCommitMapping>(
+                    &dbconfig,
+                    myrouter_port,
+                    readonly_storage,
+                );
 
                 streaming_clone
                     .join5(
@@ -472,7 +496,7 @@ pub fn repo_handlers(
         .collect();
 
     future::join_all(repo_futs)
-        .and_then(build_repo_handlers)
+        .and_then(move |t| build_repo_handlers(t, readonly_storage))
         .boxify()
 }
 
@@ -483,6 +507,7 @@ fn build_repo_handlers(
         IncompleteRepoHandler,
         Option<RepoSyncTargetArgs>,
     )>,
+    readonly_storage: ReadOnlyStorage,
 ) -> impl Future<Item = HashMap<String, RepoHandler>, Error = Error> {
     let lookup_table: HashMap<RepositoryId, IncompleteRepoHandler> = tuples
         .iter()
@@ -505,6 +530,7 @@ fn build_repo_handlers(
                         &incomplete_repo_handler,
                         repo_sync_target_args,
                         &lookup_table,
+                        readonly_storage,
                     ),
                 };
 

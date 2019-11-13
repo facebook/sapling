@@ -76,6 +76,7 @@ impl Sqlblob {
         shardmap: String,
         port: u16,
         shard_num: NonZeroUsize,
+        readonly: bool,
     ) -> BoxFuture<CountedSqlblob, Error> {
         Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
@@ -84,6 +85,7 @@ impl Sqlblob {
                 port,
                 PoolSizeConfig::for_sharded_connection(),
                 "blobstore".into(),
+                readonly,
             ))
             .into_future()
             .boxify()
@@ -94,9 +96,10 @@ impl Sqlblob {
         fb: FacebookInit,
         shardmap: String,
         shard_num: NonZeroUsize,
+        readonly: bool,
     ) -> BoxFuture<CountedSqlblob, Error> {
         Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
-            create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id)).boxify()
+            create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id), readonly).boxify()
         })
     }
 

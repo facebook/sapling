@@ -84,7 +84,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let disabled_hooks = cmdlib::args::parse_disabled_hooks(&matches, &logger);
 
     let caching = cmdlib::args::init_cachelib(fb, &matches);
-
+    let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobrepo = open_blobrepo(
         fb,
         config.storage_config.clone(),
@@ -95,6 +95,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         config.redaction,
         common_config.scuba_censored_table,
         config.filestore.clone(),
+        readonly_storage,
         logger.clone(),
     );
 

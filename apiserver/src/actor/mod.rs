@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use blobrepo_factory::Caching;
+use blobrepo_factory::{Caching, ReadOnlyStorage};
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -45,6 +45,7 @@ impl Mononoke {
         logger: Logger,
         configs: RepoConfigs,
         myrouter_port: Option<u16>,
+        readonly_storage: ReadOnlyStorage,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
         with_skiplist: bool,
@@ -68,6 +69,7 @@ impl Mononoke {
                                     config,
                                     common_config,
                                     myrouter_port,
+                                    readonly_storage,
                                     cache,
                                     with_cachelib,
                                     with_skiplist,

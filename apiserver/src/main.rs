@@ -574,6 +574,7 @@ fn main(fb: FacebookInit) -> Fallible<()> {
         mononoke_logger.clone(),
         repo_configs,
         cmdlib::args::parse_myrouter_port(&matches),
+        cmdlib::args::parse_readonly_storage(&matches),
         cache,
         with_cachelib,
         with_skiplist,

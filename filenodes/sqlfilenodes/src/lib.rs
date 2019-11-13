@@ -207,6 +207,7 @@ impl SqlFilenodes {
         tier: String,
         port: u16,
         shard_count: usize,
+        readonly: bool,
     ) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
             Ok(create_myrouter_connections(
@@ -215,15 +216,20 @@ impl SqlFilenodes {
                 port,
                 PoolSizeConfig::for_sharded_connection(),
                 "shardedfilenodes".into(),
+                readonly,
             ))
             .into_future()
             .boxify()
         })
     }
 
-    pub fn with_sharded_raw_xdb(tier: String, shard_count: usize) -> BoxFuture<Self, Error> {
+    pub fn with_sharded_raw_xdb(
+        tier: String,
+        shard_count: usize,
+        readonly: bool,
+    ) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
-            create_raw_xdb_connections(format!("{}.{}", tier, shard_id)).boxify()
+            create_raw_xdb_connections(format!("{}.{}", tier, shard_id), readonly).boxify()
         })
     }
 

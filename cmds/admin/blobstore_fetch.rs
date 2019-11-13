@@ -16,7 +16,7 @@ use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_sql_factory};
+use blobstore_factory::{make_blobstore, make_sql_factory, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cloned::cloned;
 use cmdlib::args;
@@ -67,12 +67,26 @@ fn get_blobstore(
     inner_blobstore_id: Option<u64>,
     myrouter_port: Option<u16>,
     logger: Logger,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     let blobconfig = try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
 
-    make_sql_factory(storage_config.dbconfig, myrouter_port, logger)
-        .and_then(move |sql_factory| make_blobstore(fb, &blobconfig, &sql_factory, myrouter_port))
-        .boxify()
+    make_sql_factory(
+        storage_config.dbconfig,
+        myrouter_port,
+        readonly_storage,
+        logger,
+    )
+    .and_then(move |sql_factory| {
+        make_blobstore(
+            fb,
+            &blobconfig,
+            &sql_factory,
+            myrouter_port,
+            readonly_storage,
+        )
+    })
+    .boxify()
 }
 
 pub fn subcommand_blobstore_fetch(
@@ -87,12 +101,14 @@ pub fn subcommand_blobstore_fetch(
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
     let myrouter_port = args::parse_myrouter_port(&matches);
+    let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_fut = get_blobstore(
         fb,
         storage_config,
         inner_blobstore_id,
         myrouter_port,
         logger.clone(),
+        readonly_storage,
     );
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));

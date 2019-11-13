@@ -14,7 +14,7 @@ use std::{
 };
 
 use blobrepo::{file_history::get_file_history, BlobRepo};
-use blobrepo_factory::{open_blobrepo, Caching};
+use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
@@ -112,6 +112,7 @@ impl MononokeRepo {
         config: RepoConfig,
         common_config: CommonConfig,
         myrouter_port: Option<u16>,
+        readonly_storage: ReadOnlyStorage,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
         with_skiplist: bool,
@@ -123,7 +124,7 @@ impl MononokeRepo {
         let repoid = config.repoid;
 
         // This is hacky, for the benefit of the new Mononoke object type
-        open_synced_commit_mapping(config.clone(), myrouter_port)
+        open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage)
             .boxed()
             .compat()
             .join(open_blobrepo(
@@ -136,6 +137,7 @@ impl MononokeRepo {
                 config.redaction,
                 common_config.scuba_censored_table,
                 config.filestore,
+                readonly_storage,
                 logger.clone(),
             ))
             .map(move |(synced_commit_mapping, repo)| {

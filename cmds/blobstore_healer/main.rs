@@ -53,6 +53,7 @@ fn maybe_schedule_healer_for_storage(
     myrouter_port: u16,
     replication_lag_db_regions: Vec<String>,
     source_blobstore_key: Option<String>,
+    readonly_storage: bool,
 ) -> Result<BoxFuture<(), Error>> {
     let (db_address, blobstores_args) = match &storage_config {
         StorageConfig {
@@ -77,8 +78,14 @@ fn maybe_schedule_healer_for_storage(
                     shard_map,
                     shard_num,
                 } => {
-                    let blobstore = Sqlblob::with_myrouter(fb, shard_map, myrouter_port, shard_num)
-                        .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
+                    let blobstore = Sqlblob::with_myrouter(
+                        fb,
+                        shard_map,
+                        myrouter_port,
+                        shard_num,
+                        readonly_storage,
+                    )
+                    .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
                     blobstores.insert(id, blobstore.boxify());
                 }
                 unsupported => bail_msg!("Unsupported blobstore type {:?}", unsupported),
@@ -110,7 +117,11 @@ fn maybe_schedule_healer_for_storage(
     .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
 
     let sync_queue: Arc<dyn BlobstoreSyncQueue> = {
-        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(db_address.clone(), myrouter_port);
+        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(
+            db_address.clone(),
+            myrouter_port,
+            readonly_storage,
+        );
 
         if !dry_run {
             Arc::new(sync_queue)
@@ -277,6 +288,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = args::init_logging(fb, &matches);
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
+    let readonly_storage = args::parse_readonly_storage(&matches);
     let storage_config = args::read_storage_configs(&matches)?
         .remove(storage_id)
         .ok_or(err_msg(format!("Storage id `{}` not found", storage_id)))?;
@@ -309,6 +321,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             myrouter_port,
             regions,
             source_blobstore_key.map(|s| s.to_string()),
+            readonly_storage.0,
         );
 
         match scheduled {

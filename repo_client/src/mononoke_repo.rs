@@ -143,8 +143,9 @@ pub fn streaming_clone(
     db_address: String,
     myrouter_port: Option<u16>,
     repoid: RepositoryId,
+    readonly_storage: bool,
 ) -> BoxFuture<SqlStreamingCloneConfig, Error> {
-    SqlStreamingChunksFetcher::with_xdb(db_address, myrouter_port)
+    SqlStreamingChunksFetcher::with_xdb(db_address, myrouter_port, readonly_storage)
         .map(move |fetcher| SqlStreamingCloneConfig {
             fetcher,
             blobstore: blobrepo.get_blobstore(),

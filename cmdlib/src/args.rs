@@ -23,7 +23,7 @@ use std::str::FromStr;
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, Caching};
+use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use blobstore_factory::Scrubbing;
 use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
@@ -402,7 +402,12 @@ where
 {
     let (_, config) = try_boxfuture!(get_config(matches));
     let maybe_myrouter_port = parse_myrouter_port(matches);
-    open_sql_with_config_and_myrouter_port(config.storage_config.dbconfig, maybe_myrouter_port)
+    let readonly_storage = parse_readonly_storage(matches);
+    open_sql_with_config_and_myrouter_port(
+        config.storage_config.dbconfig,
+        maybe_myrouter_port,
+        readonly_storage,
+    )
 }
 
 pub fn open_source_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
@@ -412,7 +417,12 @@ where
     let source_repo_id = try_boxfuture!(get_source_repo_id(matches));
     let (_, config) = try_boxfuture!(get_config_by_repoid(matches, source_repo_id));
     let maybe_myrouter_port = parse_myrouter_port(matches);
-    open_sql_with_config_and_myrouter_port(config.storage_config.dbconfig, maybe_myrouter_port)
+    let readonly_storage = parse_readonly_storage(matches);
+    open_sql_with_config_and_myrouter_port(
+        config.storage_config.dbconfig,
+        maybe_myrouter_port,
+        readonly_storage,
+    )
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
@@ -546,6 +556,11 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .args_from_usage(
         r#"
         --cachelib-only-blobstore 'do not init memcache for blobstore'
+        "#,
+    )
+    .args_from_usage(
+        r#"
+        --readonly-storage 'Error on any attempts to write to storage'
         "#,
     )
     .args(&cache_args)
@@ -729,6 +744,7 @@ fn open_repo_internal_with_repo_id<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
+    let readonly_storage = parse_readonly_storage(matches);
 
     cloned!(logger);
     open_blobrepo(
@@ -741,6 +757,7 @@ fn open_repo_internal_with_repo_id<'a>(
         redaction_override.unwrap_or(config.redaction),
         common_config.scuba_censored_table,
         config.filestore,
+        readonly_storage,
         logger,
     )
     .boxify()
@@ -763,6 +780,10 @@ pub fn open_repo_with_repo_id<'a>(
         None,
     )
     .boxify()
+}
+
+pub fn parse_readonly_storage<'a>(matches: &ArgMatches<'a>) -> ReadOnlyStorage {
+    ReadOnlyStorage(matches.is_present("readonly-storage"))
 }
 
 pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {

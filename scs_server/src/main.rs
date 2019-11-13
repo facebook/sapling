@@ -119,6 +119,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo_configs,
                 args::parse_myrouter_port(&matches),
                 caching,
+                args::parse_readonly_storage(&matches),
             )
             .boxed()
             .compat(),

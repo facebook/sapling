@@ -30,12 +30,15 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use memblob::EagerMemblob;
 use metaconfig_types::{self, FilestoreParams, Redaction, StorageConfig};
 use mononoke_types::RepositoryId;
+use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
+
+pub use blobstore_factory::ReadOnlyStorage;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Caching {
@@ -64,14 +67,26 @@ pub fn open_blobrepo(
     redaction: Redaction,
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
+    readonly_storage: ReadOnlyStorage,
     logger: Logger,
 ) -> BoxFuture<BlobRepo, Error> {
-    let sql_fut = make_sql_factory(storage_config.dbconfig, myrouter_port, logger.clone());
+    let sql_fut = make_sql_factory(
+        storage_config.dbconfig,
+        myrouter_port,
+        readonly_storage,
+        logger.clone(),
+    );
     let blobconfig = storage_config.blobstore;
     let datasources = sql_fut
         .map(move |sql_factory| {
             (
-                make_blobstore(fb, &blobconfig, &sql_factory, myrouter_port),
+                make_blobstore(
+                    fb,
+                    &blobconfig,
+                    &sql_factory,
+                    myrouter_port,
+                    readonly_storage,
+                ),
                 sql_factory,
             )
         })
@@ -86,6 +101,7 @@ pub fn open_blobrepo(
         redaction,
         scuba_censored_table,
         filestore_params,
+        readonly_storage,
     )
     .boxify()
 }
@@ -100,6 +116,7 @@ pub fn open_blobrepo_given_datasources(
     redaction: Redaction,
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
+    readonly_storage: ReadOnlyStorage,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     datasources.and_then(move |(unredacted_blobstore, sql_factory)| {
         let redacted_blobs = match redaction {
@@ -152,6 +169,7 @@ pub fn open_blobrepo_given_datasources(
                 } else {
                     unredacted_blobstore
                 };
+
                 new_development(
                     fb,
                     &sql_factory,
@@ -171,6 +189,7 @@ pub fn open_blobrepo_given_datasources(
                 repoid,
                 bookmarks_cache_ttl,
                 filestore_config,
+                readonly_storage,
             ),
         }
     })
@@ -296,6 +315,7 @@ fn new_production(
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
     filestore_config: FilestoreConfig,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<BlobRepo, Error> {
     fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
         let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
@@ -312,7 +332,7 @@ fn new_production(
             blobstore,
             Arc::new(blob_pool),
             Arc::new(presence_pool),
-        ))
+        )) as Arc<dyn Blobstore>
     });
 
     let filenodes_pool = try_boxfuture!(get_volatile_pool("filenodes"));
@@ -326,6 +346,15 @@ fn new_production(
     let changesets = sql_factory.open::<SqlChangesets>();
     let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>();
     let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
+
+    // Wrap again to avoid any writes to memcache
+    let blobstore = if readonly_storage.0 {
+        blobstore
+            .map(|inner| Arc::new(ReadOnlyBlobstore::new(inner)) as Arc<dyn Blobstore>)
+            .left_future()
+    } else {
+        blobstore.right_future()
+    };
 
     filenodes_tier_and_filenodes
         .join3(blobstore, redacted_blobs)

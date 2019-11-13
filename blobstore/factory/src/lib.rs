@@ -27,6 +27,7 @@ use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{self, BlobConfig, MetadataDBConfig, ShardedFilenodesParams};
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
+use readonlyblob::ReadOnlyBlobstore;
 use rocksblob::Rocksblob;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
@@ -36,6 +37,9 @@ use sql_ext::{
 };
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct ReadOnlyStorage(pub bool);
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Scrubbing {
@@ -56,6 +60,7 @@ trait SqlFactoryBase: Send + Sync {
 
 struct XdbFactory {
     db_address: String,
+    readonly: bool,
     myrouter_port: Option<u16>,
     sharded_filenodes: Option<ShardedFilenodesParams>,
 }
@@ -65,9 +70,11 @@ impl XdbFactory {
         db_address: String,
         myrouter_port: Option<u16>,
         sharded_filenodes: Option<ShardedFilenodesParams>,
+        readonly: bool,
     ) -> Self {
         XdbFactory {
             db_address,
+            readonly,
             myrouter_port,
             sharded_filenodes,
         }
@@ -76,7 +83,7 @@ impl XdbFactory {
 
 impl SqlFactoryBase for XdbFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
-        T::with_xdb(self.db_address.clone(), self.myrouter_port)
+        T::with_xdb(self.db_address.clone(), self.myrouter_port, self.readonly)
             .map(|r| Arc::new(r))
             .boxify()
     }
@@ -90,8 +97,12 @@ impl SqlFactoryBase for XdbFactory {
                 }),
                 Some(port),
             ) => {
-                let conn =
-                    SqlFilenodes::with_sharded_myrouter(shard_map.clone(), port, shard_num.into());
+                let conn = SqlFilenodes::with_sharded_myrouter(
+                    shard_map.clone(),
+                    port,
+                    shard_num.into(),
+                    self.readonly,
+                );
                 (shard_map, conn)
             }
             (
@@ -101,11 +112,15 @@ impl SqlFactoryBase for XdbFactory {
                 }),
                 None,
             ) => {
-                let conn = SqlFilenodes::with_sharded_raw_xdb(shard_map.clone(), shard_num.into());
+                let conn = SqlFilenodes::with_sharded_raw_xdb(
+                    shard_map.clone(),
+                    shard_num.into(),
+                    self.readonly,
+                );
                 (shard_map, conn)
             }
             (None, port) => {
-                let conn = SqlFilenodes::with_xdb(self.db_address.clone(), port);
+                let conn = SqlFilenodes::with_xdb(self.db_address.clone(), port, self.readonly);
                 (self.db_address.clone(), conn)
             }
         };
@@ -123,9 +138,10 @@ impl SqlFactoryBase for XdbFactory {
                 myrouter_port,
                 PoolSizeConfig::for_regular_connection(),
                 label,
+                self.readonly,
             ))
             .boxify(),
-            None => create_raw_xdb_connections(self.db_address.clone()).boxify(),
+            None => create_raw_xdb_connections(self.db_address.clone(), self.readonly).boxify(),
         }
     }
 }
@@ -188,6 +204,7 @@ impl SqlFactory {
 pub fn make_sql_factory(
     dbconfig: MetadataDBConfig,
     myrouter_port: Option<u16>,
+    readonly: ReadOnlyStorage,
     logger: Logger,
 ) -> impl Future<Item = SqlFactory, Error = Error> {
     match dbconfig {
@@ -202,7 +219,12 @@ pub fn make_sql_factory(
             db_address,
             sharded_filenodes,
         } => {
-            let sql_factory = XdbFactory::new(db_address.clone(), myrouter_port, sharded_filenodes);
+            let sql_factory = XdbFactory::new(
+                db_address.clone(),
+                myrouter_port,
+                sharded_filenodes,
+                readonly.0,
+            );
             myrouter_ready(Some(db_address), myrouter_port, logger)
                 .map(move |()| SqlFactory {
                     underlying: Either::Right(sql_factory),
@@ -219,10 +241,11 @@ pub fn make_blobstore(
     blobconfig: &BlobConfig,
     sql_factory: &SqlFactory,
     myrouter_port: Option<u16>,
+    readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
 
-    match blobconfig {
+    let read_write = match blobconfig {
         Disabled => {
             Ok(Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn Blobstore>)
                 .into_future()
@@ -268,9 +291,15 @@ pub fn make_blobstore(
             shard_map,
             shard_num,
         } => if let Some(myrouter_port) = myrouter_port {
-            Sqlblob::with_myrouter(fb, shard_map.clone(), myrouter_port, *shard_num)
+            Sqlblob::with_myrouter(
+                fb,
+                shard_map.clone(),
+                myrouter_port,
+                *shard_num,
+                readonly_storage.0,
+            )
         } else {
-            Sqlblob::with_raw_xdb_shardmap(fb, shard_map.clone(), *shard_num)
+            Sqlblob::with_raw_xdb_shardmap(fb, shard_map.clone(), *shard_num, readonly_storage.0)
         }
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()
@@ -286,7 +315,7 @@ pub fn make_blobstore(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(fb, config, sql_factory, myrouter_port)
+                        make_blobstore(fb, config, sql_factory, myrouter_port, readonly_storage)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -322,7 +351,7 @@ pub fn make_blobstore(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(fb, config, sql_factory, myrouter_port)
+                        make_blobstore(fb, config, sql_factory, myrouter_port, readonly_storage)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -364,5 +393,13 @@ pub fn make_blobstore(
             .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
             .into_future()
             .boxify(),
+    };
+
+    if readonly_storage.0 {
+        read_write
+            .map(|inner| Arc::new(ReadOnlyBlobstore::new(inner)) as Arc<dyn Blobstore>)
+            .boxify()
+    } else {
+        read_write
     }
 }

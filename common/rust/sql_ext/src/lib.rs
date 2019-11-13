@@ -10,7 +10,7 @@ use cloned::cloned;
 use failure_ext::{Error, Result};
 use futures::{
     future::{loop_fn, ok, Loop},
-    Future, IntoFuture,
+    Future,
 };
 use futures_ext::{BoxFuture, FutureExt};
 use slog::{info, Logger};
@@ -65,6 +65,7 @@ pub fn create_myrouter_connections(
     port: u16,
     pool_size_config: PoolSizeConfig,
     label: String,
+    readonly: bool,
 ) -> SqlConnections {
     let mut builder = Connection::myrouter_builder();
     builder.tier(tier, shard_id).port(port);
@@ -82,9 +83,14 @@ pub fn create_myrouter_connections(
         .max_num_of_concurrent_connections(pool_size_config.read_master_pool_size)
         .build_read_only();
 
-    let write_connection = builder
-        .max_num_of_concurrent_connections(pool_size_config.write_pool_size)
-        .build_read_write();
+    let write_connection = if readonly {
+        // Myrouter respects readonly, it connects as scriptro
+        read_master_connection.clone()
+    } else {
+        builder
+            .max_num_of_concurrent_connections(pool_size_config.write_pool_size)
+            .build_read_write()
+    };
 
     SqlConnections {
         write_connection,
@@ -93,8 +99,9 @@ pub fn create_myrouter_connections(
     }
 }
 
-pub fn do_create_raw_xdb_connections<'a, T>(
+fn do_create_raw_xdb_connections<'a, T>(
     tier: &'a T,
+    readonly: bool,
 ) -> impl Future<Item = SqlConnections, Error = Error>
 where
     T: ?Sized,
@@ -105,14 +112,20 @@ where
 
     let tier: &str = tier.as_ref();
 
-    let write_connection = raw::RawConnection::new_from_tier(
-        fb,
-        tier,
-        raw::InstanceRequirement::Master,
-        None,
-        None,
-        None,
-    );
+    let write_connection = if readonly {
+        ok(None).left_future()
+    } else {
+        raw::RawConnection::new_from_tier(
+            fb,
+            tier,
+            raw::InstanceRequirement::Master,
+            None,
+            None,
+            None,
+        )
+        .map(Some)
+        .right_future()
+    };
 
     let read_connection = raw::RawConnection::new_from_tier(
         fb,
@@ -120,7 +133,7 @@ where
         raw::InstanceRequirement::ReplicaFirst,
         None,
         None,
-        None,
+        Some("scriptro"),
     );
 
     let read_master_connection = raw::RawConnection::new_from_tier(
@@ -129,13 +142,13 @@ where
         raw::InstanceRequirement::Master,
         None,
         None,
-        None,
+        Some("scriptro"),
     );
 
-    (write_connection, read_connection, read_master_connection)
-        .into_future()
+    write_connection
+        .join3(read_connection, read_master_connection)
         .map(|(wr, rd, rm)| SqlConnections {
-            write_connection: Connection::Raw(wr),
+            write_connection: Connection::Raw(wr.unwrap_or_else(|| rm.clone())),
             read_connection: Connection::Raw(rd),
             read_master_connection: Connection::Raw(rm),
         })
@@ -143,11 +156,12 @@ where
 
 pub fn create_raw_xdb_connections(
     tier: String,
+    readonly: bool,
 ) -> impl Future<Item = SqlConnections, Error = Error> {
     let max_attempts = 5;
 
     loop_fn(0, move |i| {
-        do_create_raw_xdb_connections(&tier).then(move |r| {
+        do_create_raw_xdb_connections(&tier, readonly).then(move |r| {
             let loop_state = if r.is_ok() || i > max_attempts {
                 Loop::Break(r)
             } else {
@@ -163,6 +177,7 @@ pub fn create_sqlite_connections(path: &Path) -> Result<SqlConnections> {
     let con = SqliteConnection::open(path)?;
     let con = Connection::with_sqlite(con);
     Ok(SqlConnections {
+        // TODO(ahornby) add readonly sqlite handling
         write_connection: con.clone(),
         read_connection: con.clone(),
         read_master_connection: con.clone(),
@@ -174,6 +189,8 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
     /// Label used for stats accounting, and also for the local DB name
     const LABEL: &'static str;
 
+    /// TODO(ahornby) consider taking SqlConnections as parameter struct, would make it easier
+    /// to pass write_connection: Option<Connection> later in stack.
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,
@@ -182,7 +199,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
 
     fn get_up_query() -> &'static str;
 
-    fn with_myrouter(tier: String, port: u16) -> Self {
+    fn with_myrouter(tier: String, port: u16, readonly: bool) -> Self {
         let SqlConnections {
             write_connection,
             read_connection,
@@ -193,13 +210,14 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             port,
             PoolSizeConfig::for_regular_connection(),
             Self::LABEL.to_string(),
+            readonly,
         );
 
         Self::from_connections(write_connection, read_connection, read_master_connection)
     }
 
-    fn with_raw_xdb_tier(tier: String) -> BoxFuture<Self, Error> {
-        create_raw_xdb_connections(tier)
+    fn with_raw_xdb_tier(tier: String, readonly: bool) -> BoxFuture<Self, Error> {
+        create_raw_xdb_connections(tier, readonly)
             .map(|r| {
                 let SqlConnections {
                     write_connection,
@@ -212,10 +230,10 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             .boxify()
     }
 
-    fn with_xdb(tier: String, port: Option<u16>) -> BoxFuture<Self, Error> {
+    fn with_xdb(tier: String, port: Option<u16>, readonly: bool) -> BoxFuture<Self, Error> {
         match port {
-            Some(myrouter_port) => ok(Self::with_myrouter(tier, myrouter_port)).boxify(),
-            None => Self::with_raw_xdb_tier(tier),
+            Some(myrouter_port) => ok(Self::with_myrouter(tier, myrouter_port, readonly)).boxify(),
+            None => Self::with_raw_xdb_tier(tier, readonly),
         }
     }
 
@@ -241,7 +259,12 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
 
 fn with_sqlite<T: SqlConstructors>(con: SqliteConnection) -> Result<T> {
     let con = Connection::with_sqlite(con);
-    Ok(T::from_connections(con.clone(), con.clone(), con))
+    Ok(T::from_connections(
+        // TODO(ahornby) add readonly sqlite handling
+        con.clone(),
+        con.clone(),
+        con,
+    ))
 }
 
 pub fn myrouter_ready(

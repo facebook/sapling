@@ -117,6 +117,7 @@ fn main(fb: FacebookInit) {
             acceptor.build(),
             &TERMINATE_PROCESS,
             matches.is_present("test-instance"),
+            cmdlib::args::parse_readonly_storage(&matches),
         );
 
         tracing_fb303::register(fb);

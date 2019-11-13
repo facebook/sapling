@@ -234,9 +234,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let fut = match sub.value_of(ARG_MYROUTER_PORT) {
                 Some(port) => {
                     let port = port.parse().map_err(Error::from)?;
-                    Sqlblob::with_myrouter(fb, shardmap, port, shard_count)
+                    Sqlblob::with_myrouter(fb, shardmap, port, shard_count, false)
                 }
-                None => Sqlblob::with_raw_xdb_shardmap(fb, shardmap, shard_count),
+                None => Sqlblob::with_raw_xdb_shardmap(fb, shardmap, shard_count, false),
             };
             let blobstore = runtime.block_on(fut)?;
             Arc::new(blobstore)

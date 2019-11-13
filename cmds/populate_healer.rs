@@ -56,6 +56,7 @@ struct Config {
     state_key: Option<String>,
     dry_run: bool,
     started_at: Instant,
+    readonly_storage: bool,
 }
 
 /// State used to resume iteration in case of restart
@@ -226,6 +227,8 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("myrouter-port must be specified"))?;
 
+    let readonly_storage = args::parse_readonly_storage(&matches);
+
     Ok(Config {
         repo_id,
         db_address: db_address.clone(),
@@ -239,6 +242,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         ctx,
         dry_run: matches.is_present("dry-run"),
         started_at: Instant::now(),
+        readonly_storage: readonly_storage.0,
     })
 }
 
@@ -370,6 +374,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
         config.db_address.clone(),
         config.myrouter_port,
+        config.readonly_storage,
     ));
     let mut runtime = runtime::Runtime::new()?;
     runtime.block_on(populate_healer_queue(manifold, queue, config))?;

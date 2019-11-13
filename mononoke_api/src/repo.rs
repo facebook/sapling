@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, Caching};
+use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use failure::Error;
@@ -53,6 +53,7 @@ pub struct RepoContext {
 pub async fn open_synced_commit_mapping(
     config: RepoConfig,
     myrouter_port: Option<u16>,
+    readonly_storage: ReadOnlyStorage,
 ) -> Result<SqlSyncedCommitMapping, Error> {
     let name = SqlSyncedCommitMapping::LABEL;
     match config.storage_config.dbconfig {
@@ -60,7 +61,7 @@ pub async fn open_synced_commit_mapping(
             SqlSyncedCommitMapping::with_sqlite_path(path.join(name))
         }
         MetadataDBConfig::Mysql { db_address, .. } => {
-            SqlSyncedCommitMapping::with_xdb(db_address, myrouter_port)
+            SqlSyncedCommitMapping::with_xdb(db_address, myrouter_port, readonly_storage.0)
                 .compat()
                 .await
         }
@@ -75,13 +76,15 @@ impl Repo {
         common_config: CommonConfig,
         myrouter_port: Option<u16>,
         with_cachelib: Caching,
+        readonly_storage: ReadOnlyStorage,
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = config.repoid;
 
-        let synced_commit_mapping =
-            Arc::new(open_synced_commit_mapping(config.clone(), myrouter_port).await?);
+        let synced_commit_mapping = Arc::new(
+            open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage).await?,
+        );
 
         let blob_repo = open_blobrepo(
             fb,
@@ -93,6 +96,7 @@ impl Repo {
             config.redaction,
             common_config.scuba_censored_table,
             config.filestore,
+            readonly_storage,
             logger.clone(),
         )
         .compat()

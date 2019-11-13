@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::Caching;
+use blobrepo_factory::{Caching, ReadOnlyStorage};
 use cloned::cloned;
 use failure::Error;
 use fbinit::FacebookInit;
@@ -68,6 +68,7 @@ impl Mononoke {
         configs: RepoConfigs,
         myrouter_port: Option<u16>,
         with_cachelib: Caching,
+        readonly_storage: ReadOnlyStorage,
     ) -> Result<Self, Error> {
         let common_config = configs.common;
         let repos = future::join_all(
@@ -86,6 +87,7 @@ impl Mononoke {
                             common_config,
                             myrouter_port,
                             with_cachelib,
+                            readonly_storage,
                         )
                         .await
                         .expect("failed to initialize repo");
