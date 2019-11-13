@@ -131,7 +131,7 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
 
 Test renaming a remote and tracking
 
-  $ rm .hg/store/remotenames
+  $ hg dbsh -c "with repo.lock(): repo.svfs.write('remotenames', '')"
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "rename.default = remote" >> $HGRCPATH
   $ hg pull

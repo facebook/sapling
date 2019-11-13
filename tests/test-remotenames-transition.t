@@ -25,7 +25,7 @@ Set up extension and repos
 
 Test renaming
 
-  $ rm .hg/store/remotenames
+  $ hg dbsh -c 'with repo.lock(): repo.svfs.write("remotenames","")'
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "rename.default = remote" >> $HGRCPATH
   $ hg pull
@@ -54,7 +54,7 @@ Test hoisting basics
   tip
 
 Test hoisting name lookup
-  $ rm .hg/store/remotenames
+  $ hg dbsh -c 'with repo.lock(): repo.svfs.write("remotenames","")'
   $ hg log -r . -T '{hoistedbookmarks}\n'
   
   $ hg pull
@@ -67,7 +67,7 @@ Test hoisting name lookup
   cb9a9f314b8b -  - bm1 bm2 - remote/bm1 remote/bm2
 
 Test transition bookmark deletion
-  $ rm .hg/store/remotenames
+  $ hg dbsh -c 'with repo.lock(): repo.svfs.write("remotenames","")'
   $ hg book stable -r .
   $ echo b > b
   $ hg add b
@@ -88,7 +88,7 @@ Test transition bookmark deletion
      notdeleted                1:d2ae7f538514
 
 Test message
-  $ rm .hg/store/remotenames
+  $ hg dbsh -c 'with repo.lock(): repo.svfs.write("remotenames","")'
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "transitionmessage = Test transition message" >> $HGRCPATH
   $ echo "    with newline" >> $HGRCPATH

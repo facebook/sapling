@@ -134,7 +134,7 @@ Create one more branch head on the server
 
 Go back to client, make pull and make sure that we pulled remote branches
   $ cd client
-  $ cat .hg/store/remotenames | sort
+  $ hg dbsh -c 'ui.write("".join(sorted(repo.svfs.read("remotenames").splitlines(True))))'
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
   ac312cb08db5366e622a01fd001e583917eb9f1c bookmarks default/scratch/serverbook
   $ hg pull
@@ -145,7 +145,7 @@ Go back to client, make pull and make sure that we pulled remote branches
   adding file changes
   added 2 changesets with 2 changes to 2 files
   new changesets 64d557aa86fd:dc4b2ecb723b
-  $ cat .hg/store/remotenames | sort
+  $ hg dbsh -c 'ui.write("".join(sorted(repo.svfs.read("remotenames").splitlines(True))))'
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
   64d557aa86fdc42384b193f7eab99059da84f1f0 bookmarks default/scratch/serverbook
   $ cd ..

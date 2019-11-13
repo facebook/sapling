@@ -1884,7 +1884,7 @@ def saveremotenames(repo, remotebookmarks):
 
     svfs = repo.svfs
     with repo.wlock(), repo.lock():
-        if not svfs.exists("remotenames"):
+        if not svfs.tryread("remotenames"):
             transition(repo, repo.ui)
 
         tr = repo.currenttransaction()
