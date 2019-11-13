@@ -49,12 +49,12 @@ SemiFuture<Unit> FaultInjector::checkAsyncImpl(
           [&](const FaultInjector::Delay& delay) -> SemiFuture<Unit> {
             XLOG(DBG1) << "delay fault hit: " << keyClass << ", " << keyValue;
             if (delay.error.has_value()) {
-              return folly::futures::sleepUnsafe(delay.duration)
-                  .thenValue([error = delay.error.value()](auto&&) {
+              return folly::futures::sleep(delay.duration)
+                  .defer([error = delay.error.value()](auto&&) {
                     error.throw_exception();
                   });
             }
-            return folly::futures::sleepUnsafe(delay.duration);
+            return folly::futures::sleep(delay.duration);
           },
           [&](const folly::exception_wrapper& error) {
             XLOG(DBG1) << "error fault hit: " << keyClass << ", " << keyValue;

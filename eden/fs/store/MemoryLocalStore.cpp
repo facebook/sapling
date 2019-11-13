@@ -57,7 +57,7 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
 } // namespace
 
 MemoryLocalStore::MemoryLocalStore() {
-  storage_->resize(KeySpace::End);
+  storage_.wlock()->resize(KeySpace::End);
 }
 
 void MemoryLocalStore::close() {}
