@@ -293,7 +293,7 @@ class GitHandler(object):
         # if remote returns a symref for HEAD, then let's store that
         rhead = None
         rnode = None
-        oldheads = self.repo.changelog.heads()
+        oldheads = self.repo.heads()
         imported = 0
         if refs:
             filteredrefs = self.filter_min_date(self.filter_refs(refs, heads))
@@ -371,7 +371,7 @@ class GitHandler(object):
         # code taken from localrepo.py:addchangegroup
         dh = 0
         if oldheads:
-            heads = self.repo.changelog.heads()
+            heads = self.repo.heads()
             dh = len(heads) - len(oldheads)
             for h in heads:
                 if h not in oldheads and self.repo[h].closesbranch():
@@ -510,7 +510,7 @@ class GitHandler(object):
         pending = []
         if len(repo) > 0:
             # repo.heads() returns the nullrev in an empty repo
-            pending = list(repo.changelog.headrevs())
+            pending = list(repo.headrevs())
         exportrevs = set()
         while pending:
             rev = pending.pop()
