@@ -744,6 +744,20 @@ impl Log {
             .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
+    /// Check if the log is changed on disk.
+    pub fn is_changed(&self) -> bool {
+        match &self.dir {
+            None => false,
+            Some(dir) => {
+                let meta_path = dir.join(META_FILE);
+                match LogMetadata::read_file(&meta_path) {
+                    Ok(meta) => meta != self.meta,
+                    Err(_) => true,
+                }
+            }
+        }
+    }
+
     /// Renamed. Use [`Log::sync`] instead.
     pub fn flush(&mut self) -> crate::Result<u64> {
         self.sync()
