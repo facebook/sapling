@@ -178,6 +178,7 @@ pub fn open_blobrepo_given_datasources(
                     scuba_censored_table,
                     repoid,
                     filestore_config,
+                    bookmarks_cache_ttl,
                 )
             }
             Caching::Enabled => new_production(
@@ -244,11 +245,21 @@ fn new_development(
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     filestore_config: FilestoreConfig,
+    bookmarks_cache_ttl: Option<Duration>,
 ) -> BoxFuture<BlobRepo, Error> {
     let bookmarks = sql_factory
         .open::<SqlBookmarks>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))
-        .from_err();
+        .from_err()
+        .map(move |bookmarks| {
+            let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
+                Arc::new(CachedBookmarks::new(bookmarks, ttl))
+            } else {
+                bookmarks
+            };
+
+            bookmarks
+        });
 
     let filenodes = sql_factory
         .open_filenodes()

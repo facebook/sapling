@@ -21,9 +21,11 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
+use sql_ext::TransactionResult;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::{Bound, Range, RangeBounds, RangeFrom, RangeFull};
+use std::sync::Arc;
 
 mod cache;
 pub use cache::CachedBookmarks;
@@ -613,6 +615,16 @@ pub trait Transaction: Send + Sync + 'static {
     /// successful, or errors if transaction has failed. Logical failure is indicated by
     /// returning a successful `false` value; infrastructure failure is reported via an Error.
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error>;
+
+    /// Commits the transaction using provided transaction. If bookmarks implementation
+    /// is not support committing into transactions, then it should return an error.
+    /// Future succeeds if transaction has been
+    /// successful, or errors if transaction has failed. Logical failure is indicated by
+    /// returning a successful `false` value; infrastructure failure is reported via an Error.
+    fn commit_into_txn(
+        self: Box<Self>,
+        txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
+    ) -> BoxFuture<bool, Error>;
 }
 
 impl From<BookmarkName> for Value {

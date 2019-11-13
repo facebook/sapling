@@ -16,6 +16,7 @@ use failure_ext::Result;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
+use sql_ext::TransactionResult;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::{Arc, Mutex},
@@ -434,6 +435,29 @@ impl Transaction for CachedBookmarksTransaction {
             })
             .boxify()
     }
+
+    fn commit_into_txn(
+        self: Box<Self>,
+        txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
+    ) -> BoxFuture<bool, Error> {
+        let CachedBookmarksTransaction {
+            transaction,
+            caches,
+            repoid,
+            ctx,
+            dirty,
+        } = *self;
+
+        transaction
+            .commit_into_txn(txn_factory)
+            .map(move |success| {
+                if success && dirty {
+                    caches.purge_cache(ctx, repoid);
+                }
+                success
+            })
+            .boxify()
+    }
 }
 
 #[cfg(test)]
@@ -699,6 +723,13 @@ mod tests {
 
         fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
             future::ok(true).boxify()
+        }
+
+        fn commit_into_txn(
+            self: Box<Self>,
+            _txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
+        ) -> BoxFuture<bool, Error> {
+            unimplemented!()
         }
     }
 

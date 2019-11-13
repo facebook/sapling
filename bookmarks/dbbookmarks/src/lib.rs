@@ -26,6 +26,7 @@ use sql::{queries, Connection, Transaction as SqlTransaction};
 pub use sql_ext::{SqlConstructors, TransactionResult};
 use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 const DEFAULT_MAX: u64 = std::u64::MAX;
 const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
@@ -1136,10 +1137,34 @@ impl Transaction for SqlBookmarksTransaction {
 
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
         let Self {
-            write_connection,
+            ref write_connection,
+            ..
+        } = *self;
+        let sql_txn_factory = Arc::new({
+            cloned!(write_connection);
+            move || {
+                write_connection
+                    .start_transaction()
+                    .map(TransactionResult::Succeeded)
+                    .boxify()
+            }
+        });
+
+        self.commit_into_txn(sql_txn_factory).boxify()
+    }
+
+    // commit_into_txn() can be used to have the same transaction to update two different
+    // database tables. `sql_txn_factory()` provides this sql transaction, which is later
+    // used to commit all bookmark updates into it.
+    fn commit_into_txn(
+        self: Box<Self>,
+        sql_txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
+    ) -> BoxFuture<bool, Error> {
+        let Self {
             repo_id,
             ctx,
             payload,
+            ..
         } = *self;
 
         ctx.perf_counters()
@@ -1147,9 +1172,12 @@ impl Transaction for SqlBookmarksTransaction {
 
         let commit_fut = conditional_retry_without_delay(
             move |_attempt| {
-                write_connection
-                    .start_transaction()
+                sql_txn_factory()
                     .map_err(BookmarkTransactionError::Other)
+                    .and_then(|txn_result| match txn_result {
+                        TransactionResult::Succeeded(txn) => Ok(txn),
+                        TransactionResult::Failed => Err(BookmarkTransactionError::LogicError),
+                    })
                     .and_then({
                         cloned!(payload);
                         move |txn| Self::attempt_write(txn, repo_id, payload)

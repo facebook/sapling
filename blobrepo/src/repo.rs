@@ -947,6 +947,10 @@ impl BlobRepo {
         self.bonsai_hg_mapping.clone()
     }
 
+    pub fn get_bookmarks_object(&self) -> Arc<dyn Bookmarks> {
+        self.bookmarks.clone()
+    }
+
     fn store_file_change(
         &self,
         ctx: CoreContext,

@@ -149,7 +149,7 @@ fn create_repo_sync_target(
     let large_repo = target_incomplete_repo_handler.repo.blobrepo().clone();
     let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
     let syncers = try_boxfuture!(create_commit_syncers(
-        small_repo,
+        small_repo.clone(),
         large_repo,
         &commit_sync_config,
         mapping.clone()
@@ -162,6 +162,7 @@ fn create_repo_sync_target(
 
     open_backsyncer_dbs_compat(
         ctx.clone(),
+        small_repo,
         db_config,
         maybe_myrouter_port,
         readonly_storage,
