@@ -48,5 +48,6 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     m.add(py, "vlq", pyvlq::init_module(py, &name)?)?;
     m.add(py, "workingcopy", pyworkingcopy::init_module(py, &name)?)?;
     m.add(py, "zstd", pyzstd::init_module(py, &name)?)?;
+    m.add(py, "zstore", pyzstore::init_module(py, &name)?)?;
     Ok(py.None())
 }

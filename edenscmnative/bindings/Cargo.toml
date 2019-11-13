@@ -34,3 +34,4 @@ pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyzstd = { path = "modules/pyzstd" }
+pyzstore = { path = "modules/pyzstore" }
