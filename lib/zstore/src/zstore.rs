@@ -288,6 +288,103 @@ impl Zstore {
     }
 }
 
+// -------- Debug APIs --------
+
+/// Represent delta relationships.
+pub struct DebugDeltaTree {
+    id: Id20,
+    len: usize,
+    chain_len: usize,
+    depth: usize,
+    subchain_len: usize,
+    children: Vec<DebugDeltaTree>,
+}
+
+#[allow(dead_code)]
+impl Zstore {
+    /// Reconstruct a tree of deltas for debugging purpose.
+    fn debug_delta_tree(&self) -> crate::Result<DebugDeltaTree> {
+        let mut root = DebugDeltaTree {
+            id: *EMPTY_ID20,
+            len: 0,
+            chain_len: 0,
+            depth: 0,
+            subchain_len: 0,
+            children: Vec::new(),
+        };
+
+        fn insert<'a>(tree: &'a mut DebugDeltaTree, delta: Delta) -> &'a mut DebugDeltaTree {
+            let id = tree
+                .children
+                .iter()
+                .enumerate()
+                .find(|(_, c)| c.id == delta.id)
+                .map(|(id, _)| id);
+            match id {
+                Some(id) => &mut tree.children[id],
+                None => {
+                    tree.children.push(DebugDeltaTree {
+                        id: delta.id,
+                        len: delta.data.len(),
+                        chain_len: tree.chain_len + 1,
+                        depth: delta.depth,
+                        subchain_len: delta.subchain_len,
+                        children: Vec::new(),
+                    });
+                    tree.children.last_mut().unwrap()
+                }
+            }
+        }
+
+        for entry in self.log.iter() {
+            let id = &self.log.index_func(Self::ID20_INDEX, entry?)?[0];
+            let mut id = Id20::from_slice(id).unwrap();
+            let mut chain: Vec<Delta> = Vec::new();
+            while id != *EMPTY_ID20 {
+                if let Some(delta) = self.get_delta(id)? {
+                    id = delta.base_id;
+                    chain.push(delta);
+                } else {
+                    return Err(crate::Error(format!(
+                        "unexpected broken chain around {}",
+                        id.to_hex()
+                    )));
+                }
+            }
+
+            let mut tree = &mut root;
+            for delta in chain.into_iter().rev() {
+                tree = insert(tree, delta);
+            }
+        }
+
+        Ok(root)
+    }
+}
+
+impl fmt::Debug for DebugDeltaTree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.id == *EMPTY_ID20 {
+            // Write header.
+            write!(f, "Chain Len| Depth |Subchain Len| Bytes | Chain ID\n")?;
+        }
+        write!(
+            f,
+            "{:8} | {:5} | {:10} | {:5} | {}{}\n",
+            self.chain_len,
+            self.depth,
+            self.subchain_len,
+            self.len,
+            " ".repeat(self.chain_len),
+            &self.id.to_hex()[..6],
+        )?;
+        for child in self.children.iter() {
+            write!(f, "{:?}", child)?;
+        }
+        Ok(())
+    }
+}
+
 // -------- Utilities --------
 
 pub fn sha1(data: &[u8]) -> Id20 {
@@ -525,5 +622,240 @@ mod tests {
         for (i, id) in ids.iter().enumerate() {
             assert_eq!(zstore.get(*id).unwrap().unwrap(), contents[i].as_ref());
         }
+    }
+
+    /// Generate noise that is hard to compress.
+    fn generate_noise(approximated_len: usize) -> String {
+        (0..(approximated_len / 41))
+            .map(|i| sha1(&[(i % 100) as u8, (i % 101) as u8][..]).to_hex())
+            .collect::<Vec<_>>()
+            .join("|")
+    }
+
+    /// Adjust `DeltaOptions`. Insert `contents` as linear delta chain.
+    /// Print the delta tree to a `String`.
+    fn show_tree(contents: &[impl AsRef<[u8]>], set_opts: fn(&mut DeltaOptions)) -> String {
+        let dir = TempDir::new().unwrap();
+        let mut zstore = Zstore::open(&dir).unwrap();
+        set_opts(&mut zstore.delta_opts);
+
+        let mut id = *EMPTY_ID20;
+        for content in contents {
+            let next_id = zstore.insert(content.as_ref(), &[id]).unwrap();
+            id = next_id;
+        }
+
+        let tree = zstore.debug_delta_tree().unwrap();
+        format!("\n{:?}", tree)
+    }
+
+    #[test]
+    fn test_delta_options() {
+        let noise = generate_noise(4000);
+        // Similar contents. This ensures that delta will be used.
+        let contents: Vec<Vec<u8>> = (0..50)
+            .map(|i| format!("{}{}{}", noise, i, noise).as_bytes().to_vec())
+            .collect();
+
+        // Test that the delta trees effectively limit the max
+        // delta chain length.
+        //
+        // Set n (max_subchain_len) and d (max_depth) to 3. Check:
+        // - The chain length is bounded to 9 (n * d).
+        // - 39 (see dostring of DeltaOptions) deltas are used before full text
+        //   ("Depth" is 1).
+        assert_eq!(
+            show_tree(&contents[..42], |opts| {
+                opts.max_depth = 3;
+                opts.max_subchain_len = 3;
+            }),
+            // Hint: In case this test is broken by zstd version change, run
+            // `fbcode/experimental/quark/grep-rs/cargo-test-i.py --lib` from
+            // the `src` directory to auto-update the test.
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  2072 |  12a9a7
+       2 |     2 |          0 |    23 |   d176e3
+       3 |     3 |          0 |    23 |    480cf2
+       4 |     3 |          1 |    23 |     7b2274
+       5 |     3 |          2 |    23 |      9195fa
+       3 |     2 |          1 |    23 |    68a44f
+       4 |     3 |          0 |    23 |     049af1
+       5 |     3 |          1 |    23 |      6be3a2
+       6 |     3 |          2 |    23 |       0565d7
+       4 |     2 |          2 |    23 |     fcf8f6
+       5 |     3 |          0 |    25 |      0a012d
+       6 |     3 |          1 |    24 |       316785
+       7 |     3 |          2 |    24 |        7c562e
+       2 |     1 |          1 |    25 |   5b8328
+       3 |     2 |          0 |    23 |    8802f4
+       4 |     3 |          0 |    24 |     35b10a
+       5 |     3 |          1 |    24 |      565d3f
+       6 |     3 |          2 |    24 |       c2a84a
+       4 |     2 |          1 |    24 |     aad27f
+       5 |     3 |          0 |    24 |      4ad6aa
+       6 |     3 |          1 |    25 |       dd14d5
+       7 |     3 |          2 |    25 |        aea69c
+       5 |     2 |          2 |    25 |      0c4075
+       6 |     3 |          0 |    25 |       ffa7b4
+       7 |     3 |          1 |    25 |        3cfff1
+       8 |     3 |          2 |    25 |         0c98c3
+       3 |     1 |          2 |    25 |    091e0d
+       4 |     2 |          0 |    25 |     98715e
+       5 |     3 |          0 |    25 |      47258d
+       6 |     3 |          1 |    25 |       7802ae
+       7 |     3 |          2 |    25 |        cec4d0
+       5 |     2 |          1 |    25 |      fa80d4
+       6 |     3 |          0 |    25 |       1ca3c5
+       7 |     3 |          1 |    25 |        5292f3
+       8 |     3 |          2 |    25 |         a2ff59
+       6 |     2 |          2 |    25 |       758c14
+       7 |     3 |          0 |    25 |        465a4a
+       8 |     3 |          1 |    25 |         3af16a
+       9 |     3 |          2 |    25 |          002504
+       1 |     1 |          0 |  2073 |  409bca
+       2 |     2 |          0 |    25 |   cca7b8
+       3 |     3 |          0 |    25 |    6972af
+"#
+        );
+
+        // Test that if n = d = 0, full text will always be used.
+        assert_eq!(
+            show_tree(&contents[..5], |opts| {
+                opts.max_depth = 0;
+                opts.max_subchain_len = 0;
+            }),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  2072 |  12a9a7
+       1 |     1 |          0 |  2072 |  d176e3
+       1 |     1 |          0 |  2072 |  480cf2
+       1 |     1 |          0 |  2072 |  7b2274
+       1 |     1 |          0 |  2072 |  9195fa
+"#
+        );
+
+        // Test that if either n or d is a large number, it's similar to a
+        // linear chain.
+        assert_eq!(
+            show_tree(&contents[..5], |opts| {
+                opts.max_depth = 1000;
+                opts.max_subchain_len = 0;
+            }),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  2072 |  12a9a7
+       2 |     2 |          0 |    23 |   d176e3
+       3 |     3 |          0 |    23 |    480cf2
+       4 |     4 |          0 |    23 |     7b2274
+       5 |     5 |          0 |    23 |      9195fa
+"#
+        );
+        assert_eq!(
+            show_tree(&contents[..5], |opts| {
+                opts.max_depth = 0;
+                opts.max_subchain_len = 1000;
+            }),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  2072 |  12a9a7
+       2 |     1 |          1 |    23 |   d176e3
+       3 |     1 |          2 |    23 |    480cf2
+       4 |     1 |          3 |    23 |     7b2274
+       5 |     1 |          4 |    23 |      9195fa
+"#
+        );
+        assert_eq!(
+            show_tree(&contents[..5], |opts| {
+                opts.max_depth = 1000;
+                opts.max_subchain_len = 1000;
+            }),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  2072 |  12a9a7
+       2 |     2 |          0 |    23 |   d176e3
+       3 |     3 |          0 |    23 |    480cf2
+       4 |     4 |          0 |    23 |     7b2274
+       5 |     5 |          0 |    23 |      9195fa
+"#
+        );
+
+        // Test that `max_chain_bytes` is effective.
+        assert_eq!(
+            show_tree(&contents[..10], |opts| {
+                opts.max_chain_bytes = 2120;
+            }),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  2072 |  12a9a7
+       2 |     2 |          0 |    23 |   d176e3
+       3 |     3 |          0 |    23 |    480cf2
+       1 |     1 |          0 |  2072 |  7b2274
+       2 |     2 |          0 |    23 |   9195fa
+       3 |     3 |          0 |    23 |    68a44f
+       1 |     1 |          0 |  2072 |  049af1
+       2 |     2 |          0 |    23 |   6be3a2
+       3 |     3 |          0 |    23 |    0565d7
+       1 |     1 |          0 |  2072 |  fcf8f6
+"#
+        );
+
+        // Test that `max_chain_factor_log` is effective.
+        assert_eq!(
+            show_tree(
+                &[&noise[0..100], &noise[50..150], &noise[100..200]],
+                |opts| {
+                    // chain bytes should < full text length * 2 (100 * 2).
+                    opts.max_chain_factor_log = 1;
+                }
+            ),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |    81 |  ed1309
+       2 |     2 |          0 |    67 |   ab2eea
+       1 |     1 |          0 |    80 |  f4d55f
+"#
+        );
+    }
+
+    #[test]
+    fn test_delta_candidates() {
+        let noise = generate_noise(5000);
+        let noise = noise.as_bytes();
+
+        // Delta candidates are not used if it cannot beat full text.
+        let dir = TempDir::new().unwrap();
+        let mut zstore = Zstore::open(&dir).unwrap();
+        let id1 = zstore.insert(&noise[0..2000], &[]).unwrap();
+        let id2 = zstore.insert(&noise[2000..], &[id1]).unwrap();
+        assert_eq!(
+            format!("\n{:?}", zstore.debug_delta_tree().unwrap()),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  1056 |  6e06bf
+       1 |     1 |          0 |  1545 |  4ccc52
+"#
+        );
+
+        // For multiple delta candidates, the one that compresses better is used.
+        zstore.insert(&noise[1500..3500], &[id1, id2]).unwrap();
+        assert_eq!(
+            format!("\n{:?}", zstore.debug_delta_tree().unwrap()),
+            r#"
+Chain Len| Depth |Subchain Len| Bytes | Chain ID
+       0 |     0 |          0 |     0 | da39a3
+       1 |     1 |          0 |  1056 |  6e06bf
+       1 |     1 |          0 |  1545 |  4ccc52
+       2 |     2 |          0 |   297 |   a078da
+"#
+        );
     }
 }
