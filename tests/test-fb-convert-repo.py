@@ -17,6 +17,17 @@ def draft(test_func):
 class gitutiltest(unittest.TestCase):
     """Unit tests for the gitutil helper class of the repo converter"""
 
+    def test_getfilemodestr(self):
+        mode = gitutil.getfilemodestr(int("000644", 8))
+        self.assertEqual("", mode)
+
+        mode = gitutil.getfilemodestr(int("100755", 8))
+        self.assertEqual("x", mode)
+
+        mode = gitutil.getfilemodestr(int("120000", 8))
+        self.assertEqual("l", mode)
+
+
     def test_parsedifftree_readable(self):
         difftree_string = """1fd915b9c1fcf3803383432ede29fc4d686fdb44
 :100644 100644 b02a70992e734985768e839281932c315fafb21d a268f9d1a620a9f438d014376f72bcf413eea6d8 M\tlibc/arch-arm/bionic/__bionic_clone.S

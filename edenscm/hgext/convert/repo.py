@@ -28,8 +28,14 @@ class gitutil(object):
     OBJECT_TYPE_BLOB = "blob"
 
     FILE_MODE_MASK_LINK = 0o020000
-    FILE_MODE_MASK_GLOBAL_EXEC = 0o000100
-    FILE_MODE_MASK_USER_EXEC = 0o000001
+    FILE_MODE_MASK_EXEC_GLOBAL = 0o000100
+    FILE_MODE_MASK_EXEC_GROUP = 0o000010
+    FILE_MODE_MASK_EXEC_USER = 0o000001
+    FILE_MODE_MASK_EXEC_COMBINED = (
+        FILE_MODE_MASK_EXEC_GLOBAL
+        | FILE_MODE_MASK_EXEC_GROUP
+        | FILE_MODE_MASK_EXEC_USER
+    )
 
     GIT_FILE_STATUS_ADDED = "A"
     GIT_FILE_STATUS_COPIED = "C"
@@ -65,9 +71,9 @@ class gitutil(object):
 
     @classmethod
     def isexecfilemode(cls, mode):
-        return (
-            mode & (cls.FILE_MODE_MASK_GLOBAL_EXEC | cls.FILE_MODE_MASK_USER_EXEC)
-        ) > 0
+        # Git's docs say that files can either be 644 or 755, but we're checking all of
+        # the bits out of an abundance of caution
+        return (mode & cls.FILE_MODE_MASK_EXEC_COMBINED) > 0
 
     @classmethod
     def iscopystatus(cls, status):
@@ -741,6 +747,7 @@ class repo_source(common.converter_source):
         self.objecthashprojectindex = {}
         self.filecache = {}
         self._difftreecache = {}
+        self._filemodecache = {}
 
     def before(self):
         """See converter_source.before"""
@@ -814,7 +821,8 @@ class repo_source(common.converter_source):
             self.filecache.pop(self.filecache.keys()[0])
         self.filecache[(name, rev)] = filebytes
 
-        mode = ""  # TODO
+        gitfilemode = self._filemodecache[rev]
+        mode = gitutil.getfilemodestr(gitfilemode)
 
         return filebytes, mode
 
@@ -868,6 +876,7 @@ class repo_source(common.converter_source):
                         filediff["source"]["hash"]
                     ] = projectpath
                     self.objecthashprojectindex[filediff["dest"]["hash"]] = projectpath
+                    self._filemodecache[filediff["dest"]["hash"]] = filediff["dest"]["mode"]
 
         pathprefix = {
             self.VARIANT_ROOTED: "",
