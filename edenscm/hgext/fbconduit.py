@@ -20,7 +20,7 @@ from edenscm.mercurial import (
     templater,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin
+from edenscm.mercurial.node import bin, hex
 from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.util import httplib
 
@@ -139,6 +139,28 @@ def getmirroredrev(fromrepo, fromtype, torepo, totype, rev):
         to_scm=totype,
         revs=[rev],
     ).get(rev, "")
+
+
+def getmirroredrevmap(repo, nodes, fromtype, totype):
+    """Return a mapping {node: node}
+
+    Example:
+
+        getmirroredrevmap(repo, [gitnode1, gitnode2],"git", "hg")
+        # => {gitnode1: hgnode1, gitnode2: hgnode2}
+    """
+    reponame = repo.ui.config("fbconduit", "reponame")
+    if not reponame:
+        return {}
+    result = call_conduit(
+        "scmquery.get.mirrored.revs",
+        from_repo=reponame,
+        from_scm=fromtype,
+        to_repo=reponame,
+        to_scm=totype,
+        revs=map(hex, nodes),
+    )
+    return {bin(k): bin(v) for k, v in result.items()}
 
 
 @templater.templatefunc("mirrornode")

@@ -11,6 +11,10 @@ Config::
     # Use graphql to query what diffs are landed, instead of scanning
     # through pulled commits.
     use-graphql = true
+
+    # Indicate that commit hashes returned by the GraphQL query are git
+    # commits, and need to be converted before being used.
+    convert-git = false
 """
 from ..mercurial import (
     commands,
@@ -47,6 +51,15 @@ def _cleanuplanded(repo, dryrun=False):
     try:
         client = graphql.Client(repo=repo)
         difftopublic = client.getlandednodes(list(difftodraft.keys()))
+        if ui.configbool("pullcreatemarkers", "convert-git"):
+            from . import fbconduit
+
+            git2hg = fbconduit.getmirroredrevmap(
+                repo, list(difftopublic.values()), "git", "hg"
+            )
+            difftopublic = {
+                k: git2hg[v] for k, v in difftopublic.items() if v in git2hg
+            }
     except KeyboardInterrupt:
         ui.warn(
             _(
