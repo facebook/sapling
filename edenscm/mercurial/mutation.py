@@ -221,7 +221,7 @@ def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
     depth = 0
     thislevel = set(nodes)
     nextlevel = set()
-    seen = set()
+    seen = {nullid}
     while thislevel and (stopdepth is None or depth < stopdepth):
         for current in thislevel:
             if current in seen:
