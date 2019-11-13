@@ -38,8 +38,7 @@ def stoptracking(repo):
         with repo.lock():
             repo.storerequirements.discard("visibleheads")
             repo._writestorerequirements()
-    if repo.svfs.lexists("visibleheads"):
-        repo.svfs.tryunlink("visibleheads")
+    repo.svfs.write("visibleheads", "")
 
 
 # Supported file format version.
@@ -67,8 +66,8 @@ class visibleheads(object):
         self._invisiblerevs = None
         try:
             lines = self.vfs("visibleheads").readlines()
-            if not lines or lines[0].strip() != FORMAT_VERSION:
-                raise error.Abort("invalid visibleheads file format")
+            if lines and lines[0].strip() != FORMAT_VERSION:
+                raise error.Abort("invalid visibleheads file format %r" % lines[0])
             self.heads = [node.bin(head.strip()) for head in lines[1:]]
             self.dirty = False
             self._logheads("read", visibility_headcount=len(self.heads))
