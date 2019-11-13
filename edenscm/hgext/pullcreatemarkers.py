@@ -31,18 +31,14 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-def _cleanuplanded(repo, dryrun=False, skipnodes=None):
+def _cleanuplanded(repo, dryrun=False):
     """Query Phabricator about states of draft commits and optionally mark them
     as landed.
 
     This uses mutation and visibility directly.
     """
-    if skipnodes is None:
-        skipnodes = set()
     difftodraft = {}  # {str: node}
     for ctx in repo.set("draft() - obsolete()"):
-        if ctx.node() in skipnodes:
-            continue
         diffid = diffprops.parserevfromcommitmsg(ctx.description())  # str or None
         if diffid:
             difftodraft.setdefault(diffid, []).append(ctx.node())
@@ -86,7 +82,6 @@ def _cleanuplanded(repo, dryrun=False, skipnodes=None):
         )
         for draftnode in draftnodes:
             tohide.add(draftnode)
-            skipnodes.add(draftnode)
             mutationentries.append(
                 mutation.createsyntheticentry(
                     unfi, mutation.ORIGIN_SYNTHETIC, [draftnode], publicnode, "land"
@@ -100,9 +95,6 @@ def _cleanuplanded(repo, dryrun=False, skipnodes=None):
                 mutation.recordentries(unfi, mutationentries, skipexisting=False)
             if visibility.tracking(unfi):
                 visibility.remove(unfi, tohide)
-    # In case the graphql result is paginated, query again to fetch the
-    # remaining results.
-    _cleanuplanded(repo, dryrun=dryrun, skipnodes=skipnodes)
 
 
 @command("debugmarklanded", commands.dryrunopts)
