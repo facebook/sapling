@@ -1990,8 +1990,6 @@ def debugcomplete(ui, cmd="", **opts):
             if alias.startswith(cmd):
                 cmdlist.append(alias)
                 break
-    if ui.verbose:
-        cmdlist = [" ".join(c[0]) for c in cmdlist.values()]
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
 
 

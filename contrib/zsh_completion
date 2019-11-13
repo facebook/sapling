@@ -139,7 +139,7 @@ _hg_get_commands() {
   typeset -gA _hg_alias_list
   local hline cmd cmdalias
 
-  _call_program hg hg debugcomplete -v | while read -A hline
+  _call_program hg hg debugcomplete | while read -A hline
   do
     cmd=$hline[1]
     _hg_cmd_list+=($cmd)
