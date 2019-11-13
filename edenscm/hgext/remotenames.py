@@ -1781,13 +1781,13 @@ def shareawarecachevfs(repo):
 
 def _readremotenamesfrom(vfs, filename):
     try:
-        f = vfs(filename)
+        fileobj = vfs(filename)
     except EnvironmentError as er:
         if er.errno != errno.ENOENT:
             raise
         return
 
-    with f:
+    with fileobj as f:
         for line in f:
             nametype = None
             line = line.strip()
