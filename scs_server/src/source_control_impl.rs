@@ -928,12 +928,15 @@ impl SourceControlService for SourceControlServiceImpl {
         _params: thrift::ListReposParams,
     ) -> Result<Vec<thrift::Repo>, service::ListReposExn> {
         let _ctx = self.create_ctx(None);
-        let rsp = self
+        let mut repo_names: Vec<_> = self
             .mononoke
             .repo_names()
-            .map(|repo_name| thrift::Repo {
-                name: repo_name.to_string(),
-            })
+            .map(|repo_name| repo_name.to_string())
+            .collect();
+        repo_names.sort();
+        let rsp = repo_names
+            .into_iter()
+            .map(|repo_name| thrift::Repo { name: repo_name })
             .collect();
         Ok(rsp)
     }

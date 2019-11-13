@@ -885,6 +885,7 @@ EOF
 function setup_hg_server() {
   cat >> .hg/hgrc <<EOF
 [extensions]
+commitextras=
 treemanifest=
 remotefilelog=
 clienttelemetry=
