@@ -18,7 +18,7 @@ use fbwhoami::FbWhoAmI;
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
 use lazy_static::lazy_static;
-use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits};
+use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use maplit::{hashmap, hashset};
 use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
@@ -134,10 +134,14 @@ pub fn request_handler(
         .unwrap_or("".to_string());
 
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
-    let load_limiting_config = load_limiting_config.and_then(|(config_loader, category)| {
-        loadlimiting_configs(config_loader.clone(), client_hostname, &ssh_env_vars)
-            .map(|limits| (limits, category))
-    });
+
+    let load_limiting_config = match load_limiting_config {
+        Some((config_loader, category)) => {
+            loadlimiting_configs(config_loader, client_hostname, &ssh_env_vars)
+                .map(|(throttle_limits, rate_limits)| (throttle_limits, rate_limits, category))
+        }
+        None => None,
+    };
 
     let session = SessionContainer::new(
         fb,
@@ -214,7 +218,7 @@ fn loadlimiting_configs(
     config: ConfigLoader,
     client_hostname: String,
     ssh_env_vars: &SshEnvVars,
-) -> Option<MononokeThrottleLimit> {
+) -> Option<(MononokeThrottleLimit, RateLimits)> {
     let is_quicksand = is_quicksand(&ssh_env_vars);
 
     let data = config.load(CONFIGERATOR_TIMEOUT).ok();
@@ -240,7 +244,7 @@ fn loadlimiting_configs(
             region_percentage / 100.0
         };
 
-        MononokeThrottleLimit {
+        let throttle_limits = MononokeThrottleLimit {
             egress_bytes: limit.egress_bytes * multiplier,
             ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
             total_manifests: limit.total_manifests * multiplier,
@@ -248,7 +252,9 @@ fn loadlimiting_configs(
             getfiles_files: limit.getfiles_files * multiplier,
             getpack_files: limit.getpack_files * multiplier,
             commits: limit.commits * multiplier,
-        }
+        };
+
+        (throttle_limits, config.rate_limits)
     })
 }
 

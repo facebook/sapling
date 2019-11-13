@@ -12,7 +12,7 @@ use chashmap::CHashMap;
 use failure_ext::Error;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
-use limits::types::MononokeThrottleLimit;
+use limits::types::{MononokeThrottleLimit, RateLimits};
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
 use std::{
     collections::HashMap,
@@ -54,7 +54,7 @@ fn make_limit_key(prefix: &str) -> String {
     key
 }
 
-struct LoadLimiter {
+pub struct LoadLimiter {
     fb: FacebookInit,
     egress_bytes: LoadLimitCounter,
     ingress_blobstore_bytes: LoadLimitCounter,
@@ -63,11 +63,17 @@ struct LoadLimiter {
     egress_getpack_files: LoadLimitCounter,
     egress_commits: LoadLimitCounter,
     category: String,
-    limits: MononokeThrottleLimit,
+    throttle_limits: MononokeThrottleLimit,
+    rate_limits: RateLimits,
 }
 
 impl LoadLimiter {
-    fn new(fb: FacebookInit, limits: MononokeThrottleLimit, category: String) -> Self {
+    fn new(
+        fb: FacebookInit,
+        throttle_limits: MononokeThrottleLimit,
+        rate_limits: RateLimits,
+        category: String,
+    ) -> Self {
         Self {
             fb,
             egress_bytes: LoadLimitCounter {
@@ -95,7 +101,8 @@ impl LoadLimiter {
                 key: make_limit_key("egress-commits"),
             },
             category,
-            limits,
+            throttle_limits,
+            rate_limits,
         }
     }
 
@@ -118,12 +125,12 @@ impl LoadLimiter {
         window: Duration,
     ) -> impl Future<Item = bool, Error = Error> {
         let limit = match metric {
-            Metric::EgressBytes => self.limits.egress_bytes,
-            Metric::IngressBlobstoreBytes => self.limits.ingress_blobstore_bytes,
-            Metric::EgressTotalManifests => self.limits.total_manifests,
-            Metric::EgressGetfilesFiles => self.limits.getfiles_files,
-            Metric::EgressGetpackFiles => self.limits.getpack_files,
-            Metric::EgressCommits => self.limits.commits,
+            Metric::EgressBytes => self.throttle_limits.egress_bytes,
+            Metric::IngressBlobstoreBytes => self.throttle_limits.ingress_blobstore_bytes,
+            Metric::EgressTotalManifests => self.throttle_limits.total_manifests,
+            Metric::EgressGetfilesFiles => self.throttle_limits.getfiles_files,
+            Metric::EgressGetpackFiles => self.throttle_limits.getpack_files,
+            Metric::EgressCommits => self.throttle_limits.commits,
         };
 
         loadlimiter::should_throttle(self.fb, &self.counter(metric), limit, window)
@@ -132,13 +139,21 @@ impl LoadLimiter {
     pub fn bump_load(&self, metric: Metric, load: LoadCost) {
         loadlimiter::bump_load(self.fb, &self.counter(metric), load)
     }
+
+    pub fn category(&self) -> &str {
+        &self.category
+    }
+
+    pub fn rate_limits(&self) -> &RateLimits {
+        &self.rate_limits
+    }
 }
 
 impl fmt::Debug for LoadLimiter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("LoadLimiter")
             .field("category", &self.category)
-            .field("limits", &self.limits)
+            .field("throttle_limits", &self.throttle_limits)
             .finish()
     }
 }
@@ -333,10 +348,11 @@ impl SessionContainer {
         trace: TraceContext,
         user_unix_name: Option<String>,
         ssh_env_vars: SshEnvVars,
-        load_limiter: Option<(MononokeThrottleLimit, String)>,
+        load_limiter: Option<(MononokeThrottleLimit, RateLimits, String)>,
     ) -> Self {
-        let load_limiter =
-            load_limiter.map(|(limits, category)| LoadLimiter::new(fb, limits, category));
+        let load_limiter = load_limiter.map(|(throttle_limits, rate_limits, category)| {
+            LoadLimiter::new(fb, throttle_limits, rate_limits, category)
+        });
 
         let inner = SessionContainerInner {
             session_id,
@@ -420,6 +436,13 @@ impl SessionContainer {
                 })
                 .left_future(),
             None => Ok(false).into_future().right_future(),
+        }
+    }
+
+    pub fn load_limiter(&self) -> Option<&LoadLimiter> {
+        match self.inner.load_limiter {
+            Some(ref load_limiter) => Some(&load_limiter),
+            None => None,
         }
     }
 }
@@ -540,11 +563,7 @@ impl CoreContext {
             })
     }
 
-    pub fn is_quicksand(&self) -> bool {
-        self.session.is_quicksand()
-    }
-
-    pub fn bump_load(&self, metric: Metric, load: LoadCost) {
-        self.session.bump_load(metric, load)
+    pub fn session(&self) -> &SessionContainer {
+        &self.session
     }
 }

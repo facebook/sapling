@@ -28,6 +28,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use lazy_static::lazy_static;
+use limits::types::RateLimit;
 use mercurial_bundles::{Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId};
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{
@@ -84,6 +85,11 @@ pub enum BundleResolverError {
     ),
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     Error(Error),
+    RateLimitExceeded {
+        limit: RateLimit,
+        entity: String,
+        value: f64,
+    },
 }
 
 impl From<Error> for BundleResolverError {
@@ -126,6 +132,21 @@ impl From<BundleResolverError> for Error {
             PushrebaseConflicts(conflicts) => {
                 err_msg(format!("pushrebase failed Conflicts({:?})", conflicts))
             }
+            RateLimitExceeded {
+                limit,
+                entity,
+                value,
+            } => format_err!(
+                "Rate limit exceeded: {} for {}. \
+                 The maximum allowed value is {} over a sliding {}s interval. \
+                 The observed value was {}. For help: {}.",
+                limit.name,
+                entity,
+                limit.max_value,
+                limit.interval,
+                value,
+                limit.help,
+            ),
             Error(err) => err,
         }
     }

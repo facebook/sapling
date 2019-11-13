@@ -36,6 +36,10 @@ use std::sync::Arc;
 
 mod hook_running;
 pub use hook_running::run_hooks;
+
+mod rate_limits;
+pub use rate_limits::enforce_commit_rate_limits;
+
 pub mod response;
 use response::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
@@ -57,45 +61,47 @@ pub fn run_post_resolve_action(
     pushrebase_params: PushrebaseParams,
     action: PostResolveAction,
 ) -> BoxFuture<UnbundleResponse, BundleResolverError> {
-    match action {
-        PostResolveAction::Push(action) => run_push(
-            ctx,
-            repo,
-            bookmark_attrs,
-            lca_hint,
-            infinitepush_params,
-            action,
-        )
-        .map(UnbundleResponse::Push)
-        .boxify(),
-        PostResolveAction::InfinitePush(action) => {
-            run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
-                .map(UnbundleResponse::InfinitePush)
-                .boxify()
-        }
-        PostResolveAction::PushRebase(action) => run_pushrebase(
-            ctx,
-            repo,
-            bookmark_attrs,
-            lca_hint,
-            phases,
-            infinitepush_params,
-            pushrebase_params,
-            action,
-        )
-        .map(UnbundleResponse::PushRebase)
-        .boxify(),
-        PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
-            ctx,
-            repo,
-            bookmark_attrs,
-            lca_hint,
-            infinitepush_params,
-            action,
-        )
-        .map(UnbundleResponse::BookmarkOnlyPushRebase)
-        .boxify(),
-    }
+    enforce_commit_rate_limits(ctx.clone(), &action)
+        .and_then(move |()| match action {
+            PostResolveAction::Push(action) => run_push(
+                ctx,
+                repo,
+                bookmark_attrs,
+                lca_hint,
+                infinitepush_params,
+                action,
+            )
+            .map(UnbundleResponse::Push)
+            .boxify(),
+            PostResolveAction::InfinitePush(action) => {
+                run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
+                    .map(UnbundleResponse::InfinitePush)
+                    .boxify()
+            }
+            PostResolveAction::PushRebase(action) => run_pushrebase(
+                ctx,
+                repo,
+                bookmark_attrs,
+                lca_hint,
+                phases,
+                infinitepush_params,
+                pushrebase_params,
+                action,
+            )
+            .map(UnbundleResponse::PushRebase)
+            .boxify(),
+            PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
+                ctx,
+                repo,
+                bookmark_attrs,
+                lca_hint,
+                infinitepush_params,
+                action,
+            )
+            .map(UnbundleResponse::BookmarkOnlyPushRebase)
+            .boxify(),
+        })
+        .boxify()
 }
 
 fn run_push(

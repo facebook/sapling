@@ -98,7 +98,7 @@ pub fn create_getbundle_response(
         .inspect({
             cloned!(ctx);
             move |nodes| {
-                ctx.bump_load(Metric::EgressCommits, 1.0);
+                ctx.session().bump_load(Metric::EgressCommits, 1.0);
                 ctx.perf_counters()
                     .add_to_counter(PerfCounterType::GetbundleNumCommits, nodes.len() as i64);
             }

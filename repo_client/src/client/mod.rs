@@ -96,6 +96,7 @@ define_stats! {
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); RATE, SUM),
     push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); RATE, SUM),
     push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); RATE, SUM),
+    rate_limits_exceeded: dynamic_timeseries("rate_limits_exceeded.{}", (reponame: String); RATE, SUM),
     push_error: dynamic_timeseries("push_error.{}", (reponame: String); RATE, SUM),
 }
 
@@ -420,9 +421,9 @@ impl RepoClient {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
-                    ctx.bump_load(Metric::EgressTotalManifests, 1.0);
+                    ctx.session().bump_load(Metric::EgressTotalManifests, 1.0);
                     STATS::total_tree_count.add_value(1);
-                    if ctx.is_quicksand() {
+                    if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
                     }
 
@@ -491,7 +492,7 @@ impl RepoClient {
                             getpack_params.push((path.clone(), filenodes.clone()));
                         }
 
-                        ctx.bump_load(Metric::EgressGetpackFiles, 1.0);
+                        ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
 
                         let blob_futs: Vec<_> = filenodes
                             .iter()
@@ -592,7 +593,7 @@ impl RepoClient {
                             .add_to_counter(PerfCounterType::GetpackResponseSize, len);
 
                         STATS::total_fetched_file_size.add_value(len as i64);
-                        if ctx.is_quicksand() {
+                        if ctx.session().is_quicksand() {
                             STATS::quicksand_fetched_file_size.add_value(len as i64);
                         }
                     }
@@ -1312,6 +1313,9 @@ impl HgCommands for RepoClient {
                                 PushrebaseConflicts(..) => {
                                     STATS::push_conflicts.add_value(1, (reponame, ));
                                 }
+                                RateLimitExceeded { .. } => {
+                                    STATS::rate_limits_exceeded.add_value(1, (reponame, ));
+                                }
                                 Error(..) => {
                                     STATS::push_error.add_value(1, (reponame, ));
                                 }
@@ -1355,7 +1359,7 @@ impl HgCommands for RepoClient {
                         bytes.len() as i64,
                     );
                     STATS::total_tree_size.add_value(bytes.len() as i64);
-                    if ctx.is_quicksand() {
+                    if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_size.add_value(bytes.len() as i64);
                     }
                 }
@@ -1409,7 +1413,7 @@ impl HgCommands for RepoClient {
                     cloned!(ctx);
                     move |(node, path)| {
                         let repo = this.repo.clone();
-                        ctx.bump_load(Metric::EgressGetfilesFiles, 1.0);
+                        ctx.session().bump_load(Metric::EgressGetfilesFiles, 1.0);
                         create_getfiles_blob(
                             ctx.clone(),
                             repo.blobrepo().clone(),
@@ -1450,7 +1454,7 @@ impl HgCommands for RepoClient {
                             .set_max_counter(PerfCounterType::GetfilesMaxFileSize, len);
 
                         STATS::total_fetched_file_size.add_value(len as i64);
-                        if ctx.is_quicksand() {
+                        if ctx.session().is_quicksand() {
                             STATS::quicksand_fetched_file_size.add_value(len as i64);
                         }
                     }
