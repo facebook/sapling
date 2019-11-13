@@ -23,5 +23,5 @@ Recreated cwd
 
   $ mkdir $A
   $ hg debug-args a
-  (warning: the current directory was recrated, consider running 'cd $PWD' to fix your shell)
+  (warning: the current directory was recreated; consider running 'cd $PWD' to fix your shell)
   ["a"]

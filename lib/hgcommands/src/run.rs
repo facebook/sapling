@@ -125,7 +125,7 @@ fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
                 // - NotFound: rmdir $PWD; mkdir $PWD
                 if let Ok(pwd) = env::var("PWD") {
                     if env::set_current_dir(pwd).is_ok() {
-                        let _ = io.write_err("(warning: the current directory was recrated, consider running 'cd $PWD' to fix your shell)\n");
+                        let _ = io.write_err("(warning: the current directory was recreated; consider running 'cd $PWD' to fix your shell)\n");
                         return env::current_dir();
                     }
                 }
