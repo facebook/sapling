@@ -88,6 +88,15 @@ new directories are setgid
   00660 ./.hg/store/data/dir/bar.i
   00660 ./.hg/store/data/foo.i
   00660 ./.hg/store/fncache
+  02775 ./.hg/store/metalog/
+  02775 ./.hg/store/metalog/blobs/
+  00664 ./.hg/store/metalog/blobs/index-id
+  00664 ./.hg/store/metalog/blobs/log
+  00664 ./.hg/store/metalog/blobs/meta
+  02775 ./.hg/store/metalog/roots/
+  00664 ./.hg/store/metalog/roots/index-reverse
+  00664 ./.hg/store/metalog/roots/log
+  00664 ./.hg/store/metalog/roots/meta
   00660 ./.hg/store/phaseroots
   00600 ./.hg/store/requires
   00660 ./.hg/store/undo
@@ -142,6 +151,15 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/data/dir/bar.i
   00660 ../push/.hg/store/data/foo.i
   00660 ../push/.hg/store/fncache
+  02775 ../push/.hg/store/metalog/
+  02775 ../push/.hg/store/metalog/blobs/
+  00664 ../push/.hg/store/metalog/blobs/index-id
+  00664 ../push/.hg/store/metalog/blobs/log
+  00664 ../push/.hg/store/metalog/blobs/meta
+  02775 ../push/.hg/store/metalog/roots/
+  00664 ../push/.hg/store/metalog/roots/index-reverse
+  00664 ../push/.hg/store/metalog/roots/log
+  00664 ../push/.hg/store/metalog/roots/meta
   00660 ../push/.hg/store/requires
   00660 ../push/.hg/store/undo
   00660 ../push/.hg/store/undo.backupfiles

@@ -41,8 +41,8 @@ sh % "ls .hg" == r"""
 
 sh % "ls .hg/store" == r"""
     allheads
-    requires
-"""
+    metalog
+    requires"""
 
 # Poke at a clone:
 
@@ -70,6 +70,6 @@ sh % "ls .hg" == r"""
 
 sh % "ls .hg/store" == r"""
     allheads
-"""
+    metalog"""
 
 sh % "cd .."

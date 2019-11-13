@@ -31,6 +31,7 @@ alias expansion is logged
   [legacy][command] confuse
   [legacy][dirstate_info]
   [legacy][jobid]
+  [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
   [legacy][command_info]
@@ -53,6 +54,7 @@ recursive aliases work correctly
   [legacy][command] so-confusing
   [legacy][dirstate_info]
   [legacy][jobid]
+  [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][command_info]

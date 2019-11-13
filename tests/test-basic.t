@@ -5,6 +5,7 @@ Create a repository:
   $ hg config
   devel.all-warnings=true
   devel.default-date=0 0
+  experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
   fsmonitor.detectrace=1 (fsmonitor !)

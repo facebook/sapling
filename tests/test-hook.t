@@ -189,6 +189,7 @@ more there after
   data
   fncache
   journal.phaseroots
+  metalog
   phaseroots
   requires
   undo

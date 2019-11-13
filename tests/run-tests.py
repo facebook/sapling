@@ -1535,6 +1535,8 @@ class Test(unittest.TestCase):
             hgrc.write(b"[devel]\n")
             hgrc.write(b"all-warnings = true\n")
             hgrc.write(b"default-date = 0 0\n")
+            hgrc.write(b"[experimental]\n")
+            hgrc.write(b"metalog = true\n")
             hgrc.write(b"[lfs]\n")
             if self._watchman:
                 hgrc.write(b"[extensions]\nfsmonitor=\n")

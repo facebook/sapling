@@ -12,6 +12,10 @@ Useful functions
   >   hg commit -m "$1"
   > }
 
+  $ printvisibleheads() {
+  >   hg dbsh -c 'ui.write(repo.svfs.read("visibleheads"))' | sort
+  > }
+
 Setup
   $ newrepo
   $ mkcommit root
@@ -22,11 +26,11 @@ Setup
 Simple creation and amending of draft commits
 
   $ mkcommit draft1
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   ca9d66205acae45570c29bea55877bb8031aa453
   v1
   $ hg amend -m "draft1 amend1"
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   bc066ca12b451d14668c7a3e38757449b7d6a104
   v1
   $ mkcommit draft2
@@ -43,7 +47,7 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   467d8aa13aef105d18160ea682d5cf20d8941d06
   v1
 
@@ -61,7 +65,7 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   bc066ca12b451d14668c7a3e38757449b7d6a104
   v1
 
@@ -80,7 +84,7 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   ecfc0c412bb878c3e7b1b3468cae773b473fd3ec
   v1
   $ hg rebase -s . -d 2
@@ -96,7 +100,7 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   af54c09bb37da36975b8d482f660f62f95697a35
   v1
@@ -104,11 +108,11 @@ Simple creation and amending of draft commits
 Simple phase adjustments
 
   $ hg phase -p 6
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   af54c09bb37da36975b8d482f660f62f95697a35
   v1
   $ hg phase -df 6
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   af54c09bb37da36975b8d482f660f62f95697a35
   v1
@@ -130,26 +134,26 @@ Simple phase adjustments
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ hg phase -p 9
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ hg phase -p 10
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg phase -sf 9
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ hg phase -df 8
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
@@ -192,29 +196,29 @@ Simple phase adjustments
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
 
   $ hg phase -p 11
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ hg phase -p 12
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   v1
   $ hg phase -df 11
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38
   v1
   $ hg phase -df 10
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ hg phase -df 1
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
@@ -243,7 +247,7 @@ Hide and unhide
   $ hg hide 11
   hiding commit 00c8b0f0741e "merge1"
   1 changeset hidden
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ hg hide 8
@@ -252,12 +256,12 @@ Hide and unhide
   hiding commit f3f5679a1c9c "draft4"
   hiding commit 8a541e4b5b52 "merge2"
   4 changesets hidden
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   4f416a252ac81004d9b35542cb1dc8892b6879eb
   96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg unhide 9
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   5dabc7b08ef934b9e6720285205b2c17695f6491
   96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
@@ -267,25 +271,25 @@ Hide and unhide
   hiding commit af54c09bb37d "draft2a"
   hiding commit 5dabc7b08ef9 "draft3"
   4 changesets hidden
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   175dbab47dccefd3ece5916c4f92a6c69f65fcf0
   v1
   $ hg unhide 6
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg hide 1
   hiding commit 175dbab47dcc "public1"
   hiding commit 96b7359a7ee5 "draft1 amend1"
   2 changesets hidden
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   v1
   $ hg unhide 11
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38
   v1
   $ hg unhide 12
-  $ sort < .hg/store/visibleheads
+  $ printvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
