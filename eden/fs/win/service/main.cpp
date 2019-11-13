@@ -18,6 +18,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/win/service/StartupLogger.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "folly/io/IOBuf.h"
@@ -35,6 +36,10 @@ using namespace folly;
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
+
+namespace {
+
+constexpr StringPiece kEdenVersion = "edenwin";
 
 void debugSetLogLevel(std::string category, std::string level) {
   auto& db = folly::LoggerDB::get();
@@ -87,6 +92,8 @@ void redirectLogOutput(const char* logPath) {
   };
 }
 
+} // namespace
+
 int __cdecl main(int argc, char** argv) {
   XLOG(INFO) << "Eden Windows - starting";
   std::vector<std::string> originalCommandLine{argv, argv + argc};
@@ -128,11 +135,19 @@ int __cdecl main(int argc, char** argv) {
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   auto startupLogger = std::make_shared<StartupLogger>();
 
+  SessionInfo sessionInfo;
+  sessionInfo.username = identity.getUsername();
+  sessionInfo.hostname = getHostname();
+  sessionInfo.os = getOperatingSystemName();
+  sessionInfo.osVersion = getOperatingSystemVersion();
+  sessionInfo.edenVersion = kEdenVersion.str();
+
   std::optional<EdenServer> server;
   try {
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
+        std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig));
     prepareFuture = server->prepare(startupLogger);

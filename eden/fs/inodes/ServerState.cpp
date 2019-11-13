@@ -40,6 +40,7 @@ ServerState::ServerState(
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<Clock> clock,
     std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
@@ -47,6 +48,7 @@ ServerState::ServerState(
       threadPool_{std::move(threadPool)},
       clock_{std::move(clock)},
       processNameCache_{std::move(processNameCache)},
+      structuredLogger_{std::move(structuredLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       config_{edenConfig},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{

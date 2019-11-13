@@ -32,6 +32,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/testharness/FakeFuse.h"
@@ -85,6 +86,7 @@ TestMount::TestMount()
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
       make_shared<ProcessNameCache>(),
+      make_shared<NullStructuredLogger>(),
       make_shared<EdenConfig>(
           /*userName=*/folly::StringPiece{"bob"},
           /*userID=*/uid_t{},

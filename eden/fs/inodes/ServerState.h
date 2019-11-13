@@ -29,6 +29,7 @@ class EdenConfig;
 class FaultInjector;
 class PrivHelper;
 class ProcessNameCache;
+class StructuredLogger;
 class TopLevelIgnores;
 class UnboundedQueueExecutor;
 
@@ -46,6 +47,7 @@ class ServerState {
       std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
       std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
       bool enableFaultInjection = false);
   ~ServerState();
@@ -135,6 +137,10 @@ class ServerState {
     return processNameCache_;
   }
 
+  const std::shared_ptr<StructuredLogger>& getStructuredLogger() const {
+    return structuredLogger_;
+  }
+
   FaultInjector& getFaultInjector() {
     return *faultInjector_;
   }
@@ -147,6 +153,7 @@ class ServerState {
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;
   std::shared_ptr<ProcessNameCache> processNameCache_;
+  std::shared_ptr<StructuredLogger> structuredLogger_;
   std::unique_ptr<FaultInjector> const faultInjector_;
 
   ReloadableConfig config_;

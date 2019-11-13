@@ -28,7 +28,23 @@
 #include <thrift/lib/cpp2/transport/rsocket/server/RSRoutingHandler.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/service/EdenCPUThreadPool.h"
+#include "eden/fs/service/EdenError.h"
+#include "eden/fs/service/EdenServiceHandler.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/BlobCache.h"
+#include "eden/fs/store/EmptyBackingStore.h"
+#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/SessionInfo.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/telemetry/StructuredLoggerFactory.h"
+#include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/ProcUtil.h"
+
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual
@@ -48,18 +64,6 @@
 #include "eden/fs/takeover/TakeoverServer.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
-#include "eden/fs/service/EdenCPUThreadPool.h"
-#include "eden/fs/service/EdenError.h"
-#include "eden/fs/service/EdenServiceHandler.h"
-#include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/store/BlobCache.h"
-#include "eden/fs/store/EmptyBackingStore.h"
-#include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/SqliteLocalStore.h"
-#include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/ProcUtil.h"
 
 #ifdef EDEN_HAVE_EDENSCM
 #include "eden/fs/store/hg/HgBackingStore.h"
@@ -220,6 +224,7 @@ static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
+    SessionInfo sessionInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
     std::string version)
@@ -234,6 +239,7 @@ EdenServer::EdenServer(
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
+          makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo)),
           edenConfig,
           FLAGS_enable_fault_injection)},
       version_{std::move(version)} {

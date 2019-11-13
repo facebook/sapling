@@ -9,17 +9,10 @@
 
 #include <unordered_map>
 #include "eden/fs/telemetry/LogEvent.h"
+#include "eden/fs/telemetry/SessionInfo.h"
 
 namespace facebook {
 namespace eden {
-
-struct SessionInfo {
-  std::string username;
-  std::string hostname;
-  std::string os;
-  std::string osVersion;
-  std::string edenVersion;
-};
 
 class StructuredLogger {
  public:

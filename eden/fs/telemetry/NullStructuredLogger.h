@@ -7,25 +7,17 @@
 
 #pragma once
 
-#include <memory>
 #include "eden/fs/telemetry/StructuredLogger.h"
 
 namespace facebook {
 namespace eden {
 
-class EdenConfig;
-class ScribeLogger;
-
-class ScubaStructuredLogger final : public StructuredLogger {
+class NullStructuredLogger final : public StructuredLogger {
  public:
-  ScubaStructuredLogger(
-      std::shared_ptr<ScribeLogger> scribeLogger,
-      SessionInfo sessionInfo);
+  NullStructuredLogger() : StructuredLogger{false, SessionInfo{}} {}
 
  private:
-  void logDynamicEvent(DynamicEvent event) override;
-
-  std::shared_ptr<ScribeLogger> scribeLogger_;
+  void logDynamicEvent(DynamicEvent) override {}
 };
 
 } // namespace eden

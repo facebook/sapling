@@ -23,6 +23,7 @@ class EdenMain {
   // Subclasses can override these methods to tweak Eden's start-up behavior
   virtual std::string getEdenfsBuildName();
   virtual std::string getEdenfsVersion();
+  virtual std::string getLocalHostname();
   virtual void runServer(const EdenServer& server);
 };
 

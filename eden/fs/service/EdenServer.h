@@ -64,6 +64,7 @@ class BackingStore;
 class BlobCache;
 class Dirstate;
 class EdenServiceHandler;
+struct SessionInfo;
 class LocalStore;
 class MountInfo;
 class StartupLogger;
@@ -104,6 +105,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(
       std::vector<std::string> originalCommandLine,
       UserInfo userInfo,
+      SessionInfo sessionInfo,
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,
       std::string version = "");

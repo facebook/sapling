@@ -13,6 +13,7 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/TempFile.h"
 
@@ -70,6 +71,7 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
   return make_unique<EdenServer>(
       std::vector<std::string>{"edenfs_unit_test"},
       userInfo,
+      SessionInfo{},
       std::move(privHelper),
       config,
       "test server");

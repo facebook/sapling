@@ -29,6 +29,7 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
+#include "eden/fs/telemetry/SessionInfo.h"
 
 // This has to be placed after eden-config.h
 #ifdef EDEN_HAVE_CURL
@@ -52,6 +53,23 @@ DEFINE_bool(
 // messages asynchronously rather than blocking in the logging thread.
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
+namespace {
+using namespace facebook::eden;
+
+SessionInfo makeSessionInfo(
+    const UserInfo& userInfo,
+    std::string hostname,
+    std::string edenVersion) {
+  SessionInfo env;
+  env.username = userInfo.getUsername();
+  env.hostname = std::move(hostname);
+  env.os = getOperatingSystemName();
+  env.osVersion = getOperatingSystemVersion();
+  env.edenVersion = std::move(edenVersion);
+  return env;
+}
+} // namespace
+
 namespace facebook {
 namespace eden {
 
@@ -64,7 +82,11 @@ std::string EdenMain::getEdenfsBuildName() {
 std::string EdenMain::getEdenfsVersion() {
   // Subclasses can override this if desired to return specific version
   // information
-  return "";
+  return std::string{};
+}
+
+std::string EdenMain::getLocalHostname() {
+  return getHostname();
 }
 
 void EdenMain::runServer(const EdenServer& server) {
@@ -206,9 +228,12 @@ int EdenMain::main(int argc, char** argv) {
 
     startupLogger->log("Starting ", getEdenfsBuildName(), ", pid ", getpid());
 
+    auto sessionInfo =
+        makeSessionInfo(identity, getLocalHostname(), getEdenfsVersion());
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
+        std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig),
         getEdenfsVersion());
