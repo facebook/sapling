@@ -20,7 +20,7 @@ from __future__ import absolute_import
 
 import errno
 
-from . import error, util
+from . import error, pycompat, util
 from .i18n import _
 
 
@@ -496,6 +496,8 @@ class transaction(util.transactional):
                     self.report("couldn't remove %s: %s\n" % (vfs.join(b), inst))
         self.entries = []
         self._writeundo()
+        self._writemetalog()
+
         if self.after:
             self.after()
             self.after = None  # Help prevent cycles.
@@ -518,6 +520,7 @@ class transaction(util.transactional):
                         raise
                     # Abort may be raise by read only opener
                     self.report("couldn't remove %s: %s\n" % (vfs.join(b), inst))
+
         self._backupentries = []
         self.journal = None
 
@@ -563,6 +566,16 @@ class transaction(util.transactional):
                 util.copyfile(vfs.join(b), vfs.join(u), hardlink=True)
             undobackupfile.write("%s\0%s\0%s\0%d\n" % (l, f, u, c))
         undobackupfile.close()
+
+    def _writemetalog(self):
+        """write data managed by svfs.metalog"""
+        # Write metalog.
+        svfs = self._vfsmap[""]
+        metalog = getattr(svfs, "metalog", None)
+        if metalog:
+            metalog.commit(
+                " ".join(map(util.shellquote, pycompat.sysargv[1:])), int(util.timer())
+            )
 
     def _abort(self):
         self.count = 0

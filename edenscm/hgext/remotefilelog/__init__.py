@@ -505,8 +505,8 @@ def onetimeclientsetup(ui):
     else:
         wrapfunction(changegroup, "makechangegroup", shallowbundle.makechangegroup)
 
-    def storewrapper(orig, requirements, path, vfstype):
-        s = orig(requirements, path, vfstype)
+    def storewrapper(orig, requirements, path, vfstype, *args):
+        s = orig(requirements, path, vfstype, *args)
         if shallowrepo.requirement in requirements:
             s = shallowstore.wrapstore(s)
 

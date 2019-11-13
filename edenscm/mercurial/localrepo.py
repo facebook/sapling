@@ -512,6 +512,7 @@ class localrepository(object):
             self.requirements,
             self.sharedpath,
             lambda base: vfsmod.vfs(base, cacheaudited=True),
+            self.ui.uiconfig(),
         )
         self.spath = self.store.path
         self.svfs = self.store.vfs
@@ -1952,11 +1953,23 @@ class localrepository(object):
                 "acquiring store lock for %s" % self.root, skip=1, depth=5
             )
 
+        releasefn = None
+        metalog = getattr(self.svfs, "metalog", None)
+        if metalog:
+            # XXX: metalog.commit should ideally be only called by a transaction
+            # close. However, there are misuses across the code base, so we
+            # cannot really rely on transaction now.
+            def metalogcommit():
+                message = " ".join(map(util.shellquote, pycompat.sysargv[1:]))
+                metalog.commit(message, int(util.timer()))
+
+            releasefn = metalogcommit
+
         l = self._lock(
             self.svfs,
             "lock",
             wait,
-            None,
+            releasefn,
             self.invalidate,
             _("repository %s") % self.origroot,
         )

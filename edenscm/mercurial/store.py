@@ -13,9 +13,12 @@
 from __future__ import absolute_import
 
 import errno
+import functools
 import hashlib
 import os
 import stat
+
+import bindings
 
 from . import error, policy, pycompat, util, vfs as vfsmod
 from .i18n import _
@@ -575,13 +578,100 @@ class fncache(object):
         return iter(self.entries)
 
 
-class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs):
+class metavfs(object):
+    """Wrapper vfs that writes data to metalog"""
+
+    metapaths = {}
+
+    @util.propertycache
+    def metalog(self):
+        vfs = self.vfs
+        metalog = bindings.metalog.metalog(vfs.join("metalog"))
+
+        # Migrate data from vfs to metalog
+        keys = set(metalog.keys())
+        for name in self.metapaths:
+            if name not in keys:
+                data = vfs.tryread(name)
+                if data is not None:
+                    metalog[name] = data
+        try:
+            # XXX: This is racy.
+            metalog.commit("migrate from vfs", int(util.timer()))
+        except Exception:
+            pass
+
+        return metalog
+
+    def metaopen(self, path, mode="r"):
+        assert path in self.metapaths
+        # Return a virtual file that is backed by self.metalog
+        if mode in {"r", "rb"}:
+            return readablestream(self.metalog[path] or "")
+        elif mode in {"w", "wb"}:
+            return writablestream(functools.partial(self.metalog.set, path))
+        else:
+            raise error.ProgrammingError("mode %s is unsupported for %s" % (mode, path))
+
+
+class readablestream(object):
+    """Similar to stringio, but also works in a with context"""
+
+    def __init__(self, data):
+        self.stream = util.stringio(data)
+
+    def __enter__(self):
+        return self.stream
+
+    def __exit__(self, exctype, excval, exctb):
+        pass
+
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+
+    def close(self):
+        pass
+
+
+class writablestream(object):
+    """Writable stringio that writes to specified place on close"""
+
+    def __init__(self, writefunc):
+        self.writefunc = writefunc
+        self.stream = util.stringio()
+        self.closed = False
+
+    def __enter__(self):
+        assert not self.closed
+        return self.stream
+
+    def __exit__(self, exctype, excval, exctb):
+        self.close()
+
+    def __getattr__(self, name):
+        assert not self.closed
+        return getattr(self.stream, name)
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        if self.closed:
+            return
+        self.closed = True
+        value = self.stream.getvalue()
+        self.writefunc(value)
+
+
+class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs, metavfs):
     def __init__(self, vfs, fnc, encode):
         vfsmod.proxyvfs.__init__(self, vfs)
         self.fncache = fnc
         self.encode = encode
 
     def __call__(self, path, mode="r", *args, **kw):
+        if path in self.metapaths:
+            return self.metaopen(path, mode)
         if mode not in ("r", "rb") and (
             path.startswith("data/") or path.startswith("meta/")
         ):
@@ -671,9 +761,14 @@ class fncachestore(basicstore):
         return False
 
 
-def store(requirements, path, vfstype):
+def store(requirements, path, vfstype, uiconfig=None):
     if "store" in requirements:
         if "fncache" in requirements:
-            return fncachestore(path, vfstype, "dotencode" in requirements)
+            store = fncachestore(path, vfstype, "dotencode" in requirements)
+            if uiconfig and uiconfig.configbool("experimental", "metalog"):
+                # Change remotenames and visibleheads to be backed by metalog,
+                # so they can be atomically read or written.
+                store.vfs.metapaths = {"remotenames", "visibleheads"}
+            return store
         return encodedstore(path, vfstype)
     return basicstore(path, vfstype)
