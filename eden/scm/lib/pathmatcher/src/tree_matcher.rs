@@ -97,7 +97,7 @@ impl TreeMatcher {
             //
             // For now, workaround it by escaping. In the future, this can
             // possibly be done by tweaking a GlobBuilder option in
-            // build_glob().
+            // build_globs().
             //
             // See https://github.com/BurntSushi/ripgrep/issues/1183.
             let rule = escape_curly_brackets(&rule);
@@ -116,23 +116,25 @@ impl TreeMatcher {
             while let Some(index) = next_path_separator(rule_bytes, sep_index) {
                 if index > 0 && index < rule_bytes.len() - 1 {
                     let parent_rule = &rule[..index];
-                    let glob = build_glob(parent_rule)?;
-                    builder.add(glob);
-                    rule_flags.push(flag | RuleFlags::PARENT);
+                    for glob in build_globs(parent_rule)? {
+                        builder.add(glob);
+                        rule_flags.push(flag | RuleFlags::PARENT);
+                    }
                 }
                 sep_index = index + 1;
             }
-            // Insert the rule.
-            // NOTE: This crate depends on the fact that "a/**" matches "a", although
-            // the documentation of globset might say otherwise.
-            let glob = build_glob(&rule)?;
-            builder.add(glob);
             // Mark the rule as recursive so fast paths (i.e. claim everything
             // matches or nothing matches) can be used.
             if rule.ends_with("/**") || rule.ends_with("**/*") || rule == "**" {
                 flag |= RuleFlags::RECURSIVE;
             }
-            rule_flags.push(flag);
+            // Insert the rule.
+            // NOTE: This crate depends on the fact that "a/**" matches "a", although
+            // the documentation of globset might say otherwise.
+            for glob in build_globs(&rule)? {
+                builder.add(glob);
+                rule_flags.push(flag);
+            }
         }
 
         let glob_set = builder.build()?;
@@ -246,11 +248,28 @@ impl Matcher for TreeMatcher {
     }
 }
 
-fn build_glob(pat: &str) -> Result<Glob, globset::Error> {
-    GlobBuilder::new(pat)
+fn build_globs(pat: &str) -> Result<Vec<Glob>, globset::Error> {
+    // Fast path (maybe).
+    if pat.ends_with("/**") {
+        // Rewrite "foo/**" (literal_separator=true) to "foo" (literal_separator=false) and "foo/*"
+        // (literal_separator=false) so MatchStrategy::Literal and MatchStrategy::Prefix (instead
+        // of MatchStrategy::Regex) might be used.  See globset::glob::Glob::{literal,prefix}.
+        let prefix = &pat[..pat.len() - 3];
+        if !prefix.contains("?") && !prefix.contains("*") {
+            let rules = [prefix, &pat[..pat.len() - 1]];
+            return rules
+                .iter()
+                .map(|r| GlobBuilder::new(r).backslash_escape(true).build())
+                .collect();
+        }
+    }
+
+    // General path.
+    let glob = GlobBuilder::new(pat)
         .literal_separator(true) // `*` or `?` should not match `/`
         .backslash_escape(true)
-        .build()
+        .build()?;
+    Ok(vec![glob])
 }
 
 /// Find the next path separator in a pattern. Respect escaping rules.

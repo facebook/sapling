@@ -20,7 +20,7 @@ class NeverMatcherTests(unittest.TestCase):
             matchmod.treematcher("", "", rules=rules)
 
     def testManyPrefixes(self):
-        n = 100
+        n = 10000
         rules = ["a/b/c/d/e/f/g/%s/**" % i for i in range(n)]
         m = matchmod.treematcher("", "", rules=rules)
         self.assertTrue(m.visitdir("a"))
