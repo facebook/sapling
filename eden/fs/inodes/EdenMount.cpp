@@ -44,6 +44,7 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -814,6 +815,13 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
             oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
 
         return std::move(conflicts);
+      })
+      .thenTry([this, ctx](Try<std::vector<CheckoutConflict>>&& result) {
+        auto checkoutTimeInSeconds =
+            std::chrono::duration<double>{ctx->getCheckoutDuration()};
+        this->serverState_->getStructuredLogger()->logEvent(
+            FinishedCheckout{checkoutTimeInSeconds.count(), result.hasValue()});
+        return std::move(result);
       });
 }
 

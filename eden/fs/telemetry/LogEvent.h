@@ -29,6 +29,13 @@ class DynamicEvent {
   void addString(std::string name, std::string value);
   void addDouble(std::string name, double value);
 
+  /**
+   * Convenience function that adds boolean values as integer 0 or 1.
+   */
+  void addBool(std::string name, bool value) {
+    addInt(std::move(name), value);
+  }
+
   const IntMap& getIntMap() const {
     return ints_;
   }
@@ -52,9 +59,11 @@ struct FinishedCheckout {
   static constexpr const char* type = "checkout";
 
   double duration = 0.0;
+  bool success = false;
 
   void populate(DynamicEvent& event) const {
     event.addDouble("duration", duration);
+    event.addBool("success", success);
   }
 };
 
