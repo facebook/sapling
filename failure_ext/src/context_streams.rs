@@ -19,7 +19,7 @@ pub trait StreamFailureExt: Stream + Sized {
     fn with_context<D, F>(self, f: F) -> WithContextStream<Self, F>
     where
         D: Display + Clone + Send + Sync + 'static,
-        F: FnMut(&dyn Fail) -> D;
+        F: FnMut() -> D;
 }
 
 impl<S> StreamFailureExt for S
@@ -37,7 +37,7 @@ where
     fn with_context<D, F>(self, f: F) -> WithContextStream<Self, F>
     where
         D: Display + Clone + Send + Sync + 'static,
-        F: FnMut(&dyn Fail) -> D,
+        F: FnMut() -> D,
     {
         WithContextStream::new(self, f)
     }
@@ -93,7 +93,7 @@ where
     A: Stream,
     A::Error: Fail,
     D: Display + Clone + Send + Sync + 'static,
-    F: FnMut(&dyn Fail) -> D,
+    F: FnMut() -> D,
 {
     type Item = A::Item;
     type Error = Context<D>;
@@ -101,7 +101,7 @@ where
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.inner.poll() {
             Err(err) => {
-                let context = (&mut self.displayable)(&err);
+                let context = (&mut self.displayable)();
                 Err(err.context(context))
             }
             Ok(item) => Ok(item),
@@ -118,7 +118,7 @@ pub trait StreamFailureErrorExt: Stream + Sized {
     fn with_context<D, F>(self, f: F) -> WithContextErrorStream<Self, F>
     where
         D: Display + Clone + Send + Sync + 'static,
-        F: FnMut(&Error) -> D;
+        F: FnMut() -> D;
 }
 
 impl<S> StreamFailureErrorExt for S
@@ -135,7 +135,7 @@ where
     fn with_context<D, F>(self, f: F) -> WithContextErrorStream<Self, F>
     where
         D: Display + Clone + Send + Sync + 'static,
-        F: FnMut(&Error) -> D,
+        F: FnMut() -> D,
     {
         WithContextErrorStream::new(self, f)
     }
@@ -189,7 +189,7 @@ impl<A, F, D> Stream for WithContextErrorStream<A, F>
 where
     A: Stream<Error = Error>,
     D: Display + Clone + Send + Sync + 'static,
-    F: FnMut(&Error) -> D,
+    F: FnMut() -> D,
 {
     type Item = A::Item;
     type Error = Context<D>;
@@ -197,7 +197,7 @@ where
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.inner.poll() {
             Err(err) => {
-                let context = (&mut self.displayable)(&err);
+                let context = (&mut self.displayable)();
                 Err(err.context(context))
             }
             Ok(item) => Ok(item),
@@ -230,7 +230,7 @@ mod test {
             Err(format_err!("foo").context("bar")),
             Err(format_err!("baz").context("wiggle")),
         ]);
-        let mut stream = stream.with_context(move |_| "foo");
+        let mut stream = stream.with_context(|| "foo");
         let _ = stream.poll();
         let _ = stream.poll();
         let _ = stream.poll();
@@ -256,7 +256,7 @@ mod test {
             Err(format_err!("bar")),
             Err(format_err!("baz")),
         ]);
-        let mut stream = stream.with_context(move |_| "foo");
+        let mut stream = stream.with_context(|| "foo");
         let _ = stream.poll();
         let _ = stream.poll();
         let _ = stream.poll();

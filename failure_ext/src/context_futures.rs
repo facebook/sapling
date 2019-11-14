@@ -19,7 +19,7 @@ pub trait FutureFailureErrorExt: Future + Sized {
     fn with_context<D, F>(self, f: F) -> WithContextErrorFut<Self, F>
     where
         D: Display + Send + Sync + 'static,
-        F: FnOnce(&Error) -> D;
+        F: FnOnce() -> D;
 }
 
 impl<F> FutureFailureErrorExt for F
@@ -36,7 +36,7 @@ where
     fn with_context<D, O>(self, f: O) -> WithContextErrorFut<Self, O>
     where
         D: Display + Send + Sync + 'static,
-        O: FnOnce(&Error) -> D,
+        O: FnOnce() -> D,
     {
         WithContextErrorFut::new(self, f)
     }
@@ -51,7 +51,7 @@ impl<A, F, D> WithContextErrorFut<A, F>
 where
     A: Future<Error = Error>,
     D: Display + Send + Sync + 'static,
-    F: FnOnce(&Error) -> D,
+    F: FnOnce() -> D,
 {
     pub fn new(future: A, displayable: F) -> Self {
         Self {
@@ -65,7 +65,7 @@ impl<A, F, D> Future for WithContextErrorFut<A, F>
 where
     A: Future<Error = Error>,
     D: Display + Send + Sync + 'static,
-    F: FnOnce(&Error) -> D,
+    F: FnOnce() -> D,
 {
     type Item = A::Item;
     type Error = Context<D>;
@@ -78,7 +78,7 @@ where
                     .take()
                     .expect("poll called after future completion");
 
-                let context = f(&err);
+                let context = f();
                 Err(err.context(context))
             }
             Ok(item) => Ok(item),
@@ -133,7 +133,7 @@ pub trait FutureFailureExt: Future + Sized {
     fn with_context<D, F>(self, f: F) -> WithContextFut<Self, F>
     where
         D: Display + Send + Sync + 'static,
-        F: FnOnce(&dyn Fail) -> D;
+        F: FnOnce() -> D;
 }
 
 impl<F> FutureFailureExt for F
@@ -151,7 +151,7 @@ where
     fn with_context<D, O>(self, f: O) -> WithContextFut<Self, O>
     where
         D: Display + Send + Sync + 'static,
-        O: FnOnce(&dyn Fail) -> D,
+        O: FnOnce() -> D,
     {
         WithContextFut::new(self, f)
     }
@@ -207,7 +207,7 @@ where
     A: Future,
     A::Error: Fail,
     D: Display + Send + Sync + 'static,
-    F: FnOnce(&dyn Fail) -> D,
+    F: FnOnce() -> D,
 {
     pub fn new(future: A, displayable: F) -> Self {
         Self {
@@ -222,7 +222,7 @@ where
     A: Future,
     A::Error: Fail,
     D: Display + Send + Sync + 'static,
-    F: FnOnce(&dyn Fail) -> D,
+    F: FnOnce() -> D,
 {
     type Item = A::Item;
     type Error = Context<D>;
@@ -235,7 +235,7 @@ where
                     .take()
                     .expect("poll called after future completion");
 
-                let context = f(&err);
+                let context = f();
                 Err(err.context(context))
             }
             Ok(item) => Ok(item),
@@ -261,7 +261,7 @@ mod test {
     #[should_panic]
     fn poll_after_completion_fail_with_context() {
         let err = err::<(), _>(format_err!("foo").context("bar"));
-        let mut err = err.with_context(move |_| "baz");
+        let mut err = err.with_context(|| "baz");
         let _ = err.poll();
         let _ = err.poll();
     }
@@ -279,7 +279,7 @@ mod test {
     #[should_panic]
     fn poll_after_completion_error_with_context() {
         let err = err::<(), _>(format_err!("foo"));
-        let mut err = err.with_context(move |_| "baz");
+        let mut err = err.with_context(|| "baz");
         let _ = err.poll();
         let _ = err.poll();
     }

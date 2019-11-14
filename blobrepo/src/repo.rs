@@ -745,7 +745,7 @@ impl BlobRepo {
         fetch_file_envelope(ctx, &self.blobstore.boxed(), node)
             .with_context({
                 cloned!(path);
-                move |_| format!("While fetching filenode for {} {}", path, node)
+                move || format!("While fetching filenode for {} {}", path, node)
             })
             .from_err()
             .and_then({
@@ -2137,7 +2137,7 @@ impl CreateChangeset {
                         event_id,
                     )
             })
-            .with_context(move |_| {
+            .with_context(move || {
                 format!(
                     "While creating Changeset {:?}, uuid: {}",
                     expected_nodeid, uuid

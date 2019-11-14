@@ -191,7 +191,7 @@ where
             (
                 responses.boxify(),
                 recv.from_err()
-                    .with_context(|_| format!("While handling batch command"))
+                    .context("While handling batch command")
                     .from_err()
                     .and_then(|input| input)
                     .boxify(),

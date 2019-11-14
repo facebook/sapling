@@ -123,7 +123,7 @@ impl NewBlobs {
         Ok(Self {
             root_manifest,
             sub_entries: stream::futures_unordered(entries)
-                .with_context(move |_| {
+                .with_context(move || {
                     format!(
                         "While walking dependencies of Root Manifest with id {:?}",
                         manifest_root_id
@@ -309,7 +309,7 @@ pub fn upload_changeset(
     // DO NOT replace and_then() with join() or futures_ordered()!
     // It may result in a combinatoral explosion in mergy repos (see D14100259)
     p1.and_then(|p1| p2.map(|p2| (p1, p2)))
-        .with_context(move |_| format!("While fetching parents for Changeset {}", node))
+        .with_context(move || format!("While fetching parents for Changeset {}", node))
         .from_err()
         .and_then(move |(p1, p2)| {
             let cs_metadata = ChangesetMetadata {

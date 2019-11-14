@@ -425,7 +425,7 @@ impl HookManager {
                 cloned!(hook_name);
                 move |he| (hook_name, he)
             })
-            .with_context(move |_| format!("while executing hook {}", hook_name))
+            .with_context(move || format!("while executing hook {}", hook_name))
             .from_err()
             .boxify()
     }

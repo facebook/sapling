@@ -598,7 +598,7 @@ where
     (
         bundle2items,
         recv.from_err()
-            .with_context(|_| format!("While extracting bundle2 remainder"))
+            .context("While extracting bundle2 remainder")
             .from_err()
             .boxify(),
     )

@@ -144,7 +144,7 @@ fn collect_fsnode_subentries(
         move |fsnode_id| {
             fsnode_id
                 .load(ctx.clone(), &blobstore)
-                .with_context(move |_| ErrorKind::MissingParent(fsnode_id))
+                .context(ErrorKind::MissingParent(fsnode_id))
         }
     }))
     .collect()
@@ -194,7 +194,7 @@ fn collect_fsnode_subentries(
                                 .load(ctx.clone(), &blobstore)
                                 .with_context({
                                     cloned!(elem);
-                                    move |_| {
+                                    move || {
                                         ErrorKind::MissingSubentry(
                                             String::from_utf8_lossy(elem.as_ref()).to_string(),
                                             fsnode_id,

@@ -181,7 +181,7 @@ impl HgBlobChangeset {
                         Ok(Some(cs))
                     }
                 })
-                .with_context(move |_| {
+                .with_context(move || {
                     format!(
                         "Error while deserializing changeset retrieved from key '{}'",
                         key

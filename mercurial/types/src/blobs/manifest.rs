@@ -134,7 +134,7 @@ pub fn fetch_manifest_envelope_opt(
             }
             Ok(Some(envelope))
         })
-        .with_context(|_| ErrorKind::ManifestDeserializeFailed(blobstore_key))
+        .context(ErrorKind::ManifestDeserializeFailed(blobstore_key))
         .from_err()
 }
 

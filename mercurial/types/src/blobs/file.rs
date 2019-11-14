@@ -216,7 +216,7 @@ pub fn fetch_file_envelope_opt(
             }
             Ok(Some(envelope))
         })
-        .with_context(|_| ErrorKind::FileNodeDeserializeFailed(blobstore_key))
+        .context(ErrorKind::FileNodeDeserializeFailed(blobstore_key))
         .from_err()
 }
 

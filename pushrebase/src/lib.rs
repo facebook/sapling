@@ -392,7 +392,7 @@ fn fetch_bonsai_changesets(
                 cloned!(ctx, repo);
                 move |bcs_id| repo.get_bonsai_changeset(ctx, bcs_id).from_err()
             })
-            .with_context(move |_| format!("While intitial bonsai changesets fetching"))
+            .context("While intitial bonsai changesets fetching")
             .map_err(Error::from)
             .from_err()
     }))

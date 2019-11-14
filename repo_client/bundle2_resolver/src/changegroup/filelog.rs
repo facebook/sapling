@@ -142,7 +142,7 @@ where
                         })
                     }
                 })
-                .with_context(move |_| {
+                .with_context(move || {
                     format!(
                         "While decoding delta cache for file id {}, path {}",
                         node, path

@@ -315,7 +315,7 @@ impl UploadEntries {
                         Self::assert_in_blobstore(ctx.clone(), blobstore.clone(), node, is_tree);
 
                     assert
-                        .with_context(move |_| format!("While checking for path: {:?}", path))
+                        .with_context(move || format!("While checking for path: {:?}", path))
                         .map_err(Error::from)
                 }
             })
@@ -351,7 +351,7 @@ impl UploadEntries {
                     );
                     let node_key = node_key.clone();
                     assert
-                        .with_context(move |_| {
+                        .with_context(move || {
                             format!("While checking for a parent node: {}", node_key)
                         })
                         .from_err()

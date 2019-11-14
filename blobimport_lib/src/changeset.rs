@@ -56,7 +56,7 @@ struct ParseChangeset {
 fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChangeset {
     let revlogcs = revlog_repo
         .get_changeset(csid)
-        .with_context(move |_| format!("While reading changeset {:?}", csid))
+        .with_context(move || format!("While reading changeset {:?}", csid))
         .map_err(Fail::compat)
         .boxify()
         .shared();
@@ -80,7 +80,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
                 }
             }
         })
-        .with_context(move |_| format!("While reading root manifest for {:?}", csid))
+        .with_context(move || format!("While reading root manifest for {:?}", csid))
         .map_err(Fail::compat)
         .boxify()
         .shared();
@@ -116,7 +116,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
                 let p2 = parents.next().unwrap_or(Ok(None).into_future().boxify());
 
                 p1.join(p2)
-                    .with_context(move |_| format!("While reading parents of {:?}", csid))
+                    .with_context(move || format!("While reading parents of {:?}", csid))
                     .from_err()
             }
         })
@@ -128,7 +128,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
             }
         })
         .flatten_stream()
-        .with_context(move |_| format!("While reading entries for {:?}", csid))
+        .with_context(move || format!("While reading entries for {:?}", csid))
         .from_err()
         .boxify();
 
@@ -472,7 +472,7 @@ impl UploadChangesets {
                 // We know they are public.
                 oneshot::spawn(cshandle
                     .get_completed_changeset()
-                    .with_context(move |_| format!("While uploading changeset: {}", csid))
+                    .with_context(move || format!("While uploading changeset: {}", csid))
                     .from_err(), &executor)
                     .and_then(move |shared| phases_store.add_reachable_as_public(ctx, blobrepo, vec![shared.0.get_changeset_id()]).map(move |_| shared))
                     .boxify()
