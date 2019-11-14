@@ -348,3 +348,58 @@ def debuglfsdownload(ui, repo, *pats, **opts):
             _("Total size: %i, to download: %i, already exists: %r\n")
             % (totalsize, totalsize - presentsize, presentsize)
         )
+
+
+def gc(repo):
+    """remove local lfs objects that exist on the server-side"""
+    local = getattr(repo.svfs, "lfslocalblobstore", None)
+    remote = getattr(repo.svfs, "lfsremoteblobstore", None)
+    if not local or not remote:
+        return
+
+    alloids = set(repo.svfs.lfslocalblobstore.list())
+    if not alloids:
+        return
+    repo.ui.status(_("checking %s lfs objects\n") % len(alloids))
+
+    # Keep objects referred by draft commits.
+    #
+    # TODO: Consider GC hidden commits as well and only keep objects used by
+    # visible drafts to simplify the logic.
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        # narrow-heads: use repo.changelog._visibleheads._allheads.items() to get
+        # all draft heads.
+        nodes = repo.changelog._visibleheads._allheads.items()
+        draftrevs = repo.revs("(not public()) & ::%ln", nodes)
+    else:
+        # non-narrow-heads: use unfiltered repo to get all drafts.
+        draftrevs = repo.unfiltered().revs("draft()")
+
+    draftoids = {p.oid() for p in wrapper.extractpointers(repo, draftrevs)}
+    oids = alloids - draftoids
+    if not oids:
+        return
+
+    # XXX: 'size' is faked. but the server does not seem to care.
+    pointers = [pointer.gitlfspointer(oid=oid, size=1) for oid in oids]
+    todelete = []
+    for obj in remote._batchrequest(pointers, "download").get("objects", []):
+        if obj.get("actions", {}).get("download"):
+            todelete.append(obj["oid"])
+
+    if not todelete:
+        repo.ui.status(_("all lfs objects are local-only\n"))
+        return
+
+    for oid in todelete:
+        local.remove(oid)
+    repo.ui.status(
+        _("deleted %s shared lfs objects (%d left)\n")
+        % (len(todelete), len(alloids) - len(todelete))
+    )
+
+
+@command("debuglfsgc", [])
+def debuglfsgc(ui, repo):
+    """remove local lfs blobs if they can be redownloaded from server"""
+    gc(repo)

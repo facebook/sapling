@@ -51,6 +51,16 @@ class localblobstore(object):
         False otherwise."""
         return (self.cachevfs and self.cachevfs.exists(oid)) or self.vfs.exists(oid)
 
+    def remove(self, oid):
+        self.vfs.tryunlink(oid)
+
+    def list(self):
+        """Return a list of oids stored in this blobstore"""
+        oids = []
+        for entry in self.vfs.walk():
+            oids += entry[-1]
+        return sorted(oids)
+
 
 class memlocal(object):
     """In-memory local blobstore for ad-hoc uploading/downloading without
@@ -79,6 +89,14 @@ class memlocal(object):
         assert mode == "r"
         return util.stringio(self.read(oid))
 
+    def remove(self, oid):
+        if oid in self._files:
+            del self._files[oid]
+
+    def list(self):
+        """Return a list of oids stored in this blobstore"""
+        return list(sorted(self._files.keys()))
+
 
 class unionstore(object):
     """A store which offers uniform access to in-memory store and local on-disk store.
@@ -99,3 +117,10 @@ class unionstore(object):
 
     def has(self, oid):
         return self.memstore.has(oid) or self.diskstore.has(oid)
+
+    def remove(self, oid):
+        self.diskstore.remove(oid)
+        self.memstore.remove(oid)
+
+    def list(self):
+        return list(sorted(set(self.diskstore.list() + self.memstore.list())))

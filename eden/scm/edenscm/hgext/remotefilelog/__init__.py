@@ -943,6 +943,9 @@ def gc(ui, repo, *args, **opts):
     if not repo:
         ui.warn(_("hg gc needs to be called in a repo\n"))
     else:
+        from .. import lfs
+
+        lfs.gc(repo)
         repackmod.incrementalrepack(repo)
 
 
