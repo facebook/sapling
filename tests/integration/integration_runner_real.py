@@ -142,7 +142,7 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv):
             "TEST_ROOT_PUBLIC": tests,
             "TEST_ROOT_FACEBOOK": os.path.join(tests, "facebook"),
             "TEST_FIXTURES": tests,
-            "RUN_TESTS_LIBRARY": os.path.join(fbcode, "scm/hg/tests"),
+            "RUN_TESTS_LIBRARY": os.path.join(fbcode, "eden/scm/tests"),
         }
     )
 
