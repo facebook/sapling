@@ -19,7 +19,7 @@ use blobrepo::{file_history::get_file_history, BlobRepo};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Fail, Fallible};
+use failure::{Error, Fail, Fallible as Result};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use mercurial_types::{
@@ -107,7 +107,7 @@ pub fn create_getfiles_blob(
 fn encode_getfiles_file_content(
     raw_content: FileBytes,
     meta_key_flag: RevFlags,
-) -> Result<Vec<u8>, Error> {
+) -> Result<Vec<u8>> {
     let raw_content = raw_content.into_bytes();
     // requires digit counting to know for sure, use reasonable approximation
     let approximate_header_size = 12;
@@ -260,7 +260,7 @@ pub fn get_unordered_file_history_for_multiple_nodes(
 }
 
 /// Convert file history into bytes as expected in Mercurial's loose file format.
-fn serialize_history(history: Vec<HgFileHistoryEntry>) -> Fallible<Vec<u8>> {
+fn serialize_history(history: Vec<HgFileHistoryEntry>) -> Result<Vec<u8>> {
     let approximate_history_entry_size = 81;
     let mut writer = Cursor::new(Vec::<u8>::with_capacity(
         history.len() * approximate_history_entry_size,

@@ -13,7 +13,7 @@ use std::sync::Arc;
 use actix_web::{server, App, HttpRequest, HttpResponse, Path, Query, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
-use failure::Fallible;
+use failure::Fallible as Result;
 use fbinit::FacebookInit;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;
@@ -428,7 +428,7 @@ struct HttpServerState {
 }
 
 #[fbinit::main]
-fn main(fb: FacebookInit) -> Fallible<()> {
+fn main(fb: FacebookInit) -> Result<()> {
     panichandler::set_panichandler(Fate::Abort);
 
     let app = clap::App::new("Mononoke API Server")
