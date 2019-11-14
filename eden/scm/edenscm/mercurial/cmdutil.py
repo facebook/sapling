@@ -2298,15 +2298,16 @@ def finddate(ui, repo, date):
     def prep(ctx, fns):
         d = ctx.date()
         if df(d[0]):
-            results[ctx.rev()] = d
+            results[ctx.node()] = d
 
     for ctx in walkchangerevs(repo, m, {"rev": None}, prep):
-        rev = ctx.rev()
-        if rev in results:
+        node = ctx.node()
+        if node in results:
             ui.status(
-                _("found revision %s from %s\n") % (rev, util.datestr(results[rev]))
+                _("found revision %s from %s\n")
+                % (hex(node), util.datestr(results[node]))
             )
-            return "%d" % rev
+            return node
 
     raise error.Abort(_("revision matching date not found"))
 
