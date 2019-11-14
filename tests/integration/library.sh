@@ -412,9 +412,14 @@ function setup_mononoke_repo_config {
 repoid=$REPOID
 enabled=${ENABLED:-true}
 hash_validation_percentage=100
-bookmarks_cache_ttl=2000
 storage_config = "blobstore"
 CONFIG
+
+if [[ ! -v NO_BOOKMARKS_CACHE ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+bookmarks_cache_ttl=2000
+CONFIG
+fi
 
 if [[ -v READ_ONLY_REPO ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG

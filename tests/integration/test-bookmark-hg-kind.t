@@ -1,7 +1,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ LIST_KEYS_PATTERNS_MAX=6 setup_common_config
+Disable boookmarks cache because we manually modify bookmarks table
+  $ LIST_KEYS_PATTERNS_MAX=6 NO_BOOKMARKS_CACHE=1 setup_common_config
   $ cd $TESTTMP
 
 setup common configuration for these tests
