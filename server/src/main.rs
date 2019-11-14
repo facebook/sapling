@@ -12,6 +12,7 @@
 mod monitoring;
 
 use clap::{App, ArgMatches};
+use configerator::ConfigSource;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::Future;
@@ -47,6 +48,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
             -d, --debug                                         'print debug level output'
             --test-instance                                     'disables some functionality for tests'
+            --local-configerator-path [PATH]                    'local path to fetch configerator configs from. used only if --test-instance is '
             "#,
         );
     let app = cmdlib::args::add_myrouter_args(app);
@@ -103,6 +105,15 @@ fn main(fb: FacebookInit) {
         )
         .expect("failed to build fb_tls acceptor");
 
+        let test_instance = matches.is_present("test-instance");
+        let config_source = if test_instance {
+            let local_configerator_path = matches.value_of("local-configerator-path");
+            local_configerator_path
+                .map(|path| ConfigSource::file(PathBuf::from(path), String::new()))
+        } else {
+            Some(ConfigSource::configerator(fb).expect("can't set up configerator API"))
+        };
+
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
             fb,
             config.common,
@@ -116,7 +127,7 @@ fn main(fb: FacebookInit) {
                 .expect("listening path must be specified"),
             acceptor.build(),
             &TERMINATE_PROCESS,
-            matches.is_present("test-instance"),
+            config_source,
             cmdlib::args::parse_readonly_storage(&matches),
         );
 

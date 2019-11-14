@@ -667,8 +667,8 @@ fn maybe_pushredirect_action(
     action: &bundle2_resolver::PostResolveAction,
 ) -> Result<bool> {
     let maybe_config: Option<MononokePushRedirectEnable> = match pushredirect_config {
-        // If you chose not to give us configerator, we will allow redirect based purely on config
-        None => return Ok(true),
+        // If you chose not to give us configerator, we won't allow redirect based purely on config
+        None => return Ok(false),
         Some(ref pushredirect_config) => {
             let data = pushredirect_config.load(CONFIGERATOR_TIMEOUT)?;
             serde_json::from_str(&data.contents)?

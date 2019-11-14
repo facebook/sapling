@@ -19,6 +19,7 @@ mod repo_handlers;
 mod request_handler;
 
 use blobrepo_factory::{Caching, ReadOnlyStorage};
+use configerator::ConfigSource;
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -44,7 +45,7 @@ pub fn create_repo_listeners(
     sockname: &str,
     tls_acceptor: SslAcceptor,
     terminate_process: &'static AtomicBool,
-    test_instance: bool,
+    config_source: Option<ConfigSource>,
     readonly_storage: ReadOnlyStorage,
 ) -> (BoxFuture<(), Error>, ready_state::ReadyState) {
     let sockname = String::from(sockname);
@@ -72,7 +73,7 @@ pub fn create_repo_listeners(
                 handlers,
                 tls_acceptor,
                 terminate_process,
-                test_instance,
+                config_source,
             )
         })
         .boxify(),

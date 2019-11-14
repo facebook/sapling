@@ -27,6 +27,19 @@ setup configuration
   >      "special"="specialsmallrepofolder2"
   > EOF
 
+setup configerator configs
+  $ setup_configerator_configs
+  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+  > {
+  > "per_repo": {
+  >   "1": {
+  >      "draft_push": false,
+  >      "public_push": true
+  >    }
+  >   }
+  > }
+  > EOF
+
 Verification function
   $ function verify_wc() {
   >   local large_repo_commit
@@ -107,7 +120,7 @@ Setup helpers
   $ SMALL2_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL2 master_bookmark)
 
 start mononoke server
-  $ mononoke
+  $ mononoke --local-configerator-path="$TESTTMP/configerator"
   $ wait_for_mononoke
 
 Make sure mapping is set up and we know what we don't have to sync initial entries

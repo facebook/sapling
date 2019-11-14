@@ -13,6 +13,7 @@ use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
 use slog::{debug, info, warn, Logger};
 use std::default::Default;
+use std::path::PathBuf;
 use std::result::Result;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -145,7 +146,7 @@ pub fn spawn_config_poller(
                         ConfigLoader::new(config_source, source.to_string())?
                     }
                     (Some("file"), Some(file), None) => {
-                        let config_source = ConfigSource::file();
+                        let config_source = ConfigSource::file(PathBuf::new(), String::new());
                         ConfigLoader::new(config_source, file.to_string())?
                     }
                     (Some("default"), None, None) => ConfigLoader::default_content(

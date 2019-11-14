@@ -26,6 +26,4 @@ pub enum ErrorKind {
     UnexpectedIdentityType(String),
     #[fail(display = "Large repo not found: {}", _0)]
     LargeRepoNotFound(RepositoryId),
-    #[fail(display = "Small repo not found: {}", _0)]
-    SmallRepoNotFound(RepositoryId),
 }

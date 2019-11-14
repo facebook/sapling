@@ -61,7 +61,7 @@ pub fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: &'static AtomicBool,
-    test_instance: bool,
+    config_source: Option<ConfigSource>,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);
@@ -69,28 +69,27 @@ pub fn connection_acceptor(
         .expect("failed to create listener")
         .map_err(Error::from);
 
-    let (load_limiting_config, pushredirect_config) = if test_instance {
-        (None, None)
-    } else {
-        let config_source = ConfigSource::configerator(fb).expect("can't set up configerator API");
+    let (load_limiting_config, pushredirect_config) = match config_source {
+        Some(config_source) => {
+            let load_limiting_config = {
+                let config_loader = ConfigLoader::new(
+                    config_source.clone(),
+                    CONFIGERATOR_LIMITS_CONFIG.to_string(),
+                )
+                .expect("can't get limits configerator config");
+                common_config
+                    .loadlimiter_category
+                    .clone()
+                    .map(|category| (config_loader, category))
+            };
 
-        let load_limiting_config = {
-            let config_loader = ConfigLoader::new(
-                config_source.clone(),
-                CONFIGERATOR_LIMITS_CONFIG.to_string(),
-            )
-            .expect("can't get limits configerator config");
-            common_config
-                .loadlimiter_category
-                .clone()
-                .map(|category| (config_loader, category))
-        };
-
-        let pushredirect_config = Some(
-            ConfigLoader::new(config_source, CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())
-                .expect("can't get pushredirect configerator config"),
-        );
-        (load_limiting_config, pushredirect_config)
+            let pushredirect_config = Some(
+                ConfigLoader::new(config_source, CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())
+                    .expect("can't get pushredirect configerator config"),
+            );
+            (load_limiting_config, pushredirect_config)
+        }
+        None => (None, None),
     };
 
     let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(fb, common_config)

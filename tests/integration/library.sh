@@ -60,6 +60,7 @@ function mononoke {
   # Ignore specific Python warnings to make tests predictable.
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
+
   PYTHONWARNINGS="ignore:::requests" \
   GLOG_minloglevel=5 "$MONONOKE_SERVER" "$@" \
   --ca-pem "$TEST_CERTDIR/root-ca.crt" \
@@ -385,7 +386,7 @@ EOF
 
   ALLOWED_USERNAME="${ALLOWED_USERNAME:-myusername0}"
 
-  cd mononoke-config
+  cd mononoke-config || exit 1
   mkdir -p common
   touch common/commitsyncmap.toml
   cat > common/common.toml <<CONFIG
@@ -399,6 +400,42 @@ CONFIG
 
 function setup_commitsyncmap {
   cp "$TEST_FIXTURES/commitsyncmap.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
+}
+
+
+function setup_configerator_configs {
+  export LOADSHED_CONF
+  LOADSHED_CONF="$TESTTMP/configerator/scm/mononoke/loadshedding"
+  mkdir -p "$LOADSHED_CONF"
+  cat >> "$LOADSHED_CONF/limits" <<EOF
+{
+ "defaults": {
+"egress_bytes": 1000000000000,
+ "ingress_blobstore_bytes": 1000000000000,
+ "total_manifests": 1000000000000,
+ "quicksand_manifests": 1000000000,
+ "getfiles_files": 1000000000,
+ "getpack_files": 1000000000,
+ "commits": 1000000000
+},
+"datacenter_prefix_capacity": {
+},
+"hostprefixes": {
+},
+"quicksand_multiplier": 1.0,
+"rate_limits": {
+}
+}
+EOF
+
+  export PUSHREDIRECT_CONF
+  PUSHREDIRECT_CONF="$TESTTMP/configerator/scm/mononoke/pushredirect"
+  mkdir -p "$PUSHREDIRECT_CONF"
+  cat >> "$PUSHREDIRECT_CONF/enable" <<EOF
+{
+  "per_repo": {}
+}
+EOF
 }
 
 function setup_mononoke_repo_config {

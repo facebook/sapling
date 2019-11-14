@@ -4,6 +4,20 @@ setup configuration
   $ REPOTYPE="blob:files"
   $ REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=small-mon setup_common_config $REPOTYPE
+
+setup configerator configs
+  $ setup_configerator_configs
+  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+  > {
+  > "per_repo": {
+  >   "1": {
+  >      "draft_push": false,
+  >      "public_push": true
+  >    }
+  >   }
+  > }
+  > EOF
+
   $ cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
   > [megarepo_test]
   > large_repo_id = 0
@@ -83,7 +97,7 @@ Setup helpers
   $ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
 
 start mononoke server
-  $ mononoke
+  $ mononoke --local-configerator-path="$TESTTMP/configerator"
   $ wait_for_mononoke
 
 Make sure mapping is set up and we know what we don't have to sync initial entries

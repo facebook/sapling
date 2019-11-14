@@ -23,9 +23,7 @@ use cross_repo_sync::create_commit_syncers;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncDirection, MetadataDBConfig, RepoConfig, StorageConfig,
-};
+use metaconfig_types::{CommitSyncConfig, MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
@@ -194,28 +192,15 @@ fn get_maybe_create_repo_sync_target_fut(
     if large_repo_id == current_repo_id {
         future::ok(None).boxify()
     } else {
-        let current_repo_config = try_boxfuture!(repo_sync_target_args
-            .commit_sync_config
-            .small_repos
-            .get(&current_repo_id)
-            .ok_or(ErrorKind::SmallRepoNotFound(current_repo_id)));
-        let direction = current_repo_config.direction;
-        if direction != CommitSyncDirection::LargeToSmall {
-            // We can only do push redirection when sync happens in the
-            // `LargeToSmall` direction, as `SmallToLarge` is handled by
-            // tailers.
-            future::ok(None).boxify()
-        } else {
-            create_repo_sync_target(
-                ctx,
-                current_repo,
-                target_incomplete_repo_handler,
-                repo_sync_target_args,
-                readonly_storage,
-            )
-            .map(Some)
-            .boxify()
-        }
+        create_repo_sync_target(
+            ctx,
+            current_repo,
+            target_incomplete_repo_handler,
+            repo_sync_target_args,
+            readonly_storage,
+        )
+        .map(Some)
+        .boxify()
     }
 }
 
