@@ -1,0 +1,11 @@
+[package]
+name = "pyconfigparser"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bytes = "0.4.11"
+configparser = { path = "../../../../lib/configparser" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+encoding = { path = "../../../../lib/encoding" }
+util = { path = "../../../../lib/util" }

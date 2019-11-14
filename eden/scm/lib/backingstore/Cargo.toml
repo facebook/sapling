@@ -1,0 +1,16 @@
+[package]
+name = "backingstore"
+version = "0.1.0"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
+
+[dependencies]
+revisionstore = { path = "../revisionstore" }
+configparser = { path = "../configparser" }
+types = { path = "../types" }
+bytes = "0.4.12"
+failure = "0.1.6"
+libc = "0.2.62"
+
+[lib]
+crate-type = ["staticlib", "lib"]

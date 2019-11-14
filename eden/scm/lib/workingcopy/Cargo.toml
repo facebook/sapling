@@ -1,0 +1,12 @@
+[package]
+name = "workingcopy"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+failure = "0.1.3"
+pathmatcher = { path = "../pathmatcher"}
+types = { path = "../types"}
+
+[dev-dependencies]
+tempfile = "3.0"

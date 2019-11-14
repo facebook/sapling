@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+
+from __future__ import absolute_import
+
+import shlex
+import subprocess
+import os
+import sys
+
+os.chdir(os.getenv('TESTTMP'))
+
+def parse(cmd):
+    """
+    matches hg-ssh-wrapper
+    """
+    try:
+        return shlex.split(cmd)
+    except ValueError as e:
+        eprint('Illegal command "%s": %s\n' % (cmd, e))
+        sys.exit(255)
+
+def parse_repo_path(path):
+    """
+    matches hg-ssh-wrapper
+    """
+    path = path.split("?")
+    if len(path) == 1:
+        repo = path[0]
+        marker = None
+    elif len(path) == 2:
+        repo = path[0]
+        marker = path[1]
+    else:
+        eprint("Illegal repo name: %s\n" % "?".join(path))
+        sys.exit(255)
+
+    return repo, marker
+
+# Skipping SSH options
+host_index = 1
+while host_index < len(sys.argv) and sys.argv[host_index].startswith('-'):
+    host_index += 1
+
+if sys.argv[host_index] != "user@dummy":
+    sys.exit(-1)
+
+os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get('LOCALIP', '127.0.0.1')
+
+log = open("dummylog", "ab")
+log.write("Got arguments")
+for i, arg in enumerate(sys.argv[1:]):
+    log.write(" %d:%s" % (i + 1, arg))
+log.write("\n")
+log.close()
+hgcmd = sys.argv[host_index + 1]
+if os.name == 'nt':
+    # hack to make simple unix single quote quoting work on windows
+    hgcmd = hgcmd.replace("'", '"')
+
+cmdargv = parse(hgcmd)
+if cmdargv[:2] == ["hg", "-R"] and cmdargv[3:] == ["serve", "--stdio"]:
+    path, marker = parse_repo_path(cmdargv[2])
+    if marker == "read_copy":
+        path = path + "_copy"
+    cmdargv[2] = path
+    hgcmd = subprocess.list2cmdline(cmdargv)
+
+if "hgcli" in hgcmd:
+    certdir = os.environ.get("HGTEST_CERTDIR") or os.environ.get("TEST_CERTS")
+    if certdir is None:
+        raise ValueError("No cert dir")
+    cert = os.path.join(certdir, "localhost.crt")
+    capem = os.path.join(certdir, "root-ca.crt")
+    privatekey = os.path.join(certdir, "localhost.key")
+
+    hgcmd += (
+        " --mononoke-path [::1]:"
+        + os.getenv("MONONOKE_SOCKET")
+        + (" --cert %s --ca-pem %s --private-key %s --common-name localhost" % (cert, capem, privatekey))
+    )
+
+    mock_username = os.environ.get("MOCK_USERNAME")
+    hgcmd += " --mock-username '{}'".format(mock_username)
+
+r = os.system(hgcmd)
+sys.exit(bool(r))

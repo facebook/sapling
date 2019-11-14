@@ -1,0 +1,8 @@
+[package]
+name = "xdiff"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+xdiff-sys = { path = "../xdiff-sys" }
+structopt = "0.3.1"

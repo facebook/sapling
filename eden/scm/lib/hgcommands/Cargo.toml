@@ -1,0 +1,43 @@
+[package]
+name = "hgcommands"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = ["python2"]
+python2 = []
+python3 = []
+
+[dependencies]
+bindings = { path = "../../edenscmnative/bindings" }
+blackbox = { path = "../blackbox" }
+clidispatch = { path = "../clidispatch" }
+cliparser = { path = "../cliparser", features = ["python"] }
+cpython-ext = { path = "../cpython-ext" }
+edenapi = { path = "../edenapi" }
+failure = "0.1"
+flate2 = "1"
+hgtime = { path = "../hgtime"}
+indexedlog = { path = "../indexedlog" }
+libc = "0.2"
+mincode = { path = "../mincode"}
+parking_lot = "0.9"
+procinfo = { path = "../procinfo"}
+pytracing = { path = "../../edenscmnative/bindings/modules/pytracing" }
+revisionstore = { path = "../revisionstore"}
+tracing = "0.1"
+tracing-collector = { path = "../tracing-collector" }
+types = { path = "../types" }
+util = { path = "../util" }
+zstd = "0.4"
+
+[dependencies.encoding]
+path = "../encoding"
+
+[dependencies.cpython]
+version = "0.3"
+default-features = false
+features = ["python27-sys"]
+
+[dependencies.python27-sys]
+version = "0.3"

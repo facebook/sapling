@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+#
+# posplit - split messages in paragraphs on .po/.pot files
+#
+# license: MIT/X11/Expat
+#
+
+from __future__ import absolute_import, print_function
+
+import polib
+import re
+import sys
+
+def addentry(po, entry, cache):
+    e = cache.get(entry.msgid)
+    if e:
+        e.occurrences.extend(entry.occurrences)
+    else:
+        po.append(entry)
+        cache[entry.msgid] = entry
+
+def mkentry(orig, delta, msgid, msgstr):
+    entry = polib.POEntry()
+    entry.merge(orig)
+    entry.msgid = msgid or orig.msgid
+    entry.msgstr = msgstr or orig.msgstr
+    entry.occurrences = [(p, int(l) + delta) for (p, l) in orig.occurrences]
+    return entry
+
+if __name__ == "__main__":
+    po = polib.pofile(sys.argv[1])
+
+    cache = {}
+    entries = po[:]
+    po[:] = []
+    findd = re.compile(r' *\.\. (\w+)::') # for finding directives
+    for entry in entries:
+        msgids = entry.msgid.split(u'\n\n')
+        if entry.msgstr:
+            msgstrs = entry.msgstr.split(u'\n\n')
+        else:
+            msgstrs = [u''] * len(msgids)
+
+        if len(msgids) != len(msgstrs):
+            # places the whole existing translation as a fuzzy
+            # translation for each paragraph, to give the
+            # translator a chance to recover part of the old
+            # translation - erasing extra paragraphs is
+            # probably better than retranslating all from start
+            if 'fuzzy' not in entry.flags:
+                entry.flags.append('fuzzy')
+            msgstrs = [entry.msgstr] * len(msgids)
+
+        delta = 0
+        for msgid, msgstr in zip(msgids, msgstrs):
+            if msgid and msgid != '::':
+                newentry = mkentry(entry, delta, msgid, msgstr)
+                mdirective = findd.match(msgid)
+                if mdirective:
+                    if not msgid[mdirective.end():].rstrip():
+                        # only directive, nothing to translate here
+                        delta += 2
+                        continue
+                    directive = mdirective.group(1)
+                    if directive in ('container', 'include'):
+                        if msgid.rstrip('\n').count('\n') == 0:
+                            # only rst syntax, nothing to translate
+                            delta += 2
+                            continue
+                        else:
+                            # lines following directly, unexpected
+                            print('Warning: text follows line with directive' \
+                                  ' %s' % directive)
+                    comment = 'do not translate: .. %s::' % directive
+                    if not newentry.comment:
+                        newentry.comment = comment
+                    elif comment not in newentry.comment:
+                        newentry.comment += '\n' + comment
+                addentry(po, newentry, cache)
+            delta += 2 + msgid.count('\n')
+    po.save()

@@ -1,0 +1,31 @@
+[package]
+name = "hgmain"
+version = "0.1.0"
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+libc = "0.2"
+dirs = { version = "1.0", optional = true }
+clidispatch = { path = "../../lib/clidispatch" }
+cliparser = { path = "../../lib/cliparser" }
+configparser = { path = "../../lib/configparser" }
+hgcommands = { path = "../../lib/hgcommands" }
+pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
+
+[target.'cfg(windows)'.dependencies]
+winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}
+failure = "0.1"
+
+[dependencies.encoding]
+path = "../../lib/encoding"
+
+[features]
+buildinfo = []
+default = []
+with_chg = ["dirs"]
+
+[profile.release]
+debug = true
+incremental = true
+lto = false

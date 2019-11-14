@@ -1,0 +1,163 @@
+#require icasefs
+
+  $ hg debugfsinfo | grep 'case-sensitive:'
+  case-sensitive: no
+
+test file addition with bad case
+
+  $ hg init repo1
+  $ cd repo1
+  $ echo a > a
+  $ hg add A
+  $ hg st
+  A a
+  $ hg ci -m adda
+  $ hg manifest
+  a
+  $ cd ..
+
+test case collision on rename (issue750)
+
+  $ hg init repo2
+  $ cd repo2
+  $ echo a > a
+  $ hg --debug ci -Am adda
+  adding a
+  committing files:
+  a
+  committing manifest
+  committing changelog
+  committed changeset 0:07f4944404050f47db2e5c5071e0e84e7a27bba9
+
+Case-changing renames should work:
+
+  $ hg mv a A
+  $ hg mv A a
+  $ hg st
+
+addremove after case-changing rename has no effect (issue4590)
+
+  $ hg mv a A
+  $ hg addremove
+  recording removal of a as rename to A (100% similar)
+  $ hg revert --all
+  forgetting A
+  undeleting a
+
+test changing case of path components
+
+  $ mkdir D
+  $ echo b > D/b
+  $ hg ci -Am addb D/b
+  $ hg mv D/b d/b
+  D/b: not overwriting - file already committed
+  (hg rename --force to replace the file by recording a rename)
+  $ hg mv D/b d/c
+  $ hg st
+  A D/c
+  R D/b
+  $ mv D temp
+  $ mv temp d
+  $ hg st
+  A D/c
+  R D/b
+  $ hg revert -aq
+  $ rm d/c
+  $ echo c > D/c
+  $ hg add D/c
+  $ hg st
+  A D/c
+  $ hg ci -m addc D/c
+  $ hg mv d/b d/e
+  $ hg st
+  A D/e
+  R D/b
+  $ hg revert -aq
+  $ rm d/e
+  $ hg mv d/b D/B
+  $ hg st
+  A D/B
+  R D/b
+  $ cd ..
+
+test case collision between revisions (issue912)
+
+  $ hg init repo3
+  $ cd repo3
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ hg rm a
+  $ hg ci -Am removea
+  $ echo A > A
+
+on linux hfs keeps the old case stored, force it
+
+  $ mv a aa
+  $ mv aa A
+  $ hg ci -Am addA
+  adding A
+
+used to fail under case insensitive fs
+
+  $ hg up -C 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up -C
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+no clobbering of untracked files with wrong casing
+
+  $ hg up -r null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo gold > a
+  $ hg up
+  A: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ cat a
+  gold
+  $ rm a
+
+  $ cd ..
+
+issue 3342: file in nested directory causes unexpected abort
+
+  $ hg init issue3342
+  $ cd issue3342
+
+  $ mkdir -p a/B/c/D
+  $ echo e > a/B/c/D/e
+  $ hg add a/B/c/D/e
+  $ hg ci -m 'add e'
+
+issue 4481: revert across case only renames
+  $ hg mv a/B/c/D/e a/B/c/d/E
+  $ hg ci -m "uppercase E"
+  $ echo 'foo' > a/B/c/D/E
+  $ hg ci -m 'e content change'
+  $ hg revert --all -r 0
+  removing a/B/c/D/E
+  adding a/B/c/D/e
+  $ find * | sort
+  a
+  a/B
+  a/B/c
+  a/B/c/D
+  a/B/c/D/e
+  a/B/c/D/e.orig
+
+#if osx
+
+We assume anyone running the tests on a case-insensitive volume on OS
+X will be using HFS+. If that's not true, this test will fail.
+
+  $ echo a >> Z
+  $ hg commit -Aqm 'add z'
+  $ rm Z
+  >>> open(u'z\u200c'.encode('utf-8'), 'w').write('unicode is fun')
+  $ hg status
+  M Z
+
+#endif
+
+  $ cd ..

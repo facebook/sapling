@@ -1,0 +1,169 @@
+#!/usr/bin/env python
+
+"""
+Utility for inspecting files in various ways.
+
+This tool is like the collection of tools found in a unix environment but are
+cross platform and stable and suitable for our needs in the test suite.
+
+This can be used instead of tools like:
+  [
+  dd
+  find
+  head
+  hexdump
+  ls
+  md5sum
+  readlink
+  sha1sum
+  stat
+  tail
+  test
+  readlink.py
+  md5sum.py
+"""
+
+from __future__ import absolute_import
+
+import glob
+import hashlib
+import optparse
+import os
+import re
+import sys
+
+# Python 3 adapters
+ispy3 = (sys.version_info[0] >= 3)
+if ispy3:
+    def iterbytes(s):
+        for i in range(len(s)):
+            yield s[i:i + 1]
+else:
+    iterbytes = iter
+
+def visit(opts, filenames, outfile):
+    """Process filenames in the way specified in opts, writing output to
+    outfile."""
+    for f in sorted(filenames):
+        isstdin = f == '-'
+        if not isstdin and not os.path.lexists(f):
+            outfile.write(b'%s: file not found\n' % f.encode('utf-8'))
+            continue
+        quiet = opts.quiet and not opts.recurse or isstdin
+        isdir = os.path.isdir(f)
+        islink = os.path.islink(f)
+        isfile = os.path.isfile(f) and not islink
+        dirfiles = None
+        content = None
+        facts = []
+        if isfile:
+            if opts.type:
+                facts.append('file')
+            if opts.hexdump or opts.dump or opts.md5:
+                content = open(f, 'rb').read()
+        elif islink:
+            if opts.type:
+                facts.append('link')
+            content = os.readlink(f)
+        elif isstdin:
+            content = getattr(sys.stdin, 'buffer', sys.stdin).read()
+            if opts.size:
+                facts.append('size=%s' % len(content))
+        elif isdir:
+            if opts.recurse or opts.type:
+                dirfiles = glob.glob(f + '/*')
+                facts.append('directory with %s files' % len(dirfiles))
+        elif opts.type:
+            facts.append('type unknown')
+        if not isstdin:
+            stat = os.lstat(f)
+            if opts.size and not isdir:
+                facts.append('size=%s' % stat.st_size)
+            if opts.mode and not islink:
+                facts.append('mode=%o' % (stat.st_mode & 0o777))
+            if opts.links:
+                facts.append('links=%s' % stat.st_nlink)
+            if opts.newer:
+                # mtime might be in whole seconds so newer file might be same
+                if stat.st_mtime >= os.stat(opts.newer).st_mtime:
+                    facts.append('newer than %s' % opts.newer)
+                else:
+                    facts.append('older than %s' % opts.newer)
+        if opts.md5 and content is not None:
+            h = hashlib.md5(content)
+            facts.append('md5=%s' % h.hexdigest()[:opts.bytes])
+        if opts.sha1 and content is not None:
+            h = hashlib.sha1(content)
+            facts.append('sha1=%s' % h.hexdigest()[:opts.bytes])
+        if isstdin:
+            outfile.write(b', '.join(facts) + b'\n')
+        elif facts:
+            outfile.write(b'%s: %s\n' % (f.encode('utf-8'), b', '.join(facts)))
+        elif not quiet:
+            outfile.write(b'%s:\n' % f.encode('utf-8'))
+        if content is not None:
+            chunk = content
+            if not islink:
+                if opts.lines:
+                    if opts.lines >= 0:
+                        chunk = b''.join(chunk.splitlines(True)[:opts.lines])
+                    else:
+                        chunk = b''.join(chunk.splitlines(True)[opts.lines:])
+                if opts.bytes:
+                    if opts.bytes >= 0:
+                        chunk = chunk[:opts.bytes]
+                    else:
+                        chunk = chunk[opts.bytes:]
+            if opts.hexdump:
+                for i in range(0, len(chunk), 16):
+                    s = chunk[i:i + 16]
+                    outfile.write(b'%04x: %-47s |%s|\n' %
+                                  (i, b' '.join(
+                                      b'%02x' % ord(c) for c in iterbytes(s)),
+                                   re.sub(b'[^ -~]', b'.', s)))
+            if opts.dump:
+                if not quiet:
+                    outfile.write(b'>>>\n')
+                outfile.write(chunk)
+                if not quiet:
+                    if chunk.endswith(b'\n'):
+                        outfile.write(b'<<<\n')
+                    else:
+                        outfile.write(b'\n<<< no trailing newline\n')
+        if opts.recurse and dirfiles:
+            assert not isstdin
+            visit(opts, dirfiles, outfile)
+
+if __name__ == "__main__":
+    parser = optparse.OptionParser("%prog [options] [filenames]")
+    parser.add_option("-t", "--type", action="store_true",
+                      help="show file type (file or directory)")
+    parser.add_option("-m", "--mode", action="store_true",
+                      help="show file mode")
+    parser.add_option("-l", "--links", action="store_true",
+                      help="show number of links")
+    parser.add_option("-s", "--size", action="store_true",
+                      help="show size of file")
+    parser.add_option("-n", "--newer", action="store",
+                      help="check if file is newer (or same)")
+    parser.add_option("-r", "--recurse", action="store_true",
+                      help="recurse into directories")
+    parser.add_option("-S", "--sha1", action="store_true",
+                      help="show sha1 hash of the content")
+    parser.add_option("-M", "--md5", action="store_true",
+                      help="show md5 hash of the content")
+    parser.add_option("-D", "--dump", action="store_true",
+                      help="dump file content")
+    parser.add_option("-H", "--hexdump", action="store_true",
+                      help="hexdump file content")
+    parser.add_option("-B", "--bytes", type="int",
+                      help="number of characters to dump")
+    parser.add_option("-L", "--lines", type="int",
+                      help="number of lines to dump")
+    parser.add_option("-q", "--quiet", action="store_true",
+                      help="no default output")
+    (opts, filenames) = parser.parse_args(sys.argv[1:])
+    if not filenames:
+        filenames = ['-']
+
+    visit(opts, filenames, getattr(sys.stdout, 'buffer', sys.stdout))

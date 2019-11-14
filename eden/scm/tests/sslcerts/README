@@ -1,0 +1,45 @@
+Generate a private key (priv.pem):
+
+  $ openssl genrsa -out priv.pem 2048
+
+Generate 2 self-signed certificates from this key (pub.pem, pub-other.pem):
+
+  $ openssl req -new -x509 -key priv.pem -nodes -sha256 -days 9000 \
+    -out pub.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
+  $ openssl req -new -x509 -key priv.pem -nodes -sha256 -days 9000 \
+    -out pub-other.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
+
+Now generate an expired certificate by turning back the system time:
+
+  $ faketime 2016-01-01T00:00:00Z \
+    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 1 \
+    -out pub-expired.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
+
+Generate a certificate not yet active by advancing the system time:
+
+  $ faketime 2030-01-1T00:00:00Z \
+    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 1 \
+    -out pub-not-yet.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
+
+Generate a passphrase protected client certificate private key:
+
+  $ openssl genrsa -aes256 -passout pass:1234 -out client-key.pem 2048
+
+Create a copy of the private key without a passphrase:
+
+  $ openssl rsa -in client-key.pem -passin pass:1234 -out client-key-decrypted.pem
+
+Create a CSR and sign the key using the server keypair:
+
+  $ printf '.\n.\n.\n.\n.\n.\nhg-client@localhost\n.\n.\n' | \
+    openssl req -new -key client-key.pem -passin pass:1234 -out client-csr.pem
+  $ openssl x509 -req -days 9000 -in client-csr.pem -CA pub.pem -CAkey priv.pem \
+    -set_serial 01 -out client-cert.pem
+
+When replacing the certificates, references to certificate fingerprints will
+need to be updated in test files.
+
+Fingerprints for certs can be obtained by running:
+
+  $ openssl x509 -in pub.pem -noout -sha1 -fingerprint
+  $ openssl x509 -in pub.pem -noout -sha256 -fingerprint

@@ -1,0 +1,15 @@
+[package]
+name = "pyedenapi"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bytes = "0.4"
+cpython-failure = { path = "../../../../lib/cpython-failure" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+edenapi = { path = "../../../../lib/edenapi" }
+encoding = { path = "../../../../lib/encoding" }
+failure = "0.1.3"
+pyrevisionstore = { path = "../pyrevisionstore" }
+revisionstore = { path = "../../../../lib/revisionstore" }
+types = { path = "../../../../lib/types" }

@@ -1,0 +1,11 @@
+[package]
+name = "pydag"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython-failure = { path = "../../../../lib/cpython-failure" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+dag = { path = "../../../../lib/dag" }
+encoding = { path = "../../../../lib/encoding" }
+failure = "0.1.3"

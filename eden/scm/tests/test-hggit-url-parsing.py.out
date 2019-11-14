@@ -1,0 +1,46 @@
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'github.com'
+github.com
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'github.com'
+github.com
+% expect '19418'
+19418
+% expect 'webjam.git'
+webjam.git
+% expect 'git@heroku.com'
+git@heroku.com
+% expect '999'
+999
+% expect 'webjam/webjam.git'
+webjam/webjam.git
+% expect 'git@github.com'
+git@github.com
+% expect '42qu/vps.git'
+42qu/vps.git
+% expect 'git@github.com'
+git@github.com
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'git@github.com'
+git@github.com
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'git@github.com'
+git@github.com
+% expect '10022'
+10022
+% expect 'webjam.git'
+webjam.git
+% expect 'git@heroku.com'
+git@heroku.com
+% expect 'webjam.git'
+webjam.git
+% expect 'git@compatible.com'
+git@compatible.com
+% expect 'webjam.git'
+webjam.git
+% expect 'git@heroku.com'
+git@heroku.com

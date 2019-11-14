@@ -34,8 +34,8 @@
 #include "eden/fs/utils/ServiceAddress.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
-#include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
+#include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//eden/scm:datapack
+#include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//eden/scm:datapack
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
 #include "eden/fs/store/hg/HgDatapackStore.h" // @manual

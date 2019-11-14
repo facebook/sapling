@@ -1,0 +1,10 @@
+[package]
+name = "pybookmarkstore"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bookmarkstore = { path = "../../../../lib/bookmarkstore" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+encoding = { path = "../../../../lib/encoding" }
+types = { path = "../../../../lib/types" }

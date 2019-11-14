@@ -1,0 +1,75 @@
+workingfilectx.date = (1000, 0)
+ASCII   : Gr?ezi!
+Latin-1 : Grüezi!
+UTF-8   : GrÃ¼ezi!
+<status modified=['foo'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+diff --git a/foo b/foo
+--- a/foo
++++ b/foo
+@@ -1,1 +1,2 @@
+ foo
++bar
+= checking context.status():
+== checking workingctx.status:
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "pattern match":
+<status modified=['bar-m'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-m'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "always match" and "listclean=True":
+<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=['foo']>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-a', 'bar-m'], removed=[], deleted=[], unknown=[], ignored=[], clean=['foo']>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+== checking workingcommitctx.status:
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "always match":
+<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-a', 'bar-m', 'bar-r'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "always match" and "listclean=True":
+<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=['bar-r', 'foo']>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-a', 'bar-m', 'bar-r'], removed=[], deleted=[], unknown=[], ignored=[], clean=['foo']>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "pattern match":
+<status modified=['bar-m'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-m'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "pattern match" and "listclean=True":
+<status modified=[], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=['bar-r', 'foo']>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-r'], removed=[], deleted=[], unknown=[], ignored=[], clean=['foo']>
+wcctx._status=<status modified=['bar-m'], added=['bar-a'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+== commit with manifestlog invalidated
+commit 1: 2efe531a913fa648867ab8824360371679d05a65
+commit 2: 2caca91f6362020334384ebe27bae67315298abf
+commit 3: abd6b0f49f338be22b094ef2b7425e8048f8337b
+=== filelog rawdata reuse ===
+copying rev 0 from test1 to test3
+committing files:
+1
+reusing 1 filelog rawdata
+committing manifest
+committing changelog
+copying rev 1 from test1 to test3
+committing files:
+2
+reusing 2 filelog rawdata
+committing manifest
+committing changelog
+copying rev 2 from test1 to test3
+committing files:
+3
+reusing 3 filelog rawdata
+committing manifest
+committing changelog
+copying rev 3 from test1 to test3
+committing files:
+4
+reusing 4 filelog rawdata
+committing manifest
+committing changelog

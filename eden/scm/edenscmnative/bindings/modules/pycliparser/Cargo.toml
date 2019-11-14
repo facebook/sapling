@@ -1,0 +1,11 @@
+[package]
+name = "pycliparser"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+clidispatch = { path = "../../../../lib/clidispatch" }
+cliparser = { path = "../../../../lib/cliparser", features = ["python"] }
+cpython-ext = { path = "../../../../lib/cpython-ext" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+pyconfigparser = { path = "../pyconfigparser" }

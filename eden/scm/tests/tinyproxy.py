@@ -1,0 +1,213 @@
+#!/usr/bin/env python
+
+from __future__ import absolute_import, print_function
+
+import optparse
+import os
+import select
+import socket
+import sys
+
+from edenscm.mercurial import util
+
+
+__doc__ = """Tiny HTTP Proxy.
+
+This module implements GET, HEAD, POST, PUT and DELETE methods
+on BaseHTTPServer, and behaves as an HTTP proxy.  The CONNECT
+method is also implemented experimentally, but has not been
+tested yet.
+
+Any help will be greatly appreciated.           SUZUKI Hisao
+"""
+
+__version__ = "0.2.1"
+
+
+httpserver = util.httpserver
+socketserver = util.socketserver
+urlreq = util.urlreq
+
+if os.environ.get("HGIPV6", "0") == "1":
+    family = socket.AF_INET6
+else:
+    family = socket.AF_INET
+
+
+class ProxyHandler(httpserver.basehttprequesthandler):
+    __base = httpserver.basehttprequesthandler
+    __base_handle = __base.handle
+
+    server_version = "TinyHTTPProxy/" + __version__
+    rbufsize = 0  # self.rfile Be unbuffered
+
+    def handle(self):
+        (ip, port) = self.client_address
+        allowed = getattr(self, "allowed_clients", None)
+        if allowed is not None and ip not in allowed:
+            self.raw_requestline = self.rfile.readline()
+            if self.parse_request():
+                self.send_error(403)
+        else:
+            self.__base_handle()
+
+    def log_request(self, code="-", size="-"):
+        xheaders = [h for h in self.headers.items() if h[0].startswith("x-")]
+        self.log_message(
+            '"%s" %s %s%s',
+            self.requestline,
+            str(code),
+            str(size),
+            "".join([" %s:%s" % h for h in sorted(xheaders)]),
+        )
+        # Flush for Windows, so output isn't lost on TerminateProcess()
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+    def _connect_to(self, netloc, soc):
+        i = netloc.find(":")
+        if i >= 0:
+            host_port = netloc[:i], int(netloc[i + 1 :])
+        else:
+            host_port = netloc, 80
+        print("\t" "connect to %s:%d" % host_port)
+        try:
+            soc.connect(host_port)
+        except socket.error as arg:
+            try:
+                msg = arg[1]
+            except (IndexError, TypeError):
+                msg = arg
+            self.send_error(404, msg)
+            return 0
+        return 1
+
+    def do_CONNECT(self):
+        soc = socket.socket(family, socket.SOCK_STREAM)
+        try:
+            if self._connect_to(self.path, soc):
+                self.log_request(200)
+                self.wfile.write(
+                    self.protocol_version + " 200 Connection established\r\n"
+                )
+                self.wfile.write("Proxy-agent: %s\r\n" % self.version_string())
+                self.wfile.write("\r\n")
+                self._read_write(soc, 300)
+        finally:
+            print("\t" "bye")
+            soc.close()
+            self.connection.close()
+
+    def do_GET(self):
+        (scm, netloc, path, params, query, fragment) = urlreq.urlparse(
+            self.path, "http"
+        )
+        if scm != "http" or fragment or not netloc:
+            self.send_error(400, "bad url %s" % self.path)
+            return
+        soc = socket.socket(family, socket.SOCK_STREAM)
+        try:
+            if self._connect_to(netloc, soc):
+                self.log_request()
+                soc.send(
+                    "%s %s %s\r\n"
+                    % (
+                        self.command,
+                        urlreq.urlunparse(("", "", path, params, query, "")),
+                        self.request_version,
+                    )
+                )
+                self.headers["Connection"] = "close"
+                del self.headers["Proxy-Connection"]
+                for key_val in self.headers.items():
+                    soc.send("%s: %s\r\n" % key_val)
+                soc.send("\r\n")
+                self._read_write(soc)
+        finally:
+            print("\t" "bye")
+            soc.close()
+            self.connection.close()
+
+    def _read_write(self, soc, max_idling=20):
+        iw = [self.connection, soc]
+        ow = []
+        count = 0
+        while True:
+            count += 1
+            (ins, _, exs) = select.select(iw, ow, iw, 3)
+            if exs:
+                break
+            if ins:
+                for i in ins:
+                    if i is soc:
+                        out = self.connection
+                    else:
+                        out = soc
+                    try:
+                        data = i.recv(8192)
+                    except socket.error:
+                        break
+                    if data:
+                        out.send(data)
+                        count = 0
+            else:
+                print("\t" "idle", count)
+            if count == max_idling:
+                break
+
+    do_HEAD = do_GET
+    do_POST = do_GET
+    do_PUT = do_GET
+    do_DELETE = do_GET
+
+
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, httpserver.httpserver):
+    def __init__(self, *args, **kwargs):
+        httpserver.httpserver.__init__(self, *args, **kwargs)
+        a = open("proxy.pid", "w")
+        a.write(str(os.getpid()) + "\n")
+        a.close()
+
+
+def runserver(portfile="tinyproxy.port", bind=""):
+    server_address = (bind, 0)
+    ProxyHandler.protocol_version = "HTTP/1.0"
+    httpd = ThreadingHTTPServer(server_address, ProxyHandler)
+    sa = httpd.socket.getsockname()
+    print("Serving HTTP on", sa[0], "port", sa[1], "...")
+    with open(portfile + ".tmp", "w") as f:
+        f.write("%s" % sa[1])
+    os.rename(portfile + ".tmp", portfile)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nKeyboard interrupt received, exiting.")
+        httpd.server_close()
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    allowed = []
+    for name in ["localhost"]:
+        client = socket.gethostbyname(name)
+        allowed.append(client)
+        print("Accept: %s (%s)" % (client, name))
+    ProxyHandler.allowed_clients = allowed
+
+    parser = optparse.OptionParser()
+    parser.add_option(
+        "-b",
+        "--bind",
+        metavar="ADDRESS",
+        help="Specify alternate bind address [default: all interfaces]",
+        default="",
+    )
+    parser.add_option(
+        "-f",
+        "--portfile",
+        metavar="PORTFILE",
+        help="Specify the port file [default: tinyproxy.port]",
+        default="tinyproxy.port",
+    )
+    (options, args) = parser.parse_args()
+    runserver(options.portfile, options.bind)

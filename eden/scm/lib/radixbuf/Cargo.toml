@@ -1,0 +1,17 @@
+[package]
+name = "radixbuf"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+failure = "0.1.5"
+vlqencoding = { path = "../vlqencoding" }
+
+[dev-dependencies]
+minibench = { path = "../minibench" }
+quickcheck = "0.9"
+rand = "0.7"
+
+[[bench]]
+name = "bench"
+harness = false

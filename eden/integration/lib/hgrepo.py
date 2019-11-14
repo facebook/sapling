@@ -51,7 +51,7 @@ class HgRepository(repobase.Repository):
     def get_system_hgrc_contents(cls) -> str:
         if FindExe.is_buck_build():
             hgrc_path = os.path.join(
-                FindExe.EDEN_SRC_ROOT, "scm/hg/fb/staticfiles/etc/mercurial"
+                FindExe.EDEN_SRC_ROOT, "eden/scm/fb/staticfiles/etc/mercurial"
             )
             platform_rc = "posix.rc"
         else:

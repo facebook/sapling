@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Translate .t tests to .py tests.
+# Usage:
+# 1. ./translate test-foo.t
+# 2. Edit test-foo-t.py
+# 3. Commit
+
+../hg debugpython -- -m testutil.dott.translate --black --verify --hgmv "$@" || exit 1
+
+commitmessagepath="$(mktemp)"
+cat > "$commitmessagepath" << EOF
+[hg] tests: auto translate "$@"
+
+Summary:
+This is done by running:
+
+  ./translate "$@"
+
+Test Plan: CI
+
+Reviewers: #mercurial
+
+Tags: easy
+EOF
+
+finish() {
+  rm "$commitmessagepath"
+}
+
+trap finish EXIT
+
+hg commit -l "$commitmessagepath" $(echo "$@" | sed 's#\.t#-t.py#g') "$@"

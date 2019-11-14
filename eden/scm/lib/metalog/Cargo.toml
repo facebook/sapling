@@ -1,0 +1,17 @@
+[package]
+name = "metalog"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+failure = "0.1.5"
+indexedlog = { path = "../indexedlog" }
+lazy_static = "1"
+mincode = { path = "../mincode" }
+serde_bytes = "0.11"
+serde = { version = "1", features = ["derive"] }
+zstore = { path = "../zstore" }
+
+[dev-dependencies]
+quickcheck = "0.9"
+tempfile = "3.0.7"

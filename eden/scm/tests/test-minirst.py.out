@@ -1,0 +1,828 @@
+== paragraphs ==
+60 column format:
+----------------------------------------------------------------------
+This is some text in the first paragraph.
+
+  A small indented paragraph. It is followed by some lines
+  containing random whitespace.
+
+The third and final paragraph.
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+This is some text in the first
+paragraph.
+
+  A small indented paragraph.
+  It is followed by some lines
+  containing random
+  whitespace.
+
+The third and final paragraph.
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+This is some text in the first paragraph.
+</p>
+<p>
+A small indented paragraph.
+It is followed by some lines
+containing random whitespace.
+</p>
+<p>
+The third and final paragraph.
+</p>
+----------------------------------------------------------------------
+
+== definitions ==
+60 column format:
+----------------------------------------------------------------------
+A Term
+  Definition. The indented lines make up the definition.
+
+Another Term
+    Another definition. The final line in the definition
+    determines the indentation, so this will be indented
+    with four spaces.
+
+  A Nested/Indented Term
+    Definition.
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+A Term
+  Definition. The indented
+  lines make up the
+  definition.
+
+Another Term
+    Another definition. The
+    final line in the
+    definition determines the
+    indentation, so this will
+    be indented with four
+    spaces.
+
+  A Nested/Indented Term
+    Definition.
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<dl>
+ <dt>A Term
+ <dd>Definition. The indented lines make up the definition.
+ <dt>Another Term
+ <dd>Another definition. The final line in the definition determines the indentation, so this will be indented with four spaces.
+ <dt>A Nested/Indented Term
+ <dd>Definition.
+</dl>
+----------------------------------------------------------------------
+
+== literals ==
+60 column format:
+----------------------------------------------------------------------
+The fully minimized form is the most convenient form:
+
+  Hello
+    literal
+      world
+
+In the partially minimized form a paragraph simply ends with
+space-double-colon.
+
+  ////////////////////////////////////////
+  long un-wrapped line in a literal block
+  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+  This literal block is started with '::',
+    the so-called expanded form. The paragraph
+      with '::' disappears in the final output.
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+The fully minimized form is
+the most convenient form:
+
+  Hello
+    literal
+      world
+
+In the partially minimized
+form a paragraph simply ends
+with space-double-colon.
+
+  ////////////////////////////////////////
+  long un-wrapped line in a literal block
+  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+  This literal block is started with '::',
+    the so-called expanded form. The paragraph
+      with '::' disappears in the final output.
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+The fully minimized form is the most
+convenient form:
+</p>
+<pre>
+Hello
+  literal
+    world
+</pre>
+<p>
+In the partially minimized form a paragraph
+simply ends with space-double-colon.
+</p>
+<pre>
+////////////////////////////////////////
+long un-wrapped line in a literal block
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+</pre>
+<pre>
+This literal block is started with '::',
+  the so-called expanded form. The paragraph
+    with '::' disappears in the final output.
+</pre>
+----------------------------------------------------------------------
+
+== lists ==
+60 column format:
+----------------------------------------------------------------------
+- This is the first list item.
+
+  Second paragraph in the first list item.
+
+- List items need not be separated by a blank line.
+- And will be rendered without one in any case.
+
+We can have indented lists:
+
+  - This is an indented list item
+  - Another indented list item:
+
+      - A literal block in the middle
+            of an indented list.
+
+      (The above is not a list item since we are in the literal block.)
+
+  Literal block with no indentation (apart from
+  the two spaces added to all literal blocks).
+
+1. This is an enumerated list (first item).
+2. Continuing with the second item.
+(1) foo
+(2) bar
+1) Another
+2) List
+
+Line blocks are also a form of list:
+
+This is the first line. The line continues here.
+This is the second line.
+
+Bullet lists are also detected:
+
+* This is the first bullet
+* This is the second bullet It has 2 lines
+* This is the third bullet
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+- This is the first list item.
+
+  Second paragraph in the
+  first list item.
+
+- List items need not be
+  separated by a blank line.
+- And will be rendered without
+  one in any case.
+
+We can have indented lists:
+
+  - This is an indented list
+    item
+  - Another indented list
+    item:
+
+      - A literal block in the middle
+            of an indented list.
+
+      (The above is not a list item since we are in the literal block.)
+
+  Literal block with no indentation (apart from
+  the two spaces added to all literal blocks).
+
+1. This is an enumerated list
+   (first item).
+2. Continuing with the second
+   item.
+(1) foo
+(2) bar
+1) Another
+2) List
+
+Line blocks are also a form of
+list:
+
+This is the first line. The
+line continues here.
+This is the second line.
+
+Bullet lists are also
+detected:
+
+* This is the first bullet
+* This is the second bullet It
+  has 2 lines
+* This is the third bullet
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<ul>
+ <li> This is the first list item.
+<p>
+Second paragraph in the first list item.
+</p>
+ <li> List items need not be separated   by a blank line.
+ <li> And will be rendered without   one in any case.
+</ul>
+<p>
+We can have indented lists:
+</p>
+<ul>
+ <li> This is an indented list item
+ <li> Another indented list item:
+<pre>
+- A literal block in the middle
+      of an indented list.
+</pre>
+<pre>
+(The above is not a list item since we are in the literal block.)
+</pre>
+</ul>
+<pre>
+Literal block with no indentation (apart from
+the two spaces added to all literal blocks).
+</pre>
+<ol>
+ <li> This is an enumerated list (first item).
+ <li> Continuing with the second item.
+ <li> foo
+ <li> bar
+ <li> Another
+ <li> List
+</ol>
+<p>
+Line blocks are also a form of list:
+</p>
+<ol>
+ <li> This is the first line.   The line continues here.
+ <li> This is the second line.
+</ol>
+<p>
+Bullet lists are also detected:
+</p>
+<ul>
+ <li> This is the first bullet
+ <li> This is the second bullet   It has 2 lines
+ <li> This is the third bullet
+</ul>
+----------------------------------------------------------------------
+
+== options ==
+60 column format:
+----------------------------------------------------------------------
+There is support for simple option lists, but only with long
+options:
+
+ -X --exclude filter  an option with a short and long option
+                      with an argument
+ -I --include         an option with both a short option and
+                      a long option
+    --all             Output all.
+    --both            Output both (this description is quite
+                      long).
+    --long            Output all day long.
+    --par             This option has two paragraphs in its
+                      description. This is the first.
+
+                      This is the second.  Blank lines may
+                      be omitted between options (as above)
+                      or left in (as here).
+
+The next paragraph looks like an option list, but lacks the
+two-space marker after the option. It is treated as a normal
+paragraph:
+
+--foo bar baz
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+There is support for simple
+option lists, but only with
+long options:
+
+ -X --exclude filter  an
+                      option
+                      with a
+                      short
+                      and
+                      long
+                      option
+                      with an
+                      argumen
+                      t
+ -I --include         an
+                      option
+                      with
+                      both a
+                      short
+                      option
+                      and a
+                      long
+                      option
+    --all             Output
+                      all.
+    --both            Output
+                      both
+                      (this d
+                      escript
+                      ion is
+                      quite
+                      long).
+    --long            Output
+                      all day
+                      long.
+    --par             This
+                      option
+                      has two
+                      paragra
+                      phs in
+                      its des
+                      criptio
+                      n. This
+                      is the
+                      first.
+
+                      This is
+                      the
+                      second.
+                      Blank
+                      lines
+                      may be
+                      omitted
+                      between
+                      options
+                      (as
+                      above)
+                      or left
+                      in (as
+                      here).
+
+The next paragraph looks like
+an option list, but lacks the
+two-space marker after the
+option. It is treated as a
+normal paragraph:
+
+--foo bar baz
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+There is support for simple option lists,
+but only with long options:
+</p>
+<dl>
+ <dt>-X --exclude filter
+ <dd>an option with a short and long option with an argument
+ <dt>-I --include
+ <dd>an option with both a short option and a long option
+ <dt>   --all
+ <dd>Output all.
+ <dt>   --both
+ <dd>Output both (this description is quite long).
+ <dt>   --long
+ <dd>Output all day long.
+ <dt>   --par
+ <dd>This option has two paragraphs in its description. This is the first.
+<p>
+This is the second.  Blank lines may be omitted between
+options (as above) or left in (as here).
+</p>
+</dl>
+<p>
+The next paragraph looks like an option list, but lacks the two-space
+marker after the option. It is treated as a normal paragraph:
+</p>
+<p>
+--foo bar baz
+</p>
+----------------------------------------------------------------------
+
+== fields ==
+60 column format:
+----------------------------------------------------------------------
+a             First item.
+ab            Second item. Indentation and wrapping is
+              handled automatically.
+
+Next list:
+
+small         The larger key below triggers full indentation
+              here.
+much too large
+              This key is big enough to get its own line.
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+a             First item.
+ab            Second item.
+              Indentation and
+              wrapping is
+              handled
+              automatically.
+
+Next list:
+
+small         The larger key
+              below triggers
+              full indentation
+              here.
+much too large
+              This key is big
+              enough to get
+              its own line.
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<dl>
+ <dt>a
+ <dd>First item.
+ <dt>ab
+ <dd>Second item. Indentation and wrapping is handled automatically.
+</dl>
+<p>
+Next list:
+</p>
+<dl>
+ <dt>small
+ <dd>The larger key below triggers full indentation here.
+ <dt>much too large
+ <dd>This key is big enough to get its own line.
+</dl>
+----------------------------------------------------------------------
+
+== containers (normal) ==
+60 column format:
+----------------------------------------------------------------------
+Normal output.
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Normal output.
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+Normal output.
+</p>
+----------------------------------------------------------------------
+
+== containers (verbose) ==
+60 column format:
+----------------------------------------------------------------------
+Normal output.
+
+Verbose output.
+----------------------------------------------------------------------
+['debug', 'debug']
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Normal output.
+
+Verbose output.
+----------------------------------------------------------------------
+['debug', 'debug']
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+Normal output.
+</p>
+<p>
+Verbose output.
+</p>
+----------------------------------------------------------------------
+['debug', 'debug']
+----------------------------------------------------------------------
+
+== containers (debug) ==
+60 column format:
+----------------------------------------------------------------------
+Normal output.
+
+Initial debug output.
+----------------------------------------------------------------------
+['verbose']
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Normal output.
+
+Initial debug output.
+----------------------------------------------------------------------
+['verbose']
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+Normal output.
+</p>
+<p>
+Initial debug output.
+</p>
+----------------------------------------------------------------------
+['verbose']
+----------------------------------------------------------------------
+
+== containers (verbose debug) ==
+60 column format:
+----------------------------------------------------------------------
+Normal output.
+
+Initial debug output.
+
+Verbose output.
+
+Debug output.
+----------------------------------------------------------------------
+[]
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Normal output.
+
+Initial debug output.
+
+Verbose output.
+
+Debug output.
+----------------------------------------------------------------------
+[]
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+Normal output.
+</p>
+<p>
+Initial debug output.
+</p>
+<p>
+Verbose output.
+</p>
+<p>
+Debug output.
+</p>
+----------------------------------------------------------------------
+[]
+----------------------------------------------------------------------
+
+== roles ==
+60 column format:
+----------------------------------------------------------------------
+Please see 'hg add'.
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Please see 'hg add'.
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+Please see 'hg add'.
+</p>
+----------------------------------------------------------------------
+
+== sections ==
+60 column format:
+----------------------------------------------------------------------
+Title
+=====
+
+Section
+-------
+
+Subsection
+''''''''''
+
+Markup: "foo" and 'hg help'
+---------------------------
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Title
+=====
+
+Section
+-------
+
+Subsection
+''''''''''
+
+Markup: "foo" and 'hg help'
+---------------------------
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<h1>Title</h1>
+<h2>Section</h2>
+<h3>Subsection</h3>
+<h2>Markup: &quot;foo&quot; and 'hg help'</h2>
+----------------------------------------------------------------------
+
+== admonitions ==
+60 column format:
+----------------------------------------------------------------------
+Note:
+   This is a note
+
+   - Bullet 1
+   - Bullet 2
+
+   Warning!
+      This is a warning Second input line of warning
+
+!Danger!
+   This is danger
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Note:
+   This is a note
+
+   - Bullet 1
+   - Bullet 2
+
+   Warning!
+      This is a warning Second
+      input line of warning
+
+!Danger!
+   This is danger
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+<b>Note:</b> 
+</p>
+<p>
+This is a note
+</p>
+<ul>
+ <li> Bullet 1
+ <li> Bullet 2
+</ul>
+<p>
+<b>Warning!</b> This is a warning Second input line of warning
+</p>
+<p>
+<b>!Danger!</b> This is danger
+</p>
+----------------------------------------------------------------------
+
+== comments ==
+60 column format:
+----------------------------------------------------------------------
+Some text.
+
+   Some indented text.
+
+Empty comment above
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+Some text.
+
+   Some indented text.
+
+Empty comment above
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<p>
+Some text.
+</p>
+<p>
+Some indented text.
+</p>
+<p>
+Empty comment above
+</p>
+----------------------------------------------------------------------
+
+  === === ========================================
+  a   b   c                                       
+  === === ========================================
+  1   2   3                                       
+  foo bar baz this list is very very very long man
+  === === ========================================
+
+== table ==
+60 column format:
+----------------------------------------------------------------------
+  a   b   c
+  ------------------------------------------------
+  1   2   3
+  foo bar baz this list is very very very long man
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+  a   b   c
+  ------------------------------
+  1   2   3
+  foo bar baz this list is
+          very very very long
+          man
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<table>
+<tr><td>a</td>
+<td>b</td>
+<td>c</td></tr>
+<tr><td>1</td>
+<td>2</td>
+<td>3</td></tr>
+<tr><td>foo</td>
+<td>bar</td>
+<td>baz this list is very very very long man</td></tr>
+</table>
+----------------------------------------------------------------------
+
+ = ==== ======================================
+ s long line goes on here                     
+   xy   tried to fix here by indenting        
+ = ==== ======================================
+
+== table+nl ==
+60 column format:
+----------------------------------------------------------------------
+ s long line goes on here
+   xy   tried to fix here by indenting
+----------------------------------------------------------------------
+
+30 column format:
+----------------------------------------------------------------------
+ s long line goes on here
+   xy   tried to fix here by
+        indenting
+----------------------------------------------------------------------
+
+html format:
+----------------------------------------------------------------------
+<table>
+<tr><td>s</td>
+<td>long</td>
+<td>line goes on here</td></tr>
+<tr><td></td>
+<td>xy</td>
+<td>tried to fix here by indenting</td></tr>
+</table>
+----------------------------------------------------------------------
+

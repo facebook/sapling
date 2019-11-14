@@ -1,0 +1,48 @@
+# Base Revsets to be used with revsetbenchmarks.py script
+#
+# The goal of this file is to gather a limited amount of revsets that allow a
+# good coverage of the internal revsets mechanisms.  Revsets included should not
+# be selected for their individual implementation, but for what they reveal of
+# the internal implementation of smartsets classes (and their interactions).
+#
+# Use and update this file when you change internal implementation of these
+# smartsets classes. Please include a comment explaining what each of your
+# addition is testing. Also check if your changes to the smartset class makes
+# some of the tests inadequate and replace them with a new one testing the same
+# behavior.
+#
+# If you want to benchmark revsets predicate itself, check 'all-revsets.txt'.
+#
+# The current content of this file is currently likely not reaching this goal
+# entirely, feel free, to audit its content and comment on each revset to
+# highlight what internal mechanisms they test.
+
+all()
+draft()
+::tip
+draft() and ::tip
+::tip and draft()
+0::tip
+roots(0::tip)
+author(lmoscovicz)
+author(mpm)
+author(lmoscovicz) or author(mpm)
+author(mpm) or author(lmoscovicz)
+tip:0
+0::
+# those two `roots(...)` inputs are close to what phase movement use.
+roots((tip~100::) - (tip~100::tip))
+roots((0::) - (0::tip))
+42:68 and roots(42:tip)
+::p1(p1(tip))::
+public()
+:10000 and public()
+draft()
+:10000 and draft()
+roots((0:tip)::)
+(not public() - obsolete())
+(_intlist('20000\x0020001')) and merge()
+parents(20000)
+(20000::) - (20000)
+# The one below is used by rebase
+(children(ancestor(tip~5, tip)) and ::(tip~5))::

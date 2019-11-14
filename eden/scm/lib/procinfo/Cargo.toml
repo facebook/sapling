@@ -1,0 +1,13 @@
+[package]
+name = "procinfo"
+version = "0.0.1"
+edition = "2018"
+
+[dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["handleapi", "minwindef", "processthreadsapi", "psapi", "tlhelp32"] }
+
+[target.'cfg(target_os = "macos")'.build-dependencies]
+cc = "1.0"

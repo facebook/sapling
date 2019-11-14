@@ -1,0 +1,21 @@
+[package]
+name = "lz4-pyframe"
+version = "0.1.0"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
+
+[dependencies]
+byteorder = "1"
+failure = "0"
+libc = "0.2"
+lz4-sys = "1"
+
+[dev-dependencies]
+minibench = { path = "../minibench" }
+quickcheck = "0.9"
+rand_chacha = "0.2"
+rand_core = "0.5"
+
+[[bench]]
+name = "bench"
+harness = false

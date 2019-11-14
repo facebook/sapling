@@ -1,0 +1,11 @@
+{
+    // Enforcing
+    "eqeqeq"        : true,     // true: Require triple equals (===) for comparison
+    "forin"         : true,     // true: Require filtering for..in loops with obj.hasOwnProperty()
+    "freeze"        : true,     // true: prohibits overwriting prototypes of native objects such as Array, Date etc.
+    "nonbsp"        : true,     // true: Prohibit "non-breaking whitespace" characters.
+    "undef"         : true,     // true: Require all non-global variables to be declared (prevents global leaks)
+
+    // Environments
+    "browser"       : true      // Web Browser (window, document, etc)
+}

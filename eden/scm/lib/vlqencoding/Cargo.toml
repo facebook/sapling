@@ -1,0 +1,14 @@
+[package]
+name = "vlqencoding"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+
+[dev-dependencies]
+minibench = { path = "../minibench" }
+quickcheck = "0.9"
+
+[[bench]]
+name = "bench"
+harness = false

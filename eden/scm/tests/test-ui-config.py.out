@@ -1,0 +1,53 @@
+[('string', 'string value'), ('bool1', 'true'), ('bool2', 'false'), ('boolinvalid', 'foo'), ('int1', '42'), ('int2', '-42'), ('intinvalid', 'foo')]
+[('list1', 'foo'), ('list2', 'foo bar baz'), ('list3', 'alice, bob'), ('list4', 'foo bar baz alice, bob'), ('list5', 'abc d"ef"g "hij def"'), ('list6', '"hello world", "how are you?"'), ('list7', 'Do"Not"Separate'), ('list8', '"Do"Separate'), ('list9', '"Do\\"NotSeparate"'), ('list10', 'string "with extraneous" quotation mark"'), ('list11', 'x, y'), ('list12', '"x", "y"'), ('list13', '""" key = "x", "y" """'), ('list14', ',,,,'), ('list15', '" just with starting quotation'), ('list16', '"longer quotation" with "no ending quotation'), ('list17', 'this is \\" "not a quotation mark"'), ('list18', 'ding\ndong')]
+---
+'string value'
+'true'
+'false'
+None
+---
+values.string is not a boolean ('string value')
+True
+False
+False
+False
+True
+---
+42
+-42
+---
+['foo']
+['foo', 'bar', 'baz']
+['alice', 'bob']
+['foo', 'bar', 'baz', 'alice', 'bob']
+['foo', 'bar', 'baz', 'alice', 'bob']
+['abc', 'd"ef"g', 'hij def']
+['hello world', 'how are you?']
+['Do"Not"Separate']
+['Do', 'Separate']
+['Do"NotSeparate']
+['string', 'with extraneous', 'quotation', 'mark"']
+['x', 'y']
+['x', 'y']
+['', ' key = ', 'x"', 'y', '', '"']
+[]
+['"', 'just', 'with', 'starting', 'quotation']
+['longer quotation', 'with', '"no', 'ending', 'quotation']
+['this', 'is', '"', 'not a quotation mark']
+['ding', 'dong']
+[]
+[]
+['foo']
+['foo']
+['foo', 'bar']
+['foo', 'bar']
+['foo bar']
+['foo', 'bar']
+---
+(0, 0)
+(1113868800, 0)
+None
+True
+boolinvalid
+intinvalid
+dateinvalid

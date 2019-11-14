@@ -1,0 +1,10 @@
+[package]
+name = "pycommands"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+clidispatch = { path = "../../../../lib/clidispatch" }
+cpython-ext = { path = "../../../../lib/cpython-ext" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+hgcommands = { path = "../../../../lib/hgcommands" }

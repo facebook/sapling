@@ -1,0 +1,345 @@
+.. -*-restructuredtext-*-
+
+===========
+remotenames
+===========
+
+------------
+Introduction
+------------
+
+Keep track of remote names (branches and bookmarks) in Mercurial.
+
+With this extension installed, Mercurial's behavior regarding bookmarks is
+changed. The core of this extension is to keep track of remote bookmarks and
+branches and to make a better user experience. It exposes up to three new
+namespaces based on the branch heads and bookmarks available in other
+repositories. The three namespaces are:
+
+  * remotebranches: the heads of each branch on the peer repo (default: on)
+
+  * remotebookmarks: the bookmarks from the peer repo (default: on)
+
+  * hoistedbookmarks: a "short name" interface for hoisting a single peer's
+    remote bookmarks into the top-level namespace, allowing workflows to stay
+    the same when referring to bookmarks on the chosen peer (default: 'default')
+
+For example, when you pull from a repository listed in .hg/hgrc's ``[paths]``
+section, you get output similar to the following::
+
+ o  f3d8 @
+ |  more trunk
+ |
+ o  824e
+ |  trunk
+ |
+ | o  2b7b feature
+ | |  feature: more new stuff
+ | |
+ | o  a342
+ |/   feature: new stuff
+ |
+ o    52a8 (smf/default) [smf/@]
+ |\   merge stable into default
+ | |
+ | o  9c95
+ | |  chug along trunk
+ | |
+ o |  ea15 stable (smf/stable)
+ | |  fix for stable
+
+What this output is showing is that the head of the default branch in a repo at
+path ``smf`` is ``52a8``. This is labeled above as ``(smf/default)``. Similarly,
+the bookmark ``@`` was last seen on ``smf`` at the ``52a8`` changeset. Both
+remote names cannot move unless you push or pull from the remote server.
+
+Remote names are discovered by sending a single extra request to the Mercurial
+server after a push or pull is complete. This extension works properly with
+paths from the schemes extension included with Mercurial. Other extensions which
+perform varying kinds of manipulation on the repository path may not function
+as expected.
+
+This extension is built on top of the Mercurial namespace API introduced in 3.3.
+
+------------
+Installation
+------------
+
+To enable the extension, you must add an entry to the ``[extensions]`` section
+of your ``hgrc`` file::
+
+  [extensions]
+  remotenames = /path/to/hgremotenames/remotenames.py
+
+----------------
+Behavior Changes
+----------------
+
+Expect changes. Most features are enabled by default to give you an idea of
+the possibilities available with this workflow.
+
+Since this extensions keeps track of remote bookmarks, we no longer clone or
+pull remote bookmarks by default. Therefore, pulling from a remote server will
+no longer update your local bookmarks. This has the rather large beneficial
+side-effect of completely eliminating bookmark divergence, a complicated and
+difficult concept to understand, explain, and work with.
+
+The commands ``bookmarks``, ``branches``, and ``log`` all gain a ``--remote``
+flag to display remote names. This will also unhide obsolete changesets if
+you are working with the Changeset Evolution extension.
+
+Another big behavior change is that of a bare ``hg push``. For changesets that
+do not create a new remote head AND are only reachable by a local bookmark,
+``hg push`` will abort and not push these changesets. Hopefully, this is
+behavior is clear with the following example::
+
+  hg clone foo
+  cd foo
+  hg book feature
+  # <hack, hack, hack>
+  hg push
+  pushing to foo
+  searching for changes
+  abort: push creates new anonymous head without the bookmark: 'feature'
+  (use 'hg push -B feature' to create a new remote bookmark)
+
+This behavior change is intended to prevent accidentally pushing an unnamed
+('anonymous') head to a remote repository. To enforce this style of workflow,
+read about the ``forceto`` configuration option below.
+
+-------------------
+Cloning and Pulling
+-------------------
+
+As mentioned above under the ``Behavior Changes`` section, pulls by default
+will not sync normal bookmarks between the two repositories. This is also the
+case with cloning. In effect, bookmarks in the ``remotenames`` world are no
+longer a shared namespace among peers; rather, they are distinct namespaces that
+need to be manually and explicitly synchronized among peers during pull
+operations. During push operations, the manual synchronization can be achieved
+with the ``--to`` option described in the previous section.
+
+To re-enable the bookmark synchronizing behavior on ``clone`` and ``pull``,
+set the ``syncbookmarks`` configuration option::
+
+  [remotenames]
+  syncbookmarks = True
+
+-------
+Pushing
+-------
+
+When pushing changes to another repository, ``remotenames`` introduces a new
+flag, ``--to`` (``-t``) which drastically changes the behavior of ``push``
+to be more friendly in a ``remotenames`` world. The ``--to`` flag requires
+the name of the remote bookmark to push (without any ``remote/`` prefix).
+For more on ``hg push`` behaviour, see the Tracking section.
+When ``--to`` is specified, the default push rev (``-r``) will be ``.``.
+Another rev may be specified, but only one rev may be specified or the push
+will abort. The specified rev, and it's ancestors, will be pushed to the
+remote repository, and the remote repository will have the named bookmark
+updated to point to this revision, subject to the following constraints
+(unless ``--force``/``-f`` is specified):
+
+ * The remote bookmark must already exist (it will be created with ``-f``)
+ * The remote bookmark rev must exist in the local repo (subset of the below)
+ * The pushed rev must be a descendant of the current remote bookmark
+ * A special case of the above: the remote bookmark already points at rev
+
+Using ``--to`` also disables other flags to avoid confusion. ``hg push --to``
+will abort if any of the following flags are specified:
+
+ * ``--bookmark`` / ``-B``
+ * ``--branch`` / ``-b``
+ * ``--delete`` / ``-d``
+
+There is a new config option to enforce using ``--to`` if that is appropriate
+in your chosen workflow. To enable it, set the option ``forceto``::
+
+  [remotenames]
+  forceto = True
+
+In this mode, to push revs to a peer, you must specify a name with the ``--to``
+flag. You can still delete a remote bookmark in this mode with the added
+``--delete`` flag to push as well.
+
+Finally, there is another new flag for push, ``--delete``, which allows remote
+bookmark to be deleted without deleting any local bookmark or pushing any revs.
+
+---------
+Templates
+---------
+
+Remotenames adds up to four new template keywords: ``remotebranches``,
+``remotebookmarks``, ``remotenames`` (a combination of the first two), and
+``hoistedbookmarks``, which are up to one peer's remote bookmarks, lifted into
+the main namespace (eg, not requiring a pathname prefix).
+
+For example, the diagram in the introduction above uses the template
+``({remotebranches}) [{remotebookmarks}]``. Alternatively, you could use
+``remotenames`` to include both namespaces. If you set the configurable option
+``suppressbranches``::
+
+  [remotenames]
+  suppressbranches = True
+
+Then ``remotenames`` will only display the branch name if there is no bookmark
+present on the same node.
+
+---------------------------
+Aliasing and Renaming Paths
+---------------------------
+
+For the example in the Introduction, the name ``smf`` is used instead of
+``default`` because the .hg/hgrc is as follows::
+
+  [paths]
+  default = http://smf.io/hgremotenames
+  smf = http://smf.io/hgremotenames
+
+Since those two paths are equal, the non-default name is chosen. This effect
+can also be achieved by using the 'rename' configuration option:
+
+  [remotenames]
+  rename.default = smf
+
+Mercurial has several overloaded terms, including ther word ``default`` which
+can refer to the implicit named branch or the clone source path. Since
+remotenames uses the peer's path name, it is common to see remotenames prefixed
+with ``default/``. This can be confusing since branches also often have that
+name. Therefore, remotenames allows you to rename a path to something else.
+One common choice is to rename ``default`` to ``remote``. Thsi would result in
+remote names from this repository showing up as ``remote/bookmark`` instead of
+``default/bookmark``. Push and pull to this name will also work.
+
+Finally, there is an ``alias.default`` setting:
+
+  [remotenames]
+  alias.default = True
+
+Setting this will drop the remotebranch name ``smf/default`` into just ``smf``.
+It is another way to reduce the nubmer of times that ``default`` shows up in
+the UI.
+
+------------------
+Transition Helpers
+------------------
+
+Using remotenames can be a big departure from previous workflows, so in addition
+to renaming and aliasing, the remotenames extension offers a few other options
+to make migrating to a remotenames easier. First is the ``transitionbookmarks``
+configuration option:
+
+  [remotenames]
+  transitionbookmarks = @
+      foo
+
+With this setting, remotenames will delete the local bookmarks ``@`` and ``foo``
+the first time the extension is run (and pulls the remotenames from a peer).
+In order to prevent these bookmarks from being re-created and causing confusion,
+you can set the ``disllowedbookmarks`` config:
+
+  [remotenames]
+  disallowedbookmarks = @
+      foo
+
+At which point mercurial's ``bookmarks`` command will refuse to create new
+bookmarks with these names.
+
+-------
+Revsets
+-------
+
+Remotenames makes the following new revsets available: ``pushed()``,
+``upstream()``, ``remotebranches()``, ``remotebookmarks()`` and
+``remotenames()``. The ``pushed()`` revset returns all revisions that are have
+been pushed to any repository tracked by remotenames. The ``upstream()`` set is
+those revisions which are in a repository whose path is listed in the
+``upstream`` field of the ``[remotenames]`` configuration section. If there is
+no ``remotenames.upstream`` setting, it defaults to behaving identically to
+``pushed()``. The ``remotenames()`` revset simply returns all remote branches
+head changesets.
+
+--------
+Tracking
+--------
+
+Remotenames introduces a new concept to bookmarks called ``tracking``. Its use
+it entirely optional. In order to start using it, pass the --track (-t) flag
+to the bookmarks command:
+
+  hg bookmarks mybook --track remote/@
+
+Tracking sets up several default behaviors:
+
+* When pushing, if the current bookmark tracks a remote bookmark, the push
+  destination will default to the tracked path and bookmark. For example,
+  if the ``mybook`` local bookmark is current and is tracking ``remote/@``,
+  then calling ``hg push`` with be equivalent to calling
+  ``hg push remote -r mybook --to @``. This gives a default peer and default
+  name to push to. We hope this will optimize many workflows.
+
+* When rebasing (if the rebase extension is enabled), ``hg rebase`` with no
+  arguments changes behavior as well. When the current bookmark is tracking
+  another name, ``hg rebase`` will default to rebasing on top of the tracked
+  name. For example, if ``mybook`` is the current bookmark, ``hg rebase`` with
+  no arguments will be the equivalent of: ``hg rebase -b mybook -d remote/@``.
+  Note that in this usage, the tracked name does not have to be a remote
+  bookmark: bookmarks can track other local bookmarks, and rebase will use
+  that as a default rebase destination.
+
+* When pulling with the ``--rebase`` flag from an active bookmark that's
+  tracking a remote bookmark, local changes are rebased on that remote bookmark.
+
+* Finally, tracking allows a distance calculation, so you know how far ahead
+  and behind a given bookmark is from the name it is tracking. In the diagram
+  in the Introduction above, for example, the ``feature`` bookmark is 2 behind
+  and 2 ahead of the @ bookmark. Distance is covered in more detail in the
+  next section.
+
+To see a listing of what a bookmark is tracking, use ``hg bookmarks -v``.
+
+--------
+Distance
+--------
+
+For actions that create commits or update to another changeset (``commit``,
+``rebase``, ``histedit``, ``update``, etc.), the distance to the default path
+is written in .hg/remotedistance. The format of this file is ``'SIGN NUMBER'``,
+e.g. ``'+ 10'`` or ``'- 7'``. This is handy for use in your shell prompt.
+
+For example, the following is in my bash prompt::
+
+  remote="$(less $repo_dir/.hg/remotedistance 2>/dev/null)"
+  sign="⇡"
+  [[ ${remote:0:1} == "-" ]] && sign="⇣"
+  distance="$(echo $remote | cut -d ' ' -f2)"
+  remote=""
+  [[ "$distance" != "" && "$distance" != "0" ]] && remote=" $distance$sign"
+
+This tells me how many commits I'm ahead or behind in my prompt.
+
+By default, the distance is caclulated after each write operation and cached for
+quick lookup. However, in repositories with high commit rates, the distance
+calculation can take a long time, so you can disable it using the following
+configuration bits:
+
+  [remotenames]
+  cachedistance = False
+
+It is also possible to disable all distance calculation (even those in tracked
+bookmarks) with the ``calculatedistance`` knob:
+
+  [remotenames]
+  calculatedistance = False
+
+--------
+Feedback
+--------
+
+The authors appreciate feedback and would be glad to hear from you. Please ask
+questions or provide feedback on the Mercurial mailing lists. We actively
+follow these lists and are excited to have people try this extension and let
+us know what they think.
+
+Thank you for trying out remotenames!

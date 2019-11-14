@@ -1,0 +1,8 @@
+packages:
+  fb-scratch:
+    packager: source_control
+    summary: Create persistent temporary scratch space
+    rules:
+      buck:eden/scm/exec/scratch:scratch:
+        eden/scm/exec/scratch/scratch#binary/scratch:
+          path: bin/scratch

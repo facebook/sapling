@@ -1,0 +1,23 @@
+running: init test1
+result: 0
+running: add foo
+result: 0
+running: commit -m commit1 -d 2000-01-01 foo
+result: 0
+running: commit -m commit2 -d 2000-01-02 foo
+result: 0
+running: log -r 0
+changeset:   0:0e4634943879
+user:        test
+date:        Sat Jan 01 00:00:00 2000 +0000
+summary:     commit1
+
+result: 0
+running: log -r tip
+changeset:   1:45589e459b2e
+tag:         tip
+user:        test
+date:        Sun Jan 02 00:00:00 2000 +0000
+summary:     commit2
+
+result: 0

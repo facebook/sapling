@@ -1,0 +1,10 @@
+[package]
+name = "pyzstd"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython-ext = { path = "../../../../lib/cpython-ext" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+zstd = "0.4.18"
+zstdelta = { path = "../../../../lib/zstdelta/" }

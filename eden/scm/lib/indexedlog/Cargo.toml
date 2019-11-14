@@ -1,0 +1,33 @@
+[package]
+name = "indexedlog"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+byteorder = "1.2.7"
+bytes = "0.4.10"
+fs2 = "0.4.3"
+libc = "0.2"
+memmap = "0.7.0"
+once_cell = "1"
+rand = "0.7"
+tempfile = "3.0.7"
+tracing = "0.1"
+twox-hash = "1"
+vlqencoding = { path = "../vlqencoding" }
+
+[dev-dependencies]
+minibench = { path = "../minibench" }
+quickcheck = "0.9"
+
+[[bench]]
+name = "index"
+harness = false
+
+[[bench]]
+name = "misc"
+harness = false
+
+[[bench]]
+name = "log"
+harness = false

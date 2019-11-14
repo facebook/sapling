@@ -1,0 +1,164 @@
+#!/usr/bin/env python
+#
+# hggettext - carefully extract docstrings for Mercurial
+#
+# Copyright 2009 Matt Mackall <mpm@selenic.com> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
+# The normalize function is taken from pygettext which is distributed
+# with Python under the Python License, which is GPL compatible.
+
+"""Extract docstrings from Mercurial commands.
+
+Compared to pygettext, this script knows about the cmdtable and table
+dictionaries used by Mercurial, and will only extract docstrings from
+functions mentioned therein.
+
+Use xgettext like normal to extract strings marked as translatable and
+join the message cataloges to get the final catalog.
+"""
+
+from __future__ import absolute_import, print_function
+
+import inspect
+import os
+import re
+import sys
+
+
+def escape(s):
+    # The order is important, the backslash must be escaped first
+    # since the other replacements introduce new backslashes
+    # themselves.
+    s = s.replace("\\", "\\\\")
+    s = s.replace("\n", "\\n")
+    s = s.replace("\r", "\\r")
+    s = s.replace("\t", "\\t")
+    s = s.replace('"', '\\"')
+    return s
+
+
+def normalize(s):
+    # This converts the various Python string types into a format that
+    # is appropriate for .po files, namely much closer to C style.
+    lines = s.split("\n")
+    if len(lines) == 1:
+        s = '"' + escape(s) + '"'
+    else:
+        if not lines[-1]:
+            del lines[-1]
+            lines[-1] = lines[-1] + "\n"
+        lines = map(escape, lines)
+        lineterm = '\\n"\n"'
+        s = '""\n"' + lineterm.join(lines) + '"'
+    return s
+
+
+def poentry(path, lineno, s):
+    return "#: %s:%d\n" % (path, lineno) + "msgid %s\n" % normalize(s) + 'msgstr ""\n'
+
+
+doctestre = re.compile(r"^ +>>> ", re.MULTILINE)
+
+
+def offset(src, doc, name, default):
+    """Compute offset or issue a warning on stdout."""
+    # remove doctest part, in order to avoid backslash mismatching
+    m = doctestre.search(doc)
+    if m:
+        doc = doc[: m.start()]
+
+    # Backslashes in doc appear doubled in src.
+    end = src.find(doc.replace("\\", "\\\\"))
+    if end == -1:
+        # This can happen if the docstring contains unnecessary escape
+        # sequences such as \" in a triple-quoted string. The problem
+        # is that \" is turned into " and so doc wont appear in src.
+        sys.stderr.write(
+            "warning: unknown offset in %s, assuming %d lines\n" % (name, default)
+        )
+        return default
+    else:
+        return src.count("\n", 0, end)
+
+
+def importpath(path):
+    """Import a path like foo/bar/baz.py and return the baz module."""
+    if path.endswith(".py"):
+        path = path[:-3]
+    if path.endswith("/__init__"):
+        path = path[:-9]
+    path = path.replace("/", ".")
+    mod = __import__(path)
+    for comp in path.split(".")[1:]:
+        mod = getattr(mod, comp)
+    return mod
+
+
+def docstrings(path):
+    """Extract docstrings from path.
+
+    This respects the Mercurial cmdtable/table convention and will
+    only extract docstrings from functions mentioned in these tables.
+    """
+    mod = importpath(path)
+    if not path.startswith("mercurial/") and mod.__doc__:
+        src = open(path).read()
+        lineno = 1 + offset(src, mod.__doc__, path, 7)
+        print(poentry(path, lineno, mod.__doc__))
+
+    functions = list(getattr(mod, "i18nfunctions", []))
+    functions = [(f, True) for f in functions]
+
+    cmdtable = getattr(mod, "cmdtable", {})
+    if not cmdtable:
+        # Maybe we are processing mercurial.commands?
+        cmdtable = getattr(mod, "table", {})
+    functions.extend((c[0], False) for c in cmdtable.itervalues())
+
+    for func, rstrip in functions:
+        if func.__doc__:
+            docobj = func  # this might be a proxy to provide formatted doc
+            func = getattr(func, "_origfunc", func)
+            funcmod = inspect.getmodule(func)
+            extra = ""
+            if funcmod.__package__ == funcmod.__name__:
+                extra = "/__init__"
+            actualpath = "%s%s.py" % (funcmod.__name__.replace(".", "/"), extra)
+
+            src = inspect.getsource(func)
+            name = "%s.%s" % (actualpath, func.__name__)
+            lineno = inspect.getsourcelines(func)[1]
+            doc = docobj.__doc__
+            origdoc = getattr(docobj, "_origdoc", "")
+            if rstrip:
+                doc = doc.rstrip()
+                origdoc = origdoc.rstrip()
+            if origdoc:
+                lineno += offset(src, origdoc, name, 1)
+            else:
+                lineno += offset(src, doc, name, 1)
+            print(poentry(actualpath, lineno, doc))
+
+
+def rawtext(path):
+    src = open(path).read()
+    print(poentry(path, 1, src))
+
+
+if __name__ == "__main__":
+    # It is very important that we import the Mercurial modules from
+    # the source tree where hggettext is executed. Otherwise we might
+    # accidentally import and extract strings from a Mercurial
+    # installation mentioned in PYTHONPATH.
+    sys.path.insert(0, os.getcwd())
+    from edenscm.mercurial import demandimport
+
+    demandimport.enable()
+    for path in sys.argv[1:]:
+        if path.endswith(".txt"):
+            rawtext(path)
+        else:
+            docstrings(path)

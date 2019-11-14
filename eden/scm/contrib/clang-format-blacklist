@@ -1,0 +1,13 @@
+# Files that just need to be migrated to the formatter.
+# Do not add new files here!
+mercurial/cext/base85.c
+mercurial/cext/bdiff.c
+mercurial/cext/charencode.c
+mercurial/cext/charencode.h
+mercurial/cext/diffhelpers.c
+mercurial/cext/dirs.c
+mercurial/cext/manifest.c
+mercurial/cext/mpatch.c
+mercurial/cext/osutil.c
+mercurial/cext/pathencode.c
+mercurial/cext/revlog.c

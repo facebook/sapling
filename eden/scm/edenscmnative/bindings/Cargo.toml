@@ -1,0 +1,37 @@
+[package]
+name = "bindings"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "bindings"
+
+[profile.release]
+debug = true
+incremental = true
+lto = false
+
+[dependencies]
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+env_logger = "0.7"
+pyblackbox = { path = "modules/pyblackbox" }
+pybookmarkstore = { path = "modules/pybookmarkstore" }
+pycliparser = { path = "modules/pycliparser" }
+pyconfigparser = { path = "modules/pyconfigparser" }
+pydag = { path = "modules/pydag" }
+pyedenapi = { path = "modules/pyedenapi" }
+pylz4 = { path = "modules/pylz4" }
+pymanifest = { path = "modules/pymanifest" }
+pymetalog = { path = "modules/pymetalog" }
+pymutationstore = { path = "modules/pymutationstore" }
+pynodemap = { path = "modules/pynodemap" }
+pypathmatcher = { path = "modules/pypathmatcher" }
+pyrevisionstore = { path = "modules/pyrevisionstore" }
+pyrevlogindex = { path = "modules/pyrevlogindex" }
+pystackdesc = { path = "modules/pystackdesc" }
+pytracing = { path = "modules/pytracing" }
+pytreestate = { path = "modules/pytreestate" }
+pyvlq = { path = "modules/pyvlq" }
+pyworkingcopy = { path = "modules/pyworkingcopy" }
+pyzstd = { path = "modules/pyzstd" }
+pyzstore = { path = "modules/pyzstore" }

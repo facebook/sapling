@@ -1,0 +1,76 @@
+PYTHONVER=2.7.10
+PYTHONNAME=python-
+PREFIX=$(HOME)/bin/prefix-$(PYTHONNAME)$(PYTHONVER)
+SYMLINKDIR=$(HOME)/bin
+
+help:
+	@echo
+	@echo 'Make a custom installation of a Python version'
+	@echo
+	@echo 'Common make parameters:'
+	@echo '  PYTHONVER=...    [$(PYTHONVER)]'
+	@echo '  PREFIX=...       [$(PREFIX)]'
+	@echo '  SYMLINKDIR=...   [$(SYMLINKDIR) creating $(PYTHONNAME)$(PYTHONVER)]'
+	@echo
+	@echo 'Common make targets:'
+	@echo '  python    - install Python $$PYTHONVER in $$PREFIX'
+	@echo '  symlink   - create a $$SYMLINKDIR/$(PYTHONNAME)$$PYTHONVER symlink'
+	@echo
+	@echo 'Example: create a temporary Python installation:'
+	@echo '  $$ make -f Makefile.python python PYTHONVER=${PYTHONVER} PREFIX=/tmp/p27'
+	@echo '  $$ /tmp/p27/bin/python -V'
+	@echo '  Python 2.7'
+	@echo
+	@echo 'Some external libraries are required for building Python: zlib bzip2 openssl.'
+	@echo 'Make sure their development packages are installed systemwide.'
+# fedora: yum install zlib-devel bzip2-devel openssl-devel
+# debian: apt-get install zlib1g-dev libbz2-dev libssl-dev
+	@echo
+	@echo 'To build a nice collection of interesting Python versions:'
+	@echo '  $$ for v in 2.{6{,.1,.2,.9},7{,.8,.10}}; do'
+	@echo '    make -f Makefile.python symlink PYTHONVER=$$v || break; done'
+	@echo 'To run a Mercurial test on all these Python versions:'
+	@echo '  $$ for py in `cd ~/bin && ls $(PYTHONNAME)2.*`; do'
+	@echo '    echo $$py; $$py run-tests.py test-http.t; echo; done'
+	@echo
+
+export LANGUAGE=C
+export LC_ALL=C
+
+python: $(PREFIX)/bin/python docutils
+	printf 'import sys, zlib, bz2, docutils, ssl' | $(PREFIX)/bin/python
+
+PYTHON_SRCDIR=Python-$(PYTHONVER)
+PYTHON_SRCFILE=$(PYTHON_SRCDIR).tgz
+
+$(PREFIX)/bin/python:
+	[ -f $(PYTHON_SRCFILE) ] || wget http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || curl -OL http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || [ -f $(PYTHON_SRCFILE) ]
+	rm -rf $(PYTHON_SRCDIR)
+	tar xf $(PYTHON_SRCFILE)
+	# Debian/Ubuntu disables SSLv2,3 the hard way, disable it on old Pythons too
+	-sed -i 's,self.*SSLv[23]_method(),0;//\0,g' $(PYTHON_SRCDIR)/Modules/_ssl.c
+	# Find multiarch system libraries on Ubuntu and disable fortify error when setting argv
+	LDFLAGS="-L/usr/lib/`dpkg-architecture -qDEB_HOST_MULTIARCH`"; \
+	BASECFLAGS=-U_FORTIFY_SOURCE; \
+	export LDFLAGS BASECFLAGS; \
+	cd $(PYTHON_SRCDIR) && ./configure --prefix=$(PREFIX) && make all SVNVERSION=pwd && make install
+	printf 'import sys, zlib, bz2, ssl' | $(PREFIX)/bin/python
+	rm -rf $(PYTHON_SRCDIR)
+
+DOCUTILSVER=0.12
+DOCUTILS_SRCDIR=docutils-$(DOCUTILSVER)
+DOCUTILS_SRCFILE=$(DOCUTILS_SRCDIR).tar.gz
+
+docutils: $(PREFIX)/bin/python
+	@$(PREFIX)/bin/python -c 'import docutils' || ( set -ex; \
+	[ -f $(DOCUTILS_SRCFILE) ] || wget http://downloads.sourceforge.net/project/docutils/docutils/$(DOCUTILSVER)/$(DOCUTILS_SRCFILE) || [ -f $(DOCUTILS_SRCFILE) ]; \
+	rm -rf $(DOCUTILS_SRCDIR); \
+	tar xf $(DOCUTILS_SRCFILE); \
+	cd $(DOCUTILS_SRCDIR) && $(PREFIX)/bin/python setup.py install --prefix=$(PREFIX); \
+	$(PREFIX)/bin/python -c 'import docutils'; \
+	rm -rf $(DOCUTILS_SRCDIR); )
+
+symlink: python $(SYMLINKDIR)
+	ln -sf $(PREFIX)/bin/python $(SYMLINKDIR)/$(PYTHONNAME)$(PYTHONVER)
+
+.PHONY: help python docutils symlink

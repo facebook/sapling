@@ -1,0 +1,27 @@
+[package]
+name = "configparser"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bytes = "0.4.10"
+dirs = "1.0.4"
+failure = "0.1.2"
+failure_derive = "0.1.2"
+indexmap = "1.0.1"
+parking_lot = "0.9"
+pest = "2.1.0"
+pest_derive = "2.1.0"
+util = { path = "../util" }
+
+[dev-dependencies]
+lazy_static = "1.3.0"
+minibench = { path = "../minibench" }
+tempdir = "0.3.7"
+
+[[bench]]
+name = "bench"
+harness = false
+
+[lib]
+crate-type = ["staticlib", "lib"]

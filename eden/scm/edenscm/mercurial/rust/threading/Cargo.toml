@@ -1,0 +1,20 @@
+[package]
+name = "threading"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = "thin"
+
+[dependencies]
+
+[dependencies.cpython]
+version = "0.3"
+default-features = false
+features = ["extension-module-2-7"]
+
+[dependencies.python27-sys]
+version = "0.3"

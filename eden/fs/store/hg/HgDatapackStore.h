@@ -14,8 +14,7 @@
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-#include "scm/hg/lib/backingstore/c_api/HgNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
 
 namespace facebook {
 namespace eden {

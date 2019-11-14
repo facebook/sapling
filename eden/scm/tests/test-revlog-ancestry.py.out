@@ -1,0 +1,19 @@
+Ancestors of 5
+4 2 0 
+Ancestors of 6 and 5
+3 4 2 1 0 
+Ancestors of 5 and 4
+4 2 0 
+Ancestors of 7, stop at 6
+6 
+Ancestors of 7, including revs
+7 6 5 3 4 2 1 0 
+Ancestors of 7, 5 and 3, including revs
+7 5 3 6 4 2 1 0 
+
+Descendants of 5
+7 8 
+Descendants of 5 and 3
+6 7 8 
+Descendants of 5 and 4
+5 7 8

@@ -1,0 +1,66 @@
+      hgrc settings    command line options      final result   
+    quiet verbo debug   quiet verbo debug      quiet verbo debug
+ 0  False False False   False False False  ->  False False False
+ 1   True False False   False False False  ->   True False False
+ 2  False  True False   False False False  ->  False  True False
+ 3   True  True False   False False False  ->  False False False
+ 4  False False  True   False False False  ->  False  True  True
+ 5   True False  True   False False False  ->  False  True  True
+ 6  False  True  True   False False False  ->  False  True  True
+ 7   True  True  True   False False False  ->  False  True  True
+ 8  False False False    True False False  ->   True False False
+ 9   True False False    True False False  ->   True False False
+10  False  True False    True False False  ->   True False False
+11   True  True False    True False False  ->   True False False
+12  False False  True    True False False  ->   True False False
+13   True False  True    True False False  ->   True False False
+14  False  True  True    True False False  ->   True False False
+15   True  True  True    True False False  ->   True False False
+16  False False False   False  True False  ->  False  True False
+17   True False False   False  True False  ->  False  True False
+18  False  True False   False  True False  ->  False  True False
+19   True  True False   False  True False  ->  False  True False
+20  False False  True   False  True False  ->  False  True False
+21   True False  True   False  True False  ->  False  True False
+22  False  True  True   False  True False  ->  False  True False
+23   True  True  True   False  True False  ->  False  True False
+24  False False False    True  True False  ->  False False False
+25   True False False    True  True False  ->  False False False
+26  False  True False    True  True False  ->  False False False
+27   True  True False    True  True False  ->  False False False
+28  False False  True    True  True False  ->  False False False
+29   True False  True    True  True False  ->  False False False
+30  False  True  True    True  True False  ->  False False False
+31   True  True  True    True  True False  ->  False False False
+32  False False False   False False  True  ->  False  True  True
+33   True False False   False False  True  ->  False  True  True
+34  False  True False   False False  True  ->  False  True  True
+35   True  True False   False False  True  ->  False  True  True
+36  False False  True   False False  True  ->  False  True  True
+37   True False  True   False False  True  ->  False  True  True
+38  False  True  True   False False  True  ->  False  True  True
+39   True  True  True   False False  True  ->  False  True  True
+40  False False False    True False  True  ->  False  True  True
+41   True False False    True False  True  ->  False  True  True
+42  False  True False    True False  True  ->  False  True  True
+43   True  True False    True False  True  ->  False  True  True
+44  False False  True    True False  True  ->  False  True  True
+45   True False  True    True False  True  ->  False  True  True
+46  False  True  True    True False  True  ->  False  True  True
+47   True  True  True    True False  True  ->  False  True  True
+48  False False False   False  True  True  ->  False  True  True
+49   True False False   False  True  True  ->  False  True  True
+50  False  True False   False  True  True  ->  False  True  True
+51   True  True False   False  True  True  ->  False  True  True
+52  False False  True   False  True  True  ->  False  True  True
+53   True False  True   False  True  True  ->  False  True  True
+54  False  True  True   False  True  True  ->  False  True  True
+55   True  True  True   False  True  True  ->  False  True  True
+56  False False False    True  True  True  ->  False  True  True
+57   True False False    True  True  True  ->  False  True  True
+58  False  True False    True  True  True  ->  False  True  True
+59   True  True False    True  True  True  ->  False  True  True
+60  False False  True    True  True  True  ->  False  True  True
+61   True False  True    True  True  True  ->  False  True  True
+62  False  True  True    True  True  True  ->  False  True  True
+63   True  True  True    True  True  True  ->  False  True  True

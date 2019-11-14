@@ -1,0 +1,69 @@
+#!/bin/sh
+
+# Script to get stable diff output on any platform.
+#
+# Output of this script is almost equivalent to GNU diff with "-Nru".
+#
+# Use this script as "hg pdiff" via extdiff extension with preparation
+# below in test scripts:
+#
+#   $ cat >> $HGRCPATH <<EOF
+#   > [extdiff]
+#   > pdiff = sh "$RUNTESTDIR/pdiff"
+#   > EOF
+
+filediff(){
+    # USAGE: filediff file1 file2 [header]
+
+    # compare with /dev/null if file doesn't exist (as "-N" option)
+    file1="$1"
+    if test ! -f "$file1"; then
+        file1=/dev/null
+    fi
+    file2="$2"
+    if test ! -f "$file2"; then
+        file2=/dev/null
+    fi
+
+    if cmp -s "$file1" "$file2" 2> /dev/null; then
+        # Return immediately, because comparison isn't needed. This
+        # also avoids redundant message of diff like "No differences
+        # encountered" (on Solaris)
+        return
+    fi
+
+    if test -n "$3"; then
+        # show header only in recursive case
+        echo "$3"
+    fi
+
+    # replace "/dev/null" by corresponded filename (as "-N" option)
+    diff -u "$file1" "$file2" |
+    sed "s@^--- /dev/null\(.*\)\$@--- $1\1@" |
+    sed "s@^\+\+\+ /dev/null\(.*\)\$@+++ $2\1@"
+
+    # in this case, files differ from each other
+    return 1
+}
+
+if test -d "$1" -o -d "$2"; then
+    # ensure comparison in dictionary order
+    (
+    if test -d "$1"; then (cd "$1" && find . -type f); fi
+    if test -d "$2"; then (cd "$2" && find . -type f); fi
+    ) |
+    sed 's@^\./@@g' | sort | uniq |
+    while read file; do
+        filediff "$1/$file" "$2/$file" "diff -Nru $1/$file $2/$file"
+    done
+
+    # TODO: there is no portable way for current while-read based
+    # implementation to return 1 at detecting changes.
+    #
+    # On bash and dash, assignment to variable inside while-block
+    # doesn't affect outside, because inside while-block is executed
+    # in sub-shell. BTW, it affects outside while-block on ksh (as sh
+    # on Solaris).
+else
+    filediff "$1" "$2"
+fi

@@ -1,0 +1,500 @@
+A = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}'
+B = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}'
+
+uppercase char X is encoded as _x
+A = 'data/ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+B = 'data/_a_b_c_d_e_f_g_h_i_j_k_l_m_n_o_p_q_r_s_t_u_v_w_x_y_z'
+
+underbar is doubled
+A = 'data/_'
+B = 'data/__'
+
+tilde is character-encoded
+A = 'data/~'
+B = 'data/~7e'
+
+characters in ASCII code range 1..31
+A = 'data/\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f'
+B = 'data/~01~02~03~04~05~06~07~08~09~0a~0b~0c~0d~0e~0f~10~11~12~13~14~15~16~17~18~19~1a~1b~1c~1d~1e~1f'
+
+characters in ASCII code range 126..255
+A = 'data/~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f'
+B = 'data/~7e~7f~80~81~82~83~84~85~86~87~88~89~8a~8b~8c~8d~8e~8f~90~91~92~93~94~95~96~97~98~99~9a~9b~9c~9d~9e~9f'
+
+A = 'data/\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf'
+B = 'data/~a0~a1~a2~a3~a4~a5~a6~a7~a8~a9~aa~ab~ac~ad~ae~af~b0~b1~b2~b3~b4~b5~b6~b7~b8~b9~ba~bb~bc~bd~be~bf'
+
+A = 'data/\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf'
+B = 'data/~c0~c1~c2~c3~c4~c5~c6~c7~c8~c9~ca~cb~cc~cd~ce~cf~d0~d1~d2~d3~d4~d5~d6~d7~d8~d9~da~db~dc~dd~de~df'
+
+A = 'data/\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff'
+B = 'data/~e0~e1~e2~e3~e4~e5~e6~e7~e8~e9~ea~eb~ec~ed~ee~ef~f0~f1~f2~f3~f4~f5~f6~f7~f8~f9~fa~fb~fc~fd~fe~ff'
+
+Windows reserved characters
+A = 'data/less <, greater >, colon :, double-quote ", backslash \\, pipe |, question-mark ?, asterisk *'
+B = 'data/less ~3c, greater ~3e, colon ~3a, double-quote ~22, backslash ~5c, pipe ~7c, question-mark ~3f, asterisk ~2a'
+
+encoding directories ending in .hg, .i or .d with '.hg' suffix
+A = 'data/x.h.i/x.hg/x.i/x.d/foo'
+B = 'data/x.h.i.hg/x.hg.hg/x.i.hg/x.d.hg/foo'
+
+A = 'data/a.hg/a.i/a.d/foo'
+B = 'data/a.hg.hg/a.i.hg/a.d.hg/foo'
+
+A = 'data/au.hg/au.i/au.d/foo'
+B = 'data/au.hg.hg/au.i.hg/au.d.hg/foo'
+
+A = 'data/aux.hg/aux.i/aux.d/foo'
+B = 'data/au~78.hg.hg/au~78.i.hg/au~78.d.hg/foo'
+
+A = 'data/auxy.hg/auxy.i/auxy.d/foo'
+B = 'data/auxy.hg.hg/auxy.i.hg/auxy.d.hg/foo'
+
+but these are not encoded on *filenames*
+A = 'data/foo/x.hg'
+B = 'data/foo/x.hg'
+
+A = 'data/foo/x.i'
+B = 'data/foo/x.i'
+
+A = 'data/foo/x.d'
+B = 'data/foo/x.d'
+
+A = 'data/foo/a.hg'
+B = 'data/foo/a.hg'
+
+A = 'data/foo/a.i'
+B = 'data/foo/a.i'
+
+A = 'data/foo/a.d'
+B = 'data/foo/a.d'
+
+A = 'data/foo/au.hg'
+B = 'data/foo/au.hg'
+
+A = 'data/foo/au.i'
+B = 'data/foo/au.i'
+
+A = 'data/foo/au.d'
+B = 'data/foo/au.d'
+
+A = 'data/foo/aux.hg'
+B = 'data/foo/au~78.hg'
+
+A = 'data/foo/aux.i'
+B = 'data/foo/au~78.i'
+
+A = 'data/foo/aux.d'
+B = 'data/foo/au~78.d'
+
+A = 'data/foo/auxy.hg'
+B = 'data/foo/auxy.hg'
+
+A = 'data/foo/auxy.i'
+B = 'data/foo/auxy.i'
+
+A = 'data/foo/auxy.d'
+B = 'data/foo/auxy.d'
+
+plain .hg, .i and .d directories have the leading dot encoded
+A = 'data/.hg/.i/.d/foo'
+B = 'data/~2ehg.hg/~2ei.hg/~2ed.hg/foo'
+
+A = 'data/aux.bla/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c.i'
+B = 'data/au~78.bla/bla.aux/pr~6e/_p_r_n/lpt/co~6d3/nu~6c/coma/foo._n_u_l/normal.c.i'
+
+A = 'data/AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH/LOREMIPSUM.TXT.i'
+B = 'dh/au~78/second/x.prn/fourth/fi~3afth/sixth/seventh/eighth/nineth/tenth/loremia20419e358ddff1bf8751e38288aff1d7c32ec05.i'
+
+A = 'data/enterprise/openesbaddons/contrib-imola/corba-bc/netbeansplugin/wsdlExtension/src/main/java/META-INF/services/org.netbeans.modules.xml.wsdl.bindingsupport.spi.ExtensibilityElementTemplateProvider.i'
+B = 'dh/enterpri/openesba/contrib-/corba-bc/netbeans/wsdlexte/src/main/java/org.net7018f27961fdf338a598a40c4683429e7ffb9743.i'
+
+A = 'data/AUX.THE-QUICK-BROWN-FOX-JU:MPS-OVER-THE-LAZY-DOG-THE-QUICK-BROWN-FOX-JUMPS-OVER-THE-LAZY-DOG.TXT.i'
+B = 'dh/au~78.the-quick-brown-fox-ju~3amps-over-the-lazy-dog-the-quick-brown-fox-jud4dcadd033000ab2b26eb66bae1906bcb15d4a70.i'
+
+A = 'data/Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt'
+B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilenaf93030515d9849cfdca52937c2204d19f83913e5.txt'
+
+A = 'data/Project.Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt'
+B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilena0fd7c506f5c9d58204444fc67e9499006bd2d445.txt'
+
+A = 'data/foo.../foo   / /a./_. /__/.x../    bla/.FOO/something.i'
+B = 'data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/~2ex.~2e/~20   bla/~2e_f_o_o/something.i'
+
+A = 'data/c/co/com/com0/com1/com2/com3/com4/com5/com6/com7/com8/com9'
+B = 'data/c/co/com/com0/co~6d1/co~6d2/co~6d3/co~6d4/co~6d5/co~6d6/co~6d7/co~6d8/co~6d9'
+
+A = 'data/C/CO/COM/COM0/COM1/COM2/COM3/COM4/COM5/COM6/COM7/COM8/COM9'
+B = 'data/_c/_c_o/_c_o_m/_c_o_m0/_c_o_m1/_c_o_m2/_c_o_m3/_c_o_m4/_c_o_m5/_c_o_m6/_c_o_m7/_c_o_m8/_c_o_m9'
+
+A = 'data/c.x/co.x/com.x/com0.x/com1.x/com2.x/com3.x/com4.x/com5.x/com6.x/com7.x/com8.x/com9.x'
+B = 'data/c.x/co.x/com.x/com0.x/co~6d1.x/co~6d2.x/co~6d3.x/co~6d4.x/co~6d5.x/co~6d6.x/co~6d7.x/co~6d8.x/co~6d9.x'
+
+A = 'data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9'
+B = 'data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9'
+
+A = 'data/cx/cox/comx/com0x/com1x/com2x/com3x/com4x/com5x/com6x/com7x/com8x/com9x'
+B = 'data/cx/cox/comx/com0x/com1x/com2x/com3x/com4x/com5x/com6x/com7x/com8x/com9x'
+
+A = 'data/xc/xco/xcom0/xcom1/xcom2/xcom3/xcom4/xcom5/xcom6/xcom7/xcom8/xcom9'
+B = 'data/xc/xco/xcom0/xcom1/xcom2/xcom3/xcom4/xcom5/xcom6/xcom7/xcom8/xcom9'
+
+A = 'data/l/lp/lpt/lpt0/lpt1/lpt2/lpt3/lpt4/lpt5/lpt6/lpt7/lpt8/lpt9'
+B = 'data/l/lp/lpt/lpt0/lp~741/lp~742/lp~743/lp~744/lp~745/lp~746/lp~747/lp~748/lp~749'
+
+A = 'data/L/LP/LPT/LPT0/LPT1/LPT2/LPT3/LPT4/LPT5/LPT6/LPT7/LPT8/LPT9'
+B = 'data/_l/_l_p/_l_p_t/_l_p_t0/_l_p_t1/_l_p_t2/_l_p_t3/_l_p_t4/_l_p_t5/_l_p_t6/_l_p_t7/_l_p_t8/_l_p_t9'
+
+A = 'data/l.x/lp.x/lpt.x/lpt0.x/lpt1.x/lpt2.x/lpt3.x/lpt4.x/lpt5.x/lpt6.x/lpt7.x/lpt8.x/lpt9.x'
+B = 'data/l.x/lp.x/lpt.x/lpt0.x/lp~741.x/lp~742.x/lp~743.x/lp~744.x/lp~745.x/lp~746.x/lp~747.x/lp~748.x/lp~749.x'
+
+A = 'data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9'
+B = 'data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9'
+
+A = 'data/lx/lpx/lptx/lpt0x/lpt1x/lpt2x/lpt3x/lpt4x/lpt5x/lpt6x/lpt7x/lpt8x/lpt9x'
+B = 'data/lx/lpx/lptx/lpt0x/lpt1x/lpt2x/lpt3x/lpt4x/lpt5x/lpt6x/lpt7x/lpt8x/lpt9x'
+
+A = 'data/xl/xlp/xlpt/xlpt0/xlpt1/xlpt2/xlpt3/xlpt4/xlpt5/xlpt6/xlpt7/xlpt8/xlpt9'
+B = 'data/xl/xlp/xlpt/xlpt0/xlpt1/xlpt2/xlpt3/xlpt4/xlpt5/xlpt6/xlpt7/xlpt8/xlpt9'
+
+A = 'data/con/p/pr/prn/a/au/aux/n/nu/nul'
+B = 'data/co~6e/p/pr/pr~6e/a/au/au~78/n/nu/nu~6c'
+
+A = 'data/CON/P/PR/PRN/A/AU/AUX/N/NU/NUL'
+B = 'data/_c_o_n/_p/_p_r/_p_r_n/_a/_a_u/_a_u_x/_n/_n_u/_n_u_l'
+
+A = 'data/con.x/p.x/pr.x/prn.x/a.x/au.x/aux.x/n.x/nu.x/nul.x'
+B = 'data/co~6e.x/p.x/pr.x/pr~6e.x/a.x/au.x/au~78.x/n.x/nu.x/nu~6c.x'
+
+A = 'data/x.con/x.p/x.pr/x.prn/x.a/x.au/x.aux/x.n/x.nu/x.nul'
+B = 'data/x.con/x.p/x.pr/x.prn/x.a/x.au/x.aux/x.n/x.nu/x.nul'
+
+A = 'data/conx/px/prx/prnx/ax/aux/auxx/nx/nux/nulx'
+B = 'data/conx/px/prx/prnx/ax/au~78/auxx/nx/nux/nulx'
+
+A = 'data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul'
+B = 'data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul'
+
+A = 'data/a./au./aux./auxy./aux.'
+B = 'data/a~2e/au~2e/au~78~2e/auxy~2e/au~78~2e'
+
+A = 'data/c./co./con./cony./con.'
+B = 'data/c~2e/co~2e/co~6e~2e/cony~2e/co~6e~2e'
+
+A = 'data/p./pr./prn./prny./prn.'
+B = 'data/p~2e/pr~2e/pr~6e~2e/prny~2e/pr~6e~2e'
+
+A = 'data/n./nu./nul./nuly./nul.'
+B = 'data/n~2e/nu~2e/nu~6c~2e/nuly~2e/nu~6c~2e'
+
+A = 'data/l./lp./lpt./lpt1./lpt1y./lpt1.'
+B = 'data/l~2e/lp~2e/lpt~2e/lp~741~2e/lpt1y~2e/lp~741~2e'
+
+A = 'data/lpt9./lpt9y./lpt9.'
+B = 'data/lp~749~2e/lpt9y~2e/lp~749~2e'
+
+A = 'data/com./com1./com1y./com1.'
+B = 'data/com~2e/co~6d1~2e/com1y~2e/co~6d1~2e'
+
+A = 'data/com9./com9y./com9.'
+B = 'data/co~6d9~2e/com9y~2e/co~6d9~2e'
+
+A = 'data/a /au /aux /auxy /aux '
+B = 'data/a~20/au~20/aux~20/auxy~20/aux~20'
+
+largest unhashed path
+A = 'data/123456789-123456789-123456789-123456789-123456789-unhashed--xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/123456789-123456789-123456789-123456789-123456789-unhashed--xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+shortest hashed path
+A = 'data/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxe9c55002b50bf5181e7a6fc1f60b126e2a6fcf71'
+
+changing one char in part that's hashed away produces a different hash
+A = 'data/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxy-123456789-123456'
+B = 'dh/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxd24fa4455faf8a94350c18e5eace7c2bb17af706'
+
+uppercase hitting length limit due to encoding
+A = 'data/A23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxcbbc657029b41b94ed510d05feb6716a5c03bc6b'
+
+A = 'data/Z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx938f32a725c89512833fb96b6602dd9ebff51ddd'
+
+compare with lowercase not hitting limit
+A = 'data/a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+A = 'data/z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+not hitting limit with any of these
+A = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+underbar hitting length limit due to encoding
+A = 'data/_23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/_23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx9921a01af50feeabc060ce00eee4cba6efc31d2b'
+
+tilde hitting length limit due to encoding
+A = 'data/~23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~7e23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx9cec6f97d569c10995f785720044ea2e4227481b'
+
+Windows reserved characters hitting length limit
+A = 'data/<23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3c23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxee67d8f275876ca1ef2500fc542e63c885c4e62d'
+
+A = 'data/>23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3e23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx387a85a5b1547cc9136310c974df716818458ddb'
+
+A = 'data/:23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx2e4154fb571d13d22399c58cc4ef4858e4b75999'
+
+A = 'data/"23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2223456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxfc7e3ec7b0687ee06ed8c32fef0eb0c1980259f5'
+
+A = 'data/\\23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~5c23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx944e1f2b7110687e116e0d151328ac648b06ab4a'
+
+A = 'data/|23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~7c23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx28b23dd3fd0242946334126ab62bcd772aac32f4'
+
+A = 'data/?23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3f23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxa263022d3994d2143d98f94f431eef8b5e7e0f8a'
+
+A = 'data/*23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx0e7e6020e3c00ba7bb7893d84ca2966fbf53e140'
+
+initial space hitting length limit
+A = 'data/ 23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2023456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx92acbc78ef8c0b796111629a02601f07d8aec4ea'
+
+initial dot hitting length limit
+A = 'data/.23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2e23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxdbe19cc6505b3515ab9228cebf877ad07075168f'
+
+trailing space in filename hitting length limit
+A = 'data/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-1234 '
+B = 'dh/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx0025dc73e04f97426db4893e3bf67d581dc6d066'
+
+trailing dot in filename hitting length limit
+A = 'data/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-1234.'
+B = 'dh/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx85a16cf03ee7feba8a5abc626f1ba9886d01e89d'
+
+initial space in directory hitting length limit
+A = 'data/ x/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~20x/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx1b3a3b712b2ac00d6af14ae8b4c14fdbf904f516'
+
+initial dot in directory hitting length limit
+A = 'data/.x/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2ex/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx39dbc4c193a5643a8936fc69c3363cd7ac91ab14'
+
+trailing space in directory hitting length limit
+A = 'data/x /456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x~20/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx2253c341df0b5290790ad312cd8499850f2273e5'
+
+trailing dot in directory hitting length limit
+A = 'data/x./456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x~2e/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxcc0324d696d34562b44b5138db08ee1594ccc583'
+
+with directories that need direncoding, hitting length limit
+A = 'data/x.i/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x.i.hg/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxa4c4399bdf81c67dbbbb7060aa0124d8dea94f74'
+
+A = 'data/x.d/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x.d.hg/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxx1303fa90473b230615f5b3ea7b660e881ae5270a'
+
+A = 'data/x.hg/5789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x.hg.hg/5789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxx26d724a8af68e7a4e4455e6602ea9adbd0eb801f'
+
+Windows reserved filenames, hitting length limit
+A = 'data/con/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/co~6e/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxc0794d4f4c605a2617900eb2563d7113cf6ea7d3'
+
+A = 'data/prn/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/pr~6e/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx64db876e1a9730e27236cb9b167aff942240e932'
+
+A = 'data/aux/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/au~78/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx8a178558405ca6fb4bbd75446dfa186f06751a0d'
+
+A = 'data/nul/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/nu~6c/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxc5e51b6fec1bd07bd243b053a0c3f7209855b886'
+
+A = 'data/com1/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/co~6d1/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx32f5f44ece3bb62b9327369ca84cc19c86259fcd'
+
+A = 'data/com9/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/co~6d9/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx734360b28c66a3230f55849fe8926206d229f990'
+
+A = 'data/lpt1/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/lp~741/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxe6f16ab4b6b0637676b2842b3345c9836df46ef7'
+
+A = 'data/lpt9/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/lp~749/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxa475814c51acead3e44f2ff801f0c4903f986157'
+
+non-reserved names, just not hitting limit
+A = 'data/123456789-123456789-123456789-123456789-123456789-/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/123456789-123456789-123456789-123456789-123456789-/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+hashed path with largest untruncated 1st dir
+A = 'data/12345678/-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxx4e9e9e384d00929a93b6835fbf976eb32321ff3c'
+
+hashed path with smallest truncated 1st dir
+A = 'data/123456789/123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxx1f4e4ec5f2be76e109bfaa8e31c062fe426d5490'
+
+hashed path with largest untruncated two dirs
+A = 'data/12345678/12345678/9-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/9-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxx3332d8329d969cf835542a9f2cbcfb385b6cf39d'
+
+hashed path with smallest truncated two dirs
+A = 'data/123456789/123456789/123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx9699559798247dffa18717138859be5f8874840e'
+
+hashed path with largest untruncated three dirs
+A = 'data/12345678/12345678/12345678/89-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/89-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxf0a2b053bb1369cce02f78c217d6a7aaea18c439'
+
+hashed path with smallest truncated three dirs
+A = 'data/123456789/123456789/123456789/123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-1c6f8284967384ec13985a046d3553179d9d03cd'
+
+hashed path with largest untruncated four dirs
+A = 'data/12345678/12345678/12345678/12345678/789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/789-123456789-hashed----xxxxxxxxx-xxxxxxx0d30c99049d8f0ff97b94d4ef302027e8d54c6fd'
+
+hashed path with smallest truncated four dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/123456789-hashed----xxxxxxxxx-xxxxxxxxx-x46162779e1a771810b37a737f82ae7ed33771402'
+
+hashed path with largest untruncated five dirs
+A = 'data/12345678/12345678/12345678/12345678/12345678/6789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/6789-hashed----xxxxxxxxx-xxxxxxxbfe752ddc8b003c2790c66a9f2eb1ea75c114390'
+
+hashed path with smallest truncated five dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789/hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/hashed----xxxxxxxxx-xxxxxxxxx-xxb94c27b3532fa880cdd572b1c514785cab7b6ff2'
+
+hashed path with largest untruncated six dirs
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/ed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/ed----xxxxxxxxx-xxxxxxxcd8cc5483a0f3be409e0e5d4bf9e36e113c59235'
+
+hashed path with smallest truncated six dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxxxxxxx-xxx47dd6f616f833a142da00701b334cebbf640da06'
+
+hashed path with largest untruncated seven dirs
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxx-xxxxxxx1c8ed635229fc22efe51035feeadeb4c8a0ecb82'
+
+hashed path with smallest truncated seven dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxx298ff7d33f8ce6db57930837ffea2fb2f48bb926'
+
+hashed path with largest untruncated eight dirs
+(directory 8 is dropped because it hits _maxshortdirslen)
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxx-xxxxxxc8996ccd41b471f768057181a4d59d2febe7277d'
+
+hashed path with smallest truncated eight dirs
+(directory 8 is dropped because it hits _maxshortdirslen)
+A = 'data/123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxx4fa04a839a6bda93e1c21c713f2edcbd16e8890d'
+
+hashed path with largest non-dropped directory 8
+(just not hitting the _maxshortdirslen boundary)
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxx4d43d1ccaa20efbfe99ec779dc063611536ff2c5'
+
+...adding one truncated char to dir 1..7 won't drop dir 8
+A = 'data/12345678x/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxx0f9efce65189cc60fd90fe4ffd49d7b58bbe0f2e'
+
+A = 'data/12345678/12345678x/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxx945ca395708cafdd54a94501859beabd3e243921'
+
+A = 'data/12345678/12345678/12345678x/12345678/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxac62bf6898c4fd0502146074547c11caa751a327'
+
+A = 'data/12345678/12345678/12345678/12345678x/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxx2ae5a2baed7983fae8974d0ca06c6bf08b9aee92'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678x/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxx214aba07b6687532a43d1e9eaf6e88cfca96b68c'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678x/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxe7a022ae82f0f55cf4e0498e55ba59ea4ebb55bf'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678x/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxb51ce61164996a80f36ce3cfe64b62d519aedae3'
+
+hashed path with shortest dropped directory 8
+(just hitting the _maxshortdirslen boundary)
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/123456/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxx11fa9873cc6c3215eae864528b5530a04efc6cfe'
+
+hashed path that drops dir 8 due to dot or space at end is
+encoded, and thus causing to hit _maxshortdirslen
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/1234./-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/-xxxxxxxxx-xxx602df9b45bec564e2e1f0645d5140dddcc76ed58'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/1234 /-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/-xxxxxxxxx-xxxd99ff212bc84b4d1f70cd6b0071e3ef69d4e12ce'
+
+... with dir 8 short enough for encoding
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12./xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12~2e/xx-xxxxx7baeb5ed7f14a586ee1cacecdbcbff70032d1b3c'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12 /xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12~20/xx-xxxxxcf79ca9795f77d7f75745da36807e5d772bd5182'
+
+Extensions are replicated on hashed paths. Note that
+we only get to encode files that end in .i or .d inside the
+store. Encoded filenames are thus bound in length.
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.345.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxc10ad03b5755ed524f5286aab1815dfe07729438.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.345.d'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx9eec83381f2b39ef5ac8b4ecdf2c94f7983f57c8.d'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxb7796dc7d175cfb0bb8a7728f58f6ebec9042568.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.34567.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxb515857a6bfeef017c4894d8df42458ac65d55b8.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.345678.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxb05a0f247bc0a776211cd6a32ab714fd9cc09f2b.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxf192b48bff08d9e0e12035fb52bc58c70de72c94.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx435551e0ed4c7b083b9ba83cee916670e02e80ad.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-1.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxa7f74eb98d8d58b716356dfd26e2f9aaa65d6a9a.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxed68d9bd43b931f0b100267fee488d65a0c66f62.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-123.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx5cea44de2b642d2ba2b4a30693ffb1049644d698.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-1234.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx68462f62a7f230b39c1b5400d73ec35920990b7e.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx4cb852a314c6da240a83eec94761cdd71c6ec22e.i'
+
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPRSTUVWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxxxxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww.i'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx93352aa50377751d9e5ebdf52da1e6e69a6887a6.i'
+
+paths outside data/ can be encoded
+A = 'metadata/dir/00manifest.i'
+B = 'metadata/dir/00manifest.i'
+
+A = 'metadata/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/00manifest.i'
+B = 'dh/ata/12345678/12345678/12345678/12345678/12345678/12345678/12345678/00manife0a4da1f89aa2aa9eb0896eb451288419049781b4.i'
+

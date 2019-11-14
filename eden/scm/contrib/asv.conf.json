@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "project": "mercurial",
+    "project_url": "https://mercurial-scm.org/",
+    "repo": "..",
+    "branches": ["default", "stable"],
+    "environment_type": "virtualenv",
+    "show_commit_url": "https://www.mercurial-scm.org/repo/hg/rev/",
+    "benchmark_dir": "benchmarks",
+    "env_dir": "../.asv/env",
+    "results_dir": "../.asv/results",
+    "html_dir": "../.asv/html"
+}

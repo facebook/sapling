@@ -1,0 +1,25 @@
+[package]
+name = "blackbox"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+byteorder = "1"
+failure = "0.1"
+indexedlog = { path = "../indexedlog" }
+lazy_static = "1"
+libc = "0.2"
+parking_lot = "0.9"
+serde = "1"
+serde_alt = { path = "serde_alt" }
+serde_cbor = "0.9"
+serde_derive = "1"
+serde_json = "1"
+
+[dev-dependencies]
+minibench = { path = "../minibench" }
+tempfile = "3"
+
+[[bench]]
+name = "blackbox"
+harness = false

@@ -1,0 +1,41 @@
+basic:
+
+* neither file exists
+creating
+* neither file still exists
+* empty file x created
+creating
+* file x changed size
+creating
+* nothing changed with either file
+* file x changed inode
+creating
+* empty file y created
+creating
+* file y changed size
+creating
+* file y changed inode
+creating
+* both files changed inode
+creating
+
+repository tip rolled back to revision -1 (undo commit)
+working directory now based on revision -1
+repository tip rolled back to revision -1 (undo commit)
+working directory now based on revision -1
+
+setbeforeget:
+
+* neither file exists
+string set externally
+* file x created
+creating
+string from function
+* string set externally again
+string 2 set externally
+* file y created
+creating
+string from function
+
+antiambiguity:
+

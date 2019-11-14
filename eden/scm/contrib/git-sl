@@ -1,0 +1,352 @@
+#!/usr/bin/env python
+#
+# Copyright 2004-present Facebook. All rights reserved.
+#
+# Emulate the output of smartlog.py atop git, instead of Mercurial.
+#
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import argparse
+import re
+import subprocess
+import time
+
+seconds_in_a_day = 60.0 * 60.0 * 24.0
+
+class ColorOutput(object):
+    colors = {
+        'black': 90,
+        'red': 91,
+        'green': 92,
+        'yellow': 93,
+        'blue': 94,
+        'pink': 95,
+        'cyan': 96,
+        'under': 4,
+        'none': 0
+    }
+    str_pattern_color = '\33[%dm'
+
+    @classmethod
+    def str(cls, color, text):
+        return (cls.str_pattern_color % cls.colors[color]) + str(text) + \
+            (cls.str_pattern_color % cls.colors['none'])
+
+class GitRevision(object):
+    revisionmap = {}
+    root = None
+    current_branch = None
+    show_all = False
+    origin_timestamp_threshold = 0
+    ignored_message = None
+
+    # ref can be a hash or a branch_name
+    def __init__(self, ref, hash=None):
+        self.hash = hash if hash is not None else git_rev_parse(ref)
+        self.ref = [ref]
+        self.ancestors = []
+        self.predecessors = []
+        self.father = self
+        self.other_fathers = set()
+        self.children = []
+        self.author = "AwesomeAuthor"
+        self.longref = "Awesome Description"
+        self.commit_timestamp = 0
+        self.between_me_and_father = []
+        self.evaluated = set()
+        self.real_father = False
+        self.me_head = False
+        self.small_hash = ""
+        self.get_my_info()
+        global origin_timestamp_threshold
+        self.use_me = (GitRevision.show_all or
+            self.commit_timestamp > GitRevision.origin_timestamp_threshold)
+
+    @classmethod
+    def make_unique(cls, ref, hash=None):
+        hash = hash if hash is not None else git_rev_parse(ref)
+        if hash in cls.revisionmap:
+            cls.revisionmap[hash].ref += [ref]
+        else:
+            cls.revisionmap[hash] = cls(ref, hash=hash)
+        return cls.revisionmap[hash]
+
+    @classmethod
+    def build_revmap(cls, reflist):
+        hashes = git_rev_parse_many(reflist)
+        for (hash, ref) in zip(hashes, reflist):
+            cls.make_unique(ref, hash=hash)
+        cls.remove_old_revs()
+
+    @staticmethod
+    def set_hashes(revs):
+        return set([x.hash for x in revs])
+
+    @classmethod
+    def print_ignored_if_any(cls):
+        if cls.ignored_message is not None:
+            print(cls.ignored_message)
+
+    @classmethod
+    def remove_old_revs(cls):
+        new_revisionmap = {}
+        ignored = []
+        for hash, rev in cls.revisionmap.iteritems():
+            if rev.use_me:
+                new_revisionmap[hash] = rev
+            else:
+                ignored.append(
+                    "ignored: %s %s (%s) [%.1f days old] %s" % (
+                    rev.small_hash,
+                    rev.author,
+                    ", ".join(rev.ref),
+                    (time.time() - rev.commit_timestamp) / seconds_in_a_day,
+                    rev.longref)
+                )
+        cls.revisionmap = new_revisionmap
+        cls.ignored_message = "\n".join(ignored)
+
+    @classmethod
+    def get_rev(cls, rev_hash):
+        if rev_hash not in cls.revisionmap:
+            cls.make_unique(rev_hash)
+        return cls.revisionmap[rev_hash]
+
+    @classmethod
+    def prepare(cls, to_be_prepared=None):
+        refs = cls.revisionmap.keys()
+        all_rev = cls.revisionmap.values()
+        will_prepare = to_be_prepared or all_rev
+        for rev in will_prepare:
+            for rev_s in all_rev:
+                rev.eval_rev(rev_s)
+        newrefs = set(cls.revisionmap.keys()) - set(refs)
+        if len(newrefs) > 0:
+            cls.prepare(to_be_prepared=[cls.get_rev(x) for x in newrefs])
+        if to_be_prepared is None:
+            cls.find_parents_and_children()
+            head_hash = git_rev_parse("HEAD")
+            cls.get_rev(head_hash).me_head = True
+
+    @classmethod
+    def find_parents_and_children(cls):
+        for rev in cls.revisionmap.values():
+            rev.normalize()
+        for rev in cls.revisionmap.values():
+            rev.find_my_children()
+        for rev in cls.revisionmap.values():
+            if rev.father == rev:
+                cls.root = rev
+        for rev in cls.revisionmap.values():
+            key=(lambda x: time.time() if "master" in x.ref else
+                           x.newest_timestamp())
+            rev.children = sorted(
+                rev.children,
+                key = key
+            )
+
+    def newest_timestamp(self):
+        ts = self.commit_timestamp
+        for ch in self.children:
+            ts = max(ts, ch.commit_timestamp)
+        return ts
+
+    def normalize(self):
+        self.ancestors = list(
+            dict([(x.hash, x) for x in self.ancestors]).values()
+        )
+        self.predecessors = list(
+            dict([(x.hash, x) for x in self.predecessors]).values()
+        )
+
+    def find_my_children(self):
+        my_ancestors_hashes = GitRevision.set_hashes(self.ancestors)
+        my_predecessors_hashes = GitRevision.set_hashes(self.predecessors)
+        for child in self.predecessors:
+
+            #                                  / OTHER_A
+            # AN \    / - PARALLEL_A ----------\
+            # AN - ME                            OTHER
+            # AN /    \ - PARALLEL_B - CHILD --/
+            # BR_A ------- BR_B -----/         \ OTHER_B
+            #
+            # if PARALLEL_B == {} => CHILD is child
+            #
+            #
+            #
+            # CHILD.predecessors = OTHER | OTHER_B
+            # CHILD.ancestors = AN | ME | PARALLEL_B | BR_A | BR_B
+            # ME.ancestors = AN | BR_A
+            # nodes := CHILD.ancestors - ME.ancestors - ME = PARALLEL_B | BR_B
+            # nodes & ME.predecessors = PARALLEL_B
+
+            # all operations are NlogN with very low const
+            child_anc = GitRevision.set_hashes(child.ancestors)
+            nodes = child_anc - my_ancestors_hashes
+            nodes = nodes - set([self.hash])
+            parallel_b = nodes & my_predecessors_hashes
+            if len(parallel_b) == 0:
+                # if there is no one that is between me and my child, then
+                # it's a 'direct child'
+                self.children.append(child)
+                direct_fathers = set(get_parents(child.hash))
+                fathers = child.other_fathers
+                if child.hash != child.father.hash:
+                    fathers|= set([child.father.hash])
+                fathers|= set([self.hash])
+                real_fathers = fathers & direct_fathers
+                if len(real_fathers) > 0:
+                    father_hash = real_fathers.pop()
+                    child.other_fathers = fathers - set([father_hash])
+                    child.father = GitRevision.get_rev(father_hash)
+                    child.real_father = True
+                else:
+                    father_hash = fathers.pop()
+                    child.other_fathers = fathers - set([father_hash])
+                    child.father = GitRevision.get_rev(father_hash)
+                    child.real_father = False
+
+    def is_same_hash(self, hash_str):
+        len_hash = min(len(self.hash), len(hash_str))
+        if self.hash[:len_hash] == hash_str[:len_hash]:
+            return True
+        return False
+
+    def eval_rev(self, revision):
+        if revision.hash == self.hash:
+            return
+        if revision.hash in self.evaluated:
+            return
+        self.evaluated.add(revision.hash)
+        revision.evaluated.add(self.hash)
+        ancestor = git_common_ancestor(self.hash, revision.hash)
+        if self.is_same_hash(ancestor):
+            self.predecessors.append(revision)
+            revision.ancestors.append(self)
+        elif revision.is_same_hash(ancestor):
+            self.ancestors.append(revision)
+            revision.predecessors.append(self)
+        else:
+            anc_rev = GitRevision.get_rev(ancestor)
+            anc_rev.eval_rev(self)
+            anc_rev.eval_rev(revision)
+
+    def __str__(self):
+        return '\n'.join(reversed(list(self.tree())))
+
+    def tree(self):
+        yield " " if self.root != self else "|"
+        for line in self.twolines_ref():
+            yield line
+        last = self.children[-1] if len(self.children) > 0 else None
+        for child in self.children:
+            if child.father is not self:
+                # this guy is a child of someone else too. let he print it
+                continue
+            prefix = '|' if child == last else '|/'
+            for line in child.tree():
+                yield prefix + line
+                prefix = '' if child == last else '| '
+
+    def twolines_ref(self):
+        bullet = "@  " if self.me_head else "o  "
+        text = self.small_hash + "  " + self.author
+        if self.me_head:
+            lines = bullet + ColorOutput.str("green", text)
+            longref = ColorOutput.str("green", self.longref)
+        else:
+            lines = bullet + text
+            longref = self.longref
+        if self.ref != self.hash:
+            refv = [
+                x + "*" if x == GitRevision.current_branch else x
+                for x in self.ref
+            ]
+            text = "  (" + ", ".join(refv) + ")"
+            if self.me_head:
+                lines += ColorOutput.str("yellow", text)
+            else:
+                lines += ColorOutput.str("blue", text)
+        if self.real_father:
+            trace = "|  "
+        else:
+            trace = ":  "
+        if len(self.other_fathers) == 0:
+            return [trace + longref, lines]
+        else:
+            other = [GitRevision.get_rev(x).small_hash for x in
+                    self.other_fathers]
+            other = ColorOutput.str("cyan", "Also son of: " + ", ".join(other))
+            return [trace + other, trace + longref, lines]
+
+    def get_my_info(self):
+        [name, longref, committime, small_hash] = get_info(self.hash)
+        self.author = name
+        self.longref = longref
+        self.commit_timestamp = int(committime)
+        self.small_hash = small_hash
+
+def run_cmd(cmd, swallow_error=False):
+    p = subprocess.Popen(["git"] + cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.returncode != 0:
+        if swallow_error:
+            return '', ''
+        print(
+            "git %s returned code %d:\nstdout:\n%s\nstderr:\n%s" %
+            (cmd, p.returncode, out, err)
+        )
+        exit(p.returncode)
+    return out, err
+
+def get_info(revref):
+    out, _ = run_cmd(["log", revref, "--format=%ae%x00%s%x00%ct%x00%h", "-n1"])
+    result = out.split('\n')[0].split("\x00")
+    result[0] = result[0].split('@')[0]
+    return result
+
+def get_parents(rev):
+    out, _ = run_cmd(["log", "--pretty=%P", "-n1", rev])
+    return out.split()
+
+def git_rev_parse_many(refs):
+    out, _  = run_cmd(["rev-parse"] + refs)
+    return out.split()
+
+def git_rev_parse(ref):
+    return git_rev_parse_many([ref])[0]
+
+# Git Branch (git branch)
+def git_branch_names():
+    out, _ = run_cmd(["branch"])
+    reg = r"\*\s*(\w*)"
+    GitRevision.current_branch = re.search(reg, out).groups()[0]
+    return list(set(out.split()) - set(["*"]))
+
+def git_common_ancestor(branch1, branch2):
+    out, _ = run_cmd(["merge-base", branch1, branch2], swallow_error=True)
+    return out.strip()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Git Smart Log - prints a '
+                'tree representation of your branches')
+    parser.add_argument('-a', '--all', action='store_true',
+       help='By default it will only look into features not older than 2 weeks'
+            ', if this is not what you want and you don\'t care about waiting '
+            'for 10 minutes, use this')
+    # defaults for
+    parser.add_argument('-t', '--time', metavar='FLOAT_TIME_IN_DAYS',
+            default=str(14), help='time in days to look for features.')
+    gitsl_args = parser.parse_args()
+    GitRevision.show_all = gitsl_args.all
+    GitRevision.origin_timestamp_threshold = (time.time() -
+            float(gitsl_args.time) * seconds_in_a_day)
+    GitRevision.build_revmap(git_branch_names() + ["HEAD"])
+    GitRevision.prepare()
+    print(GitRevision.root)
+    GitRevision.print_ignored_if_any()

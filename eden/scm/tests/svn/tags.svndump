@@ -1,0 +1,364 @@
+SVN-fs-dump-format-version: 2
+
+UUID: a9c3b03d-cffa-4248-8023-ecf4b2bdf5d5
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-04-29T19:26:51.708679Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 112
+Content-length: 112
+
+K 7
+svn:log
+V 10
+init projA
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:26:52.115023Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: unrelated
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 4
+adda
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:26:53.109819Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 7
+changea
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:26:54.073017Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+Content-length: 4
+
+a
+a
+
+
+Revision-number: 4
+Prop-content-length: 109
+Content-length: 109
+
+K 7
+svn:log
+V 8
+changea2
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:26:55.076032Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 6
+Text-content-md5: 7d4ebf8f298d22fc349a91725b00af1c
+Text-content-sha1: 92f31bc48f52339253fce6cad9f2f0c95b302f7e
+Content-length: 6
+
+a
+a
+a
+
+
+Revision-number: 5
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 15
+unrelatedchange
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:26:56.095784Z
+PROPS-END
+
+Node-path: unrelated/dummy
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 6
+Prop-content-length: 131
+Content-length: 131
+
+K 7
+svn:log
+V 29
+tagging trunk.v1 trunk.badtag
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:00.074864Z
+PROPS-END
+
+Node-path: tags/trunk.badtag
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: trunk
+
+
+Node-path: tags/trunk.v1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: trunk
+
+
+Revision-number: 7
+Prop-content-length: 109
+Content-length: 109
+
+K 7
+svn:log
+V 8
+changea3
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:01.073910Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 8
+Text-content-md5: d12178e74d8774e34361e0a08d1fd2b7
+Text-content-sha1: cce0b2a263066e26610df9082b7b3c810f71262e
+Content-length: 8
+
+a
+a
+a
+a
+
+
+Revision-number: 8
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 16
+fix trunk.badtag
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:04.073542Z
+PROPS-END
+
+Node-path: tags/trunk.goodtag
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: tags/trunk.badtag
+
+
+Node-path: tags/trunk.badtag
+Node-action: delete
+
+
+Revision-number: 9
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 7
+changea
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:05.095204Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 10
+Text-content-md5: 3f65cbdca1b64c2f8f574fccae24f3a4
+Text-content-sha1: 5c077263421de2abff9dbe867921bc6810811aa2
+Content-length: 10
+
+a
+a
+a
+a
+a
+
+
+Revision-number: 10
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 13
+removegoodtag
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:06.089193Z
+PROPS-END
+
+Node-path: tags/trunk.goodtag
+Node-action: delete
+
+
+Revision-number: 11
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 15
+recreategoodtag
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2009-04-29T19:27:09.070471Z
+PROPS-END
+
+Node-path: tags/trunk.goodtag
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 10
+Node-copyfrom-path: trunk
+
+

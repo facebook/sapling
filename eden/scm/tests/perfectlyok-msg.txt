@@ -1,0 +1,1 @@
+This commit message is perfectly OK, and has no sneaky control characters.

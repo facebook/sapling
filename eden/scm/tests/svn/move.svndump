@@ -1,0 +1,569 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 7d15f7c2-5863-4c16-aa2a-3418b1721d3a
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-05-09T13:02:37.336239Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 112
+Content-length: 112
+
+K 7
+svn:log
+V 10
+init projA
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:37.372834Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/d1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d1/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Node-path: trunk/d1/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-content-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
+Content-length: 12
+
+PROPS-END
+c
+
+
+Node-path: trunk/d2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d2/d
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Text-content-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
+Content-length: 12
+
+PROPS-END
+d
+
+
+Revision-number: 2
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 16
+commitbeforemove
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:38.049068Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+Content-length: 4
+
+a
+a
+
+
+Node-path: trunk/d1/c
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 63fad9092ad37713ebe26b3193f89c41
+Text-content-sha1: ccfb93b7bac6f1520f0adc0eebc2cafe9da80f42
+Content-length: 4
+
+c
+c
+
+
+Revision-number: 3
+Prop-content-length: 112
+Content-length: 112
+
+K 7
+svn:log
+V 10
+movedtrunk
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:39.044479Z
+PROPS-END
+
+Node-path: subproject
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Node-path: trunk
+Node-action: delete
+
+
+Revision-number: 4
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 11
+createtrunk
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:40.057804Z
+PROPS-END
+
+Node-path: subproject/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 5
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 14
+createbranches
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:41.058871Z
+PROPS-END
+
+Node-path: subproject/branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 6
+Prop-content-length: 107
+Content-length: 107
+
+K 7
+svn:log
+V 6
+moved1
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:42.046689Z
+PROPS-END
+
+Node-path: subproject/trunk/d1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: subproject/d1
+
+
+Node-path: subproject/d1
+Node-action: delete
+
+
+Revision-number: 7
+Prop-content-length: 107
+Content-length: 107
+
+K 7
+svn:log
+V 6
+moved2
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:42.071413Z
+PROPS-END
+
+Node-path: subproject/trunk/d2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 6
+Node-copyfrom-path: subproject/d2
+
+
+Node-path: subproject/d2
+Node-action: delete
+
+
+Revision-number: 8
+Prop-content-length: 119
+Content-length: 119
+
+K 7
+svn:log
+V 17
+changeb and rm d2
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:43.062018Z
+PROPS-END
+
+Node-path: subproject/trunk/d1/b
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 06ac26ed8b614fc0b141e4542aa067c2
+Text-content-sha1: f6980469e74f7125178e88ec571e06fe6ce86e95
+Content-length: 4
+
+b
+b
+
+
+Node-path: subproject/trunk/d2
+Node-action: delete
+
+
+Revision-number: 9
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 11
+moved1again
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:44.047997Z
+PROPS-END
+
+Node-path: subproject/branches/d1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 8
+Node-copyfrom-path: subproject/trunk/d1
+
+
+Node-path: subproject/trunk/d1
+Node-action: delete
+
+
+Revision-number: 10
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 16
+copyfilefrompast
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:44.086619Z
+PROPS-END
+
+Node-path: subproject/trunk/d
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: subproject/trunk/d2/d
+Text-copy-source-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Text-copy-source-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
+
+
+Revision-number: 11
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 15
+copydirfrompast
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:44.111550Z
+PROPS-END
+
+Node-path: subproject/trunk/d2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: subproject/trunk/d2
+
+
+Revision-number: 12
+Prop-content-length: 107
+Content-length: 107
+
+K 7
+svn:log
+V 6
+add d3
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:45.067982Z
+PROPS-END
+
+Node-path: subproject/trunk/d3
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subproject/trunk/d3/d31
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subproject/trunk/d3/d31/e
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9ffbf43126e33be52cd2bf7e01d627f9
+Text-content-sha1: 094e3afb2fe8dfe82f63731cdcd3b999f4856cff
+Content-length: 12
+
+PROPS-END
+e
+
+
+Node-path: subproject/trunk/d3/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9a8ad92c50cae39aa2c5604fd0ab6d8c
+Text-content-sha1: a9fcd54b25e7e863d72cd47c08af46e61b74b561
+Content-length: 12
+
+PROPS-END
+f
+
+
+Revision-number: 13
+Prop-content-length: 128
+Content-length: 128
+
+K 7
+svn:log
+V 26
+copy dir and remove subdir
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:47.061259Z
+PROPS-END
+
+Node-path: subproject/trunk/d3/d31
+Node-action: delete
+
+
+Node-path: subproject/trunk/d4
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 12
+Node-copyfrom-path: subproject/trunk/d3
+
+
+Revision-number: 14
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 9
+add d4old
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:49.063363Z
+PROPS-END
+
+Node-path: subproject/trunk/d4old
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subproject/trunk/d4old/g
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: f5302386464f953ed581edac03556e55
+Text-content-sha1: a5938ace3f424be1a26904781cdb06d55b614e6b
+Content-length: 12
+
+PROPS-END
+g
+
+
+Revision-number: 15
+Prop-content-length: 125
+Content-length: 125
+
+K 7
+svn:log
+V 23
+rename d4old into d4new
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-05-09T13:02:51.047304Z
+PROPS-END
+
+Node-path: subproject/trunk/d4new
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 14
+Node-copyfrom-path: subproject/trunk/d4old
+
+
+Node-path: subproject/trunk/d4old
+Node-action: delete
+
+

@@ -1,0 +1,15 @@
+[package]
+name = "pyrevisionstore"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython-ext = { path = "../../../../lib/cpython-ext" }
+cpython-failure = { path = "../../../../lib/cpython-failure" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+encoding = { path = "../../../../lib/encoding" }
+failure = "0.1"
+parking_lot = "0.9.0"
+pyconfigparser = { path = "../pyconfigparser" }
+revisionstore = { path = "../../../../lib/revisionstore" }
+types = { path = "../../../../lib/types" }
