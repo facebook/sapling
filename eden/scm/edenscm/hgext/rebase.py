@@ -655,6 +655,7 @@ class rebaseruntime(object):
                     rev,
                     p1,
                     p2,
+                    self.keepf,
                     wctx=self.wctx,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
@@ -668,6 +669,7 @@ class rebaseruntime(object):
                     rev,
                     p1,
                     p2,
+                    self.keepf,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
                     date=self.date,
@@ -731,6 +733,7 @@ class rebaseruntime(object):
                     revtoreuse,
                     p1,
                     self.external,
+                    self.keepf,
                     commitmsg=commitmsg,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
@@ -746,6 +749,7 @@ class rebaseruntime(object):
                         revtoreuse,
                         p1,
                         self.external,
+                        self.keepf,
                         commitmsg=commitmsg,
                         extrafn=_makeextrafn(self.extrafns),
                         editor=editor,
@@ -1329,6 +1333,7 @@ def concludememorynode(
     rev,
     p1,
     p2,
+    keepf,
     wctx=None,
     commitmsg=None,
     editor=None,
@@ -1348,7 +1353,8 @@ def concludememorynode(
     if copypreds:
         preds.extend(repo.changelog.node(r) for r in copypreds)
         mutop = "rebase-copy"
-    mutation.record(repo, extra, preds, mutop)
+    if not keepf:
+        mutation.record(repo, extra, preds, mutop)
     if extrafn:
         extrafn(ctx, extra)
     loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
@@ -1385,6 +1391,7 @@ def concludenode(
     rev,
     p1,
     p2,
+    keepf,
     commitmsg=None,
     editor=None,
     extrafn=None,
@@ -1408,7 +1415,8 @@ def concludenode(
         if copypreds:
             preds.extend(repo.changelog.node(r) for r in copypreds)
             mutop = "rebase-copy"
-        mutation.record(repo, extra, preds, mutop)
+        if not keepf:
+            mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
         loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
