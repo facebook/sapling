@@ -18,7 +18,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use futures::{future, stream, sync, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use lock_ext::RwLockExt;
 use mononoke_types::ChangesetId;
@@ -57,10 +57,15 @@ impl WarmBookmarksCache {
             warmers.clone(),
             warm_cs_ids.clone(),
         );
-        update_bookmarks(bookmarks.clone(), ctx, repo, warmers, warm_cs_ids).map(move |()| Self {
-            bookmarks,
-            terminate: Some(sender),
-        })
+        update_bookmarks(bookmarks.clone(), ctx.clone(), repo, warmers, warm_cs_ids).map(
+            move |()| {
+                info!(ctx.logger(), "Started warm bookmark cache updater");
+                Self {
+                    bookmarks,
+                    terminate: Some(sender),
+                }
+            },
+        )
     }
 
     pub fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
@@ -144,14 +149,19 @@ fn update_bookmarks(
                     // bookmarks as warm. Changesets that fail derivation
                     // will be tried again on the next iteration if they are
                     // still bookmarked.
-                    stream::futures_unordered(warmers.iter().map({
+                    //
+                    // Spawn each warmer into a separate task so that they
+                    // run in parallel.
+                    let warmers = warmers.iter().map({
                         cloned!(ctx, repo);
                         move |warmer| {
-                            (*warmer)(ctx.clone(), repo.clone(), cs_id).then(|res| Ok(res.is_ok()))
+                            spawn_future((*warmer)(ctx.clone(), repo.clone(), cs_id))
+                                .then(|res| Ok(res.is_ok()))
                         }
-                    }))
-                    .fold(true, |a, b| -> Result<bool, Error> { Ok(a && b) })
-                    .right_future()
+                    });
+                    stream::futures_unordered(warmers)
+                        .fold(true, |a, b| -> Result<bool, Error> { Ok(a && b) })
+                        .right_future()
                 }
                 .map(move |success| (bookmark.into_name(), cs_id, success))
             }
