@@ -45,6 +45,15 @@ EPHEMERAL_DB_WHITELIST = {
 NETWORK_BLACKHOLE_BLACKLIST: Set[str] = set()
 
 
+def is_mode_opt_buck_binary():
+    try:
+        import __manifest__
+
+        return __manifest__.fbmake["build_mode"] == "opt"
+    except ImportError:
+        return False
+
+
 class TestFlags(NamedTuple):
     interactive: bool
     verbose: bool
@@ -168,11 +177,18 @@ def _hg_runner(
             *extra_args,
         ]
 
-        # The network blackhole script breaks opt mode PAR binaries (because
-        # /tmp has the wrong owner, because we are running in a user namespace),
-        # so we don't enable it if we're building in opt. This is probably fine
-        # since we do have tests running in dev as well.
-        if blackhole and not os.environ.get("FBCODE_BUILD_MODE") == "opt":
+        # The network blackhole script breaks opt mode PAR binaries, so that
+        # breaks hg's run tests (that is because /tmp has the wrong owner,
+        # because we are running in a user namespace), so we don't enable it if
+        # we're running in opt. This is necessary ...  but it's also kinda meh
+        # for 2 reasons:
+        # - It means mode/opt tests can talk to the network. This is probably
+        # fine since running in mode/dev would probably catch problems first if
+        # any.
+        # - The fact that this binary was built in mode/opt does not
+        # necessarily mean that the hg run tests binary was. It's a decent
+        # approximation, though.
+        if blackhole and not is_mode_opt_buck_binary():
             args.insert(0, manifest_env["NETWORK_BLACKHOLE"])
 
         env = os.environ.copy()
