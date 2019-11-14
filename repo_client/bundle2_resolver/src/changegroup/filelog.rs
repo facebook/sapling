@@ -586,10 +586,7 @@ mod tests {
             true
         }
 
-        fn correct_conversion_single(f: Filelog) -> bool {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
-
+        fn correct_conversion_single(fb: FacebookInit, f: Filelog) -> bool {
             let ctx = CoreContext::test_mock(fb);
             check_conversion(
                 ctx,
@@ -600,10 +597,7 @@ mod tests {
             true
         }
 
-        fn correct_conversion_delta_against_first(f: Filelog, fs: Vec<Filelog>) -> bool {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
-
+        fn correct_conversion_delta_against_first(fb: FacebookInit, f: Filelog, fs: Vec<Filelog>) -> bool {
             let ctx = CoreContext::test_mock(fb);
             let mut hash_gen = NodeHashGen::new();
 
@@ -629,10 +623,7 @@ mod tests {
             true
         }
 
-        fn correct_conversion_delta_against_next(fs: Vec<Filelog>) -> bool {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
-
+        fn correct_conversion_delta_against_next(fb: FacebookInit, fs: Vec<Filelog>) -> bool {
             let ctx = CoreContext::test_mock(fb);
             let mut hash_gen = NodeHashGen::new();
 

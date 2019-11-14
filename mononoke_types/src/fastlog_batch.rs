@@ -330,9 +330,7 @@ mod test {
     }
 
     quickcheck! {
-        fn fastlog_roundtrip(hashes: Vec<(ChangesetId, i32)>) -> TestResult {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
+        fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
 
             let mut rt = Runtime::new().unwrap();
             let blobstore = Arc::new(linear::getrepo(fb).get_blobstore());

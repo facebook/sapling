@@ -1446,9 +1446,7 @@ mod test {
     }
 
     quickcheck! {
-        fn filter_publishing(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
+        fn filter_publishing(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_publishing_by_prefix(ctx, prefix, repo_id, freshness)
@@ -1459,9 +1457,7 @@ mod test {
             want == have
         }
 
-        fn filter_pull_default(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
+        fn filter_pull_default(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_pull_default_by_prefix(ctx, prefix, repo_id, freshness)
@@ -1472,9 +1468,7 @@ mod test {
             want == have
         }
 
-        fn filter_all(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-            // TODO: this needs to be passed down from #[fbinit::test] instead.
-            let fb = *fbinit::FACEBOOK;
+        fn filter_all(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, DEFAULT_MAX)

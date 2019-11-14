@@ -319,10 +319,7 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             #[test]
             fn $test_name() {
-                fn prop(set: RevsetSpec) -> bool {
-                    // TODO: this needs to be passed down from #[fbinit::test] instead.
-                    let fb = *fbinit::FACEBOOK;
-
+                fn prop(fb: FacebookInit, set: RevsetSpec) -> bool {
                     async_unit::tokio_unit_test(move || {
                         let ctx = CoreContext::test_mock(fb);
                         let repo = Arc::new($repo::getrepo(fb));
@@ -330,7 +327,7 @@ mod test {
                     })
                 }
 
-                quickcheck(prop as fn(RevsetSpec) -> bool)
+                quickcheck(prop as fn(FacebookInit, RevsetSpec) -> bool)
             }
         };
     }
