@@ -636,7 +636,7 @@ mod tests {
             ("same", "1"),
         ]);
 
-        let matcher = TreeMatcher::from_rules(["d1/**"].iter());
+        let matcher = TreeMatcher::from_rules(["d1/**"].iter()).unwrap();
         let diff = Diff::new(&ltree, &rtree, &matcher);
         let entries = diff
             .collect::<Fallible<Vec<_>>>()
@@ -804,36 +804,52 @@ mod tests {
         let right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
 
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1/**"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
+            Diff::new(
+                &left,
+                &right,
+                &TreeMatcher::from_rules(["a1/b1/**"].iter()).unwrap()
+            )
+            .collect::<Fallible<Vec<_>>>()
+            .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a1/b1/c1/d1"),
                 DiffType::LeftOnly(make_meta("10"))
             ),)
         );
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b2"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
+            Diff::new(
+                &left,
+                &right,
+                &TreeMatcher::from_rules(["a1/b2"].iter()).unwrap()
+            )
+            .collect::<Fallible<Vec<_>>>()
+            .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a1/b2"),
                 DiffType::Changed(make_meta("20"), make_meta("40"))
             ),)
         );
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["a2/b2/**"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
+            Diff::new(
+                &left,
+                &right,
+                &TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap()
+            )
+            .collect::<Fallible<Vec<_>>>()
+            .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a2/b2/c2"),
                 DiffType::RightOnly(make_meta("30"))
             ),)
         );
         assert_eq!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["*/b2/**"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
+            Diff::new(
+                &left,
+                &right,
+                &TreeMatcher::from_rules(["*/b2/**"].iter()).unwrap()
+            )
+            .collect::<Fallible<Vec<_>>>()
+            .unwrap(),
             vec!(
                 DiffEntry::new(
                     repo_path_buf("a1/b2"),
@@ -845,11 +861,13 @@ mod tests {
                 ),
             )
         );
-        assert!(
-            Diff::new(&left, &right, &TreeMatcher::from_rules(["a3/**"].iter()))
-                .next()
-                .is_none()
-        );
+        assert!(Diff::new(
+            &left,
+            &right,
+            &TreeMatcher::from_rules(["a3/**"].iter()).unwrap()
+        )
+        .next()
+        .is_none());
     }
 
     #[test]

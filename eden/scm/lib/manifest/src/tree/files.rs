@@ -229,7 +229,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["a2/b2/**"].iter()))
+            tree.files(&TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -238,13 +238,13 @@ mod tests {
             )
         );
         assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["a1/*/c1/**"].iter()))
+            tree.files(&TreeMatcher::from_rules(["a1/*/c1/**"].iter()).unwrap())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!((repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),)
         );
         assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["**/c3"].iter()))
+            tree.files(&TreeMatcher::from_rules(["**/c3"].iter()).unwrap())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -255,13 +255,13 @@ mod tests {
 
         // A prefix matcher works as expected.
         assert_eq!(
-            dirs(&tree, &TreeMatcher::from_rules(["a1/**"].iter())),
+            dirs(&tree, &TreeMatcher::from_rules(["a1/**"].iter()).unwrap()),
             ["Ephemeral a1", "Ephemeral a1/b1", "Ephemeral a1/b1/c1"]
         );
 
         // A suffix matcher is not going to be effective.
         assert_eq!(
-            dirs(&tree, &TreeMatcher::from_rules(["**/c2"].iter())),
+            dirs(&tree, &TreeMatcher::from_rules(["**/c2"].iter()).unwrap()),
             [
                 "Ephemeral a1",
                 "Ephemeral a2",

@@ -10,6 +10,7 @@
 use std::path::Path;
 
 use cpython::*;
+use cpython_ext::failure::ResultPyErrExt;
 use cpython_ext::Bytes;
 
 use encoding::local_bytes_to_path;
@@ -63,7 +64,7 @@ py_class!(class treematcher |py| {
     data matcher: TreeMatcher;
 
     def __new__(_cls, rules: Vec<String>) -> PyResult<Self> {
-        let matcher = TreeMatcher::from_rules(rules.into_iter());
+        let matcher = TreeMatcher::from_rules(rules.into_iter()).map_pyerr::<exc::ValueError>(py)?;
         Self::create_instance(py, matcher)
     }
 

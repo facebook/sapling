@@ -887,12 +887,18 @@ class patternmatcher(basematcher):
         # kindpats are already normalized to be relative to repo-root.
         # Can we use tree matcher?
         rules = _kindpatstoglobs(kindpats, recursive=False)
+        fallback = True
         if rules is not None:
-            matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
-            # Replace self to 'matcher'.
-            self.__dict__ = matcher.__dict__
-            self.__class__ = matcher.__class__
-        else:
+            try:
+                matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
+                # Replace self to 'matcher'.
+                self.__dict__ = matcher.__dict__
+                self.__class__ = matcher.__class__
+                fallback = False
+            except ValueError:
+                # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
+                pass
+        if fallback:
             self._prefix = _prefix(kindpats)
             self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
 
@@ -927,12 +933,18 @@ class includematcher(basematcher):
 
         # Can we use tree matcher?
         rules = _kindpatstoglobs(kindpats, recursive=True)
+        fallback = True
         if rules is not None:
-            matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
-            # Replace self to 'matcher'.
-            self.__dict__ = matcher.__dict__
-            self.__class__ = matcher.__class__
-        else:
+            try:
+                matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
+                # Replace self to 'matcher'.
+                self.__dict__ = matcher.__dict__
+                self.__class__ = matcher.__class__
+                fallback = False
+            except ValueError:
+                # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
+                pass
+        if fallback:
             self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
             # prefix is True if all patterns are recursive, so certain fast paths
             # can be enabled. Unfortunately, it's too easy to break it (ex. by
