@@ -55,6 +55,16 @@ class DynamicEvent {
   DoubleMap doubles_;
 };
 
+struct DaemonStart {
+  static constexpr const char* type = "daemon_start";
+
+  double duration = 0.0;
+
+  void populate(DynamicEvent& event) const {
+    event.addDouble("duration", duration);
+  }
+};
+
 struct FinishedCheckout {
   static constexpr const char* type = "checkout";
 

@@ -14,6 +14,7 @@
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 #include <folly/ssl/Init.h>
+#include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <pwd.h>
 #include <sysexits.h>
@@ -30,6 +31,7 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
 #include "eden/fs/telemetry/SessionInfo.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 
 // This has to be placed after eden-config.h
 #ifdef EDEN_HAVE_CURL
@@ -123,6 +125,8 @@ int EdenMain::main(int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
   //// Root privileges dropped
   ////////////////////////////////////////////////////////////////////
+
+  folly::stop_watch<> daemonStart;
 
   std::vector<std::string> originalCommandLine{argv, argv + argc};
 
@@ -258,7 +262,14 @@ int EdenMain::main(int argc, char** argv) {
               result.exception().what());
         }
         startupLogger->success();
-      });
+      })
+      .ensure(
+          [daemonStart,
+           structuredLogger = server->getServerState()->getStructuredLogger()] {
+            auto startTimeInSeconds =
+                std::chrono::duration<double>{daemonStart.elapsed()}.count();
+            structuredLogger->logEvent(DaemonStart{startTimeInSeconds});
+          });
 
   runServer(server.value());
   server->performCleanup();
