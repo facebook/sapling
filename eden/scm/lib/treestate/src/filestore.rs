@@ -10,7 +10,7 @@
 use crate::errors::ErrorKind;
 use crate::store::{BlockId, Store, StoreView};
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fs::File;
@@ -54,7 +54,7 @@ pub struct FileStore {
 
 impl FileStore {
     /// Create a new FileStore, overwriting any existing file.
-    pub fn create<P: AsRef<Path>>(path: P) -> Fallible<FileStore> {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<FileStore> {
         let mut file = BufWriter::new(
             OpenOptions::new()
                 .read(true)
@@ -77,7 +77,7 @@ impl FileStore {
     /// Open an existing FileStore.  Attempts to open the file in read/write mode.  If write
     /// access is not permitted, falls back to opening the file in read-only mode.  When open
     /// in read-only mode, new blocks of data cannot be appended.
-    pub fn open<P: AsRef<Path>>(path: P) -> Fallible<FileStore> {
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<FileStore> {
         let mut read_only = false;
         let file = OpenOptions::new()
             .read(true)
@@ -115,7 +115,7 @@ impl FileStore {
         })
     }
 
-    pub fn cache(&mut self) -> Fallible<()> {
+    pub fn cache(&mut self) -> Result<()> {
         if self.cache.is_none() {
             let file = self.file.get_mut();
             file.flush()?;
@@ -140,7 +140,7 @@ impl FileStore {
 }
 
 impl Store for FileStore {
-    fn append(&mut self, data: &[u8]) -> Fallible<BlockId> {
+    fn append(&mut self, data: &[u8]) -> Result<BlockId> {
         if self.read_only {
             bail!(ErrorKind::ReadOnlyStore);
         }
@@ -159,7 +159,7 @@ impl Store for FileStore {
         Ok(id)
     }
 
-    fn flush(&mut self) -> Fallible<()> {
+    fn flush(&mut self) -> Result<()> {
         let file = self.file.get_mut();
         file.flush()?;
         file.get_mut().sync_all()?;
@@ -168,7 +168,7 @@ impl Store for FileStore {
 }
 
 impl StoreView for FileStore {
-    fn read<'a>(&'a self, id: BlockId) -> Fallible<Cow<'a, [u8]>> {
+    fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>> {
         // Check the ID is in range.
         if id.0 < HEADER_LEN || id.0 > self.position - 4 {
             bail!(ErrorKind::InvalidStoreId(id.0));

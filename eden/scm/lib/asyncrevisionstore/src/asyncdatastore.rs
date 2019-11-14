@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::{Error, Fallible};
+use failure::{Error, Fallible as Result};
 use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
@@ -71,7 +71,7 @@ impl<T: DataStore + ToKeys + Send + Sync> AsyncDataStore<T> {
     pub fn iter(&self) -> impl Stream<Item = Key, Error = Error> + Send {
         let keysfut = self.data.block(move |store| Ok(store.to_keys()));
         keysfut
-            .and_then(|keys: Vec<Fallible<Key>>| ok(iter_ok(keys.into_iter().flatten())))
+            .and_then(|keys: Vec<Result<Key>>| ok(iter_ok(keys.into_iter().flatten())))
             .flatten_stream()
     }
 }

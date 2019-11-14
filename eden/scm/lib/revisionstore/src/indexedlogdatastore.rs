@@ -13,7 +13,7 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use failure::{bail, ensure, Fallible};
+use failure::{bail, ensure, Fallible as Result};
 use parking_lot::RwLock;
 
 use indexedlog::{
@@ -71,7 +71,7 @@ impl Entry {
     /// - Flag: 1 byte,
     /// - Len: 2 unsigned bytes, big-endian
     /// - Value: <Len> bytes, big-endian
-    fn from_slice(data: &[u8]) -> Fallible<Self> {
+    fn from_slice(data: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(data);
         let hgid = cur.read_hgid()?;
 
@@ -98,7 +98,7 @@ impl Entry {
     }
 
     /// Read an entry from the IndexedLog and deserialize it.
-    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Option<Self>> {
+    pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
         let mut log_entry = log.lookup(0, key.hgid.as_ref())?;
         let buf = match log_entry.nth(0) {
             None => return Ok(None),
@@ -109,7 +109,7 @@ impl Entry {
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
-    pub fn write_to_log(self, log: &mut RotateLog) -> Fallible<()> {
+    pub fn write_to_log(self, log: &mut RotateLog) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(self.key.hgid.as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -133,7 +133,7 @@ impl Entry {
         Ok(log.append(buf)?)
     }
 
-    pub fn content(&mut self) -> Fallible<Bytes> {
+    pub fn content(&mut self) -> Result<Bytes> {
         if let Some(content) = self.content.as_ref() {
             return Ok(content.clone());
         }
@@ -154,7 +154,7 @@ impl Entry {
 
 impl IndexedLogDataStore {
     /// Create or open an `IndexedLogDataStore`.
-    pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let open_options = Self::default_open_options();
         let log = open_options.open(&path)?;
         Ok(IndexedLogDataStore {
@@ -164,7 +164,7 @@ impl IndexedLogDataStore {
 
     /// Attempt to repair data at the given path.
     /// Return human-readable repair logs.
-    pub fn repair(path: impl AsRef<Path>) -> Fallible<String> {
+    pub fn repair(path: impl AsRef<Path>) -> Result<String> {
         let path = path.as_ref();
         let open_options = Self::default_open_options();
         Ok(open_options.repair(path)?)
@@ -183,7 +183,7 @@ impl IndexedLogDataStore {
 }
 
 impl MutableDeltaStore for IndexedLogDataStore {
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
@@ -191,18 +191,18 @@ impl MutableDeltaStore for IndexedLogDataStore {
         entry.write_to_log(&mut inner.log)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         self.inner.write().log.flush()?;
         Ok(None)
     }
 }
 
 impl LocalStore for IndexedLogDataStore {
-    fn from_path(path: &Path) -> Fallible<Self> {
+    fn from_path(path: &Path) -> Result<Self> {
         IndexedLogDataStore::new(path)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.read();
         Ok(keys
             .iter()
@@ -216,11 +216,11 @@ impl LocalStore for IndexedLogDataStore {
 }
 
 impl DataStore for IndexedLogDataStore {
-    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!()
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         let inner = self.inner.read();
         let mut entry = match Entry::from_log(&key, &inner.log)? {
             None => return Ok(None),
@@ -234,18 +234,18 @@ impl DataStore for IndexedLogDataStore {
         }));
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         Ok(self.get_delta(key)?.map(|delta| vec![delta]))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let inner = self.inner.read();
         Ok(Entry::from_log(&key, &inner.log)?.map(|entry| entry.metadata().clone()))
     }
 }
 
 impl ToKeys for IndexedLogDataStore {
-    fn to_keys(&self) -> Vec<Fallible<Key>> {
+    fn to_keys(&self) -> Vec<Result<Key>> {
         self.inner
             .read()
             .log
@@ -320,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_chain() -> Fallible<()> {
+    fn test_add_chain() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogDataStore::new(&tempdir)?;
 
@@ -336,7 +336,7 @@ mod tests {
     }
 
     #[test]
-    fn test_iter() -> Fallible<()> {
+    fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogDataStore::new(&tempdir)?;
 
@@ -354,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    fn test_corrupted() -> Fallible<()> {
+    fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogDataStore::new(&tempdir)?;
 

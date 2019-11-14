@@ -14,7 +14,7 @@ use std::hash::Hash;
 use std::path::{Path, PathBuf};
 
 use bytes::Bytes;
-use failure::Fallible;
+use failure::Fallible as Result;
 use util::path::expand_path;
 
 use crate::config::{ConfigSet, Options};
@@ -61,7 +61,7 @@ pub trait ConfigSetHgExt {
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
 
     /// Get a config item. Convert to type `T`.
-    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Fallible<Option<T>>;
+    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>>;
 
     /// Get a config item. Convert to type `T`.
     ///
@@ -71,28 +71,24 @@ pub trait ConfigSetHgExt {
         section: &str,
         name: &str,
         default_func: impl Fn() -> T,
-    ) -> Fallible<T> {
+    ) -> Result<T> {
         Ok(self.get_opt(section, name)?.unwrap_or_else(default_func))
     }
 
     /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, return `T::default()`.
-    fn get_or_default<T: Default + FromConfigValue>(
-        &self,
-        section: &str,
-        name: &str,
-    ) -> Fallible<T> {
+    fn get_or_default<T: Default + FromConfigValue>(&self, section: &str, name: &str) -> Result<T> {
         self.get_or(section, name, Default::default)
     }
 }
 
 pub trait FromConfigValue: Sized {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self>;
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self>;
 }
 
 /// Load system, user config files.
-pub fn load() -> Fallible<ConfigSet> {
+pub fn load() -> Result<ConfigSet> {
     let mut set = ConfigSet::new();
     if let Some(error) = set.load_system().pop() {
         return Err(error.into());
@@ -326,7 +322,7 @@ impl ConfigSetHgExt for ConfigSet {
         self.load_path(path, &opts)
     }
 
-    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Fallible<Option<T>> {
+    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
         ConfigSet::get(self, section, name)
             .map(|bytes| T::try_from_bytes(&bytes))
             .transpose()
@@ -334,7 +330,7 @@ impl ConfigSetHgExt for ConfigSet {
 }
 
 impl FromConfigValue for bool {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.to_lowercase();
         match value.as_ref() {
             "1" | "yes" | "true" | "on" | "always" => Ok(true),
@@ -345,77 +341,77 @@ impl FromConfigValue for bool {
 }
 
 impl FromConfigValue for i8 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for i16 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for i32 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for i64 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for isize {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u8 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u16 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u32 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u64 {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for usize {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for String {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         String::from_utf8(bytes.to_vec())
             .map_err(|_| Error::Convert(format!("{:?} is not utf8 encoded", bytes)).into())
     }
@@ -439,7 +435,7 @@ impl From<u64> for ByteCount {
 }
 
 impl FromConfigValue for ByteCount {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         // This implementation matches mercurial/util.py:sizetoint
         let sizeunits = [
             ("kb", 1u64 << 10),
@@ -476,7 +472,7 @@ impl FromConfigValue for ByteCount {
 }
 
 impl FromConfigValue for PathBuf {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let st = std::str::from_utf8(&bytes)?;
 
         Ok(expand_path(st))
@@ -484,14 +480,14 @@ impl FromConfigValue for PathBuf {
 }
 
 impl<T: FromConfigValue> FromConfigValue for Vec<T> {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let items = parse_list(bytes);
         items.into_iter().map(|s| T::try_from_bytes(&s)).collect()
     }
 }
 
 impl<T: FromConfigValue> FromConfigValue for Option<T> {
-    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         T::try_from_bytes(&bytes).map(Option::Some)
     }
 }

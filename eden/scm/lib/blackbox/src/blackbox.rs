@@ -7,7 +7,7 @@
 
 use super::match_pattern;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
+use failure::Fallible as Result;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
 use serde::{Deserialize, Serialize};
@@ -90,7 +90,7 @@ const HEADER_BYTES: usize = TIMESTAMP_BYTES + SESSION_ID_BYTES;
 
 impl BlackboxOptions {
     /// Create a [`Blackbox`] instance at the given path using the specified options.
-    pub fn open(self, path: impl AsRef<Path>) -> Fallible<Blackbox> {
+    pub fn open(self, path: impl AsRef<Path>) -> Result<Blackbox> {
         let path = path.as_ref();
         let opts = self.rotate_log_open_options();
         let log = match opts.clone().open(path) {
@@ -113,7 +113,7 @@ impl BlackboxOptions {
         Ok(blackbox)
     }
 
-    pub fn create_in_memory(self) -> Fallible<Blackbox> {
+    pub fn create_in_memory(self) -> Result<Blackbox> {
         let opts = self.rotate_log_open_options();
         let log = opts.create_in_memory()?;
         Ok(Blackbox {

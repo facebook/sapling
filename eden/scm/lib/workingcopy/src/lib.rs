@@ -9,7 +9,7 @@ use std::fs::{self, DirEntry};
 use std::io;
 use std::path::PathBuf;
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};
@@ -19,7 +19,7 @@ use types::{RepoPath, RepoPathBuf};
 pub struct Walker<M> {
     root: PathBuf,
     dir_matches: Vec<RepoPathBuf>,
-    file_matches: Vec<Fallible<RepoPathBuf>>,
+    file_matches: Vec<Result<RepoPathBuf>>,
     matcher: M,
 }
 
@@ -40,7 +40,7 @@ where
         }
     }
 
-    fn match_entry(&mut self, next_dir: &RepoPathBuf, entry: io::Result<DirEntry>) -> Fallible<()> {
+    fn match_entry(&mut self, next_dir: &RepoPathBuf, entry: io::Result<DirEntry>) -> Result<()> {
         let entry = entry?;
         let filename = entry.file_name();
         let filename = RepoPath::from_str(filename.to_str().unwrap())?;
@@ -65,7 +65,7 @@ where
     }
 
     /// Lazy traversal to find matching files
-    fn walk(&mut self) -> Fallible<()> {
+    fn walk(&mut self) -> Result<()> {
         while self.file_matches.is_empty() && !self.dir_matches.is_empty() {
             let mut next_dir = self.dir_matches.pop().unwrap();
             for entry in fs::read_dir(self.root.join(next_dir.as_str()))? {
@@ -82,7 +82,7 @@ impl<M> Iterator for Walker<M>
 where
     M: Matcher,
 {
-    type Item = Fallible<RepoPathBuf>;
+    type Item = Result<RepoPathBuf>;
     fn next(&mut self) -> Option<Self::Item> {
         match self.walk() {
             Err(e) => Some(Err(e)),
@@ -105,7 +105,7 @@ mod tests {
     fn create_directory(
         directories: &std::vec::Vec<&str>,
         files: &std::vec::Vec<&str>,
-    ) -> Fallible<tempfile::TempDir> {
+    ) -> Result<tempfile::TempDir> {
         let root = tempdir()?;
         for dir in directories {
             create_dir_all(root.path().join(dir))?;
@@ -121,13 +121,13 @@ mod tests {
     }
 
     #[test]
-    fn test_walker() -> Fallible<()> {
+    fn test_walker() -> Result<()> {
         let directories = vec!["dirA", "dirB/dirC/dirD"];
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
         let walker = Walker::new(root_path, AlwaysMatcher::new());
-        let walked_files: Result<Vec<_>, _> = walker.collect();
+        let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert_eq!(walked_files.len(), 3);
         for file in walked_files {
@@ -137,7 +137,7 @@ mod tests {
     }
 
     #[test]
-    fn test_match_nothing() -> Fallible<()> {
+    fn test_match_nothing() -> Result<()> {
         let directories = vec!["dirA"];
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;

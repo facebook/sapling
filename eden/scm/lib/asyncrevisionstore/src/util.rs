@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use failure::{Error, Fallible};
+use failure::{Error, Fallible as Result};
 use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
@@ -33,7 +33,7 @@ impl<T: Send + Sync> AsyncWrapper<T> {
     /// Wraps callback into a blocking context.
     pub fn block<U: Send>(
         &self,
-        callback: impl Fn(&T) -> Fallible<U> + Send,
+        callback: impl Fn(&T) -> Result<U> + Send,
     ) -> impl Future<Item = U, Error = Error> + Send {
         poll_fn({
             cloned!(self.inner);

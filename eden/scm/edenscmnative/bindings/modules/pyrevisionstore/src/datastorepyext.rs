@@ -6,10 +6,10 @@
  */
 
 use cpython::{
-    PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
+    PyBytes, PyDict, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use revisionstore::{DataStore, MutableDeltaStore, RemoteDataStore, ToKeys};
 use types::{Key, Node};
@@ -127,7 +127,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
                 Ok(k) => from_tuple_to_key(py, &k),
                 Err(e) => Err(e),
             })
-            .collect::<Result<Vec<Key>, PyErr>>()?;
+            .collect::<PyResult<Vec<Key>>>()?;
         let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
 
         let results = PyList::new(py, &[]);
@@ -156,7 +156,7 @@ impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
                 .into_py_object(py);
             Ok(tuple)
         });
-        iter.collect::<Fallible<Vec<PyTuple>>>()
+        iter.collect::<Result<Vec<PyTuple>>>()
             .map_err(|e| to_pyerr(py, &e.into()))
     }
 }

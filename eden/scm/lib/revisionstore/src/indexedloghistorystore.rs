@@ -13,7 +13,7 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use indexedlog::{
     log::IndexOutput,
@@ -96,7 +96,7 @@ impl Entry {
     /// Optionally:
     /// - copy from len: 2 unsigned bytes, big-endian
     /// - copy from: <copy from len> bytes
-    fn from_slice(data: &[u8]) -> Fallible<Self> {
+    fn from_slice(data: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(data);
         let hgid = cur.read_hgid()?;
 
@@ -134,7 +134,7 @@ impl Entry {
     }
 
     /// Read an entry from the `IndexedLog` and deserialize it.
-    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Option<Self>> {
+    pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
         let index_key = Self::key_to_index_key(key);
         let mut log_entry = log.lookup(0, index_key)?;
         let buf = match log_entry.nth(0) {
@@ -147,7 +147,7 @@ impl Entry {
 
     /// Write an entry to the `IndexedLog`. See [`from_slice`] for the detail about the on-disk
     /// format.
-    pub fn write_to_log(self, log: &mut RotateLog) -> Fallible<()> {
+    pub fn write_to_log(self, log: &mut RotateLog) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(Self::key_to_index_key(&self.key).as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -185,7 +185,7 @@ impl Entry {
 
 impl IndexedLogHistoryStore {
     /// Create or open an `IndexedLogHistoryStore`.
-    pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let open_options = Self::default_open_options();
         let log = open_options.open(&path)?;
         Ok(IndexedLogHistoryStore {
@@ -195,7 +195,7 @@ impl IndexedLogHistoryStore {
 
     /// Attempt to repair data at the given path.
     /// Return human-readable repair logs.
-    pub fn repair(path: impl AsRef<Path>) -> Fallible<String> {
+    pub fn repair(path: impl AsRef<Path>) -> Result<String> {
         let path = path.as_ref();
         let open_options = Self::default_open_options();
         Ok(open_options.repair(path)?)
@@ -214,11 +214,11 @@ impl IndexedLogHistoryStore {
 }
 
 impl LocalStore for IndexedLogHistoryStore {
-    fn from_path(path: &Path) -> Fallible<Self> {
+    fn from_path(path: &Path) -> Result<Self> {
         IndexedLogHistoryStore::new(path)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.read().unwrap();
         Ok(keys
             .iter()
@@ -232,7 +232,7 @@ impl LocalStore for IndexedLogHistoryStore {
 }
 
 impl HistoryStore for IndexedLogHistoryStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let inner = self.inner.read().unwrap();
         let entry = match Entry::from_log(key, &inner.log)? {
             None => return Ok(None),
@@ -243,20 +243,20 @@ impl HistoryStore for IndexedLogHistoryStore {
 }
 
 impl MutableHistoryStore for IndexedLogHistoryStore {
-    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         let mut inner = self.inner.write().unwrap();
         let entry = Entry::new(key, info);
         entry.write_to_log(&mut inner.log)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         self.inner.write().unwrap().log.flush()?;
         Ok(None)
     }
 }
 
 impl ToKeys for IndexedLogHistoryStore {
-    fn to_keys(&self) -> Vec<Fallible<Key>> {
+    fn to_keys(&self) -> Vec<Result<Key>> {
         self.inner
             .read()
             .unwrap()
@@ -283,7 +283,7 @@ mod tests {
     use crate::historypack::tests::get_nodes;
 
     #[test]
-    fn test_empty() -> Fallible<()> {
+    fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         log.flush()?;
@@ -291,7 +291,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add() -> Fallible<()> {
+    fn test_add() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
@@ -306,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_get_node_info() -> Fallible<()> {
+    fn test_add_get_node_info() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
@@ -324,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn test_corrupted() -> Fallible<()> {
+    fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
@@ -353,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn test_iter() -> Fallible<()> {
+    fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         let k = key("a", "1");

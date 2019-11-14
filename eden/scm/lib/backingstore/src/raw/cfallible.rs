@@ -14,7 +14,7 @@
 //! Consumer of this struct needs to ensure the returned error string freed with
 //! `rust_cfallible_free_error`.
 
-use failure::Fallible;
+use failure::Fallible as Result;
 use libc::c_char;
 use std::ffi::CString;
 
@@ -58,8 +58,8 @@ impl<T> CFallible<T> {
     }
 }
 
-impl<T> From<Fallible<*mut T>> for CFallible<T> {
-    fn from(value: Fallible<*mut T>) -> Self {
+impl<T> From<Result<*mut T>> for CFallible<T> {
+    fn from(value: Result<*mut T>) -> Self {
         match value {
             Ok(value) => CFallible::ok(value),
             Err(err) => CFallible::err(err),

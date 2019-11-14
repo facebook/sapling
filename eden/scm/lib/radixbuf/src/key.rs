@@ -27,7 +27,7 @@
 
 use crate::errors::ErrorKind;
 use crate::traits::Resize;
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use std::io::{Cursor, Seek, SeekFrom, Write};
 use vlqencoding::{VLQDecode, VLQEncode};
 
@@ -72,7 +72,7 @@ pub struct VariantKey;
 
 impl FixedKey {
     #[inline]
-    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Fallible<&'a [u8]> {
+    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Result<&'a [u8]> {
         let key_buf = key_buf.as_ref();
         let start_pos: usize = key_id.into();
         // LANG: Consider making 20 a type parameter once supported.
@@ -98,7 +98,7 @@ impl FixedKey {
 
 impl VariantKey {
     #[inline]
-    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Fallible<&'a [u8]> {
+    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Result<&'a [u8]> {
         let key_buf = key_buf.as_ref();
         let mut reader = Cursor::new(key_buf);
         reader.seek(SeekFrom::Start(key_id.into()))?;

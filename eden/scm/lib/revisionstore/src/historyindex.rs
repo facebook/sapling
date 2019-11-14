@@ -16,7 +16,7 @@ use std::{
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 use memmap::{Mmap, MmapOptions};
 
 use types::{HgId, Key, RepoPath};
@@ -39,7 +39,7 @@ struct HistoryIndexOptions {
 }
 
 impl HistoryIndexOptions {
-    pub fn read<T: Read>(reader: &mut T) -> Fallible<HistoryIndexOptions> {
+    pub fn read<T: Read>(reader: &mut T) -> Result<HistoryIndexOptions> {
         let version = reader.read_u8()?;
         let version = match version {
             0 => HistoryPackVersion::Zero,
@@ -64,7 +64,7 @@ impl HistoryIndexOptions {
         Ok(HistoryIndexOptions { version, large })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         writer.write_u8(match self.version {
             HistoryPackVersion::Zero => 0,
             HistoryPackVersion::One => 1,
@@ -96,7 +96,7 @@ pub(crate) struct FileIndexEntry {
 const FILE_ENTRY_LEN: usize = 44;
 
 impl FileIndexEntry {
-    pub fn read(buf: &[u8]) -> Fallible<Self> {
+    pub fn read(buf: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
         let hgid_slice: &[u8] = buf.get_err(0..20)?;
@@ -109,7 +109,7 @@ impl FileIndexEntry {
         })
     }
 
-    fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
+    fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         writer.write_all(self.hgid.as_ref())?;
         writer.write_u64::<BigEndian>(self.file_section_offset)?;
         writer.write_u64::<BigEndian>(self.file_section_size)?;
@@ -127,7 +127,7 @@ pub(crate) struct NodeIndexEntry {
 const NODE_ENTRY_LEN: usize = 28;
 
 impl NodeIndexEntry {
-    pub fn read(buf: &[u8]) -> Fallible<Self> {
+    pub fn read(buf: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
         let hgid_slice: &[u8] = buf.get_err(0..20)?;
@@ -137,7 +137,7 @@ impl NodeIndexEntry {
         })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         writer.write_all(self.hgid.as_ref())?;
         writer.write_u64::<BigEndian>(self.offset)?;
         Ok(())
@@ -154,7 +154,7 @@ pub(crate) struct HistoryIndex {
 }
 
 impl HistoryIndex {
-    pub fn new(path: &Path) -> Fallible<Self> {
+    pub fn new(path: &Path) -> Result<Self> {
         let file = File::open(path)?;
         let len = file.metadata()?.len();
         if len < 1 {
@@ -194,7 +194,7 @@ impl HistoryIndex {
         writer: &mut T,
         file_sections: &[(&RepoPath, FileSectionLocation)],
         nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         // Write header
         let options = HistoryIndexOptions {
             version: HistoryPackVersion::One,
@@ -205,7 +205,7 @@ impl HistoryIndex {
         let mut file_sections: Vec<(&RepoPath, HgId, FileSectionLocation)> = file_sections
             .iter()
             .map(|e| Ok((e.0, sha1(&e.0.as_byte_slice()), e.1.clone())))
-            .collect::<Fallible<Vec<(&RepoPath, HgId, FileSectionLocation)>>>()?;
+            .collect::<Result<Vec<(&RepoPath, HgId, FileSectionLocation)>>>()?;
         // They must be written in sorted order so they can be bisected.
         file_sections.sort_by_key(|x| x.1);
 
@@ -236,7 +236,7 @@ impl HistoryIndex {
         options: &HistoryIndexOptions,
         file_sections: &Vec<(&RepoPath, HgId, FileSectionLocation)>,
         nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         // For each file, keep track of where its hgid index will start.
         // The first ones starts after the header, fanout, file count, file section, and hgid count.
         let mut hgid_offset: usize = 2
@@ -287,7 +287,7 @@ impl HistoryIndex {
         writer: &mut T,
         nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
         file_name: &RepoPath,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         // Write the filename
         let file_name_slice = file_name.as_byte_slice();
         writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
@@ -312,7 +312,7 @@ impl HistoryIndex {
         Ok(())
     }
 
-    pub fn get_file_entry(&self, key: &Key) -> Fallible<Option<FileIndexEntry>> {
+    pub fn get_file_entry(&self, key: &Key) -> Result<Option<FileIndexEntry>> {
         let filename_hgid = sha1(key.path.as_byte_slice());
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_hgid)?;
         let start = start + self.index_start;
@@ -329,7 +329,7 @@ impl HistoryIndex {
             .map(Some)
     }
 
-    pub fn get_hgid_entry(&self, key: &Key) -> Fallible<Option<NodeIndexEntry>> {
+    pub fn get_hgid_entry(&self, key: &Key) -> Result<Option<NodeIndexEntry>> {
         let file_entry = match self.get_file_entry(&key)? {
             None => return Ok(None),
             Some(entry) => entry,
@@ -348,15 +348,15 @@ impl HistoryIndex {
             .map(Some)
     }
 
-    fn read_file_entry(&self, offset: usize) -> Fallible<FileIndexEntry> {
+    fn read_file_entry(&self, offset: usize) -> Result<FileIndexEntry> {
         FileIndexEntry::read(self.read_data(offset, FILE_ENTRY_LEN)?)
     }
 
-    fn read_hgid_entry(&self, offset: usize) -> Fallible<NodeIndexEntry> {
+    fn read_hgid_entry(&self, offset: usize) -> Result<NodeIndexEntry> {
         NodeIndexEntry::read(self.read_data(offset, NODE_ENTRY_LEN)?)
     }
 
-    fn read_data(&self, offset: usize, size: usize) -> Fallible<&[u8]> {
+    fn read_data(&self, offset: usize, size: usize) -> Result<&[u8]> {
         let offset = offset + self.index_start;
         Ok(self.mmap.get_err(offset..offset + size)?)
     }

@@ -8,7 +8,7 @@
 //! Trait defining an append-only storage system.
 
 use crate::errors::ErrorKind;
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use std::borrow::Cow;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash)]
@@ -19,17 +19,17 @@ pub struct BlockId(pub u64);
 pub trait Store {
     /// Append a new block of data to the store.  Returns the ID of the block.  Note that blocks
     /// may be buffered until `flush` is called.
-    fn append(&mut self, data: &[u8]) -> Fallible<BlockId>;
+    fn append(&mut self, data: &[u8]) -> Result<BlockId>;
 
     /// Flush all appended blocks to the backing store.
-    fn flush(&mut self) -> Fallible<()>;
+    fn flush(&mut self) -> Result<()>;
 }
 
 /// Read-only view of a store.
 pub trait StoreView {
     /// Read a block of data from the store.  Blocks are immutiable, so the result may be a
     /// reference to the internal copy of the data in the store.
-    fn read<'a>(&'a self, id: BlockId) -> Fallible<Cow<'a, [u8]>>;
+    fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>>;
 }
 
 /// Null implementation of a store.  This cannot be used to store new blocks of data, and returns
@@ -43,17 +43,17 @@ impl NullStore {
 }
 
 impl Store for NullStore {
-    fn append(&mut self, _: &[u8]) -> Fallible<BlockId> {
+    fn append(&mut self, _: &[u8]) -> Result<BlockId> {
         panic!("append to NullStore");
     }
 
-    fn flush(&mut self) -> Fallible<()> {
+    fn flush(&mut self) -> Result<()> {
         Ok(())
     }
 }
 
 impl StoreView for NullStore {
-    fn read<'a>(&'a self, id: BlockId) -> Fallible<Cow<'a, [u8]>> {
+    fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>> {
         bail!(ErrorKind::InvalidStoreId(id.0))
     }
 }
@@ -83,20 +83,20 @@ pub mod tests {
     }
 
     impl Store for MapStore {
-        fn append(&mut self, data: &[u8]) -> Fallible<BlockId> {
+        fn append(&mut self, data: &[u8]) -> Result<BlockId> {
             let id = self.next_id;
             self.data.insert(id, data.to_vec());
             self.next_id.0 += data.len() as u64;
             Ok(id)
         }
 
-        fn flush(&mut self) -> Fallible<()> {
+        fn flush(&mut self) -> Result<()> {
             Ok(())
         }
     }
 
     impl StoreView for MapStore {
-        fn read<'a>(&'a self, id: BlockId) -> Fallible<Cow<'a, [u8]>> {
+        fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>> {
             match self.data.get(&id) {
                 Some(data) => Ok(Cow::from(data.as_slice())),
                 None => bail!(ErrorKind::InvalidStoreId(id.0)),

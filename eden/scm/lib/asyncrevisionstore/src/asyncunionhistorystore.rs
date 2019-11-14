@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use failure::{Error, Fallible};
+use failure::{Error, Fallible as Result};
 use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
@@ -20,7 +20,7 @@ pub type AsyncUnionHistoryStore<T> = AsyncHistoryStore<UnionHistoryStore<T>>;
 
 fn new_store<T: HistoryStore + Send + Sync + 'static>(
     packs: Vec<PathBuf>,
-    builder: impl Fn(&Path) -> Fallible<T> + Send + 'static,
+    builder: impl Fn(&Path) -> Result<T> + Send + 'static,
 ) -> impl Future<Item = AsyncUnionHistoryStore<T>, Error = Error> + Send + 'static {
     poll_fn({
         move || {

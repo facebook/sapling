@@ -11,7 +11,7 @@ use clap::{App, Arg};
 use commitcloudsubscriber::{
     CommitCloudConfig, CommitCloudTcpReceiverService, CommitCloudWorkspaceSubscriberService,
 };
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use log::info;
 use serde::Deserialize;
 use std::fs::File;
@@ -34,7 +34,7 @@ fn main() {
     run().unwrap();
 }
 
-fn run() -> Fallible<()> {
+fn run() -> Result<()> {
     check_nice()?;
     env_logger::init();
     let help: &str = &format!(
@@ -111,7 +111,7 @@ fn run() -> Fallible<()> {
 ///
 /// This is because the hg processes spawned by this daemon inherit the
 /// priority, and they can be quite slow if run on low priority.
-fn check_nice() -> Fallible<()> {
+fn check_nice() -> Result<()> {
     #[cfg(unix)]
     {
         let nice = unsafe { libc::nice(0) };

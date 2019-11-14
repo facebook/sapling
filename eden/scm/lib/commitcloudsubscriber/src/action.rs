@@ -6,7 +6,7 @@
  */
 
 use crate::error::*;
-use failure::Fallible;
+use failure::Fallible as Result;
 use log::{error, info};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -20,7 +20,7 @@ impl CloudSyncTrigger {
         path: P,
         retries: u32,
         version: Option<u64>,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         let mut version_args = vec![];
         if let Some(version) = version {
             version_args.append(&mut vec![

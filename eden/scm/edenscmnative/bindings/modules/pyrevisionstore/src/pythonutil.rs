@@ -11,7 +11,7 @@ use cpython::{
     exc, FromPyObject, PyBytes, PyDict, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
-use failure::{Error, Fallible};
+use failure::{Error, Fallible as Result};
 
 use cpython_ext::PyErr as ExtPyErr;
 use revisionstore::datastore::{Delta, Metadata};
@@ -133,7 +133,7 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
     to_key(py, &name, &node)
 }
 
-pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Fallible<PyBytes> {
+pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyBytes> {
     PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
 }
 

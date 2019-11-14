@@ -14,7 +14,7 @@
 //! and can arrange the directory structure to prevent over-watching.
 
 use clap::{App, AppSettings, Arg, SubCommand};
-use failure::{bail, format_err, Error, Fallible};
+use failure::{bail, format_err, Fallible as Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
@@ -74,7 +74,7 @@ fn home_dir() -> String {
 }
 
 #[cfg(unix)]
-fn lookup_home_dir_for_user(user: &str) -> Fallible<String> {
+fn lookup_home_dir_for_user(user: &str) -> Result<String> {
     let pw = PasswordEntry::by_name(user)?;
     Ok(pw.home_dir)
 }
@@ -82,14 +82,14 @@ fn lookup_home_dir_for_user(user: &str) -> Fallible<String> {
 /// This is technically wrong for windows, but is at least
 /// wrong in a backwards compatible way
 #[cfg(windows)]
-fn lookup_home_dir_for_user(user: &str) -> Fallible<String> {
+fn lookup_home_dir_for_user(user: &str) -> Result<String> {
     Ok(home_dir())
 }
 
 impl Config {
     /// Attempt to load a Config instance from the specified path.
     /// If path does not exist, None is returned.
-    fn load_file<P: AsRef<Path>>(path: P) -> Result<Option<Self>, Error> {
+    fn load_file<P: AsRef<Path>>(path: P) -> Result<Option<Self>> {
         let path = path.as_ref();
         let mut file = match fs::File::open(path) {
             Ok(file) => file,
@@ -119,7 +119,7 @@ impl Config {
     /// files in order and merging them together.  Missing files are OK,
     /// but any IO or parse errors cause the config resolution to stop and
     /// return the error.
-    fn load() -> Result<Self, Error> {
+    fn load() -> Result<Self> {
         let mut result = Self::default();
 
         let config_files = [
@@ -173,7 +173,7 @@ impl Config {
     }
 }
 
-fn run() -> Result<(), Error> {
+fn run() -> Result<()> {
     let matches = App::new("Scratch")
         .setting(AppSettings::SubcommandRequired)
         .setting(AppSettings::ColoredHelp)
@@ -252,7 +252,7 @@ struct PasswordEntry {
 
 #[cfg(unix)]
 impl PasswordEntry {
-    fn maybe_string(cstr: *const libc::c_char, context: &str) -> Fallible<String> {
+    fn maybe_string(cstr: *const libc::c_char, context: &str) -> Result<String> {
         if cstr.is_null() {
             Err(failure::err_msg(context.to_string()))
         } else {
@@ -261,7 +261,7 @@ impl PasswordEntry {
         }
     }
 
-    fn from_password(pwent: *const libc::passwd) -> Fallible<Self> {
+    fn from_password(pwent: *const libc::passwd) -> Result<Self> {
         failure::ensure!(!pwent.is_null(), "password ptr is null");
         let pw = unsafe { &*pwent };
         Ok(Self {
@@ -274,7 +274,7 @@ impl PasswordEntry {
 
     /// Lookup a PasswordEntry for a uid.
     /// Not thread safe.
-    pub fn by_uid(uid: u32) -> Fallible<Self> {
+    pub fn by_uid(uid: u32) -> Result<Self> {
         let pw = unsafe { libc::getpwuid(uid) };
         if pw.is_null() {
             let err = std::io::Error::last_os_error();
@@ -285,7 +285,7 @@ impl PasswordEntry {
 
     /// Lookup a PasswordEntry for a unix username.
     /// Not thread safe.
-    pub fn by_name(unixname: &str) -> Fallible<Self> {
+    pub fn by_name(unixname: &str) -> Result<Self> {
         let user_cstr = std::ffi::CString::new(unixname.to_string())?;
 
         let pw = unsafe { libc::getpwnam(user_cstr.as_ptr()) };
@@ -301,7 +301,7 @@ impl PasswordEntry {
 /// Given a path, return the unix name of the owner of that path.
 /// If we cannot stat the path, raise an error.
 #[cfg(unix)]
-fn get_file_owner(path: &Path) -> Result<String, Error> {
+fn get_file_owner(path: &Path) -> Result<String> {
     let meta = fs::metadata(path)
         .map_err(|e| format_err!("unable to get metadata for {}: {}", path.display(), e))?;
     let uid = meta.uid();
@@ -311,7 +311,7 @@ fn get_file_owner(path: &Path) -> Result<String, Error> {
 }
 
 #[cfg(unix)]
-fn set_file_owner(path: &Path, owner: &str) -> Fallible<()> {
+fn set_file_owner(path: &Path, owner: &str) -> Result<()> {
     use std::ffi::CString;
 
     let is_root = unsafe { libc::geteuid() } == 0;
@@ -346,7 +346,7 @@ fn set_file_owner(path: &Path, owner: &str) -> Fallible<()> {
 /// This should alter the file ACLs on windows, but for now we're just
 /// ignoring this, as we don't think the issue a practical problem.
 #[cfg(windows)]
-fn set_file_owner(_path: &Path, _owner: &str) -> Fallible<()> {
+fn set_file_owner(_path: &Path, _owner: &str) -> Result<()> {
     Ok(())
 }
 
@@ -355,14 +355,14 @@ fn set_file_owner(_path: &Path, _owner: &str) -> Fallible<()> {
 /// and good enough for the moment, and we can add support for the real
 /// thing in a later diff.
 #[cfg(windows)]
-fn get_file_owner(_path: &Path) -> Result<String, Error> {
+fn get_file_owner(_path: &Path) -> Result<String> {
     Ok(get_current_user())
 }
 
 /// Resolves the root directory to use as the scratch space for a given
 /// repository path.  This is the function that performs expansion of
 /// the $USER and $HOME placeholder tokens in the configured template.
-fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf, Error> {
+fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf> {
     let repo_owner = get_file_owner(path)?;
     let template = config.template_for_path(path, &repo_owner);
 
@@ -387,7 +387,7 @@ fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf, Error> {
 
 /// A watchable path needs a .watchmanconfig file to define the boundary
 /// of the watch and allow the watch of occur.
-fn create_watchmanconfig(_config: &Config, path: &Path, repo_owner: &str) -> Result<(), Error> {
+fn create_watchmanconfig(_config: &Config, path: &Path, repo_owner: &str) -> Result<()> {
     let filename = path.join(".watchmanconfig");
     let mut file = fs::File::create(&filename)?;
     // Write out an empty json object
@@ -403,7 +403,7 @@ fn path_command(
     subdir: Option<&str>,
     watchable: bool,
     path: Option<&str>,
-) -> Result<(), Error> {
+) -> Result<()> {
     // Canonicalize the provided path.  If no path was provided, fall
     // back to the cwd.
     let path = match path {

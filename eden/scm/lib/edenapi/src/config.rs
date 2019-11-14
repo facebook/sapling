@@ -188,13 +188,13 @@ mod tests {
 
     use std::fs::File;
 
-    use failure::Fallible;
+    use failure::Fallible as Result;
     use tempdir::TempDir;
 
     use configparser::config::Options;
 
     #[test]
-    fn test_from_hg_config() -> Fallible<()> {
+    fn test_from_hg_config() -> Result<()> {
         // Need to ensure that configured cert and key
         // paths actually exist on disk since otherwise
         // the auth crate will ignore the auth settings.

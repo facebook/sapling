@@ -16,7 +16,7 @@ use std::io::Write;
 use std::path::Path;
 use std::str;
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use types::hgid::HgId;
@@ -28,7 +28,7 @@ pub struct BookmarkStore {
 }
 
 impl BookmarkStore {
-    pub fn new(dir_path: &Path) -> Fallible<Self> {
+    pub fn new(dir_path: &Path) -> Result<Self> {
         // Log entry encoding:
         //   LOG := UPDATE | REMOVAL
         //   UPDATE := 'U' + NODE_ID + BOOKMARK_NAME
@@ -119,7 +119,7 @@ impl BookmarkStore {
         }
     }
 
-    pub fn update(&mut self, bookmark: &str, hgid: HgId) -> Fallible<()> {
+    pub fn update(&mut self, bookmark: &str, hgid: HgId) -> Result<()> {
         Ok(self
             .log
             .append(BookmarkEntry::pack(&BookmarkEntry::Update {
@@ -128,7 +128,7 @@ impl BookmarkStore {
             }))?)
     }
 
-    pub fn remove(&mut self, bookmark: &str) -> Fallible<()> {
+    pub fn remove(&mut self, bookmark: &str) -> Result<()> {
         if self.lookup_bookmark(bookmark).is_none() {
             return Err(errors::BookmarkNotFound {
                 name: bookmark.to_string(),
@@ -140,7 +140,7 @@ impl BookmarkStore {
             .append(BookmarkEntry::pack(&BookmarkEntry::Remove { bookmark }))?)
     }
 
-    pub fn flush(&mut self) -> Fallible<()> {
+    pub fn flush(&mut self) -> Result<()> {
         self.log.flush()?;
         Ok(())
     }

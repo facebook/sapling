@@ -11,7 +11,7 @@ use std::{borrow::Borrow, cell::RefCell, ops::Deref, str, sync::Arc};
 
 use bytes::Bytes;
 use cpython::*;
-use failure::{format_err, Fallible};
+use failure::{format_err, Error};
 
 use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
@@ -22,6 +22,8 @@ use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonDataStore;
 use revisionstore::{DataStore, RemoteDataStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
+
+type Result<T, E = Error> = std::result::Result<T, E>;
 
 struct ManifestStore<T> {
     underlying: T,
@@ -34,7 +36,7 @@ impl<T> ManifestStore<T> {
 }
 
 impl<T: DataStore + RemoteDataStore> manifest::TreeStore for ManifestStore<T> {
-    fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
+    fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
         let key = Key::new(path.to_owned(), node);
         self.underlying
             .get(&key)?
@@ -42,13 +44,13 @@ impl<T: DataStore + RemoteDataStore> manifest::TreeStore for ManifestStore<T> {
             .map(|data| Bytes::from(data))
     }
 
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Fallible<()> {
+    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
         unimplemented!(
             "At this time we don't expect to ever write manifest in rust using python stores."
         );
     }
 
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.underlying.prefetch(keys)
     }
 }

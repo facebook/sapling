@@ -8,7 +8,7 @@
 use crate::error::*;
 use crate::protocol::{JsonProtocol, Protocol};
 use crate::queries::*;
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use std::io::BufReader;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -16,25 +16,25 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub trait Transport {
-    fn watch_project<P: AsRef<Path>>(&mut self, path: P) -> Fallible<WatchProjectResponse>;
+    fn watch_project<P: AsRef<Path>>(&mut self, path: P) -> Result<WatchProjectResponse>;
 
     fn query<P: AsRef<Path>>(
         &mut self,
         params: QueryRequestParams,
         path: P,
-    ) -> Fallible<QueryResponse>;
+    ) -> Result<QueryResponse>;
 
     fn state_enter<P: AsRef<Path>>(
         &mut self,
         params: StateEnterParams,
         path: P,
-    ) -> Fallible<StateEnterResponse>;
+    ) -> Result<StateEnterResponse>;
 
     fn state_leave<P: AsRef<Path>>(
         &mut self,
         params: StateLeaveParams,
         path: P,
-    ) -> Fallible<StateLeaveResponse>;
+    ) -> Result<StateLeaveResponse>;
 }
 
 /// Implementations:
@@ -77,7 +77,7 @@ pub mod unix_socket_transport {
             self
         }
 
-        fn get_sock_name(&mut self) -> Fallible<&PathBuf> {
+        fn get_sock_name(&mut self) -> Result<&PathBuf> {
             match self.sockname {
                 Some(ref s) => Ok(s),
                 None => {
@@ -109,7 +109,7 @@ pub mod unix_socket_transport {
             &mut self,
             cmd: &'static str,
             request: Request,
-        ) -> Fallible<Response>
+        ) -> Result<Response>
         where
             Request: serde::Serialize,
             for<'de> Response: serde::Deserialize<'de>,
@@ -135,7 +135,7 @@ pub mod unix_socket_transport {
         SP: Protocol, // send protocol
         RP: Protocol, // receive protocol
     {
-        fn watch_project<P: AsRef<Path>>(&mut self, path: P) -> Fallible<WatchProjectResponse> {
+        fn watch_project<P: AsRef<Path>>(&mut self, path: P) -> Result<WatchProjectResponse> {
             let request = WatchProjectRequest(WATCH_PROJECT, path.as_ref().to_owned());
             self.rpc(WATCH_PROJECT, &request)
         }
@@ -144,7 +144,7 @@ pub mod unix_socket_transport {
             &mut self,
             params: QueryRequestParams,
             path: P,
-        ) -> Fallible<QueryResponse> {
+        ) -> Result<QueryResponse> {
             let resp: QueryResponse =
                 self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
             Ok(resp)
@@ -154,7 +154,7 @@ pub mod unix_socket_transport {
             &mut self,
             params: StateEnterParams,
             path: P,
-        ) -> Fallible<StateEnterResponse> {
+        ) -> Result<StateEnterResponse> {
             let request = StateEnterRequest(STATE_ENTER, path.as_ref().to_owned(), params);
             self.rpc(STATE_ENTER, &request)
         }
@@ -163,7 +163,7 @@ pub mod unix_socket_transport {
             &mut self,
             params: StateLeaveParams,
             path: P,
-        ) -> Fallible<StateLeaveResponse> {
+        ) -> Result<StateLeaveResponse> {
             let request = StateLeaveRequest(STATE_LEAVE, path.as_ref().to_owned(), params);
             self.rpc(STATE_LEAVE, &request)
         }
@@ -208,7 +208,7 @@ pub mod command_line_transport {
             &mut self,
             cmd: &'static str,
             request: Request,
-        ) -> Fallible<Response>
+        ) -> Result<Response>
         where
             Request: serde::Serialize,
             for<'de> Response: serde::Deserialize<'de>,
@@ -241,7 +241,7 @@ pub mod command_line_transport {
             }
         }
 
-        pub fn get_sock_name(&mut self) -> Fallible<GetSockNameResponse> {
+        pub fn get_sock_name(&mut self) -> Result<GetSockNameResponse> {
             let request = GetSockNameRequest((GET_SOCKNAME,));
             self.rpc(GET_SOCKNAME, request)
         }
@@ -251,7 +251,7 @@ pub mod command_line_transport {
     where
         RP: Protocol, // receive protocol
     {
-        fn watch_project<P: AsRef<Path>>(&mut self, path: P) -> Fallible<WatchProjectResponse> {
+        fn watch_project<P: AsRef<Path>>(&mut self, path: P) -> Result<WatchProjectResponse> {
             let request = WatchProjectRequest(WATCH_PROJECT, path.as_ref().to_owned());
             self.rpc(WATCH_PROJECT, request)
         }
@@ -260,7 +260,7 @@ pub mod command_line_transport {
             &mut self,
             params: QueryRequestParams,
             path: P,
-        ) -> Fallible<QueryResponse> {
+        ) -> Result<QueryResponse> {
             let resp: QueryResponse =
                 self.rpc(QUERY, QueryRequest(QUERY, path.as_ref().to_owned(), params))?;
             Ok(resp)
@@ -270,7 +270,7 @@ pub mod command_line_transport {
             &mut self,
             _params: StateEnterParams,
             _path: P,
-        ) -> Fallible<StateEnterResponse> {
+        ) -> Result<StateEnterResponse> {
             Err(ErrorKind::CommandLineTransportError(STATE_ENTER, "unsupported".into()).into())
         }
 
@@ -278,7 +278,7 @@ pub mod command_line_transport {
             &mut self,
             _params: StateLeaveParams,
             _path: P,
-        ) -> Fallible<StateLeaveResponse> {
+        ) -> Result<StateLeaveResponse> {
             Err(ErrorKind::CommandLineTransportError(STATE_LEAVE, "unsupported".into()).into())
         }
     }
@@ -314,7 +314,7 @@ pub mod windows_named_pipe_transport {
         SP: Protocol,
         RP: Protocol,
     {
-        fn watch_project<P: AsRef<Path>>(&mut self, _path: P) -> Fallible<WatchProjectResponse> {
+        fn watch_project<P: AsRef<Path>>(&mut self, _path: P) -> Result<WatchProjectResponse> {
             unimplemented!()
         }
 
@@ -322,7 +322,7 @@ pub mod windows_named_pipe_transport {
             &mut self,
             _params: QueryRequestParams,
             _path_root: P,
-        ) -> Fallible<QueryResponse> {
+        ) -> Result<QueryResponse> {
             unimplemented!()
         }
 
@@ -330,7 +330,7 @@ pub mod windows_named_pipe_transport {
             &mut self,
             _params: StateEnterParams,
             _path: P,
-        ) -> Fallible<StateEnterResponse> {
+        ) -> Result<StateEnterResponse> {
             unimplemented!()
         }
 
@@ -338,7 +338,7 @@ pub mod windows_named_pipe_transport {
             &mut self,
             _params: StateLeaveParams,
             _path: P,
-        ) -> Fallible<StateLeaveResponse> {
+        ) -> Result<StateLeaveResponse> {
             unimplemented!()
         }
     }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fallible;
+use failure::Fallible as Result;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -65,7 +65,7 @@ impl TcpReceiverService {
         self
     }
 
-    pub fn serve(self) -> Fallible<thread::JoinHandle<Fallible<()>>> {
+    pub fn serve(self) -> Result<thread::JoinHandle<Result<()>>> {
         let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], self.port)))?;
         Ok(thread::spawn(move || {
             info!("Starting CommitCloud TcpReceiverService");

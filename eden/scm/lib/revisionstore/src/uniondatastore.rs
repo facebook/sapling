@@ -6,7 +6,7 @@
  */
 
 // Union data store
-use failure::{err_msg, Fallible};
+use failure::{err_msg, Fallible as Result};
 
 use mpatch::mpatch::get_full_text;
 
@@ -18,7 +18,7 @@ use crate::unionstore::UnionStore;
 pub type UnionDataStore<T> = UnionStore<T>;
 
 impl<T: DataStore> UnionDataStore<T> {
-    fn get_partial_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_partial_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         for store in self {
             match store.get_delta_chain(key)? {
                 None => continue,
@@ -31,7 +31,7 @@ impl<T: DataStore> UnionDataStore<T> {
 }
 
 impl<T: DataStore> DataStore for UnionDataStore<T> {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let delta_chain = self.get_delta_chain(key)?;
         let delta_chain = match delta_chain {
             Some(chain) => chain,
@@ -54,7 +54,7 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
         ))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         for store in self {
             if let Some(delta) = store.get_delta(key)? {
                 return Ok(Some(delta));
@@ -64,7 +64,7 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
         Ok(None)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let mut current_key = Some(key.clone());
         let mut delta_chain = Vec::new();
         while let Some(key) = current_key {
@@ -82,7 +82,7 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
         Ok(Some(delta_chain))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         for store in self {
             if let Some(meta) = store.get_meta(key)? {
                 return Ok(Some(meta));
@@ -111,49 +111,49 @@ mod tests {
     struct EmptyDataStore;
 
     impl DataStore for EmptyDataStore {
-        fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+        fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
             Ok(None)
         }
 
-        fn get_delta(&self, _key: &Key) -> Fallible<Option<Delta>> {
+        fn get_delta(&self, _key: &Key) -> Result<Option<Delta>> {
             Ok(None)
         }
 
-        fn get_delta_chain(&self, _key: &Key) -> Fallible<Option<Vec<Delta>>> {
+        fn get_delta_chain(&self, _key: &Key) -> Result<Option<Vec<Delta>>> {
             Ok(None)
         }
 
-        fn get_meta(&self, _key: &Key) -> Fallible<Option<Metadata>> {
+        fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
             Ok(None)
         }
     }
 
     impl LocalStore for EmptyDataStore {
-        fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
     }
 
     impl DataStore for BadDataStore {
-        fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+        fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
             Err(BadDataStoreError.into())
         }
 
-        fn get_delta(&self, _key: &Key) -> Fallible<Option<Delta>> {
+        fn get_delta(&self, _key: &Key) -> Result<Option<Delta>> {
             Err(BadDataStoreError.into())
         }
 
-        fn get_delta_chain(&self, _key: &Key) -> Fallible<Option<Vec<Delta>>> {
+        fn get_delta_chain(&self, _key: &Key) -> Result<Option<Vec<Delta>>> {
             Err(BadDataStoreError.into())
         }
 
-        fn get_meta(&self, _key: &Key) -> Fallible<Option<Metadata>> {
+        fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
             Err(BadDataStoreError.into())
         }
     }
 
     impl LocalStore for BadDataStore {
-        fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
+        fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
             Err(BadDataStoreError.into())
         }
     }

@@ -7,7 +7,7 @@
 
 use std::{collections::VecDeque, mem};
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{HgId, RepoPathBuf};
@@ -47,7 +47,7 @@ impl<'a, T: ItemOutput<'a>> Items<'a, T> {
         }
     }
 
-    fn process_next_dir(&mut self) -> Fallible<bool> {
+    fn process_next_dir(&mut self) -> Result<bool> {
         // If we've finished processing all directories in the current layer of the tree,
         // proceed to the next layer, prefetching all of the tree nodes in that layer
         // prior to traversing the corresponding directories.
@@ -75,14 +75,14 @@ impl<'a, T: ItemOutput<'a>> Items<'a, T> {
     }
 
     /// Prefetch tree nodes for all directories in the next layer of the traversal.
-    fn prefetch(&self) -> Fallible<()> {
+    fn prefetch(&self) -> Result<()> {
         let keys = self.next.iter().filter_map(|d| d.key()).collect::<Vec<_>>();
         self.store.prefetch(keys)
     }
 }
 
 impl<'a, T: ItemOutput<'a>> Iterator for Items<'a, T> {
-    type Item = Fallible<T>;
+    type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.output.is_empty() {
@@ -157,7 +157,7 @@ mod tests {
 
         assert_eq!(
             tree.files(&AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 (repo_path_buf("a1/b2"), make_meta("20")).into(),
@@ -193,7 +193,7 @@ mod tests {
 
         assert_eq!(
             tree.files(&AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 (repo_path_buf("a1/b2"), make_meta("20")).into(),
@@ -230,7 +230,7 @@ mod tests {
 
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 (repo_path_buf("a2/b2/c2"), make_meta("30")).into(),
@@ -239,13 +239,13 @@ mod tests {
         );
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["a1/*/c1/**"].iter()).unwrap())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!((repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),)
         );
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["**/c3"].iter()).unwrap())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 (repo_path_buf("a2/b2/c3"), make_meta("40").into()).into(),
@@ -283,7 +283,7 @@ mod tests {
 
         let files_result = tree
             .files(&AlwaysMatcher::new())
-            .collect::<Result<Vec<_>, _>>();
+            .collect::<Result<Vec<_>>>();
         assert!(files_result.is_err());
     }
 

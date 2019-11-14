@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::{Key, NodeInfo};
@@ -42,19 +42,19 @@ pub struct MetadataStore {
 }
 
 impl MetadataStore {
-    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Fallible<Self> {
+    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
         MetadataStoreBuilder::new(&local_path, config).build()
     }
 }
 
 impl HistoryStore for MetadataStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.historystore.get_node_info(key)
     }
 }
 
 impl RemoteHistoryStore for MetadataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         if let Some(remote_store) = self.inner.remote_store.as_ref() {
             let missing = self.get_missing(&keys)?;
             if missing == vec![] {
@@ -70,7 +70,7 @@ impl RemoteHistoryStore for MetadataStore {
 }
 
 impl LocalStore for MetadataStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.inner.historystore.get_missing(keys)
     }
 }
@@ -84,11 +84,11 @@ impl Drop for MetadataStoreInner {
 }
 
 impl MutableHistoryStore for MetadataStore {
-    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         self.inner.local_mutablehistorystore.add(key, info)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         self.inner.local_mutablehistorystore.flush()
     }
 }
@@ -122,7 +122,7 @@ impl<'a> MetadataStoreBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Fallible<MetadataStore> {
+    pub fn build(self) -> Result<MetadataStore> {
         let cache_packs_path = get_cache_packs_path(self.config, self.suffix)?;
         let local_pack_store = Box::new(MutableHistoryPackStore::new(
             get_local_packs_path(self.local_path, self.suffix)?,
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new() -> Fallible<()> {
+    fn test_new() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_get() -> Fallible<()> {
+    fn test_add_get() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_dropped() -> Fallible<()> {
+    fn test_add_dropped() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -253,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_flush_get() -> Fallible<()> {
+    fn test_add_flush_get() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_flush_drop_get() -> Fallible<()> {
+    fn test_add_flush_drop_get() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remote_store() -> Fallible<()> {
+    fn test_remote_store() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -320,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remote_store_cached() -> Fallible<()> {
+    fn test_remote_store_cached() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_not_in_remote_store() -> Fallible<()> {
+    fn test_not_in_remote_store() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fetch_location() -> Fallible<()> {
+    fn test_fetch_location() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);

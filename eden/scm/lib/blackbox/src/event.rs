@@ -14,7 +14,7 @@
 //! types of events that are outside this module.
 
 use super::ToValue;
-use failure::Fallible;
+use failure::Fallible as Result;
 use serde_alt::serde_alt;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
@@ -495,7 +495,7 @@ fn json_to_string(value: &Value) -> String {
 }
 
 impl Event {
-    pub fn from_json(json: &str) -> Fallible<Self> {
+    pub fn from_json(json: &str) -> Result<Self> {
         Ok(serde_json::from_str(json)?)
     }
 }

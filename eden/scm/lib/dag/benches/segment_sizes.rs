@@ -6,7 +6,7 @@
  */
 
 use dag::{idmap::IdMap, segment::Dag};
-use failure::Fallible;
+use failure::Fallible as Result;
 use minibench::{
     bench, elapsed,
     measure::{self, Measure},
@@ -19,7 +19,7 @@ fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
     let head_name = format!("{}", parents.len() - 1).as_bytes().to_vec();
-    let parents_by_name = |name: &[u8]| -> Fallible<Vec<Box<[u8]>>> {
+    let parents_by_name = |name: &[u8]| -> Result<Vec<Box<[u8]>>> {
         let i = String::from_utf8(name.to_vec())
             .unwrap()
             .parse::<usize>()

@@ -7,7 +7,7 @@
 
 use crate::error::*;
 use crate::subscriber::Subscription;
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use ini::Ini;
 use log::{error, info};
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ static JOINED: &str = "joined";
 /// Map from a subscription to list of repo roots
 pub fn read_subscriptions(
     joined_pool_path: &PathBuf,
-) -> Fallible<HashMap<Subscription, Vec<PathBuf>>> {
+) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
     let mut joined_pool_path = joined_pool_path.clone();
     joined_pool_path.push(JOINED_DIR);
     joined_pool_path.push(JOINED);
@@ -145,7 +145,7 @@ pub struct Token {
     pub(crate) token_type: TokenType,
 }
 
-pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Fallible<Token> {
+pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
     // try to read token from file
     let token = if let &Some(ref user_token_path) = user_token_path {
         let mut user_token_path = user_token_path.clone();

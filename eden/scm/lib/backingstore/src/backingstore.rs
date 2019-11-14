@@ -7,7 +7,7 @@
 
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use failure::Fallible;
+use failure::Fallible as Result;
 use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
 use std::path::Path;
 use types::{Key, Node, RepoPath};
@@ -18,7 +18,7 @@ pub struct BackingStore {
 }
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(repository: P) -> Fallible<Self> {
+    pub fn new<P: AsRef<Path>>(repository: P) -> Result<Self> {
         let hg = repository.as_ref().join(".hg");
         let mut config = ConfigSet::new();
         config.load_system();
@@ -37,7 +37,7 @@ impl BackingStore {
         })
     }
 
-    pub fn get_blob(&self, path: &[u8], node: &[u8]) -> Fallible<Option<Vec<u8>>> {
+    pub fn get_blob(&self, path: &[u8], node: &[u8]) -> Result<Option<Vec<u8>>> {
         let path = RepoPath::from_utf8(path)?.to_owned();
         let node = Node::from_slice(node)?;
         let key = Key::new(path, node);
@@ -57,7 +57,7 @@ impl BackingStore {
             .map(|blob| blob.map(discard_metadata_header))
     }
 
-    pub fn get_tree(&self, path: &[u8], node: &[u8]) -> Fallible<Option<Vec<u8>>> {
+    pub fn get_tree(&self, path: &[u8], node: &[u8]) -> Result<Option<Vec<u8>>> {
         let path = RepoPath::from_utf8(path)?.to_owned();
         let node = Node::from_slice(node)?;
         let key = Key::new(path, node);

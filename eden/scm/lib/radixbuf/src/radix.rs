@@ -77,7 +77,7 @@ use crate::base16::Base16Iter;
 use crate::errors::ErrorKind;
 use crate::key::KeyId;
 use crate::traits::Resize;
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 
 /// Number of children ("pointer"s) a radix node has
 pub const RADIX_NCHILDREN: usize = 16;
@@ -95,7 +95,7 @@ impl RadixOffset {
 
     /// Append an empty `RadixNode` (`[u32; 16]`) at the end of a buffer.
     #[inline]
-    pub fn create<R: Resize<u32> + AsRef<[u32]>>(vec: &mut R) -> Fallible<Self> {
+    pub fn create<R: Resize<u32> + AsRef<[u32]>>(vec: &mut R) -> Result<Self> {
         let pos = vec.as_ref().len();
         if (pos as u32) as usize != pos {
             bail!(ErrorKind::OffsetOverflow(pos as u64));
@@ -131,7 +131,7 @@ impl RadixOffset {
         self,
         buf: &R,
         seq: I,
-    ) -> Fallible<(Option<KeyId>, (RadixOffset, usize, u8))> {
+    ) -> Result<(Option<KeyId>, (RadixOffset, usize, u8))> {
         let buf = buf.as_ref();
         let mut radix = self;
         for (i, b) in seq.enumerate() {
@@ -171,7 +171,7 @@ impl RadixOffset {
         vec: &mut R,
         index: u8,
         node: RadixOffset,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         if node.0 > 0x7fff_ffff {
             bail!(ErrorKind::OffsetOverflow(node.0 as u64));
         }
@@ -185,7 +185,7 @@ impl RadixOffset {
         vec: &mut R,
         index: u8,
         key_id: KeyId,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         let id: u32 = key_id.into();
         if id > 0x7fff_ffff {
             bail!(ErrorKind::OffsetOverflow(key_id.into()));
@@ -194,7 +194,7 @@ impl RadixOffset {
     }
 
     #[inline]
-    fn write_raw<R: AsMut<[u32]>>(&self, vec: &mut R, index: u8, value: u32) -> Fallible<()> {
+    fn write_raw<R: AsMut<[u32]>>(&self, vec: &mut R, index: u8, value: u32) -> Result<()> {
         debug_assert!(index < RADIX_NCHILDREN as u8);
         let vec = vec.as_mut();
         let pos = self.0 as usize + usize::from(index);
@@ -214,7 +214,7 @@ impl RadixOffset {
 /// `key` is a base256 sequence.
 /// The caller is responsible to check whether `KeyId` matches the given `Key` or not.
 #[inline]
-pub fn radix_lookup_unchecked<R, K>(radix_buf: &R, offset: u32, key: &K) -> Fallible<Option<KeyId>>
+pub fn radix_lookup_unchecked<R, K>(radix_buf: &R, offset: u32, key: &K) -> Result<Option<KeyId>>
 where
     R: AsRef<[u32]>,
     K: AsRef<[u8]>,
@@ -234,11 +234,11 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_lookup<R, K, KR, KA>(
     radix_buf: &R, offset: u32, key: &K, key_reader: KR, key_reader_arg: &KA)
-    -> Fallible<Option<KeyId>>
+    -> Result<Option<KeyId>>
 where
     R: AsRef<[u32]>,
     K: AsRef<[u8]>,
-    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
 {
     let key_id = radix_lookup_unchecked(radix_buf, offset, key)?;
     if let Some(id) = key_id {
@@ -266,11 +266,11 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_prefix_lookup<R, P, KR, KA>(
     radix_buf: &R, offset: u32, prefix: P, key_reader: KR, key_reader_arg: &KA)
-    -> Fallible<Option<KeyId>>
+    -> Result<Option<KeyId>>
 where
     R: AsRef<[u32]>,
     P: Iterator<Item = u8> + Clone,
-    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
 {
     let root = RadixOffset::new(offset);
     let (key_id, (_radix, i, _b)) = root.follow(radix_buf, prefix.clone())?;
@@ -301,10 +301,10 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_insert<R, KR, KA>(
     radix_buf: &mut R, offset: u32, key_id: KeyId, key_reader: KR, key_reader_arg: &KA)
-    -> Fallible<()>
+    -> Result<()>
 where
     R: Resize<u32> + AsRef<[u32]> + AsMut<[u32]>,
-    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
 {
     let new_key = key_reader(key_reader_arg, key_id)?;
     radix_insert_with_key(
@@ -333,11 +333,11 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_insert_with_key<R, K, KR, KA>(
     radix_buf: &mut R, offset: u32, key_id: KeyId, key: &K, key_reader: KR, key_reader_arg: &KA)
-    -> Fallible<()>
+    -> Result<()>
 where
     R: Resize<u32> + AsRef<[u32]> + AsMut<[u32]>,
     K: AsRef<[u8]>,
-    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
 {
     let new_key_id = key_id;
     let new_key = key;

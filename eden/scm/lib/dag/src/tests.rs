@@ -8,7 +8,7 @@
 use crate::idmap::IdMap;
 use crate::segment::Dag;
 use crate::spanset::SpanSet;
-use failure::Fallible;
+use failure::Fallible as Result;
 use tempfile::tempdir;
 
 // Example from segmented-changelog.pdf
@@ -545,7 +545,7 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
     let mut dag = Dag::open(dir.path().join("seg")).unwrap();
 
     let parents = drawdag::parse(&text);
-    let parents_by_name = |name: &[u8]| -> Fallible<Vec<Box<[u8]>>> {
+    let parents_by_name = |name: &[u8]| -> Result<Vec<Box<[u8]>>> {
         Ok(parents[&String::from_utf8(name.to_vec()).unwrap()]
             .iter()
             .map(|p| p.as_bytes().to_vec().into_boxed_slice())

@@ -8,11 +8,11 @@
 use clidispatch::{
     command::{CommandTable, Register},
     errors,
-    failure::Fallible,
     io::IO,
     repo::Repo,
 };
 use cliparser::define_flags;
+use failure::Fallible as Result;
 
 use blackbox::event::Event;
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
@@ -110,7 +110,7 @@ define_flags! {
     pub struct DebugHttpOpts {}
 }
 
-pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
+pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let path = if opts.shared {
         repo.shared_path()
     } else {
@@ -124,7 +124,7 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
     Ok(0)
 }
 
-pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Fallible<u8> {
+pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Result<u8> {
     let filter = if opts.session_id != 0 {
         blackbox::IndexFilter::SessionId(opts.session_id as u64)
     } else if let Some(range) = hgtime::HgTime::parse_range(&opts.time_range) {
@@ -160,7 +160,7 @@ pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Fallible<u8>
     Ok(0)
 }
 
-pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
+pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let path = RepoPathBuf::from_string(opts.path)?;
     let hgid = HgId::from_str(&opts.hgid)?;
     let config = repo.config();
@@ -188,7 +188,7 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
     Ok(0)
 }
 
-pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Fallible<u8> {
+pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Result<u8> {
     let mut args = opts.args;
     args.insert(0, "hgpython".to_string());
     let mut interp = crate::HgPython::new(&args);
@@ -199,14 +199,14 @@ pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Fallible<u8> {
     Ok(interp.run_python(&args, io))
 }
 
-pub fn debugargs(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
+pub fn debugargs(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
     match io.write(format!("{:?}\n", opts.args)) {
         Ok(_) => Ok(0),
         Err(_) => Ok(255),
     }
 }
 
-pub fn debugindexedlogdump(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
+pub fn debugindexedlogdump(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
     for path in opts.args {
         let _ = io.write(format!("{}\n", path));
         let path = Path::new(&path);
@@ -227,7 +227,7 @@ pub fn debugindexedlogdump(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
     Ok(0)
 }
 
-pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
+pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
     for path in opts.args {
         io.write(format!("Repairing {:?}\n", path))?;
         io.write(format!(
@@ -239,7 +239,7 @@ pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
     Ok(0)
 }
 
-pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
+pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let config = EdenApiConfig::from_hg_config(repo.config())?;
     let client = EdenApiCurlClient::new(config)?;
     let hostname = client.hostname()?;

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 use indexedlog::log::{self, IndexOutput, Log};
 use std::path::Path;
 use types::errors::KeyError;
@@ -32,7 +32,7 @@ pub struct NodeSet {
 impl NodeSet {
     const INDEX_NODE: usize = 0;
 
-    pub fn open(dir: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
         // Update the index every 100KB, i.e. every 256 entries
         let node_index = |_data: &[u8]| vec![IndexOutput::Reference(0..Node::len() as u64)];
         Ok(NodeSet {
@@ -43,24 +43,24 @@ impl NodeSet {
         })
     }
 
-    pub fn flush(&mut self) -> Fallible<()> {
+    pub fn flush(&mut self) -> Result<()> {
         self.log.flush()?;
         Ok(())
     }
 
-    pub fn add(&mut self, node: &Node) -> Fallible<()> {
+    pub fn add(&mut self, node: &Node) -> Result<()> {
         if !self.contains(node)? {
             self.log.append(node.as_ref())?;
         }
         Ok(())
     }
 
-    pub fn contains(&self, node: &Node) -> Fallible<bool> {
+    pub fn contains(&self, node: &Node) -> Result<bool> {
         let mut lookup_iter = self.log.lookup(Self::INDEX_NODE, node.as_ref())?;
         Ok(lookup_iter.next().is_some())
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = Fallible<Node>> + 'a {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = Result<Node>> + 'a {
         self.log.iter().map(|slice| Node::from_slice(slice?))
     }
 }

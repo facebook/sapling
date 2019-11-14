@@ -7,7 +7,7 @@
 
 use crate::{commands, HgPython};
 use clidispatch::{dispatch, errors};
-use failure::Fallible;
+use failure::Fallible as Result;
 use parking_lot::Mutex;
 use std::env;
 use std::fs::File;
@@ -163,7 +163,7 @@ fn setup_tracing() -> (Level, Arc<Mutex<TracingData>>) {
 fn maybe_write_trace(
     io: &mut clidispatch::io::IO,
     tracing_data: &Arc<Mutex<TracingData>>,
-) -> Fallible<()> {
+) -> Result<()> {
     // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
     // to access the data is via the blackbox interface.
     // Write ASCII or TraceEvent JSON (or gzipped JSON) to the specified path.
@@ -184,7 +184,7 @@ pub(crate) fn write_trace(
     io: &mut clidispatch::io::IO,
     path: &str,
     data: &TracingData,
-) -> Fallible<()> {
+) -> Result<()> {
     enum Format {
         ASCII,
         TraceEventJSON,

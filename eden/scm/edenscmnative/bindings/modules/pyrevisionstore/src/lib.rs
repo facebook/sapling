@@ -16,7 +16,7 @@ use std::{
 };
 
 use cpython::*;
-use failure::{format_err, Error, Fallible};
+use failure::{format_err, Error};
 use parking_lot::RwLock;
 
 use cpython_ext::{Bytes, PyErr};
@@ -44,6 +44,8 @@ mod datastorepyext;
 mod historystorepyext;
 mod pythondatastore;
 mod pythonutil;
+
+type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub use crate::pythondatastore::PythonDataStore;
 
@@ -95,7 +97,7 @@ fn repack_pywrapper(
     py: Python,
     packpath: PyBytes,
     outdir_py: PyBytes,
-    repacker: impl FnOnce(PathBuf, PathBuf) -> Result<PathBuf, Error>,
+    repacker: impl FnOnce(PathBuf, PathBuf) -> Result<PathBuf>,
 ) -> PyResult<PyBytes> {
     let path =
         encoding::local_bytes_to_path(packpath.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
@@ -213,7 +215,7 @@ py_class!(class datapack |py| {
 fn compute_store_size<P: AsRef<Path>>(
     storepath: P,
     extensions: Vec<&str>,
-) -> Fallible<(usize, usize)> {
+) -> Result<(usize, usize)> {
     let dirents = read_dir(storepath)?;
 
     assert_eq!(extensions.len(), 2);
@@ -492,7 +494,7 @@ fn make_mutabledeltastore(
     py: Python,
     packfilepath: Option<PyBytes>,
     indexedlogpath: Option<PyBytes>,
-) -> Fallible<Box<dyn MutableDeltaStore + Send>> {
+) -> Result<Box<dyn MutableDeltaStore + Send>> {
     let packfilepath = packfilepath
         .as_ref()
         .map(|path| encoding::local_bytes_to_path(path.data(py)))
@@ -552,28 +554,28 @@ py_class!(pub class mutabledeltastore |py| {
 });
 
 impl DataStore for mutabledeltastore {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get_delta(key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get_delta_chain(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -582,7 +584,7 @@ impl DataStore for mutabledeltastore {
 }
 
 impl LocalStore for mutabledeltastore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -591,14 +593,14 @@ impl LocalStore for mutabledeltastore {
 }
 
 impl MutableDeltaStore for mutabledeltastore {
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).add(delta, metadata)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -609,7 +611,7 @@ impl MutableDeltaStore for mutabledeltastore {
 fn make_mutablehistorystore(
     py: Python,
     packfilepath: Option<PyBytes>,
-) -> Fallible<Box<dyn MutableHistoryStore + Send>> {
+) -> Result<Box<dyn MutableHistoryStore + Send>> {
     let packfilepath = packfilepath
         .as_ref()
         .map(|path| encoding::local_bytes_to_path(path.data(py)))
@@ -656,7 +658,7 @@ py_class!(pub class mutablehistorystore |py| {
 });
 
 impl HistoryStore for mutablehistorystore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -665,7 +667,7 @@ impl HistoryStore for mutablehistorystore {
 }
 
 impl LocalStore for mutablehistorystore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -674,14 +676,14 @@ impl LocalStore for mutablehistorystore {
 }
 
 impl MutableHistoryStore for mutablehistorystore {
-    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).add(key, info)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -701,7 +703,7 @@ struct PyRemoteStore {
 }
 
 impl PyRemoteStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -754,17 +756,17 @@ impl RemoteStore for PyRemoteStore {
 }
 
 impl RemoteDataStore for PyRemoteDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.0.prefetch(keys)
     }
 }
 
 impl DataStore for PyRemoteDataStore {
-    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!();
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self
                 .0
@@ -778,7 +780,7 @@ impl DataStore for PyRemoteDataStore {
         }
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self
                 .0
@@ -792,7 +794,7 @@ impl DataStore for PyRemoteDataStore {
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self
                 .0
@@ -808,19 +810,19 @@ impl DataStore for PyRemoteDataStore {
 }
 
 impl LocalStore for PyRemoteDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }
 
 impl RemoteHistoryStore for PyRemoteHistoryStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.0.prefetch(keys)
     }
 }
 
 impl HistoryStore for PyRemoteHistoryStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self
                 .0
@@ -836,7 +838,7 @@ impl HistoryStore for PyRemoteHistoryStore {
 }
 
 impl LocalStore for PyRemoteHistoryStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }

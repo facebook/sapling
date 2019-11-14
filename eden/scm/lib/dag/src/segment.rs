@@ -18,7 +18,7 @@ use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use fs2::FileExt;
 use indexedlog::log;
 use indexmap::set::IndexSet;
@@ -79,7 +79,7 @@ impl Dag {
     const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
     /// Open [`Dag`] at the given directory. Create it on demand.
-    pub fn open(path: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let log = log::OpenOptions::new()
             .create(true)
@@ -101,7 +101,7 @@ impl Dag {
         Ok(dag)
     }
 
-    fn max_level_from_log(log: &log::Log) -> Fallible<Level> {
+    fn max_level_from_log(log: &log::Log) -> Result<Level> {
         // The first byte of the largest key is the maximum level.
         let max_level = match log.lookup_range(Self::INDEX_LEVEL_HEAD, ..)?.rev().nth(0) {
             None => 0,
@@ -111,7 +111,7 @@ impl Dag {
     }
 
     /// Find segment by level and head.
-    fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Fallible<Option<Segment>> {
+    fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>> {
         let key = Self::serialize_head_level_lookup_key(head, level);
         match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
             None => Ok(None),
@@ -120,7 +120,7 @@ impl Dag {
     }
 
     /// Find flat segment containing the given id.
-    fn find_flat_segment_including_id(&self, id: Id) -> Fallible<Option<Segment>> {
+    fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
         let level = 0;
         let low = Self::serialize_head_level_lookup_key(id, level);
         let high = [level + 1];
@@ -155,7 +155,7 @@ impl Dag {
         low: Id,
         high: Id,
         parents: &[Id],
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         let buf = Segment::serialize(flags, level, low, high, parents);
         self.log.append(buf)?;
         Ok(())
@@ -164,7 +164,7 @@ impl Dag {
     /// Return the next unused id for segments of the specified level.
     ///
     /// Useful for building segments incrementally.
-    pub fn next_free_id(&self, level: Level) -> Fallible<Id> {
+    pub fn next_free_id(&self, level: Level) -> Result<Id> {
         let prefix = [level];
         match self
             .log
@@ -197,7 +197,7 @@ impl Dag {
     /// actually writes changes to disk.
     ///
     /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&self) -> Fallible<SyncableDag> {
+    pub fn prepare_filesystem_sync(&self) -> Result<SyncableDag> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -265,9 +265,9 @@ impl Dag {
     ///
     /// Content inserted by this function *will not* be written to disk.
     /// For example, [`Dag::prepare_filesystem_sync`] will drop them.
-    pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Fallible<usize>
+    pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
-        F: Fn(Id) -> Fallible<Vec<Id>>,
+        F: Fn(Id) -> Result<Vec<Id>>,
     {
         let mut count = 0;
         count += self.build_flat_segments(high, get_parents, 0)?;
@@ -291,9 +291,9 @@ impl Dag {
         high: Id,
         get_parents: &F,
         last_threshold: Id,
-    ) -> Fallible<usize>
+    ) -> Result<usize>
     where
-        F: Fn(Id) -> Fallible<Vec<Id>>,
+        F: Fn(Id) -> Result<Vec<Id>>,
     {
         let low = self.next_free_id(0)?;
         let mut current_low = None;
@@ -335,7 +335,7 @@ impl Dag {
     }
 
     /// Find segments that covers `id..` range at the given level.
-    fn next_segments(&self, id: Id, level: Level) -> Fallible<Vec<Segment>> {
+    fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         let lower_bound = Self::serialize_head_level_lookup_key(id, level);
         let upper_bound = [level + 1];
         let mut result = Vec::new();
@@ -356,7 +356,7 @@ impl Dag {
         &self,
         max_high_id: Id,
         level: Level,
-    ) -> Fallible<impl Iterator<Item = Fallible<Segment>>> {
+    ) -> Result<impl Iterator<Item = Result<Segment>>> {
         let lower_bound = Self::serialize_head_level_lookup_key(0, level);
         let upper_bound = Self::serialize_head_level_lookup_key(max_high_id, level);
         let iter = self
@@ -387,12 +387,12 @@ impl Dag {
     /// are built frequently.
     ///
     /// Return number of segments inserted.
-    fn build_high_level_segments(&mut self, level: Level, drop_last: bool) -> Fallible<usize> {
+    fn build_high_level_segments(&mut self, level: Level, drop_last: bool) -> Result<usize> {
         assert!(level > 0);
         let size = self.new_seg_size;
 
         // `get_parents` is on the previous level of segments.
-        let get_parents = |head: Id| -> Fallible<Vec<Id>> {
+        let get_parents = |head: Id| -> Result<Vec<Id>> {
             if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
                 seg.parents()
             } else {
@@ -413,7 +413,7 @@ impl Dag {
 
             // Build the graph from the first head. `low_idx` is the
             // index of `segments`.
-            let find_segment = |low_idx: usize| -> Fallible<_> {
+            let find_segment = |low_idx: usize| -> Result<_> {
                 let segment_low = segments[low_idx].span()?.low;
                 let mut heads = BTreeSet::new();
                 let mut parents = IndexSet::new();
@@ -491,7 +491,7 @@ impl Dag {
     /// reduce fragmentation.
     ///
     /// Return number of segments inserted.
-    fn build_all_high_level_segments(&mut self, drop_last: bool) -> Fallible<usize> {
+    fn build_all_high_level_segments(&mut self, drop_last: bool) -> Result<usize> {
         let mut total = 0;
         for level in 1.. {
             let count = self.build_high_level_segments(level, drop_last)?;
@@ -507,7 +507,7 @@ impl Dag {
 // Reload.
 impl Dag {
     /// Reload from the filesystem. Discard pending changes.
-    pub fn reload(&mut self) -> Fallible<()> {
+    pub fn reload(&mut self) -> Result<()> {
         self.log.clear_dirty()?;
         self.log.sync()?;
         self.max_level = Self::max_level_from_log(&self.log)?;
@@ -519,7 +519,7 @@ impl Dag {
 // User-facing DAG-related algorithms.
 impl Dag {
     /// Return a [`SpanSet`] that covers all ids stored in this [`Dag`].
-    pub fn all(&self) -> Fallible<SpanSet> {
+    pub fn all(&self) -> Result<SpanSet> {
         match self.next_free_id(0)? {
             0 => Ok(SpanSet::empty()),
             n => Ok(SpanSet::from(0..=(n - 1))),
@@ -531,7 +531,7 @@ impl Dag {
     /// ```plain,ignore
     /// union(ancestors(i) for i in set)
     /// ```
-    pub fn ancestors(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn ancestors(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let mut set: SpanSet = set.into();
         if set.count() > 2 {
             // Try to (greatly) reduce the size of the `set` to make calculation cheaper.
@@ -568,7 +568,7 @@ impl Dag {
     ///
     /// Note: [`SpanSet`] does not preserve order. Use [`Dag::parent_ids`] if
     /// order is needed.
-    pub fn parents(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn parents(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let mut result = SpanSet::empty();
         let mut set = set.into();
 
@@ -621,7 +621,7 @@ impl Dag {
     }
 
     /// Get parents of a single `id`. Preserve the order.
-    pub fn parent_ids(&self, id: Id) -> Fallible<Vec<Id>> {
+    pub fn parent_ids(&self, id: Id) -> Result<Vec<Id>> {
         let seg = self
             .find_flat_segment_including_id(id)?
             .expect("logic error: flat segments are expected to cover everything but they do not");
@@ -634,13 +634,13 @@ impl Dag {
     }
 
     /// Calculate heads of the given set.
-    pub fn heads(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn heads(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
         Ok(set.difference(&self.parents(set.clone())?))
     }
 
     /// Calculate children of the given set.
-    pub fn children(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn children(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
 
         // The algorithm works as follows:
@@ -664,7 +664,7 @@ impl Dag {
             result: SpanSet,
         }
 
-        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Fallible<()> {
+        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -737,7 +737,7 @@ impl Dag {
     }
 
     /// Calculate roots of the given set.
-    pub fn roots(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn roots(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
         Ok(set.difference(&self.children(set.clone())?))
     }
@@ -747,7 +747,7 @@ impl Dag {
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    pub fn gca_one(&self, set: impl Into<SpanSet>) -> Fallible<Option<Id>> {
+    pub fn gca_one(&self, set: impl Into<SpanSet>) -> Result<Option<Id>> {
         let set = set.into();
         // The set is sorted in DESC order. Therefore its first item can be used as the result.
         Ok(self.common_ancestors(set)?.max())
@@ -755,7 +755,7 @@ impl Dag {
 
     /// Calculate all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    pub fn gca_all(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn gca_all(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
         self.heads_ancestors(self.common_ancestors(set)?)
     }
@@ -765,7 +765,7 @@ impl Dag {
     /// ```plain,ignore
     /// intersect(ancestors(i) for i in set)
     /// ```
-    pub fn common_ancestors(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn common_ancestors(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
         let result = match set.count() {
             0 => set,
@@ -782,7 +782,7 @@ impl Dag {
                 // `common_ancestors(X)` = `common_ancestors(heads(X))`.
                 let set = self.heads(set)?;
                 set.iter()
-                    .fold(Ok(SpanSet::full()), |set: Fallible<SpanSet>, id| {
+                    .fold(Ok(SpanSet::full()), |set: Result<SpanSet>, id| {
                         Ok(set?.intersection(&self.ancestors(id)?))
                     })?
             }
@@ -791,7 +791,7 @@ impl Dag {
     }
 
     /// Test if `ancestor_id` is an ancestor of `descendant_id`.
-    pub fn is_ancestor(&self, ancestor_id: Id, descendant_id: Id) -> Fallible<bool> {
+    pub fn is_ancestor(&self, ancestor_id: Id, descendant_id: Id) -> Result<bool> {
         let set = self.ancestors(descendant_id)?;
         Ok(set.contains(ancestor_id))
     }
@@ -805,7 +805,7 @@ impl Dag {
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    pub fn heads_ancestors(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn heads_ancestors(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
         let mut remaining = set;
         let mut result = SpanSet::empty();
@@ -822,7 +822,7 @@ impl Dag {
     /// ```plain,ignore
     /// intersect(ancestors(heads), descendants(roots))
     /// ```
-    pub fn range(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn range(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Result<SpanSet> {
         // Pre-calculate ancestors.
         let ancestors = self.ancestors(heads)?;
         let roots = roots.into();
@@ -858,7 +858,7 @@ impl Dag {
             result: SpanSet,
         }
 
-        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Fallible<()> {
+        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -940,7 +940,7 @@ impl Dag {
     /// Calculate the descendants of the given set.
     ///
     /// Logically equvilent to `range(set, all())`.
-    pub fn descendants(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+    pub fn descendants(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         // The algorithm is a manually "inlined" version of `range` where `ancestors`
         // is known to be `all()`.
 
@@ -956,7 +956,7 @@ impl Dag {
             result: SpanSet,
         }
 
-        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Fallible<()> {
+        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -1022,9 +1022,9 @@ impl SyncableDag {
     /// This is similar to [`Dag::build_segments_volatile`]. However, the build
     /// result is intended to be written to the filesystem. Therefore high-level
     /// segments are intentionally made lagging to reduce fragmentation.
-    pub fn build_segments_persistent<F>(&mut self, high: Id, get_parents: &F) -> Fallible<usize>
+    pub fn build_segments_persistent<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
-        F: Fn(Id) -> Fallible<Vec<Id>>,
+        F: Fn(Id) -> Result<Vec<Id>>,
     {
         let mut count = 0;
         count += self.dag.build_flat_segments(high, get_parents, 0)?;
@@ -1038,7 +1038,7 @@ impl SyncableDag {
     ///
     /// To avoid races, [`Dag`]s in the `reload_dags` list will be
     /// reloaded while [`SyncableDag`] still holds the lock.
-    pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut Dag>) -> Fallible<()> {
+    pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut Dag>) -> Result<()> {
         self.dag.log.sync()?;
         for dag in reload_dags {
             dag.reload()?;
@@ -1062,18 +1062,18 @@ impl<'a> Segment<'a> {
     const OFFSET_HIGH: usize = Self::OFFSET_LEVEL + 1;
     const OFFSET_DELTA: usize = Self::OFFSET_HIGH + 8;
 
-    pub(crate) fn flags(&self) -> Fallible<SegmentFlags> {
+    pub(crate) fn flags(&self) -> Result<SegmentFlags> {
         match self.0.get(Self::OFFSET_FLAGS) {
             Some(bits) => Ok(SegmentFlags::from_bits_truncate(*bits)),
             None => bail!("cannot read flags"),
         }
     }
 
-    pub(crate) fn has_root(&self) -> Fallible<bool> {
+    pub(crate) fn has_root(&self) -> Result<bool> {
         Ok(self.flags()?.contains(SegmentFlags::HAS_ROOT))
     }
 
-    pub(crate) fn high(&self) -> Fallible<Id> {
+    pub(crate) fn high(&self) -> Result<Id> {
         match self.0.get(Self::OFFSET_HIGH..Self::OFFSET_HIGH + 8) {
             Some(slice) => Ok(BigEndian::read_u64(slice)),
             None => bail!("cannot read high"),
@@ -1081,30 +1081,30 @@ impl<'a> Segment<'a> {
     }
 
     // high - low
-    fn delta(&self) -> Fallible<Id> {
+    fn delta(&self) -> Result<Id> {
         let (len, _) = self.0.read_vlq_at(Self::OFFSET_DELTA)?;
         Ok(len)
     }
 
-    pub(crate) fn span(&self) -> Fallible<Span> {
+    pub(crate) fn span(&self) -> Result<Span> {
         let high = self.high()?;
         let delta = self.delta()?;
         let low = high - delta;
         Ok((low..=high).into())
     }
 
-    pub(crate) fn head(&self) -> Fallible<Id> {
+    pub(crate) fn head(&self) -> Result<Id> {
         self.high()
     }
 
-    pub(crate) fn level(&self) -> Fallible<Level> {
+    pub(crate) fn level(&self) -> Result<Level> {
         match self.0.get(Self::OFFSET_LEVEL) {
             Some(level) => Ok(*level),
             None => bail!("cannot read level"),
         }
     }
 
-    pub(crate) fn parents(&self) -> Fallible<Vec<Id>> {
+    pub(crate) fn parents(&self) -> Result<Vec<Id>> {
         let mut cur = Cursor::new(self.0);
         cur.set_position(Self::OFFSET_DELTA as u64);
         let _: u64 = cur.read_vlq()?;
@@ -1138,7 +1138,7 @@ impl<'a> Segment<'a> {
 }
 
 impl Debug for Dag {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut first = true;
         let mut last_level = 255;
         let mut segments = self
@@ -1184,7 +1184,7 @@ struct LazyPredicate<P> {
     false_count: usize,
 }
 
-impl<P: Fn(Id) -> Fallible<bool>> LazyPredicate<P> {
+impl<P: Fn(Id) -> Result<bool>> LazyPredicate<P> {
     pub fn new(ids: Vec<Id>, predicate: P) -> Self {
         Self {
             ids,
@@ -1194,7 +1194,7 @@ impl<P: Fn(Id) -> Fallible<bool>> LazyPredicate<P> {
         }
     }
 
-    pub fn any(&mut self) -> Fallible<bool> {
+    pub fn any(&mut self) -> Result<bool> {
         loop {
             if self.true_count > 0 {
                 return Ok(true);
@@ -1206,7 +1206,7 @@ impl<P: Fn(Id) -> Fallible<bool>> LazyPredicate<P> {
         }
     }
 
-    pub fn all(&mut self) -> Fallible<bool> {
+    pub fn all(&mut self) -> Result<bool> {
         loop {
             if self.true_count == self.ids.len() {
                 return Ok(true);
@@ -1218,7 +1218,7 @@ impl<P: Fn(Id) -> Fallible<bool>> LazyPredicate<P> {
         }
     }
 
-    fn test_one(&mut self) -> Fallible<()> {
+    fn test_one(&mut self) -> Result<()> {
         let i = self.true_count + self.false_count;
         if (self.predicate)(self.ids[i])? {
             self.true_count += 1;
@@ -1310,7 +1310,7 @@ mod tests {
         assert_eq!(low_by_id(151), -1);
     }
 
-    fn get_parents(id: Id) -> Fallible<Vec<Id>> {
+    fn get_parents(id: Id) -> Result<Vec<Id>> {
         match id {
             0 | 1 | 2 => Ok(Vec::new()),
             _ => Ok(vec![id - 1, id / 2]),

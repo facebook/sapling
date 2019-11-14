@@ -6,10 +6,9 @@
  */
 
 use cpython::{
-    PyBytes, PyErr, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
-    ToPyObject,
+    PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
 };
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use revisionstore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
@@ -51,7 +50,7 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
         // This lets us get a Vector of Keys without copying the strings.
         let keys = keys
             .map(|k| k.and_then(|k| from_tuple_to_key(py, &k)))
-            .collect::<Result<Vec<Key>, PyErr>>()?;
+            .collect::<PyResult<Vec<Key>>>()?;
         let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
 
         let results = PyList::new(py, &[]);
@@ -153,7 +152,7 @@ impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
                 .into_py_object(py);
             Ok(tuple)
         });
-        iter.collect::<Fallible<Vec<PyTuple>>>()
+        iter.collect::<Result<Vec<PyTuple>>>()
             .map_err(|e| to_pyerr(py, &e.into()))
     }
 }

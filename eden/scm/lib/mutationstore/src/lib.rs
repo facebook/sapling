@@ -28,7 +28,7 @@
 //! be ignored.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
@@ -93,7 +93,7 @@ impl MutationEntryOrigin {
         }
     }
 
-    pub fn from_id(id: u8) -> Fallible<Self> {
+    pub fn from_id(id: u8) -> Result<Self> {
         match id {
             ORIGIN_COMMIT => Ok(MutationEntryOrigin::Commit),
             ORIGIN_OBSMARKER => Ok(MutationEntryOrigin::Obsmarker),
@@ -105,7 +105,7 @@ impl MutationEntryOrigin {
 }
 
 impl MutationEntry {
-    pub fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    pub fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_u8(self.origin.get_id())?;
         w.write_node(&self.succ)?;
         w.write_vlq(self.preds.len())?;
@@ -132,7 +132,7 @@ impl MutationEntry {
         Ok(())
     }
 
-    pub fn deserialize(r: &mut dyn Read) -> Fallible<Self> {
+    pub fn deserialize(r: &mut dyn Read) -> Result<Self> {
         let origin = MutationEntryOrigin::from_id(r.read_u8()?)?;
         let succ = r.read_node()?;
         let pred_count = r.read_vlq()?;
@@ -185,7 +185,7 @@ const INDEX_SUCC: usize = 1;
 const INDEX_SPLIT: usize = 2;
 
 impl MutationStore {
-    pub fn open(path: impl AsRef<Path>) -> Fallible<MutationStore> {
+    pub fn open(path: impl AsRef<Path>) -> Result<MutationStore> {
         const NODE_LEN: usize = Node::len();
         const SUCC_START: usize = 1usize;
         const PRED_COUNT_START: usize = SUCC_START + NODE_LEN;
@@ -237,19 +237,19 @@ impl MutationStore {
         })
     }
 
-    pub fn add(&mut self, entry: &MutationEntry) -> Fallible<()> {
+    pub fn add(&mut self, entry: &MutationEntry) -> Result<()> {
         let mut buf = Vec::with_capacity(DEFAULT_ENTRY_SIZE);
         entry.serialize(&mut buf)?;
         self.log.append(buf.as_slice())?;
         Ok(())
     }
 
-    pub fn flush(&mut self) -> Fallible<()> {
+    pub fn flush(&mut self) -> Result<()> {
         self.log.flush()?;
         Ok(())
     }
 
-    pub fn get_successors_sets(&self, node: Node) -> Fallible<Vec<Vec<Node>>> {
+    pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
         let mut successors_sets = Vec::new();
         for entry in self.log.lookup(INDEX_PRED, &node)? {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
@@ -261,7 +261,7 @@ impl MutationStore {
         Ok(successors_sets)
     }
 
-    pub fn get_predecessors(&self, node: Node) -> Fallible<Vec<Node>> {
+    pub fn get_predecessors(&self, node: Node) -> Result<Vec<Node>> {
         let mut lookup = self
             .log
             .lookup(INDEX_SUCC, &node)?
@@ -275,7 +275,7 @@ impl MutationStore {
         Ok(predecessors)
     }
 
-    pub fn get_split_head(&self, node: Node) -> Fallible<Option<MutationEntry>> {
+    pub fn get_split_head(&self, node: Node) -> Result<Option<MutationEntry>> {
         let mutation_entry = match self.log.lookup(INDEX_SPLIT, &node)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,
@@ -283,7 +283,7 @@ impl MutationStore {
         Ok(mutation_entry)
     }
 
-    pub fn get(&self, succ: Node) -> Fallible<Option<MutationEntry>> {
+    pub fn get(&self, succ: Node) -> Result<Option<MutationEntry>> {
         let mutation_entry = match self.log.lookup(INDEX_SUCC, &succ)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,

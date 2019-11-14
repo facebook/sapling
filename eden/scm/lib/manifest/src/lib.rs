@@ -12,7 +12,7 @@
 //! repository. The file path and file revision are then used to retrieve the contents of the
 //! file thus achieving the reconstruction of the entire repository state.
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use types::{HgId, RepoPath, RepoPathBuf};
 
@@ -31,23 +31,23 @@ pub trait Manifest {
     /// If the path is pointing to an file then Some(FsNode::File) is returned with then
     /// file_metadata associated with the file. If the path is poitning to a directory then
     /// Some(FsNode::Directory) is returned. If the path is not found then None is returned.
-    fn get(&self, path: &RepoPath) -> Fallible<Option<FsNode>>;
+    fn get(&self, path: &RepoPath) -> Result<Option<FsNode>>;
 
     /// Associates a file path with specific file metadata.
     /// A call with a file path that already exists results in an override or the old metadata.
-    fn insert(&mut self, file_path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()>;
+    fn insert(&mut self, file_path: RepoPathBuf, file_metadata: FileMetadata) -> Result<()>;
 
     /// Removes a file from the manifest (equivalent to removing it from the repository).
     /// A call with a file path that does not exist in the manifest is a no-op.
-    fn remove(&mut self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>>;
+    fn remove(&mut self, file_path: &RepoPath) -> Result<Option<FileMetadata>>;
 
     /// Persists the manifest so that it can be retrieved at a later time. Returns a note
     /// representing the identifier for saved manifest.
-    fn flush(&mut self) -> Fallible<HgId>;
+    fn flush(&mut self) -> Result<HgId>;
 
     /// Retrieve the FileMetadata that is associated with a path.
     /// Paths that were not set will return None.
-    fn get_file(&self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>> {
+    fn get_file(&self, file_path: &RepoPath) -> Result<Option<FileMetadata>> {
         let result = self.get(file_path)?.and_then(|fs_hgid| match fs_hgid {
             FsNode::File(file_metadata) => Some(file_metadata),
             FsNode::Directory => None,

@@ -7,7 +7,7 @@
 
 use std::{cmp::Ordering, collections::VecDeque, mem};
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};
@@ -94,7 +94,7 @@ impl<'a> DiffItem<'a> {
         lstore: &'a InnerStore,
         rstore: &'a InnerStore,
         matcher: &'a dyn Matcher,
-    ) -> Fallible<Vec<DiffEntry>> {
+    ) -> Result<Vec<DiffEntry>> {
         match self {
             DiffItem::Single(dir, side) => {
                 let store = match side {
@@ -167,7 +167,7 @@ impl<'a> Diff<'a> {
     /// Given that each tree owns its own store, we need to perform two prefetches
     /// to ensure that the keys for each tree are correctly prefetched from the
     /// corresponding store.
-    fn prefetch(&self) -> Fallible<()> {
+    fn prefetch(&self) -> Result<()> {
         let mut lkeys = Vec::new();
         let mut rkeys = Vec::new();
 
@@ -209,7 +209,7 @@ impl<'a> Diff<'a> {
     ///
     /// Returns `true` if there are more items to process after the current one. Once this
     /// method returns `false`, the traversal is complete.
-    fn process_next_item(&mut self) -> Fallible<bool> {
+    fn process_next_item(&mut self) -> Result<bool> {
         if self.current.is_empty() {
             self.prefetch()?;
             mem::swap(&mut self.current, &mut self.next);
@@ -226,7 +226,7 @@ impl<'a> Diff<'a> {
 }
 
 impl<'a> Iterator for Diff<'a> {
-    type Item = Fallible<DiffEntry>;
+    type Item = Result<DiffEntry>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let span = tracing::debug_span!("tree::diff::next", path = "");
@@ -258,7 +258,7 @@ fn diff_single<'a>(
     side: Side,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
-) -> Fallible<Vec<DiffEntry>> {
+) -> Result<Vec<DiffEntry>> {
     let (files, dirs) = dir.list(store)?;
 
     let items = dirs
@@ -291,7 +291,7 @@ fn diff<'a>(
     lstore: &'a InnerStore,
     rstore: &'a InnerStore,
     matcher: &'a dyn Matcher,
-) -> Fallible<Vec<DiffEntry>> {
+) -> Result<Vec<DiffEntry>> {
     let (lfiles, ldirs) = left.list(lstore)?;
     let (rfiles, rdirs) = right.list(rstore)?;
     next.extend(diff_dirs(ldirs, rdirs, matcher));
@@ -591,7 +591,7 @@ mod tests {
         let matcher = AlwaysMatcher::new();
         let diff = Diff::new(&ltree, &rtree, &matcher);
         let entries = diff
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap()
             .into_iter()
             .map(|entry| entry.path)
@@ -639,7 +639,7 @@ mod tests {
         let matcher = TreeMatcher::from_rules(["d1/**"].iter()).unwrap();
         let diff = Diff::new(&ltree, &rtree, &matcher);
         let entries = diff
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap()
             .into_iter()
             .map(|entry| entry.path)
@@ -660,7 +660,7 @@ mod tests {
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 DiffEntry::new(
@@ -683,7 +683,7 @@ mod tests {
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 DiffEntry::new(
@@ -744,7 +744,7 @@ mod tests {
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 DiffEntry::new(repo_path_buf("a1"), DiffType::RightOnly(make_meta("30"))),
@@ -762,7 +762,7 @@ mod tests {
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
@@ -782,7 +782,7 @@ mod tests {
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
                 DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
@@ -809,7 +809,7 @@ mod tests {
                 &right,
                 &TreeMatcher::from_rules(["a1/b1/**"].iter()).unwrap()
             )
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a1/b1/c1/d1"),
@@ -822,7 +822,7 @@ mod tests {
                 &right,
                 &TreeMatcher::from_rules(["a1/b2"].iter()).unwrap()
             )
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a1/b2"),
@@ -835,7 +835,7 @@ mod tests {
                 &right,
                 &TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap()
             )
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a2/b2/c2"),
@@ -848,7 +848,7 @@ mod tests {
                 &right,
                 &TreeMatcher::from_rules(["*/b2/**"].iter()).unwrap()
             )
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(
                 DiffEntry::new(
@@ -880,7 +880,7 @@ mod tests {
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec![DiffEntry::new(
                 repo_path_buf("foo/bar/c.txt"),

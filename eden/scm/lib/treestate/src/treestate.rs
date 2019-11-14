@@ -10,7 +10,7 @@ use crate::filestore::FileStore;
 use crate::serialization::Serializable;
 use crate::store::{BlockId, Store, StoreView};
 use crate::tree::{AggregatedState, Key, KeyRef, Node, Tree, VisitorResult};
-use failure::Fallible;
+use failure::Fallible as Result;
 use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
@@ -35,7 +35,7 @@ pub(crate) struct TreeStateRoot {
 
 impl TreeState {
     /// Read `TreeState` from a file, or create an empty new `TreeState` if `root_id` is None.
-    pub fn open<P: AsRef<Path>>(path: P, root_id: Option<BlockId>) -> Fallible<Self> {
+    pub fn open<P: AsRef<Path>>(path: P, root_id: Option<BlockId>) -> Result<Self> {
         match root_id {
             Some(root_id) => {
                 let store = FileStore::open(path)?;
@@ -56,13 +56,13 @@ impl TreeState {
     }
 
     /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
-    pub fn flush(&mut self) -> Fallible<BlockId> {
+    pub fn flush(&mut self) -> Result<BlockId> {
         let tree_block_id = { self.tree.write_delta(&mut self.store)? };
         self.write_root(tree_block_id)
     }
 
     /// Save as a new file.
-    pub fn write_as<P: AsRef<Path>>(&mut self, path: P) -> Fallible<BlockId> {
+    pub fn write_as<P: AsRef<Path>>(&mut self, path: P) -> Result<BlockId> {
         let mut new_store = FileStore::create(path)?;
         let tree_block_id = self.tree.write_full(&mut new_store, &self.store)?;
         self.store = new_store;
@@ -70,7 +70,7 @@ impl TreeState {
         Ok(root_id)
     }
 
-    fn write_root(&mut self, tree_block_id: BlockId) -> Fallible<BlockId> {
+    fn write_root(&mut self, tree_block_id: BlockId) -> Result<BlockId> {
         self.root.tree_block_id = tree_block_id;
         self.root.file_count = self.len() as u32;
 
@@ -82,21 +82,21 @@ impl TreeState {
     }
 
     /// Create or replace the existing entry.
-    pub fn insert<K: AsRef<[u8]>>(&mut self, path: K, state: &FileStateV2) -> Fallible<()> {
+    pub fn insert<K: AsRef<[u8]>>(&mut self, path: K, state: &FileStateV2) -> Result<()> {
         self.tree.add(&self.store, path.as_ref(), state)
     }
 
-    pub fn remove<K: AsRef<[u8]>>(&mut self, path: K) -> Fallible<bool> {
+    pub fn remove<K: AsRef<[u8]>>(&mut self, path: K) -> Result<bool> {
         self.tree.remove(&self.store, path.as_ref())
     }
 
-    pub fn get<K: AsRef<[u8]>>(&mut self, path: K) -> Fallible<Option<&FileStateV2>> {
+    pub fn get<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&FileStateV2>> {
         self.tree.get(&self.store, path.as_ref())
     }
 
     /// Get the aggregated state of a directory. This is useful, for example, to tell if a
     /// directory only contains removed files.
-    pub fn get_dir<K: AsRef<[u8]>>(&mut self, path: K) -> Fallible<Option<AggregatedState>> {
+    pub fn get_dir<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<AggregatedState>> {
         self.tree.get_dir(&self.store, path.as_ref())
     }
 
@@ -112,7 +112,7 @@ impl TreeState {
         self.root.metadata.deref()
     }
 
-    pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Fallible<bool> {
+    pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
         self.tree.has_dir(&self.store, path.as_ref())
     }
 
@@ -121,9 +121,9 @@ impl TreeState {
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Fallible<()>
+    ) -> Result<()>
     where
-        F: FnMut(&Vec<&[u8]>, &mut FileStateV2) -> Fallible<VisitorResult>,
+        F: FnMut(&Vec<&[u8]>, &mut FileStateV2) -> Result<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<FileStateV2>) -> bool,
         VF: Fn(&Vec<KeyRef>, &FileStateV2) -> bool,
     {
@@ -136,9 +136,9 @@ impl TreeState {
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Fallible<Vec<Key>>
+    ) -> Result<Vec<Key>>
     where
-        F: FnMut(KeyRef) -> Fallible<Key>,
+        F: FnMut(KeyRef) -> Result<Key>,
     {
         self.tree
             .get_filtered_key(&self.store, name, filter, filter_id)
@@ -150,10 +150,10 @@ impl TreeState {
         full_paths: bool,
         acceptable: &FA,
         visitor: &mut FV,
-    ) -> Fallible<()>
+    ) -> Result<()>
     where
         FA: Fn(&FileStateV2) -> bool,
-        FV: FnMut(&Vec<KeyRef>) -> Fallible<()>,
+        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
     {
         self.tree
             .path_complete(&self.store, prefix, full_paths, acceptable, visitor)

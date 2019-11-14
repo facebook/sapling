@@ -8,7 +8,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use bytes::Bytes;
-use failure::{err_msg, Fallible};
+use failure::{err_msg, Fallible as Result};
 
 use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
 use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
@@ -76,7 +76,7 @@ struct FakeRemoteDataStore {
 }
 
 impl RemoteDataStore for FakeRemoteDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         for k in keys {
             let data = self.map.get(&k).ok_or(err_msg("Not found"))?;
             let delta = Delta {
@@ -92,25 +92,25 @@ impl RemoteDataStore for FakeRemoteDataStore {
 }
 
 impl DataStore for FakeRemoteDataStore {
-    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!();
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         match self.prefetch(vec![key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_delta(key),
         }
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         match self.prefetch(vec![key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_delta_chain(key),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         match self.prefetch(vec![key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_meta(key),
@@ -119,7 +119,7 @@ impl DataStore for FakeRemoteDataStore {
 }
 
 impl LocalStore for FakeRemoteDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }
@@ -130,7 +130,7 @@ struct FakeRemoteHistoryStore {
 }
 
 impl RemoteHistoryStore for FakeRemoteHistoryStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         for k in keys {
             self.store
                 .add(&k, self.map.get(&k).ok_or(err_msg("Not found"))?)?
@@ -141,7 +141,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
 }
 
 impl HistoryStore for FakeRemoteHistoryStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         match self.prefetch(vec![key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_node_info(key),
@@ -150,7 +150,7 @@ impl HistoryStore for FakeRemoteHistoryStore {
 }
 
 impl LocalStore for FakeRemoteHistoryStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }

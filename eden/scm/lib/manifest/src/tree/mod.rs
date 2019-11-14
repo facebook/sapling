@@ -22,7 +22,7 @@ use std::{
 
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use once_cell::sync::OnceCell;
 
 use pathmatcher::Matcher;
@@ -89,7 +89,7 @@ impl Tree {
 }
 
 impl Manifest for Tree {
-    fn get(&self, path: &RepoPath) -> Fallible<Option<FsNode>> {
+    fn get(&self, path: &RepoPath) -> Result<Option<FsNode>> {
         let result = self.get_link(path)?.map(|link| {
             if let &Leaf(file_metadata) = link {
                 FsNode::File(file_metadata)
@@ -100,7 +100,7 @@ impl Manifest for Tree {
         Ok(result)
     }
 
-    fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()> {
+    fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Result<()> {
         let mut cursor = &self.root;
         let mut must_insert = false;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -163,10 +163,10 @@ impl Manifest for Tree {
         Ok(())
     }
 
-    fn remove(&mut self, path: &RepoPath) -> Fallible<Option<FileMetadata>> {
+    fn remove(&mut self, path: &RepoPath) -> Result<Option<FileMetadata>> {
         // The return value lets us know if there are no more files in the subtree and we should be
         // removing it.
-        fn do_remove<'a, I>(store: &InnerStore, cursor: &mut Link, iter: &mut I) -> Fallible<bool>
+        fn do_remove<'a, I>(store: &InnerStore, cursor: &mut Link, iter: &mut I) -> Result<bool>
         where
             I: Iterator<Item = (&'a RepoPath, &'a PathComponent)>,
         {
@@ -206,7 +206,7 @@ impl Manifest for Tree {
         }
     }
 
-    fn flush(&mut self) -> Fallible<HgId> {
+    fn flush(&mut self) -> Result<HgId> {
         fn compute_hgid<C: AsRef<[u8]>>(content: C) -> HgId {
             let mut hasher = Sha1::new();
             hasher.input(content.as_ref());
@@ -218,7 +218,7 @@ impl Manifest for Tree {
             store: &'a InnerStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
-        ) -> Fallible<(&'c HgId, store::Flag)> {
+        ) -> Result<(&'c HgId, store::Flag)> {
             loop {
                 match cursor {
                     Leaf(file_metadata) => {
@@ -308,7 +308,7 @@ impl Tree {
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&Tree>,
-    ) -> Fallible<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)>> {
+    ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)>> {
         fn compute_hgid<C: AsRef<[u8]>>(parent_tree_nodes: &[HgId], content: C) -> HgId {
             let mut hasher = Sha1::new();
             debug_assert!(parent_tree_nodes.len() <= 2);
@@ -335,7 +335,7 @@ impl Tree {
             parent_trees: Vec<Cursor<'a>>,
         };
         impl<'a> Executor<'a> {
-            fn new(store: &'a InnerStore, parent_trees: &[&'a Tree]) -> Fallible<Executor<'a>> {
+            fn new(store: &'a InnerStore, parent_trees: &[&'a Tree]) -> Result<Executor<'a>> {
                 let mut executor = Executor {
                     store,
                     path: RepoPathBuf::new(),
@@ -352,7 +352,7 @@ impl Tree {
                 }
                 Ok(executor)
             }
-            fn active_parent_tree_nodes(&self, active_parents: &[usize]) -> Fallible<Vec<HgId>> {
+            fn active_parent_tree_nodes(&self, active_parents: &[usize]) -> Result<Vec<HgId>> {
                 let mut parent_nodes = Vec::with_capacity(active_parents.len());
                 for id in active_parents {
                     let cursor = &self.parent_trees[*id];
@@ -364,7 +364,7 @@ impl Tree {
                 }
                 Ok(parent_nodes)
             }
-            fn advance_parents(&mut self, active_parents: &[usize]) -> Fallible<()> {
+            fn advance_parents(&mut self, active_parents: &[usize]) -> Result<()> {
                 for id in active_parents {
                     let cursor = &mut self.parent_trees[*id];
                     match cursor.step() {
@@ -377,7 +377,7 @@ impl Tree {
             fn parent_trees_for_subdirectory(
                 &mut self,
                 active_parents: &[usize],
-            ) -> Fallible<Vec<usize>> {
+            ) -> Result<Vec<usize>> {
                 let mut result = Vec::new();
                 for id in active_parents.iter() {
                     let cursor = &mut self.parent_trees[*id];
@@ -404,7 +404,7 @@ impl Tree {
                 &mut self,
                 link: &mut Link,
                 active_parents: Vec<usize>,
-            ) -> Fallible<(HgId, store::Flag)> {
+            ) -> Result<(HgId, store::Flag)> {
                 let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
                 if let Durable(entry) = link {
                     if parent_tree_nodes.contains(&entry.hgid) {
@@ -458,7 +458,7 @@ impl Tree {
         Ok(executor.converted_nodes.into_iter())
     }
 
-    pub fn list(&self, path: &RepoPath) -> Fallible<List> {
+    pub fn list(&self, path: &RepoPath) -> Result<List> {
         let directory = match self.get_link(path)? {
             None => return Ok(List::NotFound),
             Some(Leaf(_)) => return Ok(List::File),
@@ -470,7 +470,7 @@ impl Tree {
         ))
     }
 
-    fn get_link(&self, path: &RepoPath) -> Fallible<Option<&Link>> {
+    fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
             let child = match cursor {
@@ -517,7 +517,7 @@ pub fn compat_subtree_diff(
     hgid: HgId,
     other_nodes: Vec<HgId>,
     depth: i32,
-) -> Fallible<Vec<(RepoPathBuf, HgId, Bytes)>> {
+) -> Result<Vec<(RepoPathBuf, HgId, Bytes)>> {
     struct State {
         store: InnerStore,
         path: RepoPathBuf,
@@ -525,7 +525,7 @@ pub fn compat_subtree_diff(
         depth_remaining: i32,
     }
     impl State {
-        fn work(&mut self, hgid: HgId, other_nodes: Vec<HgId>) -> Fallible<()> {
+        fn work(&mut self, hgid: HgId, other_nodes: Vec<HgId>) -> Result<()> {
             let entry = self.store.get_entry(&self.path, hgid)?;
 
             if self.depth_remaining > 0 {
@@ -600,7 +600,7 @@ pub fn prefetch(
     store: Arc<dyn TreeStore + Send + Sync>,
     key: Key,
     mut depth: Option<usize>,
-) -> Fallible<()> {
+) -> Result<()> {
     let tree = Tree::durable(store, key.hgid);
     let mut dirs = vec![Directory::from_link(&tree.root, key.path).unwrap()];
 
@@ -615,7 +615,7 @@ pub fn prefetch(
         dirs = dirs
             .into_iter()
             .map(|d| Ok(d.list(&tree.store)?.1))
-            .collect::<Fallible<Vec<_>>>()?
+            .collect::<Result<Vec<_>>>()?
             .into_iter()
             .flatten()
             .collect();
@@ -671,7 +671,7 @@ impl<'a> Directory<'a> {
     /// not available locally. As such, algorithms that require fast access to
     /// this data should take care to ensure that this content is present
     /// locally before calling this method.
-    pub(crate) fn list(&self, store: &InnerStore) -> Fallible<(Vec<File>, Vec<Directory<'a>>)> {
+    pub(crate) fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<Directory<'a>>)> {
         let mut files = Vec::new();
         let mut dirs = Vec::new();
 
@@ -1498,7 +1498,7 @@ mod tests {
     }
 
     #[test]
-    fn test_list_directory() -> Fallible<()> {
+    fn test_list_directory() -> Result<()> {
         let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = Directory::from_root(&tree.root).unwrap();
         let (files, dirs) = dir.list(&tree.store)?;

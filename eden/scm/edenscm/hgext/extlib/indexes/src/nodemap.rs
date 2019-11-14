@@ -6,7 +6,7 @@
  */
 
 use crate::errors::ErrorKind;
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use radixbuf::errors as rerrors;
 use radixbuf::key::KeyId;
 use radixbuf::radix::{
@@ -81,7 +81,7 @@ const CHANGELOG_ENTRY_SIZE: u64 = 64;
 
 impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
     /// Initialize NodeMap from a non-inlined version of changelog.i and an incomplete index.
-    pub fn new(changelogi: C, main_index: I) -> Fallible<Self> {
+    pub fn new(changelogi: C, main_index: I) -> Result<Self> {
         // Sanity check if the index is corrupted or not.
 
         // The index must contain at least 17 elements. index[0] tracks the last rev the index has.
@@ -134,7 +134,7 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
     }
 
     /// Convert hex prefix to node.
-    pub fn hex_prefix_to_node<T: AsRef<[u8]>>(&self, hex_prefix: T) -> Fallible<Option<&[u8]>> {
+    pub fn hex_prefix_to_node<T: AsRef<[u8]>>(&self, hex_prefix: T) -> Result<Option<&[u8]>> {
         let bin_prefix = match hex_to_bin_base16(hex_prefix) {
             Some(v) => v,
             None => return Ok(None),
@@ -158,7 +158,7 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
     }
 
     /// Convert node to rev.
-    pub fn node_to_rev<T: AsRef<[u8]>>(&self, node: T) -> Fallible<Option<u32>> {
+    pub fn node_to_rev<T: AsRef<[u8]>>(&self, node: T) -> Result<Option<u32>> {
         let cl = &self.changelogi;
         if let Some(rev) = radix_lookup(&self.main_index, 1, &node, rev_to_node, cl)? {
             Ok(Some(rev.into()))
@@ -179,7 +179,7 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
     /// Incrementally build the main index based on the existing one.
     /// Note: this will memcpy the immutable main index so the new buffer
     /// could be written and resized.
-    pub fn build_incrementally(&self) -> Fallible<Vec<u32>> {
+    pub fn build_incrementally(&self) -> Result<Vec<u32>> {
         // Copy the main index since we need to modify it.
         let mut index = self.main_index.as_ref().to_vec();
         let end_rev = changelog_end_rev(&self.changelogi);
@@ -215,7 +215,7 @@ fn build<T>(
     radix_offset: u32,
     start_rev: u32,
     end_rev: u32,
-) -> Fallible<()>
+) -> Result<()>
 where
     T: AsRef<[u8]>,
 {
@@ -229,7 +229,7 @@ where
 }
 
 /// Helper method similar to `radixbuf::key::FixedKey::read`, but takes a revision number instead.
-fn rev_to_node<K: AsRef<[u8]>>(changelogi: &K, rev: KeyId) -> Fallible<&[u8]> {
+fn rev_to_node<K: AsRef<[u8]>>(changelogi: &K, rev: KeyId) -> Result<&[u8]> {
     let buf = changelogi.as_ref();
     let rev_usize: usize = rev.into();
     let start_pos = rev_usize * 64 + 32;

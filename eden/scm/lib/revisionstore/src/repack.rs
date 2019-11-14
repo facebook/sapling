@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use failure::{format_err, Error, Fail, Fallible};
+use failure::{format_err, Error, Fail, Fallible as Result};
 
 use types::Key;
 
@@ -24,14 +24,14 @@ use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;
 
 pub trait ToKeys {
-    fn to_keys(&self) -> Vec<Fallible<Key>>;
+    fn to_keys(&self) -> Vec<Result<Key>>;
 }
 
 pub trait Repackable {
-    fn delete(self) -> Fallible<()>;
+    fn delete(self) -> Result<()>;
 }
 
-fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fallible<()> {
+fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Result<()> {
     for k in data_pack.to_keys() {
         let key = k?;
 
@@ -65,8 +65,8 @@ enum RepackFailure {
 fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     mut mut_pack: T,
-    repack_pack: impl Fn(&U, &mut T) -> Fallible<()>,
-) -> Fallible<PathBuf> {
+    repack_pack: impl Fn(&U, &mut T) -> Result<()>,
+) -> Result<PathBuf> {
     if paths.clone().into_iter().count() <= 1 {
         if let Some(path) = paths.into_iter().next() {
             return Ok(path.to_path_buf());
@@ -141,16 +141,13 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
 pub fn repack_datapacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
-) -> Fallible<PathBuf> {
+) -> Result<PathBuf> {
     let mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
 
     repack_packs(paths, mut_pack, repack_datapack)
 }
 
-fn repack_historypack(
-    history_pack: &HistoryPack,
-    mut_pack: &mut MutableHistoryPack,
-) -> Fallible<()> {
+fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryPack) -> Result<()> {
     for k in history_pack.to_keys() {
         let key = k?;
         if let Some(hgid) = history_pack.get_node_info(&key)? {
@@ -164,14 +161,14 @@ fn repack_historypack(
 pub fn repack_historypacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
-) -> Fallible<PathBuf> {
+) -> Result<PathBuf> {
     let mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
 
     repack_packs(paths, mut_pack, repack_historypack)
 }
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
-pub fn list_packs(dir: &Path, extension: &str) -> Fallible<Vec<PathBuf>> {
+pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
     let mut dirents = fs::read_dir(dir)?
         .filter_map(|e| match e {
             Err(_) => None,
@@ -192,7 +189,7 @@ pub fn list_packs(dir: &Path, extension: &str) -> Fallible<Vec<PathBuf>> {
 /// Select all the packs from `packs` that needs to be repacked during an incremental repack.
 ///
 /// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
-pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fallible<Vec<PathBuf>> {
+pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
     // XXX: Read these from the configuration.
     let mut repackmaxpacksize = 4 * 1024 * 1024 * 1024;
     if extension == "histpack" {
@@ -296,7 +293,7 @@ mod tests {
             newpack
                 .to_keys()
                 .into_iter()
-                .collect::<Fallible<Vec<Key>>>()
+                .collect::<Result<Vec<Key>>>()
                 .unwrap(),
             revisions
                 .iter()
@@ -344,7 +341,7 @@ mod tests {
             newpack
                 .to_keys()
                 .into_iter()
-                .collect::<Fallible<Vec<Key>>>()
+                .collect::<Result<Vec<Key>>>()
                 .unwrap(),
             revisions
                 .iter()

@@ -19,7 +19,7 @@ use std::{
     sync::Arc,
 };
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use types::{HgId, Key, RepoPath};
 
@@ -93,7 +93,7 @@ impl DataPackUnion {
         ScanResult::ChangesDetected
     }
 
-    fn scan_dir(packs: &mut HashMap<PathBuf, Arc<DataPack>>, path: &Path) -> Fallible<usize> {
+    fn scan_dir(packs: &mut HashMap<PathBuf, Arc<DataPack>>, path: &Path) -> Result<usize> {
         let mut num_changed = 0;
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -110,7 +110,7 @@ impl DataPackUnion {
     }
 
     /// Lookup Key. If the key is missing, scan for changes in the pack files and try once more.
-    fn get(&mut self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&mut self, key: &Key) -> Result<Option<Vec<u8>>> {
         match self.store.get(key)? {
             Some(data) => return Ok(Some(data)),
             None => match self.rescan_paths() {
@@ -163,7 +163,7 @@ pub extern "C" fn revisionstore_datapackunion_free(store: *mut DataPackUnion) {
 }
 
 /// Construct an instance of Key from the provided ffi parameters
-fn make_key(name: *const u8, name_len: usize, hgid: *const u8, hgid_len: usize) -> Fallible<Key> {
+fn make_key(name: *const u8, name_len: usize, hgid: *const u8, hgid_len: usize) -> Result<Key> {
     debug_assert!(!name.is_null());
     debug_assert!(!hgid.is_null());
 
@@ -183,7 +183,7 @@ fn datapackunion_get_impl(
     name_len: usize,
     hgid: *const u8,
     hgid_len: usize,
-) -> Fallible<Option<Vec<u8>>> {
+) -> Result<Option<Vec<u8>>> {
     debug_assert!(!store.is_null());
     let store = unsafe { &mut *store };
     let key = make_key(name, name_len, hgid, hgid_len)?;

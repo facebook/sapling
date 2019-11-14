@@ -17,7 +17,7 @@ use std::{
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{format_err, Fail, Fallible};
+use failure::{format_err, Fail, Fallible as Result};
 use parking_lot::Mutex;
 use tempfile::{Builder, NamedTempFile};
 
@@ -55,7 +55,7 @@ impl MutableDataPackInner {
     /// when flush() is called, at which point the MutableDataPack is consumed. If
     /// flush() is not called, the temporary file is cleaned up when the object is
     /// release.
-    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Fallible<Self> {
+    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Result<Self> {
         let dir = dir.as_ref();
         if !dir.is_dir() {
             return Err(format_err!(
@@ -83,7 +83,7 @@ impl MutableDataPackInner {
         })
     }
 
-    fn read_entry(&self, key: &Key) -> Fallible<Option<(Delta, Metadata)>> {
+    fn read_entry(&self, key: &Key) -> Result<Option<(Delta, Metadata)>> {
         let location: &DeltaLocation = match self.mem_index.get(&key.hgid) {
             None => return Ok(None),
             Some(location) => location,
@@ -113,7 +113,7 @@ impl MutableDataPackInner {
         )))
     }
 
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         let path_slice = delta.key.path.as_byte_slice();
         if path_slice.len() >= u16::MAX as usize {
             return Err(MutableDataPackError("delta path is longer than 2^16".into()).into());
@@ -157,7 +157,7 @@ impl MutableDataPackInner {
 }
 
 impl MutableDataPack {
-    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Fallible<Self> {
+    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Result<Self> {
         Ok(Self {
             inner: Arc::new(Mutex::new(MutableDataPackInner::new(dir, version)?)),
         })
@@ -166,11 +166,11 @@ impl MutableDataPack {
 
 impl MutableDeltaStore for MutableDataPack {
     /// Adds the given entry to the mutable datapack.
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.inner.lock().add(delta, metadata)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         let mut guard = self.inner.lock();
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
@@ -180,7 +180,7 @@ impl MutableDeltaStore for MutableDataPack {
 }
 
 impl MutablePack for MutableDataPackInner {
-    fn build_files(mut self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+    fn build_files(mut self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         if self.mem_index.is_empty() {
             return Err(EmptyMutablePack().into());
         }
@@ -201,7 +201,7 @@ impl MutablePack for MutableDataPackInner {
 }
 
 impl MutablePack for MutableDataPack {
-    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+    fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         let mut guard = self.inner.lock();
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
@@ -215,14 +215,14 @@ impl MutablePack for MutableDataPack {
 }
 
 impl DataStore for MutableDataPack {
-    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         Err(
             MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain".into())
                 .into(),
         )
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         let (delta, _metadata) = match self.inner.lock().read_entry(&key)? {
             None => return Ok(None),
             Some(entry) => entry,
@@ -230,7 +230,7 @@ impl DataStore for MutableDataPack {
         Ok(Some(delta))
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
         let inner = self.inner.lock();
@@ -259,7 +259,7 @@ impl DataStore for MutableDataPack {
         Ok(Some(chain))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         Ok(self
             .inner
             .lock()
@@ -269,7 +269,7 @@ impl DataStore for MutableDataPack {
 }
 
 impl LocalStore for MutableDataPack {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.lock();
         Ok(keys
             .iter()
@@ -366,7 +366,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_partial_delta_chain() -> Fallible<()> {
+    fn test_get_partial_delta_chain() -> Result<()> {
         let tempdir = tempdir()?;
         let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One)?;
 

@@ -6,7 +6,7 @@
  */
 
 // Union history store
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use types::{Key, NodeInfo};
 
@@ -16,7 +16,7 @@ use crate::unionstore::UnionStore;
 pub type UnionHistoryStore<T> = UnionStore<T>;
 
 impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         for store in self {
             match store.get_node_info(key)? {
                 None => continue,
@@ -46,25 +46,25 @@ mod tests {
     struct BadHistoryStoreError;
 
     impl HistoryStore for EmptyHistoryStore {
-        fn get_node_info(&self, _key: &Key) -> Fallible<Option<NodeInfo>> {
+        fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
             Ok(None)
         }
     }
 
     impl LocalStore for EmptyHistoryStore {
-        fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
     }
 
     impl HistoryStore for BadHistoryStore {
-        fn get_node_info(&self, _key: &Key) -> Fallible<Option<NodeInfo>> {
+        fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
             Err(BadHistoryStoreError.into())
         }
     }
 
     impl LocalStore for BadHistoryStore {
-        fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
+        fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
             Err(BadHistoryStoreError.into())
         }
     }

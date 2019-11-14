@@ -7,7 +7,7 @@
 
 use crate::errors;
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
-use failure::Fallible;
+use failure::Fallible as Result;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -31,7 +31,7 @@ impl OptionalRepo {
     ///
     /// Return None if there is no repo found from the current directory or its
     /// parent directories.
-    pub fn from_cwd(cwd: impl AsRef<Path>, config: ConfigSet) -> Fallible<OptionalRepo> {
+    pub fn from_cwd(cwd: impl AsRef<Path>, config: ConfigSet) -> Result<OptionalRepo> {
         if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
             let repo = Repo::from_raw_path(path, config)?;
             Ok(OptionalRepo::Some(repo))
@@ -47,7 +47,7 @@ impl OptionalRepo {
         repository_path: impl AsRef<Path>,
         cwd: impl AsRef<Path>,
         config: ConfigSet,
-    ) -> Fallible<OptionalRepo> {
+    ) -> Result<OptionalRepo> {
         let repository_path = repository_path.as_ref();
         if repository_path.as_os_str().is_empty() {
             // --repo is not specified, only use cwd.
@@ -89,7 +89,7 @@ impl Repo {
     /// Load the repo from explicit path.
     ///
     /// Load repo configurations.
-    fn from_raw_path<P>(path: P, mut config: ConfigSet) -> Fallible<Self>
+    fn from_raw_path<P>(path: P, mut config: ConfigSet) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
@@ -135,7 +135,7 @@ fn find_hg_repo_root(current_path: &Path) -> Option<PathBuf> {
     }
 }
 
-fn read_sharedpath(path: &Path) -> Fallible<PathBuf> {
+fn read_sharedpath(path: &Path) -> Result<PathBuf> {
     let mut sharedpath = fs::read_to_string(path.join(".hg/sharedpath"))
         .ok()
         .map(|s| PathBuf::from(s))

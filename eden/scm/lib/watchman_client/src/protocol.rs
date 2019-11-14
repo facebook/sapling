@@ -6,15 +6,15 @@
  */
 
 use crate::error::*;
-use failure::Fallible;
+use failure::Fallible as Result;
 use std::io::{BufRead, Read, Write};
 
 pub trait Protocol {
-    fn read<T, R>(r: &mut R) -> Fallible<T>
+    fn read<T, R>(r: &mut R) -> Result<T>
     where
         for<'de> T: serde::Deserialize<'de>,
         R: BufRead;
-    fn write<T: ?Sized, W>(w: &mut W, value: &T) -> Fallible<()>
+    fn write<T: ?Sized, W>(w: &mut W, value: &T) -> Result<()>
     where
         T: serde::Serialize,
         W: Write;
@@ -33,7 +33,7 @@ impl JsonProtocol {
 }
 
 impl Protocol for JsonProtocol {
-    fn read<T, R>(r: &mut R) -> Fallible<T>
+    fn read<T, R>(r: &mut R) -> Result<T>
     where
         for<'de> T: serde::Deserialize<'de>,
         R: BufRead,
@@ -43,7 +43,7 @@ impl Protocol for JsonProtocol {
         let resp: T = serde_json::from_slice(&buffer)?;
         Ok(resp)
     }
-    fn write<T: ?Sized, W>(w: &mut W, value: &T) -> Fallible<()>
+    fn write<T: ?Sized, W>(w: &mut W, value: &T) -> Result<()>
     where
         T: serde::Serialize,
         W: Write,
@@ -60,7 +60,7 @@ impl Protocol for JsonProtocol {
 
 pub struct BserProtocol;
 impl Protocol for BserProtocol {
-    fn read<T, R>(r: &mut R) -> Fallible<T>
+    fn read<T, R>(r: &mut R) -> Result<T>
     where
         for<'de> T: serde::Deserialize<'de>,
         R: BufRead,
@@ -69,7 +69,7 @@ impl Protocol for BserProtocol {
             .map_err(|e| ErrorKind::WatchmanBserParsingError(format!("{}", e)))?;
         Ok(resp)
     }
-    fn write<T: ?Sized, W>(w: &mut W, value: &T) -> Fallible<()>
+    fn write<T: ?Sized, W>(w: &mut W, value: &T) -> Result<()>
     where
         T: serde::Serialize,
         W: Write,
@@ -87,13 +87,13 @@ impl Protocol for BserProtocol {
 /// Specific for protocols
 
 impl JsonProtocol {
-    pub fn to_string<T: ?Sized>(value: &T) -> Fallible<String>
+    pub fn to_string<T: ?Sized>(value: &T) -> Result<String>
     where
         T: serde::Serialize,
     {
         Ok(serde_json::to_string(value)?)
     }
-    pub fn to_string_pretty<T: ?Sized>(value: &T) -> Fallible<String>
+    pub fn to_string_pretty<T: ?Sized>(value: &T) -> Result<String>
     where
         T: serde::Serialize,
     {

@@ -11,7 +11,7 @@ use std::{
     io::{self, BufWriter, Write},
 };
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 /// A `PackWriter` will buffers all the writes to `T` and count the total number of bytes written.
 pub struct PackWriter<T: Write> {
@@ -28,7 +28,7 @@ impl<T: 'static + Write + Debug + Send + Sync> PackWriter<T> {
     }
 
     /// Flush the buffered data to the underlying writer.
-    pub fn flush_inner(&self) -> Fallible<()> {
+    pub fn flush_inner(&self) -> Result<()> {
         let ret = self.data.try_borrow_mut()?.flush()?;
         Ok(ret)
     }
@@ -46,7 +46,7 @@ impl<T: 'static + Write + Debug + Send + Sync> PackWriter<T> {
     }
 
     /// Flush the buffered data and return the underlying writer.
-    pub fn into_inner(self) -> Fallible<T> {
+    pub fn into_inner(self) -> Result<T> {
         let ret = self.data.into_inner().into_inner()?;
         Ok(ret)
     }

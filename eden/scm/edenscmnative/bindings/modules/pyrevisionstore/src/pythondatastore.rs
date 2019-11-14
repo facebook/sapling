@@ -9,7 +9,7 @@ use cpython::{
     exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
     PythonObject, PythonObjectWithTypeObject,
 };
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use cpython_ext::PyErr;
 use revisionstore::{DataStore, Delta, LocalStore, Metadata, RemoteDataStore};
@@ -31,7 +31,7 @@ impl PythonDataStore {
 }
 
 impl DataStore for PythonDataStore {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
@@ -56,7 +56,7 @@ impl DataStore for PythonDataStore {
         Ok(Some(py_bytes.data(py).to_vec()))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
@@ -94,7 +94,7 @@ impl DataStore for PythonDataStore {
         }))
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
@@ -117,11 +117,11 @@ impl DataStore for PythonDataStore {
         let deltas = py_list
             .iter(py)
             .map(|b| from_tuple_to_delta(py, &b).map_err(|e| PyErr::from(e).into()))
-            .collect::<Fallible<Vec<Delta>>>()?;
+            .collect::<Result<Vec<Delta>>>()?;
         Ok(Some(deltas))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
@@ -147,7 +147,7 @@ impl DataStore for PythonDataStore {
 }
 
 impl RemoteDataStore for PythonDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let keys = keys
@@ -168,7 +168,7 @@ impl RemoteDataStore for PythonDataStore {
 }
 
 impl LocalStore for PythonDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -186,7 +186,7 @@ impl LocalStore for PythonDataStore {
         let missing = py_list
             .iter(py)
             .map(|k| from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e).into()))
-            .collect::<Fallible<Vec<Key>>>()?;
+            .collect::<Result<Vec<Key>>>()?;
         Ok(missing)
     }
 }

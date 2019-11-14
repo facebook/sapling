@@ -14,7 +14,7 @@ use std::fs::{self, remove_file as fs_remove_file};
 use std::io::{self, ErrorKind};
 use std::path::{Component, Path, PathBuf};
 
-use failure::Fallible;
+use failure::Fallible as Result;
 #[cfg(not(unix))]
 use tempfile::Builder;
 
@@ -88,7 +88,7 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 
 /// Remove the file pointed by `path`.
 #[cfg(unix)]
-pub fn remove_file<P: AsRef<Path>>(path: P) -> Fallible<()> {
+pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
     fs_remove_file(path)?;
     Ok(())
 }
@@ -100,7 +100,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Fallible<()> {
 /// trying to remove a packfile. To solve this, we can rename the file before trying to remove it.
 /// If the remove operation fails, a future repack will clean it up.
 #[cfg(not(unix))]
-pub fn remove_file<P: AsRef<Path>>(path: P) -> Fallible<()> {
+pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
     let path = path.as_ref();
     let extension = path
         .extension()
@@ -251,7 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_dir_non_exist() -> Fallible<()> {
+    fn test_create_dir_non_exist() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut path = tempdir.path().to_path_buf();
         path.push("dir");
@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_dir_exist() -> Fallible<()> {
+    fn test_create_dir_exist() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut path = tempdir.path().to_path_buf();
         path.push("dir");
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_dir_file_exist() -> Fallible<()> {
+    fn test_create_dir_file_exist() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut path = tempdir.path().to_path_buf();
         path.push("dir");

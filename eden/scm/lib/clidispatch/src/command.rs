@@ -7,15 +7,15 @@
 
 use crate::{io::IO, repo::Repo};
 use cliparser::parser::{Flag, ParseOutput, StructFlags};
-use failure::Fallible;
+use failure::Fallible as Result;
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
 pub enum CommandFunc {
-    NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Fallible<u8>>),
-    OptionalRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Fallible<u8>>),
-    Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Fallible<u8>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Result<u8>>),
+    OptionalRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Result<u8>>),
+    Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Result<u8>>),
 }
 
 pub struct CommandDefinition {
@@ -106,7 +106,7 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
-    FN: Fn(S, &mut IO) -> Fallible<u8> + 'static,
+    FN: Fn(S, &mut IO) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
@@ -121,7 +121,7 @@ where
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
-    FN: Fn(S, &mut IO, Option<Repo>) -> Fallible<u8> + 'static,
+    FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
@@ -137,7 +137,7 @@ where
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
-    FN: Fn(S, &mut IO, Repo) -> Fallible<u8> + 'static,
+    FN: Fn(S, &mut IO, Repo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);

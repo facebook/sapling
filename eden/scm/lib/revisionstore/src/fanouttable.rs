@@ -19,7 +19,7 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 
 use types::HgId;
 
@@ -34,7 +34,7 @@ const LARGE_RAW_SIZE: usize = 262144; // LARGE_FANOUT_LENGTH * sizeof(u32)
 #[fail(display = "Fanout Table Error: {:?}", _0)]
 struct FanoutTableError(String);
 
-fn get_fanout_index(table_size: usize, hgid: &HgId) -> Fallible<u64> {
+fn get_fanout_index(table_size: usize, hgid: &HgId) -> Result<u64> {
     let mut cursor = Cursor::new(hgid.as_ref());
     match table_size {
         SMALL_RAW_SIZE => Ok(cursor.read_u8()? as u64),
@@ -50,7 +50,7 @@ pub struct FanoutTable {}
 impl FanoutTable {
     /// Returns the (start, end) search bounds indicated by the fanout table. If end is None, then
     /// search to the end of the index.
-    pub fn get_bounds(table: &[u8], hgid: &HgId) -> Fallible<(usize, Option<usize>)> {
+    pub fn get_bounds(table: &[u8], hgid: &HgId) -> Result<(usize, Option<usize>)> {
         // Get the integer equivalent of the first few bytes of the hgid.
         let index = get_fanout_index(table.len(), hgid)?;
 
@@ -90,7 +90,7 @@ impl FanoutTable {
         hgid_iter: &mut I,
         entry_size: usize,
         mut locations: Option<&mut Vec<u32>>,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         let fanout_raw_size = match fanout_factor {
             SMALL_FANOUT_FACTOR => SMALL_RAW_SIZE,
             LARGE_FANOUT_FACTOR => LARGE_RAW_SIZE,

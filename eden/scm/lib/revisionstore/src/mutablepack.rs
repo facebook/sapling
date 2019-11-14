@@ -9,7 +9,7 @@
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, io::ErrorKind, path::PathBuf};
 
-use failure::Fallible;
+use failure::Fallible as Result;
 use tempfile::NamedTempFile;
 
 use crate::error::EmptyMutablePack;
@@ -29,7 +29,7 @@ fn make_readonly(perms: &mut Permissions) {
 ///
 /// Since packfiles are named based on their content, a rename failure due to an already existing
 /// file isn't an error, as both files have effectively the same content.
-fn persist(file: NamedTempFile, path: PathBuf) -> Fallible<()> {
+fn persist(file: NamedTempFile, path: PathBuf) -> Result<()> {
     match file.persist_noclobber(path) {
         Ok(_) => Ok(()),
         Err(e) => {
@@ -45,14 +45,14 @@ fn persist(file: NamedTempFile, path: PathBuf) -> Fallible<()> {
 pub trait MutablePack {
     /// Make the data and index pack files with the data added to it. Also returns the fullpath of
     /// the files. After calling this function, the `MutablePack` is consumed and is no longer usable.
-    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)>;
+    fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)>;
 
     /// Returns the extension for this kind of pack files.
     fn extension(&self) -> &'static str;
 
     /// Close the packfile, returning the path of the final immutable pack on disk. The
     /// `MutablePack` is no longer usable after being closed.
-    fn close_pack(self) -> Fallible<Option<PathBuf>>
+    fn close_pack(self) -> Result<Option<PathBuf>>
     where
         Self: Sized,
     {

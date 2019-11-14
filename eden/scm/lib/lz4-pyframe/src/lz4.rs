@@ -6,7 +6,7 @@
  */
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 use libc::{c_int, c_void};
 use lz4_sys::{
     LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue, LZ4_createStream,
@@ -80,7 +80,7 @@ impl Drop for StreamEncoder {
 }
 
 /// Read decompressed size from a u32 header.
-pub fn decompress_size(data: &[u8]) -> Fallible<usize> {
+pub fn decompress_size(data: &[u8]) -> Result<usize> {
     if data.len() == 0 {
         Ok(0)
     } else {
@@ -109,7 +109,7 @@ impl Drop for StreamEncoderHC {
 
 /// Decompress into a preallocated buffer. The size of `dest` must
 /// match what [decompress_size] returns.
-pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Fallible<()> {
+pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
     let stream = StreamDecoder(unsafe { LZ4_createStreamDecode() });
     if stream.0.is_null() {
         return Err(LZ4Error {
@@ -140,7 +140,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Fallible<()> {
     Ok(())
 }
 
-pub fn decompress(data: &[u8]) -> Fallible<Vec<u8>> {
+pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
     let max_decompressed_size = decompress_size(data)?;
     if max_decompressed_size == 0 {
         return Ok(Vec::new());
@@ -151,7 +151,7 @@ pub fn decompress(data: &[u8]) -> Fallible<Vec<u8>> {
     Ok(dest)
 }
 
-pub fn compress(data: &[u8]) -> Fallible<Vec<u8>> {
+pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
         + HEADER_LEN as i32) as usize;
 
@@ -184,7 +184,7 @@ pub fn compress(data: &[u8]) -> Fallible<Vec<u8>> {
     Ok(dest)
 }
 
-pub fn compresshc(data: &[u8]) -> Fallible<Vec<u8>> {
+pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
     let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
         + HEADER_LEN as i32) as usize;
 
@@ -218,7 +218,7 @@ pub fn compresshc(data: &[u8]) -> Fallible<Vec<u8>> {
     Ok(dest)
 }
 
-fn check_error(result: i32) -> Fallible<i32> {
+fn check_error(result: i32) -> Result<i32> {
     if result < 0 {
         return Err(LZ4Error {
             message: format!("lz4 failed with error '{:?}'", result),

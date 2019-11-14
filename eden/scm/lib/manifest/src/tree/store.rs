@@ -8,7 +8,7 @@
 use std::{str::from_utf8, sync::Arc};
 
 use bytes::{Bytes, BytesMut};
-use failure::{format_err, Fallible};
+use failure::{format_err, Fallible as Result};
 
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath};
 
@@ -18,16 +18,16 @@ use crate::FileType;
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
 pub trait TreeStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes>;
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes>;
 
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Fallible<()>;
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()>;
 
     /// Indicate to the store that we will be attempting to access the given
     /// tree nodes soon. Some stores (especially ones that may perform network
     /// I/O) may use this information to prepare for these accesses (e.g., by
     /// by prefetching the nodes in bulk). For some stores this operation does
     /// not make sense, so the default implementation is a no-op.
-    fn prefetch(&self, _keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, _keys: Vec<Key>) -> Result<()> {
         Ok(())
     }
 }
@@ -42,7 +42,7 @@ impl InnerStore {
         InnerStore { tree_store }
     }
 
-    pub fn get_entry(&self, path: &RepoPath, hgid: HgId) -> Fallible<Entry> {
+    pub fn get_entry(&self, path: &RepoPath, hgid: HgId) -> Result<Entry> {
         tracing::debug_span!(
             "tree::store::get",
             id = AsRef::<str>::as_ref(&hgid.to_hex())
@@ -53,7 +53,7 @@ impl InnerStore {
         })
     }
 
-    pub fn insert_entry(&self, path: &RepoPath, hgid: HgId, entry: Entry) -> Fallible<()> {
+    pub fn insert_entry(&self, path: &RepoPath, hgid: HgId, entry: Entry) -> Result<()> {
         tracing::debug_span!(
             "tree::store::insert",
             path = path.as_str(),
@@ -62,7 +62,7 @@ impl InnerStore {
         .in_scope(|| self.tree_store.insert(path, hgid, entry.0))
     }
 
-    pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<()> {
+    pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Result<()> {
         let keys: Vec<Key> = keys.into_iter().collect();
         tracing::debug_span!(
             "tree::store::prefetch",
@@ -129,9 +129,7 @@ impl Entry {
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
-    pub fn from_elements<I: IntoIterator<Item = Fallible<Element>>>(
-        elements: I,
-    ) -> Fallible<Entry> {
+    pub fn from_elements<I: IntoIterator<Item = Result<Element>>>(elements: I) -> Result<Entry> {
         let mut underlying = BytesMut::new();
         for element_result in elements.into_iter() {
             underlying.extend(element_result?.to_byte_vec());
@@ -176,7 +174,7 @@ pub struct Elements<'a> {
 }
 
 impl<'a> Iterator for Elements<'a> {
-    type Item = Fallible<Element>;
+    type Item = Result<Element>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.position >= self.byte_slice.len() {
@@ -209,7 +207,7 @@ impl Element {
         }
     }
 
-    fn from_byte_slice(byte_slice: &[u8]) -> Fallible<Element> {
+    fn from_byte_slice(byte_slice: &[u8]) -> Result<Element> {
         let path_len = match byte_slice.iter().position(|&x| x == b'\0') {
             Some(position) => position,
             None => return Err(format_err!("did not find path delimiter")),
@@ -291,7 +289,7 @@ impl TestStore {
 
 #[cfg(test)]
 impl TreeStore for TestStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes> {
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
         let underlying = self.entries.read();
         let result = underlying
             .get(path)
@@ -300,7 +298,7 @@ impl TreeStore for TestStore {
         result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, hgid))
     }
 
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Fallible<()> {
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
         let mut underlying = self.entries.write();
         underlying
             .entry(path.to_owned())
@@ -309,7 +307,7 @@ impl TreeStore for TestStore {
         Ok(())
     }
 
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.prefetched.lock().push(keys);
         Ok(())
     }

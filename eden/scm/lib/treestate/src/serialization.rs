@@ -14,7 +14,7 @@ use crate::tree::{AggregatedState, Key, Node, NodeEntry, NodeEntryMap};
 use crate::treedirstate::TreeDirstateRoot;
 use crate::treestate::TreeStateRoot;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{bail, Fallible};
+use failure::{bail, Fallible as Result};
 use std::hash::Hasher;
 use std::io::{Cursor, Read, Write};
 use twox_hash::XxHash;
@@ -25,15 +25,15 @@ where
     Self: Sized,
 {
     /// Serialize the storable data to a `Write` stream.
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()>;
+    fn serialize(&self, w: &mut dyn Write) -> Result<()>;
 
     /// Deserialize a new data item from a `Read` stream.
-    fn deserialize(r: &mut dyn Read) -> Fallible<Self>;
+    fn deserialize(r: &mut dyn Read) -> Result<Self>;
 }
 
 impl Serializable for FileState {
     /// Write a file entry to the store.
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_u8(self.state)?;
         w.write_vlq(self.mode)?;
         w.write_vlq(self.size)?;
@@ -42,7 +42,7 @@ impl Serializable for FileState {
     }
 
     /// Read an entry from the store.
-    fn deserialize(r: &mut dyn Read) -> Fallible<FileState> {
+    fn deserialize(r: &mut dyn Read) -> Result<FileState> {
         let state = r.read_u8()?;
         let mode = r.read_vlq()?;
         let size = r.read_vlq()?;
@@ -57,14 +57,14 @@ impl Serializable for FileState {
 }
 
 impl Serializable for AggregatedState {
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_vlq(self.union.to_bits())?;
         w.write_vlq(self.intersection.to_bits())?;
         Ok(())
     }
 
     /// Read an entry from the store.
-    fn deserialize(r: &mut dyn Read) -> Fallible<AggregatedState> {
+    fn deserialize(r: &mut dyn Read) -> Result<AggregatedState> {
         let state: u16 = r.read_vlq()?;
         let union = StateFlags::from_bits_truncate(state);
         let state: u16 = r.read_vlq()?;
@@ -77,14 +77,14 @@ impl Serializable for AggregatedState {
 }
 
 impl Serializable for Box<[u8]> {
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_vlq(self.len())?;
         w.write_all(&self)?;
 
         Ok(())
     }
 
-    fn deserialize(r: &mut dyn Read) -> Fallible<Self> {
+    fn deserialize(r: &mut dyn Read) -> Result<Self> {
         let len: usize = r.read_vlq()?;
         let mut buf = vec![0; len];
         r.read_exact(&mut buf)?;
@@ -93,7 +93,7 @@ impl Serializable for Box<[u8]> {
 }
 
 impl Serializable for FileStateV2 {
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_vlq(self.state.to_bits())?;
         w.write_vlq(self.mode)?;
         w.write_vlq(self.size)?;
@@ -109,7 +109,7 @@ impl Serializable for FileStateV2 {
         Ok(())
     }
 
-    fn deserialize(r: &mut dyn Read) -> Fallible<FileStateV2> {
+    fn deserialize(r: &mut dyn Read) -> Result<FileStateV2> {
         let state: u16 = r.read_vlq()?;
         let state = StateFlags::from_bits_truncate(state);
         let mode = r.read_vlq()?;
@@ -132,7 +132,7 @@ impl Serializable for FileStateV2 {
 }
 
 /// Deserialize a single entry in a node's entry map.  Returns the name and the entry.
-fn deserialize_node_entry<T>(r: &mut dyn Read) -> Fallible<(Key, NodeEntry<T>)>
+fn deserialize_node_entry<T>(r: &mut dyn Read) -> Result<(Key, NodeEntry<T>)>
 where
     T: Serializable + Clone,
 {
@@ -172,7 +172,7 @@ where
 }
 
 impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
-    fn deserialize(r: &mut dyn Read) -> Fallible<NodeEntryMap<T>> {
+    fn deserialize(r: &mut dyn Read) -> Result<NodeEntryMap<T>> {
         let count = r.read_vlq()?;
         let mut entries = NodeEntryMap::with_capacity(count);
         for _i in 0..count {
@@ -182,7 +182,7 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
         Ok(entries)
     }
 
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_vlq(self.len())?;
         for (name, entry) in self.iter() {
             match entry {
@@ -207,7 +207,7 @@ const DIRSTATE_ROOT_MAGIC_LEN: usize = 4;
 const DIRSTATE_ROOT_MAGIC: [u8; DIRSTATE_ROOT_MAGIC_LEN] = *b"////";
 
 impl Serializable for TreeDirstateRoot {
-    fn deserialize(r: &mut dyn Read) -> Fallible<TreeDirstateRoot> {
+    fn deserialize(r: &mut dyn Read) -> Result<TreeDirstateRoot> {
         // Sanity check that this is a root
         let mut buffer = [0; DIRSTATE_ROOT_MAGIC_LEN];
         r.read_exact(&mut buffer)?;
@@ -228,7 +228,7 @@ impl Serializable for TreeDirstateRoot {
         })
     }
 
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_all(&DIRSTATE_ROOT_MAGIC)?;
         w.write_u64::<BigEndian>(self.tracked_root_id.0)?;
         w.write_u32::<BigEndian>(self.tracked_file_count)?;
@@ -246,7 +246,7 @@ fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
 }
 
 impl Serializable for TreeStateRoot {
-    fn deserialize(r: &mut dyn Read) -> Fallible<Self> {
+    fn deserialize(r: &mut dyn Read) -> Result<Self> {
         let checksum = r.read_u64::<BigEndian>()?;
         let mut buf = Vec::new();
         r.read_to_end(&mut buf)?;
@@ -273,7 +273,7 @@ impl Serializable for TreeStateRoot {
         })
     }
 
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_vlq(self.version)?;
         buf.write_vlq(self.tree_block_id.0)?;
@@ -286,12 +286,12 @@ impl Serializable for TreeStateRoot {
 }
 
 impl Serializable for StateFlags {
-    fn deserialize(r: &mut dyn Read) -> Fallible<Self> {
+    fn deserialize(r: &mut dyn Read) -> Result<Self> {
         let v = r.read_vlq()?;
         Ok(Self::from_bits_truncate(v))
     }
 
-    fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         Ok(w.write_vlq(self.to_bits())?)
     }
 }

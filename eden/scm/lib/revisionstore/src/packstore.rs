@@ -16,7 +16,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use failure::Fallible;
+use failure::Fallible as Result;
 use parking_lot::Mutex;
 
 use types::{Key, NodeInfo};
@@ -226,7 +226,7 @@ impl HistoryPackStore {
 
 impl<T: LocalStore + Repackable> PackStoreInner<T> {
     /// Open new on-disk packfiles, and close removed ones.
-    fn rescan(&self) -> Fallible<()> {
+    fn rescan(&self) -> Result<()> {
         let mut new_packs = Vec::new();
 
         let readdir = match read_dir(&self.pack_dir) {
@@ -261,7 +261,7 @@ impl<T: LocalStore + Repackable> PackStoreInner<T> {
 
     /// Scan the store when too much time has passed since the last scan. Returns whether the
     /// filesystem was actually scanned.
-    fn try_scan(&self) -> Fallible<bool> {
+    fn try_scan(&self) -> Result<bool> {
         let now = Instant::now();
 
         if now.duration_since(*self.last_scanned.borrow()) >= self.scan_frequency {
@@ -274,9 +274,9 @@ impl<T: LocalStore + Repackable> PackStoreInner<T> {
     }
 
     /// Execute the `op` function. May call `rescan` when `op` fails with `KeyError`.
-    fn run<R, F>(&self, op: F) -> Fallible<Option<R>>
+    fn run<R, F>(&self, op: F) -> Result<Option<R>>
     where
-        F: Fn(&T) -> Fallible<Option<R>>,
+        F: Fn(&T) -> Result<Option<R>>,
     {
         for _ in 0..2 {
             let mut found = None;
@@ -324,7 +324,7 @@ impl<T: LocalStore + Repackable> PackStoreInner<T> {
 }
 
 impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
         // any packfiles have been loaded. Let's tentatively scan the store before iterating over
         // all the known packs.
@@ -343,25 +343,25 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
 }
 
 impl DataStore for DataPackStore {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.inner.lock().run(|store| store.get(key))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         self.inner.lock().run(|store| store.get_delta(key))
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         self.inner.lock().run(|store| store.get_delta_chain(key))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         self.inner.lock().run(|store| store.get_meta(key))
     }
 }
 
 impl HistoryStore for HistoryPackStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.lock().run(|store| store.get_node_info(key))
     }
 }
@@ -379,7 +379,7 @@ pub struct MutableDataPackStore {
 }
 
 impl MutableDataPackStore {
-    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Fallible<Self> {
+    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
         let pack_store = Arc::new(DataPackStore::new(pack_dir.as_ref(), corruption_policy));
         let mutable_pack = MutableDataPack::new(pack_dir, DataPackVersion::One)?;
         let mut union_store: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
@@ -397,36 +397,36 @@ impl MutableDataPackStore {
 }
 
 impl DataStore for MutableDataPackStore {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.inner.union_store.get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         self.inner.union_store.get_delta(key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         self.inner.union_store.get_delta_chain(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         self.inner.union_store.get_meta(key)
     }
 }
 
 impl LocalStore for MutableDataPackStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.inner.union_store.get_missing(keys)
     }
 }
 
 impl MutableDeltaStore for MutableDataPackStore {
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.inner.mutable_pack.add(delta, metadata)
     }
 
     /// Flush the current mutable datapack to disk and add it to the `PackStore`.
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         if let Some(path) = self.inner.mutable_pack.flush()? {
             let datapack = DataPack::new(path.as_path())?;
             self.inner.pack_store.add_pack(datapack);
@@ -450,7 +450,7 @@ pub struct MutableHistoryPackStore {
 }
 
 impl MutableHistoryPackStore {
-    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Fallible<Self> {
+    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
         let pack_store = Arc::new(HistoryPackStore::new(pack_dir.as_ref(), corruption_policy));
         let mutable_pack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
         let mut union_store: UnionHistoryStore<Box<dyn HistoryStore>> = UnionHistoryStore::new();
@@ -468,24 +468,24 @@ impl MutableHistoryPackStore {
 }
 
 impl HistoryStore for MutableHistoryPackStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.union_store.get_node_info(key)
     }
 }
 
 impl LocalStore for MutableHistoryPackStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.inner.union_store.get_missing(keys)
     }
 }
 
 impl MutableHistoryStore for MutableHistoryPackStore {
-    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         self.inner.mutable_pack.add(key, info)
     }
 
     /// Flush the current mutable historypack to disk and add it to the `PackStore`.
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         if let Some(path) = self.inner.mutable_pack.flush()? {
             let histpack = HistoryPack::new(path.as_path())?;
             self.inner.pack_store.add_pack(histpack);
@@ -513,7 +513,7 @@ mod tests {
     use crate::historypack::tests::{get_nodes, make_historypack};
 
     #[test]
-    fn test_datapack_created_before() -> Fallible<()> {
+    fn test_datapack_created_before() -> Result<()> {
         let tempdir = TempDir::new()?;
 
         let k = key("a", "2");
@@ -534,7 +534,7 @@ mod tests {
     }
 
     #[test]
-    fn test_datapack_get_missing() -> Fallible<()> {
+    fn test_datapack_get_missing() -> Result<()> {
         let tempdir = TempDir::new()?;
 
         let k = key("a", "2");
@@ -555,7 +555,7 @@ mod tests {
     }
 
     #[test]
-    fn test_datapack_created_after() -> Fallible<()> {
+    fn test_datapack_created_after() -> Result<()> {
         let tempdir = TempDir::new()?;
         let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
@@ -612,7 +612,7 @@ mod tests {
     }
 
     #[test]
-    fn test_force_rescan() -> Fallible<()> {
+    fn test_force_rescan() -> Result<()> {
         let tempdir = TempDir::new()?;
         let store = PackStoreOptions::new()
             .directory(&tempdir)
@@ -650,7 +650,7 @@ mod tests {
     }
 
     #[test]
-    fn test_histpack() -> Fallible<()> {
+    fn test_histpack() -> Result<()> {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new()?;
         let store = HistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
@@ -666,7 +666,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lrustore_order() -> Fallible<()> {
+    fn test_lrustore_order() -> Result<()> {
         let tempdir = TempDir::new()?;
 
         let k1 = key("a", "2");
@@ -707,7 +707,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rescan_no_dir() -> Fallible<()> {
+    fn test_rescan_no_dir() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut non_present_tempdir = tempdir.into_path();
         non_present_tempdir.push("non_present");
@@ -749,7 +749,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ignore_corrupted() -> Fallible<()> {
+    fn test_ignore_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
 
         let k1 = key("a", "2");
@@ -783,7 +783,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_flush() -> Fallible<()> {
+    fn test_add_flush() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
@@ -800,7 +800,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_get_delta() -> Fallible<()> {
+    fn test_add_get_delta() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
@@ -817,7 +817,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_flush_get_delta() -> Fallible<()> {
+    fn test_add_flush_get_delta() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
@@ -835,7 +835,7 @@ mod tests {
     }
 
     #[test]
-    fn test_histpack_add_get() -> Fallible<()> {
+    fn test_histpack_add_get() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
@@ -853,7 +853,7 @@ mod tests {
     }
 
     #[test]
-    fn test_histpack_add_flush_get() -> Fallible<()> {
+    fn test_histpack_add_flush_get() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
@@ -873,7 +873,7 @@ mod tests {
     }
 
     #[test]
-    fn test_datapack_flush_empty() -> Fallible<()> {
+    fn test_datapack_flush_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
         packstore.flush()?;
@@ -881,7 +881,7 @@ mod tests {
     }
 
     #[test]
-    fn test_histpack_flush_empty() -> Fallible<()> {
+    fn test_histpack_flush_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
         let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
         packstore.flush()?;

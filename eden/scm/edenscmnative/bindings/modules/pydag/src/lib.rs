@@ -15,8 +15,10 @@ use dag::{
     spanset::{SpanSet, SpanSetIter},
 };
 use encoding::local_bytes_to_path;
-use failure::Fallible;
+use failure::Error;
 use std::cell::RefCell;
+
+type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "dag"].join(".");
@@ -300,8 +302,8 @@ py_class!(class dagindex |py| {
 fn translate_get_parents<'a>(
     py: Python<'a>,
     get_parents: PyObject,
-) -> impl Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>> + 'a {
-    move |node: &[u8]| -> Fallible<Vec<Box<[u8]>>> {
+) -> impl Fn(&[u8]) -> Result<Vec<Box<[u8]>>> + 'a {
+    move |node: &[u8]| -> Result<Vec<Box<[u8]>>> {
         let mut result = Vec::new();
         let node = PyBytes::new(py, node);
         let parents = get_parents.call(py, (node,), None).into_fallible()?;

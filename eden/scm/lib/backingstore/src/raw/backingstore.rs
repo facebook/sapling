@@ -7,14 +7,14 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use failure::{ensure, err_msg, Fallible};
+use failure::{ensure, err_msg, Fallible as Result};
 use libc::{c_char, size_t};
 use std::{slice, str};
 
 use crate::backingstore::BackingStore;
 use crate::raw::{CBytes, CFallible};
 
-fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Fallible<&'a [U]> {
+fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [U]> {
     ensure!(!ptr.is_null(), "string ptr is null");
     Ok(unsafe { slice::from_raw_parts(ptr as *const U, length) })
 }
@@ -22,7 +22,7 @@ fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Fallible<&'a
 fn backingstore_new(
     repository: *const c_char,
     repository_len: size_t,
-) -> Fallible<*mut BackingStore> {
+) -> Result<*mut BackingStore> {
     let repository = stringpiece_to_slice(repository, repository_len)?;
     let repo = str::from_utf8(repository)?;
     let store = Box::new(BackingStore::new(repo)?);
@@ -51,7 +51,7 @@ fn backingstore_get_blob(
     name_len: usize,
     node: *const u8,
     node_len: usize,
-) -> Fallible<*mut CBytes> {
+) -> Result<*mut CBytes> {
     assert!(!store.is_null());
     let store = unsafe { &*store };
     let path = stringpiece_to_slice(name, name_len)?;
@@ -81,7 +81,7 @@ fn backingstore_get_tree(
     name_len: usize,
     node: *const u8,
     node_len: usize,
-) -> Fallible<*mut CBytes> {
+) -> Result<*mut CBytes> {
     assert!(!store.is_null());
     let store = unsafe { &*store };
     let path = stringpiece_to_slice(name, name_len)?;

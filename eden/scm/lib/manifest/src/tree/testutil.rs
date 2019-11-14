@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use types::{testutil::*, HgId, RepoPath};
 
@@ -19,7 +19,7 @@ use crate::{
     FileMetadata, Manifest,
 };
 
-pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Fallible<store::Element> {
+pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
     Ok(store::Element::new(
         path_component_buf(path),
         hgid(hex),

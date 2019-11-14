@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::Key;
@@ -42,31 +42,31 @@ pub struct ContentStore {
 }
 
 impl ContentStore {
-    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Fallible<Self> {
+    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
         ContentStoreBuilder::new(&local_path, config).build()
     }
 }
 
 impl DataStore for ContentStore {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.inner.datastore.get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         self.inner.datastore.get_delta(key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         self.inner.datastore.get_delta_chain(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         self.inner.datastore.get_meta(key)
     }
 }
 
 impl RemoteDataStore for ContentStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         if let Some(remote_store) = self.inner.remote_store.as_ref() {
             let missing = self.get_missing(&keys)?;
             if missing == vec![] {
@@ -82,7 +82,7 @@ impl RemoteDataStore for ContentStore {
 }
 
 impl LocalStore for ContentStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.inner.datastore.get_missing(keys)
     }
 }
@@ -99,12 +99,12 @@ impl Drop for ContentStoreInner {
 /// remote stores will be automatically written to while calling the various `DataStore` methods.
 impl MutableDeltaStore for ContentStore {
     /// Add the data to the local store.
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.inner.local_mutabledatastore.add(delta, metadata)
     }
 
     /// Commit the data written to the local store.
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         self.inner.local_mutabledatastore.flush()
     }
 }
@@ -140,7 +140,7 @@ impl<'a> ContentStoreBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Fallible<ContentStore> {
+    pub fn build(self) -> Result<ContentStore> {
         let cache_packs_path = get_cache_packs_path(self.config, self.suffix)?;
         let local_pack_store = Box::new(MutableDataPackStore::new(
             get_local_packs_path(self.local_path, self.suffix)?,
@@ -221,7 +221,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new() -> Fallible<()> {
+    fn test_new() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_get() -> Fallible<()> {
+    fn test_add_get() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -250,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_dropped() -> Fallible<()> {
+    fn test_add_dropped() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_flush_get() -> Fallible<()> {
+    fn test_add_flush_get() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -292,7 +292,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_flush_drop_get() -> Fallible<()> {
+    fn test_add_flush_drop_get() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -315,7 +315,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remote_store() -> Fallible<()> {
+    fn test_remote_store() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remote_store_cached() -> Fallible<()> {
+    fn test_remote_store_cached() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn test_not_in_remote_store() -> Fallible<()> {
+    fn test_not_in_remote_store() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
@@ -386,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fetch_location() -> Fallible<()> {
+    fn test_fetch_location() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);

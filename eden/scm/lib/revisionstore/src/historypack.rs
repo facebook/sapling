@@ -91,7 +91,7 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{format_err, Fail, Fallible};
+use failure::{format_err, Fail, Fallible as Result};
 use memmap::{Mmap, MmapOptions};
 
 use types::{HgId, Key, NodeInfo, RepoPath, RepoPathBuf};
@@ -114,7 +114,7 @@ pub enum HistoryPackVersion {
 }
 
 impl HistoryPackVersion {
-    fn new(value: u8) -> Fallible<Self> {
+    fn new(value: u8) -> Result<Self> {
         match value {
             0 => Ok(HistoryPackVersion::Zero),
             1 => Ok(HistoryPackVersion::One),
@@ -151,11 +151,7 @@ pub struct HistoryEntry<'a> {
     pub copy_from: Option<&'a RepoPath>,
 }
 
-fn read_slice<'a, 'b>(
-    cur: &'a mut Cursor<&[u8]>,
-    buf: &'b [u8],
-    size: usize,
-) -> Fallible<&'b [u8]> {
+fn read_slice<'a, 'b>(cur: &'a mut Cursor<&[u8]>, buf: &'b [u8], size: usize) -> Result<&'b [u8]> {
     let start = cur.position() as usize;
     let end = start + size;
     let file_name = buf.get_err(start..end)?;
@@ -164,7 +160,7 @@ fn read_slice<'a, 'b>(
 }
 
 impl<'a> FileSectionHeader<'a> {
-    pub(crate) fn read(buf: &[u8]) -> Fallible<FileSectionHeader> {
+    pub(crate) fn read(buf: &[u8]) -> Result<FileSectionHeader> {
         let mut cur = Cursor::new(buf);
         let file_name_len = cur.read_u16::<BigEndian>()? as usize;
         let file_name_slice = read_slice(&mut cur, &buf, file_name_len)?;
@@ -174,7 +170,7 @@ impl<'a> FileSectionHeader<'a> {
         Ok(FileSectionHeader { file_name, count })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         let file_name_slice = self.file_name.as_byte_slice();
         writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
         writer.write_all(file_name_slice)?;
@@ -184,7 +180,7 @@ impl<'a> FileSectionHeader<'a> {
 }
 
 impl<'a> HistoryEntry<'a> {
-    pub(crate) fn read(buf: &[u8]) -> Fallible<HistoryEntry> {
+    pub(crate) fn read(buf: &[u8]) -> Result<HistoryEntry> {
         let mut cur = Cursor::new(buf);
         let mut hgid_buf: [u8; 20] = Default::default();
 
@@ -227,7 +223,7 @@ impl<'a> HistoryEntry<'a> {
         p2: &HgId,
         linknode: &HgId,
         copy_from: &Option<&RepoPath>,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         writer.write_all(hgid.as_ref())?;
         writer.write_all(p1.as_ref())?;
         writer.write_all(p2.as_ref())?;
@@ -256,7 +252,7 @@ pub struct HistoryPack {
 }
 
 impl HistoryPack {
-    pub fn new(path: &Path) -> Fallible<Self> {
+    pub fn new(path: &Path) -> Result<Self> {
         let base_path = PathBuf::from(path);
         let pack_path = path.with_extension("histpack");
         let file = File::open(&pack_path)?;
@@ -301,15 +297,15 @@ impl HistoryPack {
         &self.index_path
     }
 
-    fn read_file_section_header(&self, offset: u64) -> Fallible<FileSectionHeader> {
+    fn read_file_section_header(&self, offset: u64) -> Result<FileSectionHeader> {
         FileSectionHeader::read(&self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
-    fn read_history_entry(&self, offset: u64) -> Fallible<HistoryEntry> {
+    fn read_history_entry(&self, offset: u64) -> Result<HistoryEntry> {
         HistoryEntry::read(&self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
-    fn read_node_info(&self, key: &Key, offset: u64) -> Fallible<NodeInfo> {
+    fn read_node_info(&self, key: &Key, offset: u64) -> Result<NodeInfo> {
         let entry = self.read_history_entry(offset)?;
         assert_eq!(entry.hgid, key.hgid);
         let p1 = Key::new(
@@ -329,7 +325,7 @@ impl HistoryPack {
 }
 
 impl HistoryStore for HistoryPack {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let hgid_location = match self.index.get_hgid_entry(key)? {
             None => return Ok(None),
             Some(location) => location,
@@ -339,11 +335,11 @@ impl HistoryStore for HistoryPack {
 }
 
 impl LocalStore for HistoryPack {
-    fn from_path(path: &Path) -> Fallible<Self> {
+    fn from_path(path: &Path) -> Result<Self> {
         HistoryPack::new(path)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys
             .iter()
             .filter(|k| match self.index.get_hgid_entry(&k) {
@@ -356,13 +352,13 @@ impl LocalStore for HistoryPack {
 }
 
 impl ToKeys for HistoryPack {
-    fn to_keys(&self) -> Vec<Fallible<Key>> {
+    fn to_keys(&self) -> Vec<Result<Key>> {
         HistoryPackIterator::new(self).collect()
     }
 }
 
 impl Repackable for HistoryPack {
-    fn delete(mut self) -> Fallible<()> {
+    fn delete(mut self) -> Result<()> {
         // On some platforms, removing a file can fail if it's still opened or mapped, let's make
         // sure we close and unmap them before deletion.
         let pack_path = replace(&mut self.pack_path, Default::default());
@@ -398,7 +394,7 @@ impl<'a> HistoryPackIterator<'a> {
 }
 
 impl<'a> Iterator for HistoryPackIterator<'a> {
-    type Item = Fallible<Key>;
+    type Item = Result<Key>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.current_remaining == 0 && (self.offset as usize) < self.pack.len() {
@@ -563,7 +559,7 @@ pub mod tests {
         let mut iter_keys = pack
             .to_keys()
             .into_iter()
-            .collect::<Fallible<Vec<Key>>>()
+            .collect::<Result<Vec<Key>>>()
             .unwrap();
         iter_keys.sort_unstable();
         assert_eq!(iter_keys, keys,);

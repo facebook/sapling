@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use failure::{format_err, Fallible};
+use failure::{format_err, Fallible as Result};
 
 use types::{Key, NodeInfo};
 
@@ -49,7 +49,7 @@ impl<'a> MultiplexHistoryStore<'a> {
 
 impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
     /// Write the `Delta` and `Metadata` to all the stores
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         for store in self.stores.iter() {
             store.add(delta, metadata)?;
         }
@@ -57,7 +57,7 @@ impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
         Ok(())
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         for store in self.stores.iter() {
             store.flush()?;
         }
@@ -67,11 +67,11 @@ impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
 }
 
 impl<'a> DataStore for MultiplexDeltaStore<'a> {
-    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         Err(format_err!("MultiplexDeltaStore doesn't support raw get()"))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         for store in self.stores.iter() {
             if let Some(result) = store.get_delta(key)? {
                 return Ok(Some(result));
@@ -81,7 +81,7 @@ impl<'a> DataStore for MultiplexDeltaStore<'a> {
         Ok(None)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         for store in self.stores.iter() {
             if let Some(result) = store.get_delta_chain(key)? {
                 return Ok(Some(result));
@@ -91,7 +91,7 @@ impl<'a> DataStore for MultiplexDeltaStore<'a> {
         Ok(None)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         for store in self.stores.iter() {
             if let Some(result) = store.get_meta(key)? {
                 return Ok(Some(result));
@@ -103,7 +103,7 @@ impl<'a> DataStore for MultiplexDeltaStore<'a> {
 }
 
 impl<'a> LocalStore for MultiplexDeltaStore<'a> {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
             .iter()
@@ -115,7 +115,7 @@ impl<'a> LocalStore for MultiplexDeltaStore<'a> {
 }
 
 impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
-    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         for store in self.stores.iter() {
             store.add(key, info)?;
         }
@@ -123,7 +123,7 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
         Ok(())
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         for store in self.stores.iter() {
             store.flush()?;
         }
@@ -133,7 +133,7 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
 }
 
 impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         for store in self.stores.iter() {
             if let Some(nodeinfo) = store.get_node_info(key)? {
                 return Ok(Some(nodeinfo));
@@ -145,7 +145,7 @@ impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
 }
 
 impl<'a> LocalStore for MultiplexHistoryStore<'a> {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
             .iter()
@@ -174,7 +174,7 @@ mod tests {
     use crate::mutablehistorypack::MutableHistoryPack;
 
     #[test]
-    fn test_delta_add_static() -> Fallible<()> {
+    fn test_delta_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut log = IndexedLogDataStore::new(&tempdir)?;
         let mut multiplex = MultiplexDeltaStore::new();
@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_add_dynamic() -> Fallible<()> {
+    fn test_delta_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut log = IndexedLogDataStore::new(&tempdir)?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One)?;
@@ -226,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    fn test_history_add_static() -> Fallible<()> {
+    fn test_history_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut pack = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
         let mut multiplex = MultiplexHistoryStore::new();
@@ -249,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    fn test_history_add_dynamic() -> Fallible<()> {
+    fn test_history_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut pack1 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
         let mut pack2 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;

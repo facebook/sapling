@@ -7,7 +7,7 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use failure::{bail, format_err, Fallible};
+use failure::{bail, format_err, Fallible as Result};
 use once_cell::sync::OnceCell;
 
 use types::{HgId, PathComponentBuf, RepoPath};
@@ -46,7 +46,7 @@ pub use self::Link::*;
 #[derive(Debug)]
 pub struct DurableEntry {
     pub hgid: HgId,
-    pub links: OnceCell<Fallible<BTreeMap<PathComponentBuf, Link>>>,
+    pub links: OnceCell<Result<BTreeMap<PathComponentBuf, Link>>>,
 }
 
 impl Link {
@@ -63,7 +63,7 @@ impl Link {
         &mut self,
         store: &InnerStore,
         parent: &RepoPath,
-    ) -> Fallible<&mut BTreeMap<PathComponentBuf, Link>> {
+    ) -> Result<&mut BTreeMap<PathComponentBuf, Link>> {
         loop {
             match self {
                 Leaf(_) => bail!("Path {} is a file but a directory was expected.", parent),
@@ -89,7 +89,7 @@ impl DurableEntry {
         &self,
         store: &InnerStore,
         path: &RepoPath,
-    ) -> Fallible<&BTreeMap<PathComponentBuf, Link>> {
+    ) -> Result<&BTreeMap<PathComponentBuf, Link>> {
         // TODO: be smarter around how failures are handled when reading from the store
         // Currently this loses the stacktrace
         let result = self.links.get_or_init(|| {

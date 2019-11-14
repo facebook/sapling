@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use edenapi::EdenApi;
 use types::Key;
@@ -56,7 +56,7 @@ struct EdenApiRemoteDataStore {
 }
 
 impl RemoteDataStore for EdenApiRemoteDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         let (entries, _) = self.inner.edenapi.0.get_files(keys, None)?;
         for entry in entries {
             let key = entry.0.clone();
@@ -77,25 +77,25 @@ impl RemoteDataStore for EdenApiRemoteDataStore {
 }
 
 impl DataStore for EdenApiRemoteDataStore {
-    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!();
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self.inner.store.get_delta(key),
             Err(_) => Ok(None),
         }
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self.inner.store.get_delta_chain(key),
             Err(_) => Ok(None),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self.inner.store.get_meta(key),
             Err(_) => Ok(None),
@@ -104,7 +104,7 @@ impl DataStore for EdenApiRemoteDataStore {
 }
 
 impl LocalStore for EdenApiRemoteDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }
@@ -122,7 +122,7 @@ mod tests {
     use crate::{indexedlogdatastore::IndexedLogDataStore, testutil::*};
 
     #[test]
-    fn test_get_delta() -> Fallible<()> {
+    fn test_get_delta() -> Result<()> {
         let tmp = TempDir::new()?;
         let store = IndexedLogDataStore::new(&tmp)?;
 
@@ -142,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn test_missing() -> Fallible<()> {
+    fn test_missing() -> Result<()> {
         let tmp = TempDir::new()?;
         let store = IndexedLogDataStore::new(&tmp)?;
 

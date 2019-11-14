@@ -13,7 +13,7 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use failure::{format_err, Fallible};
+use failure::{format_err, Fallible as Result};
 use serde_derive::{Deserialize, Serialize};
 
 use types::Key;
@@ -34,10 +34,10 @@ pub struct Metadata {
 }
 
 pub trait DataStore: LocalStore + Send + Sync {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>>;
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>>;
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>>;
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>>;
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>>;
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>>;
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>>;
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>>;
 }
 
 /// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
@@ -49,27 +49,27 @@ pub trait RemoteDataStore: DataStore + Send + Sync {
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
     /// everything that was asked. On a higher level store, such as the `ContentStore`, this will
     /// avoid fetching data that is already present locally.
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()>;
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()>;
 }
 
 pub trait MutableDeltaStore: DataStore + Send + Sync {
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
-    fn flush(&self) -> Fallible<Option<PathBuf>>;
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()>;
+    fn flush(&self) -> Result<Option<PathBuf>>;
 }
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
 /// the smart pointers like `Box`, `Rc`, `Arc`.
 impl<T: DataStore + ?Sized, U: Deref<Target = T> + Send + Sync> DataStore for U {
-    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         T::get(self, key)
     }
-    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         T::get_delta(self, key)
     }
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         T::get_delta_chain(self, key)
     }
-    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         T::get_meta(self, key)
     }
 }
@@ -77,23 +77,23 @@ impl<T: DataStore + ?Sized, U: Deref<Target = T> + Send + Sync> DataStore for U 
 /// Implement `RemoteDataStore` for all types that can be `Deref` into a `RemoteDataStore`. This
 /// includes all the smart pointers like `Box`, `Rc`, `Arc`.
 impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteDataStore for U {
-    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         T::prefetch(self, keys)
     }
 }
 
 impl<T: MutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> MutableDeltaStore for U {
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         T::add(self, delta, metadata)
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         T::flush(self)
     }
 }
 
 impl Metadata {
-    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         let mut buf = vec![];
         if let Some(flags) = self.flags {
             if flags != 0 {
@@ -109,14 +109,14 @@ impl Metadata {
         Ok(())
     }
 
-    fn write_meta<T: Write>(flag: u8, value: u64, writer: &mut T) -> Fallible<()> {
+    fn write_meta<T: Write>(flag: u8, value: u64, writer: &mut T) -> Result<()> {
         writer.write_u8(flag as u8)?;
         writer.write_u16::<BigEndian>(u64_to_bin_len(value))?;
         u64_to_bin(value, writer)?;
         Ok(())
     }
 
-    pub fn read(cur: &mut Cursor<&[u8]>) -> Fallible<Metadata> {
+    pub fn read(cur: &mut Cursor<&[u8]>) -> Result<Metadata> {
         let metadata_len = cur.read_u32::<BigEndian>()? as u64;
         let mut size: Option<u64> = None;
         let mut flags: Option<u64> = None;
@@ -160,7 +160,7 @@ fn u64_to_bin_len(value: u64) -> u16 {
 }
 
 /// Converts an integer into a buffer using a special format used in the datapack format.
-fn u64_to_bin<T: Write>(value: u64, writer: &mut T) -> Fallible<()> {
+fn u64_to_bin<T: Write>(value: u64, writer: &mut T) -> Result<()> {
     let mut value = value;
     let mut buf = [0; 8];
     let len = u64_to_bin_len(value) as usize;

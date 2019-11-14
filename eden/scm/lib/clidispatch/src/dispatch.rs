@@ -15,12 +15,14 @@ use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use failure::Fallible;
+use failure::Error;
 use std::convert::TryInto;
 use std::{env, path::Path};
 
+type Result<T, E = Error> = std::result::Result<T, E>;
+
 /// Similar to `env::args()`. But does not panic.
-pub fn args() -> Fallible<Vec<String>> {
+pub fn args() -> Result<Vec<String>> {
     env::args_os()
         .map(|os| {
             os.into_string()
@@ -34,7 +36,7 @@ fn override_config<P>(
     config: &mut ConfigSet,
     config_paths: &[P],
     config_overrides: &[String],
-) -> Fallible<()>
+) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -63,7 +65,7 @@ where
     Ok(())
 }
 
-fn last_chance_to_abort(opts: &HgGlobalOpts) -> Fallible<()> {
+fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<()> {
     if opts.profile {
         return Err(errors::Abort("--profile does not support Rust commands (yet)".into()).into());
     }
@@ -97,7 +99,7 @@ fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutp
         .parse_args(args)
 }
 
-fn initialize_blackbox(optional_repo: &OptionalRepo) -> Fallible<()> {
+fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
     if let OptionalRepo::Some(repo) = optional_repo {
         let config = repo.config();
         let max_size = config
@@ -118,7 +120,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Fallible<()> {
     Ok(())
 }
 
-fn initialize_indexedlog(config: &ConfigSet) -> Fallible<()> {
+fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
     #[cfg(unix)]
     {
         use std::sync::atomic::Ordering::SeqCst;
@@ -154,7 +156,7 @@ fn initialize_indexedlog(config: &ConfigSet) -> Fallible<()> {
     Ok(())
 }
 
-pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) -> Fallible<u8> {
+pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) -> Result<u8> {
     let early_result = early_parse(&args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
 

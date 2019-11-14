@@ -10,7 +10,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 use serde_derive::{Deserialize, Serialize};
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -61,7 +61,7 @@ impl HgId {
         40
     }
 
-    pub fn from_slice(bytes: &[u8]) -> Fallible<Self> {
+    pub fn from_slice(bytes: &[u8]) -> Result<Self> {
         if bytes.len() != HgId::len() {
             return Err(HgIdError(format!("invalid hgid length {:?}", bytes.len())).into());
         }
@@ -76,7 +76,7 @@ impl HgId {
     }
 
     // Taken from Mononoke
-    pub fn from_str(s: &str) -> Fallible<Self> {
+    pub fn from_str(s: &str) -> Result<Self> {
         if s.len() != HgId::hex_len() {
             return Err(HgIdError(format!("invalid string length {:?}", s.len())).into());
         }

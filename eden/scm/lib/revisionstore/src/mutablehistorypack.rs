@@ -17,7 +17,7 @@ use std::{
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{Fail, Fallible};
+use failure::{Fail, Fallible as Result};
 use parking_lot::Mutex;
 use tempfile::NamedTempFile;
 
@@ -47,7 +47,7 @@ pub struct MutableHistoryPack {
 }
 
 impl MutableHistoryPackInner {
-    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Fallible<Self> {
+    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Result<Self> {
         let dir = dir.as_ref();
         if !dir.is_dir() {
             return Err(MutableHistoryPackError(format!(
@@ -71,7 +71,7 @@ impl MutableHistoryPackInner {
         hgid_map: &HashMap<Key, NodeInfo>,
         section_offset: usize,
         nodes: &mut HashMap<&'a RepoPath, HashMap<Key, NodeLocation>>,
-    ) -> Fallible<()> {
+    ) -> Result<()> {
         let mut hgid_locations = HashMap::<Key, NodeLocation>::with_capacity(hgid_map.len());
 
         // Write section header
@@ -117,7 +117,7 @@ impl MutableHistoryPackInner {
 }
 
 impl MutableHistoryPack {
-    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Fallible<Self> {
+    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Result<Self> {
         Ok(Self {
             inner: Arc::new(Mutex::new(MutableHistoryPackInner::new(dir, version)?)),
         })
@@ -125,7 +125,7 @@ impl MutableHistoryPack {
 }
 
 impl MutableHistoryStore for MutableHistoryPack {
-    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         let mut inner = self.inner.lock();
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
@@ -144,7 +144,7 @@ impl MutableHistoryStore for MutableHistoryPack {
         Ok(())
     }
 
-    fn flush(&self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<PathBuf>> {
         let mut guard = self.inner.lock();
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
@@ -154,7 +154,7 @@ impl MutableHistoryStore for MutableHistoryPack {
 }
 
 impl MutablePack for MutableHistoryPackInner {
-    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+    fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         if self.mem_index.is_empty() {
             return Err(EmptyMutablePack().into());
         }
@@ -216,7 +216,7 @@ impl MutablePack for MutableHistoryPackInner {
 }
 
 impl MutablePack for MutableHistoryPack {
-    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+    fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         let mut guard = self.inner.lock();
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
@@ -229,7 +229,7 @@ impl MutablePack for MutableHistoryPack {
     }
 }
 
-fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo)>> {
+fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>> {
     // Sorts the given keys into newest-first topological order
     let mut roots = Vec::<&Key>::new();
 
@@ -295,7 +295,7 @@ fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo
 }
 
 impl HistoryStore for MutableHistoryPack {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let inner = self.inner.lock();
         Ok(inner
             .mem_index
@@ -306,7 +306,7 @@ impl HistoryStore for MutableHistoryPack {
 }
 
 impl LocalStore for MutableHistoryPack {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.lock();
         Ok(keys
             .iter()
@@ -391,7 +391,7 @@ mod tests {
         let actual_order = pack
             .to_keys()
             .into_iter()
-            .collect::<Fallible<Vec<Key>>>()
+            .collect::<Result<Vec<Key>>>()
             .unwrap();
 
         // Compute the expected order

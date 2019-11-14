@@ -9,7 +9,7 @@
 
 use std::{slice::Iter, vec::IntoIter};
 
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use types::Key;
 
@@ -30,7 +30,7 @@ impl<T> UnionStore<T> {
 }
 
 impl<T: LocalStore> LocalStore for UnionStore<T> {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
@@ -59,7 +59,7 @@ impl<'a, T> IntoIterator for &'a UnionStore<T> {
 }
 
 impl<T: ToKeys> ToKeys for UnionStore<T> {
-    fn to_keys(&self) -> Vec<Fallible<Key>> {
+    fn to_keys(&self) -> Vec<Result<Key>> {
         self.into_iter()
             .map(|store| store.to_keys())
             .flatten()

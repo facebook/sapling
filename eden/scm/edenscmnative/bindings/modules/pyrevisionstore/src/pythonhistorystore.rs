@@ -9,7 +9,7 @@ use cpython::{
     exc, FromPyObject, ObjectProtocol, PyBytes, PyClone, PyList, PyObject, PyTuple, Python,
     PythonObject, PythonObjectWithTypeObject,
 };
-use failure::Fallible;
+use failure::Fallible as Result;
 
 use cpython_ext::PyErr;
 use revisionstore::{HistoryStore, LocalStore};
@@ -28,7 +28,7 @@ impl PythonHistoryStore {
 }
 
 impl HistoryStore for PythonHistoryStore {
-    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
@@ -66,7 +66,7 @@ impl HistoryStore for PythonHistoryStore {
 }
 
 impl LocalStore for PythonHistoryStore {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -84,7 +84,7 @@ impl LocalStore for PythonHistoryStore {
         let missing = py_list
             .iter(py)
             .map(|k| from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e).into()))
-            .collect::<Fallible<Vec<Key>>>()?;
+            .collect::<Result<Vec<Key>>>()?;
         Ok(missing)
     }
 }

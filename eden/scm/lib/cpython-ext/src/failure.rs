@@ -8,7 +8,7 @@
 //! Integrate cpython with failure
 
 use cpython::{ObjectProtocol, PyClone, PyResult, Python, PythonObjectWithTypeObject};
-use failure::{AsFail, Error, Fallible};
+use failure::{AsFail, Error, Fallible as Result};
 use std::fmt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` by specifying a
@@ -46,9 +46,9 @@ pub trait ResultPyErrExt<T> {
 ///
 /// ```
 /// use cpython_ext::failure::{FallibleExt, PyErr};
-/// use failure::Fallible;
+/// use failure::Fallible as Result;
 ///
-/// fn eval_py() -> Fallible<i32> {
+/// fn eval_py() -> Result<i32> {
 ///     let gil = cpython::Python::acquire_gil();
 ///     let py = gil.python();
 ///     let obj = py.eval("1 + 2", None, None).into_fallible()?;
@@ -65,10 +65,10 @@ pub trait ResultPyErrExt<T> {
 /// ```
 ///
 pub trait FallibleExt<T> {
-    fn into_fallible(self) -> Fallible<T>;
+    fn into_fallible(self) -> Result<T>;
 }
 
-impl<T, E: AsFail> ResultPyErrExt<T> for Result<T, E> {
+impl<T, E: AsFail> ResultPyErrExt<T> for std::result::Result<T, E> {
     fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T> {
         self.map_err(|e| {
             let e = e.as_fail();
@@ -82,7 +82,7 @@ impl<T, E: AsFail> ResultPyErrExt<T> for Result<T, E> {
 }
 
 impl<T> FallibleExt<T> for PyResult<T> {
-    fn into_fallible(self) -> Fallible<T> {
+    fn into_fallible(self) -> Result<T> {
         self.map_err(|e| Error::from_boxed_compat(Box::new(PyErr::from(e))))
     }
 }

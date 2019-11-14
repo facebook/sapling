@@ -8,7 +8,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
-use failure::{format_err, Fallible};
+use failure::{format_err, Fallible as Result};
 use structopt::StructOpt;
 
 use pathmatcher::AlwaysMatcher;
@@ -42,7 +42,7 @@ pub struct DataPackStore {
 }
 
 impl DataPackStore {
-    pub fn new(dir: PathBuf) -> Fallible<Self> {
+    pub fn new(dir: PathBuf) -> Result<Self> {
         let dirents = std::fs::read_dir(&dir)?
             .filter_map(|e| match e {
                 Err(_) => None,
@@ -68,7 +68,7 @@ impl DataPackStore {
 }
 
 impl manifest::TreeStore for DataPackStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes> {
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
         let key = Key::new(path.to_owned(), hgid);
         let result = self
             .union_store
@@ -77,7 +77,7 @@ impl manifest::TreeStore for DataPackStore {
         Ok(Bytes::from(result))
     }
 
-    fn insert(&self, _path: &RepoPath, _node: HgId, _value: Bytes) -> Fallible<()> {
+    fn insert(&self, _path: &RepoPath, _node: HgId, _value: Bytes) -> Result<()> {
         unimplemented!("this binary doesn't do writes yet");
     }
 }

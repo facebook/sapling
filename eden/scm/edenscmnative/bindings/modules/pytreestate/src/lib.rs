@@ -24,7 +24,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 use cpython::*;
-use failure::Fallible;
+use failure::Error;
 
 use ::treestate::{
     errors::ErrorKind,
@@ -36,6 +36,8 @@ use ::treestate::{
 };
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
+
+type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "treestate"].join(".");
@@ -828,7 +830,7 @@ fn flags_to_hg_state(_py: Python, flags: u16) -> PyResult<&'static str> {
 }
 
 /// Convert a Result to PyResult
-fn convert_result<T>(py: Python, result: Fallible<T>) -> PyResult<T> {
+fn convert_result<T>(py: Python, result: Result<T>) -> PyResult<T> {
     result.map_pyerr::<exc::IOError>(py)
 }
 

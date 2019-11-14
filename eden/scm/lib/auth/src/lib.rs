@@ -8,7 +8,7 @@
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, str};
 
 use bytes::Bytes;
-use failure::{err_msg, Error, Fallible};
+use failure::{err_msg, Error, Fallible as Result};
 use indexmap::IndexMap;
 use url::Url;
 
@@ -30,7 +30,7 @@ pub struct Auth {
 impl TryFrom<(&str, HashMap<&str, Bytes>)> for Auth {
     type Error = Error;
 
-    fn try_from((group, settings): (&str, HashMap<&str, Bytes>)) -> Fallible<Self> {
+    fn try_from((group, settings): (&str, HashMap<&str, Bytes>)) -> Result<Self> {
         let group = group.into();
 
         let prefix = settings
@@ -213,7 +213,7 @@ fn strip_scheme_and_user(url: &Url) -> String {
 
 /// Trivial function to convert Bytes to &str; factored out to help with type inference.
 #[inline]
-fn bytes_to_str(bytes: &Bytes) -> Fallible<&str> {
+fn bytes_to_str(bytes: &Bytes) -> Result<&str> {
     Ok(str::from_utf8(&bytes)?)
 }
 
@@ -273,7 +273,7 @@ mod test {
     }
 
     #[test]
-    fn test_strip_scheme_and_user() -> Fallible<()> {
+    fn test_strip_scheme_and_user() -> Result<()> {
         let url = "https://example.com/".parse()?;
         let stripped = strip_scheme_and_user(&url);
         assert_eq!(stripped, "example.com/");
@@ -286,7 +286,7 @@ mod test {
     }
 
     #[test]
-    fn test_auth_for_url() -> Fallible<()> {
+    fn test_auth_for_url() -> Result<()> {
         let mut config = ConfigSet::new();
         let _errors = config.parse(
             "[auth]\n\

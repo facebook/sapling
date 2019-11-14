@@ -10,7 +10,7 @@
 //! See [`IdMap`] for the main structure.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{bail, ensure, Fallible};
+use failure::{bail, ensure, Fallible as Result};
 use fs2::FileExt;
 use indexedlog::log;
 use std::fs::{self, File};
@@ -45,7 +45,7 @@ impl IdMap {
     ///
     /// By default, only read-only operations are allowed. For writing
     /// access, call [`IdMap::make_writable`] to get a writable instance.
-    pub fn open(path: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let log = log::OpenOptions::new()
             .create(true)
@@ -75,7 +75,7 @@ impl IdMap {
     /// Block if another instance is taking the lock.
     ///
     /// Panic if there are pending in-memory writes.
-    pub fn prepare_filesystem_sync(&mut self) -> Fallible<SyncableIdMap> {
+    pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdMap> {
         assert!(
             self.log.iter_dirty().next().is_none(),
             "programming error: prepare_filesystem_sync must be called without dirty in-memory entries",
@@ -106,7 +106,7 @@ impl IdMap {
     }
 
     /// Find slice by a specified integer id.
-    pub fn find_slice_by_id(&self, id: Id) -> Fallible<Option<&[u8]>> {
+    pub fn find_slice_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
         let mut key = Vec::with_capacity(8);
         key.write_u64::<BigEndian>(id).unwrap();
         let key = self.log.lookup(Self::INDEX_ID_TO_SLICE, key)?.nth(0);
@@ -121,7 +121,7 @@ impl IdMap {
     }
 
     /// Find the integer id matching the given slice.
-    pub fn find_id_by_slice(&self, slice: &[u8]) -> Fallible<Option<Id>> {
+    pub fn find_id_by_slice(&self, slice: &[u8]) -> Result<Option<Id>> {
         let key = self.log.lookup(Self::INDEX_SLICE_TO_ID, slice)?.nth(0);
         match key {
             Some(Ok(mut entry)) => {
@@ -136,7 +136,7 @@ impl IdMap {
     /// Insert a new entry mapping from a slice to an id.
     ///
     /// Panic if the new entry conflicts with existing entries.
-    pub fn insert(&mut self, id: Id, slice: &[u8]) -> Fallible<()> {
+    pub fn insert(&mut self, id: Id, slice: &[u8]) -> Result<()> {
         if id < self.next_free_id {
             let existing_slice = self.find_slice_by_id(id)?;
             if let Some(existing_slice) = existing_slice {
@@ -171,7 +171,7 @@ impl IdMap {
 
     // Find an unused id that is bigger than existing ids.
     // Used internally. It should match `next_free_id`.
-    fn get_next_free_id(log: &log::Log) -> Fallible<Id> {
+    fn get_next_free_id(log: &log::Log) -> Result<Id> {
         let mut iter = log.lookup_range(Self::INDEX_ID_TO_SLICE, ..)?.rev();
         match iter.nth(0) {
             None => Ok(0),
@@ -193,9 +193,9 @@ impl IdMap {
     /// This function needs roughly `O(N)` heap memory. `N` is the number of
     /// ids to assign. When `N` is very large, try assigning ids to a known
     /// ancestor first.
-    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F) -> Fallible<Id>
+    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F) -> Result<Id>
     where
-        F: Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
+        F: Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
     {
         // There are some interesting cases to optimize the numbers:
         //
@@ -277,9 +277,9 @@ impl IdMap {
     /// Translate `get_parents` from taking slices to taking `Id`s.
     pub fn build_get_parents_by_id<'a>(
         &'a self,
-        get_parents_by_name: &'a dyn Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
-    ) -> impl Fn(Id) -> Fallible<Vec<Id>> + 'a {
-        let func = move |id: Id| -> Fallible<Vec<Id>> {
+        get_parents_by_name: &'a dyn Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
+    ) -> impl Fn(Id) -> Result<Vec<Id>> + 'a {
+        let func = move |id: Id| -> Result<Vec<Id>> {
             let name = self
                 .find_slice_by_id(id)?
                 .unwrap_or_else(|| panic!("logic error: id {} is referred but not assigned", id));
@@ -303,7 +303,7 @@ impl<'a> SyncableIdMap<'a> {
     ///
     /// This method must be called if there are new entries inserted.
     /// Otherwise [`SyncableIdMap`] will panic once it gets dropped.
-    pub fn sync(&mut self) -> Fallible<()> {
+    pub fn sync(&mut self) -> Result<()> {
         self.map.log.sync()?;
         Ok(())
     }
