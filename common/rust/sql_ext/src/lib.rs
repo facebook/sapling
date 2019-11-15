@@ -17,7 +17,11 @@ use slog::{info, Logger};
 use std::{path::Path, time::Duration};
 use tokio_timer::sleep;
 
-use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection, Transaction};
+use sql::{
+    myrouter, raw,
+    rusqlite::{Connection as SqliteConnection, OpenFlags as SqliteOpenFlags},
+    Connection, Transaction,
+};
 
 #[derive(Clone)]
 pub struct SqlConnections {
@@ -173,14 +177,49 @@ pub fn create_raw_xdb_connections(
     .and_then(|r| r)
 }
 
-pub fn create_sqlite_connections(path: &Path) -> Result<SqlConnections> {
-    let con = SqliteConnection::open(path)?;
-    let con = Connection::with_sqlite(con);
+fn sqlite_setup_connection(con: &SqliteConnection) {
+    // By default, when there's a read/write contention, SQLite will not wait,
+    // but rather throw a `SQLITE_BUSY` error. See https://www.sqlite.org/lockingv3.html
+    // This means that tests will fail in cases when production setup (e.g. one with MySQL)
+    // would not. To change that, let's make sqlite wait for some time, before erroring out
+    let _ = con.busy_timeout(Duration::from_secs(10));
+}
+
+// Open a single sqlite connection to a new in memory database
+pub fn open_sqlite_in_memory() -> Result<SqliteConnection> {
+    let con = SqliteConnection::open_in_memory()?;
+    sqlite_setup_connection(&con);
+    Ok(con)
+}
+
+// Open a single sqlite connection
+pub fn open_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<SqliteConnection> {
+    let flags = if readonly {
+        SqliteOpenFlags::SQLITE_OPEN_READ_ONLY
+    } else {
+        SqliteOpenFlags::SQLITE_OPEN_READ_WRITE | SqliteOpenFlags::SQLITE_OPEN_CREATE
+    };
+
+    let con = SqliteConnection::open_with_flags(path, flags)?;
+    sqlite_setup_connection(&con);
+    Ok(con)
+}
+
+/// Open sqlite connections for use by SqlConstructors::from_sql_connections
+pub fn create_sqlite_connections<P: AsRef<Path>>(
+    path: P,
+    readonly: bool,
+) -> Result<SqlConnections> {
+    let ro = Connection::with_sqlite(open_sqlite_path(&path, true)?);
+    let rw = if readonly {
+        ro.clone()
+    } else {
+        Connection::with_sqlite(open_sqlite_path(&path, readonly)?)
+    };
     Ok(SqlConnections {
-        // TODO(ahornby) add readonly sqlite handling
-        write_connection: con.clone(),
-        read_connection: con.clone(),
-        read_master_connection: con.clone(),
+        write_connection: rw,
+        read_connection: ro.clone(),
+        read_master_connection: ro,
     })
 }
 
@@ -189,8 +228,15 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
     /// Label used for stats accounting, and also for the local DB name
     const LABEL: &'static str;
 
-    /// TODO(ahornby) consider taking SqlConnections as parameter struct, would make it easier
-    /// to pass write_connection: Option<Connection> later in stack.
+    fn from_sql_connections(c: SqlConnections) -> Self {
+        Self::from_connections(
+            c.write_connection,
+            c.read_connection,
+            c.read_master_connection,
+        )
+    }
+
+    /// TODO(ahornby) consider removing this
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,
@@ -200,11 +246,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
     fn get_up_query() -> &'static str;
 
     fn with_myrouter(tier: String, port: u16, readonly: bool) -> Self {
-        let SqlConnections {
-            write_connection,
-            read_connection,
-            read_master_connection,
-        } = create_myrouter_connections(
+        let r = create_myrouter_connections(
             tier,
             None,
             port,
@@ -212,21 +254,12 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             Self::LABEL.to_string(),
             readonly,
         );
-
-        Self::from_connections(write_connection, read_connection, read_master_connection)
+        Self::from_sql_connections(r)
     }
 
     fn with_raw_xdb_tier(tier: String, readonly: bool) -> BoxFuture<Self, Error> {
         create_raw_xdb_connections(tier, readonly)
-            .map(|r| {
-                let SqlConnections {
-                    write_connection,
-                    read_connection,
-                    read_master_connection,
-                } = r;
-
-                Self::from_connections(write_connection, read_connection, read_master_connection)
-            })
+            .map(|r| Self::from_sql_connections(r))
             .boxify()
     }
 
@@ -238,33 +271,22 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
     }
 
     fn with_sqlite_in_memory() -> Result<Self> {
-        let con = SqliteConnection::open_in_memory()?;
+        // In memory never readonly
+        let con = open_sqlite_in_memory()?;
         con.execute_batch(Self::get_up_query())?;
-        with_sqlite(con)
+        let con = Connection::with_sqlite(con);
+        Ok(Self::from_connections(con.clone(), con.clone(), con))
     }
 
-    fn with_sqlite_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let con = SqliteConnection::open(path)?;
+    fn with_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<Self> {
+        // Do update on writable connection to construct schema
+        let con = open_sqlite_path(&path, false)?;
         // When opening an sqlite database we might already have the proper tables in it, so ignore
         // errors from table creation
         let _ = con.execute_batch(Self::get_up_query());
-        // By default, when there's a read/write contention, SQLite will not wait,
-        // but rather throw a `SQLITE_BUSY` error. See https://www.sqlite.org/lockingv3.html
-        // This means that tests will fail in cases when production setup (e.g. one with MySQL)
-        // would not. To change that, let's make sqlite wait for some time, before erroring out
-        let _ = con.busy_timeout(Duration::from_secs(10));
-        with_sqlite(con)
-    }
-}
 
-fn with_sqlite<T: SqlConstructors>(con: SqliteConnection) -> Result<T> {
-    let con = Connection::with_sqlite(con);
-    Ok(T::from_connections(
-        // TODO(ahornby) add readonly sqlite handling
-        con.clone(),
-        con.clone(),
-        con,
-    ))
+        create_sqlite_connections(&path, readonly).map(|r| Self::from_sql_connections(r))
+    }
 }
 
 pub fn myrouter_ready(

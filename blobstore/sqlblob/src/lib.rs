@@ -26,7 +26,8 @@ use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::BlobstoreBytes;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
-    create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
+    create_myrouter_connections, create_raw_xdb_connections, open_sqlite_in_memory,
+    open_sqlite_path, PoolSizeConfig, SqlConnections,
 };
 use stats::{define_stats, Timeseries};
 use std::fmt;
@@ -183,16 +184,22 @@ impl Sqlblob {
 
     pub fn with_sqlite_in_memory() -> Result<CountedSqlblob> {
         Self::with_sqlite(|_| {
-            let con = SqliteConnection::open_in_memory()?;
+            let con = open_sqlite_in_memory()?;
             con.execute_batch(Self::get_up_query())?;
             Ok(con)
         })
     }
 
-    pub fn with_sqlite_path<P: Into<PathBuf>>(path: P) -> Result<CountedSqlblob> {
-        let path = path.into();
+    pub fn with_sqlite_path<P: Into<PathBuf>>(
+        path: P,
+        readonly_storage: bool,
+    ) -> Result<CountedSqlblob> {
+        let pathbuf = path.into();
         Self::with_sqlite(move |shard_id| {
-            let con = SqliteConnection::open(path.join(format!("shard_{}.sqlite", shard_id)))?;
+            let con = open_sqlite_path(
+                &pathbuf.join(format!("shard_{}.sqlite", shard_id)),
+                readonly_storage,
+            )?;
             // When opening an sqlite database we might already have the proper tables in it, so ignore
             // errors from table creation
             let _ = con.execute_batch(Self::get_up_query());

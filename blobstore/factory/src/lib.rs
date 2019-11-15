@@ -148,17 +148,21 @@ impl SqlFactoryBase for XdbFactory {
 
 struct SqliteFactory {
     path: PathBuf,
+    readonly: bool,
 }
 
 impl SqliteFactory {
-    fn new(path: PathBuf) -> Self {
-        SqliteFactory { path }
+    fn new(path: PathBuf, readonly: bool) -> Self {
+        SqliteFactory { path, readonly }
     }
 }
 
 impl SqlFactoryBase for SqliteFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
-        let r = try_boxfuture!(T::with_sqlite_path(self.path.join("sqlite_dbs")));
+        let r = try_boxfuture!(T::with_sqlite_path(
+            self.path.join("sqlite_dbs"),
+            self.readonly
+        ));
         Ok(Arc::new(r)).into_future().boxify()
     }
 
@@ -169,7 +173,7 @@ impl SqlFactoryBase for SqliteFactory {
     }
 
     fn create_connections(&self, _label: String) -> BoxFuture<SqlConnections, Error> {
-        create_sqlite_connections(&self.path.join("sqlite_dbs"))
+        create_sqlite_connections(&self.path.join("sqlite_dbs"), self.readonly)
             .into_future()
             .boxify()
     }
@@ -209,7 +213,7 @@ pub fn make_sql_factory(
 ) -> impl Future<Item = SqlFactory, Error = Error> {
     match dbconfig {
         MetadataDBConfig::LocalDB { path } => {
-            let sql_factory = SqliteFactory::new(path.to_path_buf());
+            let sql_factory = SqliteFactory::new(path.to_path_buf(), readonly.0);
             future::ok(SqlFactory {
                 underlying: Either::Left(sql_factory),
             })
@@ -269,7 +273,7 @@ pub fn make_blobstore(
                 .boxify()
         }
 
-        Sqlite { path } => Sqlblob::with_sqlite_path(path.join("blobs"))
+        Sqlite { path } => Sqlblob::with_sqlite_path(path.join("blobs"), readonly_storage.0)
             .chain_err(ErrorKind::StateOpen)
             .map_err(Error::from)
             .map(|store| Arc::new(store) as Arc<dyn Blobstore>)

@@ -116,9 +116,11 @@ fn open_db_from_config<S: SqlConstructors>(
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<S, Error> {
     match dbconfig {
-        MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join("sqlite_dbs"))
-            .into_future()
-            .boxify(),
+        MetadataDBConfig::LocalDB { ref path } => {
+            S::with_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
+                .into_future()
+                .boxify()
+        }
         MetadataDBConfig::Mysql { ref db_address, .. } => {
             S::with_xdb(db_address.clone(), myrouter_port, readonly_storage.0)
         }

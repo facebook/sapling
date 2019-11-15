@@ -279,9 +279,11 @@ where
 {
     let name = T::LABEL;
     match dbconfig {
-        MetadataDBConfig::LocalDB { path } => T::with_sqlite_path(path.join("sqlite_dbs"))
-            .into_future()
-            .boxify(),
+        MetadataDBConfig::LocalDB { path } => {
+            T::with_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
+                .into_future()
+                .boxify()
+        }
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
             T::with_xdb(db_address, maybe_myrouter_port, readonly_storage.0)
         }

@@ -58,7 +58,7 @@ pub async fn open_synced_commit_mapping(
     let name = SqlSyncedCommitMapping::LABEL;
     match config.storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => {
-            SqlSyncedCommitMapping::with_sqlite_path(path.join(name))
+            SqlSyncedCommitMapping::with_sqlite_path(path.join(name), readonly_storage.0)
         }
         MetadataDBConfig::Mysql { db_address, .. } => {
             SqlSyncedCommitMapping::with_xdb(db_address, myrouter_port, readonly_storage.0)
