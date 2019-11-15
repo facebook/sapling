@@ -604,17 +604,9 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
             out,
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
-        # Make sure resetParentCommits() was called once with the expected arguments
-        self.assertEqual(
-            checkout.instance.get_thrift_client().set_parents_calls,
-            [
-                ResetParentsCommitsArgs(
-                    mount=bytes(checkout.path),
-                    parent1=b"\x12\x00\x00\x00" * 5,
-                    parent2=None,
-                )
-            ],
-        )
+        # The dirstate file should have been updated to use the snapshot hash
+        self.assertEqual(checkout.instance.get_thrift_client().set_parents_calls, [])
+        self.assert_dirstate_p0(checkout, snapshot_hex)
 
     def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
         def check_commit_validity(path: bytes, commit: str) -> bool:

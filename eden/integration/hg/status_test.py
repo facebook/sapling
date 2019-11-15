@@ -134,11 +134,7 @@ class StatusTest(EdenHgTestCase):
             self.repo.commit("committing changes")
 
             # Test calling getScmStatusV2() with a commit that is not the parent commit
-            error_regex = (
-                "error computing status: requested parent commit is "
-                + "out-of-date: requested .*, but current parent commit is .*"
-            )
-            with self.assertRaisesRegex(EdenError, error_regex) as context:
+            with self.assertRaises(EdenError) as context:
                 client.getScmStatusV2(
                     GetScmStatusParams(
                         mountPoint=bytes(self.mount, encoding="utf-8"),

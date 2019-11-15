@@ -151,12 +151,14 @@ class DirstateChecker(HgFileChecker):
         if self._old_snapshot is None and self._old_dirstate_parents is None:
             last_resort = self._get_last_resort_commit()
             return (last_resort, self._null_commit_id)
-        elif self._old_dirstate_parents is None:
-            assert self._old_snapshot is not None  # to make mypy happy
-            return (self._old_snapshot, self._null_commit_id)
+        elif self._old_snapshot is None:
+            assert self._old_dirstate_parents is not None  # to make mypy happy
+            # pyre-fixme[7]: Expected `Tuple[bytes, bytes]` but got
+            #  `Optional[Tuple[bytes, bytes]]`.
+            return self._old_dirstate_parents
         else:
             if (
-                self._old_snapshot is not None
+                self._old_dirstate_parents is not None
                 # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
                 and self._old_snapshot != self._old_dirstate_parents[0]
             ):
@@ -168,9 +170,7 @@ class DirstateChecker(HgFileChecker):
                     f"mercurial's parent commit is {p0_hex}, but Eden's internal "
                     f"parent commit is {snapshot_hex}"
                 )
-            # pyre-fixme[7]: Expected `Tuple[bytes, bytes]` but got
-            #  `Optional[Tuple[bytes, bytes]]`.
-            return self._old_dirstate_parents
+            return (self._old_snapshot, self._null_commit_id)
 
     def repair(self) -> None:
         # If the .hg directory was missing entirely check_for_error() won't have been

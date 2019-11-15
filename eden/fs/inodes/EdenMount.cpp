@@ -899,7 +899,8 @@ Future<Unit> EdenMount::diff(
           "error computing status: requested parent commit is out-of-date: requested ",
           commitHash,
           ", but current parent commit is ",
-          parentInfo->parents.parent1()));
+          parentInfo->parents.parent1(),
+          ".\nTry running `eden doctor` to remediate"));
     }
 
     // TODO: Should we perhaps hold the parentInfo read-lock for the duration of
