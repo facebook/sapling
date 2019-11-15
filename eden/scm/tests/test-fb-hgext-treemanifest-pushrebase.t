@@ -1,3 +1,4 @@
+  $ setconfig treemanifest.flatcompat=False
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
 
@@ -13,14 +14,12 @@ TODO: Make this test compatibile with obsstore enabled.
   > [treemanifest]
   > sendtrees=True
   > EOF2
-  > 
   >        hg -R client\$i pull -q
   >        hg -R client\$i up -q master
   >        echo >> client\$i/\$i
   >        hg -R client\$i commit -Aqm "add $i"
   >     done
   > }
-  > 
   > pushclients() {
   >     for i in {0..9} ; do
   >        hg -R client\$i push --to master -B master >/dev/null 2>/dev/null &
@@ -62,7 +61,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd ..
 
   $ initclients
-  fetching tree '' 0ca5062b87888558ca097bff2f7511160e2e20f6
+  fetching tree '' b25ede39b5168327f0596fcf74d1ff53842bad2a
   2 trees fetched over * (glob)
   $ pushclients
 
@@ -106,7 +105,7 @@ Test that pushrebase hooks can access the commit data
   $ cd ..
 
   $ hg clone -q ssh://user@dummy/master hook_client
-  fetching tree '' *, based on 0ca5062b87888558ca097bff2f7511160e2e20f6, found via * (glob)
+  fetching tree '' *, based on b25ede39b5168327f0596fcf74d1ff53842bad2a, found via * (glob)
   1 trees fetched over * (glob)
   $ cd hook_client
   $ hg up -q master
