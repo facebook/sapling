@@ -68,6 +68,8 @@ pub struct RepoConfig {
     pub repoid: RepositoryId,
     /// Scuba table for logging performance of operations
     pub scuba_table: Option<String>,
+    /// Scuba table for logging hook executions
+    pub scuba_table_hooks: Option<String>,
     /// Parameters of how to warm up the cache
     pub cache_warmup: Option<CacheWarmupParams>,
     /// Configuration for bookmarks

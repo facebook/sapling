@@ -276,6 +276,7 @@ pub fn repo_handlers(
                     infinitepush,
                     list_keys_patterns_max,
                     scuba_table,
+                    scuba_table_hooks,
                     hash_validation_percentage,
                     wireproto_logging,
                     bundle2_replay_params,
@@ -287,11 +288,19 @@ pub fn repo_handlers(
 
                 let hook_manager_params = hook_manager_params.unwrap_or(Default::default());
 
+                let mut scuba = if let Some(table_name) = scuba_table_hooks {
+                    ScubaSampleBuilder::new(fb, table_name)
+                } else {
+                    ScubaSampleBuilder::with_discard()
+                };
+                scuba.add("repo", reponame.clone());
+
                 let mut hook_manager = HookManager::new(
                     ctx.clone(),
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
                     hook_manager_params,
+                    scuba,
                 );
 
                 // TODO: Don't require full config in load_hooks so we can avoid a clone here.

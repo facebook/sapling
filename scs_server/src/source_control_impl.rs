@@ -241,6 +241,7 @@ impl SourceControlServiceImpl {
             session_id,
             TraceContext::default(),
             None,
+            None,
             SshEnvVars::default(),
             None,
         );

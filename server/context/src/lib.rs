@@ -331,6 +331,7 @@ pub struct SessionContainerInner {
     session_id: SessionId,
     trace: TraceContext,
     user_unix_name: Option<String>,
+    source_hostname: Option<String>,
     ssh_env_vars: SshEnvVars,
     load_limiter: Option<LoadLimiter>,
 }
@@ -347,6 +348,7 @@ impl SessionContainer {
         session_id: SessionId,
         trace: TraceContext,
         user_unix_name: Option<String>,
+        source_hostname: Option<String>,
         ssh_env_vars: SshEnvVars,
         load_limiter: Option<(MononokeThrottleLimit, RateLimits, String)>,
     ) -> Self {
@@ -358,6 +360,7 @@ impl SessionContainer {
             session_id,
             trace,
             user_unix_name,
+            source_hostname,
             ssh_env_vars,
             load_limiter,
         };
@@ -373,6 +376,7 @@ impl SessionContainer {
             fb,
             generate_session_id(),
             TraceContext::new(generate_trace_id(), Instant::now()),
+            None,
             None,
             SshEnvVars::default(),
             None,
@@ -403,6 +407,10 @@ impl SessionContainer {
 
     pub fn user_unix_name(&self) -> &Option<String> {
         &self.inner.user_unix_name
+    }
+
+    pub fn source_hostname(&self) -> &Option<String> {
+        &self.inner.source_hostname
     }
 
     pub fn ssh_env_vars(&self) -> &SshEnvVars {
@@ -486,7 +494,6 @@ pub struct CoreContext {
 impl CoreContext {
     pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
         let session = SessionContainer::new_with_defaults(fb);
-
         session.new_context(logger, ScubaSampleBuilder::with_discard())
     }
 
@@ -495,6 +502,7 @@ impl CoreContext {
             fb,
             generate_session_id(),
             TraceContext::default(),
+            None,
             None,
             SshEnvVars::default(),
             None,
@@ -536,6 +544,10 @@ impl CoreContext {
 
     pub fn user_unix_name(&self) -> &Option<String> {
         &self.session.user_unix_name()
+    }
+
+    pub fn source_hostname(&self) -> &Option<String> {
+        &self.session.source_hostname()
     }
 
     pub fn ssh_env_vars(&self) -> &SshEnvVars {

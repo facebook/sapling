@@ -23,6 +23,7 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
+use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, info};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -56,6 +57,7 @@ impl Tailer {
             Box::new(changeset_store),
             content_store,
             Default::default(),
+            ScubaSampleBuilder::with_discard(),
         );
 
         load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks)?;

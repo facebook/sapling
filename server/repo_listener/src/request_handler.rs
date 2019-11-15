@@ -148,6 +148,7 @@ pub fn request_handler(
         session_id,
         trace.clone(),
         preamble.misc.get("unix_username").cloned(),
+        preamble.misc.get("source_hostname").cloned(),
         ssh_env_vars,
         load_limiting_config,
     );

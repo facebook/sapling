@@ -580,6 +580,7 @@ impl RepoConfigs {
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = RepositoryId::new(this.repoid);
         let scuba_table = this.scuba_table;
+        let scuba_table_hooks = this.scuba_table_hooks;
 
         let wireproto_logging = this
             .wireproto_logging
@@ -752,6 +753,7 @@ impl RepoConfigs {
             generation_cache_size,
             repoid,
             scuba_table,
+            scuba_table_hooks,
             cache_warmup,
             hook_manager_params,
             bookmarks,
@@ -854,6 +856,7 @@ struct RawRepoConfig {
     // TODO: work out what these all are
     generation_cache_size: Option<usize>,
     scuba_table: Option<String>,
+    scuba_table_hooks: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
     cache_warmup: Option<RawCacheWarmupConfig>,
@@ -1501,6 +1504,7 @@ mod test {
         let www_content = r#"
             repoid=1
             scuba_table="scuba_table"
+            scuba_table_hooks="scm_hooks"
             storage_config="files"
 
             [storage.files]
@@ -1540,6 +1544,7 @@ mod test {
             generation_cache_size=1048576
             repoid=0
             scuba_table="scuba_table"
+            scuba_table_hooks="scm_hooks"
             skiplist_index_blobstore_key="skiplist_key"
             bookmarks_cache_ttl=5000
             storage_config="main"
@@ -1634,6 +1639,7 @@ mod test {
         let www_content = r#"
             repoid=1
             scuba_table="scuba_table"
+            scuba_table_hooks="scm_hooks"
             storage_config="files"
 
             [storage.files]
@@ -1705,6 +1711,7 @@ mod test {
                 generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
                 scuba_table: Some("scuba_table".to_string()),
+                scuba_table_hooks: Some("scm_hooks".to_string()),
                 cache_warmup: Some(CacheWarmupParams {
                     bookmark: BookmarkName::new("master").unwrap(),
                     commit_limit: 100,
@@ -1829,6 +1836,7 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
                 scuba_table: Some("scuba_table".to_string()),
+                scuba_table_hooks: Some("scm_hooks".to_string()),
                 cache_warmup: None,
                 hook_manager_params: None,
                 bookmarks: vec![],

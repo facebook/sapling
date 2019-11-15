@@ -128,6 +128,7 @@ impl MononokeAPIServiceImpl {
             session_id,
             TraceContext::default(),
             None,
+            None,
             SshEnvVars::default(),
             None,
         );

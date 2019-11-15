@@ -31,11 +31,14 @@ pub use errors::*;
 use failure_ext::{err_msg, Error, FutureFailureErrorExt};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_stats::Timed;
 use hooks_content_stores::{ChangedFileType, ChangesetStore, FileContentStore};
 use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgParents, MPath};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
 use regex::Regex;
+use scuba::builder::ServerData;
+use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -58,6 +61,7 @@ pub struct HookManager {
     changeset_store: Box<dyn ChangesetStore>,
     content_store: Arc<dyn FileContentStore>,
     reviewers_acl_checker: Arc<Option<AclChecker>>,
+    scuba: ScubaSampleBuilder,
 }
 
 impl HookManager {
@@ -66,10 +70,19 @@ impl HookManager {
         changeset_store: Box<dyn ChangesetStore>,
         content_store: Arc<dyn FileContentStore>,
         hook_manager_params: HookManagerParams,
+        mut scuba: ScubaSampleBuilder,
     ) -> HookManager {
         let fb = ctx.fb;
         let changeset_hooks = HashMap::new();
         let file_hooks = HashMap::new();
+
+        scuba
+            .add("driver", "mononoke")
+            .add("scm", "hg")
+            .add_mapped_common_server_data(|data| match data {
+                ServerData::Hostname => "host",
+                _ => data.default_key(),
+            });
 
         let reviewers_acl_checker = if !hook_manager_params.disable_acl_checker {
             let identity = Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME);
@@ -96,6 +109,7 @@ impl HookManager {
             changeset_store,
             content_store,
             reviewers_acl_checker: Arc::new(reviewers_acl_checker),
+            scuba,
         }
     }
 
@@ -221,6 +235,9 @@ impl HookManager {
             })
             .collect();
         let hooks = try_boxfuture!(hooks);
+        cloned!(mut self.scuba);
+        scuba.add("hash", changeset_id.to_hex().to_string());
+
         self.get_hook_changeset(ctx.clone(), changeset_id)
             .and_then({
                 cloned!(bookmark);
@@ -236,6 +253,7 @@ impl HookManager {
                         hcs.clone(),
                         hooks.clone(),
                         bookmark,
+                        scuba,
                     )
                 }
             })
@@ -260,12 +278,14 @@ impl HookManager {
         changeset: HookChangeset,
         hooks: Vec<(String, Arc<dyn Hook<HookChangeset>>, HookConfig)>,
         bookmark: BookmarkName,
+        scuba: ScubaSampleBuilder,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
             HookManager::run_hook(
                 ctx.clone(),
                 hook,
                 HookContext::new(hook_name, config, changeset.clone(), bookmark.clone()),
+                scuba.clone(),
             )
         }))
         .boxify()
@@ -327,6 +347,8 @@ impl HookManager {
             })
             .collect();
         let hooks = try_boxfuture!(hooks);
+        cloned!(mut self.scuba);
+        scuba.add("hash", changeset_id.to_hex().to_string());
 
         self.get_hook_changeset(ctx.clone(), changeset_id)
             .and_then({
@@ -343,6 +365,7 @@ impl HookManager {
                         hcs.clone(),
                         hooks,
                         bookmark,
+                        scuba,
                     )
                 }
             })
@@ -355,6 +378,7 @@ impl HookManager {
         changeset: HookChangeset,
         hooks: Vec<(String, Arc<dyn Hook<HookFile>>, HookConfig)>,
         bookmark: BookmarkName,
+        scuba: ScubaSampleBuilder,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
             .files
@@ -369,6 +393,7 @@ impl HookManager {
                             file.clone(),
                             hooks.clone(),
                             bookmark.clone(),
+                            scuba.clone(),
                         )
                     ),
                     ChangedFileType::Deleted => None,
@@ -386,6 +411,7 @@ impl HookManager {
         file: HookFile,
         hooks: Vec<(String, Arc<dyn Hook<HookFile>>, HookConfig)>,
         bookmark: BookmarkName,
+        scuba: ScubaSampleBuilder,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let hook_futs = hooks.into_iter().map(move |(hook_name, hook, config)| {
             let hook_context = HookContext::new(
@@ -395,7 +421,10 @@ impl HookManager {
                 bookmark.clone(),
             );
 
-            HookManager::run_hook(ctx.clone(), hook, hook_context).map({
+            cloned!(mut scuba);
+            scuba.add("hash", cs_id.to_hex().to_string());
+
+            HookManager::run_hook(ctx.clone(), hook, hook_context, scuba).map({
                 cloned!(file, bookmark);
                 move |(hook_name, exec)| {
                     (
@@ -417,13 +446,44 @@ impl HookManager {
         ctx: CoreContext,
         hook: Arc<dyn Hook<T>>,
         hook_context: HookContext<T>,
+        mut scuba: ScubaSampleBuilder,
     ) -> BoxFuture<(String, HookExecution), Error> {
         let hook_name = hook_context.hook_name.clone();
         debug!(ctx.logger(), "Running hook {:?}", hook_context.hook_name);
+
+        // Try getting the source hostname, otherwise use the unix name.
+        let user_option = ctx
+            .source_hostname()
+            .as_ref()
+            .or(ctx.user_unix_name().as_ref())
+            .map(|s| s.as_str());
+
+        if let Some(user) = user_option {
+            scuba.add("user", user);
+        }
+
+        scuba.add("hook", hook_name.clone());
+
         hook.run(ctx, hook_context)
             .map({
                 cloned!(hook_name);
                 move |he| (hook_name, he)
+            })
+            .timed(move |stats, result| {
+                if let Err(e) = result.as_ref() {
+                    scuba.add("stderr", e.to_string());
+                }
+
+                let elapsed = stats.completion_time.as_millis() as i64;
+
+                scuba
+                    .add("elapsed", elapsed)
+                    .add("total_time", elapsed)
+                    .add("errorcode", result.is_err() as i32)
+                    .add("failed_hooks", result.is_err() as i32)
+                    .log();
+
+                Ok(())
             })
             .with_context(move || format!("while executing hook {}", hook_name))
             .from_err()

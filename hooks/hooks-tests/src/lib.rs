@@ -35,6 +35,7 @@ use metaconfig_types::{
 };
 use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
+use scuba_ext::ScubaSampleBuilder;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -1030,6 +1031,7 @@ fn hook_manager_blobrepo(fb: FacebookInit) -> HookManager {
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),
+        ScubaSampleBuilder::with_discard(),
     )
 }
 
@@ -1093,6 +1095,7 @@ fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),
+        ScubaSampleBuilder::with_discard(),
     )
 }
 
@@ -1109,6 +1112,7 @@ fn default_repo_config() -> RepoConfig {
         generation_cache_size: 1,
         repoid: RepositoryId::new(1),
         scuba_table: None,
+        scuba_table_hooks: None,
         cache_warmup: None,
         hook_manager_params: None,
         bookmarks_cache_ttl: None,
