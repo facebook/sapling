@@ -3231,6 +3231,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
 
     def display(fm, fn, ctx, pstates, states):
         rev = ctx.rev()
+        node = ctx.node()
         if fm.isplain():
             formatuser = ui.shortuser
         else:
@@ -3256,7 +3257,8 @@ def histgrep(ui, repo, pattern, *pats, **opts):
             fm.data(node=fm.hexfunc(ctx.node()))
             cols = [
                 ("filename", fn, True),
-                ("rev", rev, True),
+                ("rev", rev, False),
+                ("node", fm.hexfunc(node), True),
                 ("linenumber", l.linenum, opts.get("line_number")),
             ]
             if opts.get("all"):

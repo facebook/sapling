@@ -21,7 +21,7 @@ sh % "echo ababagalamaga" > "histgrepfile2"
 sh % "hg add histgrepfile1"
 sh % "hg add histgrepfile2"
 sh % "hg commit -m 'Added some files'"
-sh % "hg histgrep ababagalamaga histgrepfile1" == "histgrepdir/histgrepfile1:0:ababagalamaga"
+sh % "hg histgrep ababagalamaga histgrepfile1" == "histgrepdir/histgrepfile1:bdc1161fcbee:ababagalamaga"
 sh % "hg histgrep ababagalamaga" == r"""
     abort: can't run histgrep on the whole repo, please provide filenames
     (this is disabled to avoid very slow greps over the whole repo)
@@ -30,6 +30,6 @@ sh % "hg histgrep ababagalamaga" == r"""
 # Now allow allowfullrepogrep:
 sh % "setconfig 'histgrep.allowfullrepogrep=True'"
 sh % "hg histgrep ababagalamaga" == r"""
-    histgrepdir/histgrepfile1:0:ababagalamaga
-    histgrepdir/histgrepfile2:0:ababagalamaga"""
+    histgrepdir/histgrepfile1:bdc1161fcbee:ababagalamaga
+    histgrepdir/histgrepfile2:bdc1161fcbee:ababagalamaga"""
 sh % "cd .."

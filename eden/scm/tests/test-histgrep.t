@@ -24,21 +24,21 @@ pattern error
 simple
 
   $ hg histgrep '.*'
-  port:4:export
-  port:4:vaportight
-  port:4:import/export
+  port:914fa752cdea:export
+  port:914fa752cdea:vaportight
+  port:914fa752cdea:import/export
   $ hg histgrep port port
-  port:4:export
-  port:4:vaportight
-  port:4:import/export
+  port:914fa752cdea:export
+  port:914fa752cdea:vaportight
+  port:914fa752cdea:import/export
 
 simple with color
 
   $ hg --config extensions.color= histgrep --config color.mode=ansi \
   >     --color=always port port
-  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mex\x1b[0;31;1mport\x1b[0m (esc)
-  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mva\x1b[0;31;1mport\x1b[0might (esc)
-  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mim\x1b[0;31;1mport\x1b[0m/ex\x1b[0;31;1mport\x1b[0m (esc)
+  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m914fa752cdea\x1b[0;36m:\x1b[0mex\x1b[0;31;1mport\x1b[0m (esc)
+  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m914fa752cdea\x1b[0;36m:\x1b[0mva\x1b[0;31;1mport\x1b[0might (esc)
+  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m914fa752cdea\x1b[0;36m:\x1b[0mim\x1b[0;31;1mport\x1b[0m/ex\x1b[0;31;1mport\x1b[0m (esc)
 
 simple templated
 
@@ -98,15 +98,15 @@ simple JSON without matching lines
 all
 
   $ hg histgrep --traceback --all -nu port port
-  port:4:4:-:spam:import/export
-  port:3:4:+:eggs:import/export
-  port:2:1:-:spam:import
-  port:2:2:-:spam:export
-  port:2:1:+:spam:export
-  port:2:2:+:spam:vaportight
-  port:2:3:+:spam:import/export
-  port:1:2:+:eggs:export
-  port:0:1:+:spam:import
+  port:914fa752cdea:4:-:spam:import/export
+  port:95040cfd017d:4:+:eggs:import/export
+  port:3b325e3481a1:1:-:spam:import
+  port:3b325e3481a1:2:-:spam:export
+  port:3b325e3481a1:1:+:spam:export
+  port:3b325e3481a1:2:+:spam:vaportight
+  port:3b325e3481a1:3:+:spam:import/export
+  port:8b20f75c1585:2:+:eggs:export
+  port:f31323c92170:1:+:spam:import
 
 all JSON
 
@@ -207,9 +207,9 @@ all JSON
 other
 
   $ hg histgrep -l port port
-  port:4
+  port:914fa752cdea
   $ hg histgrep import port
-  port:4:import/export
+  port:914fa752cdea:import/export
 
   $ hg cp port port2
   $ hg commit -m 4 -u spam -d '5 0'
@@ -217,21 +217,21 @@ other
 follow
 
   $ hg histgrep --traceback -f 'import\n\Z' port2
-  port:0:import
+  port:f31323c92170:import
   
   $ echo deport >> port2
   $ hg commit -m 5 -u eggs -d '6 0'
   $ hg histgrep -f --all -nu port port2
-  port2:6:4:+:eggs:deport
-  port:4:4:-:spam:import/export
-  port:3:4:+:eggs:import/export
-  port:2:1:-:spam:import
-  port:2:2:-:spam:export
-  port:2:1:+:spam:export
-  port:2:2:+:spam:vaportight
-  port:2:3:+:spam:import/export
-  port:1:2:+:eggs:export
-  port:0:1:+:spam:import
+  port2:1a78f9325f49:4:+:eggs:deport
+  port:914fa752cdea:4:-:spam:import/export
+  port:95040cfd017d:4:+:eggs:import/export
+  port:3b325e3481a1:1:-:spam:import
+  port:3b325e3481a1:2:-:spam:export
+  port:3b325e3481a1:1:+:spam:export
+  port:3b325e3481a1:2:+:spam:vaportight
+  port:3b325e3481a1:3:+:spam:import/export
+  port:8b20f75c1585:2:+:eggs:export
+  port:f31323c92170:1:+:spam:import
 
   $ hg up -q null
   $ hg histgrep -f port
@@ -256,18 +256,18 @@ follow
   $ echo blue >> color
   $ hg ci -m 3
   $ hg histgrep orange
-  color:3:orange
+  color:e0116d3829f8:orange
   $ hg histgrep --all orange
-  color:3:+:orange
-  color:2:-:orange
-  color:1:+:orange
+  color:e0116d3829f8:+:orange
+  color:11bd8bc8d653:-:orange
+  color:7c585a21e0d1:+:orange
 
 test substring match: '^' should only match at the beginning
 
   $ hg histgrep '^.' --config extensions.color= --color debug
-  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lack
-  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|o]range
-  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lue
+  [grep.filename|color][grep.sep|:][grep.node|e0116d3829f8][grep.sep|:][grep.match|b]lack
+  [grep.filename|color][grep.sep|:][grep.node|e0116d3829f8][grep.sep|:][grep.match|o]range
+  [grep.filename|color][grep.sep|:][grep.node|e0116d3829f8][grep.sep|:][grep.match|b]lue
 
 match in last "line" without newline
 
@@ -275,7 +275,7 @@ match in last "line" without newline
   $ hg ci -Amnoeol
   adding noeol
   $ hg histgrep loop
-  noeol:4:no infinite loop
+  noeol:8c97710679c8:no infinite loop
 
   $ cd ..
 
@@ -292,13 +292,13 @@ revision with renamed files.
   $ hg rename color colour
   $ hg ci -Am rename
   $ hg histgrep octarine
-  colour:1:octarine
-  color:0:octarine
+  colour:efd8f9e6d7a7:octarine
+  color:ec548afd7026:octarine
 
 Used to crash here
 
   $ hg histgrep -r 1 octarine
-  colour:1:octarine
+  colour:efd8f9e6d7a7:octarine
   $ cd ..
 
 
@@ -326,8 +326,8 @@ of just using revision numbers.
   $ hg commit -A -m "3 blue"
 
   $ hg histgrep --all red
-  color:3:-:red
-  color:1:+:red
+  color:787a36e93381:-:red
+  color:3e2bd43f9d34:+:red
 
   $ cd ..
 
@@ -337,6 +337,6 @@ of just using revision numbers.
   $ hg add binfile.bin
   $ hg ci -m 'add binfile.bin'
   $ hg histgrep "MaCam" --all
-  binfile.bin:0:+: Binary file matches
+  binfile.bin:48b371597640:+: Binary file matches
 
   $ cd ..
