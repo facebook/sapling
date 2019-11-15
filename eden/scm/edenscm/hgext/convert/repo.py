@@ -483,7 +483,12 @@ class repo(object):
                     projectpath
                 ]
                 outputlines, exitcode = self.gitcommandline.runlines(
-                    "-C", projectpath, "log", "--pretty=format:%H:%ct", commitname
+                    "-C",
+                    projectpath,
+                    "log",
+                    "--reverse",  # Important for ordering commits with matching times
+                    "--pretty=format:%H:%ct",
+                    commitname,
                 )
                 if exitcode > 0:
                     raise error.Abort(_("failed to log"))
