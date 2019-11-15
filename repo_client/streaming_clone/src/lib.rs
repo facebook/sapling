@@ -11,19 +11,20 @@
 use std::vec::Vec;
 
 use bytes::Bytes;
-use failure::{Error, Fail};
+use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::{queries, Connection};
 use sql_ext::SqlConstructors;
+use thiserror::Error;
 
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "internal error: streaming blob {} missing", _0)]
+    #[error("internal error: streaming blob {0} missing")]
     MissingStreamingBlob(String),
 }
 

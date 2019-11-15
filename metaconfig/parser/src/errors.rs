@@ -8,32 +8,32 @@
 
 //! Definition of errors used in this crate by the error_chain crate
 
-use failure_ext::failure_derive::Fail;
 pub use failure_ext::{Error, Result};
 use mononoke_types::RepositoryId;
+use thiserror::Error;
 
 /// Types of errors we can raise
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
     /// The given bookmark does not exist in the repo
-    #[fail(display = "bookmark not found: {}", _0)]
+    #[error("bookmark not found: {0}")]
     BookmarkNotFound(String),
     /// The structure of metaconfig repo is invalid
-    #[fail(display = "invalid file structure: {}", _0)]
+    #[error("invalid file structure: {0}")]
     InvalidFileStructure(String),
     /// Config is invalid
-    #[fail(display = "invalid config options: {}", _0)]
+    #[error("invalid config options: {0}")]
     InvalidConfig(String),
     /// Duplicated repo ids
-    #[fail(display = "repoid {} used more than once", _0)]
+    #[error("repoid {0} used more than once")]
     DuplicatedRepoId(RepositoryId),
     /// Missing path for hook
-    #[fail(display = "missing path")]
+    #[error("missing path")]
     MissingPath(),
     /// Invalid pushvar
-    #[fail(display = "invalid pushvar, should be KEY=VALUE: {}", _0)]
+    #[error("invalid pushvar, should be KEY=VALUE: {0}")]
     InvalidPushvar(String),
     /// Too many bypass options for a hook
-    #[fail(display = "Only one bypass option is allowed. Hook: {}", _0)]
+    #[error("Only one bypass option is allowed. Hook: {0}")]
     TooManyBypassOptions(String),
 }

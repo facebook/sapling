@@ -10,7 +10,7 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use failure::err_msg;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -26,6 +26,7 @@ use std::sync::{
     Arc,
 };
 use std::time::Duration;
+use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::executor::spawn;
 use tokio::prelude::FutureExt as TokioFutureExt;
@@ -39,20 +40,19 @@ type BlobstoresWithEntry = HashSet<BlobstoreId>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
-#[derive(Fail, Debug, Clone)]
+#[derive(Error, Debug, Clone)]
 pub enum ErrorKind {
-    #[fail(display = "Some blobstores failed, and other returned None: {:?}", _0)]
+    #[error("Some blobstores failed, and other returned None: {0:?}")]
     SomeFailedOthersNone(Arc<BlobstoresReturnedError>),
-    #[fail(display = "All blobstores failed: {:?}", _0)]
+    #[error("All blobstores failed: {0:?}")]
     AllFailed(Arc<BlobstoresReturnedError>),
     // Errors below this point are from ScrubBlobstore only. If they include an
     // Option<BlobstoreBytes>, this implies that this error is recoverable
-    #[fail(
-        display = "Different blobstores have different values for this item: {:?} differ, {:?} do not have",
-        _0, _1
+    #[error(
+        "Different blobstores have different values for this item: {0:?} differ, {1:?} do not have"
     )]
     ValueMismatch(Arc<BlobstoresWithEntry>, Arc<BlobstoresReturnedNone>),
-    #[fail(display = "Some blobstores missing this item: {:?}", _0)]
+    #[error("Some blobstores missing this item: {0:?}")]
     SomeMissingItem(Arc<BlobstoresReturnedNone>, Option<BlobstoreBytes>),
 }
 

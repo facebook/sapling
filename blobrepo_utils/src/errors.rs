@@ -6,14 +6,15 @@
  * directory of this source tree.
  */
 
-pub use failure::{Error, Fail};
+pub use failure::Error;
 pub use failure_ext::{Result, ResultExt};
 use mercurial_types::HgChangesetId;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "While visiting changeset {}", _0)]
+    #[error("While visiting changeset {0}")]
     VisitError(HgChangesetId),
-    #[fail(display = "While verifying changeset {}", _0)]
+    #[error("While verifying changeset {0}")]
     VerificationError(HgChangesetId),
 }

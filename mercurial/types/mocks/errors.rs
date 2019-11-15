@@ -6,14 +6,15 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{Error, Fail, Result};
+pub use failure_ext::{Error, Result};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "invalid manifest description: {}", _0)]
+    #[error("invalid manifest description: {0}")]
     InvalidManifestDescription(String),
-    #[fail(display = "invalid path map: {}", _0)]
+    #[error("invalid path map: {0}")]
     InvalidPathMap(String),
-    #[fail(display = "invalid directory hash map: {}", _0)]
+    #[error("invalid directory hash map: {0}")]
     InvalidDirectoryHashes(String),
 }

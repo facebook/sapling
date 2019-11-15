@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
-use failure_ext::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Blob {} not found in blobstore", _0)]
+    #[error("Blob {0} not found in blobstore")]
     NotFound(String),
-    #[fail(display = "Error while opening state for blob store")]
+    #[error("Error while opening state for blob store")]
     StateOpen,
 }

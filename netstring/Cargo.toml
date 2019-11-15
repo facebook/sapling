@@ -1,5 +1,5 @@
 # @autocargo from //common/rust/netstring:netstring
-# Signature<<99e6fa71cb31dfc8e9eceec72b7968693d33f01e>>
+# Signature<<0e16a7ecf7106e41d1f700f98f675d5ee574d48e>>
 [package]
 name = "netstring"
 edition = "2018"
@@ -10,8 +10,9 @@ include = ["src/**/*.rs"]
 [dependencies]
 failure_ext = { path = "../failure_ext" }
 bytes = { version="*", features=["serde"] }
+thiserror = "*"
 tokio-io = "0.1"
 
 [dev-dependencies]
 quickcheck = "0.9"
-# @end of Signature<<99e6fa71cb31dfc8e9eceec72b7968693d33f01e>>
+# @end of Signature<<0e16a7ecf7106e41d1f700f98f675d5ee574d48e>>

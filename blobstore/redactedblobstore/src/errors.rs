@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
-use failure_ext::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "The blob {} is censored. \n Task/Sev: {}", _0, _1)]
+    #[error("The blob {0} is censored. \n Task/Sev: {1}")]
     Censored(String, String),
 }

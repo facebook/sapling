@@ -15,19 +15,17 @@ pub use sql_ext::SqlConstructors;
 
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::queries;
 use stats::{define_stats, Timeseries};
+use thiserror::Error;
 
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
-    #[fail(
-        display = "tried to insert inconsistent small bcs id {:?}, while db has {:?}",
-        _0, _1
-    )]
+    #[error("tried to insert inconsistent small bcs id {expected:?}, while db has {actual:?}")]
     InconsistentWorkingCopyEntry {
         expected: Option<ChangesetId>,
         actual: Option<ChangesetId>,

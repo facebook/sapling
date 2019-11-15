@@ -12,18 +12,19 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
-use failure_ext::{bail_err, chain::*, Error, Fail, Result};
+use failure_ext::{bail_err, chain::*, Error, Result};
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
+use thiserror::Error;
 
 use mercurial_types::HgChangesetId;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "invalid bookmarks line: {}", _0)]
+    #[error("invalid bookmarks line: {0}")]
     InvalidBookmarkLine(String),
-    #[fail(display = "invalid hash: {}", _0)]
+    #[error("invalid hash: {0}")]
     InvalidHash(String),
 }
 

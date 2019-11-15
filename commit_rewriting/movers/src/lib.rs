@@ -19,19 +19,17 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::iter::Iterator;
 use std::sync::Arc;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Cannot remove prefix, equal to the whole path")]
+    #[error("Cannot remove prefix, equal to the whole path")]
     RemovePrefixWholePathFailure,
-    #[fail(display = "Cannot apply prefix action {:?} to {:?}", _0, _1)]
+    #[error("Cannot apply prefix action {0:?} to {1:?}")]
     PrefixActionFailure(PrefixAction, MPath),
-    #[fail(display = "Small repo {} not found", _0)]
+    #[error("Small repo {0} not found")]
     SmallRepoNotFound(RepositoryId),
-    #[fail(
-        display = "Provided map is not prefix-free (e.g. {:?} and {:?})",
-        _0, _1
-    )]
+    #[error("Provided map is not prefix-free (e.g. {0:?} and {1:?})")]
     NonPrefixFreeMap(MPath, MPath),
 }
 

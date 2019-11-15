@@ -9,6 +9,7 @@
 use failure::Error;
 use futures::{future, Future};
 use futures_ext::FutureExt;
+use thiserror::Error;
 
 use blobrepo::BlobRepo;
 use cloned::cloned;
@@ -17,11 +18,9 @@ use mercurial_types::manifest::Content;
 use mercurial_types::{Changeset, HgChangesetId};
 use mononoke_types::MPath;
 
-use failure::Fail;
-
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "{} not found", _0)]
+    #[error("{0} not found")]
     NotFound(String),
 }
 

@@ -6,24 +6,24 @@
  * directory of this source tree.
  */
 
-use failure::Fail;
 pub use failure_ext::{Error, Result, ResultExt};
 use mononoke_types::RepositoryId;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "connection does not start with preamble")]
+    #[error("connection does not start with preamble")]
     NoConnectionPreamble,
-    #[fail(display = "connection error while reading preamble")]
+    #[error("connection error while reading preamble")]
     ConnectionError,
-    #[fail(display = "connection does not have a client certificate")]
+    #[error("connection does not have a client certificate")]
     ConnectionNoClientCertificate,
-    #[fail(display = "Unauthorized access, permission denied")]
+    #[error("Unauthorized access, permission denied")]
     AuthorizationFailed,
-    #[fail(display = "Failed to create AclChecker for tier {}", _0)]
+    #[error("Failed to create AclChecker for tier {0}")]
     AclCheckerCreationFailed(String),
-    #[fail(display = "Unexpected identity type {}", _0)]
+    #[error("Unexpected identity type {0}")]
     UnexpectedIdentityType(String),
-    #[fail(display = "Large repo not found: {}", _0)]
+    #[error("Large repo not found: {0}")]
     LargeRepoNotFound(RepositoryId),
 }

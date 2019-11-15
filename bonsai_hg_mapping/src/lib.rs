@@ -17,7 +17,6 @@ pub use sql_ext::SqlConstructors;
 use abomonation_derive::Abomonation;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext as failure;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;

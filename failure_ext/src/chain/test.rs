@@ -7,15 +7,16 @@
  */
 
 use super::*;
+use thiserror::Error;
 
-#[derive(Fail, Debug)]
-#[fail(display = "RootError badness")]
+#[derive(Error, Debug)]
+#[error("RootError badness")]
 struct RootError;
-#[derive(Fail, Debug)]
-#[fail(display = "Bar badness")]
+#[derive(Error, Debug)]
+#[error("Bar badness")]
 struct Bar;
-#[derive(Fail, Debug)]
-#[fail(display = "Blat badness")]
+#[derive(Error, Debug)]
+#[error("Blat badness")]
 struct Blat;
 
 #[test]

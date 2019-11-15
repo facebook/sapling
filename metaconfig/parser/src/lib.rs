@@ -11,8 +11,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-use failure_ext as failure;
-
 pub mod errors;
 pub mod repoconfig;
 

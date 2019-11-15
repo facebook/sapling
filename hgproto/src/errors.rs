@@ -6,24 +6,25 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{Error, Fail, Result};
+pub use failure_ext::{Error, Result};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Unimplemented operation '{}'", _0)]
+    #[error("Unimplemented operation '{0}'")]
     Unimplemented(String),
-    #[fail(display = "command parse failed for '{}'", _0)]
+    #[error("command parse failed for '{0}'")]
     CommandParse(String),
-    #[fail(display = "unconsumed data left after parsing '{}'", _0)]
+    #[error("unconsumed data left after parsing '{0}'")]
     UnconsumedData(String),
-    #[fail(display = "malformed batch with command '{}'", _0)]
+    #[error("malformed batch with command '{0}'")]
     BatchInvalid(String),
-    #[fail(display = "malformed bundle2 '{}'", _0)]
+    #[error("malformed bundle2 '{0}'")]
     Bundle2Invalid(String),
-    #[fail(display = "unknown escape character in batch command '{}'", _0)]
+    #[error("unknown escape character in batch command '{0}'")]
     BatchEscape(u8),
-    #[fail(display = "Repo error")]
+    #[error("Repo error")]
     RepoError,
-    #[fail(display = "cannot serve revlog repos")]
+    #[error("cannot serve revlog repos")]
     CantServeRevlogRepo,
 }

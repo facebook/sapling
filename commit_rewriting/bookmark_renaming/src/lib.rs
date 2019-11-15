@@ -16,10 +16,11 @@ use mononoke_types::RepositoryId;
 use std::collections::HashSet;
 use std::iter::Iterator;
 use std::sync::Arc;
+use thiserror::Error;
 
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
-    #[fail(display = "Small repo {} not found", _0)]
+    #[error("Small repo {0} not found")]
     SmallRepoNotFound(RepositoryId),
 }
 

@@ -7,35 +7,26 @@
  */
 
 use crate::{HgFileNodeId, HgNodeHash, Type};
-use failure::Fail;
 use mononoke_types::{ContentId, RepoPath};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Corrupt hg filenode returned: {} != {}", _0, _1)]
+    #[error("Corrupt hg filenode returned: {expected} != {actual}")]
     CorruptHgFileNode {
         expected: HgFileNodeId,
         actual: HgFileNodeId,
     },
-    #[fail(display = "Content blob missing for id: {}", _0)]
+    #[error("Content blob missing for id: {0}")]
     ContentBlobMissing(ContentId),
-    #[fail(display = "Mercurial content missing for node {} (type {})", _0, _1)]
+    #[error("Mercurial content missing for node {0} (type {1})")]
     HgContentMissing(HgNodeHash, Type),
-    #[fail(
-        display = "Error while deserializing file node retrieved from key '{}'",
-        _0
-    )]
+    #[error("Error while deserializing file node retrieved from key '{0}'")]
     FileNodeDeserializeFailed(String),
-    #[fail(
-        display = "Error while deserializing manifest retrieved from key '{}'",
-        _0
-    )]
+    #[error("Error while deserializing manifest retrieved from key '{0}'")]
     ManifestDeserializeFailed(String),
-    #[fail(display = "Incorrect LFS file content {}", _0)]
+    #[error("Incorrect LFS file content {0}")]
     IncorrectLfsFileContent(String),
-    #[fail(
-        display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}",
-        _0, _1, _2
-    )]
+    #[error("Inconsistent node hash for entry: path {0}, provided: {1}, computed: {2}")]
     InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
 }

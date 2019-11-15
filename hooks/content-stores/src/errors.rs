@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "No changeset with id '{}'", _0)]
+    #[error("No changeset with id '{0}'")]
     NoSuchChangeset(String),
 }

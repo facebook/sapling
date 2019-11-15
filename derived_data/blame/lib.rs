@@ -20,7 +20,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure::{format_err, Error, Fail};
+use failure::{format_err, Error};
 use futures::{future, Future};
 use futures_ext::FutureExt;
 use manifest::ManifestOps;
@@ -29,13 +29,14 @@ use mononoke_types::{
     ChangesetId, MPath,
 };
 use std::sync::Arc;
+use thiserror::Error;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum BlameError {
-    #[fail(display = "{}", _0)]
+    #[error("{0}")]
     Rejected(BlameRejected),
-    #[fail(display = "{}", _0)]
+    #[error("{0}")]
     Error(Error),
 }
 

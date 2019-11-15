@@ -8,36 +8,36 @@
 
 use crate::part_header::{PartHeader, PartHeaderType};
 
-use failure_ext::Fail;
 pub use failure_ext::{Error, Result, ResultExt};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "bundle2 decode error: {}", _0)]
+    #[error("bundle2 decode error: {0}")]
     Bundle2Decode(String),
-    #[fail(display = "changegroup decode error: {}", _0)]
+    #[error("changegroup decode error: {0}")]
     CgDecode(String),
-    #[fail(display = "changegroup2 encode error: {}", _0)]
+    #[error("changegroup2 encode error: {0}")]
     Cg2Encode(String),
-    #[fail(display = "wirepack decode error: {}", _0)]
+    #[error("wirepack decode error: {0}")]
     WirePackDecode(String),
-    #[fail(display = "wirepack encode error: {}", _0)]
+    #[error("wirepack encode error: {0}")]
     WirePackEncode(String),
-    #[fail(display = "bundle2 encode error: {}", _0)]
+    #[error("bundle2 encode error: {0}")]
     Bundle2Encode(String),
-    #[fail(display = "bundle2 chunk error: {}", _0)]
+    #[error("bundle2 chunk error: {0}")]
     Bundle2Chunk(String),
-    #[fail(display = "invalid delta: {}", _0)]
+    #[error("invalid delta: {0}")]
     InvalidDelta(String),
-    #[fail(display = "invalid wire pack entry: {}", _0)]
+    #[error("invalid wire pack entry: {0}")]
     InvalidWirePackEntry(String),
-    #[fail(display = "unknown part type: {:?}", _0)]
+    #[error("unknown part type: {0:?}")]
     BundleUnknownPart(PartHeader),
-    #[fail(display = "unknown params for bundle2 part '{:?}': {:?}", _0, _1)]
+    #[error("unknown params for bundle2 part '{0:?}': {1:?}")]
     BundleUnknownPartParams(PartHeaderType, Vec<String>),
-    #[fail(display = "error while generating listkey part")]
+    #[error("error while generating listkey part")]
     ListkeyGeneration,
-    #[fail(display = "error while generating phase-heads part")]
+    #[error("error while generating phase-heads part")]
     PhaseHeadsGeneration,
 }
 

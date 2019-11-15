@@ -23,14 +23,14 @@ use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 mod errors {
     use bookmarks::BookmarkName;
-    use failure::Fail;
     use mercurial_types::HgChangesetId;
+    use thiserror::Error;
 
-    #[derive(Debug, Fail)]
+    #[derive(Debug, Error)]
     pub enum ErrorKind {
-        #[fail(display = "Bookmark {} does not exist", _0)]
+        #[error("Bookmark {0} does not exist")]
         BookmarkNotFound(BookmarkName),
-        #[fail(display = "Bookmark value {} not found", _0)]
+        #[error("Bookmark value {0} not found")]
         BookmarkValueNotFound(HgChangesetId),
     }
 }

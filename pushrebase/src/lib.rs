@@ -50,7 +50,7 @@ use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Fail};
+use failure::Error;
 use failure_ext::{FutureFailureErrorExt, Result};
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{stream, Future, IntoFuture, Stream};
@@ -70,6 +70,7 @@ use slog::info;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
+use thiserror::Error;
 use tracing::{trace_args, Traced};
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
@@ -77,34 +78,25 @@ const MAX_REBASE_ATTEMPTS: usize = 100;
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
 // TODO: (torozco) T44843329 Why does this duplicate scm/mononoke/bundle2_resolver/src/errors.rs?
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]
+    #[error("Bonsai not found for hg changeset: {0:?}")]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
-    #[fail(display = "Pushrebase onto bookmark not found: {:?}", _0)]
+    #[error("Pushrebase onto bookmark not found: {0:?}")]
     PushrebaseBookmarkNotFound(BookmarkName),
-    #[fail(display = "Only one head is allowed in pushed set")]
+    #[error("Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
-    #[fail(
-        display = "Error while uploading data for changesets, hashes: {:?}",
-        _0
-    )]
+    #[error("Error while uploading data for changesets, hashes: {0:?}")]
     PushrebaseNoCommonRoot(BookmarkName, HashSet<ChangesetId>),
-    #[fail(display = "Internal error: root changeset {} not found", _0)]
+    #[error("Internal error: root changeset {0} not found")]
     RootNotFound(ChangesetId),
-    #[fail(display = "No pushrebase roots found")]
+    #[error("No pushrebase roots found")]
     NoRoots,
-    #[fail(display = "Pushrebase failed after too many unsuccessful rebases")]
+    #[error("Pushrebase failed after too many unsuccessful rebases")]
     TooManyRebaseAttempts,
-    #[fail(
-        display = "Forbid pushrebase because root ({}) is not a p1 of {} bookmark",
-        _0, _1
-    )]
+    #[error("Forbid pushrebase because root ({0}) is not a p1 of {1} bookmark")]
     P2RootRebaseForbidden(HgChangesetId, BookmarkName),
-    #[fail(
-        display = "internal error: unexpected file conflicts when adding new file changes to {}",
-        _0
-    )]
+    #[error("internal error: unexpected file conflicts when adding new file changes to {0}")]
     NewFileChangesConflict(ChangesetId),
 }
 

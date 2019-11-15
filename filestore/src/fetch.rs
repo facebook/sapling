@@ -12,20 +12,21 @@ use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::{stream, Future, Stream};
 use futures_ext::{BufferedParams, FutureExt, StreamExt};
 use itertools::Either;
 use mononoke_types::{ContentChunk, ContentChunkId, ContentId, FileContents};
+use thiserror::Error;
 
 // TODO: Make this configurable? Perhaps as a global, since it's something that only makes sense at
 // the program level (as opposed to e;g. chunk size, which makes sense at the repo level).
 const BUFFER_MEMORY_BUDGET: u64 = 16 * 1024 * 1024; // 16MB.
 const BUFFER_MAX_SIZE: usize = 1024; // Fairly arbitrarily large buffer size (we rely on weight).
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Chunk not found: {:?}", _0)]
+    #[error("Chunk not found: {0:?}")]
     ChunkNotFound(ContentChunkId),
 }
 

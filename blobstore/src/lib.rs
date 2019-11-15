@@ -12,9 +12,10 @@ use bytes::Bytes;
 use std::fmt;
 use std::sync::Arc;
 
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use thiserror::Error;
 
 use asyncmemo::Weight;
 use context::CoreContext;
@@ -164,11 +165,11 @@ impl Blobstore for Box<dyn Blobstore> {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum LoadableError {
-    #[fail(display = "Internal error: {}", _0)]
+    #[error("Internal error: {0}")]
     Error(Error),
-    #[fail(display = "Blob is missing: {}", _0)]
+    #[error("Blob is missing: {0}")]
     Missing(String),
 }
 

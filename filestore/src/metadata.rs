@@ -9,21 +9,22 @@
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::FutureExt;
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
+use thiserror::Error;
 
 use crate::alias::alias_stream;
 use crate::expected_size::ExpectedSize;
 use crate::fetch;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum RebuildBackmappingError {
-    #[fail(display = "Not found: {:?}", _0)]
+    #[error("Not found: {0:?}")]
     NotFound(ContentId),
 
-    #[fail(display = "Error computing metadata for {:?}: {:?}", _0, _1)]
+    #[error("Error computing metadata for {0:?}: {1:?}")]
     InternalError(ContentId, Error),
 }
 

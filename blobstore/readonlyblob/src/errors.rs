@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
-use failure_ext::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Attempt to put to ReadOnlyBlobstore for key {}", _0)]
+    #[error("Attempt to put to ReadOnlyBlobstore for key {0}")]
     ReadOnlyPut(String),
 }

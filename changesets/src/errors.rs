@@ -6,18 +6,15 @@
  * directory of this source tree.
  */
 
-use failure::Fail;
 pub use failure_ext::{Error, Result};
+use thiserror::Error;
 
 use mononoke_types::ChangesetId;
 
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
-    #[fail(
-        display = "Duplicate changeset {} has different parents: {:?} vs {:?}",
-        _0, _1, _2
-    )]
+    #[error("Duplicate changeset {0} has different parents: {1:?} vs {2:?}")]
     DuplicateInsertionInconsistency(ChangesetId, Vec<ChangesetId>, Vec<ChangesetId>),
-    #[fail(display = "Missing parents")]
+    #[error("Missing parents")]
     MissingParents(Vec<ChangesetId>),
 }

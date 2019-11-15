@@ -6,40 +6,37 @@
  * directory of this source tree.
  */
 
-use failure::Fail;
 use std::collections::HashSet;
+use thiserror::Error;
 
 pub use mercurial_types::HgChangesetId;
 use metaconfig_types::BookmarkOrRegex;
 pub use mononoke_types::MPath;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "No such hook '{}'", _0)]
+    #[error("No such hook '{0}'")]
     NoSuchHook(String),
 
-    #[fail(display = "Error while parsing hook '{}'", _0)]
+    #[error("Error while parsing hook '{0}'")]
     HookParseError(String),
-    #[fail(display = "Error while running hook '{}'", _0)]
+    #[error("Error while running hook '{0}'")]
     HookRuntimeError(String),
 
-    #[fail(display = "invalid file structure: {}", _0)]
+    #[error("invalid file structure: {0}")]
     InvalidFileStructure(String),
-    #[fail(display = "invalid path: {}", _0)]
+    #[error("invalid path: {0}")]
     InvalidPath(MPath),
 
-    #[fail(display = "Missing file for cs '{}' path '{}'", _0, _1)]
+    #[error("Missing file for cs '{0}' path '{1}'")]
     MissingFile(HgChangesetId, MPath),
 
-    #[fail(
-        display = "Hook(s) referenced in bookmark {:#?} do not exist: {:?}",
-        _0, _1
-    )]
+    #[error("Hook(s) referenced in bookmark {0:#?} do not exist: {1:?}")]
     NoSuchBookmarkHook(BookmarkOrRegex, HashSet<String>),
 
-    #[fail(display = "invalid rust hook: {}", _0)]
+    #[error("invalid rust hook: {0}")]
     InvalidRustHook(String),
 
-    #[fail(display = "Disabled hook(s) do(es) not exist: {:?}", _0)]
+    #[error("Disabled hook(s) do(es) not exist: {0:?}")]
     NoSuchHookToDisable(HashSet<String>),
 }

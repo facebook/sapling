@@ -6,8 +6,9 @@
  * directory of this source tree.
  */
 
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::Future;
+use thiserror::Error;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
@@ -15,9 +16,9 @@ use mononoke_types::{ContentId, ContentMetadata};
 
 use crate::{fetch, store, FilestoreConfig, StoreRequest};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Content not found: {:?}", _0)]
+    #[error("Content not found: {0:?}")]
     ContentNotFound(ContentId),
 }
 

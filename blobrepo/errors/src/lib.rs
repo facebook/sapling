@@ -9,14 +9,13 @@
 #![deny(warnings)]
 
 use ascii::AsciiString;
-use failure_ext::failure;
-use failure_ext::Fail;
 use mercurial_types::{
     blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
     HgParents, MPath, RepoPath, Type,
 };
 use mononoke_types::{hash::Sha256, ChangesetId};
 use std::fmt;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -41,106 +40,93 @@ impl fmt::Display for StateOpenError {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Missing typed key entry for key: {}", _0)]
+    #[error("Missing typed key entry for key: {0}")]
     MissingTypedKeyEntry(String),
     // TODO(anastasiyaz): Use general Alias Key instead of Sha256
-    #[fail(display = "Incorrect content of alias blob: {}", _0)]
+    #[error("Incorrect content of alias blob: {0}")]
     IncorrectAliasBlobContent(Sha256),
-    #[fail(display = "Error while opening state for {}", _0)]
+    #[error("Error while opening state for {0}")]
     StateOpen(StateOpenError),
-    #[fail(display = "Changeset id {} is missing", _0)]
+    #[error("Changeset id {0} is missing")]
     ChangesetMissing(HgChangesetId),
-    #[fail(
-        display = "Error while deserializing changeset retrieved from key '{}'",
-        _0
-    )]
+    #[error("Error while deserializing changeset retrieved from key '{0}'")]
     ChangesetDeserializeFailed(String),
-    #[fail(display = "Manifest id {} is missing", _0)]
+    #[error("Manifest id {0} is missing")]
     ManifestMissing(HgManifestId),
-    #[fail(display = "Node id {} is missing", _0)]
+    #[error("Node id {0} is missing")]
     NodeMissing(HgNodeHash),
-    #[fail(display = "Content missing nodeid {}", _0)]
+    #[error("Content missing nodeid {0}")]
     ContentMissing(HgNodeHash),
-    #[fail(
-        display = "Error while deserializing file contents retrieved from key '{}'",
-        _0
-    )]
+    #[error("Error while deserializing file contents retrieved from key '{0}'")]
     FileContentsDeserializeFailed(String),
-    #[fail(display = "Content blob missing for id: {}", _0)]
+    #[error("Content blob missing for id: {0}")]
     ContentBlobByAliasMissing(Sha256),
-    #[fail(display = "Uploaded blob is incomplete {:?}", _0)]
+    #[error("Uploaded blob is incomplete {0:?}")]
     BadUploadBlob(HgBlob),
-    #[fail(display = "HgParents are not in blob store {:?}", _0)]
+    #[error("HgParents are not in blob store {0:?}")]
     ParentsUnknown(HgParents),
-    #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
+    #[error("Serialization of node failed {0} ({1})")]
     SerializationFailed(HgNodeHash, bincode::Error),
-    #[fail(display = "Root manifest is not a manifest (type {})", _0)]
+    #[error("Root manifest is not a manifest (type {0})")]
     BadRootManifest(Type),
-    #[fail(display = "Manifest type {} does not match uploaded type {}", _0, _1)]
+    #[error("Manifest type {0} does not match uploaded type {1}")]
     ManifestTypeMismatch(Type, Type),
-    #[fail(display = "Node generation failed for unknown reason")]
+    #[error("Node generation failed for unknown reason")]
     NodeGenerationFailed,
-    #[fail(display = "Path {} appears multiple times in manifests", _0)]
+    #[error("Path {0} appears multiple times in manifests")]
     DuplicateEntry(RepoPath),
-    #[fail(display = "Duplicate manifest hash {}", _0)]
+    #[error("Duplicate manifest hash {0}")]
     DuplicateManifest(HgNodeHash),
-    #[fail(display = "Missing entries in new changeset {}", _0)]
+    #[error("Missing entries in new changeset {0}")]
     MissingEntries(HgNodeHash),
-    #[fail(display = "Filenode is missing: {} {}", _0, _1)]
+    #[error("Filenode is missing: {0} {1}")]
     MissingFilenode(RepoPath, HgFileNodeId),
-    #[fail(display = "Some manifests do not exist")]
+    #[error("Some manifests do not exist")]
     MissingManifests,
-    #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
+    #[error("Expected {0} to be a manifest, found a {1} instead")]
     NotAManifest(HgNodeHash, Type),
-    #[fail(
-        display = "Inconsistent node hash for changeset: provided: {}, \
-                   computed: {} for blob: {:#?}",
-        _0, _1, _2
+    #[error(
+        "Inconsistent node hash for changeset: provided: {0}, \
+         computed: {1} for blob: {2:#?}"
     )]
     InconsistentChangesetHash(HgNodeHash, HgNodeHash, HgBlobChangeset),
-    #[fail(display = "Bookmark {} does not exist", _0)]
+    #[error("Bookmark {0} does not exist")]
     BookmarkNotFound(AsciiString),
-    #[fail(display = "Unresolved conflicts when converting BonsaiChangeset to Manifest")]
+    #[error("Unresolved conflicts when converting BonsaiChangeset to Manifest")]
     UnresolvedConflicts,
-    #[fail(display = "Manifest without parents did not get changed by a BonsaiChangeset")]
+    #[error("Manifest without parents did not get changed by a BonsaiChangeset")]
     UnchangedManifest,
-    #[fail(display = "Saving empty manifest which is not a root: {}", _0)]
+    #[error("Saving empty manifest which is not a root: {0}")]
     SavingHgEmptyManifest(RepoPath),
-    #[fail(
-        display = "Trying to merge a manifest with two existing parents p1 {} and p2 {}",
-        _0, _1
-    )]
+    #[error("Trying to merge a manifest with two existing parents p1 {0} and p2 {1}")]
     ManifestAlreadyAMerge(HgNodeHash, HgNodeHash),
-    #[fail(display = "Path not found: {}", _0)]
+    #[error("Path not found: {0}")]
     PathNotFound(MPath),
-    #[fail(display = "Remove called on non-directory")]
+    #[error("Remove called on non-directory")]
     NotADirectory,
-    #[fail(display = "Empty file path")]
+    #[error("Empty file path")]
     EmptyFilePath,
-    #[fail(display = "Memory manifest conflict can not contain single entry")]
+    #[error("Memory manifest conflict can not contain single entry")]
     SingleEntryConflict,
-    #[fail(display = "Cannot find cache pool {}", _0)]
+    #[error("Cannot find cache pool {0}")]
     MissingCachePool(String),
-    #[fail(display = "Bonsai cs {} not found", _0)]
+    #[error("Bonsai cs {0} not found")]
     BonsaiNotFound(ChangesetId),
-    #[fail(display = "Bonsai changeset not found for hg changeset {}", _0)]
+    #[error("Bonsai changeset not found for hg changeset {0}")]
     BonsaiMappingNotFound(HgChangesetId),
-    #[fail(display = "Root path wasn't expected at this context")]
+    #[error("Root path wasn't expected at this context")]
     UnexpectedRootPath,
-    #[fail(
-        display = "Incorrect copy info: not found a file version {} {} the file {} {} was copied from",
-        from_path, from_node, to_path, to_node
-    )]
+    #[error("Incorrect copy info: not found a file version {from_path} {from_node} the file {to_path} {to_node} was copied from")]
     IncorrectCopyInfo {
         from_path: MPath,
         from_node: HgFileNodeId,
         to_path: MPath,
         to_node: HgFileNodeId,
     },
-    #[fail(display = "Case conflict in a commit")]
+    #[error("Case conflict in a commit")]
     CaseConflict(MPath),
-    #[fail(display = "Mercurial entry can not have more than two parents")]
+    #[error("Mercurial entry can not have more than two parents")]
     TooManyParents,
 }

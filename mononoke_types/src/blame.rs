@@ -13,11 +13,12 @@ use crate::{
 };
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
-use failure::{err_msg, format_err, Error, Fail};
+use failure::{err_msg, format_err, Error};
 use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use std::{collections::HashMap, convert::TryFrom};
+use thiserror::Error;
 use xdiff::{diff_hunks, Hunk};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -81,11 +82,11 @@ pub fn store_blame<B: Blobstore + Clone>(
         .map(move |_| blame_id)
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Fail)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Error)]
 pub enum BlameRejected {
-    #[fail(display = "Blame was not generated because file was too big")]
+    #[error("Blame was not generated because file was too big")]
     TooBig,
-    #[fail(display = "Blame was not generated because file was marked as binary")]
+    #[error("Blame was not generated because file was marked as binary")]
     Binary,
 }
 

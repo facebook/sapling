@@ -7,36 +7,34 @@
  */
 
 use crate::path::MPath;
-pub use failure_ext::{Error, Fail, ResultExt};
+pub use failure_ext::{Error, ResultExt};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "invalid blake2 input: {}", _0)]
+    #[error("invalid blake2 input: {0}")]
     InvalidBlake2Input(String),
-    #[fail(display = "invalid sha1 input: {}", _0)]
+    #[error("invalid sha1 input: {0}")]
     InvalidSha1Input(String),
-    #[fail(display = "invalid sha256 input: {}", _0)]
+    #[error("invalid sha256 input: {0}")]
     InvalidSha256Input(String),
-    #[fail(display = "invalid git sha1 input: {}", _0)]
+    #[error("invalid git sha1 input: {0}")]
     InvalidGitSha1Input(String),
-    #[fail(display = "invalid path '{}': {}", _0, _1)]
+    #[error("invalid path '{0}': {1}")]
     InvalidPath(String, String),
-    #[fail(display = "invalid Mononoke path '{}': {}", _0, _1)]
+    #[error("invalid Mononoke path '{0}': {1}")]
     InvalidMPath(MPath, String),
-    #[fail(display = "error while deserializing blob for '{}'", _0)]
+    #[error("error while deserializing blob for '{0}'")]
     BlobDeserializeError(String),
-    #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)]
+    #[error("invalid Thrift structure '{0}': {1}")]
     InvalidThrift(String, String),
-    #[fail(display = "invalid changeset date: {}", _0)]
+    #[error("invalid changeset date: {0}")]
     InvalidDateTime(String),
-    #[fail(
-        display = "not path-conflict-free: changed path '{}' is a prefix of '{}'",
-        _0, _1
-    )]
+    #[error("not path-conflict-free: changed path '{0}' is a prefix of '{1}'")]
     NotPathConflictFree(MPath, MPath),
-    #[fail(display = "invalid bonsai changeset: {}", _0)]
+    #[error("invalid bonsai changeset: {0}")]
     InvalidBonsaiChangeset(String),
-    #[fail(display = "Failed to parse RepositoryId from '{}'", _0)]
+    #[error("Failed to parse RepositoryId from '{0}'")]
     FailedToParseRepositoryId(String),
 }
 

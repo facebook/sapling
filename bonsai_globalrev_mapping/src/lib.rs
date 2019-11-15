@@ -14,7 +14,6 @@ use std::collections::HashSet;
 
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext as failure;
 use failure_ext::Error;
 use futures::future::Future;
 use futures::{future, IntoFuture};

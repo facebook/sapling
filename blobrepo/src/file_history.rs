@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use crate::repo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use filenodes::FilenodeInfo;
 use futures::{future::ok, stream, Future, Stream};
 use futures_ext::{BoxStream, FutureExt, StreamExt};
@@ -19,10 +19,11 @@ use maplit::hashset;
 use mercurial_types::{
     HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,
 };
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
+    #[error("internal error: file {0} copied from directory {1}")]
     InconsistentCopyInfo(RepoPath, RepoPath),
 }
 

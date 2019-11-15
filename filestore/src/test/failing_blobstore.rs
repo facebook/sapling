@@ -8,14 +8,15 @@
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::future::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Failing Blobstore Error")]
+#[derive(Debug, Error)]
+#[error("Failing Blobstore Error")]
 pub struct FailingBlobstoreError;
 
 #[derive(Debug, Clone)]

@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
-use failure_ext::Fail;
 use std::fmt::Debug;
+use thiserror::Error;
 
 use crate::expected_size::ExpectedSize;
 use mononoke_types::{
@@ -21,20 +21,20 @@ pub struct InvalidHash<T: Debug> {
     pub effective: T,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Invalid size: {:?} was expected, {:?} was observed", _0, _1)]
+    #[error("Invalid size: {0:?} was expected, {1:?} was observed")]
     InvalidSize(ExpectedSize, u64),
 
-    #[fail(display = "Invalid ContentId: {:?}", _0)]
+    #[error("Invalid ContentId: {0:?}")]
     InvalidContentId(InvalidHash<ContentId>),
 
-    #[fail(display = "Invalid Sha1: {:?}", _0)]
+    #[error("Invalid Sha1: {0:?}")]
     InvalidSha1(InvalidHash<Sha1>),
 
-    #[fail(display = "Invalid Sha256: {:?}", _0)]
+    #[error("Invalid Sha256: {0:?}")]
     InvalidSha256(InvalidHash<Sha256>),
 
-    #[fail(display = "Invalid GitSha1: {:?}", _0)]
+    #[error("Invalid GitSha1: {0:?}")]
     InvalidGitSha1(InvalidHash<GitSha1>),
 }

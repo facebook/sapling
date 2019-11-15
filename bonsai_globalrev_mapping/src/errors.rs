@@ -7,15 +7,13 @@
  */
 
 use super::BonsaiGlobalrevMappingEntry;
-pub use failure_ext::{Error, Fail, Result};
+pub use failure_ext::{Error, Result};
+use thiserror::Error;
 
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
-    #[fail(display = "Conflicting entries: stored:{:?} current:{:?}", _0, _1)]
+    #[error("Conflicting entries: stored:{0:?} current:{1:?}")]
     ConflictingEntries(BonsaiGlobalrevMappingEntry, BonsaiGlobalrevMappingEntry),
-    #[fail(
-        display = "Conflict detected during insert, but no value was there for: {:?}",
-        _0
-    )]
+    #[error("Conflict detected during insert, but no value was there for: {0:?}")]
     RaceConditionWithDelete(BonsaiGlobalrevMappingEntry),
 }

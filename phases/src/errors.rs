@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
-use failure::Fail;
 pub use failure_ext::{Error, Result};
+use thiserror::Error;
 
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
-    #[fail(display = "failed to get/set phase, reason: {}", _0)]
+    #[error("failed to get/set phase, reason: {0}")]
     PhasesError(String),
 }

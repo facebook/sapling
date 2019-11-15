@@ -19,7 +19,7 @@ use blobrepo::{file_history::get_file_history, BlobRepo};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Fail, Fallible as Result};
+use failure::{Error, Fallible as Result};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use mercurial_types::{
@@ -27,21 +27,22 @@ use mercurial_types::{
     HgFileNodeId, HgParents, MPath, RevFlags,
 };
 use revisionstore::Metadata;
+use thiserror::Error;
 
 use redaction::RedactionFutureExt;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Corrupt hg filenode returned: {} != {}", _0, _1)]
+    #[error("Corrupt hg filenode returned: {expected} != {actual}")]
     CorruptHgFileNode {
         expected: HgFileNodeId,
         actual: HgFileNodeId,
     },
 
-    #[fail(display = "Invalid blob kind returned: {:?}", _0)]
+    #[error("Invalid blob kind returned: {kind:?}")]
     InvalidKind { kind: RemotefilelogBlobKind },
 }
 

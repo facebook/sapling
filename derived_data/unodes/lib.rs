@@ -12,21 +12,22 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::ManifestOps;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
 use std::{collections::HashMap, sync::Arc};
+use thiserror::Error;
 
 mod derive;
 mod mapping;
 
 pub use mapping::{RootUnodeManifestId, RootUnodeManifestMapping};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Invalid bonsai changeset: {}", _0)]
+    #[error("Invalid bonsai changeset: {0}")]
     InvalidBonsai(String),
 }
 

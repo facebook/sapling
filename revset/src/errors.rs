@@ -6,22 +6,22 @@
  * directory of this source tree.
  */
 
-use failure::Fail;
 pub use failure_ext::{Error, Result};
+use thiserror::Error;
 
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "repo error checking for node: {}", _0)]
+    #[error("repo error checking for node: {0}")]
     RepoNodeError(HgNodeHash),
-    #[fail(display = "repo error checking for changeset: {}", _0)]
+    #[error("repo error checking for changeset: {0}")]
     RepoChangesetError(ChangesetId),
-    #[fail(display = "could not fetch node generation")]
+    #[error("could not fetch node generation")]
     GenerationFetchFailed,
-    #[fail(display = "failed to fetch parent nodes")]
+    #[error("failed to fetch parent nodes")]
     ParentsFetchFailed,
-    #[fail(display = "Bonsai mapping not found for {}", _0)]
+    #[error("Bonsai mapping not found for {0}")]
     BonsaiMappingNotFound(HgChangesetId),
 }

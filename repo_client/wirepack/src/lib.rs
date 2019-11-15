@@ -10,18 +10,19 @@ use std::fmt::Debug;
 use std::mem;
 
 use bytes::Bytes;
-use failure::{Error, Fail};
+use failure::Error;
 use failure_ext::Result;
 use futures::{Poll, Stream};
+use thiserror::Error;
 
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_revlog::manifest::ManifestContent;
 use mercurial_types::{delta, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Malformed treemanifest part: {}", _0)]
+    #[error("Malformed treemanifest part: {0}")]
     MalformedTreemanifestPart(String),
 }
 

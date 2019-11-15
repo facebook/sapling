@@ -15,7 +15,7 @@ use blobsync::copy_content;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use failure::{err_msg, Error, Fail};
+use failure::{err_msg, Error};
 use futures::Future;
 use futures_preview::{
     compat::Future01CompatExt,
@@ -34,29 +34,21 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
     WorkingCopyEquivalence,
 };
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(
-        display = "Pushrebase of synced commit failed - check config for overlaps: {:?}",
-        _0
-    )]
+    #[error("Pushrebase of synced commit failed - check config for overlaps: {0:?}")]
     PushrebaseFailure(PushrebaseError),
-    #[fail(
-        display = "Remapped commit {} expected in target repo, but not present",
-        _0
-    )]
+    #[error("Remapped commit {0} expected in target repo, but not present")]
     MissingRemappedCommit(ChangesetId),
-    #[fail(
-        display = "Could not find a commit in the target repo with the same working copy as {}",
-        _0
-    )]
+    #[error("Could not find a commit in the target repo with the same working copy as {0}")]
     SameWcSearchFail(ChangesetId),
-    #[fail(display = "Parent commit {} hasn't been remapped", _0)]
+    #[error("Parent commit {0} hasn't been remapped")]
     ParentNotRemapped(ChangesetId),
-    #[fail(display = "Parent commit {} is not a sync candidate", _0)]
+    #[error("Parent commit {0} is not a sync candidate")]
     ParentNotSyncCandidate(ChangesetId),
-    #[fail(display = "Cannot choose working copy equivalent for {}", _0)]
+    #[error("Cannot choose working copy equivalent for {0}")]
     AmbiguousWorkingCopyEquivalent(ChangesetId),
 }
 

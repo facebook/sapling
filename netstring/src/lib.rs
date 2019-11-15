@@ -20,11 +20,12 @@
 use failure_ext as failure;
 
 mod errors {
-    pub use crate::failure::{Error, Fail, Result};
+    pub use crate::failure::{Error, Result};
+    use thiserror::Error;
 
-    #[derive(Clone, Debug, Fail)]
+    #[derive(Clone, Debug, Error)]
     pub enum ErrorKind {
-        #[fail(display = "{}", _0)]
+        #[error("{0}")]
         NetstringDecode(&'static str),
     }
 }

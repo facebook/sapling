@@ -29,7 +29,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use futures::{future, stream::FuturesUnordered, Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use manifest::{find_intersection_of_diffs, Entry};
@@ -37,6 +37,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId}
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
+use thiserror::Error;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 mod fastlog_impl;
@@ -74,13 +75,13 @@ pub enum FastlogParent {
     Unknown,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)]
+    #[error("invalid Thrift structure '{0}': {1}")]
     InvalidThrift(String, String),
-    #[fail(display = "Fastlog batch for {:?} unode not found", _0)]
+    #[error("Fastlog batch for {0:?} unode not found")]
     NotFound(Entry<ManifestUnodeId, FileUnodeId>),
-    #[fail(display = "Failed to deserialize FastlogBatch for {}: {}", _0, _1)]
+    #[error("Failed to deserialize FastlogBatch for {0}: {1}")]
     DeserializationError(String, String),
 }
 

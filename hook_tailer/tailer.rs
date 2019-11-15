@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error, Fail, Result};
+use failure_ext::{err_msg, Error, Result};
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};
@@ -26,6 +26,7 @@ use revset::AncestorsNodeStream;
 use slog::{debug, info};
 use std::collections::HashSet;
 use std::sync::Arc;
+use thiserror::Error;
 
 pub struct Tailer {
     ctx: CoreContext,
@@ -304,12 +305,12 @@ fn run_hooks_for_changeset(
         })
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "No such bookmark '{}'", _0)]
+    #[error("No such bookmark '{0}'")]
     NoSuchBookmark(BookmarkName),
-    #[fail(display = "Cannot find last revision in blobstore")]
+    #[error("Cannot find last revision in blobstore")]
     NoLastRevision,
-    #[fail(display = "Cannot find bonsai for {}", _0)]
+    #[error("Cannot find bonsai for {0}")]
     BonsaiNotFound(HgChangesetId),
 }

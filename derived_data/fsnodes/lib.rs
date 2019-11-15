@@ -8,22 +8,22 @@
 
 #![deny(warnings)]
 
-use failure_ext::Fail;
 use mononoke_types::{ContentId, FsnodeId};
+use thiserror::Error;
 
 mod derive;
 mod mapping;
 
 pub use mapping::{RootFsnodeId, RootFsnodeMapping};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Invalid bonsai changeset: {}", _0)]
+    #[error("Invalid bonsai changeset: {0}")]
     InvalidBonsai(String),
-    #[fail(display = "Missing content: {}", _0)]
+    #[error("Missing content: {0}")]
     MissingContent(ContentId),
-    #[fail(display = "Missing fsnode parent: {}", _0)]
+    #[error("Missing fsnode parent: {0}")]
     MissingParent(FsnodeId),
-    #[fail(display = "Missing fsnode subentry for '{}': {}", _0, _1)]
+    #[error("Missing fsnode subentry for '{0}': {1}")]
     MissingSubentry(String, FsnodeId),
 }

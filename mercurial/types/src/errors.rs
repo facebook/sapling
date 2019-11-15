@@ -6,20 +6,20 @@
  * directory of this source tree.
  */
 
-pub use failure::Fail;
 pub use failure_ext::{Error, ResultExt};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "invalid sha-1 input: {}", _0)]
+    #[error("invalid sha-1 input: {0}")]
     InvalidSha1Input(String),
-    #[fail(display = "invalid fragment list: {}", _0)]
+    #[error("invalid fragment list: {0}")]
     InvalidFragmentList(String),
-    #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)]
+    #[error("invalid Thrift structure '{0}': {1}")]
     InvalidThrift(String, String),
-    #[fail(display = "error while deserializing blob for '{}'", _0)]
+    #[error("error while deserializing blob for '{0}'")]
     BlobDeserializeError(String),
-    #[fail(display = "imposssible to parse unknown rev flags")]
+    #[error("imposssible to parse unknown rev flags")]
     UnknownRevFlags,
 }
 

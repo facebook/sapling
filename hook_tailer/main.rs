@@ -16,7 +16,7 @@ use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error, Fail, Result};
+use failure_ext::{err_msg, format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::future::{err, ok, result, Future};
 use futures::stream::repeat;
@@ -34,6 +34,7 @@ use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::time::Duration;
 use tailer::Tailer;
+use thiserror::Error;
 use tokio_timer::sleep;
 
 pub struct HookResults {
@@ -361,8 +362,8 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
     )
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "No such repo '{}'", _0)]
+    #[error("No such repo '{0}'")]
     NoSuchRepo(String),
 }

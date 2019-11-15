@@ -8,68 +8,59 @@
 
 use hyper::StatusCode;
 
-use failure_ext::Fail;
+use thiserror::Error;
 
 use lfs_protocol::{RequestObject, ResponseObject};
 use mononoke_types::ContentId;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Client cancelled the request")]
+    #[error("Client cancelled the request")]
     ClientCancelled,
-    #[fail(display = "An error occurred forwarding the request to upstream")]
+    #[error("An error occurred forwarding the request to upstream")]
     UpstreamDidNotRespond,
-    #[fail(
-        display = "An error ocurred receiving a response from upstream ({}): {}",
-        _0, _1
-    )]
+    #[error("An error ocurred receiving a response from upstream ({0}): {1}")]
     UpstreamError(StatusCode, String),
-    #[fail(display = "Could not serialize")]
+    #[error("Could not serialize")]
     SerializationFailed,
-    #[fail(display = "Could not initialize HTTP client")]
+    #[error("Could not initialize HTTP client")]
     HttpClientInitializationFailed,
-    #[fail(display = "Repository does not exist: {}", _0)]
+    #[error("Repository does not exist: {0}")]
     RepositoryDoesNotExist(String),
-    #[fail(display = "Could not build {}", _0)]
+    #[error("Could not build {0}")]
     UriBuilderFailed(&'static str),
-    #[fail(display = "Invalid Uri {}: {}", _0, _1)]
+    #[error("Invalid Uri {0}: {1}")]
     InvalidUri(String, &'static str),
-    #[fail(display = "Object does not exist: {}", _0)]
+    #[error("Object does not exist: {0}")]
     ObjectDoesNotExist(ContentId),
-    #[fail(display = "Could not dispatch batch request to upstream")]
+    #[error("Could not dispatch batch request to upstream")]
     UpstreamBatchNoResponse,
-    #[fail(display = "Upstream batch response is invalid")]
+    #[error("Upstream batch response is invalid")]
     UpstreamBatchInvalid,
-    #[fail(display = "Could not fetch upstream batch")]
+    #[error("Could not fetch upstream batch")]
     UpstreamBatchError,
-    #[fail(display = "Could not perform upstream upload")]
+    #[error("Could not perform upstream upload")]
     UpstreamUploadError,
-    #[fail(display = "Upstream batch response included an invalid transfer")]
+    #[error("Upstream batch response included an invalid transfer")]
     UpstreamInvalidTransfer,
-    #[fail(
-        display = "Upstream batch response did not include requested object: {:?}",
-        _0
-    )]
+    #[error("Upstream batch response did not include requested object: {0:?}")]
     UpstreamMissingObject(RequestObject),
-    #[fail(
-        display = "Upstream batch response included an invalid object: {:?}",
-        _0
-    )]
+    #[error("Upstream batch response included an invalid object: {0:?}")]
     UpstreamInvalidObject(ResponseObject),
-    #[fail(display = "Could not load local alias")]
+    #[error("Could not load local alias")]
     LocalAliasLoadError,
-    #[fail(display = "Could not generate download URIs")]
+    #[error("Could not generate download URIs")]
     GenerateDownloadUrisError,
-    #[fail(display = "Could not generate upload URIs")]
+    #[error("Could not generate upload URIs")]
     GenerateUploadUrisError,
-    #[fail(display = "Could not parse Request Batch")]
+    #[error("Could not parse Request Batch")]
     InvalidBatch,
-    #[fail(display = "Could not parse Content ID")]
+    #[error("Could not parse Content ID")]
     InvalidContentId,
-    #[fail(display = "Could not access Filestore for reads")]
+    #[error("Could not access Filestore for reads")]
     FilestoreReadFailure,
-    #[fail(display = "Could not access Filestore for writes")]
+    #[error("Could not access Filestore for writes")]
     FilestoreWriteFailure,
-    #[fail(display = "Failed to create response")]
+    #[error("Failed to create response")]
     ResponseCreationFailure,
 }

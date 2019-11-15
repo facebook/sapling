@@ -8,32 +8,27 @@
 
 use std::collections::HashSet;
 
-pub use failure_ext::{prelude::*, Fail};
+pub use failure_ext::prelude::*;
+use thiserror::Error;
 
 use bookmarks::BookmarkName;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]
+    #[error("Bonsai not found for hg changeset: {0:?}")]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
-    #[fail(display = "Malformed treemanifest part: {}", _0)]
+    #[error("Malformed treemanifest part: {0}")]
     MalformedTreemanifestPart(String),
-    #[fail(display = "Pushrebase onto bookmark not found: {:?}", _0)]
+    #[error("Pushrebase onto bookmark not found: {0:?}")]
     PushrebaseBookmarkNotFound(BookmarkName),
-    #[fail(display = "Only one head is allowed in pushed set")]
+    #[error("Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
-    #[fail(
-        display = "Error while uploading data for changesets, hashes: {:?}",
-        _0
-    )]
+    #[error("Error while uploading data for changesets, hashes: {0:?}")]
     WhileUploadingData(Vec<HgChangesetId>),
-    #[fail(
-        display = "No common root found between: bookmark:{:?} roots:{:?}",
-        _0, _1
-    )]
+    #[error("No common root found between: bookmark:{0:?} roots:{1:?}")]
     PushrebaseNoCommonRoot(BookmarkName, HashSet<ChangesetId>),
-    #[fail(display = "Repo is marked as read-only: {}", _0)]
+    #[error("Repo is marked as read-only: {0}")]
     RepoReadOnly(String),
 }

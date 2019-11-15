@@ -6,37 +6,22 @@
  * directory of this source tree.
  */
 
-use failure_ext::Fail;
 pub use failure_ext::{Error, Result};
 use mercurial_types::{HgFileNodeId, RepoPath};
+use thiserror::Error;
 
-#[derive(Debug, Eq, Fail, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
-    #[fail(display = "Invalid copy: {:?} copied from {:?}", _0, _1)]
+    #[error("Invalid copy: {0:?} copied from {1:?}")]
     InvalidCopy(RepoPath, RepoPath),
-    #[fail(
-        display = "Internal error: failure while fetching file node {} {}",
-        _0, _1
-    )]
+    #[error("Internal error: failure while fetching file node {0} {1}")]
     FailFetchFilenode(HgFileNodeId, RepoPath),
-    #[fail(
-        display = "Internal error: failure while fetching copy information {} {}",
-        _0, _1
-    )]
+    #[error("Internal error: failure while fetching copy information {0} {1}")]
     FailFetchCopydata(HgFileNodeId, RepoPath),
-    #[fail(
-        display = "Internal error: copy information is not found for {} {}",
-        _0, _1
-    )]
+    #[error("Internal error: copy information is not found for {0} {1}")]
     CopydataNotFound(HgFileNodeId, RepoPath),
-    #[fail(
-        display = "Internal error: failure while fetching file nodes for {}",
-        _0
-    )]
+    #[error("Internal error: failure while fetching file nodes for {0}")]
     FailRangeFetch(RepoPath),
-    #[fail(
-        display = "Internal error: failure while fetching copy source path for {}",
-        _0
-    )]
+    #[error("Internal error: failure while fetching copy source path for {0}")]
     FromPathNotFound(RepoPath),
 }

@@ -1,5 +1,5 @@
 # @autocargo from //common/rust/failure_ext:failure_ext
-# Signature<<f75d246c560d46a5b3c1ae4f12a8c39eb68d415c>>
+# Signature<<47c17cafb1fd9379d31c2aafce77a3146013d430>>
 [package]
 name = "failure_ext"
 edition = "2018"
@@ -12,4 +12,5 @@ failure = "*"
 failure_derive = "*"
 futures = "0.1"
 slog = { version="*", features=["max_level_debug"] }
-# @end of Signature<<f75d246c560d46a5b3c1ae4f12a8c39eb68d415c>>
+thiserror = "*"
+# @end of Signature<<47c17cafb1fd9379d31c2aafce77a3146013d430>>
