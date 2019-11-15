@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::future::Future;
 use std::pin::Pin;
@@ -18,7 +19,7 @@ use fsnodes::RootFsnodeId;
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
-use futures_util::try_join;
+use futures_util::{try_future::try_join_all, try_join};
 use manifest::ManifestOps;
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry};
 use mercurial_types::Globalrev;
@@ -243,48 +244,106 @@ impl ChangesetContext {
     ///
     /// `self` is considered the "new" changeset (so files missing there are "Removed")
     /// `other` is considered the "old" changeset (so files missing there are "Added")
+    /// include_copies_renames is only available for diffing commits with its parent
     pub async fn diff(
         &self,
         other: ChangesetId,
+        include_copies_renames: bool,
     ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
         let other = ChangesetContext::new(self.repo.clone(), other);
-        Ok({
-            // yes, we start from "other" as manfest.diff() is backwards
-            let (self_manifest_root, other_manifest_root) =
-                try_join!(self.root_fsnode_id(), other.root_fsnode_id(),)?;
-            other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
-                .fsnode_id()
-                .diff(
-                    self.ctx().clone(),
-                    self.repo().blob_repo().get_blobstore(),
-                    self_manifest_root.fsnode_id().clone(),
-                )
-                .filter_map(|diff_entry| match diff_entry {
-                    ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
+        let bonsai = self.bonsai_changeset().await?;
+
+        // map from from_path to to_path
+        let mut copy_path_map = HashMap::new();
+        // map from to_path to from_path
+        let mut inv_copy_path_map = HashMap::new();
+        let file_changes;
+        // For now we only consider copies when comparing with parent.
+        if include_copies_renames && self.parents().await?.contains(&other.id) {
+            file_changes = bonsai.file_changes().collect::<Vec<_>>();
+            for (to_path, file_change) in file_changes.iter() {
+                if let Some((from_path, csid)) = file_change.and_then(|fc| fc.copy_from()) {
+                    if *csid == other.id {
+                        copy_path_map.insert(from_path, to_path);
+                        inv_copy_path_map.insert(to_path, from_path);
+                    }
+                }
+            }
+        }
+        // set of paths from other that were copied in (not moved)
+        let copied_paths: HashSet<_> =
+            try_join_all(copy_path_map.iter().map(move |(from_path, _)| {
+                async move { self.path(from_path.to_string())?.file_type().await }
+            }))
+            .await?
+            .into_iter()
+            .zip(copy_path_map.keys())
+            .filter_map(|(file_type, path)| file_type.map(|_| path))
+            .collect();
+
+        let (self_manifest_root, other_manifest_root) =
+            try_join!(self.root_fsnode_id(), other.root_fsnode_id(),)?;
+        let change_contexts = other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
+            .fsnode_id()
+            .diff(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_blobstore(),
+                self_manifest_root.fsnode_id().clone(),
+            )
+            .filter_map(|diff_entry| match diff_entry {
+                ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
+                    if let Some(from_path) = inv_copy_path_map.get(&&path) {
+                        // There's copy information that we can use.
+                        if copied_paths.contains(from_path) {
+                            // If the source still exists in the current commit it was a copy.
+                            Some(ChangesetPathDiffContext::Copied(
+                                ChangesetPathContext::new(self.clone(), Some(path.clone())),
+                                ChangesetPathContext::new(
+                                    other.clone(),
+                                    Some((*from_path).clone()),
+                                ),
+                            ))
+                        } else {
+                            // If it doesn't it was a move
+                            Some(ChangesetPathDiffContext::Moved(
+                                ChangesetPathContext::new(self.clone(), Some(path.clone())),
+                                ChangesetPathContext::new(
+                                    other.clone(),
+                                    Some((*from_path).clone()),
+                                ),
+                            ))
+                        }
+                    } else {
                         Some(ChangesetPathDiffContext::Added(ChangesetPathContext::new(
                             self.clone(),
                             Some(path),
                         )))
                     }
-                    ManifestDiff::Removed(Some(path), ManifestEntry::Leaf(_)) => {
+                }
+                ManifestDiff::Removed(Some(path), ManifestEntry::Leaf(_)) => {
+                    if let Some(_) = copy_path_map.get(&path) {
+                        // The file is was moved (not removed), it will be covered by a "Moved" entry.
+                        None
+                    } else {
                         Some(ChangesetPathDiffContext::Removed(
                             ChangesetPathContext::new(self.clone(), Some(path)),
                         ))
                     }
-                    ManifestDiff::Changed(
-                        Some(path),
-                        ManifestEntry::Leaf(_a),
-                        ManifestEntry::Leaf(_b),
-                    ) => Some(ChangesetPathDiffContext::Changed(
-                        ChangesetPathContext::new(self.clone(), Some(path.clone())),
-                        ChangesetPathContext::new(other.clone(), Some(path)),
-                    )),
-                    // We don't care about diffs not involving leaves
-                    _ => None,
-                })
-                .collect()
-                .compat()
-                .await?
-        })
+                }
+                ManifestDiff::Changed(
+                    Some(path),
+                    ManifestEntry::Leaf(_a),
+                    ManifestEntry::Leaf(_b),
+                ) => Some(ChangesetPathDiffContext::Changed(
+                    ChangesetPathContext::new(self.clone(), Some(path.clone())),
+                    ChangesetPathContext::new(other.clone(), Some(path)),
+                )),
+                // We don't care about diffs not involving leaves
+                _ => None,
+            })
+            .collect()
+            .compat()
+            .await?;
+        return Ok(change_contexts);
     }
 }

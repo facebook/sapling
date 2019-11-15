@@ -39,6 +39,15 @@ Commit with globalrev:
   $ hg commit -Am "commit with globalrev" --extra global_rev=9999999999
   $ hg bookmark -i BOOKMARK_C
 
+A commit with file move and copy
+
+  $ hg update -q $COMMIT_B
+  $ hg move a moved_a
+  $ echo x >> moved_a
+  $ hg cp b copied_b
+  $ commit D
+
+
 import testing repo to mononoke
   $ cd ..
   $ blobimport repo-hg/.hg repo --has-globalrev
@@ -56,7 +65,7 @@ repos
   repo
 
 diff
-  $ scsc diff --repo repo -B BOOKMARK_B -i $COMMIT_C
+  $ scsc diff --repo repo -B BOOKMARK_B -i "$COMMIT_C"
   diff --git a/b b/b
   --- a/b
   +++ b/b
@@ -70,6 +79,21 @@ diff
   diff --git a/binary b/binary
   new file mode 100644
   Binary file binary has changed
+
+  $ scsc diff --repo repo -i "$COMMIT_B" -i "$COMMIT_D"
+  diff --git a/b b/copied_b
+  copy from b
+  copy to copied_b
+  diff --git a/a b/moved_a
+  rename from a
+  rename to moved_a
+  --- a/a
+  +++ b/moved_a
+  @@ -3,3 +3,4 @@
+   c
+   d
+   e
+  +x
 
 lookup using bookmarks
   $ scsc lookup --repo repo  -B BOOKMARK_B

@@ -780,24 +780,35 @@ impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
 #[async_trait]
 impl AsyncIntoResponse<thrift::CommitCompareFile> for ChangesetPathDiffContext {
     async fn into_response(self) -> Result<thrift::CommitCompareFile, errors::ServiceError> {
-        let (other_file, base_file) = match self {
+        let (other_file, base_file, copy_info) = match self {
             ChangesetPathDiffContext::Added(base_context) => {
                 let entry = base_context.into_response().await?;
-                (None, entry)
+                (None, entry, thrift::CopyInfo::NONE)
             }
             ChangesetPathDiffContext::Removed(other_context) => {
                 let entry = other_context.into_response().await?;
-                (entry, None)
+                (entry, None, thrift::CopyInfo::NONE)
             }
             ChangesetPathDiffContext::Changed(base_context, other_context) => {
                 let (other_entry, base_entry) =
                     try_join!(other_context.into_response(), base_context.into_response(),)?;
-                (other_entry, base_entry)
+                (other_entry, base_entry, thrift::CopyInfo::NONE)
+            }
+            ChangesetPathDiffContext::Copied(base_context, other_context) => {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                (other_entry, base_entry, thrift::CopyInfo::COPY)
+            }
+            ChangesetPathDiffContext::Moved(base_context, other_context) => {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                (other_entry, base_entry, thrift::CopyInfo::MOVE)
             }
         };
         Ok(thrift::CommitCompareFile {
             base_file,
             other_file,
+            copy_info,
         })
     }
 }
@@ -1209,7 +1220,7 @@ impl SourceControlService for SourceControlServiceImpl {
                 params.other_commit_id.to_string()
             ))
         })?;
-        let diff = base_changeset.diff(other_changeset_id).await?;
+        let diff = base_changeset.diff(other_changeset_id, true).await?;
         let diff_files = stream::iter(diff)
             .map(|d| d.into_response())
             .buffer_unordered(CONCURRENCY_LIMIT)
