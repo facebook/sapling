@@ -577,21 +577,34 @@ class repo(object):
         if exitcode > 0:
             raise RuntimeError("forall error %d" % exitcode)
 
-        linesbyproject = {}
-        remainder = cmdoutput
-        while len(remainder) > 0:  # Run all the projects
-            line, remainder = remainder.split("\n", 1)
-            currentproject = line[8:]  # text after "project "
-            currentlist = []
-            while len(remainder) > 0 and not remainder.startswith("\nproject"):
-                line, remainder = remainder.split("\n", 1)
-                currentlist.append(line)
-            if remainder.startswith("\n"):
-                _, remainder = remainder.split(
-                    "\n", 1
-                )  # consume empty line between projects
-            linesbyproject[currentproject] = currentlist
+        return self._splitlinesbyproject(cmdoutput)
 
+    @staticmethod
+    def _splitlinesbyproject(content):
+        linesbyproject = {}
+        cursor = 0
+        currentproject = None
+        currentlines = None
+        while cursor < len(content):  # Run all the projects
+            separatoridx = content.find("\n", cursor)
+            if separatoridx == -1:
+                separatoridx = len(content)
+            else:
+                assert content[separatoridx] == "\n"
+            line = content[cursor:separatoridx]
+            assert not line.endswith("\n")
+            cursor = separatoridx + 1
+            if line.startswith("project "):
+                if currentproject is not None and currentlines is not None:
+                    linesbyproject[currentproject] = currentlines
+                currentproject = line[8:]  # text after "project "
+                currentlines = []
+            elif line != "":
+                currentlines.append(line)
+
+        # Append the very last project
+        if currentproject is not None and currentlines is not None:
+            linesbyproject[currentproject] = currentlines
         return linesbyproject
 
     def list(self):
@@ -876,7 +889,9 @@ class repo_source(common.converter_source):
                         filediff["source"]["hash"]
                     ] = projectpath
                     self.objecthashprojectindex[filediff["dest"]["hash"]] = projectpath
-                    self._filemodecache[filediff["dest"]["hash"]] = filediff["dest"]["mode"]
+                    self._filemodecache[filediff["dest"]["hash"]] = filediff["dest"][
+                        "mode"
+                    ]
 
         pathprefix = {
             self.VARIANT_ROOTED: "",

@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from edenscm.hgext.convert.repo import gitutil
+from edenscm.hgext.convert.repo import gitutil, repo
 
 
 def draft(test_func):
@@ -26,7 +26,6 @@ class gitutiltest(unittest.TestCase):
 
         mode = gitutil.getfilemodestr(int("120000", 8))
         self.assertEqual("l", mode)
-
 
     def test_parsedifftree_readable(self):
         difftree_string = """1fd915b9c1fcf3803383432ede29fc4d686fdb44
@@ -165,6 +164,30 @@ Change-Id: Ie8ded3a8316b465c89a256c1a9146345614ed68f"""
             """Merge AU_LINUX_ANDROID_LA.BR.1.3.7_RB1.08.01.00.336.038 on remote branch
 
 Change-Id: Ie8ded3a8316b465c89a256c1a9146345614ed68f""",
+        )
+
+
+class repotest(unittest.TestCase):
+    """Tests implementation of the repo command"""
+
+    def test_forallbyproject(self):
+        foralloutput = """project A/
+123
+456
+789
+0
+
+project B/
+Humpty Dumpty
+sat on the wall
+Humpty Dumpty
+had a great fall
+"""
+        out = repo._splitlinesbyproject(foralloutput)
+        self.assertSequenceEqual(out["A/"], ["123", "456", "789", "0"])
+        self.assertSequenceEqual(
+            out["B/"],
+            ["Humpty Dumpty", "sat on the wall", "Humpty Dumpty", "had a great fall"],
         )
 
 
