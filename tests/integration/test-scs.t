@@ -145,3 +145,11 @@ lookup using hg needed resolving to identify commit
   bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
   globalrev=9999999999
   hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+
+cat a file
+  $ scsc cat --repo repo -B BOOKMARK_B -p a
+  a
+  b
+  c
+  d
+  e
