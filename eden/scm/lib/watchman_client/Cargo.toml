@@ -10,6 +10,7 @@ serde = "1"
 serde_derive = "1"
 serde_json = "1"
 serde_bser = { version = "0.1.0", path = "../../../../watchman/rust/serde_bser" }
+thiserror = "1.0.5"
 timeout-readwrite = "*"
 
 [dev-dependencies]

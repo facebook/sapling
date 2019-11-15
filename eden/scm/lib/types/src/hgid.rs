@@ -10,8 +10,9 @@ use std::{
     io::{self, Read, Write},
 };
 
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use serde_derive::{Deserialize, Serialize};
+use thiserror::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
@@ -19,8 +20,8 @@ use rand::RngCore;
 #[cfg(any(test, feature = "for-tests"))]
 use std::collections::HashSet;
 
-#[derive(Debug, Fail)]
-#[fail(display = "HgId Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("HgId Error: {0:?}")]
 struct HgIdError(String);
 
 const HEX_CHARS: &[u8] = b"0123456789abcdef";

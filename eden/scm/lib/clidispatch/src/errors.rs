@@ -5,50 +5,44 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fail;
 use std::borrow::Cow;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
-#[fail(display = "cannot decode arguments")]
+#[derive(Debug, Error)]
+#[error("cannot decode arguments")]
 pub struct NonUTF8Arguments;
 
 pub use cliparser::errors::InvalidArguments;
 
-#[derive(Debug, Fail)]
-#[fail(display = "unknown command '{}'\n(use 'hg help' to get help)", _0)]
+#[derive(Debug, Error)]
+#[error("unknown command '{0}'\n(use 'hg help' to get help)")]
 pub struct UnknownCommand(pub String);
 
 /// Explicitly fallback to Python code path.
 ///
 /// Ideally this does not exist.
-#[derive(Debug, Fail)]
-#[fail(display = "")]
+#[derive(Debug, Error)]
+#[error("")]
 pub struct FallbackToPython;
 
-#[derive(Debug, Fail)]
-#[fail(
-    display = "'{}' is not inside a repository, but this command requires a repository!\n(use 'cd' to go to a directory inside a repository and try again)",
-    _0
-)]
+#[derive(Debug, Error)]
+#[error("'{0}' is not inside a repository, but this command requires a repository!\n(use 'cd' to go to a directory inside a repository and try again)")]
 pub struct RepoRequired(pub String);
 
-#[derive(Debug, Fail)]
-#[fail(display = "repository {} not found!", _0)]
+#[derive(Debug, Error)]
+#[error("repository {0} not found!")]
 pub struct RepoNotFound(pub String);
 
-#[derive(Debug, Fail)]
-#[fail(display = ".hg/sharedpath points to nonexistent directory {}!", _0)]
+#[derive(Debug, Error)]
+#[error(".hg/sharedpath points to nonexistent directory {0}!")]
 pub struct InvalidSharedPath(pub String);
 
-#[derive(Debug, Fail)]
-#[fail(
-    display = "malformed --config option: '{}' (use --config section.name=value)",
-    _0
-)]
+#[derive(Debug, Error)]
+#[error("malformed --config option: '{0}' (use --config section.name=value)")]
 pub struct MalformedConfigOption(pub String);
 
-#[derive(Debug, Fail)]
-#[fail(display = "{}", _0)]
+#[derive(Debug, Error)]
+#[error("{0}")]
 pub struct Abort(pub Cow<'static, str>);
 
 /// Print an error suitable for end-user consumption.

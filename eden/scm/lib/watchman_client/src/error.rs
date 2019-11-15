@@ -7,31 +7,22 @@
 
 #![deny(warnings)]
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(
-        display = "[{}] watchman command line transport request failed\n[{} error] {}",
-        _0, _0, _1
-    )]
+    #[error("[{0}] watchman command line transport request failed\n[{0} error] {1}")]
     CommandLineTransportError(&'static str, String),
 
-    #[fail(
-        display = "[{}] watchman unix socket transport request failed\n[{} error] {}",
-        _0, _0, _1
-    )]
+    #[error("[{0}] watchman unix socket transport request failed\n[{0} error] {1}")]
     UnixSocketTransportError(&'static str, String),
 
-    #[fail(
-        display = "[{}] watchman windows named pipe transport request failed\n[{} error] {}",
-        _0, _0, _1
-    )]
+    #[error("[{0}] watchman windows named pipe transport request failed\n[{0} error] {1}")]
     WindowsNamedPipeTransportError(&'static str, String),
 
-    #[fail(display = "watchman bser protocol parsing error {}", _0)]
+    #[error("watchman bser protocol parsing error {0}")]
     WatchmanBserParsingError(String),
 
-    #[fail(display = "error while decoding watchman pdu {}", _0)]
+    #[error("error while decoding watchman pdu {0}")]
     WatchmanError(String),
 }

@@ -7,11 +7,12 @@
 
 #![deny(warnings)]
 
-pub use failure::{Error, Fail};
+pub use failure::Error;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "unexpected error {}", _0)]
+    #[error("unexpected error {0}")]
     ScmDaemonUnexpectedError(String),
 }
 

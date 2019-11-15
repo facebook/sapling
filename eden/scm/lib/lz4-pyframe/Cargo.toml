@@ -9,6 +9,7 @@ byteorder = "1"
 failure = "0"
 libc = "0.2"
 lz4-sys = "1"
+thiserror = "1.0.5"
 
 [dev-dependencies]
 minibench = { path = "../minibench" }

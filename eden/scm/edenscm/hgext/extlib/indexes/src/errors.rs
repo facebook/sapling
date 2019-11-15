@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "corrupted index")]
+    #[error("corrupted index")]
     IndexCorrupted,
 }

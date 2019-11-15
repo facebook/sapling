@@ -23,6 +23,7 @@ rust-crypto = "*"
 serde = "1.0.84"
 serde_derive = "1.0.84"
 tempfile = "3.0.4"
+thiserror = "1.0.5"
 types = { path = "../types" }
 util = { path = "../util" }
 

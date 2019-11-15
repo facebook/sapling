@@ -13,6 +13,7 @@ use std::{
 
 use failure::{Backtrace, Context, Fail};
 use http::StatusCode;
+use thiserror::Error;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -120,29 +121,29 @@ impl Display for ApiError {
 /// // the Debug implementation will print both the message and the error.
 /// my_function().context("An error occurred in my_function")?;
 /// ```
-#[derive(Clone, Debug, Fail)]
+#[derive(Clone, Debug, Error)]
 pub enum ApiErrorKind {
-    #[fail(display = "Client TLS certificate is missing or invalid: {:?}", _0)]
+    #[error("Client TLS certificate is missing or invalid: {0:?}")]
     BadCertificate(PathBuf),
-    #[fail(display = "Invalid client configuration: {}", _0)]
+    #[error("Invalid client configuration: {0}")]
     BadConfig(String),
-    #[fail(display = "The server returned an unexpected or invalid response")]
+    #[error("The server returned an unexpected or invalid response")]
     BadResponse,
-    #[fail(display = "libcurl returned an error")]
+    #[error("libcurl returned an error")]
     Curl,
-    #[fail(display = "Received HTTP status '{}' with response: {:?}", code, msg)]
+    #[error("Received HTTP status '{code}' with response: {msg:?}")]
     Http { code: StatusCode, msg: String },
-    #[fail(display = "Proxy server returned an error (HTTP {})", _0)]
+    #[error("Proxy server returned an error (HTTP {0})")]
     Proxy(StatusCode),
-    #[fail(display = "Error during serialization/deserialization")]
+    #[error("Error during serialization/deserialization")]
     Serialization,
-    #[fail(display = "Failed to write data to the store")]
+    #[error("Failed to write data to the store")]
     Store,
-    #[fail(display = "A TLS error occurred")]
+    #[error("A TLS error occurred")]
     Tls,
-    #[fail(display = "Malformed URL")]
+    #[error("Malformed URL")]
     Url,
-    #[fail(display = "{}", _0)]
+    #[error("{0}")]
     Other(String),
 }
 

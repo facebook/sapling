@@ -97,15 +97,15 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
 mod tests {
     use super::*;
 
-    use failure::Fail;
     use quickcheck::quickcheck;
+    use thiserror::Error;
 
     use crate::localstore::LocalStore;
 
     struct BadDataStore;
 
-    #[derive(Debug, Fail)]
-    #[fail(display = "Bad data store always has error which is not KeyError")]
+    #[derive(Debug, Error)]
+    #[error("Bad data store always has error which is not KeyError")]
     struct BadDataStoreError;
 
     struct EmptyDataStore;

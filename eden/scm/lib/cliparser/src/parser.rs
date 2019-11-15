@@ -14,38 +14,35 @@ use cpython::{
 };
 #[cfg(feature = "python")]
 use cpython_ext::Bytes;
-use failure::Fail;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ParseError {
-    #[fail(display = "option {} not recognized", option_name)]
+    #[error("option {option_name} not recognized")]
     OptionNotRecognized { option_name: String },
-    #[fail(display = "option {} requires argument", option_name)]
+    #[error("option {option_name} requires argument")]
     OptionRequiresArgument { option_name: String },
-    #[fail(
-        display = "invalid value '{}' for option {}, expected {}",
-        given, option_name, expected
-    )]
+    #[error("invalid value '{given}' for option {option_name}, expected {expected}")]
     OptionArgumentInvalid {
         option_name: String,
         given: String,
         expected: String,
     },
-    #[fail(display = "option {} not a unique prefix", option_name)]
+    #[error("option {option_name} not a unique prefix")]
     OptionAmbiguous {
         option_name: String,
         possibilities: Vec<String>,
     },
-    #[fail(display = "command '{}' is ambiguous", command_name)]
+    #[error("command '{command_name}' is ambiguous")]
     AmbiguousCommand {
         command_name: String,
         possibilities: Vec<String>,
     },
-    #[fail(display = "circular alias: {}", command_name)]
+    #[error("circular alias: {command_name}")]
     CircularReference { command_name: String },
-    #[fail(display = "alias definition {} = {:?} cannot be parsed", name, value)]
+    #[error("alias definition {name} = {value:?} cannot be parsed")]
     MalformedAlias { name: String, value: String },
 }
 

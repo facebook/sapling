@@ -91,8 +91,9 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{format_err, Fail, Fallible as Result};
+use failure::{format_err, Fallible as Result};
 use memmap::{Mmap, MmapOptions};
+use thiserror::Error;
 
 use types::{HgId, Key, NodeInfo, RepoPath, RepoPathBuf};
 use util::path::remove_file;
@@ -103,8 +104,8 @@ use crate::localstore::LocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Historypack Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Historypack Error: {0:?}")]
 struct HistoryPackError(String);
 
 #[derive(Clone, Debug, PartialEq)]

@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use indexedlog::log::{self, IndexOutput, Log};
 use std::path::Path;
+use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Node Set Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Node Set Error: {0:?}")]
 struct NodeSetError(String);
 
 impl From<NodeSetError> for KeyError {

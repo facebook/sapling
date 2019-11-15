@@ -13,8 +13,9 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use memmap::{Mmap, MmapOptions};
+use thiserror::Error;
 
 use types::HgId;
 
@@ -24,8 +25,8 @@ use crate::sliceext::SliceExt;
 const ENTRY_LEN: usize = 40;
 const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8
 
-#[derive(Debug, Fail)]
-#[fail(display = "DataIndex Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("DataIndex Error: {0:?}")]
 struct DataIndexError(String);
 
 #[derive(Debug, PartialEq)]

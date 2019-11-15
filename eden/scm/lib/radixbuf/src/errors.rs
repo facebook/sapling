@@ -5,20 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fail;
+use thiserror::Error;
 
 use crate::key::KeyId;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "offset {} is out of range", _0)]
+    #[error("offset {0} is out of range")]
     OffsetOverflow(u64),
-    #[fail(display = "ambiguous prefix")]
+    #[error("ambiguous prefix")]
     AmbiguousPrefix,
-    #[fail(display = "{:?} cannot be a prefix of {:?}", _0, _1)]
+    #[error("{0:?} cannot be a prefix of {1:?}")]
     PrefixConflict(KeyId, KeyId),
-    #[fail(display = "{:?} cannot be resolved", _0)]
+    #[error("{0:?} cannot be resolved")]
     InvalidKeyId(KeyId),
-    #[fail(display = "{} is not a base16 value", _0)]
+    #[error("{0} is not a base16 value")]
     InvalidBase16(u8),
 }

@@ -7,10 +7,11 @@
 
 use std::{fmt::Debug, slice::SliceIndex};
 
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
-#[fail(display = "SliceOutOfBounds Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("SliceOutOfBounds Error: {0:?}")]
 struct SliceOutOfBoundsError(String);
 
 pub trait SliceExt<'a, T> {

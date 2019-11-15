@@ -32,8 +32,8 @@ impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
 mod tests {
     use super::*;
 
-    use failure::Fail;
     use quickcheck::quickcheck;
+    use thiserror::Error;
 
     use crate::localstore::LocalStore;
 
@@ -41,8 +41,8 @@ mod tests {
 
     struct EmptyHistoryStore;
 
-    #[derive(Debug, Fail)]
-    #[fail(display = "Bad history store always has error which is not KeyError")]
+    #[derive(Debug, Error)]
+    #[error("Bad history store always has error which is not KeyError")]
     struct BadHistoryStoreError;
 
     impl HistoryStore for EmptyHistoryStore {

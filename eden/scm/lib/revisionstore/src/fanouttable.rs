@@ -19,7 +19,8 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
+use thiserror::Error;
 
 use types::HgId;
 
@@ -30,8 +31,8 @@ const LARGE_FANOUT_LENGTH: usize = 65536; // 2^16
 const SMALL_RAW_SIZE: usize = 1024; // SMALL_FANOUT_LENGTH * sizeof(u32)
 const LARGE_RAW_SIZE: usize = 262144; // LARGE_FANOUT_LENGTH * sizeof(u32)
 
-#[derive(Debug, Fail)]
-#[fail(display = "Fanout Table Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Fanout Table Error: {0:?}")]
 struct FanoutTableError(String);
 
 fn get_fanout_index(table_size: usize, hgid: &HgId) -> Result<u64> {

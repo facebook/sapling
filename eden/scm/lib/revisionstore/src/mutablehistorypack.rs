@@ -17,9 +17,10 @@ use std::{
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use parking_lot::Mutex;
 use tempfile::NamedTempFile;
+use thiserror::Error;
 
 use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 
@@ -31,8 +32,8 @@ use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Mutable History Pack Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Mutable History Pack Error: {0:?}")]
 struct MutableHistoryPackError(String);
 
 struct MutableHistoryPackInner {
@@ -156,7 +157,7 @@ impl MutableHistoryStore for MutableHistoryPack {
 impl MutablePack for MutableHistoryPackInner {
     fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         if self.mem_index.is_empty() {
-            return Err(EmptyMutablePack().into());
+            return Err(EmptyMutablePack.into());
         }
 
         let mut data_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);

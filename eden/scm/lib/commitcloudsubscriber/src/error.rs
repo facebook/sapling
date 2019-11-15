@@ -7,17 +7,17 @@
 
 #![deny(warnings)]
 
-use failure::Fail;
 use lazy_static::lazy_static;
 use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "Commit Cloud `hg cloud sync` error: {}", _0)]
+    #[error("Commit Cloud `hg cloud sync` error: {0}")]
     CommitCloudHgCloudSyncError(String),
-    #[fail(display = "Commit Cloud config error: {}", _0)]
+    #[error("Commit Cloud config error: {0}")]
     CommitCloudConfigError(&'static str),
-    #[fail(display = "Unexpected error: {}", _0)]
+    #[error("Unexpected error: {0}")]
     CommitCloudUnexpectedError(String),
 }
 
@@ -29,7 +29,7 @@ lazy_static! {
 // This error is outside the enum ErrorKind because of custom filter
 // It seems #[fail(display = )] doesn't support arbitrary expressions
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub struct CommitCloudHttpError(pub String);
 impl fmt::Display for CommitCloudHttpError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

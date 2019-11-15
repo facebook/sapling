@@ -91,8 +91,9 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
-use failure::{format_err, Fail, Fallible as Result};
+use failure::{format_err, Fallible as Result};
 use memmap::{Mmap, MmapOptions};
+use thiserror::Error;
 
 use lz4_pyframe::decompress;
 use types::{HgId, Key, RepoPath};
@@ -104,8 +105,8 @@ use crate::localstore::LocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Datapack Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Datapack Error: {0:?}")]
 struct DataPackError(String);
 
 #[derive(Clone, PartialEq)]

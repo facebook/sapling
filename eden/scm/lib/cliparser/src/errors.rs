@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
-#[fail(display = "invalid arguments\n(use '--help' to get help)")]
+#[derive(Debug, Error)]
+#[error("invalid arguments\n(use '--help' to get help)")]
 pub struct InvalidArguments;

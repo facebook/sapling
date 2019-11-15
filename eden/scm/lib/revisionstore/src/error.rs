@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Empty Mutable Pack")]
-pub struct EmptyMutablePack();
+#[derive(Debug, Error)]
+#[error("Empty Mutable Pack")]
+pub struct EmptyMutablePack;

@@ -16,8 +16,9 @@ use std::{
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use memmap::{Mmap, MmapOptions};
+use thiserror::Error;
 
 use types::{HgId, Key, RepoPath};
 
@@ -25,8 +26,8 @@ use crate::fanouttable::FanoutTable;
 use crate::historypack::HistoryPackVersion;
 use crate::sliceext::SliceExt;
 
-#[derive(Debug, Fail)]
-#[fail(display = "HistoryIndex Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("HistoryIndex Error: {0:?}")]
 struct HistoryIndexError(String);
 
 const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8

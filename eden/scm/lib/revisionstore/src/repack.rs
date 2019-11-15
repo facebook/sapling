@@ -10,7 +10,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use failure::{format_err, Error, Fail, Fallible as Result};
+use failure::{format_err, Error, Fallible as Result};
+use thiserror::Error;
 
 use types::Key;
 
@@ -51,12 +52,12 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
     Ok(())
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum RepackFailure {
-    #[fail(display = "Repack failure: {:?}", _0)]
+    #[error("Repack failure: {0:?}")]
     Total(Vec<(PathBuf, Error)>),
 
-    #[fail(display = "Repack successful but with errors: {:?}", _1)]
+    #[error("Repack successful but with errors: {1:?}")]
     Partial(PathBuf, Vec<(PathBuf, Error)>),
 }
 

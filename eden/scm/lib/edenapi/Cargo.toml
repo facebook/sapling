@@ -20,6 +20,7 @@ url = "2.1.0"
 blackbox = { path = "../blackbox" }
 regex = "1.0"
 lazy_static = "1.2"
+thiserror = "1.0.5"
 
 [dev-dependencies]
 tempdir = "0.3.7"

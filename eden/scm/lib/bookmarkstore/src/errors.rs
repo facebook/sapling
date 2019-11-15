@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Fail, Debug)]
-#[fail(display = "bookmark not found: {}", name)]
+#[derive(Error, Debug)]
+#[error("bookmark not found: {name}")]
 pub struct BookmarkNotFound {
     pub(crate) name: String,
 }

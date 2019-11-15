@@ -6,13 +6,14 @@
  */
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use libc::{c_int, c_void};
 use lz4_sys::{
     LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue, LZ4_createStream,
     LZ4_createStreamDecode, LZ4_decompress_safe_continue, LZ4_freeStream, LZ4_freeStreamDecode,
 };
 use std::io::Cursor;
+use thiserror::Error;
 
 const HEADER_LEN: usize = 4;
 
@@ -38,17 +39,16 @@ extern "C" {
     fn LZ4_freeStreamHC(streamHCPtr: *mut LZ4_streamHC_t) -> c_int;
 }
 
-#[derive(Debug, Fail)]
-#[fail(display = "{:?}", message)]
+#[derive(Debug, Error)]
+#[error("{message:?}")]
 pub struct LZ4Error {
     message: String,
 }
 
-#[derive(Fail, Debug)]
-#[fail(
-    display = "lz4 decompressed data does not match expected length. \
-               Expected '{:?}' vs Actual '{:?}'",
-    expected, actual
+#[derive(Error, Debug)]
+#[error(
+    "lz4 decompressed data does not match expected length. \
+     Expected '{expected:?}' vs Actual '{actual:?}'"
 )]
 pub struct LZ4DecompressionError {
     expected: usize,

@@ -7,22 +7,22 @@
 
 //! Errors.
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "the provided store file is not a valid store file")]
+    #[error("the provided store file is not a valid store file")]
     NotAStoreFile,
-    #[fail(display = "tree version not supported: {}", _0)]
+    #[error("tree version not supported: {0}")]
     UnsupportedTreeVersion(u32),
-    #[fail(display = "store file version not supported: {}", _0)]
+    #[error("store file version not supported: {0}")]
     UnsupportedVersion(u32),
-    #[fail(display = "invalid store id: {}", _0)]
+    #[error("invalid store id: {0}")]
     InvalidStoreId(u64),
-    #[fail(display = "store is read-only")]
+    #[error("store is read-only")]
     ReadOnlyStore,
-    #[fail(display = "treedirstate is corrupt")]
+    #[error("treedirstate is corrupt")]
     CorruptTree,
-    #[fail(display = "callback error: {}", _0)]
+    #[error("callback error: {0}")]
     CallbackError(String),
 }

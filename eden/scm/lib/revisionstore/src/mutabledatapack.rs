@@ -17,9 +17,10 @@ use std::{
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{format_err, Fail, Fallible as Result};
+use failure::{format_err, Fallible as Result};
 use parking_lot::Mutex;
 use tempfile::{Builder, NamedTempFile};
+use thiserror::Error;
 
 use lz4_pyframe::compress;
 use types::{HgId, Key};
@@ -44,8 +45,8 @@ pub struct MutableDataPack {
     inner: Arc<Mutex<MutableDataPackInner>>,
 }
 
-#[derive(Debug, Fail)]
-#[fail(display = "Mutable Data Pack Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Mutable Data Pack Error: {0:?}")]
 struct MutableDataPackError(String);
 
 impl MutableDataPackInner {
@@ -182,7 +183,7 @@ impl MutableDeltaStore for MutableDataPack {
 impl MutablePack for MutableDataPackInner {
     fn build_files(mut self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         if self.mem_index.is_empty() {
-            return Err(EmptyMutablePack().into());
+            return Err(EmptyMutablePack.into());
         }
 
         let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);

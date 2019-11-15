@@ -28,15 +28,16 @@
 //! be ignored.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
+use thiserror::Error;
 use types::node::{Node, ReadNodeExt, WriteNodeExt};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
-#[derive(Debug, Fail)]
-#[fail(display = "Invalid Mutation Entry Origin: {}", _0)]
+#[derive(Debug, Error)]
+#[error("Invalid Mutation Entry Origin: {0}")]
 struct InvalidMutationEntryOrigin(u8);
 
 pub struct MutationStore {

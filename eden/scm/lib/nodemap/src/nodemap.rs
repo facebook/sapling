@@ -8,13 +8,14 @@
 use std::ops::Range;
 use std::path::Path;
 
-use failure::{Fail, Fallible as Result};
+use failure::Fallible as Result;
 use indexedlog::log::{self, IndexOutput, Log};
+use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Node Map Error: {:?}", _0)]
+#[derive(Debug, Error)]
+#[error("Node Map Error: {0:?}")]
 struct NodeMapError(String);
 
 impl From<NodeMapError> for KeyError {
