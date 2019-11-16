@@ -238,6 +238,59 @@ async fn subcommand_verify_bookmarks(
     let large_repo = commit_syncer.get_large_repo();
     let small_repo = commit_syncer.get_small_repo();
 
+    let diff = find_bookmark_diff(ctx.clone(), small_repo, large_repo, &commit_syncer).await?;
+
+    if diff.is_empty() {
+        info!(ctx.logger(), "all is well!");
+        Ok(())
+    } else {
+        for d in &diff {
+            use BookmarkDiff::*;
+            match d {
+                InconsistentValue {
+                    small_bookmark,
+                    expected_small_cs_id,
+                    actual_small_cs_id,
+                } => {
+                    warn!(
+                        ctx.logger(),
+                        "inconsistent value of {}: small repo {}, large repo cs maps to {:?}",
+                        small_bookmark,
+                        expected_small_cs_id,
+                        actual_small_cs_id,
+                    );
+                }
+                ShouldBeDeleted { small_bookmark } => {
+                    warn!(
+                        ctx.logger(),
+                        "large repo bookmark (renames to {}) not found in small repo",
+                        small_bookmark,
+                    );
+                }
+            }
+        }
+
+        Err(format_err!("found {} inconsistencies", diff.len()).into())
+    }
+}
+
+enum BookmarkDiff {
+    InconsistentValue {
+        small_bookmark: BookmarkName,
+        expected_small_cs_id: ChangesetId,
+        actual_small_cs_id: Option<ChangesetId>,
+    },
+    ShouldBeDeleted {
+        small_bookmark: BookmarkName,
+    },
+}
+
+async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
+    ctx: CoreContext,
+    small_repo: &BlobRepo,
+    large_repo: &BlobRepo,
+    commit_syncer: &CommitSyncer<M>,
+) -> Result<Vec<BookmarkDiff>, Error> {
     let small_bookmarks = small_repo
         .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
         .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
@@ -245,51 +298,50 @@ async fn subcommand_verify_bookmarks(
         .compat()
         .await?;
 
-    let large_repo_bookmarks = large_repo
-        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-        .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
-        .collect()
-        .compat()
-        .await?;
+    let renamed_large_bookmarks = {
+        let large_bookmarks = large_repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+            .collect()
+            .compat()
+            .await?;
 
-    let large_repo_bookmarks = rename_large_repo_bookmarks(
-        ctx.clone(),
-        &commit_syncer,
-        commit_syncer.get_bookmark_renamer(),
-        large_repo_bookmarks,
-    )
-    .await?;
+        // Renames bookmarks and also maps large cs ids to small cs ids
+        rename_large_repo_bookmarks(
+            ctx.clone(),
+            &commit_syncer,
+            commit_syncer.get_bookmark_renamer(),
+            large_bookmarks,
+        )
+        .await?
+    };
 
-    let mut failed = false;
-    for (small_book, small_value) in &small_bookmarks {
-        let maybe_large_value = large_repo_bookmarks.get(small_book);
-        if maybe_large_value != Some(small_value) {
-            failed = true;
-            warn!(
-                ctx.logger(),
-                "inconsistent value of {}: small repo {}, large repo {:?}",
-                small_book,
-                small_value,
-                maybe_large_value,
-            );
+    // Compares small bookmarks (i.e. bookmarks from small repo) with large bookmarks.
+    // Note that renamed_large_bookmarks are key value pairs where key is a renamed large repo
+    // bookmark and value is a remapped large repo cs id.
+    let mut diff = vec![];
+    for (small_book, small_cs_id) in &small_bookmarks {
+        // actual_small_cs_id is a commit in a small repo that corresponds to a commit
+        // in a large repo which is pointed by this bookmark.
+        let actual_small_cs_id = renamed_large_bookmarks.get(small_book);
+        if actual_small_cs_id != Some(small_cs_id) {
+            diff.push(BookmarkDiff::InconsistentValue {
+                small_bookmark: small_book.clone(),
+                expected_small_cs_id: small_cs_id.clone(),
+                actual_small_cs_id: actual_small_cs_id.cloned(),
+            });
         }
     }
 
-    for large_book in large_repo_bookmarks.keys() {
-        if !small_bookmarks.contains_key(large_book) {
-            failed = true;
-            warn!(
-                ctx.logger(),
-                "large repo bookmark {} not found in small repo", large_book,
-            );
+    for renamed_large_book in renamed_large_bookmarks.keys() {
+        if !small_bookmarks.contains_key(renamed_large_book) {
+            diff.push(BookmarkDiff::ShouldBeDeleted {
+                small_bookmark: renamed_large_book.clone(),
+            });
         }
     }
 
-    if failed {
-        Err(format_err!("inconsistent bookmarks").into())
-    } else {
-        Ok(())
-    }
+    Ok(diff)
 }
 
 async fn rename_large_repo_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
