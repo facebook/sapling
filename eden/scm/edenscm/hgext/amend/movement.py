@@ -413,9 +413,8 @@ def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None):
         displayer.show(ctx)
 
 
-def _setbookmark(repo, tr, bookmark, rev):
+def _setbookmark(repo, tr, bookmark, node):
     """Make the given bookmark point to the given revision."""
-    node = repo.changelog.node(rev)
     repo._bookmarks[bookmark] = node
     repo._bookmarks.recordchange(tr)
 
