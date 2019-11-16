@@ -801,7 +801,8 @@ impl SqlBookmarksTransaction {
                 bundle_replay_data: None,
             }
             | ManualMove
-            | Blobimport => future::ok(sql_transaction).boxify(),
+            | Blobimport
+            | XRepoSync => future::ok(sql_transaction).boxify(),
         }
     }
 

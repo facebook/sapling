@@ -1252,7 +1252,8 @@ fn test_update_reason_conversion(_fb: FacebookInit) -> Result<(), Error> {
         ManualMove => {}
         Push { .. } => {}
         Pushrebase { .. } => {}
-        TestMove { .. } => {} // PLEASE ADD A TEST FOR A NEW BOOKMARK UPDATE REASON
+        TestMove { .. } => {}
+        XRepoSync => {} // PLEASE ADD A TEST FOR A NEW BOOKMARK UPDATE REASON
     };
 
     let reasons = vec![
@@ -1270,6 +1271,7 @@ fn test_update_reason_conversion(_fb: FacebookInit) -> Result<(), Error> {
         TestMove {
             bundle_replay_data: None,
         },
+        XRepoSync,
     ];
     for reason in reasons {
         let value = Value::from(reason);

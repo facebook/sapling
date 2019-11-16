@@ -448,6 +448,7 @@ pub enum BookmarkUpdateReason {
     Backsyncer {
         bundle_replay_data: Option<BundleReplayData>,
     },
+    XRepoSync,
 }
 
 impl std::fmt::Display for BookmarkUpdateReason {
@@ -461,6 +462,7 @@ impl std::fmt::Display for BookmarkUpdateReason {
             ManualMove => "manualmove",
             TestMove { .. } => "testmove",
             Backsyncer { .. } => "backsyncer",
+            XRepoSync { .. } => "xreposync",
         };
         write!(f, "{}", s)
     }
@@ -475,7 +477,7 @@ impl BookmarkUpdateReason {
         match self {
             Pushrebase { .. } => Ok(Pushrebase { bundle_replay_data }),
             Push { .. } => Ok(Push { bundle_replay_data }),
-            Blobimport | ManualMove => match bundle_replay_data {
+            Blobimport | ManualMove | XRepoSync => match bundle_replay_data {
                 Some(..) => Err(err_msg(
                     "internal error: bundle replay data can not be specified",
                 )),
@@ -501,7 +503,7 @@ impl BookmarkUpdateReason {
             | Backsyncer {
                 ref bundle_replay_data,
             } => bundle_replay_data.as_ref(),
-            Blobimport | ManualMove => None,
+            Blobimport | ManualMove | XRepoSync => None,
         }
     }
 }
@@ -523,6 +525,7 @@ impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
             Value::Bytes(ref b) if b == &b"backsyncer" => Ok(BookmarkUpdateReason::Backsyncer {
                 bundle_replay_data: None,
             }),
+            Value::Bytes(ref b) if b == &b"xreposync" => Ok(BookmarkUpdateReason::XRepoSync),
             v => Err(FromValueError(v)),
         }
     }
@@ -549,6 +552,7 @@ impl From<BookmarkUpdateReason> for Value {
             BookmarkUpdateReason::ManualMove { .. } => Value::Bytes(b"manualmove".to_vec()),
             BookmarkUpdateReason::TestMove { .. } => Value::Bytes(b"testmove".to_vec()),
             BookmarkUpdateReason::Backsyncer { .. } => Value::Bytes(b"backsyncer".to_vec()),
+            BookmarkUpdateReason::XRepoSync { .. } => Value::Bytes(b"xreposync".to_vec()),
         }
     }
 }
