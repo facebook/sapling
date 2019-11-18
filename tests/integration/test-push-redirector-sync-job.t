@@ -18,6 +18,10 @@
   Starting Mononoke server
   Adding synced mapping entry
 
+-- enable verification hook in small-hg-srv
+  $ cd "$TESTTMP/small-hg-srv"
+  $ enable_replay_verification_hook
+
 -- normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
@@ -62,7 +66,7 @@
   bookmark:    master_bookmark
   tag:         tip
   user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
+  date:        * (glob)
   files:       2
   description:
   newcommit
@@ -70,7 +74,7 @@
   
   diff -r * -r * 2 (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/2	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/2* (glob)
   @@ -0,0 +1,1 @@
   +2
   
