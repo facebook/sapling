@@ -353,7 +353,7 @@ impl WorkspaceSubscriberService {
                     return;
                 }
 
-                let event = event.map_err(|e| CommitCloudHttpError(format!("{}", e)));
+                let event = event.map_err(|e| ErrorKind::CommitCloudHttpError(format!("{}", e)));
                 if let Err(e) = event {
                     terror!(throttler_error, "{} {}. Continue...", sid, e);
                     throttler_alive.reset();
