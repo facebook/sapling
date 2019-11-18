@@ -54,7 +54,7 @@ use mononoke_types::{
 };
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::{trace, Logger};
+use slog::{debug, trace, Logger};
 use stats::{define_stats, Histogram, Timeseries};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -1776,19 +1776,39 @@ impl BlobRepo {
                         .pop()
                     {
                         Some(bcs) => generate_single_hg_changeset(ctx.clone(), repo.clone(), bcs)
-                            .map(move |(_, generated)| {
-                                if generated {
-                                    generated_count += 1;
+                            .map({
+                                cloned!(ctx);
+                                move |(_, generated)| {
+                                    if generated {
+                                        debug!(
+                                            ctx.logger(),
+                                            "generated hg changeset for {}, {} more left to visit",
+                                            bcs_id,
+                                            commits_to_generate.len(),
+                                        );
+                                        generated_count += 1;
+                                    }
+                                    Loop::Continue((generated_count, commits_to_generate))
                                 }
-                                Loop::Continue((generated_count, commits_to_generate))
                             })
                             .left_future(),
                         None => {
                             return bonsai_hg_mapping
                                 .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
-                                .map(move |maybe_hg_cs_id| match maybe_hg_cs_id {
-                                    Some(hg_cs_id) => Loop::Break((hg_cs_id, generated_count)),
-                                    None => panic!("hg changeset must be generated already"),
+                                .map({
+                                    cloned!(ctx);
+                                    move |maybe_hg_cs_id| match maybe_hg_cs_id {
+                                        Some(hg_cs_id) => {
+                                            if generated_count > 0 {
+                                                debug!(
+                                                    ctx.logger(),
+                                                    "generation complete for {}", bcs_id,
+                                                );
+                                            }
+                                            Loop::Break((hg_cs_id, generated_count))
+                                        }
+                                        None => panic!("hg changeset must be generated already"),
+                                    }
                                 })
                                 .right_future();
                         }
