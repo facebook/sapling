@@ -285,9 +285,9 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
 
   $ hg merge -qr 21 && hg ci -qm "merge 10 and 12"
   $ hg phase -r $(hg log -r . -T "{p1node}")
-  23: draft
+  cd5aac4439e50d4329539ac117bfb3e35d7fb74b: draft
   $ hg phase -r $(hg log -r . -T "{p2node}")
-  21: public
+  c573a92e1179f7367f4e4a51689d097bb84842ab: public
   $ hg log -r master_bookmark -T '{node}\n'
   589551466f2555a4d90ca544b23273a2eed21f9d
 
