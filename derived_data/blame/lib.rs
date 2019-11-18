@@ -9,7 +9,7 @@
 #![deny(warnings)]
 
 mod derived;
-pub use derived::{BlameRoot, BlameRootMapping};
+pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping};
 
 #[cfg(test)]
 mod tests;

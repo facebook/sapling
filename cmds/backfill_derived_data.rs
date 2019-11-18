@@ -8,9 +8,9 @@
 
 #![deny(warnings)]
 
-use blame::{BlameRoot, BlameRootMapping};
+use blame::{fetch_file_full_content, BlameRoot, BlameRootMapping};
 use blobrepo::{BlobRepo, DangerousOverride};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
@@ -29,15 +29,17 @@ use fastlog::{RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{future, stream, Future, IntoFuture, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
 use lock_ext::LockExt;
+use manifest::find_intersection_of_diffs;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
-use mononoke_types::{ChangesetId, MononokeId, RepositoryId};
+use mononoke_types::{ChangesetId, FileUnodeId, MPath, MononokeId, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
 use stats::{define_stats_struct, Timeseries};
 use std::{
+    collections::HashMap,
     fs,
     path::Path,
     sync::{
@@ -46,7 +48,7 @@ use std::{
     },
     time::Duration,
 };
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::{find_unode_renames, RootUnodeManifestId, RootUnodeManifestMapping};
 
 define_stats_struct! {
     DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
@@ -90,6 +92,10 @@ const UNREDACTED_TYPES: &[&str] = &[
     // Blame does not contain any content of the file itself
     BlameRoot::NAME,
 ];
+
+/// Types of derived data for which prefetching content for changed files
+/// migth speed up derivation.
+const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::NAME];
 
 fn open_repo_maybe_unredacted<'a>(
     fb: FacebookInit,
@@ -490,10 +496,11 @@ fn subcommand_backfill<P: AsRef<Path>>(
         });
     let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
+    let prefetch_content_on = PREFETCH_CONTENT_TYPES.contains(&derived_data_type.as_ref());
     let derived_utils = try_boxfuture!(derived_data_utils(
         ctx.clone(),
         repo.clone(),
-        derived_data_type
+        derived_data_type,
     ));
 
     info!(
@@ -544,6 +551,24 @@ fn subcommand_backfill<P: AsRef<Path>>(
                         )
                             .into_future()
                             .map(move |(_, chunk)| chunk)
+                    }
+                })
+                .and_then({
+                    cloned!(ctx, repo);
+                    move |chunk| {
+                        if prefetch_content_on {
+                            stream::iter_ok(chunk.clone())
+                                .map({
+                                    cloned!(ctx, repo);
+                                    move |csid| prefetch_content(ctx.clone(), repo.clone(), csid)
+                                })
+                                .buffered(CHUNK_SIZE)
+                                .for_each(|_| Ok(()))
+                                .map(move |_| chunk)
+                                .left_future()
+                        } else {
+                            future::ok(chunk).right_future()
+                        }
                     }
                 })
                 .for_each(move |chunk| {
@@ -727,4 +752,95 @@ fn subcommand_single(
         })
         .map(|_| ())
         .right_future()
+}
+
+// Prefetch content of changed files between parents
+fn prefetch_content(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    csid: ChangesetId,
+) -> impl Future<Item = (), Error = Error> {
+    fn prefetch_content_unode(
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+        renames: &HashMap<MPath, FileUnodeId>,
+        path: MPath,
+        file_unode_id: FileUnodeId,
+    ) -> impl Future<Item = (), Error = Error> {
+        let rename = renames.get(&path).copied();
+        file_unode_id
+            .load(ctx.clone(), &blobstore)
+            .from_err()
+            .and_then(move |file_unode| {
+                let parents_content: Vec<_> = file_unode
+                    .parents()
+                    .iter()
+                    .cloned()
+                    .chain(rename)
+                    .map({
+                        cloned!(ctx, blobstore);
+                        move |file_unode_id| {
+                            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id)
+                        }
+                    })
+                    .collect();
+
+                (
+                    fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id),
+                    future::join_all(parents_content),
+                )
+                    .into_future()
+                    .map(|_| ())
+            })
+            .boxify()
+    }
+
+    csid.load(ctx.clone(), &repo.get_blobstore())
+        .from_err()
+        .and_then(move |bonsai| {
+            let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+            let root_manifest = RootUnodeManifestId::derive(
+                ctx.clone(),
+                repo.clone(),
+                unodes_mapping.clone(),
+                csid,
+            )
+            .map(|mf| mf.manifest_unode_id().clone());
+
+            let parents_manifest = bonsai.parents().collect::<Vec<_>>().into_iter().map({
+                cloned!(ctx, repo);
+                move |csid| {
+                    RootUnodeManifestId::derive(
+                        ctx.clone(),
+                        repo.clone(),
+                        unodes_mapping.clone(),
+                        csid,
+                    )
+                    .map(|mf| mf.manifest_unode_id().clone())
+                }
+            });
+
+            (
+                root_manifest,
+                future::join_all(parents_manifest),
+                find_unode_renames(ctx.clone(), repo.clone(), &bonsai),
+            )
+                .into_future()
+                .and_then(move |(root_mf, parents_mf, renames)| {
+                    let blobstore = repo.get_blobstore().boxed();
+                    find_intersection_of_diffs(ctx.clone(), blobstore.clone(), root_mf, parents_mf)
+                        .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?)))
+                        .map(move |(path, file)| {
+                            spawn_future(prefetch_content_unode(
+                                ctx.clone(),
+                                blobstore.clone(),
+                                &renames,
+                                path,
+                                file,
+                            ))
+                        })
+                        .buffered(256)
+                        .for_each(|_| Ok(()))
+                })
+        })
 }
