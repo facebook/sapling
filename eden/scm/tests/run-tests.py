@@ -2647,7 +2647,10 @@ class TestSuite(unittest.TestSuite):
                 done.put(("!", test, "run-test raised an error, see traceback"))
                 raise
             finally:
-                del runningtests[test.name]
+                try:
+                    del runningtests[test.name]
+                except KeyError:
+                    pass
                 try:
                     channels[channel] = ""
                 except IndexError:
