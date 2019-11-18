@@ -198,3 +198,16 @@ show file info
   Content-SHA1: 6249443f65b64a5ac07802a3582fd5c1f5f2ebd8
   Content-SHA256: 86dc03602dcf385217216784784a8ecf20e6400decc3208170b12fcb0afb6698
   Size: 10 bytes
+
+list directory
+  $ scsc ls --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402
+  a
+  b
+  binary
+  c
+
+  $ scsc ls --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -l
+  file        10  a
+  file        10  b
+  file         5  binary
+  file         0  c
