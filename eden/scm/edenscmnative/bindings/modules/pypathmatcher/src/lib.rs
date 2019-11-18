@@ -68,14 +68,17 @@ py_class!(class treematcher |py| {
         Self::create_instance(py, matcher)
     }
 
-    def matches(&self, path: &str) -> PyResult<bool> {
+    def matches(&self, path: &PyBytes) -> PyResult<bool> {
+        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
         Ok(self.matcher(py).matches(path))
     }
 
-    def match_recursive(&self, path: &str) -> PyResult<Option<bool>> {
+    def match_recursive(&self, path: &PyBytes) -> PyResult<Option<bool>> {
+        let path = path.data(py);
         if path.is_empty() {
             Ok(None)
         } else {
+            let path = local_bytes_to_path(path).map_err(|_|encoding_error(py))?;
             Ok(self.matcher(py).match_recursive(path))
         }
     }
