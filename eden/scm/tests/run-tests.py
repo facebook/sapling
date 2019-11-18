@@ -1640,6 +1640,15 @@ class PythonTest(Test):
     def refpath(self):
         return os.path.join(self._testdir, b"%s.out" % self.bname)
 
+    def readrefout(self):
+        if self._isdotttest():
+            # No reference output.
+            # This prevents a textual diff between the test script output and
+            # the "reference output".
+            return []
+        else:
+            return super(PythonTest, self).readrefout()
+
     def _processoutput(self, output):
         if os.path.exists(self.refpath):
             expected = open(self.refpath, "r").readlines()
@@ -1685,9 +1694,14 @@ class PythonTest(Test):
 
     def _isdotttest(self):
         """Returns true if the test is using testutil.dott"""
-        # Make it simple. Just test from filename.
-        # A more accurate way is to check the file content.
-        return self.bname.endswith(b"-t.py")
+        if self.bname.endswith(b"-t.py"):
+            return True
+        else:
+            try:
+                content = open(self.name).read()
+                return " testutil.dott" in content or "sh %" in content
+            except Exception:
+                return False
 
 
 # Some glob patterns apply only in some circumstances, so the script
