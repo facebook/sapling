@@ -153,3 +153,48 @@ cat a file
   c
   d
   e
+
+show commit info
+  $ scsc info --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402
+  Commit: ee87eb8cfeb218e7352a94689b241ea973b80402
+  Parent: c29e0e474e30ae40ed639fa6292797a7502bc590
+  Date: 1970-01-01 00:00:00 +00:00
+  Author: test
+  Extra:
+      global_rev=9999999999
+  
+  commit with globalrev
+
+  $ scsc info --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -S bonsai,hg,globalrev
+  Commit:
+      bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
+      globalrev=9999999999
+      hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+  Parent:
+      bonsai=d5ded5e738f4fc36b03c3e09db9cdd9259d167352a03fb6130f5ee138b52972f
+      hg=c29e0e474e30ae40ed639fa6292797a7502bc590
+  Date: 1970-01-01 00:00:00 +00:00
+  Author: test
+  Extra:
+      global_rev=9999999999
+  
+  commit with globalrev
+
+show tree info
+  $ scsc info --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -p ""
+  Path: 
+  Type: tree
+  Id: 7403a559399d2aeb6b0e58f62131ac121a3347ec6342201895d34036d87c726e
+  Simple-Format-SHA1: 7c6d1b3745da28107356823689cb2b83c4132f7c
+  Simple-Format-SHA256: 57abececda70ab40c538a02743987a7e5f829581986c582fc11e7fe9d37b7bac
+  Children: 4 files (25 bytes), 0 dirs
+  Descendants: 4 files (25 bytes)
+
+show file info
+  $ scsc info --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -p a
+  Path: a
+  Type: file
+  Id: af1950dbdacd7eee24e4dbb7de9bcbf1f6b05c4a24b066deab407e9143715702
+  Content-SHA1: 6249443f65b64a5ac07802a3582fd5c1f5f2ebd8
+  Content-SHA256: 86dc03602dcf385217216784784a8ecf20e6400decc3208170b12fcb0afb6698
+  Size: 10 bytes
