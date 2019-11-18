@@ -8,6 +8,7 @@
 
 #include <folly/Optional.h>
 #include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <memory>

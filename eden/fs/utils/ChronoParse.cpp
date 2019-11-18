@@ -16,6 +16,7 @@
 
 #include <folly/Conv.h>
 #include <folly/CppAttributes.h>
+#include <folly/String.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/utils/ChronoUnit.h"

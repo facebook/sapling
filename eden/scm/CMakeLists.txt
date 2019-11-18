@@ -20,6 +20,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 find_package(Gflags MODULE REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 find_package(folly CONFIG REQUIRED)
 find_package(Python COMPONENTS Interpreter)
 

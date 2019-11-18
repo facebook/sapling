@@ -13,6 +13,7 @@
 
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
+#include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 

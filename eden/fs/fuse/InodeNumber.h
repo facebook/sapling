@@ -8,6 +8,7 @@
 #pragma once
 
 #include <assert.h>
+#include <fmt/format.h>
 #include <folly/Format.h>
 #include <glog/logging.h>
 #include <stdint.h>
@@ -144,3 +145,12 @@ class FormatValue<facebook::eden::InodeNumber> {
   const facebook::eden::InodeNumber ino_;
 };
 } // namespace folly
+
+namespace fmt {
+template <>
+struct formatter<facebook::eden::InodeNumber> : formatter<uint64_t> {
+  auto format(facebook::eden::InodeNumber n, format_context& ctx) {
+    return formatter<uint64_t>::format(n.getRawValue(), ctx);
+  }
+};
+} // namespace fmt

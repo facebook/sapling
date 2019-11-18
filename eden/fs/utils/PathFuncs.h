@@ -12,6 +12,7 @@
 #include <boost/operators.hpp>
 #include <glog/logging.h>
 
+#include <fmt/format.h>
 #include <folly/Expected.h>
 #include <folly/FBString.h>
 #include <folly/FBVector.h>
@@ -1765,6 +1766,26 @@ struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
   }
 };
 } // namespace std
+
+namespace fmt {
+template <typename Storage>
+struct formatter<facebook::eden::detail::PathComponentBase<Storage>>
+    : formatter<folly::StringPiece> {
+  using Path = facebook::eden::detail::PathComponentBase<Storage>;
+  auto format(const Path& p, format_context& ctx) {
+    return formatter<folly::StringPiece>::format(p.stringPiece(), ctx);
+  }
+};
+
+template <typename Storage>
+struct formatter<facebook::eden::detail::AbsolutePathBase<Storage>>
+    : formatter<folly::StringPiece> {
+  using Path = facebook::eden::detail::AbsolutePathBase<Storage>;
+  auto format(const Path& p, format_context& ctx) {
+    return formatter<folly::StringPiece>::format(p.stringPiece(), ctx);
+  }
+};
+} // namespace fmt
 
 namespace folly {
 /*
