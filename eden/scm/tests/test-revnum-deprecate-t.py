@@ -83,4 +83,4 @@ sh % "hg log -r 'smartlog(1)' -T." == r"""
 
 # phase
 
-sh % "hg phase" == "1: draft"
+sh % "hg phase" == "112478962961147124edd43549aedd1a335e44bf: draft"

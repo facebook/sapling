@@ -28,7 +28,7 @@ Cannot change null revision phase
   abort: cannot change null revision phase
   [255]
   $ hg phase null
-  -1: public
+  0000000000000000000000000000000000000000: public
 
   $ mkcommit A
   test-debug-phase: new rev 0:  x -> 1
@@ -57,7 +57,7 @@ Draft commit are properly created over public one:
   test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:  draft -> public
   test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:  draft -> public
   $ hg phase
-  1: public
+  27547f69f25460a52fff66ad004e58da7ad3fb56: public
   $ hglog
   1 0 B
   0 0 A
@@ -118,8 +118,8 @@ Even on merge
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg phase
-  6: draft
-  4: secret
+  cf9fe039dfd67e829edf6522a45de057b5c86519: draft
+  a603bfb5a83e312131cebcd05353c217d4d21dde: secret
   $ hg ci -m "merge B' and E"
   test-debug-phase: new rev 7:  x -> 2
   test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:   -> secret
@@ -203,7 +203,7 @@ visible shared between the initial repo and the push destination.
   test-debug-phase: new rev 5:  x -> 2
   test-hook-close-phase: 2713879da13d6eea1ff22b442a5a87cb31a7ce6a:   -> secret
   $ hg phase .
-  5: secret
+  2713879da13d6eea1ff22b442a5a87cb31a7ce6a: secret
 
 We now try to push a new public changeset that descend from the common public
 head shadowed by the remote secret head.
@@ -462,11 +462,11 @@ display changesets phase
 (mixing -r and plain rev specification)
 
   $ hg phase 1::4 -r 7
-  1: public
-  2: draft
-  3: draft
-  4: secret
-  7: secret
+  27547f69f25460a52fff66ad004e58da7ad3fb56: public
+  f838bfaca5c7226600ebcfd84f3c3c13a28d3757: draft
+  b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e: draft
+  a603bfb5a83e312131cebcd05353c217d4d21dde: secret
+  17a481b3bccb796c0521ae97903d81c52bfee4af: secret
 
 
 move changeset forward
@@ -669,7 +669,7 @@ repositories visible to an external hook.
   > EOF
   $ cd push-dest
   $ hg phase 6
-  6: draft
+  6d6770faffce199f1fddd1cf87f6f026138cf061: draft
   $ hg --config hooks.pretxnclose="sh $TESTTMP/savepending.sh" phase -f -s 6
   transaction abort!
   rollback completed
@@ -688,12 +688,12 @@ repositories visible to an external hook.
   > EOF
   $ cd ../initialrepo
   $ hg phase 7
-  7: public
+  17a481b3bccb796c0521ae97903d81c52bfee4af: public
   $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" phase -f -s 7
   @initialrepo
-  7: secret
+  17a481b3bccb796c0521ae97903d81c52bfee4af: secret
   @push-dest
-  6: draft
+  6d6770faffce199f1fddd1cf87f6f026138cf061: draft
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1

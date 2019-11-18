@@ -281,7 +281,7 @@ Uncommit with draft parent
 
   $ hg uncommit
   $ hg phase -r .
-  11: draft
+  8eb87968f2edb7f27f27fe676316e179de65fff6: draft
   $ hg commit -m 'update ab again'
 
 Uncommit with public parent
@@ -289,7 +289,7 @@ Uncommit with public parent
   $ hg phase -p "::.^"
   $ hg uncommit
   $ hg phase -r .
-  11: public
+  8eb87968f2edb7f27f27fe676316e179de65fff6: public
 
 Partial uncommit with public parent
 
@@ -300,9 +300,9 @@ Partial uncommit with public parent
   $ hg status
   A xyz
   $ hg phase -r .
-  15: draft
+  eba3a9aaec002872b3f74ec1f71cbecc0ad86ac8: draft
   $ hg phase -r ".^"
-  11: public
+  8eb87968f2edb7f27f27fe676316e179de65fff6: public
 
 Uncommit leaving an empty changeset
 

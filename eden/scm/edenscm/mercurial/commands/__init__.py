@@ -4649,7 +4649,7 @@ def phase(ui, repo, *revs, **opts):
         # display
         for r in revs:
             ctx = repo[r]
-            ui.write("%i: %s\n" % (ctx.rev(), ctx.phasestr()))
+            ui.write("%s: %s\n" % (ctx.hex(), ctx.phasestr()))
     else:
         if repo.ui.configbool("experimental", "narrow-heads"):
             ui.warn(

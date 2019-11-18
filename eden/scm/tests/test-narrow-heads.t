@@ -135,12 +135,12 @@ Phases
   $ hg phase --force --public $D
   (phases are now managed by remotenames and heads; manully editing phases is a no-op)
   $ hg phase $D
-  3: secret
+  e7b3f00ed42ef8977173765eccff8a861809549b: secret
 
   $ hg phase --force --draft $A
   (phases are now managed by remotenames and heads; manully editing phases is a no-op)
   $ hg phase $A
-  0: public
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0: public
 
 Rebase
 

@@ -1118,7 +1118,7 @@ Test that test are properly ignored on remote event when existing locally
   test-debug-phase: new rev 5:  x -> 0
   test-debug-phase: new rev 6:  x -> 0
   $ hg phase f54f1bb90ff3
-  2: draft
+  f54f1bb90ff30cfeb010664beab49514ac7d3e8b: draft
 
 same over the wire
 
@@ -1133,7 +1133,7 @@ same over the wire
   searching for changes
   no changes found
   $ hg phase f54f1bb90ff3
-  2: draft
+  f54f1bb90ff30cfeb010664beab49514ac7d3e8b: draft
 
 enforce bundle1
 
@@ -1142,7 +1142,7 @@ enforce bundle1
   searching for changes
   no changes found
   $ hg phase f54f1bb90ff3
-  2: draft
+  f54f1bb90ff30cfeb010664beab49514ac7d3e8b: draft
 
 check that secret local on both side are not synced to public
 
@@ -1152,7 +1152,7 @@ check that secret local on both side are not synced to public
   no changes found
   [1]
   $ hg phase f54f1bb90ff3
-  2: draft
+  f54f1bb90ff30cfeb010664beab49514ac7d3e8b: draft
 
 put the changeset in the draft state again
 (first test after this one expect to be able to copy)

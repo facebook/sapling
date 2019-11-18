@@ -14,9 +14,9 @@ Make 'B' public, and 'C' draft.
 
   $ hg debugremotebookmark master $B
   $ hg phase $B
-  1: public
+  112478962961147124edd43549aedd1a335e44bf: public
   $ hg phase $C
-  2: draft
+  dc0947a82db884575bb76ea10ac97b08536bfa03: draft
 
 Migrate down.
 
@@ -25,16 +25,16 @@ Migrate down.
   migrating repo to old-style visibility and phases
   (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)
   (added 1 draft roots)
-  1: public
+  112478962961147124edd43549aedd1a335e44bf: public
   $ hg phase $C
-  2: draft
+  dc0947a82db884575bb76ea10ac97b08536bfa03: draft
   $ drawdag << 'EOS'
   > D
   > |
   > A
   > EOS
   $ hg phase $D
-  3: draft
+  b18e25de2cf5fc4699a029ed635882849e53ef73: draft
 
 Migrate up.
 
@@ -42,11 +42,11 @@ Migrate up.
   $ hg phase $B
   migrating repo to new-style visibility and phases
   (this does not affect most workflows; post in Source Control @ FB if you have issues)
-  1: public
+  112478962961147124edd43549aedd1a335e44bf: public
   $ hg phase $C
-  2: draft
+  dc0947a82db884575bb76ea10ac97b08536bfa03: draft
   $ hg phase $D
-  3: draft
+  b18e25de2cf5fc4699a029ed635882849e53ef73: draft
 
 Test (legacy) secret commit migration.
 
