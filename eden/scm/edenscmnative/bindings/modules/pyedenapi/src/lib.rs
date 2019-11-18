@@ -106,7 +106,7 @@ fn add_data(
         };
         store
             .add(&delta, &metadata)
-            .map_err(|e| into_exception(py, e.context(ApiErrorKind::Store).into()))?;
+            .map_err(|e| into_exception(py, ApiError::new(ApiErrorKind::Store, e)))?;
     }
     Ok(())
 }
@@ -201,7 +201,7 @@ py_class!(class client |py| {
         }).map_err(|e| into_exception(py, e))?;
 
         for entry in data_iter {
-            store.add_entry(&entry).map_err(|e| into_exception(py, e.context(ApiErrorKind::Store).into()))?;
+            store.add_entry(&entry).map_err(|e| into_exception(py, ApiError::new(ApiErrorKind::Store, e)))?;
         }
 
         downloadstats::create_instance(py, stats)

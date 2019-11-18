@@ -7,13 +7,12 @@
 
 use std::path::{Path, PathBuf};
 
-use failure::ResultExt;
 use url::Url;
 
 use auth::AuthConfig;
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 
-use crate::errors::{ApiErrorKind, ApiResult};
+use crate::errors::{ApiErrorContext, ApiErrorKind, ApiResult};
 
 #[derive(Default)]
 pub struct Config {

@@ -11,7 +11,7 @@ use std::{
     path::PathBuf,
 };
 
-use failure::{Backtrace, Context, Fail};
+use failure::{Backtrace, Error, Fail};
 use http::StatusCode;
 use thiserror::Error;
 
@@ -19,21 +19,29 @@ pub type ApiResult<T> = Result<T, ApiError>;
 
 #[derive(Debug)]
 pub struct ApiError {
-    context: Context<ApiErrorKind>,
+    cause: Option<Error>,
+    kind: ApiErrorKind,
 }
 
 impl ApiError {
+    pub fn new(kind: ApiErrorKind, cause: impl Into<Error>) -> Self {
+        ApiError {
+            cause: Some(cause.into()),
+            kind,
+        }
+    }
+
     pub fn kind(&self) -> &ApiErrorKind {
-        &*self.context.get_context()
+        &self.kind
     }
 
     pub(crate) fn from_http(code: u32, msg: impl ToString) -> Self {
         let code = match code.try_into() {
             Ok(code) => match StatusCode::from_u16(code) {
                 Ok(code) => code,
-                Err(e) => return e.context(ApiErrorKind::BadResponse).into(),
+                Err(e) => return ApiError::new(ApiErrorKind::BadResponse, e),
             },
-            Err(e) => return e.context(ApiErrorKind::BadResponse).into(),
+            Err(e) => return ApiError::new(ApiErrorKind::BadResponse, e),
         };
         let msg = msg.to_string();
 
@@ -53,20 +61,20 @@ impl ApiError {
 
 impl Fail for ApiError {
     fn cause(&self) -> Option<&dyn Fail> {
-        self.context.cause()
+        self.cause.as_ref().map(Error::as_fail)
     }
 
     fn backtrace(&self) -> Option<&Backtrace> {
-        self.context.backtrace()
+        self.cause.as_ref().map(Error::backtrace)
     }
 }
 
 impl Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(error) = self.context.cause() {
-            write!(f, "{}: {}", &self.context, &error)
+        if let Some(cause) = &self.cause {
+            write!(f, "{}: {}", self.kind, cause)
         } else {
-            write!(f, "{}", &self.context)
+            write!(f, "{}", self.kind)
         }
     }
 }
@@ -147,27 +155,19 @@ pub enum ApiErrorKind {
     Other(String),
 }
 
-impl From<Context<ApiErrorKind>> for ApiError {
-    fn from(context: Context<ApiErrorKind>) -> Self {
-        Self { context }
+pub trait ApiErrorContext<T> {
+    fn context(self, kind: ApiErrorKind) -> ApiResult<T>;
+}
+
+impl<T, E: Into<Error>> ApiErrorContext<T> for Result<T, E> {
+    fn context(self, kind: ApiErrorKind) -> ApiResult<T> {
+        self.map_err(|e| ApiError::new(kind, e))
     }
 }
 
 impl From<ApiErrorKind> for ApiError {
     fn from(kind: ApiErrorKind) -> Self {
-        Context::new(kind).into()
-    }
-}
-
-impl From<Context<String>> for ApiError {
-    fn from(context: Context<String>) -> Self {
-        context.map(ApiErrorKind::Other).into()
-    }
-}
-
-impl From<Context<&str>> for ApiError {
-    fn from(context: Context<&str>) -> Self {
-        context.map(String::from).into()
+        ApiError { cause: None, kind }
     }
 }
 
@@ -186,27 +186,27 @@ impl From<&str> for ApiError {
 impl From<curl::Error> for ApiError {
     fn from(error: curl::Error) -> Self {
         if error.is_ssl_connect_error() {
-            error.context(ApiErrorKind::Tls).into()
+            ApiError::new(ApiErrorKind::Tls, error)
         } else {
-            error.context(ApiErrorKind::Curl).into()
+            ApiError::new(ApiErrorKind::Curl, error)
         }
     }
 }
 
 impl From<curl::MultiError> for ApiError {
     fn from(error: curl::MultiError) -> Self {
-        error.context(ApiErrorKind::Curl).into()
+        ApiError::new(ApiErrorKind::Curl, error)
     }
 }
 
 impl From<serde_cbor::error::Error> for ApiError {
     fn from(error: serde_cbor::error::Error) -> Self {
-        error.context(ApiErrorKind::Serialization).into()
+        ApiError::new(ApiErrorKind::Serialization, error)
     }
 }
 
 impl From<url::ParseError> for ApiError {
     fn from(error: url::ParseError) -> Self {
-        error.context(ApiErrorKind::Url).into()
+        ApiError::new(ApiErrorKind::Url, error)
     }
 }

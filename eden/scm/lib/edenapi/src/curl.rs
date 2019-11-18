@@ -13,7 +13,7 @@ use curl::{
     easy::{Easy2, Handler, HttpVersion, List},
     multi::Multi,
 };
-use failure::{format_err, Fallible, ResultExt};
+use failure::{format_err, Fallible};
 use itertools::Itertools;
 use parking_lot::{Mutex, MutexGuard};
 use serde::{de::DeserializeOwned, Serialize};
@@ -29,7 +29,7 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::errors::{ApiError, ApiErrorKind, ApiResult};
+use crate::errors::{ApiError, ApiErrorContext, ApiErrorKind, ApiResult};
 use crate::progress::{ProgressFn, ProgressReporter};
 use crate::stats::DownloadStats;
 
@@ -136,7 +136,8 @@ impl EdenApi for EdenApiCurlClient {
         }
 
         if msg != "I_AM_ALIVE" {
-            Err(format_err!("Unexpected response: {:?}", &msg).context(ApiErrorKind::BadResponse))?;
+            Err(format_err!("Unexpected response: {:?}", &msg))
+                .context(ApiErrorKind::BadResponse)?;
         }
 
         Ok(())
