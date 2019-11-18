@@ -315,7 +315,7 @@ def checkportabilityalert(ui):
     val = ui.config("ui", "portablefilenames")
     lval = val.lower()
     bval = util.parsebool(val)
-    abort = pycompat.iswindows or lval == "abort"
+    abort = lval == "abort"
     warn = bval or lval == "warn"
     if bval is None and not (warn or abort or lval == "ignore"):
         raise error.ConfigError(_("ui.portablefilenames value is invalid ('%s')") % val)
