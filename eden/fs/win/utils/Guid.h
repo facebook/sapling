@@ -54,7 +54,7 @@ class Guid {
   }
 
   std::string toString() const {
-    return wstringToString(toWString());
+    return wideToMultibyteString(toWString());
   }
 
   const GUID& getGuid() const noexcept {

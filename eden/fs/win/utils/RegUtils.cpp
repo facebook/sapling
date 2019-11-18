@@ -37,7 +37,7 @@ RegistryKey RegistryKey::create(
     throw makeWin32ErrorExplicit(
         status,
         folly::sformat(
-            "Failed to create the key : {}", wstringToString(keyname)));
+            "Failed to create the key : {}", wideToMultibyteString(keyname)));
   }
 
   return RegistryKey{std::move(handle)};
@@ -55,7 +55,7 @@ RegistryKey RegistryKey::open(
     throw makeWin32ErrorExplicit(
         status,
         folly::sformat(
-            "Failed to open the key : {}", wstringToString(keyname)));
+            "Failed to open the key : {}", wideToMultibyteString(keyname)));
   }
 
   return RegistryKey{std::move(handle)};
@@ -141,8 +141,8 @@ void RegistryKey::renameKey(
         status,
         folly::sformat(
             "Failed to rename the key: {} -> {}",
-            wstringToString(keyName),
-            wstringToString(newName)));
+            wideToMultibyteString(keyName),
+            wideToMultibyteString(newName)));
   }
 }
 
@@ -168,8 +168,8 @@ RegistryKey::getDWord(const ValueName& value, RegistryPath subKey) const {
         status,
         folly::sformat(
             "Failed to get 32bit value from Registry : {}:{}",
-            wcharToString(subKey),
-            wstringToString(value)));
+            wideToMultibyteString(subKey),
+            wideToMultibyteString(value)));
   }
   return data;
 }
@@ -192,8 +192,8 @@ std::wstring RegistryKey::getString(const ValueName& value, RegistryPath subKey)
         status,
         folly::sformat(
             "Failed to get string value from Registry: {}:{}",
-            wcharToString(subKey),
-            wstringToString(value)));
+            wideToMultibyteString(subKey),
+            wideToMultibyteString(value)));
   }
 
   std::wstring data;
@@ -212,8 +212,8 @@ std::wstring RegistryKey::getString(const ValueName& value, RegistryPath subKey)
         status,
         folly::sformat(
             "Failed to get string value from Registry {}:{} size: {}",
-            wcharToString(subKey),
-            wstringToString(value),
+            wideToMultibyteString(subKey),
+            wideToMultibyteString(value),
             size));
   }
 
@@ -242,8 +242,8 @@ DWORD RegistryKey::getBinary(
         status,
         folly::sformat(
             "Failed to get binary data: {}:{} size: {}",
-            wcharToString(subKey),
-            wstringToString(value),
+            wideToMultibyteString(subKey),
+            wideToMultibyteString(value),
             size));
   }
   return size;
@@ -261,7 +261,8 @@ void RegistryKey::setDWord(const ValueName& value, const DWORD data) const {
   if (status != ERROR_SUCCESS) {
     throw makeWin32ErrorExplicit(
         status,
-        folly::sformat("Failed to set DWORD : {}", wstringToString(value)));
+        folly::sformat(
+            "Failed to set DWORD : {}", wideToMultibyteString(value)));
   }
 }
 
@@ -279,7 +280,8 @@ void RegistryKey::setString(const ValueName& value, const std::wstring& data)
   if (status != ERROR_SUCCESS) {
     throw makeWin32ErrorExplicit(
         status,
-        folly::sformat("Failed to set String : {}", wstringToString(value)));
+        folly::sformat(
+            "Failed to set String : {}", wideToMultibyteString(value)));
   }
 }
 
@@ -299,7 +301,8 @@ void RegistryKey::setBinary(
   if (status != ERROR_SUCCESS) {
     throw makeWin32ErrorExplicit(
         status,
-        folly::sformat("Failed to set String : {}", wstringToString(value)));
+        folly::sformat(
+            "Failed to set String : {}", wideToMultibyteString(value)));
   }
 }
 
@@ -308,7 +311,8 @@ void RegistryKey::deleteValue(const ValueName& value) {
   if (status != ERROR_SUCCESS) {
     throw makeWin32ErrorExplicit(
         status,
-        folly::sformat("Failed to delete Value : {}", wstringToString(value)));
+        folly::sformat(
+            "Failed to delete Value : {}", wideToMultibyteString(value)));
   }
 }
 

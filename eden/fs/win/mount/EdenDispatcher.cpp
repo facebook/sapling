@@ -67,11 +67,11 @@ HRESULT EdenDispatcher::startEnumeration(
         "startEnumeration mount (0x{:x}) root ({}) path ({}) process ({})",
         reinterpret_cast<uintptr_t>(&getMount()),
         getMount().getPath(),
-        wstringToString(path),
-        wcharToString(callbackData.TriggeringProcessImageFileName));
+        wideToMultibyteString(path),
+        wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
 
     if (!winStore_.getAllEntries(path, list)) {
-      TRACE("File not found path ({})", wstringToString(path));
+      TRACE("File not found path ({})", wideToMultibyteString(path));
       return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     }
 
@@ -110,7 +110,7 @@ HRESULT EdenDispatcher::getEnumerationData(
     auto sessionIterator = lockedSessions->find(enumerationId);
     if (sessionIterator == lockedSessions->end()) {
       XLOG(DBG5) << "Enum instance not found: "
-                 << wstringToString(callbackData.FilePathName);
+                 << wideToMultibyteString(callbackData.FilePathName);
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
@@ -143,7 +143,7 @@ HRESULT EdenDispatcher::getEnumerationData(
 
       TRACE(
           "Enum {} {} size= {}",
-          wstringToString(entry->name),
+          wideToMultibyteString(entry->name),
           fileInfo.IsDirectory ? "Dir" : "File",
           fileInfo.FileSize);
 
@@ -168,16 +168,16 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     FileMetadata metadata = {};
 
     if (!winStore_.getFileMetadata(path, metadata)) {
-      TRACE("{} : File not Found", wstringToString(path));
+      TRACE("{} : File not Found", wideToMultibyteString(path));
       return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     }
 
     TRACE(
         "Found {} {} size= {} process {}",
-        wstringToString(metadata.name),
+        wideToMultibyteString(metadata.name),
         metadata.isDirectory ? "Dir" : "File",
         metadata.size,
-        wcharToString(callbackData.TriggeringProcessImageFileName));
+        wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
 
     placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDirectory;
     placeholderInfo.FileBasicInfo.FileSize = metadata.size;
@@ -197,7 +197,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
       XLOGF(
           DBG2,
           "Failed to send the file info. file {} error {} msg {}",
-          wstringToString(path),
+          wideToMultibyteString(path),
           result,
           win32ErrorToString(result));
     }

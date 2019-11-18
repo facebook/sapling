@@ -91,7 +91,7 @@ void writeFile(const wchar_t* filePath, const folly::ByteRange data) {
     throw makeWin32ErrorExplicit(
         GetLastError(),
         folly::sformat(
-            "Unable to create the file {}", wcharToString(filePath)));
+            "Unable to create the file {}", wideToMultibyteString(filePath)));
   }
 
   if (!data.empty()) {
@@ -116,7 +116,8 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
     throw makeWin32ErrorExplicit(
         GetLastError(),
         folly::sformat(
-            "Unable to get the temp file name: {}", wcharToString(filePath)));
+            "Unable to get the temp file name: {}",
+            wideToMultibyteString(filePath)));
   }
 
   writeFile(tmpFile.c_str(), data);
@@ -126,7 +127,8 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
     DeleteFile(tmpFile.c_str());
     throw makeWin32ErrorExplicit(
         error,
-        folly::sformat("Unable to move the file: {}", wcharToString(filePath)));
+        folly::sformat(
+            "Unable to move the file: {}", wideToMultibyteString(filePath)));
   }
 }
 

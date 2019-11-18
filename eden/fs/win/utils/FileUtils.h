@@ -89,7 +89,8 @@ void readFile(
   if (!fileHandle) {
     throw makeWin32ErrorExplicit(
         GetLastError(),
-        folly::sformat("Unable to open the file {}", wcharToString(filePath)));
+        folly::sformat(
+            "Unable to open the file {}", wideToMultibyteString(filePath)));
   }
   if (bytesToRead == std::numeric_limits<size_t>::max()) {
     //
@@ -102,7 +103,8 @@ void readFile(
       throw makeWin32ErrorExplicit(
           GetLastError(),
           folly::sformat(
-              "Unable to get the file size {}", wcharToString(filePath)));
+              "Unable to get the file size {}",
+              wideToMultibyteString(filePath)));
     }
     bytesToRead = fileSize.QuadPart;
   }
@@ -117,7 +119,7 @@ inline void readFile(
     const char* filePath,
     Container& data,
     size_t bytesToRead = std::numeric_limits<size_t>::max()) {
-  readFile(charToWstring(filePath).c_str(), data, bytesToRead);
+  readFile(multibyteToWideString(filePath).c_str(), data, bytesToRead);
 }
 /*
  * This will write the data to the file. If the file doesn't exist it will
@@ -127,7 +129,7 @@ inline void readFile(
 void writeFile(const wchar_t* filePath, const folly::ByteRange data);
 
 inline void writeFile(const char* filePath, const folly::ByteRange data) {
-  writeFile(charToWstring(filePath).c_str(), data);
+  writeFile(multibyteToWideString(filePath).c_str(), data);
 }
 
 /*
@@ -136,7 +138,7 @@ inline void writeFile(const char* filePath, const folly::ByteRange data) {
  */
 
 inline void writeFile(const char* filePath, const std::string& data) {
-  writeFile(charToWstring(filePath).c_str(), folly::StringPiece(data));
+  writeFile(multibyteToWideString(filePath).c_str(), folly::StringPiece(data));
 }
 
 inline void writeFile(const wchar_t* filePath, const std::string& data) {
@@ -152,11 +154,12 @@ FOLLY_NODISCARD DWORD writeFileIov(HANDLE handle, const iovec* iov, int count);
 void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data);
 
 inline void writeFileAtomic(const char* filePath, const folly::ByteRange data) {
-  writeFileAtomic(charToWstring(filePath).c_str(), data);
+  writeFileAtomic(multibyteToWideString(filePath).c_str(), data);
 }
 
 inline void writeFileAtomic(const char* filePath, const std::string& data) {
-  writeFileAtomic(charToWstring(filePath).c_str(), folly::StringPiece(data));
+  writeFileAtomic(
+      multibyteToWideString(filePath).c_str(), folly::StringPiece(data));
 }
 
 inline void writeFileAtomic(const wchar_t* filePath, const std::string& data) {

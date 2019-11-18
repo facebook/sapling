@@ -99,7 +99,8 @@ void EdenMount::start() {
       getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
   if (!getCurrentState()) {
     currentState_ = std::make_unique<CurrentState>(
-        kCurrentStateDataPath, stringToWstring(getMountId(getPath().c_str())));
+        kCurrentStateDataPath,
+        multibyteToWideString(getMountId(getPath().c_str())));
   }
 }
 

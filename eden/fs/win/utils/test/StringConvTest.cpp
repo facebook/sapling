@@ -91,40 +91,42 @@ TEST(StringConvTest, testWstringToString) {
   std::wstring wideStr = L"C:\\winPath\\PATH1\\path\\File.txt";
   std::string str = "C:\\winPath\\PATH1\\path\\File.txt";
 
-  EXPECT_EQ(wstringToString(wideStr), str);
+  EXPECT_EQ(wideToMultibyteString(wideStr), str);
 }
 
 TEST(StringConvTest, testStringToWstring) {
   std::wstring wideStr = L"C:\\winPath\\PATH1\\path\\File.txt";
   std::string str = "C:\\winPath\\PATH1\\path\\File.txt";
 
-  EXPECT_EQ(stringToWstring(str), wideStr);
+  EXPECT_EQ(multibyteToWideString(str), wideStr);
 }
 
 TEST(StringConvTest, testWcharToString) {
   std::wstring wideStr = L"C:\\winPath\\PATH1\\path\\File.txt";
   std::string str = "C:\\winPath\\PATH1\\path\\File.txt";
 
-  EXPECT_EQ(wcharToString(wideStr.c_str()), str);
+  EXPECT_EQ(wideToMultibyteString(wideStr.c_str()), str);
 }
 
 TEST(StringConvTest, testcharToWstring) {
   std::wstring wideStr = L"C:\\winPath\\PATH1\\path\\File.txt";
   std::string str = "C:\\winPath\\PATH1\\path\\File.txt";
 
-  EXPECT_EQ(charToWstring(str.c_str()), wideStr);
+  EXPECT_EQ(multibyteToWideString(str.c_str()), wideStr);
 }
 
 TEST(StringConvTest, testWcharToStringWithNullptr) {
   std::string str = "";
+  const wchar_t* wideStr = nullptr;
 
-  EXPECT_EQ(wcharToString(nullptr), str);
+  EXPECT_EQ(wideToMultibyteString(wideStr), str);
 }
 
 TEST(StringConvTest, testcharToWstringWithNullptr) {
   std::wstring wideStr = L"";
+  const char* str = nullptr;
 
-  std::wstring newWStr = charToWstring(nullptr);
+  std::wstring newWStr = multibyteToWideString(str);
   EXPECT_EQ(newWStr, wideStr);
 }
 
@@ -132,7 +134,7 @@ TEST(StringConvTest, testWcharToStringWithEmptyPath) {
   std::wstring wideStr = L"";
   std::string str = "";
 
-  std::string newStr = wcharToString(wideStr.c_str());
+  std::string newStr = wideToMultibyteString(wideStr.c_str());
   EXPECT_EQ(newStr, str);
 }
 
@@ -140,7 +142,7 @@ TEST(StringConvTest, testcharToWstringWithEmptyPath) {
   std::wstring wideStr = L"";
   std::string str = "";
 
-  std::wstring newWStr = charToWstring(str.c_str());
+  std::wstring newWStr = multibyteToWideString(str.c_str());
   EXPECT_EQ(newWStr, wideStr);
 }
 
@@ -182,4 +184,33 @@ TEST(StringConvTest, testEdenToWinPathNTPath) {
   std::string edenPath = "/??/mixed/winPath/PATH1/path/File.txt";
 
   EXPECT_EQ(edenToWinPath(edenPath), winPath);
+}
+
+TEST(StringConvTest, testPieceToWString) {
+  std::wstring widePath = L"/??/mixed/winPath/PATH1/path/File.txt";
+  folly::StringPiece piece = "/??/mixed/winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(widePath, multibyteToWideString(piece));
+}
+
+TEST(StringConvTest, testViewToWString) {
+  std::wstring widePath = L"/??/mixed/winPath/PATH1/path/File.txt";
+  std::string_view piece = "/??/mixed/winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(widePath, multibyteToWideString(piece));
+}
+
+TEST(StringConvTest, testWViewToString) {
+  std::wstring_view widePath = L"/??/mixed/winPath/PATH1/path/File.txt";
+  std::string multiBytePath = "/??/mixed/winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(multiBytePath, wideToMultibyteString(widePath));
+}
+
+TEST(StringConvTest, teststdPathToString) {
+  std::filesystem::path widePath{
+      L"\\??\\mixed\\winPath\\PATH1\\path\\File.txt"};
+  std::string multiBytePath = "/??/mixed/winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(multiBytePath, winToEdenPath(widePath));
 }
