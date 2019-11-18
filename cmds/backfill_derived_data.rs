@@ -36,6 +36,7 @@ use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{ChangesetId, MononokeId, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
+use stats::{define_stats_struct, Timeseries};
 use std::{
     fs,
     path::Path,
@@ -46,6 +47,11 @@ use std::{
     time::Duration,
 };
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+
+define_stats_struct! {
+    DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
+    pending_heads: timeseries(RATE, SUM),
+}
 
 const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
 const ARG_OUT_FILENAME: &'static str = "out-filename";
@@ -230,6 +236,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 })?;
             let service_name =
                 std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string());
+
+            let stats = {
+                let repo_name = format!(
+                    "{}_{}",
+                    args::get_repo_name(&matches)?,
+                    args::get_repo_id(&matches)?
+                );
+                move |data_type| DerivedDataStats::new(repo_name.clone(), data_type)
+            };
             start_fb303_and_stats_agg(fb, &mut runtime, &service_name, &logger, &matches)?;
             (
                 args::open_repo(fb, &logger, &matches),
@@ -238,7 +253,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
                 .into_future()
                 .and_then(move |(repo, unredacted_repo, bookmarks)| {
-                    subcommand_tail(ctx, repo, unredacted_repo, bookmarks, derived_data_types)
+                    subcommand_tail(
+                        ctx,
+                        stats,
+                        repo,
+                        unredacted_repo,
+                        bookmarks,
+                        derived_data_types,
+                    )
                 })
                 .boxify()
         }
@@ -306,6 +328,9 @@ trait DerivedUtils: Send + Sync + 'static {
 
     /// Regenerate derived data for specified set of commits
     fn regenerate(&self, csids: &Vec<ChangesetId>);
+
+    /// Get a name for this type of derived data
+    fn name(&self) -> &'static str;
 }
 
 #[derive(Clone)]
@@ -353,6 +378,10 @@ where
 
     fn regenerate(&self, csids: &Vec<ChangesetId>) {
         self.mapping.regenerate(csids.iter().copied())
+    }
+
+    fn name(&self) -> &'static str {
+        M::Value::NAME
     }
 }
 
@@ -568,6 +597,7 @@ fn subcommand_backfill<P: AsRef<Path>>(
 
 fn subcommand_tail(
     ctx: CoreContext,
+    stats_constructor: impl Fn(&'static str) -> DerivedDataStats,
     repo: BlobRepo,
     unredacted_repo: BlobRepo,
     bookmarks: SqlBookmarks,
@@ -582,7 +612,8 @@ fn subcommand_tail(
                 repo.clone()
             };
             let derive = derived_data_utils(ctx.clone(), repo.clone(), name)?;
-            Ok((derive, maybe_unredacted_repo))
+            let stats = stats_constructor(derive.name());
+            Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
         })
         .collect();
     derive_utils.into_future().and_then(move |derive_utils| {
@@ -605,7 +636,7 @@ fn subcommand_tail(
                                 .iter()
                                 .map({
                                     cloned!(ctx);
-                                    move |(derive, maybe_unredacted_repo)| {
+                                    move |(derive, maybe_unredacted_repo, stats)| {
                                         // create new context so each derivation would have its own trace
                                         let ctx = CoreContext::new_with_logger(
                                             ctx.fb,
@@ -618,8 +649,11 @@ fn subcommand_tail(
                                                 heads.clone(),
                                             )
                                             .map({
-                                                cloned!(ctx, maybe_unredacted_repo, derive);
+                                                cloned!(ctx, maybe_unredacted_repo, derive, stats);
                                                 move |pending| {
+                                                    stats
+                                                        .pending_heads
+                                                        .add_value(pending.len() as i64);
                                                     pending
                                                         .into_iter()
                                                         .map(|csid| {
