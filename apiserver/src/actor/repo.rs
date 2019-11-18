@@ -411,7 +411,6 @@ impl MononokeRepo {
             .boxify()
     }
 
-    // TODO(aida): move it to the blobrepo
     fn get_hg_changeset_ids_by_bonsais(
         &self,
         ctx: CoreContext,
@@ -420,25 +419,20 @@ impl MononokeRepo {
         cloned!(ctx, self.repo);
         repo.get_hg_bonsai_mapping(ctx.clone(), changeset_ids.clone())
             .from_err()
-            .and_then({
-                cloned!(ctx, repo);
-                move |hg_bonsai_list| {
-                    let mapping: HashMap<_, _> = hg_bonsai_list
-                        .into_iter()
-                        .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
-                        .collect();
+            .and_then(move |hg_bonsai_list| {
+                let mapping: HashMap<_, _> = hg_bonsai_list
+                    .into_iter()
+                    .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
+                    .collect();
 
-                    futures_ordered(changeset_ids.into_iter().map(|bcs_id| {
-                        match mapping.get(&bcs_id) {
-                            Some(hg_cs_id) => ok(*hg_cs_id).left_future(),
-                            None => repo
-                                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                                .map_err(ErrorKind::InternalError)
-                                .right_future(),
-                        }
-                    }))
-                    .collect()
+                let mut res = vec![];
+                for cs_id in &changeset_ids {
+                    let hg_cs_id = mapping
+                        .get(cs_id)
+                        .ok_or(ErrorKind::NotFound(format!("{}", cs_id), None))?;
+                    res.push(*hg_cs_id);
                 }
+                Ok(res)
             })
             .boxify()
     }

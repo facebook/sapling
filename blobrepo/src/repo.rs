@@ -28,7 +28,7 @@ use failure_ext::{format_err, prelude::*, Error, FutureFailureErrorExt, FutureFa
 use filenodes::{FilenodeInfo, Filenodes};
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Future, Loop};
-use futures::stream::{self, FuturesUnordered, Stream};
+use futures::stream::{self, futures_unordered, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -799,16 +799,69 @@ impl BlobRepo {
         bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds>,
     ) -> BoxFuture<Vec<(HgChangesetId, ChangesetId)>, Error> {
         STATS::get_hg_bonsai_mapping.add_value(1);
-        self.bonsai_hg_mapping
-            .get(ctx, self.repoid, bonsai_or_hg_cs_ids.into())
+
+        let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
+        let fetched_from_mapping = self
+            .bonsai_hg_mapping
+            .get(ctx.clone(), self.repoid, bonsai_or_hg_cs_ids.clone())
             .map(|result| {
                 result
                     .into_iter()
                     .map(|entry| (entry.hg_cs_id, entry.bcs_id))
-                    .collect()
+                    .collect::<Vec<_>>()
             })
-            // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
-            .boxify()
+            .boxify();
+
+        use BonsaiOrHgChangesetIds::*;
+        match bonsai_or_hg_cs_ids {
+            Bonsai(bonsais) => fetched_from_mapping
+                .and_then({
+                    let repo = self.clone();
+                    move |hg_bonsai_list| {
+                        // If a bonsai commit doesn't exist in the bonsai_hg_mapping,
+                        // that might mean two things: 1) Bonsai commit just doesn't exist
+                        // 2) Bonsai commit exists but hg changesets weren't generated for it
+                        // Normally the callers of get_hg_bonsai_mapping would expect that hg
+                        // changesets will be lazily generated, so the
+                        // code below explicitly checks if a commit exists and if yes then
+                        // generates hg changeset for it.
+                        let mapping: HashMap<_, _> = hg_bonsai_list
+                            .iter()
+                            .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
+                            .collect();
+                        let mut notfound = vec![];
+                        for b in bonsais {
+                            if !mapping.contains_key(&b) {
+                                notfound.push(b);
+                            }
+                        }
+                        repo.changesets
+                            .get_many(ctx.clone(), repo.get_repoid(), notfound.clone())
+                            .and_then(move |existing| {
+                                let existing: HashSet<_> =
+                                    existing.into_iter().map(|entry| entry.cs_id).collect();
+
+                                futures_unordered(
+                                    notfound
+                                        .into_iter()
+                                        .filter(|cs_id| existing.contains(cs_id))
+                                        .map(move |bcs_id| {
+                                            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                                                .map(move |hg_cs_id| (hg_cs_id, bcs_id))
+                                        }),
+                                )
+                                .collect()
+                            })
+                            .map(move |mut newmapping| {
+                                newmapping.extend(hg_bonsai_list);
+                                newmapping
+                            })
+                    }
+                })
+                .boxify(),
+            Hg(_) => fetched_from_mapping,
+        }
+        // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
     }
 
     pub fn get_bonsai_changeset(
