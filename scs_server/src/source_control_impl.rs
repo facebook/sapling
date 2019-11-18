@@ -1165,6 +1165,7 @@ impl SourceControlService for SourceControlServiceImpl {
             ids,
             message,
             date: date.timestamp(),
+            tz: date.offset().local_minus_utc(),
             author,
             parents,
             extra: extra.into_iter().collect(),
