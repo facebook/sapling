@@ -136,6 +136,10 @@ impl BonsaiChangeset {
             .map(|(path, fc_opt)| (path, fc_opt.as_ref()))
     }
 
+    pub fn file_changes_map(&self) -> &BTreeMap<MPath, Option<FileChange>> {
+        &self.inner.file_changes
+    }
+
     /// Get the author for this changeset.
     pub fn author(&self) -> &str {
         &self.inner.author
