@@ -70,6 +70,7 @@ use slog::info;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
+use std::sync::Arc;
 use thiserror::Error;
 use tracing::{trace_args, Traced};
 
@@ -107,6 +108,49 @@ pub enum PushrebaseError {
     RebaseOverMerge,
     RootTooFarBehind,
     Error(Error),
+}
+
+type CsIdConvertor =
+    Arc<dyn Fn(ChangesetId) -> BoxFuture<HgChangesetId, Error> + Send + Sync + 'static>;
+/// Struct that contains data for hg sync replay
+#[derive(Clone)]
+pub struct HgReplayData {
+    // Handle of the bundle2 id that was sent by the client and saved to the blobstore
+    bundle2_id: RawBundle2Id,
+    // Get hg changeset id from bonsai changeset id. Normally it should just do a simple lookup
+    // however it might return other hg changesets if push redirector is used
+    cs_id_convertor: CsIdConvertor,
+}
+
+impl HgReplayData {
+    pub fn new_with_simple_convertor(
+        ctx: CoreContext,
+        bundle2_id: RawBundle2Id,
+        repo: BlobRepo,
+    ) -> Self {
+        let cs_id_convertor: Arc<
+            dyn Fn(ChangesetId) -> BoxFuture<HgChangesetId, Error> + Send + Sync + 'static,
+        > = Arc::new({
+            cloned!(ctx, repo);
+            move |cs_id| {
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .boxify()
+            }
+        });
+
+        Self {
+            bundle2_id,
+            cs_id_convertor,
+        }
+    }
+
+    pub fn override_convertor(&mut self, cs_id_convertor: CsIdConvertor) {
+        self.cs_id_convertor = cs_id_convertor;
+    }
+
+    pub fn get_raw_bundle2_id(&self) -> RawBundle2Id {
+        self.bundle2_id.clone()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -169,7 +213,7 @@ pub fn do_pushrebase(
     config: PushrebaseParams,
     onto_bookmark: OntoBookmarkParams,
     pushed_set: Vec<HgChangesetId>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     fetch_bonsai_changesets(ctx.clone(), repo.clone(), pushed_set)
         .and_then({
@@ -181,7 +225,7 @@ pub fn do_pushrebase(
                     config,
                     onto_bookmark,
                     pushed,
-                    maybe_raw_bundle2_id,
+                    maybe_hg_replay_data,
                 )
             }
         })
@@ -197,10 +241,11 @@ pub fn do_pushrebase_bonsai(
     config: PushrebaseParams,
     onto_bookmark: OntoBookmarkParams,
     pushed: Vec<BonsaiChangeset>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     let head = find_only_head_or_fail(&pushed).into_future();
     let roots = find_roots(&pushed).into_future();
+
     head.join(roots).and_then(move |(head, roots)| {
         find_closest_root(
             ctx.clone(),
@@ -229,7 +274,7 @@ pub fn do_pushrebase_bonsai(
                             root,
                             client_cf,
                             client_bcs,
-                            maybe_raw_bundle2_id,
+                            maybe_hg_replay_data,
                         )
                     })
             }
@@ -246,13 +291,21 @@ fn rebase_in_loop(
     root: ChangesetId,
     client_cf: Vec<MPath>,
     client_bcs: Vec<BonsaiChangeset>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
 ) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
     loop_fn(
         (root.clone(), 0),
         move |(latest_rebase_attempt, retry_num)| {
             get_onto_bookmark_value(ctx.clone(), &repo, onto_bookmark.clone()).and_then({
-                cloned!(ctx, client_cf, client_bcs, onto_bookmark, repo, config);
+                cloned!(
+                    ctx,
+                    client_cf,
+                    client_bcs,
+                    maybe_hg_replay_data,
+                    onto_bookmark,
+                    repo,
+                    config
+                );
                 move |bookmark_val| {
                     fetch_bonsai_range(
                         ctx.clone(),
@@ -296,7 +349,7 @@ fn rebase_in_loop(
                             head,
                             bookmark_val,
                             onto_bookmark.bookmark,
-                            maybe_raw_bundle2_id,
+                            maybe_hg_replay_data.clone(),
                         )
                         .and_then(move |update_res| match update_res {
                             Some((head, rebased_changesets)) => {
@@ -333,7 +386,7 @@ fn do_rebase(
     head: ChangesetId,
     bookmark_val: Option<ChangesetId>,
     onto_bookmark: BookmarkName,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, Error = PushrebaseError>
 {
     create_rebased_changesets(
@@ -354,7 +407,7 @@ fn do_rebase(
                 &onto_bookmark,
                 bookmark_val,
                 new_head,
-                maybe_raw_bundle2_id,
+                maybe_hg_replay_data,
                 rebased_changesets,
             ),
             None => try_create_bookmark(
@@ -362,7 +415,7 @@ fn do_rebase(
                 &repo,
                 &onto_bookmark,
                 new_head,
-                maybe_raw_bundle2_id,
+                maybe_hg_replay_data,
                 rebased_changesets,
             ),
         }
@@ -1066,16 +1119,13 @@ fn try_update_bookmark(
     bookmark_name: &BookmarkName,
     old_value: ChangesetId,
     new_value: ChangesetId,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    let bookmark_update_reason = create_bookmark_update_reason(
-        ctx,
-        repo.clone(),
-        maybe_raw_bundle2_id,
-        rebased_changesets.clone(),
-    );
+
+    let bookmark_update_reason =
+        create_bookmark_update_reason(maybe_hg_replay_data, rebased_changesets.clone());
     bookmark_update_reason
         .from_err()
         .and_then({
@@ -1102,16 +1152,13 @@ fn try_create_bookmark(
     repo: &BlobRepo,
     bookmark_name: &BookmarkName,
     new_value: ChangesetId,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    let bookmark_update_reason = create_bookmark_update_reason(
-        ctx,
-        repo.clone(),
-        maybe_raw_bundle2_id,
-        rebased_changesets.clone(),
-    );
+
+    let bookmark_update_reason =
+        create_bookmark_update_reason(maybe_hg_replay_data, rebased_changesets.clone());
 
     bookmark_update_reason
         .from_err()
@@ -1135,22 +1182,21 @@ fn try_create_bookmark(
 }
 
 fn create_bookmark_update_reason(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<BookmarkUpdateReason, Error> {
-    match maybe_raw_bundle2_id {
-        Some(id) => {
-            let bundle_replay_data = BundleReplayData::new(id);
+    match maybe_hg_replay_data {
+        Some(HgReplayData {
+            bundle2_id,
+            cs_id_convertor,
+        }) => {
+            let bundle_replay_data = BundleReplayData::new(bundle2_id);
             let timestamps = rebased_changesets
                 .into_iter()
                 .map(|(id_old, (_, datetime))| (id_old, datetime.into()))
                 .map({
-                    cloned!(ctx, repo);
                     move |(id_old, timestamp)| {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), id_old)
-                            .map(move |hg_cs_id| (hg_cs_id, timestamp))
+                        cs_id_convertor(id_old).map(move |hg_cs_id| (hg_cs_id, timestamp))
                     }
                 });
             join_all(timestamps)
@@ -2392,12 +2438,16 @@ mod tests {
         run_future(
             &mut runtime,
             do_pushrebase(
-                ctx,
-                repo,
+                ctx.clone(),
+                repo.clone(),
                 Default::default(),
                 book,
                 vec![hg_cs],
-                Some(RawBundle2Id::new(AS)),
+                Some(HgReplayData::new_with_simple_convertor(
+                    ctx,
+                    RawBundle2Id::new(AS),
+                    repo,
+                )),
             ),
         )
         .expect("pushrebase failed");
@@ -2456,7 +2506,11 @@ mod tests {
                 config,
                 book,
                 vec![hg_cs],
-                Some(RawBundle2Id::new(AS)),
+                Some(HgReplayData::new_with_simple_convertor(
+                    ctx.clone(),
+                    RawBundle2Id::new(AS),
+                    repo.clone(),
+                )),
             ),
         )
         .expect("pushrebase failed");

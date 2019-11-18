@@ -118,7 +118,7 @@ fn test_pushredirect_config() {
             old: None,
             new: None,
         }),
-        maybe_raw_bundle2_id: None,
+        maybe_hg_replay_data: None,
         maybe_pushvars: None,
         commonheads: CommonHeads { heads: Vec::new() },
         uploaded_bonsais: Vec::new(),

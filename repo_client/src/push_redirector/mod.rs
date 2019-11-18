@@ -29,11 +29,12 @@ use context::CoreContext;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
 use failure::{format_err, Error};
 use futures::Future;
+use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::try_join_all;
 use futures_util::{future::FutureExt, try_future::TryFutureExt, try_join};
 use metaconfig_types::CommitSyncConfig;
-use mononoke_types::ChangesetId;
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::PushrebaseChangesetPair;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -180,7 +181,7 @@ impl RepoSyncTarget {
             bookmark_pushes,
             maybe_raw_bundle2_id,
             non_fast_forward_policy,
-            uploaded_bonsais,
+            uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
         })
     }
 
@@ -202,7 +203,7 @@ impl RepoSyncTarget {
             any_merges,
             bookmark_push_part_id,
             bookmark_spec,
-            maybe_raw_bundle2_id,
+            maybe_hg_replay_data,
             maybe_pushvars,
             commonheads,
             uploaded_bonsais,
@@ -216,14 +217,40 @@ impl RepoSyncTarget {
             .convert_pushrebase_bookmark_spec(ctx.clone(), bookmark_spec)
             .await?;
 
+        let source_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
+        // Pushrebase happens in the large repo, but we'd like to have hg replay data relative
+        // to the small repo. In order to do that we need to need to make sure we are using
+        // small hg changeset ids for the timestamps instead of large hg changeset ids.
+        // In order to do that let's convert large cs id to small cs id and create hg changeset
+        // for it.
+
+        let large_to_small = uploaded_bonsais
+            .iter()
+            .map(|(small_cs_id, large_bcs)| (large_bcs.get_changeset_id(), *small_cs_id))
+            .collect::<HashMap<_, _>>();
+
+        let maybe_hg_replay_data = maybe_hg_replay_data.map(|mut hg_replay_data| {
+            hg_replay_data.override_convertor(Arc::new({
+                move |large_cs_id| {
+                    let small_cs_id = try_boxfuture!(large_to_small
+                        .get(&large_cs_id)
+                        .ok_or(format_err!("{} doesn't remap in small repo", large_cs_id)));
+                    source_repo
+                        .get_hg_from_bonsai_changeset(ctx.clone(), *small_cs_id)
+                        .boxify()
+                }
+            }));
+            hg_replay_data
+        });
+
         Ok(PostResolvePushRebase {
             any_merges,
             bookmark_push_part_id,
             bookmark_spec,
-            maybe_raw_bundle2_id,
+            maybe_hg_replay_data,
             maybe_pushvars,
             commonheads,
-            uploaded_bonsais,
+            uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
             uploaded_hg_changeset_ids,
         })
     }
@@ -252,7 +279,7 @@ impl RepoSyncTarget {
             changegroup_id,
             bookmark_push,
             maybe_raw_bundle2_id,
-            uploaded_bonsais,
+            uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
         })
     }
 
@@ -611,14 +638,14 @@ impl RepoSyncTarget {
         .await
     }
 
-    /// Take a map, representing the changesets uploaded during the `unbundle` resolution
-    /// and sync all the changesets into a large repo, while remembering which `HgChangesetId`
-    /// corresponds to which synced changeset
+    /// Take changesets uploaded during the `unbundle` resolution
+    /// and sync all the changesets into a large repo, while remembering which small cs id
+    /// corresponds to which large cs id
     async fn sync_uploaded_changesets(
         &self,
         ctx: CoreContext,
         uploaded_map: UploadedBonsais,
-    ) -> Result<UploadedBonsais, Error> {
+    ) -> Result<HashMap<ChangesetId, BonsaiChangeset>, Error> {
         let target_repo = self.small_to_large_commit_syncer.get_target_repo();
         let uploaded_ids: HashSet<ChangesetId> = uploaded_map
             .iter()
@@ -644,7 +671,7 @@ impl RepoSyncTarget {
             .rev()
             .collect();
 
-        let mut synced_ids: Vec<ChangesetId> = Vec::new();
+        let mut synced_ids = Vec::new();
 
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
@@ -655,18 +682,24 @@ impl RepoSyncTarget {
                     "{} was rewritten into nothingness during uploaded changesets sync",
                     bcs_id
                 ))?;
-            synced_ids.push(synced_bcs_id);
+            synced_ids.push((bcs_id, synced_bcs_id));
         }
 
-        try_join_all(synced_ids.into_iter().map(move |target_repo_bcs_id| {
-            cloned!(ctx, target_repo);
-            async move {
-                target_repo
-                    .get_bonsai_changeset(ctx, target_repo_bcs_id)
-                    .compat()
-                    .await
-            }
-        }))
+        try_join_all(
+            synced_ids
+                .into_iter()
+                .map(move |(small_bcs_id, target_repo_bcs_id)| {
+                    cloned!(ctx, target_repo);
+                    async move {
+                        let target_bcs = target_repo
+                            .get_bonsai_changeset(ctx, target_repo_bcs_id)
+                            .compat()
+                            .await?;
+
+                        Ok((*small_bcs_id, target_bcs))
+                    }
+                }),
+        )
         .await
         .map(|v| v.into_iter().collect())
     }

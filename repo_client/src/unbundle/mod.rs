@@ -25,7 +25,7 @@ use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use phases::Phases;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -223,7 +223,7 @@ fn run_pushrebase(
         any_merges,
         bookmark_push_part_id,
         bookmark_spec,
-        maybe_raw_bundle2_id,
+        maybe_hg_replay_data,
         maybe_pushvars: _,
         commonheads,
         uploaded_bonsais,
@@ -245,7 +245,7 @@ fn run_pushrebase(
             uploaded_bonsais,
             any_merges,
             &onto_params,
-            maybe_raw_bundle2_id,
+            maybe_hg_replay_data,
             bookmark_attrs,
             infinitepush_params,
         )
@@ -255,7 +255,7 @@ fn run_pushrebase(
             repo.clone(),
             lca_hint,
             plain_push,
-            maybe_raw_bundle2_id,
+            maybe_hg_replay_data,
             bookmark_attrs,
             infinitepush_params,
         )
@@ -358,7 +358,7 @@ fn normal_pushrebase(
     changesets: Vec<BonsaiChangeset>,
     any_merges: bool,
     onto_bookmark: &pushrebase::OntoBookmarkParams,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<pushrebase::HgReplayData>,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
 ) -> impl Future<
@@ -405,7 +405,7 @@ fn normal_pushrebase(
                 pushrebase,
                 onto_bookmark,
                 changesets,
-                maybe_raw_bundle2_id,
+                maybe_hg_replay_data,
             )
         }
     })
@@ -436,7 +436,7 @@ fn force_pushrebase(
     repo: BlobRepo,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_hg_replay_data: Option<pushrebase::HgReplayData>,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
 ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error> {
@@ -445,7 +445,9 @@ fn force_pushrebase(
         maybe_target_bcs.ok_or(err_msg("new changeset is required for force pushrebase"))
     );
     let reason = BookmarkUpdateReason::Pushrebase {
-        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
+        bundle_replay_data: maybe_hg_replay_data
+            .map(|hg_replay_data| hg_replay_data.get_raw_bundle2_id())
+            .map(BundleReplayData::new),
     };
     // Note that this push did not do any actual rebases, so we do not
     // need to provide any actual mapping, an empty Vec will do

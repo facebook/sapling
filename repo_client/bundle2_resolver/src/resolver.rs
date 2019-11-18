@@ -37,6 +37,7 @@ use mercurial_types::{
 };
 use metaconfig_types::RepoReadOnly;
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
+use pushrebase::HgReplayData;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, trace};
 use std::collections::HashMap;
@@ -174,7 +175,7 @@ pub struct PostResolvePushRebase {
     pub any_merges: bool,
     pub bookmark_push_part_id: Option<PartId>,
     pub bookmark_spec: PushrebaseBookmarkSpec<ChangesetId>,
-    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub maybe_hg_replay_data: Option<HgReplayData>,
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub commonheads: CommonHeads,
     pub uploaded_bonsais: UploadedBonsais,
@@ -601,11 +602,21 @@ fn resolve_pushrebase(
                 let any_merges = changesets
                     .iter()
                     .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
+
+                let repo = resolver.repo.clone();
+                let maybe_hg_replay_data = maybe_raw_bundle2_id
+                    .map(|raw_bundle2_id| {
+                        HgReplayData::new_with_simple_convertor(
+                            ctx.clone(),
+                            raw_bundle2_id,
+                            repo,
+                        )
+                    });
                 PostResolveAction::PushRebase(PostResolvePushRebase {
                     any_merges,
                     bookmark_push_part_id,
                     bookmark_spec,
-                    maybe_raw_bundle2_id,
+                    maybe_hg_replay_data,
                     maybe_pushvars,
                     commonheads,
                     uploaded_bonsais,
