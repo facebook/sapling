@@ -9,11 +9,6 @@ file(GLOB WIN_UTILS_TEST_SRCS "*Test.cpp")
 # Boost, which fails the build. Taking out FileUtilsTest.cpp until we figure
 # that out.
 
-list(
-    REMOVE_ITEM WIN_UTILS_TEST_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/FileUtilsTest.cpp
-  )
-
 add_executable(
   eden_win_utils_test
   ${WIN_UTILS_TEST_SRCS}

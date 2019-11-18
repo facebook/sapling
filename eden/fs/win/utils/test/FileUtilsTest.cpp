@@ -6,20 +6,35 @@
  */
 
 #include "eden/fs/win/utils/FileUtils.h"
-#include <iostream>
+#include <filesystem>
 #include <string>
-#include "folly/experimental/TestUtil.h"
+#include "eden/fs/win/utils/Guid.h"
 #include "gtest/gtest.h"
 
 using namespace facebook::eden;
-using boost::filesystem::path;
-using folly::ByteRange;
-using folly::test::TemporaryDirectory;
-using folly::test::TemporaryFile;
+using std::filesystem::path;
 
-TEST(FileUtilsTest, testWriteReadFile) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
+namespace {
+class FileUtilsTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    create_directories(testLocation_);
+  }
+
+  void TearDown() override {
+    remove_all(testLocation_);
+  }
+
+  const path& getTestPath() {
+    return testLocation_;
+  }
+  path testLocation_ =
+      std::filesystem::temp_directory_path() / Guid::generate().toWString();
+};
+} // namespace
+
+TEST_F(FileUtilsTest, testWriteReadFile) {
+  auto filePath = getTestPath() / L"testfile.txt";
   auto fileString = filePath.generic_string();
 
   std::string writtenContents = "This is the test file.";
@@ -31,22 +46,19 @@ TEST(FileUtilsTest, testWriteReadFile) {
   EXPECT_EQ(writtenContents, readContents);
 }
 
-TEST(FileUtilsTest, testWriteReadFileWide) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
-  auto fileString = filePath.generic_wstring();
+TEST_F(FileUtilsTest, testWriteReadFileWide) {
+  auto filePath = getTestPath() / L"testfile.txt";
   std::string writtenContents = "This is the test file.";
 
-  writeFile(fileString.c_str(), writtenContents);
+  writeFile(filePath.c_str(), writtenContents);
   std::string readContents;
-  readFile(fileString.c_str(), readContents);
-  EXPECT_TRUE(DeleteFile(fileString.c_str()));
+  readFile(filePath.c_str(), readContents);
+  EXPECT_TRUE(DeleteFile(filePath.c_str()));
   EXPECT_EQ(writtenContents, readContents);
 }
 
-TEST(FileUtilsTest, testReadPartialFile) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
+TEST_F(FileUtilsTest, testReadPartialFile) {
+  auto filePath = getTestPath() / L"testfile.txt";
   auto fileString = filePath.generic_string();
   std::string writtenContents =
       "This is the test file. We plan to read the partial contents out of it";
@@ -58,23 +70,20 @@ TEST(FileUtilsTest, testReadPartialFile) {
   EXPECT_EQ(writtenContents.substr(0, 10), readContents);
 }
 
-TEST(FileUtilsTest, testReadPartialFileWide) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
-  auto fileString = filePath.generic_wstring();
+TEST_F(FileUtilsTest, testReadPartialFileWide) {
+  auto filePath = getTestPath() / L"testfile.txt";
   std::string writtenContents =
       "This is the test file. We plan to read the partial contents out of it";
 
-  writeFile(fileString.c_str(), writtenContents);
+  writeFile(filePath.c_str(), writtenContents);
   std::string readContents;
-  readFile(fileString.c_str(), readContents, 10);
-  EXPECT_TRUE(DeleteFile(fileString.c_str()));
+  readFile(filePath.c_str(), readContents, 10);
+  EXPECT_TRUE(DeleteFile(filePath.c_str()));
   EXPECT_EQ(writtenContents.substr(0, 10), readContents);
 }
 
-TEST(FileUtilsTest, testWriteFileAtomicNoTarget) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
+TEST_F(FileUtilsTest, testWriteFileAtomicNoTarget) {
+  auto filePath = getTestPath() / L"testfile.txt";
   auto fileString = filePath.generic_string();
   std::string writtenContents = "This is the test file.";
 
@@ -85,22 +94,19 @@ TEST(FileUtilsTest, testWriteFileAtomicNoTarget) {
   EXPECT_EQ(writtenContents, readContents);
 }
 
-TEST(FileUtilsTest, testWriteFileAtomicNoTargetWide) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
-  auto fileString = filePath.generic_wstring();
+TEST_F(FileUtilsTest, testWriteFileAtomicNoTargetWide) {
+  auto filePath = getTestPath() / L"testfile.txt";
   std::string writtenContents = "This is the test file.";
 
-  writeFileAtomic(fileString.c_str(), writtenContents);
+  writeFileAtomic(filePath.c_str(), writtenContents);
   std::string readContents;
-  readFile(fileString.c_str(), readContents);
-  EXPECT_TRUE(DeleteFile(fileString.c_str()));
+  readFile(filePath.c_str(), readContents);
+  EXPECT_TRUE(DeleteFile(filePath.c_str()));
   EXPECT_EQ(writtenContents, readContents);
 }
 
-TEST(FileUtilsTest, testWriteFileAtomicWithTarget) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
+TEST_F(FileUtilsTest, testWriteFileAtomicWithTarget) {
+  auto filePath = getTestPath() / L"testfile.txt";
   auto fileString = filePath.generic_string();
 
   // writeFileAtomic takes path with posix path separator.
@@ -117,28 +123,23 @@ TEST(FileUtilsTest, testWriteFileAtomicWithTarget) {
   EXPECT_EQ(writtenContents2, readContents);
 }
 
-TEST(FileUtilsTest, testWriteFileAtomicWithTargetWide) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
-  auto fileString = filePath.generic_wstring();
+TEST_F(FileUtilsTest, testWriteFileAtomicWithTargetWide) {
+  auto filePath = getTestPath() / L"testfile.txt";
 
-  // writeFileAtomic takes path with posix path separator.
-  std::replace(fileString.begin(), fileString.end(), L'\\', L'/');
   std::string writtenContents1 = "This is the test file.";
   std::string writtenContents2 = "This is new contents.";
 
-  writeFile(fileString.c_str(), writtenContents1);
+  writeFile(filePath.c_str(), writtenContents1);
 
-  writeFileAtomic(fileString.c_str(), writtenContents2);
+  writeFileAtomic(filePath.c_str(), writtenContents2);
   std::string readContents;
-  readFile(fileString.c_str(), readContents);
-  EXPECT_TRUE(DeleteFile(fileString.c_str()));
+  readFile(filePath.c_str(), readContents);
+  EXPECT_TRUE(DeleteFile(filePath.c_str()));
   EXPECT_EQ(writtenContents2, readContents);
 }
 
-TEST(FileUtilsTest, testWriteFileTruncate) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
+TEST_F(FileUtilsTest, testWriteFileTruncate) {
+  auto filePath = getTestPath() / L"testfile.txt";
   auto fileString = filePath.generic_string();
   std::string writtenContents = "This is the test file.";
 
@@ -150,23 +151,20 @@ TEST(FileUtilsTest, testWriteFileTruncate) {
   EXPECT_EQ("hi", readContents);
 }
 
-TEST(FileUtilsTest, testWriteFileTruncateWide) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
-  auto fileString = filePath.generic_wstring();
+TEST_F(FileUtilsTest, testWriteFileTruncateWide) {
+  auto filePath = getTestPath() / L"testfile.txt";
   std::string writtenContents = "This is the test file.";
 
-  writeFile(fileString.c_str(), std::string("Hello"));
-  writeFile(fileString.c_str(), std::string("hi"));
+  writeFile(filePath.c_str(), std::string("Hello"));
+  writeFile(filePath.c_str(), std::string("hi"));
   std::string readContents;
-  readFile(fileString.c_str(), readContents);
-  EXPECT_TRUE(DeleteFile(fileString.c_str()));
+  readFile(filePath.c_str(), readContents);
+  EXPECT_TRUE(DeleteFile(filePath.c_str()));
   EXPECT_EQ("hi", readContents);
 }
 
-TEST(FileUtilsTest, testReadFileFull) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
+TEST_F(FileUtilsTest, testReadFileFull) {
+  auto filePath = getTestPath() / L"testfile.txt";
   auto fileString = filePath.generic_string();
 
   std::string writtenContents = "This is the test file.";
@@ -188,16 +186,14 @@ TEST(FileUtilsTest, testReadFileFull) {
   DeleteFileA(fileString.c_str());
 }
 
-TEST(FileUtilsTest, testReadFileFullWide) {
-  TemporaryDirectory tmpDir;
-  auto filePath = tmpDir.path() / L"testfile.txt";
-  auto fileString = filePath.generic_wstring();
+TEST_F(FileUtilsTest, testReadFileFullWide) {
+  auto filePath = getTestPath() / L"testfile.txt";
 
   std::string writtenContents = "This is the test file.";
 
-  writeFile(fileString.c_str(), writtenContents);
+  writeFile(filePath.c_str(), writtenContents);
   FileHandle fileHandle{CreateFile(
-      fileString.c_str(),
+      filePath.c_str(),
       GENERIC_READ,
       0,
       nullptr,
@@ -209,41 +205,27 @@ TEST(FileUtilsTest, testReadFileFullWide) {
   DWORD read = readFile(fileHandle.get(), buffer, 1024);
 
   EXPECT_EQ(read, writtenContents.size());
-  DeleteFile(fileString.c_str());
+  DeleteFile(filePath.c_str());
 }
 
-TEST(FileUtilsTest, testGetEnumerationEntries) {
-  TemporaryDirectory tmpDir;
+TEST_F(FileUtilsTest, testGetEnumerationEntries) {
   std::string writtenContents = "This is the test file.";
 
-  writeFile(
-      path{tmpDir.path() / L"testfile1.txt"}.generic_string().c_str(),
-      writtenContents);
-  writeFile(
-      path{tmpDir.path() / L"testfile2.txt"}.generic_string().c_str(),
-      writtenContents);
-  writeFile(
-      path{tmpDir.path() / L"testfile3.txt"}.generic_string().c_str(),
-      writtenContents);
-  writeFile(
-      path{tmpDir.path() / L"testfile4.txt"}.generic_string().c_str(),
-      writtenContents);
-  writeFile(
-      path{tmpDir.path() / L"testfile5.txt"}.generic_string().c_str(),
-      writtenContents);
+  writeFile(path{getTestPath() / L"testfile1.txt"}.c_str(), writtenContents);
+  writeFile(path{getTestPath() / L"testfile2.txt"}.c_str(), writtenContents);
+  writeFile(path{getTestPath() / L"testfile3.txt"}.c_str(), writtenContents);
+  writeFile(path{getTestPath() / L"testfile4.txt"}.c_str(), writtenContents);
+  writeFile(path{getTestPath() / L"testfile5.txt"}.c_str(), writtenContents);
 
-  CreateDirectoryA(
-      path{tmpDir.path() / L"testdir1"}.generic_string().c_str(), nullptr);
-  CreateDirectoryA(
-      path{tmpDir.path() / L"testdir2"}.generic_string().c_str(), nullptr);
+  create_directory(path{getTestPath() / L"testdir1"});
+  create_directory(path{getTestPath() / L"testdir2"});
 
   // Add a directory with a different start letter so we are not always getting
   // all the directory together and then all the files.
-  CreateDirectoryA(
-      path{tmpDir.path() / L"zztestdir3"}.generic_string().c_str(), nullptr);
+  create_directory(path{getTestPath() / L"zztestdir3"});
 
   std::vector<DirectoryEntryA> entries =
-      getEnumerationEntries(tmpDir.path().generic_string() + "\\*");
+      getEnumerationEntries(path{getTestPath() / L"*"}.generic_string());
 
   EXPECT_EQ(entries.size(), 8);
   EXPECT_EQ(std::string(entries[0].data.cFileName), "testdir1");
@@ -256,7 +238,7 @@ TEST(FileUtilsTest, testGetEnumerationEntries) {
   EXPECT_EQ(std::string(entries[7].data.cFileName), "zztestdir3");
 
   std::vector<DirectoryEntryW> entriesWide =
-      getEnumerationEntries(tmpDir.path().generic_wstring() + L"\\*");
+      getEnumerationEntries(getTestPath() / L"*");
 
   EXPECT_EQ(entriesWide.size(), 8);
   EXPECT_EQ(std::wstring(entriesWide[0].data.cFileName), L"testdir1");
