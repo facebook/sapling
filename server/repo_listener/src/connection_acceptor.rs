@@ -310,9 +310,8 @@ impl ConnectionsSecurityChecker {
 
     fn check_if_connections_allowed(&self, identities: &Vec<Identity>) -> bool {
         if let Some(ref aclchecker) = self.tier_aclchecker {
-            let identities_ref: Vec<_> = identities.iter().collect();
             let action = "tupperware";
-            if aclchecker.check(identities_ref.as_ref(), &[action]) {
+            if aclchecker.check(identities.as_ref(), &[action]) {
                 return true;
             }
         }

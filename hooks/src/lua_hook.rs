@@ -157,8 +157,8 @@ impl Hook<HookChangeset> for LuaHook {
                 let system_user = Identity::with_system_user(&user);
                 let valid = match *reviewers_acl_checker {
                     Some(ref reviewers_acl_checker) => {
-                        reviewers_acl_checker.is_member(&[&regular_user])
-                            || reviewers_acl_checker.is_member(&[&system_user])
+                        reviewers_acl_checker.is_member(&[regular_user])
+                            || reviewers_acl_checker.is_member(&[system_user])
                     }
                     None => false,
                 };
