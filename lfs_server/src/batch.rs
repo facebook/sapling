@@ -152,11 +152,12 @@ async fn resolve_internal_object(
     // of the content is what makes it logically exists), so we should check for the content's
     // existence before we proceed here. This wouldn't matter if we didn't have an upstream, but it
     // does matter for now to handle the (very much edge-y) case of the content existing in the
-    // upstream, its alias existing locally, but not its content.
+    // upstream, its alias existing locally, but not its content (T57777060).
     let exists = blobstore
-        .is_present(ctx.ctx.clone(), content_id.blobstore_key())
+        .get(ctx.ctx.clone(), content_id.blobstore_key())
         .compat()
-        .await?;
+        .await?
+        .is_some();
 
     if exists {
         Ok(Some(content_id))
