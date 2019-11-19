@@ -170,7 +170,7 @@ macro_rules! enum_str {
     (enum $name:ident {
         $($variant:ident),*,
     }) => {
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
         pub enum $name {
             $($variant),*
         }
@@ -272,6 +272,10 @@ impl PerfCounters {
 
     pub fn set_counter(&self, counter: PerfCounterType, val: i64) {
         self.counters.insert(counter, val);
+    }
+
+    pub fn get_counter(&self, counter: PerfCounterType) -> i64 {
+        self.counters.get(&counter).map(|c| *c).unwrap_or(0)
     }
 
     pub fn increment_counter(&self, counter: PerfCounterType) {
