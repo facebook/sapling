@@ -109,6 +109,8 @@ pub struct RepoConfig {
     pub commit_sync_config: Option<CommitSyncConfig>,
     /// Maximum size to consider files in hooks
     pub hook_max_file_size: u64,
+    /// Hipster ACL that controls access to this repo
+    pub hipster_acl: Option<String>,
 }
 
 impl RepoConfig {

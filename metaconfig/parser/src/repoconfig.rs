@@ -774,6 +774,7 @@ impl RepoConfigs {
             filestore,
             commit_sync_config,
             hook_max_file_size,
+            hipster_acl: this.hipster_acl,
         })
     }
 
@@ -871,6 +872,7 @@ struct RawRepoConfig {
     list_keys_patterns_max: Option<u64>,
     filestore: Option<RawFilestoreParams>,
     hook_max_file_size: Option<u64>,
+    hipster_acl: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1550,6 +1552,7 @@ mod test {
             storage_config="main"
             list_keys_patterns_max=123
             hook_max_file_size=456
+            hipster_acl="foo/test"
 
             [wireproto_logging]
             scribe_category="category"
@@ -1817,6 +1820,7 @@ mod test {
                     concurrency: 48,
                 }),
                 commit_sync_config: None,
+                hipster_acl: Some("foo/test".to_string()),
             },
         );
 
@@ -1856,6 +1860,7 @@ mod test {
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 filestore: None,
                 commit_sync_config: None,
+                hipster_acl: None,
             },
         );
         assert_eq!(

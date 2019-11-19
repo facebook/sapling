@@ -1132,6 +1132,7 @@ fn default_repo_config() -> RepoConfig {
         filestore: None,
         commit_sync_config: None,
         hook_max_file_size: 456,
+        hipster_acl: None,
     }
 }
 
