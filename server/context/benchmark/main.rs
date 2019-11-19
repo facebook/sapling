@@ -13,7 +13,7 @@ use chrono::Local;
 use context::{PerfCounterType, PerfCounters};
 
 fn main() {
-    let ctrs = Arc::new(PerfCounters::new());
+    let ctrs = Arc::new(PerfCounters::default());
     let k = PerfCounterType::BlobGets;
     let k2 = PerfCounterType::BlobPuts;
 

@@ -1153,9 +1153,7 @@ fn log_result(
     stats: &FutureStats,
     query: &serde_json::value::Value,
 ) {
-    if !ctx.perf_counters().is_empty() {
-        ctx.perf_counters().insert_perf_counters(&mut scuba);
-    }
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
 
     let server_error = match resp {
         Ok(_) => false,

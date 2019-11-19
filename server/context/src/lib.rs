@@ -6,16 +6,14 @@
  * directory of this source tree.
  */
 
-#![feature(never_type)]
+#![feature(never_type, atomic_min_max)]
 
-use chashmap::CHashMap;
 use failure_ext::Error;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use limits::types::{MononokeThrottleLimit, RateLimits};
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
 use std::{
-    collections::HashMap,
     fmt,
     sync::Arc,
     time::{Duration, Instant},
@@ -30,6 +28,10 @@ use slog::{info, o, warn, Logger};
 use sshrelay::SshEnvVars;
 use tracing::{generate_trace_id, TraceContext};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
+
+pub use perf_counters::{PerfCounterType, PerfCounters};
+
+mod perf_counters;
 
 #[derive(Debug)]
 pub enum Metric {
@@ -163,173 +165,6 @@ pub fn is_quicksand(ssh_env_vars: &SshEnvVars) -> bool {
         ssh_cert_principals.contains("quicksand")
     } else {
         false
-    }
-}
-
-macro_rules! enum_str {
-    (enum $name:ident {
-        $($variant:ident),*,
-    }) => {
-        #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-        pub enum $name {
-            $($variant),*
-        }
-
-        impl $name {
-            pub fn name(&self) -> &'static str {
-                match self {
-                    $($name::$variant => stringify!($variant)),*
-                }
-            }
-        }
-
-        fn init_counters() -> HashMap<$name, i64> {
-            let mut counters = HashMap::new();
-            $(counters.insert($name::$variant, 0);)*
-
-            counters
-        }
-    };
-}
-
-enum_str! {
-    enum PerfCounterType {
-        BlobGets,
-        BlobGetsMaxLatency,
-        BlobPresenceChecks,
-        BlobPresenceChecksMaxLatency,
-        BlobPuts,
-        BlobPutsMaxLatency,
-        CachelibHits,
-        CachelibMisses,
-        GetbundleNumCommits,
-        GetfilesMaxFileSize,
-        GetfilesMaxLatency,
-        GetfilesNumFiles,
-        GetfilesResponseSize,
-        GetpackMaxFileSize,
-        GetpackNumFiles,
-        GetpackResponseSize,
-        GettreepackNumTreepacks,
-        GettreepackResponseSize,
-        MemcacheHits,
-        MemcacheMisses,
-        SkiplistAncestorGen,
-        SkiplistDescendantGen,
-        SkiplistNoskipIterations,
-        SkiplistSkipIterations,
-        SkiplistSkippedGenerations,
-        SqlReadsMaster,
-        SqlReadsReplica,
-        SqlWrites,
-        SumManifoldPollTime,
-    }
-}
-
-impl PerfCounterType {
-    pub(crate) fn log_in_separate_column(&self) -> bool {
-        use PerfCounterType::*;
-
-        match self {
-            BlobGets
-            | BlobGetsMaxLatency
-            | BlobPresenceChecks
-            | BlobPresenceChecksMaxLatency
-            | BlobPuts
-            | BlobPutsMaxLatency
-            | CachelibHits
-            | CachelibMisses
-            | MemcacheHits
-            | MemcacheMisses
-            | SqlReadsMaster
-            | SqlReadsReplica
-            | SqlWrites => true,
-            _ => false,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct PerfCounters {
-    // A wrapper around a concurrent HashMap that allows for
-    // tracking of arbitrary counters.
-    counters: CHashMap<PerfCounterType, i64>,
-}
-
-impl PerfCounters {
-    pub fn new() -> Self {
-        Self {
-            counters: CHashMap::new(),
-        }
-    }
-
-    pub fn change_counter<F>(&self, counter: PerfCounterType, default: i64, update: F)
-    where
-        F: FnOnce(&mut i64),
-    {
-        self.counters.upsert(counter, || default, update);
-    }
-
-    pub fn set_counter(&self, counter: PerfCounterType, val: i64) {
-        self.counters.insert(counter, val);
-    }
-
-    pub fn get_counter(&self, counter: PerfCounterType) -> i64 {
-        self.counters.get(&counter).map(|c| *c).unwrap_or(0)
-    }
-
-    pub fn increment_counter(&self, counter: PerfCounterType) {
-        self.add_to_counter(counter, 1);
-    }
-
-    pub fn decrement_counter(&self, counter: PerfCounterType) {
-        self.add_to_counter(counter, -1);
-    }
-
-    pub fn add_to_counter(&self, counter: PerfCounterType, val: i64) {
-        self.change_counter(counter, val, |old| *old += val);
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.counters.is_empty()
-    }
-
-    pub fn set_max_counter(&self, counter: PerfCounterType, val: i64) {
-        self.change_counter(counter, val, |old| {
-            if val > *old {
-                *old = val
-            }
-        });
-    }
-
-    pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
-        let mut counters = init_counters();
-        for (key, value) in self.counters.clone().into_iter() {
-            counters.insert(key, value);
-        }
-
-        let mut extra = HashMap::new();
-        // NOTE: we log 0 to separate scuba columns mainly so that we can distinguish
-        // nulls i.e. "not logged" and 0 as in "zero calls to blobstore". Logging 0 allows
-        // counting avg, p50 etc statistic.
-        // However we do not log 0 in extras to save space
-        for (key, value) in counters {
-            if key.log_in_separate_column() {
-                builder.add(key.name(), value);
-            } else {
-                if value != 0 {
-                    extra.insert(key.name(), value);
-                }
-            }
-        }
-
-        if !extra.is_empty() {
-            if let Ok(extra) = serde_json::to_string(&extra) {
-                // Scuba does not support columns that are too long, we have to trim it
-                let limit = ::std::cmp::min(extra.len(), 1000);
-                builder.add("extra_context", &extra[..limit]);
-            }
-        }
     }
 }
 
@@ -479,7 +314,7 @@ impl LoggingContainer {
         Self {
             logger,
             scuba: Arc::new(scuba),
-            perf_counters: Arc::new(PerfCounters::new()),
+            perf_counters: Arc::new(PerfCounters::default()),
         }
     }
 
