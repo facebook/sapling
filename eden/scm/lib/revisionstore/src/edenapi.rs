@@ -24,6 +24,7 @@ use crate::{
 #[derive(Clone)]
 pub struct EdenApiRemoteStore(Arc<Box<dyn EdenApi>>);
 
+#[cfg(test)]
 impl EdenApiRemoteStore {
     pub fn new(edenapi: Box<dyn EdenApi>) -> Self {
         Self(Arc::new(edenapi))
