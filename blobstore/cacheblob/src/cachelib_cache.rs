@@ -13,6 +13,7 @@ use bytes::Bytes;
 
 use crate::locking_cache::CacheOps;
 use cachelib::LruCachePool;
+use context::PerfCounterType;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
@@ -70,6 +71,9 @@ where
 }
 
 impl CacheOps for CachelibOps {
+    const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibHits);
+    const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibMisses);
+
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
         self.blob_pool
             .get(key)

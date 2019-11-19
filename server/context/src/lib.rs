@@ -200,25 +200,29 @@ enum_str! {
         BlobPresenceChecksMaxLatency,
         BlobPuts,
         BlobPutsMaxLatency,
+        CachelibHits,
+        CachelibMisses,
         GetbundleNumCommits,
         GetfilesMaxFileSize,
         GetfilesMaxLatency,
         GetfilesNumFiles,
         GetfilesResponseSize,
-        GettreepackResponseSize,
-        GettreepackNumTreepacks,
         GetpackMaxFileSize,
         GetpackNumFiles,
         GetpackResponseSize,
+        GettreepackNumTreepacks,
+        GettreepackResponseSize,
+        MemcacheHits,
+        MemcacheMisses,
         SkiplistAncestorGen,
         SkiplistDescendantGen,
         SkiplistNoskipIterations,
         SkiplistSkipIterations,
         SkiplistSkippedGenerations,
-        SumManifoldPollTime,
-        SqlReadsReplica,
         SqlReadsMaster,
+        SqlReadsReplica,
         SqlWrites,
+        SumManifoldPollTime,
     }
 }
 
@@ -233,8 +237,12 @@ impl PerfCounterType {
             | BlobPresenceChecksMaxLatency
             | BlobPuts
             | BlobPutsMaxLatency
-            | SqlReadsReplica
+            | CachelibHits
+            | CachelibMisses
+            | MemcacheHits
+            | MemcacheMisses
             | SqlReadsMaster
+            | SqlReadsReplica
             | SqlWrites => true,
             _ => false,
         }

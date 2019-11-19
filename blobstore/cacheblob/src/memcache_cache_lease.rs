@@ -16,6 +16,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 
 use blobstore::{Blobstore, CountedBlobstore};
+use context::PerfCounterType;
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
 use stats::{define_stats, DynamicTimeseries, Timeseries};
@@ -195,6 +196,9 @@ where
 }
 
 impl CacheOps for MemcacheOps {
+    const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheHits);
+    const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheMisses);
+
     // Turns errors to Ok(None)
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
         let mc_key = self.keygen.key(key);

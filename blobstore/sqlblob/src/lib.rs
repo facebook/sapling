@@ -14,7 +14,7 @@ mod store;
 use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use crate::store::{ChunkSqlStore, DataSqlStore};
 use blobstore::{Blobstore, CountedBlobstore};
-use cacheblob::{dummy::DummyCache, MemcacheOps};
+use cacheblob::{dummy::DummyCache, CacheOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, Result};
@@ -43,7 +43,7 @@ const CHUNK_SIZE: usize = MEMCACHE_VALUE_MAX_SIZE - 1000;
 const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(100) };
 
 const COUNTED_ID: &str = "sqlblob";
-pub type CountedSqlblob = CountedBlobstore<Sqlblob>;
+pub type CountedSqlblob<C> = CountedBlobstore<Sqlblob<C>>;
 
 define_stats! {
     prefix = "mononoke.blobstore.sqlblob";
@@ -64,21 +64,21 @@ fn i32_to_non_zero_usize(val: i32) -> Option<NonZeroUsize> {
     }
 }
 
-pub struct Sqlblob {
+pub struct Sqlblob<C> {
     data_store: DataSqlStore,
     chunk_store: ChunkSqlStore,
-    data_cache: SqlblobCacheOps<DataCacheTranslator>,
-    chunk_cache: SqlblobCacheOps<ChunkCacheTranslator>,
+    data_cache: SqlblobCacheOps<DataCacheTranslator, C>,
+    chunk_cache: SqlblobCacheOps<ChunkCacheTranslator, C>,
 }
 
-impl Sqlblob {
+impl Sqlblob<MemcacheOps> {
     pub fn with_myrouter(
         fb: FacebookInit,
         shardmap: String,
         port: u16,
         shard_num: NonZeroUsize,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
         Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
@@ -98,7 +98,7 @@ impl Sqlblob {
         shardmap: String,
         shard_num: NonZeroUsize,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
         Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id), readonly).boxify()
         })
@@ -109,7 +109,7 @@ impl Sqlblob {
         label: String,
         shard_num: NonZeroUsize,
         connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
         let shard_count = shard_num.get();
 
         let futs: Vec<_> = (0..shard_count)
@@ -181,8 +181,10 @@ impl Sqlblob {
             })
             .boxify()
     }
+}
 
-    pub fn with_sqlite_in_memory() -> Result<CountedSqlblob> {
+impl Sqlblob<DummyCache> {
+    pub fn with_sqlite_in_memory() -> Result<CountedSqlblob<DummyCache>> {
         Self::with_sqlite(|_| {
             let con = open_sqlite_in_memory()?;
             con.execute_batch(Self::get_up_query())?;
@@ -193,7 +195,7 @@ impl Sqlblob {
     pub fn with_sqlite_path<P: Into<PathBuf>>(
         path: P,
         readonly_storage: bool,
-    ) -> Result<CountedSqlblob> {
+    ) -> Result<CountedSqlblob<DummyCache>> {
         let pathbuf = path.into();
         Self::with_sqlite(move |shard_id| {
             let con = open_sqlite_path(
@@ -207,7 +209,7 @@ impl Sqlblob {
         })
     }
 
-    fn with_sqlite<F>(mut constructor: F) -> Result<CountedSqlblob>
+    fn with_sqlite<F>(mut constructor: F) -> Result<CountedSqlblob<DummyCache>>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
@@ -241,22 +243,24 @@ impl Sqlblob {
         ))
     }
 
-    fn counted(self, label: String) -> CountedSqlblob {
-        CountedBlobstore::new(format!("{}.{}", COUNTED_ID, label), self)
-    }
-
     fn get_up_query() -> &'static str {
         include_str!("../schema/sqlite-sqlblob.sql")
     }
 }
 
-impl fmt::Debug for Sqlblob {
+impl<C: CacheOps> Sqlblob<C> {
+    fn counted(self, label: String) -> CountedBlobstore<Self> {
+        CountedBlobstore::new(format!("{}.{}", COUNTED_ID, label), self)
+    }
+}
+
+impl<C: CacheOps> fmt::Debug for Sqlblob<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Sqlblob").finish()
     }
 }
 
-impl Blobstore for Sqlblob {
+impl<C: CacheOps> Blobstore for Sqlblob<C> {
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         cloned!(
             self.data_store,

@@ -8,7 +8,7 @@
 
 use blobstore::{Blobstore, CountedBlobstore};
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use failure_ext::Error;
 use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -56,6 +56,9 @@ pub trait CacheBlobstoreExt: Blobstore {
 /// No state is permitted to demote to Leased.
 /// Caches that do not support LeaseOps do not have the Leased state.
 pub trait CacheOps: fmt::Debug + Send + Sync + 'static {
+    const HIT_COUNTER: Option<PerfCounterType> = None;
+    const MISS_COUNTER: Option<PerfCounterType> = None;
+
     /// Fetch the blob from the cache, if possible. Return `None` if the cache does not have a
     /// copy of the blob (i.e. the cache entry is not in Known state).
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()>;
@@ -245,18 +248,21 @@ where
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let cache_get = CacheOpsUtil::get(&self.cache, &key);
         let cache_put = CacheOpsUtil::put_closure(&self.cache, &key);
-        let blobstore_get = future::lazy({
-            let blobstore = self.blobstore.clone();
-            move || blobstore.get(ctx, key)
-        });
 
         cache_get
             .and_then({
+                cloned!(self.blobstore);
                 move |blob| {
                     if blob.is_some() {
+                        if let Some(counter) = C::HIT_COUNTER {
+                            ctx.perf_counters().increment_counter(counter);
+                        }
                         future::Either::A(Ok(blob).into_future())
                     } else {
-                        future::Either::B(blobstore_get.map(cache_put))
+                        if let Some(counter) = C::MISS_COUNTER {
+                            ctx.perf_counters().increment_counter(counter);
+                        }
+                        future::Either::B(blobstore.get(ctx, key).map(cache_put))
                     }
                 }
             })

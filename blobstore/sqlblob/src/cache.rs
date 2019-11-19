@@ -31,18 +31,27 @@ pub(crate) trait CacheTranslator {
     fn cache_key(&self, key: &Self::Key) -> String;
 }
 
-#[derive(Clone)]
-pub(crate) struct SqlblobCacheOps<T> {
-    cache: Arc<dyn CacheOps>,
+pub(crate) struct SqlblobCacheOps<T, C> {
+    cache: Arc<C>,
     translator: T,
 }
 
-impl<T> SqlblobCacheOps<T>
+impl<T: Clone, C> Clone for SqlblobCacheOps<T, C> {
+    fn clone(&self) -> Self {
+        Self {
+            cache: self.cache.clone(),
+            translator: self.translator.clone(),
+        }
+    }
+}
+
+impl<T, C> SqlblobCacheOps<T, C>
 where
     T: CacheTranslator + Clone + Send + 'static,
     T::Value: Send + 'static,
+    C: CacheOps,
 {
-    pub(crate) fn new(cache: Arc<dyn CacheOps>, translator: T) -> Self {
+    pub(crate) fn new(cache: Arc<C>, translator: T) -> Self {
         Self { cache, translator }
     }
 
