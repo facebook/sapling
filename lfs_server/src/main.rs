@@ -13,7 +13,7 @@
 use clap::Arg;
 use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
-use futures::{empty, future::Either, sync::oneshot, Future, IntoFuture};
+use futures::{future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
@@ -33,10 +33,10 @@ use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
 use blobrepo_factory::open_blobrepo;
+use cmdlib::{args, monitoring::start_fb303_server};
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
-
-use cmdlib::{args, monitoring::create_fb303_and_stats_agg};
+use stats::schedule_stats_aggregation;
 
 use crate::config::spawn_config_poller;
 use crate::handler::MononokeLfsHandler;
@@ -229,10 +229,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut runtime = tokio::runtime::Runtime::new()?;
 
-    let stats_aggregation = match create_fb303_and_stats_agg(fb, SERVICE_NAME, &logger, &matches)? {
-        Some(fut) => fut.discard().left_future(),
-        None => empty().right_future(),
-    };
+    let stats_aggregation = schedule_stats_aggregation()
+        .map_err(|_| err_msg("Failed to create stats aggregation worker"))?
+        .discard();
 
     let repos: HashMap<_, _> = runtime
         .block_on(try_join_all(futs).compat())?
@@ -288,6 +287,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .chain_err(err_msg("Invalid Listener Address"))?
         .next()
         .ok_or(err_msg("Invalid Socket Address"))?;
+
+    start_fb303_server(fb, SERVICE_NAME, &logger, &matches)?;
 
     let listener = TcpListener::bind(&addr).chain_err(err_msg("Could not start TCP listener"))?;
 

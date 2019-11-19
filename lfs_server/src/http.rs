@@ -149,6 +149,13 @@ impl HttpError {
         }
     }
 
+    pub fn e429<E: Into<Error>>(err: E) -> Self {
+        Self {
+            error: err.into(),
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+        }
+    }
+
     pub fn e500<E: Into<Error>>(err: E) -> Self {
         Self {
             error: err.into(),
