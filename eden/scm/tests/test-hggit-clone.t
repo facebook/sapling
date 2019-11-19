@@ -34,7 +34,7 @@ clone a tag
   
 Make sure this is still draft since we didn't pull remote's HEAD
   $ hg -R hgrepo-a phase -r alpha
-  0: draft
+  69982ec78c6dd2f24b3b62f3e2baaa79ab48ed93: draft
 
 clone a branch
   $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
