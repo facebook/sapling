@@ -81,6 +81,7 @@ const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 const ARG_TEST_IDENTITY: &str = "allowed-test-identity";
+const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -194,6 +195,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .number_of_values(1)
                 .required(false)
                 .help("Test identity to allow (NOTE: this will disable AclChecker)"),
+        )
+        .arg(
+            Arg::with_name(ARG_TEST_FRIENDLY_LOGGING)
+                .long(ARG_TEST_FRIENDLY_LOGGING)
+                .takes_value(false)
+                .required(false)
+                .help("Whether or not to use test-friendly logging"),
         );
 
     let app = args::add_fb303_args(app);
@@ -319,12 +327,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         config,
     )?;
 
+    let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
+        true => LogMiddleware::test_friendly(),
+        false => LogMiddleware::slog(logger.clone()),
+    };
+
     let router = build_router(fb, ctx);
 
     let root = MononokeLfsHandler::builder()
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(RequestContextMiddleware::new(fb, logger.clone()))
-        .add(LogMiddleware::new(logger.clone()))
+        .add(log_middleware)
         .add(ServerIdentityMiddleware::new())
         .add(LoadMiddleware::new())
         .add(ScubaMiddleware::new(

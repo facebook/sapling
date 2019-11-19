@@ -39,17 +39,18 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
   $ cat "$log_proxy"
-  *POST /lfs_repo/objects/batch * 200 * (glob)
-  *GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d * 200 * (glob)
+  POST /lfs_repo/objects/batch 200 OK
+  GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
   $ truncate -s 0 "$log_proxy"
 
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
-  $ hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
+  $ env time -f "%E" -- hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
   abort: LFS HTTP error: HTTP Error 502: Bad Gateway (action=download)!
+  0:04.* (glob)
   [255]
 
   $ cat "$log_proxy"
-  *POST /lfs_repo/objects/batch * 502 * 4* (glob)
+  POST /lfs_repo/objects/batch 502 Bad Gateway
   $ truncate -s 0 "$log_proxy"
 
 # Kill nc, otherwise we don't exit properly :/

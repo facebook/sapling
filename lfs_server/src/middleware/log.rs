@@ -15,17 +15,22 @@ use time_ext::DurationExt;
 use super::{ClientIdentity, Middleware, RequestContext};
 
 #[derive(Clone)]
-pub struct LogMiddleware {
-    logger: Logger,
+pub enum LogMiddleware {
+    TestFriendly,
+    Slog(Logger),
 }
 
 impl LogMiddleware {
-    pub fn new(logger: Logger) -> Self {
-        Self { logger }
+    pub fn test_friendly() -> Self {
+        Self::TestFriendly
+    }
+
+    pub fn slog(logger: Logger) -> Self {
+        Self::Slog(logger)
     }
 }
 
-fn log_request(logger: &Logger, state: &mut State, status: StatusCode) -> Option<()> {
+fn log_request_slog(logger: &Logger, state: &mut State, status: StatusCode) -> Option<()> {
     let uri = Uri::try_borrow_from(&state)?;
     if uri.path() == "/health_check" {
         return None;
@@ -61,8 +66,22 @@ fn log_request(logger: &Logger, state: &mut State, status: StatusCode) -> Option
     None
 }
 
+fn log_request_test_friendly(state: &mut State, status: StatusCode) -> Option<()> {
+    let method = Method::try_borrow_from(&state)?;
+    let uri = Uri::try_borrow_from(&state)?;
+    eprintln!("{} {} {}", method, uri, status);
+    None
+}
+
 impl Middleware for LogMiddleware {
     fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
-        log_request(&self.logger, state, response.status());
+        match self {
+            Self::TestFriendly => {
+                log_request_test_friendly(state, response.status());
+            }
+            Self::Slog(ref logger) => {
+                log_request_slog(&logger, state, response.status());
+            }
+        }
     }
 }

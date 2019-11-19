@@ -57,5 +57,5 @@
 
 # Verify that we used the consistent URL
   $ tail -n 2 "$LFS_LOG"
-  *POST /repo1/objects/batch * 200 * (glob)
-  *GET /repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?routing=ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 * 200 * (glob)
+  POST /repo1/objects/batch 200 OK
+  GET /repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?routing=ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 200 OK

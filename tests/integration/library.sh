@@ -759,6 +759,7 @@ function lfs_server {
     --mononoke-config-path "$TESTTMP/mononoke-config"
     --listen-host 127.0.0.1
     --listen-port "$port"
+    --test-friendly-logging
   )
   args=()
 
