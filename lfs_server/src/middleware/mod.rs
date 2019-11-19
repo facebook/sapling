@@ -19,7 +19,9 @@ mod scuba;
 mod server_identity;
 mod timer;
 
-pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
+pub use self::client_identity::{
+    CertIdentitiesPreStateData, ClientIdentity, ClientIdentityMiddleware,
+};
 pub use self::load::{LoadMiddleware, RequestLoad};
 pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;

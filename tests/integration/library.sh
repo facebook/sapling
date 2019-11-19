@@ -56,6 +56,14 @@ function sslcurl {
   curl --cert "$TEST_CERTDIR/localhost.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/localhost.key" "$@"
 }
 
+function ssldebuglfssend {
+  hg --config extensions.lfs= --config hostsecurity.localhost:verifycertsfile="$TEST_CERTDIR/root-ca.crt" \
+    --config auth.lfs.cert="$TEST_CERTDIR/localhost.crt" \
+    --config auth.lfs.key="$TEST_CERTDIR/localhost.key" \
+    --config auth.lfs.schemes=https \
+    --config auth.lfs.prefix=localhost debuglfssend "$@"
+}
+
 function mononoke {
   # Ignore specific Python warnings to make tests predictable.
   export MONONOKE_SOCKET
@@ -764,7 +772,6 @@ function lfs_server {
       shift
       shift
     elif [[ "$1" = "--tls" ]]; then
-      shift
       proto="https"
       poll="sslcurl"
       opts=(
@@ -779,6 +786,10 @@ function lfs_server {
       opts=("${opts[@]}" "$1")
       shift
     elif [[ "$1" = "--scuba-log-file" ]]; then
+      opts=("${opts[@]}" "$1" "$2")
+      shift
+      shift
+    elif [[ "$1" = "--trusted-proxy-identity" ]]; then
       opts=("${opts[@]}" "$1" "$2")
       shift
       shift

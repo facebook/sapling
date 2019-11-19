@@ -10,14 +10,16 @@
 #![feature(async_closure, option_flattening, never_type)]
 #![deny(warnings)]
 
-use clap::Arg;
+use aclchecker::Identity;
+use clap::{Arg, Values};
+use cloned::cloned;
 use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
 use futures::{future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
-use gotham::bind_server;
+use gotham::{bind_server, bind_server_with_pre_state};
 use scuba::ScubaSampleBuilder;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::{info, warn};
@@ -42,8 +44,9 @@ use crate::config::spawn_config_poller;
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
-    ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
-    RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
+    CertIdentitiesPreStateData, ClientIdentityMiddleware, LoadMiddleware, LogMiddleware,
+    OdsMiddleware, RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware,
+    TimerMiddleware,
 };
 use crate::service::build_router;
 
@@ -73,6 +76,7 @@ const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
+const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -168,6 +172,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .default_value("5")
                 .help("How often to reload the live config, in seconds"),
+        )
+        .arg(
+            Arg::with_name(ARG_TRUSTED_PROXY_IDENTITY)
+                .long(ARG_TRUSTED_PROXY_IDENTITY)
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Proxy identity to trust"),
         );
 
     let app = args::add_fb303_args(app);
@@ -192,6 +205,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     } else {
         ScubaSampleBuilder::with_discard()
     };
+
+    let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
 
     scuba_logger.add_common_server_data();
 
@@ -265,7 +280,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let router = build_router(fb, ctx);
 
     let root = MononokeLfsHandler::builder()
-        .add(ClientIdentityMiddleware::new())
+        .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LogMiddleware::new(logger.clone()))
         .add(ServerIdentityMiddleware::new())
@@ -311,16 +326,27 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )?;
             let acceptor = fbs_tls_builder.build();
 
-            bind_server(listener, root, {
-                let logger = logger.clone();
+            bind_server_with_pre_state(listener, root, {
+                cloned!(logger);
                 move |socket| {
-                    acceptor.accept_async(socket).map_err({
-                        let logger = logger.clone();
-                        move |e| {
-                            warn!(&logger, "TLS handshake failed: {:?}", e);
-                            ()
-                        }
-                    })
+                    acceptor
+                        .accept_async(socket)
+                        .map({
+                            |ssl_stream| {
+                                let cert_idents = CertIdentitiesPreStateData::from_ssl(
+                                    ssl_stream.get_ref().ssl(),
+                                );
+
+                                (ssl_stream, cert_idents)
+                            }
+                        })
+                        .map_err({
+                            cloned!(logger);
+                            move |e| {
+                                warn!(&logger, "TLS handshake failed: {:?}", e);
+                                ()
+                            }
+                        })
                 }
             })
             .left_future()
@@ -391,4 +417,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     info!(&logger, "Exiting...");
 
     Ok(())
+}
+
+fn idents_from_values<'a>(matches: Option<Values<'a>>) -> Result<Vec<Identity>, Error> {
+    match matches {
+        Some(matches) => matches
+            .map(|ident| {
+                let mut parts = ident.split(":");
+
+                match (parts.next(), parts.next(), parts.next()) {
+                    (Some(ty), Some(data), None) => Ok(Identity::new(&ty, &data)),
+                    _ => Err(err_msg("Invalid identity format, expected TYPE:DATA")),
+                }
+            })
+            .collect(),
+        None => Ok(vec![]),
+    }
 }

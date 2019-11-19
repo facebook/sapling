@@ -113,9 +113,9 @@
   }
   {
     "int": {
-      "BlobGets": 1,
+      "BlobGets": 2,
       "BlobGetsMaxLatency": *, (glob)
-      "BlobPresenceChecks": 1,
+      "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)

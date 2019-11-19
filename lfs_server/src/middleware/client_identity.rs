@@ -8,12 +8,16 @@
 
 use aclchecker::Identity;
 use gotham::state::{client_addr, FromState, State};
+use gotham::PreStateData;
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
 use json_encoded::get_identities;
 use lazy_static::lazy_static;
+use openssl::ssl::SslRef;
 use percent_encoding::percent_decode;
 use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
+use x509::identity;
 
 use super::Middleware;
 
@@ -24,6 +28,35 @@ const CLIENT_CORRELATOR: &str = "x-client-correlator";
 lazy_static! {
     static ref PROXYGEN_ORIGIN_IDENTITY: Identity =
         Identity::new("SERVICE_IDENTITY", "proxygen-origin");
+}
+
+pub struct CertIdentitiesPreStateData {
+    identities: Option<Vec<Identity>>,
+}
+
+impl CertIdentitiesPreStateData {
+    pub fn from_ssl(ssl_ref: &SslRef) -> Self {
+        let identities = match ssl_ref.peer_certificate() {
+            Some(cert) => identity::get_identities(&cert).ok(),
+            None => None,
+        };
+
+        Self { identities }
+    }
+}
+
+#[derive(StateData)]
+pub struct CertIdentitiesStateData {
+    identities: Option<Vec<Identity>>,
+}
+
+impl PreStateData for CertIdentitiesPreStateData {
+    fn fill_state(&self, state: &mut State) {
+        let data = CertIdentitiesStateData {
+            identities: self.identities.clone(),
+        };
+        state.put(data);
+    }
 }
 
 #[derive(StateData, Default)]
@@ -56,11 +89,15 @@ impl ClientIdentity {
 }
 
 #[derive(Clone)]
-pub struct ClientIdentityMiddleware {}
+pub struct ClientIdentityMiddleware {
+    trusted_proxy_idents: Arc<Vec<Identity>>,
+}
 
 impl ClientIdentityMiddleware {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(trusted_proxy_idents: Vec<Identity>) -> Self {
+        Self {
+            trusted_proxy_idents: Arc::new(trusted_proxy_idents),
+        }
     }
 }
 
@@ -80,6 +117,31 @@ fn request_identities_from_headers(headers: &HeaderMap) -> Option<Vec<Identity>>
     Some(identities)
 }
 
+fn is_trusted_proxy(cert_idents: &[Identity], trusted_proxy_idents: &[Identity]) -> bool {
+    cert_idents.iter().any(|ident| {
+        trusted_proxy_idents
+            .iter()
+            .any(|trusted_ident| trusted_ident == ident)
+    })
+}
+
+fn extract_client_identities(
+    cert_idents: Option<Vec<Identity>>,
+    trusted_proxy_idents: &Vec<Identity>,
+    headers: &HeaderMap,
+) -> Option<Vec<Identity>> {
+    if let Some(ref c_idents) = cert_idents {
+        if is_trusted_proxy(&c_idents, trusted_proxy_idents) {
+            request_identities_from_headers(&headers)
+        } else {
+            cert_idents
+        }
+    } else {
+        // We can't blindly trust the identities in the header.
+        None
+    }
+}
+
 fn request_client_correlator_from_headers(headers: &HeaderMap) -> Option<String> {
     let header = headers.get(CLIENT_CORRELATOR)?;
     let header = header.to_str().ok()?;
@@ -89,11 +151,19 @@ fn request_client_correlator_from_headers(headers: &HeaderMap) -> Option<String>
 impl Middleware for ClientIdentityMiddleware {
     fn inbound(&self, state: &mut State) {
         let mut client_identity = ClientIdentity::default();
+        let cert_idents = CertIdentitiesStateData::try_take_from(state);
 
         if let Some(headers) = HeaderMap::try_borrow_from(&state) {
             client_identity.address = request_ip_from_headers(&headers);
-            client_identity.identities = request_identities_from_headers(&headers);
             client_identity.client_correlator = request_client_correlator_from_headers(&headers);
+
+            if let Some(cert_idents) = cert_idents {
+                client_identity.identities = extract_client_identities(
+                    cert_idents.identities,
+                    &self.trusted_proxy_idents,
+                    &headers,
+                );
+            }
         }
 
         // For the IP, we can fallback to the peer IP
