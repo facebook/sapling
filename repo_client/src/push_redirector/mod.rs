@@ -35,7 +35,7 @@ use futures_preview::future::try_join_all;
 use futures_util::{future::FutureExt, try_future::TryFutureExt, try_join};
 use metaconfig_types::CommitSyncConfig;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use pushrebase::PushrebaseChangesetPair;
+use pushrebase::{OntoBookmarkParams, PushrebaseChangesetPair};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -590,7 +590,19 @@ impl RepoSyncTarget {
     ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
         match pushrebase_bookmark_spec {
             PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
-                Ok(PushrebaseBookmarkSpec::NormalPushrebase(onto_params))
+                let OntoBookmarkParams { bookmark } = onto_params;
+                let bookmark = self
+                    .small_to_large_commit_syncer
+                    .rename_bookmark(&bookmark)
+                    .ok_or(format_err!(
+                        "Bookmark {} unexpectedly dropped in {:?}",
+                        bookmark,
+                        self.small_to_large_commit_syncer
+                    ))?;
+
+                Ok(PushrebaseBookmarkSpec::NormalPushrebase(
+                    OntoBookmarkParams { bookmark },
+                ))
             }
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
                 let converted = self

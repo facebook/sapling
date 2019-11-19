@@ -107,7 +107,7 @@ Normal pushrebase with many commits
   ~
   $ verify_wc master_bookmark
 
-Pushrebase, which deletes and removes files
+Pushrebase, which copies and removes files
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg rm 4 -q
@@ -149,3 +149,40 @@ Pushrebase, which replaces a directory with a file
   |
   ~
   $ verify_wc master_bookmark
+
+Normal pushrebase to a prefixed bookmark
+-- push to create a second bookmark
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn up -q master_bookmark^
+  $ createfile epicfail && hg ci -qm "The epicness of this fail is great"
+  $ REPONAME=small-mon hgmn push --to master_bookmark_2 --create -q
+  $ log -r master_bookmark_2
+  @  The epicness of this fail is great [public;rev=9;8d22dc8b8a89] default/master_bookmark_2
+  |
+  ~
+-- this should also be present in a large repo, once we pull
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ log -r bookprefix/master_bookmark_2
+  o  The epicness of this fail is great [public;rev=10;030470259cb4] default/bookprefix/master_bookmark_2
+  |
+  ~
+  $ verify_wc bookprefix/master_bookmark_2
+-- push to update a second bookmark
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn up -q master_bookmark_2
+  $ echo "more epicness" >> epicfail && hg ci -m "The epicness of this fail is greater"
+  $ REPONAME=small-mon hgmn push --to master_bookmark_2 | grep updating
+  updating bookmark master_bookmark_2
+  $ log -r master_bookmark_2
+  @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] default/master_bookmark_2
+  |
+  ~
+-- this should also be present in a large repo, once we pull
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ log -r bookprefix/master_bookmark_2
+  o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] default/bookprefix/master_bookmark_2
+  |
+  ~
+  $ verify_wc bookprefix/master_bookmark_2
