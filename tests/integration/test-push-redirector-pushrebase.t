@@ -186,3 +186,55 @@ Normal pushrebase to a prefixed bookmark
   |
   ~
   $ verify_wc bookprefix/master_bookmark_2
+
+Pushrebase with a rename between a shifted and a non-shifted behavior
+-- let's create a file in a non-shifted directory
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ createfile non_path_shifting/filetomove && createfile filetonotmove
+  $ hg ci -qm "But since it is for you, I vow To slap Aeneas down to hell"
+  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  updating bookmark master_bookmark
+-- let's sync it, make sure everything is fine
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ ls non_path_shifting
+  filetomove
+  $ verify_wc master_bookmark
+
+-- let's now move this file to a shifted directory
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg mv non_path_shifting/filetomove filetomove
+  $ hg ci -qm "I shall delay no longer now But knock him for a fare-you-well."
+  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  updating bookmark master_bookmark
+-- let's also sync it to the large repo
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ ls non_path_shifting/filetomove
+  ls: cannot access non_path_shifting/filetomove: No such file or directory
+  [2]
+  $ ls smallrepofolder/filetomove
+  smallrepofolder/filetomove
+  $ verify_wc master_bookmark
+
+-- let's now move this file back
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg mv filetomove non_path_shifting/filetomove
+  $ hg ci -qm "Now Dido was in such great sorrow All day she neither drank nor ate"
+  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  updating bookmark master_bookmark
+-- let's also sync it to the large repo
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ ls non_path_shifting
+  filetomove
+  $ ls smallrepofolder/filetomove
+  ls: cannot access smallrepofolder/filetomove: No such file or directory
+  [2]
+  $ verify_wc master_bookmark
