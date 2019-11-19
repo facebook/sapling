@@ -40,8 +40,6 @@ use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use xdiff;
 
-const MAX_LIMIT: i64 = 1000;
-const MAX_CHUNK_SIZE: i64 = 16 * 1024 * 1024;
 // Magic number used when we want to limit concurrency with buffer_unordered.
 const CONCURRENCY_LIMIT: usize = 100;
 
@@ -986,7 +984,11 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::RepoListBookmarksParams,
     ) -> Result<thrift::RepoListBookmarksResponse, service::RepoListBookmarksExn> {
         let ctx = self.create_ctx(Some(&repo));
-        let limit = match check_range_and_convert("limit", params.limit, 0..=MAX_LIMIT)? {
+        let limit = match check_range_and_convert(
+            "limit",
+            params.limit,
+            0..=source_control::REPO_LIST_BOOKMARKS_MAX_LIMIT,
+        )? {
             0 => None,
             limit => Some(limit),
         };
@@ -1291,13 +1293,19 @@ impl SourceControlService for SourceControlServiceImpl {
     ) -> Result<thrift::TreeListResponse, service::TreeListExn> {
         let ctx = self.create_ctx(Some(&tree));
         let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
+        let offset: usize = check_range_and_convert("offset", params.offset, 0..)?;
+        let limit: usize = check_range_and_convert(
+            "limit",
+            params.limit,
+            0..=source_control::TREE_LIST_MAX_LIMIT,
+        )?;
         if let Some(tree) = tree {
             let summary = tree.summary().await?;
             let entries = tree
                 .list()
                 .await?
-                .skip(params.offset as usize)
-                .take(params.limit as usize)
+                .skip(offset)
+                .take(limit)
                 .map(IntoResponse::into_response)
                 .collect();
             let response = thrift::TreeListResponse {
@@ -1346,7 +1354,11 @@ impl SourceControlService for SourceControlServiceImpl {
     ) -> Result<thrift::FileChunk, service::FileContentChunkExn> {
         let ctx = self.create_ctx(Some(&file));
         let offset: u64 = check_range_and_convert("offset", params.offset, 0..)?;
-        let size: u64 = check_range_and_convert("size", params.size, 0..=MAX_CHUNK_SIZE)?;
+        let size: u64 = check_range_and_convert(
+            "size",
+            params.size,
+            0..=source_control::FILE_CONTENT_CHUNK_SIZE_LIMIT,
+        )?;
         match self.repo_file(ctx, &file).await? {
             (_repo, Some(file)) => {
                 let metadata = file.metadata().await?;
