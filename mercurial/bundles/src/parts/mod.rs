@@ -19,7 +19,7 @@ use crate::part_header::{PartHeaderType, PartId};
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
 use context::CoreContext;
-use failure::err_msg;
+use failure_ext::err_msg;
 use failure_ext::prelude::*;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};

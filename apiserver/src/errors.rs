@@ -12,8 +12,7 @@ use actix::MailboxError;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
-use failure::{Error, Fail};
-use failure_ext::{err_downcast, err_downcast_ref};
+use failure_ext::{err_downcast, err_downcast_ref, Error, Fail};
 use futures::Canceled;
 use serde_derive::Serialize;
 

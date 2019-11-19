@@ -10,7 +10,7 @@ use std::{sync::Arc, time::Instant};
 
 use clap::Arg;
 use cloned::cloned;
-use failure::{err_msg, format_err, Error};
+use failure_ext::{err_msg, format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;

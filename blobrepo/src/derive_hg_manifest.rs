@@ -11,7 +11,7 @@ use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, format_err, Error};
+use failure_ext::{err_msg, format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
 use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};

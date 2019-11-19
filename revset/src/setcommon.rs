@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;
-use failure::Error;
+use failure_ext::Error;
 
 use futures::{Async, Poll};
 

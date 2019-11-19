@@ -14,7 +14,7 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use blobrepo_factory::{Caching, ReadOnlyStorage};
 use cloned::cloned;
-use failure::Error;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeMapping;
 use futures_preview::future;

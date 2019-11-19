@@ -11,7 +11,7 @@ use std::error::Error as StdError;
 use std::str::FromStr;
 
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::{try_ready, Async, Poll, Stream};
 use futures_ext::StreamExt;
 use gotham::state::State;

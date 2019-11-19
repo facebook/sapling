@@ -16,7 +16,6 @@ use std::sync::Arc;
 
 use crate::errors::*;
 use bytes::Bytes;
-use failure_ext as failure;
 use memmap::Mmap;
 use nom::IResult;
 
@@ -346,7 +345,7 @@ impl RevlogInner {
     /// flag set or not.
     fn get_chunk(&self, idx: RevIdx) -> Result<Chunk> {
         if !self.have_data() {
-            return Err(failure::err_msg("Can't get chunks without data"));
+            return Err(failure_ext::err_msg("Can't get chunks without data"));
         }
 
         let entry = self.get_entry(idx)?;
@@ -529,7 +528,7 @@ impl RevlogInner {
 
     fn get_rev(&self, tgtidx: RevIdx) -> Result<HgBlobNode> {
         if !self.have_data() {
-            return Err(failure::err_msg("Need data to assemble revision"));
+            return Err(failure_ext::err_msg("Need data to assemble revision"));
         }
 
         let entry = self.get_entry(tgtidx)?;

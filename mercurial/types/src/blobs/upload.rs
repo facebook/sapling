@@ -16,7 +16,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use failure_ext::{bail_err, FutureFailureErrorExt, Result};
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};

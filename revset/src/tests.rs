@@ -10,7 +10,7 @@ use crate::BonsaiNodeStream;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, Generation};

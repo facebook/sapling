@@ -16,7 +16,7 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure::{err_msg, format_err, Error};
+use failure_ext::{err_msg, format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{

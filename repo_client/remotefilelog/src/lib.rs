@@ -19,7 +19,7 @@ use blobrepo::{file_history::get_file_history, BlobRepo};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Fallible as Result};
+use failure_ext::{Error, Result};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use mercurial_types::{

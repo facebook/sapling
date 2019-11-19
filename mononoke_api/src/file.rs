@@ -12,7 +12,7 @@ use std::pin::Pin;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure::format_err;
+use failure_ext::format_err;
 use filestore::{fetch, fetch_range, get_metadata, FetchKey};
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;

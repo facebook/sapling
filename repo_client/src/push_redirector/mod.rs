@@ -27,7 +27,7 @@ use bundle2_resolver::{
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::Future;
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use futures_preview::compat::Future01CompatExt;

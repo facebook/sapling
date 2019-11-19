@@ -10,7 +10,7 @@
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
 use mononoke_types::{

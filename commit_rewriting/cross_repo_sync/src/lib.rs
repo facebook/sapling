@@ -15,7 +15,7 @@ use blobsync::copy_content;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use futures::Future;
 use futures_preview::{
     compat::Future01CompatExt,

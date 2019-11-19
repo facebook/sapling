@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use blobrepo_factory::{Caching, ReadOnlyStorage};
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{
     future::{join_all, lazy},

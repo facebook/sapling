@@ -13,7 +13,7 @@ use bookmarks::BookmarkName;
 use bundle2_resolver::CommonHeads;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use failure_ext::FutureFailureErrorExt;
 pub use failure_ext::{prelude::*, Fail};
 use futures::{Future, Stream};

@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use manifest::{Entry, ManifestOps};

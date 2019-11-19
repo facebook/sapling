@@ -10,7 +10,7 @@ use std::convert::{TryFrom, TryInto};
 
 use crate::errors::ErrorKind;
 use apiserver_thrift::MononokeRevision::UnknownField;
-use failure::Error;
+use failure_ext::Error;
 use serde_derive::Serialize;
 
 use apiserver_thrift::types::{

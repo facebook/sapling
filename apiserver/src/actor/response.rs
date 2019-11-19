@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 use actix_web::{self, dev::BodyStream, Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 use serde::{Deserialize, Serialize};

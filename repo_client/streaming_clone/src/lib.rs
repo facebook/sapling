@@ -11,7 +11,7 @@
 use std::vec::Vec;
 
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::{queries, Connection};

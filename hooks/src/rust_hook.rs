@@ -13,7 +13,7 @@
 
 use super::{Hook, HookChangeset, HookContext, HookExecution};
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::future::ok;
 use futures_ext::{BoxFuture, FutureExt};
 

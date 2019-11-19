@@ -9,8 +9,7 @@
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure::err_msg;
-use failure_ext::Error;
+use failure_ext::{err_msg, Error};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;

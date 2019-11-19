@@ -17,7 +17,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use context::{generate_session_id, CoreContext, SessionContainer};
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use json_encoded::get_identities;
 use openssl::x509::X509;

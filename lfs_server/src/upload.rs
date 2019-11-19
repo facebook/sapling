@@ -7,7 +7,7 @@
  */
 
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::Future;
 use futures_preview::{
     channel::mpsc::channel, compat::Future01CompatExt, compat::Stream01CompatExt, future::ready,

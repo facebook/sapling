@@ -8,8 +8,7 @@
 
 use std::collections::HashMap;
 
-use failure::Compat;
-use failure_ext::ensure_msg;
+use failure_ext::{ensure_msg, Compat};
 use futures::{future::Shared, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 

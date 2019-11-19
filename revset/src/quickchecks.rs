@@ -31,7 +31,7 @@ mod test {
     use changeset_fetcher::ChangesetFetcher;
     use cloned::cloned;
     use context::CoreContext;
-    use failure::Error;
+    use failure_ext::Error;
     use fbinit::FacebookInit;
     use futures::executor::spawn;
     use futures::{

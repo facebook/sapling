@@ -20,7 +20,7 @@ use bytes::Bytes;
 use std::io::{self, BufRead, Read};
 use std::sync::{Arc, Mutex};
 
-use failure::format_err;
+use failure_ext::format_err;
 use futures::future::poll_fn;
 use futures::{Async, Future};
 use tokio_io::{try_nb, AsyncRead};

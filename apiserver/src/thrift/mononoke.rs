@@ -25,7 +25,7 @@ use apiserver_thrift::MononokeRevision::UnknownField;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::{generate_session_id, CoreContext, SessionContainer};
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;

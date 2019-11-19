@@ -13,7 +13,7 @@ use std::sync::Arc;
 use actix_web::{server, App, HttpRequest, HttpResponse, Path, Query, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
-use failure::Fallible as Result;
+use failure_ext::Result;
 use fbinit::FacebookInit;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;

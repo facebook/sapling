@@ -12,8 +12,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure::Error;
-use failure_ext::Result;
+use failure_ext::{Error, Result};
 use futures::{
     stream::{self, FuturesUnordered},
     Future, Stream,

@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure::Error;
+use failure_ext::Error;
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{

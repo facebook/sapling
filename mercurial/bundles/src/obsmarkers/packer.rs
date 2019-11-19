@@ -100,7 +100,7 @@ fn prepare_obsmarker_chunk(
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure::err_msg;
+    use failure_ext::err_msg;
     use futures::{stream, Async, Poll};
     use futures_ext::StreamExt;
     use mercurial_types_mocks::nodehash;

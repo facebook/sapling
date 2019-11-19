@@ -12,7 +12,7 @@
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use context::CoreContext;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;

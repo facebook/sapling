@@ -8,7 +8,7 @@
 
 use cloned::cloned;
 use configerator::{ConfigLoader, ConfigSource, Entity};
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
 use slog::{debug, info, warn, Logger};

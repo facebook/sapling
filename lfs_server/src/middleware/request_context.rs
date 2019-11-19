@@ -9,7 +9,7 @@
 use std::fmt;
 
 use dns_lookup::lookup_addr;
-use failure::Error;
+use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{asynchronize, FutureExt};
 use gotham::state::{FromState, State};

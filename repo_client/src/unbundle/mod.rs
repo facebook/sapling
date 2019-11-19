@@ -17,8 +17,7 @@ use bundle2_resolver::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, format_err, Error};
-use failure_ext::FutureFailureErrorExt;
+use failure_ext::{err_msg, format_err, Error, FutureFailureErrorExt};
 pub use failure_ext::{prelude::*, Fail};
 use futures::future::{err, ok};
 use futures::{future, Future, IntoFuture};

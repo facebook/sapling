@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure::Error;
+use failure_ext::Error;
 use gotham::helpers::http::header::X_REQUEST_ID;
 use gotham::state::{request_id, State};
 use hyper::header::HeaderValue;

@@ -7,7 +7,7 @@
  */
 
 use bytes::Bytes;
-use failure::err_msg;
+use failure_ext::err_msg;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 

@@ -11,8 +11,7 @@ use crate::{
     BookmarkUpdateReason, Bookmarks, Freshness, Transaction,
 };
 use context::CoreContext;
-use failure::{err_msg, Error};
-use failure_ext::Result;
+use failure_ext::{err_msg, Error, Result};
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};

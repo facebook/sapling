@@ -10,7 +10,7 @@ use crate::{Entry, Manifest, PathTree};
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, BoxFuture, BoxStream, FutureExt, StreamExt,

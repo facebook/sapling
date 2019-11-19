@@ -11,7 +11,7 @@ use std::fmt::{Arguments, Write};
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::Future as Future01;
 use futures_channel::oneshot;

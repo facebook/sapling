@@ -9,7 +9,7 @@
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgChangesetId;

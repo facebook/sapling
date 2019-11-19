@@ -10,7 +10,7 @@ use crate::setcommon::{add_generations_by_bonsai, BonsaiInputStream};
 use crate::BonsaiNodeStream;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::stream::Stream;
 use futures::{Async, Poll};
 use futures_ext::StreamExt;

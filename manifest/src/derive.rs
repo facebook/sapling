@@ -9,7 +9,7 @@
 use crate::{Entry, Manifest, PathTree};
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{bounded_traversal::bounded_traversal, FutureExt};
 use mononoke_types::{MPath, MPathElement};

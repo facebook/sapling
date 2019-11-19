@@ -11,7 +11,7 @@
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use filestore::{exists, fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{err, ok, Future};
 use futures_ext::{BoxFuture, FutureExt};

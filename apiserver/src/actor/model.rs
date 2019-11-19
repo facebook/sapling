@@ -17,7 +17,7 @@ use std::{
 use abomonation_derive::Abomonation;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use serde_derive::{Deserialize, Serialize};
 
 use apiserver_thrift::types::{

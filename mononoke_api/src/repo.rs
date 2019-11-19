@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use fsnodes::RootFsnodeMapping;

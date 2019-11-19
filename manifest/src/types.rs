@@ -8,7 +8,7 @@
 
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{

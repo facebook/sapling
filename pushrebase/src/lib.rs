@@ -50,8 +50,7 @@ use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
-use failure_ext::{FutureFailureErrorExt, Result};
+use failure_ext::{Error, FutureFailureErrorExt, Result};
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -1219,7 +1218,7 @@ fn create_bookmark_update_reason(
 mod tests {
 
     use super::*;
-    use failure::err_msg;
+    use failure_ext::err_msg;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;

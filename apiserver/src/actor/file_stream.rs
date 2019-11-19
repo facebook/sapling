@@ -23,7 +23,7 @@
 // the connection is closed, or you get a 500, try again :(
 
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::{
     stream::{iter_ok, once},
     Future, Stream,

@@ -13,7 +13,7 @@ use crate::{
 };
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
-use failure::{err_msg, format_err, Error};
+use failure_ext::{err_msg, format_err, Error};
 use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};

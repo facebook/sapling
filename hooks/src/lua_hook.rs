@@ -18,7 +18,7 @@ use super::{
 use aclchecker::Identity;
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::future::{ok, result};
 use futures::{future, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

@@ -12,7 +12,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};

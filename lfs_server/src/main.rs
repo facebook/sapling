@@ -11,7 +11,7 @@
 #![deny(warnings)]
 
 use clap::Arg;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
 use futures::{empty, future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;

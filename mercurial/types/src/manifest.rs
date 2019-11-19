@@ -9,7 +9,7 @@
 use std::fmt;
 use std::iter;
 
-use failure::Error;
+use failure_ext::Error;
 
 use context::CoreContext;
 use futures_ext::{BoxFuture, BoxStream};

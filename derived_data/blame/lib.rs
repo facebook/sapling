@@ -20,7 +20,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::{future, Future};
 use futures_ext::FutureExt;
 use manifest::ManifestOps;

@@ -10,8 +10,7 @@ use blobrepo::BlobRepo;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
-use failure_ext::Result;
+use failure_ext::{Error, Result};
 use futures::{
     sync::mpsc::{self, Sender},
     Future, Stream,

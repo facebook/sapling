@@ -21,7 +21,7 @@ pub use crate::errors::ErrorKind;
 use blobrepo::BlobRepo;
 use bonsai_utils::BonsaiDiffResult;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::{future::ok, Future};
 use futures_ext::FutureExt;
 use mononoke_types::{FileChange, MPath};

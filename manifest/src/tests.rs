@@ -12,7 +12,7 @@ use crate::{
 };
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};

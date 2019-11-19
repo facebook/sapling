@@ -18,7 +18,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use configerator::ConfigLoader;
 use context::{CoreContext, LoggingContainer, Metric, PerfCounterType, SessionContainer};
-use failure::{err_msg, format_err};
+use failure_ext::{err_msg, format_err};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};

@@ -10,8 +10,7 @@ use std::fmt::Debug;
 use std::mem;
 
 use bytes::Bytes;
-use failure::Error;
-use failure_ext::Result;
+use failure_ext::{Error, Result};
 use futures::{Poll, Stream};
 use thiserror::Error;
 

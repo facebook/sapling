@@ -20,7 +20,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use fastlog::{prefetch_history, FastlogParent, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use futures::{

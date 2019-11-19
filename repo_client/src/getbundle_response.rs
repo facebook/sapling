@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
-use failure::err_msg;
+use failure_ext::err_msg;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
 use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};

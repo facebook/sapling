@@ -7,7 +7,7 @@
  */
 
 use super::{bounded_traversal, bounded_traversal_dag, bounded_traversal_stream};
-use failure::Error;
+use failure_ext::Error;
 use futures::{
     future,
     sync::oneshot::{channel, Sender},

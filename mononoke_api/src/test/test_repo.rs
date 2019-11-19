@@ -11,7 +11,7 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
-use failure::Error;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::Stream;

@@ -12,7 +12,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use filestore::StoreRequest;
 use futures::future::{join_all, Future};

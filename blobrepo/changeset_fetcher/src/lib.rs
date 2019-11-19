@@ -8,7 +8,7 @@
 
 use changesets::Changesets;
 use context::CoreContext;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, Generation, RepositoryId};

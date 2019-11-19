@@ -11,7 +11,7 @@ use std::pin::Pin;
 
 use blobstore::{Loadable, LoadableError};
 use cloned::cloned;
-use failure::Error;
+use failure_ext::Error;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
 use mononoke_types::fsnode::Fsnode;
