@@ -87,7 +87,7 @@ Cloning transfers all bookmarks from remote to local
 
 Make sure that master is public
   $ hg phase -r master
-  3: public
+  3783f3cdb535321db1dbf622958d68d051c73218: public
   $ cd ..
 
 No changes
