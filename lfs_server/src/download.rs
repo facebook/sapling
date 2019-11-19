@@ -40,8 +40,8 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         content_id,
     } = state.take();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)
-        .map_err(HttpError::e400)?;
+    let ctx =
+        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)?;
 
     let content_id = ContentId::from_str(&content_id)
         .chain_err(ErrorKind::InvalidContentId)

@@ -23,12 +23,23 @@ use lazy_static::lazy_static;
 use mime::Mime;
 use tokio::sync::oneshot::Sender;
 
+use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::{RequestContext, ScubaKey, ScubaMiddlewareState};
 
 // Provide an easy way to map from Error -> Http code
 pub struct HttpError {
     pub error: Error,
     pub status_code: StatusCode,
+}
+
+impl From<LfsServerContextErrorKind> for HttpError {
+    fn from(e: LfsServerContextErrorKind) -> HttpError {
+        use LfsServerContextErrorKind::*;
+        match e {
+            Forbidden => HttpError::e403(e),
+            RepositoryDoesNotExist(_) => HttpError::e400(e),
+        }
+    }
 }
 
 pub struct EmptyBody;
@@ -139,6 +150,13 @@ impl HttpError {
         Self {
             error: err.into(),
             status_code: StatusCode::BAD_REQUEST,
+        }
+    }
+
+    pub fn e403<E: Into<Error>>(err: E) -> Self {
+        Self {
+            error: err.into(),
+            status_code: StatusCode::FORBIDDEN,
         }
     }
 

@@ -404,8 +404,7 @@ async fn batch_download(
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch)
-        .map_err(HttpError::e400)?;
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch)?;
 
     let body = Body::take_from(state)
         .compat()

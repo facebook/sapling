@@ -25,8 +25,6 @@ pub enum ErrorKind {
     SerializationFailed,
     #[error("Could not initialize HTTP client")]
     HttpClientInitializationFailed,
-    #[error("Repository does not exist: {0}")]
-    RepositoryDoesNotExist(String),
     #[error("Could not build {0}")]
     UriBuilderFailed(&'static str),
     #[error("Invalid Uri {0}: {1}")]
@@ -65,4 +63,12 @@ pub enum ErrorKind {
     ResponseCreationFailure,
     #[error("Throttled by counter: {0} (value: {1}, limit: {2})")]
     Throttled(String, i64, i64),
+}
+
+#[derive(Debug, Error)]
+pub enum LfsServerContextErrorKind {
+    #[error("Operated not permitted")]
+    Forbidden,
+    #[error("Repository does not exist: {0}")]
+    RepositoryDoesNotExist(String),
 }

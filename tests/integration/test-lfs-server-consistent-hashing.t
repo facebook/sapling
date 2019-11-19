@@ -8,7 +8,9 @@
   > {
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
-  >   "throttle_limits": []
+  >   "throttle_limits": [],
+  >   "acl_check": false,
+  >   "enforce_acl_check": false
   > }
   > EOF
 

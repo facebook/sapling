@@ -37,6 +37,8 @@ pub struct ServerConfig {
     pub track_bytes_sent: bool,
     pub enable_consistent_routing: bool,
     pub throttle_limits: Vec<Limit>,
+    pub acl_check: bool,
+    pub enforce_acl_check: bool,
 }
 
 impl Default for ServerConfig {
@@ -45,6 +47,8 @@ impl Default for ServerConfig {
             track_bytes_sent: false,
             enable_consistent_routing: false,
             throttle_limits: vec![],
+            acl_check: false,
+            enforce_acl_check: false,
         }
     }
 }

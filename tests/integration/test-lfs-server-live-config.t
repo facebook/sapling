@@ -8,7 +8,9 @@
   > {
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
-  >   "throttle_limits": []
+  >   "throttle_limits": [],
+  >   "acl_check": false,
+  >   "enforce_acl_check": false
   > }
   > EOF
 
@@ -19,7 +21,9 @@
 # Get the config
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
+    "acl_check": false,
     "enable_consistent_routing": false,
+    "enforce_acl_check": false,
     "throttle_limits": [],
     "track_bytes_sent": true
   }
@@ -30,6 +34,8 @@
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
   >   "throttle_limits": []
+  >   "acl_check": false,
+  >   "enforce_acl_check": false
   > }
   > EOF
 
@@ -39,7 +45,9 @@
 # Get the updated config
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
+    "acl_check": false,
     "enable_consistent_routing": false,
+    "enforce_acl_check": false,
     "throttle_limits": [],
-    "track_bytes_sent": false
+    "track_bytes_sent": true
   }

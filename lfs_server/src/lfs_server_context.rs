@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::fmt::{Arguments, Write};
 use std::sync::{Arc, Mutex};
 
+use aclchecker::Identity;
 use bytes::Bytes;
 use failure_ext::Error;
 use futures::Future as Future01;
@@ -33,14 +34,18 @@ use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
 use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 
+use crate::acl::LfsAclChecker;
 use crate::config::{ServerConfig, ServerConfigHandle};
-use crate::errors::ErrorKind;
-use crate::middleware::{LfsMethod, RequestContext};
+use crate::errors::{ErrorKind, LfsServerContextErrorKind};
+use crate::middleware::{ClientIdentity, LfsMethod, RequestContext};
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
+// For some reason Source Control uses the read action to decide if a user can write to a repo...
+const ACL_CHECK_ACTION: &str = "read";
+
 struct LfsServerContextInner {
-    repositories: HashMap<String, BlobRepo>,
+    repositories: HashMap<String, (BlobRepo, LfsAclChecker)>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
@@ -55,7 +60,7 @@ pub struct LfsServerContext {
 
 impl LfsServerContext {
     pub fn new(
-        repositories: HashMap<String, BlobRepo>,
+        repositories: HashMap<String, (BlobRepo, LfsAclChecker)>,
         server: ServerUris,
         always_wait_for_upstream: bool,
         will_exit: Arc<AtomicBool>,
@@ -85,12 +90,18 @@ impl LfsServerContext {
         &self,
         ctx: CoreContext,
         repository: String,
-    ) -> Result<RepositoryRequestContext, Error> {
+        identities: Option<&Vec<Identity>>,
+    ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
         let inner = self.inner.lock().expect("poisoned lock");
 
         match inner.repositories.get(&repository) {
-            Some(repo) => {
+            Some((repo, aclchecker)) => {
                 let always_wait_for_upstream = inner.always_wait_for_upstream;
+                let config = inner.config_handle.get();
+
+                if config.acl_check {
+                    acl_check(aclchecker, identities, config.enforce_acl_check)?;
+                }
 
                 Ok(RepositoryRequestContext {
                     ctx,
@@ -100,11 +111,11 @@ impl LfsServerContext {
                         server: inner.server.clone(),
                     },
                     client: inner.client.clone(),
-                    config: inner.config_handle.get(),
+                    config,
                     always_wait_for_upstream,
                 })
             }
-            None => Err(ErrorKind::RepositoryDoesNotExist(repository).into()),
+            None => Err(LfsServerContextErrorKind::RepositoryDoesNotExist(repository).into()),
         }
     }
 
@@ -126,6 +137,24 @@ impl LfsServerContext {
     }
 }
 
+fn acl_check(
+    aclchecker: &LfsAclChecker,
+    identities: Option<&Vec<Identity>>,
+    enforce_acl_check: bool,
+) -> Result<(), LfsServerContextErrorKind> {
+    if let Some(identities) = identities {
+        if !aclchecker.is_allowed(identities, &[ACL_CHECK_ACTION]) && enforce_acl_check {
+            return Err(LfsServerContextErrorKind::Forbidden.into());
+        } else {
+            return Ok(());
+        }
+    } else {
+        // For now, allow clients to connect that don't provide an identity. Once we know
+        // all clients have idents, we can return Forbidden.
+        return Ok(());
+    }
+}
+
 #[derive(Clone)]
 pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
@@ -141,14 +170,20 @@ impl RepositoryRequestContext {
         state: &mut State,
         repository: String,
         method: LfsMethod,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, LfsServerContextErrorKind> {
         let req_ctx = state.borrow_mut::<RequestContext>();
         req_ctx.set_request(repository.clone(), method);
 
         let ctx = req_ctx.ctx.clone();
 
+        let identities = if let Some(client_ident) = state.try_borrow::<ClientIdentity>() {
+            client_ident.identities().as_ref()
+        } else {
+            None
+        };
+
         let lfs_ctx = LfsServerContext::borrow_from(&state);
-        lfs_ctx.request(ctx, repository)
+        lfs_ctx.request(ctx, repository, identities)
     }
 
     pub fn logger(&self) -> &Logger {

@@ -144,8 +144,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         size,
     } = state.take();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Upload)
-        .map_err(HttpError::e400)?;
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Upload)?;
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;

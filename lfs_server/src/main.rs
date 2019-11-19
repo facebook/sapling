@@ -17,8 +17,8 @@ use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
 use futures::{future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
-use futures_preview::{FutureExt, TryFutureExt};
-use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
+use futures_preview::TryFutureExt;
+use futures_util::{compat::Future01CompatExt, try_future::try_join_all, try_join};
 use gotham::{bind_server, bind_server_with_pre_state};
 use scuba::ScubaSampleBuilder;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
@@ -34,12 +34,14 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
+use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo;
 use cmdlib::{args, monitoring::start_fb303_server};
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 use stats::schedule_stats_aggregation;
 
+use crate::acl::LfsAclChecker;
 use crate::config::spawn_config_poller;
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
@@ -50,6 +52,7 @@ use crate::middleware::{
 };
 use crate::service::build_router;
 
+mod acl;
 mod batch;
 mod config;
 mod download;
@@ -77,6 +80,7 @@ const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
+const ARG_TEST_IDENTITY: &str = "allowed-test-identity";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -181,6 +185,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .number_of_values(1)
                 .required(false)
                 .help("Proxy identity to trust"),
+        )
+        .arg(
+            Arg::with_name(ARG_TEST_IDENTITY)
+                .long(ARG_TEST_IDENTITY)
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Test identity to allow (NOTE: this will disable AclChecker)"),
         );
 
     let app = args::add_fb303_args(app);
@@ -210,6 +223,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     scuba_logger.add_common_server_data();
 
+    let test_idents = idents_from_values(matches.values_of(ARG_TEST_IDENTITY))?;
+
+    let test_acl_checker = if !test_idents.is_empty() {
+        Some(LfsAclChecker::TestAclChecker(test_idents))
+    } else {
+        None
+    };
+
     let server = ServerUris::new(
         matches.value_of(ARG_SELF_URL).unwrap(),
         matches.value_of(ARG_UPSTREAM_URL),
@@ -225,21 +246,42 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .into_iter()
         .filter(|(_name, config)| config.enabled)
         .map(|(name, config)| {
-            open_blobrepo(
-                fb,
-                config.storage_config.clone(),
-                config.repoid,
-                myrouter_port,
-                caching,
-                config.bookmarks_cache_ttl,
-                config.redaction,
-                common.scuba_censored_table.clone(),
-                config.filestore.clone(),
-                readonly_storage,
-                logger.clone(),
-            )
-            .compat()
-            .map(|repo| repo.map(|repo| (name, repo)))
+            let scuba_censored_table = common.scuba_censored_table.clone();
+            cloned!(test_acl_checker, logger);
+            async move {
+                let aclchecker = async {
+                    if let Some(test_checker) = test_acl_checker {
+                        Ok(test_checker)
+                    } else {
+                        LfsAclChecker::new_acl_checker(
+                            fb,
+                            &name,
+                            &logger,
+                            config.hipster_acl.clone(),
+                        )
+                        .await
+                    }
+                };
+
+                let blobrepo = open_blobrepo(
+                    fb,
+                    config.storage_config.clone(),
+                    config.repoid,
+                    myrouter_port,
+                    caching,
+                    config.bookmarks_cache_ttl,
+                    config.redaction,
+                    scuba_censored_table,
+                    config.filestore.clone(),
+                    readonly_storage,
+                    logger.clone(),
+                )
+                .compat();
+
+                let (repo, aclchecker) = try_join!(blobrepo, aclchecker)?;
+
+                Result::<(String, (BlobRepo, LfsAclChecker)), Error>::Ok((name, (repo, aclchecker)))
+            }
         });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
