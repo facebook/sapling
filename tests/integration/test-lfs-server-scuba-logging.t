@@ -1,8 +1,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
-# Create a repository
+# Create a repository. We use MULTIPLEXED here because that is the one that records BlobGets counters.
   $ setup_mononoke_config
-  $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
+  $ MULTIPLEXED=1 REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
 
 # Start a LFS server for this repository (no upstream, but we --always-wait-for-upstream to get logging consistency)
   $ SCUBA="$TESTTMP/scuba.json"
@@ -31,6 +31,19 @@
   $ jq -S . < "$SCUBA"
   {
     "int": {
+      "BlobGets": 1,
+      "BlobGetsMaxLatency": *, (glob)
+      "BlobPresenceChecks": 0,
+      "BlobPresenceChecksMaxLatency": *, (glob)
+      "BlobPuts": 0,
+      "BlobPutsMaxLatency": *, (glob)
+      "CachelibHits": 0,
+      "CachelibMisses": 0,
+      "MemcacheHits": 0,
+      "MemcacheMisses": 0,
+      "SqlReadsMaster": 0,
+      "SqlReadsReplica": 0,
+      "SqlWrites": 0,
       "batch_object_count": 1,
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
@@ -59,6 +72,19 @@
   }
   {
     "int": {
+      "BlobGets": 0,
+      "BlobGetsMaxLatency": *, (glob)
+      "BlobPresenceChecks": 0,
+      "BlobPresenceChecksMaxLatency": *, (glob)
+      "BlobPuts": 210,
+      "BlobPutsMaxLatency": *, (glob)
+      "CachelibHits": 0,
+      "CachelibMisses": 0,
+      "MemcacheHits": 0,
+      "MemcacheMisses": 0,
+      "SqlReadsMaster": 0,
+      "SqlReadsReplica": 0,
+      "SqlWrites": 0,
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,
@@ -87,6 +113,19 @@
   }
   {
     "int": {
+      "BlobGets": 1,
+      "BlobGetsMaxLatency": *, (glob)
+      "BlobPresenceChecks": 1,
+      "BlobPresenceChecksMaxLatency": *, (glob)
+      "BlobPuts": 0,
+      "BlobPutsMaxLatency": *, (glob)
+      "CachelibHits": 0,
+      "CachelibMisses": 0,
+      "MemcacheHits": 0,
+      "MemcacheMisses": 0,
+      "SqlReadsMaster": 0,
+      "SqlReadsReplica": 0,
+      "SqlWrites": 0,
       "batch_object_count": 1,
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
@@ -119,6 +158,19 @@
   }
   {
     "int": {
+      "BlobGets": 206,
+      "BlobGetsMaxLatency": *, (glob)
+      "BlobPresenceChecks": 0,
+      "BlobPresenceChecksMaxLatency": *, (glob)
+      "BlobPuts": 0,
+      "BlobPutsMaxLatency": *, (glob)
+      "CachelibHits": 0,
+      "CachelibMisses": 0,
+      "MemcacheHits": 0,
+      "MemcacheMisses": 0,
+      "SqlReadsMaster": 0,
+      "SqlReadsReplica": 0,
+      "SqlWrites": 0,
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,
@@ -145,6 +197,19 @@
   }
   {
     "int": {
+      "BlobGets": 0,
+      "BlobGetsMaxLatency": *, (glob)
+      "BlobPresenceChecks": 0,
+      "BlobPresenceChecksMaxLatency": *, (glob)
+      "BlobPuts": 0,
+      "BlobPutsMaxLatency": *, (glob)
+      "CachelibHits": 0,
+      "CachelibMisses": 0,
+      "MemcacheHits": 0,
+      "MemcacheMisses": 0,
+      "SqlReadsMaster": 0,
+      "SqlReadsReplica": 0,
+      "SqlWrites": 0,
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,

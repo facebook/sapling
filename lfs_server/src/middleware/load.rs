@@ -52,7 +52,7 @@ impl Middleware for LoadMiddleware {
         if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
             ctx.add_post_request({
                 let requests = self.requests.clone();
-                move |_, _, _| {
+                move |_, _, _, _| {
                     requests.fetch_sub(1, Ordering::Relaxed);
                 }
             });

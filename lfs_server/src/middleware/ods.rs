@@ -36,7 +36,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         return None;
     }
 
-    ctx.add_post_request(move |duration, _, response_bytes_sent| {
+    ctx.add_post_request(move |duration, _, response_bytes_sent, _| {
         match method {
             LfsMethod::Upload => {
                 STATS::upload_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))

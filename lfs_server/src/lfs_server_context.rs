@@ -12,16 +12,15 @@ use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
 use failure_ext::Error;
-use fbinit::FacebookInit;
 use futures::Future as Future01;
 use futures_channel::oneshot;
 use futures_preview::Future;
 use futures_util::{compat::Stream01CompatExt, TryStreamExt};
-use gotham::state::{request_id, FromState, State};
+use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
-use slog::{o, Logger};
+use slog::Logger;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::spawn;
 
@@ -41,7 +40,6 @@ use crate::middleware::{LfsMethod, RequestContext};
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
 struct LfsServerContextInner {
-    logger: Logger,
     repositories: HashMap<String, BlobRepo>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
@@ -51,15 +49,12 @@ struct LfsServerContextInner {
 
 #[derive(Clone, StateData)]
 pub struct LfsServerContext {
-    fb: FacebookInit,
     inner: Arc<Mutex<LfsServerContextInner>>,
     will_exit: Arc<AtomicBool>,
 }
 
 impl LfsServerContext {
     pub fn new(
-        fb: FacebookInit,
-        logger: Logger,
         repositories: HashMap<String, BlobRepo>,
         server: ServerUris,
         always_wait_for_upstream: bool,
@@ -73,7 +68,6 @@ impl LfsServerContext {
         let client = Client::builder().build(connector);
 
         let inner = LfsServerContextInner {
-            logger,
             repositories,
             server: Arc::new(server),
             client: Arc::new(client),
@@ -82,7 +76,6 @@ impl LfsServerContext {
         };
 
         Ok(LfsServerContext {
-            fb,
             inner: Arc::new(Mutex::new(inner)),
             will_exit,
         })
@@ -90,18 +83,17 @@ impl LfsServerContext {
 
     pub fn request(
         &self,
+        ctx: CoreContext,
         repository: String,
-        request_id: &str,
     ) -> Result<RepositoryRequestContext, Error> {
         let inner = self.inner.lock().expect("poisoned lock");
 
         match inner.repositories.get(&repository) {
             Some(repo) => {
-                let logger = inner.logger.new(o!("request_id" => request_id.to_string()));
                 let always_wait_for_upstream = inner.always_wait_for_upstream;
 
                 Ok(RepositoryRequestContext {
-                    ctx: CoreContext::new_with_logger(self.fb, logger),
+                    ctx,
                     repo: repo.clone(),
                     uri_builder: UriBuilder {
                         repository,
@@ -150,12 +142,13 @@ impl RepositoryRequestContext {
         repository: String,
         method: LfsMethod,
     ) -> Result<Self, Error> {
-        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
-            ctx.set_request(repository.clone(), method);
-        }
+        let req_ctx = state.borrow_mut::<RequestContext>();
+        req_ctx.set_request(repository.clone(), method);
+
+        let ctx = req_ctx.ctx.clone();
 
         let lfs_ctx = LfsServerContext::borrow_from(&state);
-        lfs_ctx.request(repository, request_id(&state))
+        lfs_ctx.request(ctx, repository)
     }
 
     pub fn logger(&self) -> &Logger {

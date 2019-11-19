@@ -255,8 +255,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     .chain_err(err_msg("Failed to load configuration"))?;
 
     let ctx = LfsServerContext::new(
-        fb,
-        logger.clone(),
         repos,
         server,
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
@@ -268,7 +266,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let root = MononokeLfsHandler::builder()
         .add(ClientIdentityMiddleware::new())
-        .add(RequestContextMiddleware::new())
+        .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LogMiddleware::new(logger.clone()))
         .add(ServerIdentityMiddleware::new())
         .add(LoadMiddleware::new())

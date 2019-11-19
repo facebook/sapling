@@ -251,29 +251,34 @@ fn log_stats(
         );
     }
 
-    ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
-        scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
+    ctx.add_post_request(
+        move |duration, client_hostname, bytes_sent, perf_counters| {
+            scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
 
-        if let Some(client_hostname) = client_hostname {
-            scuba.add(ScubaKey::ClientHostname, client_hostname.to_string());
-        }
-        if let Some(bytes_sent) = bytes_sent {
-            scuba.add(ScubaKey::ResponseBytesSent, bytes_sent);
-        }
+            if let Some(client_hostname) = client_hostname {
+                scuba.add(ScubaKey::ClientHostname, client_hostname.to_string());
+            }
 
-        scuba.log();
+            if let Some(bytes_sent) = bytes_sent {
+                scuba.add(ScubaKey::ResponseBytesSent, bytes_sent);
+            }
 
-        // Write to a log file here. If this fails, we don't take further action (this is only used
-        // in tests, so it's largely fine).
-        if let Some(log_file) = log_file {
-            let mut log_file = log_file.lock().expect("Poisoned lock");
-            let _ = scuba.to_json().map_err(|_| ()).and_then(|sample| {
-                log_file
-                    .write_all(sample.to_string().as_bytes())
-                    .map_err(|_| ())
-            });
-        }
-    });
+            perf_counters.insert_perf_counters(&mut scuba);
+
+            scuba.log();
+
+            // Write to a log file here. If this fails, we don't take further action (this is only used
+            // in tests, so it's largely fine).
+            if let Some(log_file) = log_file {
+                let mut log_file = log_file.lock().expect("Poisoned lock");
+                let _ = scuba.to_json().map_err(|_| ()).and_then(|sample| {
+                    log_file
+                        .write_all(sample.to_string().as_bytes())
+                        .map_err(|_| ())
+                });
+            }
+        },
+    );
 
     Some(())
 }

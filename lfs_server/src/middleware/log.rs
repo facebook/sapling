@@ -43,7 +43,7 @@ fn log_request(logger: &Logger, state: &mut State, status: StatusCode) -> Option
     let ctx = state.try_borrow_mut::<RequestContext>()?;
     let logger = logger.new(o!("request_id" => request_id));
 
-    ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
+    ctx.add_post_request(move |duration, client_hostname, bytes_sent, _| {
         info!(
             &logger,
             "{} {} \"{} {} {:?}\" {} {} - {}ms",
