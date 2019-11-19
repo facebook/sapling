@@ -39,7 +39,7 @@ use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, R
 use pushrebase::HgReplayData;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, trace};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
@@ -48,8 +48,8 @@ pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
-pub type UploadedBonsais = Vec<BonsaiChangeset>;
-pub type UploadedHgChangesetIds = Vec<HgChangesetId>;
+pub type UploadedBonsais = HashSet<BonsaiChangeset>;
+pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 
 // This is to match the core hg behavior from https://fburl.com/jf3iyl7y
 // Mercurial substitutes the `onto` parameter with this bookmark name when

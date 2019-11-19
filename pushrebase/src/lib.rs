@@ -211,7 +211,7 @@ pub fn do_pushrebase(
     repo: BlobRepo,
     config: PushrebaseParams,
     onto_bookmark: OntoBookmarkParams,
-    pushed_set: Vec<HgChangesetId>,
+    pushed_set: HashSet<HgChangesetId>,
     maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     fetch_bonsai_changesets(ctx.clone(), repo.clone(), pushed_set)
@@ -239,7 +239,7 @@ pub fn do_pushrebase_bonsai(
     repo: BlobRepo,
     config: PushrebaseParams,
     onto_bookmark: OntoBookmarkParams,
-    pushed: Vec<BonsaiChangeset>,
+    pushed: HashSet<BonsaiChangeset>,
     maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     let head = find_only_head_or_fail(&pushed).into_future();
@@ -424,8 +424,8 @@ fn do_rebase(
 fn fetch_bonsai_changesets(
     ctx: CoreContext,
     repo: BlobRepo,
-    commit_ids: Vec<HgChangesetId>,
-) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
+    commit_ids: HashSet<HgChangesetId>,
+) -> impl Future<Item = HashSet<BonsaiChangeset>, Error = PushrebaseError> {
     join_all(commit_ids.into_iter().map(move |hg_cs| {
         repo.get_bonsai_from_hg(ctx.clone(), hg_cs)
             .and_then({
@@ -440,11 +440,12 @@ fn fetch_bonsai_changesets(
             .map_err(Error::from)
             .from_err()
     }))
+    .map(|vec| vec.into_iter().collect())
 }
 
 // There should only be one head in the pushed set
 fn find_only_head_or_fail(
-    commits: &Vec<BonsaiChangeset>,
+    commits: &HashSet<BonsaiChangeset>,
 ) -> ::std::result::Result<ChangesetId, PushrebaseError> {
     let mut commits_set: HashSet<_> =
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
@@ -467,7 +468,7 @@ fn find_only_head_or_fail(
 struct ChildIndex(usize);
 
 fn find_roots(
-    commits: &Vec<BonsaiChangeset>,
+    commits: &HashSet<BonsaiChangeset>,
 ) -> ::std::result::Result<HashMap<ChangesetId, ChildIndex>, PushrebaseError> {
     let commits_set: HashSet<_> =
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
@@ -1296,7 +1297,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs], None)
+            do_pushrebase(ctx, repo, Default::default(), book, hashset![hg_cs], None)
                 .wait()
                 .expect("pushrebase failed");
         });
@@ -1363,7 +1364,7 @@ mod tests {
                 repo,
                 Default::default(),
                 book,
-                vec![hg_cs_1, hg_cs_2],
+                hashset![hg_cs_1, hg_cs_2],
                 None,
             )
             .wait()
@@ -1433,7 +1434,7 @@ mod tests {
                 repo,
                 Default::default(),
                 book,
-                vec![hg_cs_1, hg_cs_2],
+                hashset![hg_cs_1, hg_cs_2],
                 None,
             )
             .wait()
@@ -1557,7 +1558,7 @@ mod tests {
                 repo.clone(),
                 config,
                 book,
-                vec![hg_cs_1, hg_cs_2, hg_cs_3],
+                hashset![hg_cs_1, hg_cs_2, hg_cs_3],
                 None,
             )
             .wait()
@@ -1647,7 +1648,7 @@ mod tests {
                 repo,
                 Default::default(),
                 book,
-                vec![hg_cs_1, hg_cs_2, hg_cs_3],
+                hashset![hg_cs_1, hg_cs_2, hg_cs_3],
                 None,
             )
             .wait();
@@ -1706,7 +1707,7 @@ mod tests {
                     repo.clone(),
                 ),
             );
-            let hgcss = vec![
+            let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                     .wait()
                     .unwrap(),
@@ -1766,7 +1767,7 @@ mod tests {
                     repo.clone(),
                 ),
             );
-            let hgcss = vec![
+            let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                     .wait()
                     .unwrap(),
@@ -1842,7 +1843,7 @@ mod tests {
                 repo_arc.clone(),
                 Default::default(),
                 book.clone(),
-                hgcss,
+                hgcss.into_iter().collect(),
                 None,
             )
             .wait()
@@ -1858,7 +1859,7 @@ mod tests {
                     repo.clone(),
                 ),
             );
-            let hgcss = vec![repo_arc
+            let hgcss = hashset![repo_arc
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                 .wait()
                 .unwrap()];
@@ -1916,7 +1917,7 @@ mod tests {
                     repo.clone(),
                 ),
             );
-            let hgcss = vec![repo
+            let hgcss = hashset![repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                 .wait()
                 .unwrap()];
@@ -1996,7 +1997,7 @@ mod tests {
                     repo.clone(),
                 ),
             );
-            let hgcss = vec![repo
+            let hgcss = hashset![repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                 .wait()
                 .unwrap()];
@@ -2120,7 +2121,7 @@ mod tests {
                 vec![root],
                 btreemap! {path_1.clone() => Some(file_1_exec.clone())},
             );
-            let hgcss = vec![repo
+            let hgcss = hashset![repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                 .wait()
                 .unwrap()];
@@ -2254,7 +2255,7 @@ mod tests {
                         repo.clone(),
                         Default::default(),
                         book.clone(),
-                        vec![hg_cs],
+                        hashset![hg_cs],
                         None,
                     )
                     .map_err(|_| err_msg("error while pushrebasing")),
@@ -2325,7 +2326,7 @@ mod tests {
         let book = OntoBookmarkParams { bookmark: book };
         assert!(run_future(
             &mut runtime,
-            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs], None),
+            do_pushrebase(ctx, repo, Default::default(), book, hashset![hg_cs], None),
         )
         .is_ok());
     }
@@ -2372,7 +2373,7 @@ mod tests {
                         repo.clone(),
                         Default::default(),
                         book.clone(),
-                        vec![hg_cs],
+                        hashset![hg_cs],
                         None,
                     )
                     .map_err(|err| err_msg(format!("error while pushrebasing {:?}", err))),
@@ -2441,7 +2442,7 @@ mod tests {
                 repo.clone(),
                 Default::default(),
                 book,
-                vec![hg_cs],
+                hashset![hg_cs],
                 Some(HgReplayData::new_with_simple_convertor(
                     ctx,
                     RawBundle2Id::new(AS),
@@ -2504,7 +2505,7 @@ mod tests {
                 repo.clone(),
                 config,
                 book,
-                vec![hg_cs],
+                hashset![hg_cs],
                 Some(HgReplayData::new_with_simple_convertor(
                     ctx.clone(),
                     RawBundle2Id::new(AS),
@@ -2561,7 +2562,7 @@ mod tests {
                 repo.clone(),
             ),
         );
-        let hgcss = vec![
+        let hgcss = hashset![
             run_future(
                 &mut runtime,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0),
@@ -2672,7 +2673,7 @@ mod tests {
                     store_files(ctx.clone(), content, repo.clone()),
                 );
 
-                let hgcss = vec![repo
+                let hgcss = hashset![repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
                     .wait()
                     .unwrap()];
@@ -2748,7 +2749,7 @@ mod tests {
 
         let book = master_bookmark();
 
-        let hgcss = vec![run_future(
+        let hgcss = hashset![run_future(
             &mut runtime,
             repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_fail),
         )?];
@@ -2764,7 +2765,7 @@ mod tests {
         .wait();
 
         should_have_conflicts(res);
-        let hgcss = vec![run_future(
+        let hgcss = hashset![run_future(
             &mut runtime,
             repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_succeed),
         )?];
@@ -2862,7 +2863,7 @@ mod tests {
             &format!("{}", hg_cs),
         );
 
-        let hgcss = vec![
+        let hgcss = hashset![
             run_future(
                 &mut runtime,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_first_merge),
@@ -2980,7 +2981,7 @@ mod tests {
             &format!("{}", hg_cs),
         );
 
-        let hgcss = vec![run_future(
+        let hgcss = hashset![run_future(
             &mut runtime,
             repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge),
         )?];
@@ -3116,7 +3117,7 @@ mod tests {
             &format!("{}", hg_cs),
         );
 
-        let hgcss = vec![run_future(
+        let hgcss = hashset![run_future(
             &mut runtime,
             repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge),
         )?];

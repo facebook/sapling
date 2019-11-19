@@ -31,7 +31,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{o, warn};
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 mod hook_running;
 pub use hook_running::run_hooks;
@@ -354,7 +354,7 @@ fn normal_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
     mut pushrebase_params: PushrebaseParams,
-    changesets: Vec<BonsaiChangeset>,
+    changesets: HashSet<BonsaiChangeset>,
     any_merges: bool,
     onto_bookmark: &pushrebase::OntoBookmarkParams,
     maybe_hg_replay_data: Option<pushrebase::HgReplayData>,

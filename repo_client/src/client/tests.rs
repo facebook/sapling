@@ -9,6 +9,7 @@
 use super::*;
 use maplit::hashset;
 use mononoke_types_mocks::changesetid::ONES_CSID;
+use std::collections::HashSet;
 
 #[test]
 fn test_parsing_caps_simple() {
@@ -95,7 +96,7 @@ fn test_pushredirect_config() {
         bookmark_pushes: Vec::new(),
         maybe_raw_bundle2_id: None,
         non_fast_forward_policy: NonFastForwardPolicy::Allowed,
-        uploaded_bonsais: Vec::new(),
+        uploaded_bonsais: HashSet::new(),
     });
     let infinitepush_action = PostResolveAction::InfinitePush(PostResolveInfinitePush {
         changegroup_id: None,
@@ -107,7 +108,7 @@ fn test_pushredirect_config() {
             new: ONES_CSID,
         },
         maybe_raw_bundle2_id: None,
-        uploaded_bonsais: Vec::new(),
+        uploaded_bonsais: HashSet::new(),
     });
     let pushrebase_action = PostResolveAction::PushRebase(PostResolvePushRebase {
         any_merges: true,
@@ -121,8 +122,8 @@ fn test_pushredirect_config() {
         maybe_hg_replay_data: None,
         maybe_pushvars: None,
         commonheads: CommonHeads { heads: Vec::new() },
-        uploaded_bonsais: Vec::new(),
-        uploaded_hg_changeset_ids: Vec::new(),
+        uploaded_bonsais: HashSet::new(),
+        uploaded_hg_changeset_ids: HashSet::new(),
     });
     let bookmark_only_action =
         PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {

@@ -39,7 +39,7 @@ fn run_pushrebase_hooks(
     action: &PostResolvePushRebase,
     hook_manager: Arc<HookManager>,
 ) -> BoxFuture<(), BundleResolverError> {
-    let changesets: Vec<_> = action.uploaded_hg_changeset_ids.clone();
+    let changesets = action.uploaded_hg_changeset_ids.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
     let bookmark = action.bookmark_spec.get_bookmark_name();
     run_pushrebase_hooks_impl(ctx, changesets, maybe_pushvars, &bookmark, hook_manager)

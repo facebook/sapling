@@ -22,7 +22,7 @@ use futures_preview::{
     future::{FutureExt, TryFutureExt},
     stream::{futures_unordered::FuturesUnordered, TryStreamExt},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use metaconfig_types::{CommitSyncConfig, PushrebaseParams};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
@@ -893,10 +893,10 @@ pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
 
             // Sync commit
             let frozen = rewritten.freeze()?;
-            let rewritten_list = vec![frozen];
+            let rewritten_list = hashset![frozen];
             upload_commits(
                 ctx.clone(),
-                rewritten_list.clone(),
+                rewritten_list.clone().into_iter().collect(),
                 source_repo.clone(),
                 target_repo.clone(),
             )
