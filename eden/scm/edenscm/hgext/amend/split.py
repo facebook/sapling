@@ -15,6 +15,7 @@
 
 from __future__ import absolute_import
 
+from edenscm.hgext import rebase
 from edenscm.mercurial import (
     bookmarks,
     cmdutil,
@@ -173,7 +174,8 @@ def split(ui, repo, *revs, **opts):
             if obsolete.isenabled(repo, obsolete.createmarkersopt):
                 obsolete.createmarkers(repo, [(repo[r], newcommits)], operation="split")
             if torebase:
-                common.restackonce(ui, repo, tip.rev())
+                rebaseopts = {"dest": "_destrestack(SRC)", "rev": torebase}
+                rebase.rebase(ui, repo, **rebaseopts)
             unfi = repo.unfiltered()
             visibility.remove(repo, [unfi[r].node()])
 
