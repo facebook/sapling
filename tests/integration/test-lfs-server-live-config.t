@@ -8,8 +8,7 @@
   > {
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
-  >   "max_bytes_sent_5s": null,
-  >   "max_bytes_sent_15s": null
+  >   "throttle_limits": []
   > }
   > EOF
 
@@ -18,16 +17,19 @@
   $ lfs_root="$(lfs_server --log "$lfs_log" --live-config "file:${LIVE_CONFIG}")"
 
 # Get the config
-  $ curl -fs "${lfs_root}/config"
-  {"track_bytes_sent":true,"enable_consistent_routing":false,"max_bytes_sent_5s":null,"max_bytes_sent_15s":null} (no-eol)
+  $ curl -fs "${lfs_root}/config" | jq -S .
+  {
+    "enable_consistent_routing": false,
+    "throttle_limits": [],
+    "track_bytes_sent": true
+  }
 
 # Update the config
   $ cat > "$LIVE_CONFIG" << EOF
   > {
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
-  >   "max_bytes_sent_5s": null,
-  >   "max_bytes_sent_15s": null
+  >   "throttle_limits": []
   > }
   > EOF
 
@@ -35,5 +37,9 @@
   $ sleep 2
 
 # Get the updated config
-  $ curl -fs "${lfs_root}/config"
-  {"track_bytes_sent":false,"enable_consistent_routing":false,"max_bytes_sent_5s":null,"max_bytes_sent_15s":null} (no-eol)
+  $ curl -fs "${lfs_root}/config" | jq -S .
+  {
+    "enable_consistent_routing": false,
+    "throttle_limits": [],
+    "track_bytes_sent": false
+  }

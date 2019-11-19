@@ -6,9 +6,10 @@
  * directory of this source tree.
  */
 
+use fbinit::FacebookInit;
 use futures_preview::{FutureExt, TryFutureExt};
 use gotham::{
-    handler::{HandlerError, HandlerFuture, IntoHandlerError},
+    handler::HandlerFuture,
     helpers::http::response::{create_empty_response, create_response},
     middleware::state::StateMiddleware,
     pipeline::{new_pipeline, single::single_pipeline},
@@ -16,66 +17,18 @@ use gotham::{
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
-    state::{request_id, FromState, State},
+    state::{FromState, State},
 };
 use hyper::{Body, Response, StatusCode};
-use itertools::Itertools;
 use mime;
-use std::iter;
-
-use failure_ext::chain::ChainExt;
-use lfs_protocol::ResponseError;
 
 use crate::batch;
 use crate::download;
-use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, HttpError, TryIntoResponse};
 use crate::lfs_server_context::LfsServerContext;
-use crate::middleware::RequestContext;
 use crate::upload;
 
-fn build_response<IR>(
-    res: Result<IR, HttpError>,
-    mut state: State,
-) -> Result<(State, Response<Body>), (State, HandlerError)>
-where
-    IR: TryIntoResponse,
-{
-    let res = res.and_then(|c| {
-        c.try_into_response(&mut state)
-            .chain_err(ErrorKind::ResponseCreationFailure)
-            .map_err(HttpError::e500)
-    });
-
-    let res: Response<Body> = match res {
-        Ok(resp) => resp,
-        Err(error) => {
-            let HttpError { error, status_code } = error;
-
-            let error_message = iter::once(error.to_string())
-                .chain(error.iter_causes().map(|c| c.to_string()))
-                .join(": ");
-
-            let res = ResponseError {
-                message: error_message.clone(),
-                documentation_url: None,
-                request_id: Some(request_id(&state).to_string()),
-            };
-
-            if let Some(log_ctx) = state.try_borrow_mut::<RequestContext>() {
-                log_ctx.set_error_msg(error_message);
-            }
-
-            // Bail if we can't convert the response to json.
-            match serde_json::to_string(&res) {
-                Ok(res) => create_response(&state, status_code, git_lfs_mime(), res),
-                Err(error) => return Err((state, error.into_handler_error())),
-            }
-        }
-    };
-
-    Ok((state, res))
-}
+use super::middleware::ThrottleMiddleware;
+use super::util::build_response;
 
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
 // as well as creating HTTP responses using build_response().
@@ -133,8 +86,11 @@ fn config_handler(state: State) -> (State, Response<Body>) {
     (state, res)
 }
 
-pub fn build_router(lfs_ctx: LfsServerContext) -> Router {
-    let pipeline = new_pipeline().add(StateMiddleware::new(lfs_ctx)).build();
+pub fn build_router(fb: FacebookInit, lfs_ctx: LfsServerContext) -> Router {
+    let pipeline = new_pipeline()
+        .add(ThrottleMiddleware::new(fb, lfs_ctx.get_config_handle()))
+        .add(StateMiddleware::new(lfs_ctx))
+        .build();
 
     let (chain, pipelines) = single_pipeline(pipeline);
 

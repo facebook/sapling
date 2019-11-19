@@ -63,6 +63,6 @@ pub enum ErrorKind {
     FilestoreWriteFailure,
     #[error("Failed to create response")]
     ResponseCreationFailure,
-    #[error("Throttled by counter: {0}")]
-    Throttled(String),
+    #[error("Throttled by counter: {0} (value: {1}, limit: {2})")]
+    Throttled(String, i64, i64),
 }

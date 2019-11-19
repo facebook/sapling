@@ -116,7 +116,15 @@ impl LfsServerContext {
         }
     }
 
-    pub fn get_config(&self) -> ServerConfig {
+    pub fn get_config_handle(&self) -> ServerConfigHandle {
+        self.inner
+            .lock()
+            .expect("poisoned lock")
+            .config_handle
+            .clone()
+    }
+
+    pub fn get_config(&self) -> Arc<ServerConfig> {
         let inner = self.inner.lock().expect("poisoned lock");
         inner.config_handle.get()
     }
@@ -131,7 +139,7 @@ pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: BlobRepo,
     pub uri_builder: UriBuilder,
-    pub config: ServerConfig,
+    pub config: Arc<ServerConfig>,
     always_wait_for_upstream: bool,
     client: Arc<HttpsHyperClient>,
 }

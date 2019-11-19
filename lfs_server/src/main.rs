@@ -45,7 +45,7 @@ use crate::middleware::{
     ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
     RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
 };
-use crate::router::build_router;
+use crate::service::build_router;
 
 mod batch;
 mod config;
@@ -54,7 +54,7 @@ mod errors;
 mod handler;
 mod lfs_server_context;
 mod middleware;
-mod router;
+mod service;
 mod upload;
 #[macro_use]
 mod http;
@@ -264,7 +264,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         config,
     )?;
 
-    let router = build_router(ctx);
+    let router = build_router(fb, ctx);
 
     let root = MononokeLfsHandler::builder()
         .add(ClientIdentityMiddleware::new())

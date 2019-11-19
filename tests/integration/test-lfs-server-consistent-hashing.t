@@ -8,8 +8,7 @@
   > {
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
-  >   "max_bytes_sent_5s": null,
-  >   "max_bytes_sent_15s": null
+  >   "throttle_limits": []
   > }
   > EOF
 

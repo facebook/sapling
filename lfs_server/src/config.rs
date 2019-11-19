@@ -24,13 +24,19 @@ use std::time::{Duration, Instant};
 
 const FETCH_TIMEOUT: u64 = 10;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Limit {
+    pub counter: String,
+    pub limit: i64,
+    pub sleep_ms: i64,
+}
+
 /// Struct representing actual config data.
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     pub track_bytes_sent: bool,
     pub enable_consistent_routing: bool,
-    pub max_bytes_sent_5s: Option<u64>,
-    pub max_bytes_sent_15s: Option<u64>,
+    pub throttle_limits: Vec<Limit>,
 }
 
 impl Default for ServerConfig {
@@ -38,21 +44,20 @@ impl Default for ServerConfig {
         Self {
             track_bytes_sent: false,
             enable_consistent_routing: false,
-            max_bytes_sent_5s: None,
-            max_bytes_sent_15s: None,
+            throttle_limits: vec![],
         }
     }
 }
 
 /// Struct representing a stored config and its source's idea of freshness.
 #[derive(Debug, Clone)]
-struct ServerConfigInner {
+struct ServerConfigContainer {
     mod_time: u64,
     version: Option<String>,
-    config: ServerConfig,
+    config: Arc<ServerConfig>,
 }
 
-impl ServerConfigInner {
+impl ServerConfigContainer {
     fn new(entity: Entity) -> Result<Self, Error> {
         let Entity {
             mod_time,
@@ -60,7 +65,7 @@ impl ServerConfigInner {
             contents,
         } = entity;
 
-        let config = serde_json::from_str(&contents)?;
+        let config = Arc::new(serde_json::from_str(&contents)?);
 
         Ok(Self {
             mod_time,
@@ -82,11 +87,11 @@ impl ServerConfigInner {
 /// Accessor for the config
 #[derive(Debug, Clone)]
 pub struct ServerConfigHandle {
-    inner: Arc<RwLock<ServerConfigInner>>,
+    inner: Arc<RwLock<ServerConfigContainer>>,
 }
 
 impl ServerConfigHandle {
-    fn new(inner: ServerConfigInner) -> Self {
+    fn new(inner: ServerConfigContainer) -> Self {
         Self {
             inner: Arc::new(RwLock::new(inner)),
         }
@@ -111,14 +116,14 @@ impl ServerConfigHandle {
 
     fn with_inner<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(&ServerConfigInner) -> T,
+        F: FnOnce(&ServerConfigContainer) -> T,
     {
         let inner = self.inner.read().expect("Lock poisoned");
         f(&inner)
     }
 
-    pub fn get(&self) -> ServerConfig {
-        self.with_inner(|inner| inner.config)
+    pub fn get(&self) -> Arc<ServerConfig> {
+        self.with_inner(|inner| inner.config.clone())
     }
 }
 
@@ -165,7 +170,7 @@ pub fn spawn_config_poller(
     );
 
     let entity = loader.load(timeout)?;
-    let config = ServerConfigHandle::new(ServerConfigInner::new(entity)?);
+    let config = ServerConfigHandle::new(ServerConfigContainer::new(entity)?);
 
     let handle = thread::spawn({
         cloned!(config);

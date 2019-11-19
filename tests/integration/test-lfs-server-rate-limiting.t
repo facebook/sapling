@@ -8,8 +8,9 @@
   > {
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
-  >   "max_bytes_sent_5s": 8,
-  >   "max_bytes_sent_15s": 8
+  >   "throttle_limits": [
+  >     {"counter": "mononoke.lfs.download.size_bytes_sent.sum.5", "limit": 10, "sleep_ms": 1000 }
+  >   ]
   > }
   > EOF
 
