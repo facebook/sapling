@@ -23,6 +23,18 @@ if(USE_CARGO_VENDOR AND NOT TARGET rust_vendored_crates)
     )
   endif()
 
+  # Note: USE_CARGO_VENDOR requires Python 3 and CMake 3.12+ (for FindPython3)
+  # We could support older versions of CMake using the older
+  # find_package(PythonInterp) code if necessary, but it would make the code
+  # much more complicated here.
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(NOT Python3_Interpreter_FOUND)
+    message(
+      FATAL_ERROR "unable to find Python 3, which is required for building "
+      "Rust code with USE_CARGO_VENDOR enabled"
+    )
+  endif()
+
   set(RUST_VENDORED_CRATES_DIR "${CMAKE_BINARY_DIR}/_rust_crates/vendor")
   set(RUST_CARGO_HOME "${CMAKE_BINARY_DIR}/_rust_crates/cargo_home")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/_rust_crates")
@@ -47,7 +59,7 @@ if(USE_CARGO_VENDOR AND NOT TARGET rust_vendored_crates)
 
   add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/_rust_crates/vendor/.url"
-    COMMAND "${RUST_VENDORED_CRATES_SCRIPT}" download
+    COMMAND "${Python3_EXECUTABLE}" "${RUST_VENDORED_CRATES_SCRIPT}" download
     DEPENDS "${RUST_VENDORED_CRATES_SCRIPT}"
     COMMENT "Fetching rust vendored crates..."
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/_rust_crates"
