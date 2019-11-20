@@ -198,7 +198,7 @@ py_class!(class treemanifest |py| {
         let result = match tree.list(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             manifest::tree::List::NotFound | manifest::tree::List::File => vec![],
             manifest::tree::List::Directory(components) =>
-                components.into_iter().map(|component|
+                components.into_iter().map(|(component, _)|
                     path_to_pybytes(py, component.as_path_component())
                 ).collect()
         };

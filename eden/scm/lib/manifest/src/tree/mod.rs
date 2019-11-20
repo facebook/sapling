@@ -459,9 +459,13 @@ impl Tree {
             Some(Ephemeral(content)) => content,
             Some(Durable(entry)) => entry.get_links(&self.store, path)?,
         };
-        Ok(List::Directory(
-            directory.keys().map(|key| key.to_owned()).collect(),
-        ))
+
+        let directory = directory
+            .into_iter()
+            .map(|(key, value)| (key.to_owned(), value.to_fs_node()))
+            .collect();
+
+        Ok(List::Directory(directory))
     }
 
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
@@ -488,7 +492,7 @@ impl Tree {
 pub enum List {
     NotFound,
     File,
-    Directory(Vec<PathComponentBuf>),
+    Directory(Vec<(PathComponentBuf, FsNode)>),
 }
 
 /// The purpose of this function is to provide compatible behavior with the C++ implementation
@@ -1408,38 +1412,53 @@ mod tests {
     #[test]
     fn test_list() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1"), make_meta("10"))
-            .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
+        let c1_meta = make_meta("10");
+        tree.insert(repo_path_buf("a1/b1/c1"), c1_meta).unwrap();
+        let b2_meta = make_meta("20");
+        tree.insert(repo_path_buf("a1/b2"), b2_meta).unwrap();
         let _hgid = tree.flush().unwrap();
-        tree.insert(repo_path_buf("a2/b3/c2"), make_meta("30"))
-            .unwrap();
-        tree.insert(repo_path_buf("a2/b4"), make_meta("30"))
-            .unwrap();
+        let c2_meta = make_meta("30");
+        tree.insert(repo_path_buf("a2/b3/c2"), c2_meta).unwrap();
+        let b4_meta = make_meta("40");
+        tree.insert(repo_path_buf("a2/b4"), b4_meta).unwrap();
 
         assert_eq!(tree.list(repo_path("not_found")).unwrap(), List::NotFound);
         assert_eq!(tree.list(repo_path("a1/b1/c1")).unwrap(), List::File);
         assert_eq!(
             tree.list(repo_path("a1/b1")).unwrap(),
-            List::Directory(vec![path_component_buf("c1")]),
+            List::Directory(vec![(path_component_buf("c1"), FsNode::File(c1_meta))]),
         );
         assert_eq!(
             tree.list(repo_path("a1")).unwrap(),
-            List::Directory(vec![path_component_buf("b1"), path_component_buf("b2")]),
+            List::Directory(vec![
+                (
+                    path_component_buf("b1"),
+                    tree.get(repo_path("a1/b1")).unwrap().unwrap()
+                ),
+                (path_component_buf("b2"), FsNode::File(b2_meta)),
+            ]),
         );
         assert_eq!(tree.list(repo_path("a2/b3/c2")).unwrap(), List::File);
         assert_eq!(
             tree.list(repo_path("a2/b3")).unwrap(),
-            List::Directory(vec![path_component_buf("c2")]),
+            List::Directory(vec![(path_component_buf("c2"), FsNode::File(c2_meta))]),
         );
         assert_eq!(
             tree.list(repo_path("a2")).unwrap(),
-            List::Directory(vec![path_component_buf("b3"), path_component_buf("b4")]),
+            List::Directory(vec![
+                (path_component_buf("b3"), FsNode::Directory(None)),
+                (path_component_buf("b4"), FsNode::File(b4_meta)),
+            ]),
         );
         assert_eq!(
             tree.list(RepoPath::empty()).unwrap(),
-            List::Directory(vec![path_component_buf("a1"), path_component_buf("a2")]),
+            List::Directory(vec![
+                (
+                    path_component_buf("a1"),
+                    tree.get(repo_path("a1")).unwrap().unwrap()
+                ),
+                (path_component_buf("a2"), FsNode::Directory(None)),
+            ]),
         );
     }
 
