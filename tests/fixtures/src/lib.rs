@@ -112,7 +112,7 @@ fn create_bonsai_changeset_from_test_data(
     );
 }
 
-fn set_bookmark(fb: FacebookInit, blobrepo: BlobRepo, hg_cs_id: &str, bookmark: BookmarkName) {
+pub fn set_bookmark(fb: FacebookInit, blobrepo: BlobRepo, hg_cs_id: &str, bookmark: BookmarkName) {
     let ctx = CoreContext::test_mock(fb);
     let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
     let bcs_id = blobrepo

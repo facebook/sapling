@@ -236,8 +236,9 @@ pub fn init_cachelib_from_settings(fb: FacebookInit, settings: CachelibSettings)
 pub fn csid_resolve(
     ctx: CoreContext,
     repo: BlobRepo,
-    hash_or_bookmark: String,
+    hash_or_bookmark: impl ToString,
 ) -> impl Future<Item = ChangesetId, Error = Error> {
+    let hash_or_bookmark = hash_or_bookmark.to_string();
     BookmarkName::new(hash_or_bookmark.clone())
         .into_future()
         .and_then({
