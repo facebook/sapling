@@ -1,9 +1,21 @@
 include(FBCMakeParseArgs)
 
+set(
+  USE_CARGO_VENDOR AUTO CACHE STRING
+  "Download Rust Crates from an internally vendored location"
+)
+set_property(CACHE USE_CARGO_VENDOR PROPERTY STRINGS AUTO ON OFF)
+
+set(RUST_VENDORED_CRATES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/lfs/crates-io.py")
+if("${USE_CARGO_VENDOR}" STREQUAL "AUTO")
+  if(EXISTS "${RUST_VENDORED_CRATES_SCRIPT}")
+    set(USE_CARGO_VENDOR ON)
+  else()
+    set(USE_CARGO_VENDOR OFF)
+  endif()
+endif()
+
 if(USE_CARGO_VENDOR AND NOT TARGET rust_vendored_crates)
-  set(RUST_VENDORED_CRATES_DIR "${CMAKE_BINARY_DIR}/_rust_crates/vendor")
-  set(RUST_VENDORED_CRATES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/lfs/crates-io.py")
-  set(RUST_CARGO_HOME "${CMAKE_BINARY_DIR}/_rust_crates/cargo_home")
   if(NOT EXISTS "${RUST_VENDORED_CRATES_SCRIPT}")
     message(
       FATAL "vendored rust crates script does not exist: "
@@ -11,6 +23,8 @@ if(USE_CARGO_VENDOR AND NOT TARGET rust_vendored_crates)
     )
   endif()
 
+  set(RUST_VENDORED_CRATES_DIR "${CMAKE_BINARY_DIR}/_rust_crates/vendor")
+  set(RUST_CARGO_HOME "${CMAKE_BINARY_DIR}/_rust_crates/cargo_home")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/_rust_crates")
   file(MAKE_DIRECTORY "${RUST_CARGO_HOME}")
   file(
