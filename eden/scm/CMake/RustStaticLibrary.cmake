@@ -1,5 +1,49 @@
 include(FBCMakeParseArgs)
 
+if(USE_CARGO_VENDOR AND NOT TARGET rust_vendored_crates)
+  set(RUST_VENDORED_CRATES_DIR "${CMAKE_BINARY_DIR}/_rust_crates/vendor")
+  set(RUST_VENDORED_CRATES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/lfs/crates-io.py")
+  set(RUST_CARGO_HOME "${CMAKE_BINARY_DIR}/_rust_crates/cargo_home")
+  if(NOT EXISTS "${RUST_VENDORED_CRATES_SCRIPT}")
+    message(
+      FATAL "vendored rust crates script does not exist: "
+      "${RUST_VENDORED_CRATES_SCRIPT}"
+    )
+  endif()
+
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/_rust_crates")
+  file(MAKE_DIRECTORY "${RUST_CARGO_HOME}")
+  file(
+    TO_NATIVE_PATH "${RUST_VENDORED_CRATES_DIR}"
+    ESCAPED_RUST_VENDORED_CRATES_DIR
+  )
+  string(
+    REPLACE "\\" "\\\\"
+    ESCAPED_RUST_VENDORED_CRATES_DIR
+    "${ESCAPED_RUST_VENDORED_CRATES_DIR}"
+  )
+  file(
+    WRITE "${RUST_CARGO_HOME}/config"
+    "[source.crates-io]\n"
+    "replace-with = \"vendored-sources\"\n"
+    "\n"
+    "[source.vendored-sources]\n"
+    "directory = \"${ESCAPED_RUST_VENDORED_CRATES_DIR}\"\n"
+  )
+
+  add_custom_command(
+    OUTPUT "${CMAKE_BINARY_DIR}/_rust_crates/vendor/.url"
+    COMMAND "${RUST_VENDORED_CRATES_SCRIPT}" download
+    DEPENDS "${RUST_VENDORED_CRATES_SCRIPT}"
+    COMMENT "Fetching rust vendored crates..."
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/_rust_crates"
+  )
+  add_custom_target(
+    rust_vendored_crates
+    DEPENDS "${CMAKE_BINARY_DIR}/_rust_crates/vendor/.url"
+  )
+endif()
+
 # This function creates an interface library target based on the static library
 # built by Cargo. It will call Cargo to build a staticlib and generate a CMake
 # interface library with it.
@@ -46,37 +90,25 @@ function(rust_static_library TARGET)
   set(rust_staticlib "${CMAKE_CURRENT_BINARY_DIR}/${target_dir}/${staticlib_name}")
 
   if(USE_CARGO_VENDOR)
-    # setup_cargo_vendor.py is present only in the internal FB version of this repo,
-    # and is used to avoid downloading crates directly from the internet each time
-    # our CI runs a build.
-    set(pre_cargo_cmd ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/CMake/facebook/setup_cargo_vendor.py)
-  else()
-    set(pre_cargo_cmd "${CMAKE_COMMAND}" -E echo NOP)
-  endif()
-
-  if(WIN32)
-    # compatibility for cmd.exe
-    set(
-      cargo_cmd
-      set CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}&& ${cargo_cmd}
-    )
-  else()
-    set(
-      cargo_cmd
-      CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR} ${cargo_cmd}
-    )
+    set(extra_cargo_env "CARGO_HOME=${RUST_CARGO_HOME}")
   endif()
 
   add_custom_target(
     ${cargo_target} ALL
-    COMMAND ${pre_cargo_cmd}
-    COMMAND ${cargo_cmd}
+    COMMAND
+      "${CMAKE_COMMAND}" -E env
+      "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+      ${extra_cargo_env}
+      ${cargo_cmd}
     COMMENT "Building Rust crate '${crate_name}'..."
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )
 
   add_library(${TARGET} INTERFACE)
   add_dependencies(${TARGET} ${cargo_target})
+  if(USE_CARGO_VENDOR)
+    add_dependencies("${cargo_target}" rust_vendored_crates)
+  endif()
   set_target_properties(
     ${TARGET}
     PROPERTIES
