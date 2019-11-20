@@ -29,6 +29,7 @@ use itertools::join;
 use lazy_static::lazy_static;
 use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
+use repo_client::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{crit, error, o, Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
@@ -46,7 +47,6 @@ use crate::request_handler::request_handler;
 
 const CHUNK_SIZE: usize = 10000;
 const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
-const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
 lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }

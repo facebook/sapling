@@ -41,6 +41,8 @@ use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
 
+pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
+
 #[derive(Clone)]
 /// Core push redirector struct. Performs conversions of pushes
 /// to be processed by the large repo, and conversions of results
