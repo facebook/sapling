@@ -504,13 +504,11 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     if (config_) {
       auto edenConfig = config_->getEdenConfig();
       if (edenConfig->useHgCache.getValue() && datapackStore_) {
-        if (auto content = datapackStore_->getTree(manifestNode, path)) {
+        if (auto tree = datapackStore_->getTree(
+                path, manifestNode, edenTreeID, writeBatch.get())) {
           XLOG(DBG4) << "imported tree node=" << manifestNode
                      << " path=" << path << " from Rust hgcache";
-          auto fbstr = content->moveToFbString();
-          auto ref = ConstantStringRef{fbstr.c_str(), fbstr.length()};
-          return folly::makeFuture(processTree(
-              ref, manifestNode, edenTreeID, path, writeBatch.get()));
+          return folly::makeFuture(std::move(tree));
         }
       }
     }

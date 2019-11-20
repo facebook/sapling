@@ -96,11 +96,16 @@ std::unique_ptr<Blob> HgDatapackStore::getBlob(
   return nullptr;
 }
 
-folly::Optional<folly::IOBuf> HgDatapackStore::getTree(
-    const Hash& id,
-    RelativePath path) {
-  return store_.getTree(path.stringPiece(), id.getBytes());
-}
+std::unique_ptr<Tree> HgDatapackStore::getTree(
+    const RelativePath& path,
+    const Hash& manifestId,
+    const Hash& edenTreeId,
+    LocalStore::WriteBatch* writeBatch) {
+  if (auto tree = store_.getTree(manifestId.getBytes())) {
+    return fromRawTree(tree.get(), edenTreeId, path, writeBatch);
+  }
 
+  return nullptr;
+}
 } // namespace eden
 } // namespace facebook

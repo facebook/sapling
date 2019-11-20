@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use crate::raw;
+use crate::treecontentstore::TreeContentStore;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
 use failure::Fallible as Result;
+use manifest::Tree;
 use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
+use std::convert::TryFrom;
 use std::path::Path;
+use std::sync::Arc;
 use types::{Key, Node, RepoPath};
 
 pub struct BackingStore {
     blobstore: ContentStore,
-    treestore: ContentStore,
+    treestore: Arc<TreeContentStore>,
 }
 
 impl BackingStore {
@@ -33,7 +38,7 @@ impl BackingStore {
 
         Ok(Self {
             blobstore,
-            treestore,
+            treestore: Arc::new(TreeContentStore::new(treestore)),
         })
     }
 
@@ -57,12 +62,12 @@ impl BackingStore {
             .map(|blob| blob.map(discard_metadata_header))
     }
 
-    pub fn get_tree(&self, path: &[u8], node: &[u8]) -> Result<Option<Vec<u8>>> {
-        let path = RepoPath::from_utf8(path)?.to_owned();
+    pub fn get_tree(&self, node: &[u8]) -> Result<raw::Tree> {
         let node = Node::from_slice(node)?;
-        let key = Key::new(path, node);
+        let manifest = Tree::durable(self.treestore.clone(), node);
+        let list = manifest.list(RepoPath::empty())?;
 
-        self.treestore.get(&key)
+        raw::Tree::try_from(list)
     }
 }
 

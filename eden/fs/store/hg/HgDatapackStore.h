@@ -7,12 +7,10 @@
 
 #pragma once
 
-#include <folly/Optional.h>
 #include <folly/Range.h>
-#include <folly/Synchronized.h>
-#include <folly/io/IOBuf.h>
 
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
 
@@ -29,7 +27,11 @@ class HgDatapackStore {
 
   std::unique_ptr<Blob> getBlob(const Hash& id, const HgProxyHash& hgInfo);
 
-  folly::Optional<folly::IOBuf> getTree(const Hash& id, RelativePath path);
+  std::unique_ptr<Tree> getTree(
+      const RelativePath& path,
+      const Hash& manifestId,
+      const Hash& edenTreeId,
+      LocalStore::WriteBatch* writeBatch);
 
  private:
   HgNativeBackingStore store_;

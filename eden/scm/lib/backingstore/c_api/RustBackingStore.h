@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<d354b7cf7fd596344df4dabeebf5e77e>>
+ * @generated SignedSource<<85582de8715286965cfc5e5472a8dab0>>
  *
  */
 
@@ -128,10 +128,8 @@ RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
                                                          uintptr_t node_len);
 
 RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
-                                                         const uint8_t *name,
-                                                         uintptr_t name_len,
-                                                         const uint8_t *node,
-                                                         uintptr_t node_len);
+                                                       const uint8_t *node,
+                                                       uintptr_t node_len);
 
 RustCFallibleBase rust_backingstore_new(const char *repository,
                                                           size_t repository_len);
@@ -151,5 +149,7 @@ RustCFallibleBase rust_test_cfallible_err();
 RustCFallibleBase rust_test_cfallible_ok();
 
 void rust_test_cfallible_ok_free(uint8_t *val);
+
+void rust_tree_free(RustTree *tree);
 
 } // extern "C"

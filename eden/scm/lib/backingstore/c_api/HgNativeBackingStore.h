@@ -21,6 +21,9 @@ class Optional;
 
 namespace facebook {
 namespace eden {
+class Tree;
+class Hash;
+
 class HgNativeBackingStore {
  public:
   explicit HgNativeBackingStore(folly::StringPiece repository);
@@ -29,9 +32,7 @@ class HgNativeBackingStore {
       folly::ByteRange name,
       folly::ByteRange node);
 
-  folly::Optional<folly::IOBuf> getTree(
-      folly::ByteRange name,
-      folly::ByteRange node);
+  std::shared_ptr<RustTree> getTree(folly::ByteRange node);
 
  private:
   std::unique_ptr<RustBackingStore, std::function<void(RustBackingStore*)>>
