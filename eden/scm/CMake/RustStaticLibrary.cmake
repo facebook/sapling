@@ -120,7 +120,7 @@ function(rust_static_library TARGET)
   endif()
 
   add_custom_target(
-    ${cargo_target} ALL
+    ${cargo_target}
     COMMAND
       "${CMAKE_COMMAND}" -E env
       "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}"
@@ -128,6 +128,9 @@ function(rust_static_library TARGET)
       ${cargo_cmd}
     COMMENT "Building Rust crate '${crate_name}'..."
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    BYPRODUCTS
+      "${CMAKE_CURRENT_BINARY_DIR}/debug/${staticlib_name}"
+      "${CMAKE_CURRENT_BINARY_DIR}/release/${staticlib_name}"
   )
 
   add_library(${TARGET} INTERFACE)
