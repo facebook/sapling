@@ -256,6 +256,12 @@ def callcatch(ui, func):
         return inst.code
     except socket.error as inst:
         ui.warn(_("%s\n") % inst.args[-1], error=_("abort"))
+    except Exception as e:
+        if type(e).__name__ == "TApplicationException":
+            ui.warn(_("ThriftError: %s\n") % e, error=_("abort"))
+            ui.warn(_("(try 'eden doctor' to diagnose this issue)\n"))
+        else:
+            raise
 
     return -1
 
