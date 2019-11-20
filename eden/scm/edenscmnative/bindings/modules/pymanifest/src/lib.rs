@@ -161,7 +161,7 @@ py_class!(class treemanifest |py| {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
         let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
-            Some(FsNode::Directory) => true,
+            Some(FsNode::Directory(_)) => true,
             _ => false
         };
         Ok(result)

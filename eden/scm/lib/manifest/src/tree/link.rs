@@ -13,7 +13,7 @@ use once_cell::sync::OnceCell;
 use types::{HgId, PathComponentBuf, RepoPath};
 
 use crate::tree::{store, store::InnerStore};
-use crate::FileMetadata;
+use crate::{FileMetadata, FsNode};
 
 /// `Link` describes the type of nodes that tree manifest operates on.
 #[derive(Clone, Debug)]
@@ -73,6 +73,14 @@ impl Link {
                     *self = Ephemeral(durable_links.clone());
                 }
             }
+        }
+    }
+
+    pub fn to_fs_node(&self) -> FsNode {
+        match self {
+            &Link::Leaf(metadata) => FsNode::File(metadata),
+            Link::Ephemeral(_) => FsNode::Directory(None),
+            Link::Durable(durable) => FsNode::Directory(Some(durable.hgid)),
         }
     }
 }

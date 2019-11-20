@@ -50,7 +50,7 @@ pub trait Manifest {
     fn get_file(&self, file_path: &RepoPath) -> Result<Option<FileMetadata>> {
         let result = self.get(file_path)?.and_then(|fs_hgid| match fs_hgid {
             FsNode::File(file_metadata) => Some(file_metadata),
-            FsNode::Directory => None,
+            FsNode::Directory(_) => None,
         });
         Ok(result)
     }
@@ -63,7 +63,7 @@ pub trait Manifest {
 /// helps us represent that notion.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FsNode {
-    Directory,
+    Directory(Option<HgId>),
     File(FileMetadata),
 }
 

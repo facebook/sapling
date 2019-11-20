@@ -90,13 +90,7 @@ impl Tree {
 
 impl Manifest for Tree {
     fn get(&self, path: &RepoPath) -> Result<Option<FsNode>> {
-        let result = self.get_link(path)?.map(|link| {
-            if let &Leaf(file_metadata) = link {
-                FsNode::File(file_metadata)
-            } else {
-                FsNode::Directory
-            }
-        });
+        let result = self.get_link(path)?.map(|link| link.to_fs_node());
         Ok(result)
     }
 
@@ -868,9 +862,12 @@ mod tests {
             .unwrap();
         assert_eq!(
             tree.get(repo_path("foo/bar")).unwrap(),
-            Some(FsNode::Directory)
+            Some(FsNode::Directory(None))
         );
-        assert_eq!(tree.get(repo_path("foo")).unwrap(), Some(FsNode::Directory));
+        assert_eq!(
+            tree.get(repo_path("foo")).unwrap(),
+            Some(FsNode::Directory(None))
+        );
     }
 
     #[test]
@@ -927,7 +924,7 @@ mod tests {
 
         assert_eq!(
             tree.get(RepoPath::empty()).unwrap(),
-            Some(FsNode::Directory)
+            Some(FsNode::Directory(None))
         );
     }
 
@@ -939,8 +936,9 @@ mod tests {
             store_element("a2", "20", store::Flag::File(FileType::Regular)),
         ])
         .unwrap();
+        let tree_hgid = hgid("1");
         store
-            .insert(RepoPath::empty(), hgid("1"), root_entry.to_bytes())
+            .insert(RepoPath::empty(), tree_hgid, root_entry.to_bytes())
             .unwrap();
         let a1_entry = store::Entry::from_elements(vec![
             store_element("b1", "11", store::Flag::File(FileType::Regular)),
@@ -950,8 +948,12 @@ mod tests {
         store
             .insert(repo_path("a1"), hgid("10"), a1_entry.to_bytes())
             .unwrap();
-        let mut tree = Tree::durable(Arc::new(store), hgid("1"));
+        let mut tree = Tree::durable(Arc::new(store), tree_hgid);
 
+        assert_eq!(
+            tree.get(RepoPath::empty()).unwrap(),
+            Some(FsNode::Directory(Some(tree_hgid)))
+        );
         assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
         assert_eq!(
             tree.remove(repo_path("a1/b1")).unwrap(),
@@ -976,10 +978,9 @@ mod tests {
         );
         assert_eq!(tree.remove(repo_path("a2")).unwrap(), Some(make_meta("20")));
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
-
         assert_eq!(
             tree.get(RepoPath::empty()).unwrap(),
-            Some(FsNode::Directory)
+            Some(FsNode::Directory(None))
         );
     }
 
