@@ -19,7 +19,6 @@ pub struct CBytes {
 }
 
 impl CBytes {
-    #[allow(dead_code)]
     pub fn from_vec(vec: Vec<u8>) -> Self {
         let vec = Box::new(vec);
         let ptr = vec.as_ptr();
@@ -32,10 +31,21 @@ impl CBytes {
     }
 }
 
+impl From<Vec<u8>> for CBytes {
+    fn from(vec: Vec<u8>) -> Self {
+        CBytes::from_vec(vec)
+    }
+}
+
+impl Drop for CBytes {
+    fn drop(&mut self) {
+        let vec = unsafe { Box::from_raw(self.vec) };
+        drop(vec);
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn rust_cbytes_free(vec: *mut CBytes) {
     let ptr = unsafe { Box::from_raw(vec) };
-    let vec = unsafe { Box::from_raw(ptr.vec) };
-    drop(vec);
     drop(ptr);
 }
