@@ -95,6 +95,29 @@ diff
    e
   +x
 
+  $ scsc diff --repo repo -i "$COMMIT_B" -i "$COMMIT_D" --skip-copies-renames
+  diff --git a/copied_b b/copied_b
+  new file mode 100644
+  --- /dev/null
+  +++ b/copied_b
+  @@ -0,0 +1,5 @@
+  +a
+  +b
+  +d
+  +e
+  +f
+  diff --git a/moved_a b/moved_a
+  new file mode 100644
+  --- /dev/null
+  +++ b/moved_a
+  @@ -0,0 +1,6 @@
+  +a
+  +b
+  +c
+  +d
+  +e
+  +x
+
 lookup using bookmarks
   $ scsc lookup --repo repo  -B BOOKMARK_B
   323afe77a1b1e632e54e8d5a683ba2cc8511f299

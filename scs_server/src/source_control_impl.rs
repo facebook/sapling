@@ -1224,7 +1224,9 @@ impl SourceControlService for SourceControlServiceImpl {
                 params.other_commit_id.to_string()
             ))
         })?;
-        let diff = base_changeset.diff(other_changeset_id, true).await?;
+        let diff = base_changeset
+            .diff(other_changeset_id, !params.skip_copies_renames)
+            .await?;
         let diff_files = stream::iter(diff)
             .map(|d| d.into_response())
             .buffer_unordered(CONCURRENCY_LIMIT)
