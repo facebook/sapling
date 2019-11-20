@@ -10,7 +10,9 @@
   >   "enable_consistent_routing": false,
   >   "throttle_limits": [
   >     {"counter": "mononoke.lfs.download.size_bytes_sent.sum.5", "limit": 10, "sleep_ms": 1000 }
-  >   ]
+  >   ],
+  >   "acl_check": true,
+  >   "enforce_acl_check": false
   > }
   > EOF
 
