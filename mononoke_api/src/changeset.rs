@@ -326,7 +326,7 @@ impl ChangesetContext {
                         None
                     } else {
                         Some(ChangesetPathDiffContext::Removed(
-                            ChangesetPathContext::new(self.clone(), Some(path)),
+                            ChangesetPathContext::new(other.clone(), Some(path)),
                         ))
                     }
                 }

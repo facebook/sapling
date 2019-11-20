@@ -96,6 +96,16 @@ diff
   +x
 
   $ scsc diff --repo repo -i "$COMMIT_B" -i "$COMMIT_D" --skip-copies-renames
+  diff --git a/a b/a
+  deleted file mode 100644
+  --- a/a
+  +++ /dev/null
+  @@ -1,5 +0,0 @@
+  -a
+  -b
+  -c
+  -d
+  -e
   diff --git a/copied_b b/copied_b
   new file mode 100644
   --- /dev/null
