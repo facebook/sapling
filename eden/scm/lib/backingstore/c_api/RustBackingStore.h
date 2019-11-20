@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<9e8a2dc050438223b658363f7614992e>>
+ * @generated SignedSource<<d354b7cf7fd596344df4dabeebf5e77e>>
  *
  */
 
@@ -76,6 +76,13 @@ public:
 #include <cstdlib>
 #include <new>
 
+enum class RustTreeEntryType : uint8_t {
+  Tree,
+  RegularFile,
+  ExecutableFile,
+  Symlink,
+};
+
 struct RustBackingStore;
 
 template<typename T>
@@ -92,6 +99,22 @@ folly::ByteRange asByteRange() const {
 operator folly::ByteRange() const {
   return asByteRange();
 }
+};
+
+struct RustTreeEntry {
+  RustCBytes hash;
+  RustCBytes name;
+  RustTreeEntryType ttype;
+  uint64_t *size;
+  RustCBytes *content_sha1;
+};
+
+struct RustTree {
+  const RustTreeEntry *entries;
+  /// This makes sure `entries` above is pointing to a valid memory.
+  RustVec<RustTreeEntry> *_entries;
+  uintptr_t length;
+  RustCBytes hash;
 };
 
 extern "C" {

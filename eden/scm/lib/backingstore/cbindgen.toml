@@ -78,6 +78,7 @@ public:
 [export]
 prefix= "Rust"
 exclude = ["CFallible"]
+include = ["Tree", "TreeEntry", "TreeEntryType"]
 
 [export.rename]
 "CFallible" = "CFallibleBase"
