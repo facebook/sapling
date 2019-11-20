@@ -191,21 +191,27 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   remote:   Error:
   remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd)))]
   remote:   Root cause:
-  remote:     SharedError {
-  remote:         error: Compat {
-  remote:             error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("inconsistent_file")), HgNodeHash(Sha1(ef5953d600ca68bacb539eab8dffb415441213bb)), HgNodeHash(Sha1(232ec9b974a9df3d48c2b740396691fb8939976c))) } }
-  remote:             
-  remote:             While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))
-  remote:             
-  remote:             While uploading child entries
-  remote:             
-  remote:             While processing entries
-  remote:             
-  remote:             While creating Changeset Some(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd))), uuid: * (glob)
-  remote:         },
-  remote:     }
+  remote:     InconsistentEntryHash(
+  remote:         FilePath(
+  remote:             MPath("inconsistent_file"),
+  remote:         ),
+  remote:         HgNodeHash(
+  remote:             Sha1(ef5953d600ca68bacb539eab8dffb415441213bb),
+  remote:         ),
+  remote:         HgNodeHash(
+  remote:             Sha1(232ec9b974a9df3d48c2b740396691fb8939976c),
+  remote:         ),
+  remote:     )
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd))), uuid: * (glob)
+  remote:   Caused by:
+  remote:     While processing entries
+  remote:   Caused by:
+  remote:     While uploading child entries
+  remote:   Caused by:
+  remote:     While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))
+  remote:   Caused by:
+  remote:     Inconsistent node hash for entry: path file 'inconsistent_file', provided: ef5953d600ca68bacb539eab8dffb415441213bb, computed: 232ec9b974a9df3d48c2b740396691fb8939976c
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

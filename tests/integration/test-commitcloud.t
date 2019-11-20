@@ -274,19 +274,21 @@ Make one of the commits public when it shouldn't be.
   remote:   Error:
   remote:     bundle2_resolver error
   remote:   Root cause:
-  remote:     SharedError {
-  remote:         error: Compat {
-  remote:             error: SharedError { error: Compat { error: BonsaiMappingNotFound(HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874)))) } }
-  remote:             
-  remote:             While waiting for parents to complete
-  remote:             
-  remote:             While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
-  remote:         },
-  remote:     }
+  remote:     BonsaiMappingNotFound(
+  remote:         HgChangesetId(
+  remote:             HgNodeHash(
+  remote:                 Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874),
+  remote:             ),
+  remote:         ),
+  remote:     )
   remote:   Caused by:
   remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
+  remote:   Caused by:
+  remote:     While waiting for parents to complete
+  remote:   Caused by:
+  remote:     Bonsai changeset not found for hg changeset 8d621fa1167779dffcefe5cb813fc11f2f272874
   push failed: stream ended unexpectedly (got 0 bytes, expected 4)
   retrying push with discovery
   searching for changes

@@ -63,20 +63,26 @@ filenode won't be send at all
   remote:   Error:
   remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b)))]
   remote:   Root cause:
-  remote:     SharedError {
-  remote:         error: Compat {
-  remote:             error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("file")), HgNodeHash(Sha1(979d39e9dea4d1f3f1fea701fd4d3bae43eef76b)), HgNodeHash(Sha1(d159b93d975921924ad128d6a46ef8b1b8f28ba5))) } }
-  remote:             
-  remote:             While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(314550e1ace48fe6245515c137b38ea8aeb04c7d)))
-  remote:             
-  remote:             While uploading child entries
-  remote:             
-  remote:             While processing entries
-  remote:             
-  remote:             While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
-  remote:         },
-  remote:     }
+  remote:     InconsistentEntryHash(
+  remote:         FilePath(
+  remote:             MPath("file"),
+  remote:         ),
+  remote:         HgNodeHash(
+  remote:             Sha1(979d39e9dea4d1f3f1fea701fd4d3bae43eef76b),
+  remote:         ),
+  remote:         HgNodeHash(
+  remote:             Sha1(d159b93d975921924ad128d6a46ef8b1b8f28ba5),
+  remote:         ),
+  remote:     )
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
+  remote:   Caused by:
+  remote:     While processing entries
+  remote:   Caused by:
+  remote:     While uploading child entries
+  remote:   Caused by:
+  remote:     While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(314550e1ace48fe6245515c137b38ea8aeb04c7d)))
+  remote:   Caused by:
+  remote:     Inconsistent node hash for entry: path file 'file', provided: 979d39e9dea4d1f3f1fea701fd4d3bae43eef76b, computed: d159b93d975921924ad128d6a46ef8b1b8f28ba5
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
