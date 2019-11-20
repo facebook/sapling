@@ -162,24 +162,41 @@ queries! {
         "INSERT INTO csparents (cs_id, parent_id, seq) VALUES {values}"
     }
 
-    read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId) -> (u64, Option<ChangesetId>) {
-        "SELECT cs.gen, pcs.cs_id
-         FROM changesets cs
-         LEFT JOIN (csparents p, changesets pcs)
-         ON (cs.id = p.cs_id AND p.parent_id = pcs.id)
-         WHERE cs.repo_id = {repo_id}
-           AND cs.cs_id = {cs_id}
-         ORDER BY p.seq ASC"
+    read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId) -> (u64, Option<ChangesetId>, Option<u64>) {
+        // NOTE: This selects seq even though we don't need it in order to sort by it.
+        "
+        SELECT cs0.gen AS gen, cs1.cs_id AS parent_id, csparents.seq AS seq
+        FROM csparents
+        INNER JOIN changesets cs0 ON cs0.id = csparents.cs_id
+        INNER JOIN changesets cs1 ON cs1.id = csparents.parent_id
+        WHERE cs0.repo_id = {repo_id} AND cs0.cs_id = {cs_id} AND cs1.repo_id = {repo_id}
+
+        UNION
+
+        SELECT cs0.gen AS gen, NULL AS parent_id, NULL as seq
+        FROM changesets cs0
+        WHERE cs0.repo_id = {repo_id} and cs0.cs_id = {cs_id}
+
+        ORDER BY seq ASC
+        "
     }
 
-    read SelectManyChangesets(repo_id: RepositoryId, >list cs_id: ChangesetId) -> (ChangesetId, u64, Option<ChangesetId>) {
-        "SELECT cs.cs_id, cs.gen, pcs.cs_id
-         FROM changesets cs
-         LEFT JOIN (csparents p, changesets pcs)
-         ON (cs.id = p.cs_id AND p.parent_id = pcs.id)
-         WHERE cs.repo_id = {repo_id}
-           AND cs.cs_id IN {cs_id}
-         ORDER BY p.seq ASC"
+    read SelectManyChangesets(repo_id: RepositoryId, >list cs_id: ChangesetId) -> (ChangesetId, u64, Option<ChangesetId>, Option<u64>) {
+        "
+        SELECT cs0.cs_id AS cs_id, cs0.gen AS gen, cs1.cs_id AS parent_id, csparents.seq AS seq
+        FROM csparents
+        INNER JOIN changesets cs0 ON cs0.id = csparents.cs_id
+        INNER JOIN changesets cs1 ON cs1.id = csparents.parent_id
+        WHERE cs0.repo_id = {repo_id} AND cs0.cs_id IN {cs_id} AND cs1.repo_id = {repo_id}
+
+        UNION
+
+        SELECT cs0.cs_id AS cs_id, cs0.gen AS gen, NULL AS parent_id, NULL as seq
+        FROM changesets cs0
+        WHERE cs0.repo_id = {repo_id} and cs0.cs_id IN {cs_id}
+
+        ORDER BY seq ASC
+        "
     }
 
     read SelectChangesets(repo_id: RepositoryId, >list cs_id: ChangesetId) -> (u64, ChangesetId, u64) {
@@ -490,7 +507,7 @@ fn select_many_changesets(
     SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..]).map(move |fetched_changesets| {
         let mut cs_id_to_cs_entry = HashMap::new();
 
-        for (cs_id, gen, maybe_parent) in fetched_changesets {
+        for (cs_id, gen, maybe_parent, _) in fetched_changesets {
             cs_id_to_cs_entry
                 .entry(cs_id)
                 .or_insert(ChangesetEntry {
