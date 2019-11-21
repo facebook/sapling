@@ -989,30 +989,41 @@ std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
 #endif // !_WIN32
 }
 
-Future<std::unique_ptr<GetScmStatusResult>>
-EdenServiceHandler::future_getScmStatusV2(
+void EdenServiceHandler::async_tm_getScmStatusV2(
+    unique_ptr<apache::thrift::HandlerCallback<unique_ptr<GetScmStatusResult>>>
+        callback,
     unique_ptr<GetScmStatusParams> params) {
 #ifndef _WIN32
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2,
-      params->mountPoint,
-      folly::to<string>("commitHash=", logHash(params->commit)),
-      folly::to<string>("listIgnored=", params->listIgnored));
+  auto* request = callback->getRequest();
+  folly::makeFutureWith([&, func = __func__] {
+    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
+        DBG2,
+        func,
+        params->mountPoint,
+        folly::to<string>("commitHash=", logHash(params->commit)),
+        folly::to<string>("listIgnored=", params->listIgnored));
 
-  auto mount = server_->getMount(params->mountPoint);
-  auto hash = hashFromThrift(params->commit);
-  const auto& enforceParents = server_->getServerState()
-                                   ->getReloadableConfig()
-                                   .getEdenConfig()
-                                   ->enforceParents.getValue();
-  return helper.wrapFuture(
-      mount->diff(hash, params->listIgnored, enforceParents)
-          .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
-            auto result = std::make_unique<GetScmStatusResult>();
-            result->status = std::move(*status);
-            result->version = server_->getVersion();
-            return result;
-          }));
+    auto mount = server_->getMount(params->mountPoint);
+    auto hash = hashFromThrift(params->commit);
+    const auto& enforceParents = server_->getServerState()
+                                     ->getReloadableConfig()
+                                     .getEdenConfig()
+                                     ->enforceParents.getValue();
+    return helper.wrapFuture(
+        mount->diff(hash, params->listIgnored, enforceParents, request)
+            .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
+              auto result = std::make_unique<GetScmStatusResult>();
+              result->status = std::move(*status);
+              result->version = server_->getVersion();
+              return result;
+            }));
+  })
+      .thenTry([cb = std::move(callback)](
+                   folly::Try<std::unique_ptr<GetScmStatusResult>>&&
+                       result) mutable {
+        apache::thrift::HandlerCallback<std::unique_ptr<GetScmStatusResult>>::
+            completeInThread(std::move(cb), std::move(result));
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
