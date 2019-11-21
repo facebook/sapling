@@ -14,6 +14,7 @@ use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
 use serde::Deserialize;
 use serde_json::Value;
 use std::cell::Cell;
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::Cursor;
 use std::ops::Bound::{Excluded, Included, Unbounded};
@@ -183,8 +184,8 @@ impl Blackbox {
         (self.session_id & 0xffffff) as u32
     }
 
-    pub fn session_id(&self) -> u64 {
-        self.session_id
+    pub fn session_id(&self) -> SessionId {
+        SessionId(self.session_id)
     }
 
     /// Log an event. Maybe write it to disk immediately.
@@ -274,7 +275,78 @@ impl Blackbox {
         }
         result
     }
+
+    /// Filter blackbox by patterns.
+    /// See `match_pattern.rs` for how to specify patterns.
+    ///
+    /// The pattern will match again the JSON form of an `Event`. For example,
+    /// - Pattern `{"alias": {"from": "foo" }}` matches `Event::Alias { from, to }`
+    ///   where `from` is `"foo"`.
+    /// - Pattern `{"finish": {"duration_ms": ["range", 1000, 2000] }}` matches
+    ///   `Event::Finish { duration_ms, ... }` where `duration_ms` is between
+    ///   1000 and 2000.
+    pub fn session_ids_by_pattern(&self, pattern: &Value) -> BTreeSet<SessionId> {
+        let mut result = BTreeSet::new();
+        for log in self.log.logs().iter() {
+            // TODO: Optimize queries using indexes.
+            for next in log.iter() {
+                if let Ok(bytes) = next {
+                    let session_id = match Entry::session_id_from_slice(bytes) {
+                        Some(id) => id,
+                        None => continue,
+                    };
+                    if result.contains(&session_id) {
+                        // The session_id is already included in the result set.
+                        // Skip deserializing it.
+                        continue;
+                    }
+                    if let Some(entry) = Entry::from_slice(bytes) {
+                        if entry.match_pattern(pattern) {
+                            result.insert(session_id);
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    /// Get all [`Entry`]s with specified `session_id`s.
+    ///
+    /// This function is usually used together with `session_ids_by_pattern`.
+    ///
+    /// Entries that cannot be read or deserialized are ignored silently.
+    pub fn entries_by_session_ids(
+        &self,
+        session_ids: impl IntoIterator<Item = SessionId>,
+    ) -> Vec<Entry> {
+        let mut result = Vec::new();
+        for session_id in session_ids {
+            if let Ok(iter) = self
+                .log
+                .lookup(INDEX_SESSION_ID, &u64_to_slice(session_id.0)[..])
+            {
+                for bytes in iter {
+                    if let Ok(bytes) = bytes {
+                        if let Some(entry) = Entry::from_slice(bytes) {
+                            result.push(entry)
+                        }
+                    }
+                }
+            }
+        }
+        result.reverse();
+        result
+    }
+
+    pub fn entries_by_session_id(&self, session_id: SessionId) -> Vec<Entry> {
+        self.entries_by_session_ids(vec![session_id])
+    }
 }
+
+/// Session Id used in public APIs.
+#[derive(Copy, Clone, Ord, Eq, PartialOrd, PartialEq, Debug)]
+pub struct SessionId(pub u64);
 
 impl Drop for Blackbox {
     fn drop(&mut self) {
@@ -283,6 +355,23 @@ impl Drop for Blackbox {
 }
 
 impl Entry {
+    /// Test if `Entry` matches a specific pattern or not.
+    pub fn match_pattern(&self, pattern: &Value) -> bool {
+        match_pattern(&self.data.to_value(), pattern)
+    }
+
+    /// Partially decode `bytes` into session_id and timestamp.
+    fn session_id_from_slice(bytes: &[u8]) -> Option<SessionId> {
+        if bytes.len() >= HEADER_BYTES {
+            let mut cur = Cursor::new(bytes);
+            let _timestamp = cur.read_u64::<BigEndian>().unwrap();
+            let session_id = cur.read_u64::<BigEndian>().unwrap();
+            Some(SessionId(session_id))
+        } else {
+            None
+        }
+    }
+
     fn from_slice(bytes: &[u8]) -> Option<Self> {
         if bytes.len() >= HEADER_BYTES {
             let mut cur = Cursor::new(bytes);
@@ -394,6 +483,7 @@ fn new_session_id() -> u64 {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use serde_json::json;
     use std::collections::HashSet;
     use std::{
         fs,
@@ -424,7 +514,7 @@ pub(crate) mod tests {
         ];
 
         let session_count = 4;
-        let first_session_id = blackbox.session_id();
+        let first_session_id = blackbox.session_id().0;
         for _ in 0..session_count {
             for event in events.iter() {
                 blackbox.log(event);
@@ -476,6 +566,84 @@ pub(crate) mod tests {
             blackbox.filter::<Event>(IndexFilter::Nop, None).len(),
             entries.len()
         );
+    }
+
+    #[test]
+    fn test_query_by_session_ids() {
+        let dir = tempdir().unwrap();
+        let mut blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
+
+        let events = [
+            Event::Alias {
+                from: "a".to_string(),
+                to: "b".to_string(),
+            },
+            Event::Debug {
+                value: json!([1, 2, 3]),
+            },
+            Event::Alias {
+                from: "x".to_string(),
+                to: "y".to_string(),
+            },
+            Event::Debug {
+                value: json!("foo"),
+            },
+            Event::Debug {
+                value: json!({"p": "q"}),
+            },
+        ];
+
+        // Write some events.
+        // Session 0
+        let mut session_ids = Vec::new();
+        blackbox.log(&events[0]);
+        blackbox.log(&events[1]);
+        session_ids.push(blackbox.session_id());
+
+        // Session 1
+        blackbox.refresh_session_id();
+        blackbox.log(&events[2]);
+        blackbox.log(&events[3]);
+        session_ids.push(blackbox.session_id());
+
+        // Session 2
+        blackbox.refresh_session_id();
+        blackbox.log(&events[4]);
+        session_ids.push(blackbox.session_id());
+
+        let query = |pattern: serde_json::Value| -> Vec<usize> {
+            let ids = blackbox.session_ids_by_pattern(&pattern);
+            session_ids
+                .iter()
+                .enumerate()
+                .filter(|(_i, session_id)| ids.contains(session_id))
+                .map(|(i, _)| i)
+                .collect()
+        };
+
+        // Query session_ids by patterns.
+        // Only Session 0 and 1 have Event::Alias.
+        assert_eq!(query(json!({"alias": "_"})), [0, 1]);
+        // Only Session 1 has Event::Alias with from = "x".
+        assert_eq!(query(json!({"alias": {"from": "x"}})), [1]);
+        // All sessions have Event::Debug.
+        assert_eq!(query(json!({"debug": "_"})), [0, 1, 2]);
+        // Session 0 has Event::Debug with 2 in its "value" array.
+        assert_eq!(query(json!({"debug": {"value": ["contain", 2]}})), [0]);
+        // Session 2 has Event::Debug with the "p" key in its "value" object.
+        assert_eq!(query(json!({"debug": {"value": {"p": "_"}}})), [2]);
+
+        // Query Events by session_ids.
+        let query = |i: usize| -> Vec<Event> {
+            blackbox
+                .entries_by_session_id(session_ids[i])
+                .into_iter()
+                .map(|e| e.data)
+                .collect()
+        };
+        assert_eq!(query(0), &events[0..2]);
+        assert_eq!(query(1), &events[2..4]);
+        assert_eq!(query(2), &events[4..5]);
     }
 
     #[cfg(unix)]
