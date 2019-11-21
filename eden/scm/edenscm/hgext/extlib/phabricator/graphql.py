@@ -165,6 +165,8 @@ class Client(object):
 
     def getlandednodes(self, diffids, timeout=10):
         """Get landed nodes for diffids. Return {diffid: node}"""
+        if not diffids:
+            return {}
         query = """
             query DiffToCommitQuery($diffids: [String!]!){
                 phabricator_diff_query(query_params: {
