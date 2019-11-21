@@ -269,6 +269,11 @@ fn log_start(args: Vec<String>, now: SystemTime) {
         timestamp_ms: epoch_ms(now),
     });
 
+    if let Ok(tags) = std::env::var("EDENSCM_BLACKBOX_TAGS") {
+        let names: Vec<String> = tags.split_whitespace().map(ToString::to_string).collect();
+        blackbox::log(&blackbox::event::Event::Tags { names });
+    }
+
     let mut parent_names = Vec::new();
     let mut parent_pids = Vec::new();
     if !inside_test {

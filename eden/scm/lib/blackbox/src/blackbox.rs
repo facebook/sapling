@@ -160,6 +160,11 @@ impl BlackboxOptions {
                             push(INDEX_EVENT_FINISH_TIME, &u64_to_slice(timestamp_ms)[..]);
                             push(INDEX_EVENT_FINISH_DURATION, &u64_to_slice(duration_ms)[..]);
                         }
+                        Event::Tags { names } => {
+                            for name in names {
+                                push(INDEX_EVENT_TAG_NAME, name.as_bytes());
+                            }
+                        }
                         _ => (),
                     }
                 }
@@ -182,6 +187,7 @@ const INDEX_EVENT_START_TIME: u8 = 0;
 const INDEX_EVENT_START_PID: u8 = 1;
 const INDEX_EVENT_FINISH_TIME: u8 = 2;
 const INDEX_EVENT_FINISH_DURATION: u8 = 3;
+const INDEX_EVENT_TAG_NAME: u8 = 4;
 
 lazy_static! {
     static ref START_TIME_PATTERN: Value = json!(
@@ -212,6 +218,13 @@ lazy_static! {
           ["prefix", "and"],
           ["contain",
            {"finish": {"duration_ms": ["prefix", "range", ["capture", "MIN", "_"], ["capture", "MAX", "_"]]}}]]]);
+    static ref TAG_NAME_PATTERN: Value = json!(
+        ["or",
+         {"tags": {"names": ["prefix", "contain", ["capture", "NAME", "_"]]}},
+         ["and",
+          ["prefix", "and"],
+          ["contain",
+           {"tags": {"names": ["prefix", "contain", ["capture", "NAME", "_"]]}}]]]);
 }
 
 impl Blackbox {
@@ -335,6 +348,17 @@ impl Blackbox {
                         u64_to_boxed_slice(min),
                         u64_to_boxed_slice(max.max(min)),
                     )
+                })
+            })
+            .or_else(|| {
+                capture_pattern(pattern, &TAG_NAME_PATTERN).and_then(|captured| {
+                    let name = captured["NAME"].as_str().unwrap_or("");
+                    if name.is_empty() {
+                        None
+                    } else {
+                        let bytes = name.as_bytes().to_vec().into_boxed_slice();
+                        Some((INDEX_EVENT_TAG_NAME, bytes.clone(), bytes.clone()))
+                    }
                 })
             });
 

@@ -369,6 +369,13 @@ pub enum Event {
         timestamp_ms: u64,
     },
 
+    /// Tag the session with some names.
+    #[serde(rename = "T", alias = "tags")]
+    Tags {
+        #[serde(rename = "N", alias = "names")]
+        names: Vec<String>,
+    },
+
     #[serde(rename = "TD", alias = "tracing_data")]
     TracingData {
         #[serde(rename = "S", alias = "serialized")]
@@ -703,6 +710,7 @@ impl fmt::Display for Event {
                 write!(f, " (this process)")?;
             }
             Profile { msg } => write!(f, "[profile] {}", msg)?,
+            Tags { names } => write!(f, "[tags] {}", names.join(", "))?,
             TracingData { serialized } => {
                 write!(f, "[tracing] (binary data of {} bytes)", serialized.0.len())?
             }

@@ -202,6 +202,15 @@ blackbox can log without a ui object using util.log
 blackbox writes Request ID if HGREQUESTID is set
 (This is not implemented in the new blackbox.  Maybe it is not that important nowadays?)
 
+Test EDENSCM_BLACKBOX_TAGS
+
+  $ EDENSCM_BLACKBOX_TAGS='foo bar' hg root
+  $TESTTMP/repo1
+  $ hg blackbox -p '{"tags": "_"}'
+  [tags] foo, bar
+  $ hg blackbox -p '{"tags": {"names": ["contain", "bar"]}}'
+  [tags] foo, bar
+
 blackbox should not fail with "TypeError: not enough arguments for format string"
 
   $ rm -rf ./.hg/blackbox*
@@ -210,4 +219,3 @@ blackbox should not fail with "TypeError: not enough arguments for format string
   $ hg blackbox --pattern '{"legacy_log":{"service":"foo"}}'
   [legacy][foo] bar %s %r
   [legacy][foo] bar %s %r arg1
-
