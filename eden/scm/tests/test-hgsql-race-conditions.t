@@ -47,6 +47,12 @@ no-check-code
   first:0
   $ sed -i '/hooks/d' .hg/hgrc
   $ sed -i '/sleep/d' .hg/hgrc
+
+# Check hgsql.synclimit
+
+  $ hg log -r . -T '.\n' --debug --config hgsql.synclimit=100000
+  skipping database sync due to rate limit
+  .
   $ cd ..
 
 # Verify simultaneous pushes to different heads succeeds

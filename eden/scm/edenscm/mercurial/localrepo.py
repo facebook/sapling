@@ -383,6 +383,8 @@ class localrepository(object):
         # this changeset was introduced. Someone should fix
         # the remainig bit and drop this line
         "bisect.state",
+        # Race condition to this file is okay.
+        "lastsqlsync",
     }
 
     # Set of prefixes of store files which can be written without 'lock'.

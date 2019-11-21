@@ -18,6 +18,10 @@ Config::
     # (default: -1)
     syncinterval = -1
 
+    # Seconds. Do not attempt to sync for read-only commands. If last sync was
+    # within the specified time.
+    synclimit = 30
+
     # Enable faster "need sync or not" check. It could be 6x faster, and
     # removes some time in the critical section.
     # (default: true)
@@ -102,6 +106,7 @@ configitem("hgsql", "rootpidnsonly", default=False)
 configitem("hgsql", "sockettimeout", default=60)
 configitem("hgsql", "sqltimeout", default=120)
 configitem("hgsql", "syncinterval", default=-1)
+configitem("hgsql", "synclimit", default=0)
 configitem("hgsql", "verbose", default=False)
 configitem("hgsql", "verifybatchsize", default=1000)
 configitem("hgsql", "waittimeout", default=300)
@@ -960,6 +965,20 @@ def wraprepo(repo):
             read-only clients perform database syncs at the same time. If None
             is returned, it means the limiter was not acquired, and readonly
             clients should not attempt to perform a sync."""
+
+            synclimit = self.ui.configint("hgsql", "synclimit")
+            if synclimit > 0:
+                lastsync = 0
+                try:
+                    lastsync = int(self.sharedvfs.tryread("lastsqlsync"))
+                except Exception:
+                    # This can happen if the file cannot be read or is not an int.
+                    # Not fatal.
+                    pass
+                if time.time() - lastsync < synclimit:
+                    # Hit limit. Skip sync.
+                    self._hgsqlnote("skipping database sync due to rate limit")
+                    return None
             try:
                 wait = False
                 return self._lock(
@@ -971,6 +990,11 @@ def wraprepo(repo):
                     _("repository %s") % self.origroot,
                 )
             except error.LockHeld:
+                # Someone else is already checking and updating the repo
+                self._hgsqlnote(
+                    "skipping database sync because another "
+                    "process is already syncing"
+                )
                 return None
 
         def pullfromdb(self, enforcepullfromdb=False):
@@ -990,11 +1014,6 @@ def wraprepo(repo):
                     # only let one process update the repo at a time.
                     limiter = self.synclimiter()
                     if not limiter:
-                        # Someone else is already checking and updating the repo
-                        self._hgsqlnote(
-                            "skipping database sync because another "
-                            "process is already syncing"
-                        )
 
                         # It's important that we load bookmarks before the
                         # changelog. This way we know that the bookmarks point to
@@ -1154,6 +1173,7 @@ def wraprepo(repo):
             # that don't exist in the loaded changelog. So let's force loading
             # bookmarks now.
             bm = self._bookmarks
+            self.sharedvfs.write("lastsqlsync", str(int(time.time())))
 
         def fetchthread(self, queue, abort, fetchstart, fetchend):
             """Fetches every revision from fetchstart to fetchend (inclusive)
