@@ -5,17 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use super::match_pattern;
+use super::{capture_pattern, json, match_pattern};
 use crate::event::Event;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible as Result;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
+use lazy_static::lazy_static;
 use serde_json::Value;
 use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::Cursor;
+use std::io::{Cursor, Write};
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -134,8 +135,35 @@ impl BlackboxOptions {
         OpenOptions::new()
             .max_bytes_per_log(self.max_bytes_per_log)
             .max_log_count(self.max_log_count)
-            .index("timestamp", |_| {
-                vec![IndexOutput::Reference(0..TIMESTAMP_BYTES as u64)]
+            .index("event", |bytes| {
+                // Index on fields of `event`. This index includes fields from some dedicated
+                // events. For example, timestamps of Start and Finish, etc.
+                let mut result = Vec::new();
+                let mut push = |head: u8, data: &[u8]| {
+                    let mut bytes = vec![head];
+                    bytes.write_all(data).expect("Vec::write should not fail");
+                    result.push(IndexOutput::Owned(bytes.into_boxed_slice()));
+                };
+                if let Some(entry) = Entry::from_slice(bytes) {
+                    match entry.data {
+                        Event::Start {
+                            timestamp_ms, pid, ..
+                        } => {
+                            push(INDEX_EVENT_START_TIME, &u64_to_slice(timestamp_ms)[..]);
+                            push(INDEX_EVENT_START_PID, &u64_to_slice(pid as u64)[..]);
+                        }
+                        Event::Finish {
+                            timestamp_ms,
+                            duration_ms,
+                            ..
+                        } => {
+                            push(INDEX_EVENT_FINISH_TIME, &u64_to_slice(timestamp_ms)[..]);
+                            push(INDEX_EVENT_FINISH_DURATION, &u64_to_slice(duration_ms)[..]);
+                        }
+                        _ => (),
+                    }
+                }
+                result
             })
             .index("session_id", |_| {
                 vec![IndexOutput::Reference(
@@ -146,8 +174,45 @@ impl BlackboxOptions {
     }
 }
 
-const INDEX_TIMESTAMP: usize = 0;
+const INDEX_EVENT_MISC: usize = 0;
 const INDEX_SESSION_ID: usize = 1;
+
+// Sub-index used by INDEX_EVENT_MISC.
+const INDEX_EVENT_START_TIME: u8 = 0;
+const INDEX_EVENT_START_PID: u8 = 1;
+const INDEX_EVENT_FINISH_TIME: u8 = 2;
+const INDEX_EVENT_FINISH_DURATION: u8 = 3;
+
+lazy_static! {
+    static ref START_TIME_PATTERN: Value = json!(
+        ["or",
+         {"start": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}},
+         ["and",
+          ["prefix", "and"],
+          ["contain",
+           {"start": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}}]]]);
+    static ref START_PID_PATTERN: Value = json!(
+        ["or",
+         {"start": {"pid": ["capture", "PID", "_"]}},
+         ["and",
+          ["prefix", "and"],
+          ["contain",
+           {"start": {"pid": ["capture", "PID", "_"]}}]]]);
+    static ref FINISH_TIME_PATTERN: Value = json!(
+        ["or",
+         {"finish": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}},
+         ["and",
+          ["prefix", "and"],
+          ["contain",
+           {"finish": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}}]]]);
+    static ref FINISH_DURATION_PATTERN: Value = json!(
+        ["or",
+         {"finish": {"duration_ms": ["prefix", "range", ["capture", "MIN", "_"], ["capture", "MAX", "_"]]}},
+         ["and",
+          ["prefix", "and"],
+          ["contain",
+           {"finish": {"duration_ms": ["prefix", "range", ["capture", "MIN", "_"], ["capture", "MAX", "_"]]}}]]]);
+}
 
 impl Blackbox {
     /// Assign a likely unused "Session ID".
@@ -230,23 +295,110 @@ impl Blackbox {
     ///   `Event::Finish { duration_ms, ... }` where `duration_ms` is between
     ///   1000 and 2000.
     pub fn session_ids_by_pattern(&self, pattern: &Value) -> BTreeSet<SessionId> {
+        let index: Option<(u8, _, _)> = capture_pattern(pattern, &START_TIME_PATTERN)
+            .map(|captured| {
+                let start = captured["START"].as_u64().unwrap_or(0);
+                let end = captured["END"].as_u64().unwrap_or(0);
+                (
+                    INDEX_EVENT_START_TIME,
+                    u64_to_boxed_slice(start),
+                    u64_to_boxed_slice(start.max(end)),
+                )
+            })
+            .or_else(|| {
+                capture_pattern(pattern, &START_PID_PATTERN).map(|captured| {
+                    let pid = captured["PID"].as_u64().unwrap_or(0);
+                    (
+                        INDEX_EVENT_START_PID,
+                        u64_to_boxed_slice(pid),
+                        u64_to_boxed_slice(pid),
+                    )
+                })
+            })
+            .or_else(|| {
+                capture_pattern(pattern, &FINISH_TIME_PATTERN).map(|captured| {
+                    let start = captured["START"].as_u64().unwrap_or(0);
+                    let end = captured["END"].as_u64().unwrap_or(0);
+                    (
+                        INDEX_EVENT_FINISH_TIME,
+                        u64_to_boxed_slice(start),
+                        u64_to_boxed_slice(start.max(end)),
+                    )
+                })
+            })
+            .or_else(|| {
+                capture_pattern(pattern, &FINISH_DURATION_PATTERN).map(|captured| {
+                    let min = captured["MIN"].as_u64().unwrap_or(0);
+                    let max = captured["MAX"].as_u64().unwrap_or(0);
+                    (
+                        INDEX_EVENT_FINISH_DURATION,
+                        u64_to_boxed_slice(min),
+                        u64_to_boxed_slice(max.max(min)),
+                    )
+                })
+            });
+
         let mut result = BTreeSet::new();
-        for log in self.log.logs().iter() {
-            // TODO: Optimize queries using indexes.
-            for next in log.iter() {
-                if let Ok(bytes) = next {
-                    let session_id = match Entry::session_id_from_slice(bytes) {
-                        Some(id) => id,
-                        None => continue,
-                    };
-                    if result.contains(&session_id) {
-                        // The session_id is already included in the result set.
-                        // Skip deserializing it.
-                        continue;
+        match &index {
+            Some((index_id, start, end)) => {
+                // Use index to narrow down session_ids. Then search through the session_ids.
+                // The real index key has the index_id has its header byte.
+                let start: Vec<u8> = [&[*index_id][..], &start[..]].concat();
+                let end: Vec<u8> = [&[*index_id][..], &end[..]].concat();
+                let mut candidate_session_ids = Vec::new();
+                for log in self.log.logs().iter() {
+                    if let Ok(iter) = log.lookup_range(INDEX_EVENT_MISC, &start[..]..=&end[..]) {
+                        for pair in iter {
+                            if let Ok((_key, values)) = pair {
+                                for value in values {
+                                    if let Ok(bytes) = value {
+                                        if let Some(session_id) =
+                                            Entry::session_id_from_slice(bytes)
+                                        {
+                                            candidate_session_ids.push(session_id)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                    if let Some(entry) = Entry::from_slice(bytes) {
-                        if entry.match_pattern(pattern) {
-                            result.insert(session_id);
+                }
+
+                'next_session_id: for session_id in candidate_session_ids {
+                    if let Ok(iter) = self
+                        .log
+                        .lookup(INDEX_SESSION_ID, &u64_to_slice(session_id.0)[..])
+                    {
+                        for bytes in iter {
+                            if let Ok(bytes) = bytes {
+                                if let Some(entry) = Entry::from_slice(bytes) {
+                                    if entry.match_pattern(pattern) {
+                                        result.insert(session_id);
+                                        continue 'next_session_id;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            None => {
+                // Cannot use index. Go through every entry.
+                for next in self.log.iter() {
+                    if let Ok(bytes) = next {
+                        let session_id = match Entry::session_id_from_slice(bytes) {
+                            Some(id) => id,
+                            None => continue,
+                        };
+                        if result.contains(&session_id) {
+                            // The session_id is already included in the result set.
+                            // Skip deserializing it.
+                            continue;
+                        }
+                        if let Some(entry) = Entry::from_slice(bytes) {
+                            if entry.match_pattern(pattern) {
+                                result.insert(session_id);
+                            }
                         }
                     }
                 }
@@ -355,6 +507,10 @@ impl Entry {
 fn u64_to_slice(value: u64) -> [u8; 8] {
     // The field can be used for index range query. So it has to be BE.
     unsafe { std::mem::transmute(value.to_be()) }
+}
+
+fn u64_to_boxed_slice(value: u64) -> Box<[u8]> {
+    (&u64_to_slice(value)[..]).to_vec().into_boxed_slice()
 }
 
 fn time_to_u64(time: &SystemTime) -> u64 {
