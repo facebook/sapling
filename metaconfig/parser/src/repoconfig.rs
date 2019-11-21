@@ -31,8 +31,8 @@ use metaconfig_types::{
     DefaultSmallToLargeCommitSyncPathAction, FilestoreParams, HookBypass, HookConfig,
     HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
     MetadataDBConfig, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
-    ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
-    WireprotoLoggingConfig,
+    ShardedFilenodesParams, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
+    StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -725,6 +725,11 @@ impl RepoConfigs {
 
         let filestore = this.filestore.map(|f| f.into());
 
+        let source_control_service_monitoring = this
+            .source_control_service_monitoring
+            .map(|m| m.try_into())
+            .transpose()?;
+
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
         let relevant_commit_sync_configs: Vec<&CommitSyncConfig> = commit_sync
             .iter()
@@ -775,6 +780,7 @@ impl RepoConfigs {
             commit_sync_config,
             hook_max_file_size,
             hipster_acl: this.hipster_acl,
+            source_control_service_monitoring,
         })
     }
 
@@ -873,6 +879,7 @@ struct RawRepoConfig {
     filestore: Option<RawFilestoreParams>,
     hook_max_file_size: Option<u64>,
     hipster_acl: Option<String>,
+    source_control_service_monitoring: Option<RawSourceControlServiceMonitoring>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1186,6 +1193,36 @@ pub struct RawWireprotoLoggingConfig {
     pub scribe_category: String,
     /// Storage where to store arguments for replay
     pub storage_config: String,
+}
+
+/// Raw configuration for health monitoring of the source-control-as-a-service
+/// solutions
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct RawSourceControlServiceMonitoring {
+    /// Bookmarks, for which we want our services to log
+    /// freshness values to monitoring counters. For example,
+    /// a freshness value may be the `now - author_date` of
+    /// the commit, to which the bookmark points
+    pub bookmarks_to_report_age: Vec<String>,
+}
+
+impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitoring {
+    type Error = Error;
+
+    fn try_from(raw: RawSourceControlServiceMonitoring) -> Result<Self> {
+        let RawSourceControlServiceMonitoring {
+            bookmarks_to_report_age,
+        } = raw;
+        let converted: Result<Vec<BookmarkName>> = bookmarks_to_report_age
+            .into_iter()
+            .map(|bookmark| BookmarkName::new(bookmark))
+            .collect();
+
+        Ok(Self {
+            bookmarks_to_report_age: converted?,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -1638,6 +1675,9 @@ mod test {
             [filestore]
             chunk_size = 768
             concurrency = 48
+
+            [source_control_service_monitoring]
+            bookmarks_to_report_age= ["master", "master2"]
         "#;
         let www_content = r#"
             repoid=1
@@ -1821,6 +1861,12 @@ mod test {
                 }),
                 commit_sync_config: None,
                 hipster_acl: Some("foo/test".to_string()),
+                source_control_service_monitoring: Some(SourceControlServiceMonitoring {
+                    bookmarks_to_report_age: vec![
+                        BookmarkName::new("master").unwrap(),
+                        BookmarkName::new("master2").unwrap(),
+                    ],
+                }),
             },
         );
 
@@ -1861,6 +1907,7 @@ mod test {
                 filestore: None,
                 commit_sync_config: None,
                 hipster_acl: None,
+                source_control_service_monitoring: None,
             },
         );
         assert_eq!(

@@ -111,6 +111,8 @@ pub struct RepoConfig {
     pub hook_max_file_size: u64,
     /// Hipster ACL that controls access to this repo
     pub hipster_acl: Option<String>,
+    /// Configuration for Source Control Service monitoring
+    pub source_control_service_monitoring: Option<SourceControlServiceMonitoring>,
 }
 
 impl RepoConfig {
@@ -763,4 +765,15 @@ pub struct WireprotoLoggingConfig {
     /// Storage config to store wireproto arguments. The arguments can be quite big,
     /// so storing separately would make sense.
     pub storage_config: StorageConfig,
+}
+
+/// Configuration for health monitoring of the source-control-as-a-service
+/// solutions
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SourceControlServiceMonitoring {
+    /// Bookmarks, for which we want our services to log
+    /// age values to monitoring counters. For example,
+    /// a freshness value may be the `now - author_date` of
+    /// the commit, to which the bookmark points
+    pub bookmarks_to_report_age: Vec<BookmarkName>,
 }
