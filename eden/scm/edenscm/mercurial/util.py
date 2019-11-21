@@ -1785,7 +1785,10 @@ def mktempcopy(name, emptyok=False, createmode=None):
 
     Returns the name of the temporary file.
     """
+    TRUNCATE_FILENAME_LENGTH = 240
+
     d, fn = os.path.split(name)
+    fn = fn[:TRUNCATE_FILENAME_LENGTH]
     fd, temp = tempfile.mkstemp(prefix=".%s-" % fn, suffix="~", dir=d)
     os.close(fd)
     # Temporary files are created with mode 0600, which is usually not

@@ -11,6 +11,10 @@ from edenscm.mercurial import util
 
 atomictempfile = util.atomictempfile
 
+# force dealing with tmp filenames that go
+# over the maximum file length
+filename = "A" * 253
+
 try:
     xrange(0)
 except NameError:
@@ -20,7 +24,7 @@ except NameError:
 class testatomictempfile(unittest.TestCase):
     def setUp(self):
         self._testdir = tempfile.mkdtemp("atomictempfiletest")
-        self._filename = os.path.join(self._testdir, "testfilename")
+        self._filename = os.path.join(self._testdir, filename)
 
     def tearDown(self):
         shutil.rmtree(self._testdir, True)
@@ -29,9 +33,7 @@ class testatomictempfile(unittest.TestCase):
         file = atomictempfile(self._filename)
         self.assertFalse(os.path.isfile(self._filename))
         tempfilename = file._tempname
-        self.assertTrue(
-            tempfilename in glob.glob(os.path.join(self._testdir, ".testfilename-*"))
-        )
+        self.assertTrue(tempfilename in glob.glob(os.path.join(self._testdir, ".*")))
 
         file.write(b"argh\n")
         file.close()
