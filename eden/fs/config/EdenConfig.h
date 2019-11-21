@@ -300,6 +300,13 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<std::string> scribeCategory{"telemetry:scribe-category",
                                             "",
                                             this};
+
+  /**
+   * Controls whether if EdenFS caches blobs in local store.
+   */
+  ConfigSetting<bool> enableBlobCaching{"experimental:enable-blob-caching",
+                                        true,
+                                        this};
 };
 } // namespace eden
 } // namespace facebook

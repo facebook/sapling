@@ -8,6 +8,7 @@
 #include "eden/fs/service/EdenServer.h"
 
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <atomic>
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -623,6 +624,9 @@ void EdenServer::openStorageEngine(
     ensureDirectoryExists(rocksPath);
     localStore_ = make_shared<RocksDbLocalStore>(
         rocksPath, &serverState_->getFaultInjector());
+    localStore_->enableBlobCaching.store(
+        serverState_->getEdenConfig()->enableBlobCaching.getValue(),
+        std::memory_order_relaxed);
     logger->log(
         "Opened RocksDB store in ",
         watch.elapsed().count() / 1000.0,

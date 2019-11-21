@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <atomic>
 #include <memory>
 #include <optional>
 #include "eden/fs/store/BlobMetadata.h"
@@ -275,6 +276,15 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   virtual std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) = 0;
 
   virtual void periodicManagementTask(const EdenConfig& config);
+
+  /*
+   * We keep this field to avoid making `LocalStore` holding a reference to
+   * `EdenConfig`, which will require us to change all the subclasses. We update
+   * this flag through `periodicManagementTask` function. The implication is
+   * that the configuration may need up to 1 minute to propagate (or whatever
+   * the configured local store management interval is).
+   */
+  std::atomic<bool> enableBlobCaching = true;
 };
 } // namespace eden
 } // namespace facebook

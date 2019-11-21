@@ -8,6 +8,7 @@
 #include "eden/fs/store/RocksDbLocalStore.h"
 
 #include <array>
+#include <atomic>
 
 #include <fb303/ServiceData.h>
 #include <folly/Format.h>
@@ -557,6 +558,9 @@ uint64_t RocksDbLocalStore::getApproximateSize(
 }
 
 void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
+  enableBlobCaching.store(
+      config.enableBlobCaching.getValue(), std::memory_order_relaxed);
+
   // Compute and publish the stats
   auto ephemeralSize = publishStats();
 

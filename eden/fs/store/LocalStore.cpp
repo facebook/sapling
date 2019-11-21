@@ -190,6 +190,11 @@ BlobMetadata LocalStore::getMetadataFromBlob(const Blob* blob) {
 }
 
 void LocalStore::putBlobWithoutMetadata(const Hash& id, const Blob* blob) {
+  if (!enableBlobCaching) {
+    XLOG(DBG4) << "Skipping caching " << id
+               << " because blob cache is diabled via config";
+    return;
+  }
   // Since blob serialization is moderately complex, just delegate
   // the immediate putBlob to the method on the WriteBatch.
   // Pre-allocate a buffer of approximately the right size; it
