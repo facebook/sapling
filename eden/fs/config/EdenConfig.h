@@ -278,6 +278,12 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether Eden enforces parent commits in a hg status
+   * (getScmStatusV2) call
+   */
+  ConfigSetting<bool> enforceParents{"hg:enforce-parents", true, this};
+
+  /**
    * Controls whether EdenFS reads directly from hgcache.
    */
   ConfigSetting<bool> useHgCache{"hg:use-hgcache", false, this};

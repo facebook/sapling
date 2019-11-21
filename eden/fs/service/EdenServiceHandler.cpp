@@ -1001,8 +1001,12 @@ EdenServiceHandler::future_getScmStatusV2(
 
   auto mount = server_->getMount(params->mountPoint);
   auto hash = hashFromThrift(params->commit);
+  const auto& enforceParents = server_->getServerState()
+                                   ->getReloadableConfig()
+                                   .getEdenConfig()
+                                   ->enforceParents.getValue();
   return helper.wrapFuture(
-      mount->diff(hash, params->listIgnored)
+      mount->diff(hash, params->listIgnored, enforceParents)
           .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
             auto result = std::make_unique<GetScmStatusResult>();
             result->status = std::move(*status);

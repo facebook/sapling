@@ -124,6 +124,11 @@ class StatusTest(EdenHgTestCase):
         # with a commit that is not the parent commit
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
+        config = """\
+["hg"]
+enforce-parents = false
+"""
+        edenrc = os.path.join(self.home_dir, ".edenrc")
 
         with self.get_thrift_client() as client:
             # Add file to commit
@@ -145,6 +150,28 @@ class StatusTest(EdenHgTestCase):
             self.assertEqual(
                 EdenErrorType.OUT_OF_DATE_PARENT, context.exception.errorType
             )
+
+            with open(edenrc, "w") as f:
+                f.write(config)
+
+            # Makes sure that EdenFS picks up our updated config,
+            # since we wrote it out after EdenFS started.
+            client.reloadConfig()
+
+            try:
+                client.getScmStatusV2(
+                    GetScmStatusParams(
+                        mountPoint=bytes(self.mount, encoding="utf-8"),
+                        commit=initial_commit,
+                        listIgnored=False,
+                    )
+                )
+            except EdenError as ex:
+                self.fail(
+                    "getScmStatusV2 threw after setting enforce-parents to false with {}".format(
+                        ex
+                    )
+                )
 
     def test_manual_revert(self) -> None:
         self.assert_status_empty()
