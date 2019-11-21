@@ -7,7 +7,8 @@
  */
 
 use fbinit::FacebookInit;
-use futures_preview::{FutureExt, TryFutureExt};
+use futures_ext::FutureExt;
+use futures_preview::{FutureExt as Futures03Ext, TryFutureExt};
 use gotham::{
     handler::HandlerFuture,
     helpers::http::response::{create_empty_response, create_response},
@@ -33,36 +34,33 @@ use super::util::build_response;
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
 // as well as creating HTTP responses using build_response().
 fn batch_handler(mut state: State) -> Box<HandlerFuture> {
-    Box::new(
-        (async move || {
-            let res = batch::batch(&mut state).await;
-            build_response(res, state)
-        })()
+    async move {
+        let res = batch::batch(&mut state).await;
+        build_response(res, state)
+    }
         .boxed()
-        .compat(),
-    )
+        .compat()
+        .boxify()
 }
 
 fn download_handler(mut state: State) -> Box<HandlerFuture> {
-    Box::new(
-        (async move || {
-            let res = download::download(&mut state).await;
-            build_response(res, state)
-        })()
+    async move {
+        let res = download::download(&mut state).await;
+        build_response(res, state)
+    }
         .boxed()
-        .compat(),
-    )
+        .compat()
+        .boxify()
 }
 
 fn upload_handler(mut state: State) -> Box<HandlerFuture> {
-    Box::new(
-        (async move || {
-            let res = upload::upload(&mut state).await;
-            build_response(res, state)
-        })()
+    async move {
+        let res = upload::upload(&mut state).await;
+        build_response(res, state)
+    }
         .boxed()
-        .compat(),
-    )
+        .compat()
+        .boxify()
 }
 
 fn health_handler(state: State) -> (State, &'static str) {
