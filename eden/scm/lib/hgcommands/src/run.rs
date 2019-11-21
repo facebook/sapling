@@ -47,7 +47,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     // which is a bit more desiable. Since run_command is very close to process
     // start, it should reflect the duration of the command relatively
     // accurately, at least for non-chg cases.
-    log_start(args.clone());
+    log_start(args.clone(), now);
 
     let cwd = match current_dir(io) {
         Err(e) => {
@@ -240,7 +240,7 @@ pub(crate) fn write_trace(
     Ok(())
 }
 
-fn log_start(args: Vec<String>) {
+fn log_start(args: Vec<String>, now: SystemTime) {
     let inside_test = is_inside_test();
     let (uid, pid, nice) = if inside_test {
         (0, 0, 0)
@@ -266,6 +266,7 @@ fn log_start(args: Vec<String>) {
         uid,
         nice,
         args,
+        timestamp_ms: epoch_ms(now),
     });
 
     let mut parent_names = Vec::new();
@@ -305,6 +306,7 @@ fn log_end(exit_code: u8, now: SystemTime, tracing_data: Arc<Mutex<TracingData>>
         exit_code,
         max_rss,
         duration_ms,
+        timestamp_ms: epoch_ms(now),
     });
 
     // Stop sending tracing events to subscribers. This prevents
@@ -326,6 +328,13 @@ fn log_end(exit_code: u8, now: SystemTime, tracing_data: Arc<Mutex<TracingData>>
         }
         blackbox::sync();
     });
+}
+
+fn epoch_ms(time: SystemTime) -> u64 {
+    match time.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => duration.as_millis() as u64,
+        Err(_) => 0,
+    }
 }
 
 fn is_inside_test() -> bool {

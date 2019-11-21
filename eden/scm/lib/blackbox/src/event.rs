@@ -155,6 +155,10 @@ pub enum Event {
 
         #[serde(rename = "D", alias = "duration_ms")]
         duration_ms: u64,
+
+        /// Timestamp in milliseconds.
+        #[serde(rename = "T", alias = "timestamp_ms")]
+        timestamp_ms: u64,
     },
 
     /// A watchman query with related context.
@@ -359,6 +363,10 @@ pub enum Event {
 
         #[serde(rename = "A", alias = "args")]
         args: Vec<String>,
+
+        /// Timestamp in milliseconds.
+        #[serde(rename = "T", alias = "timestamp_ms")]
+        timestamp_ms: u64,
     },
 
     #[serde(rename = "TD", alias = "tracing_data")]
@@ -614,6 +622,7 @@ impl fmt::Display for Event {
                 exit_code,
                 max_rss,
                 duration_ms,
+                timestamp_ms: _,
             } => {
                 write!(
                     f,
@@ -677,6 +686,7 @@ impl fmt::Display for Event {
                 uid,
                 nice,
                 args,
+                timestamp_ms: _,
             } => {
                 write!(
                     f,
