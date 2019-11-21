@@ -6,9 +6,10 @@
 from bindings import blackbox as _blackbox
 
 
-filter = _blackbox.filter
+events = _blackbox.events
 init = _blackbox.init
 log = _blackbox.log
+sessions = _blackbox.sessions
 sync = _blackbox.sync
 
 

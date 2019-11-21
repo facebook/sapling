@@ -11,14 +11,11 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible as Result;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
-use serde::Deserialize;
 use serde_json::Value;
 use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::Cursor;
-use std::ops::Bound::{Excluded, Included, Unbounded};
-use std::ops::RangeBounds;
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -63,18 +60,6 @@ pub struct Entry {
 /// Convert to JSON Value for pattern matching.
 pub trait ToValue {
     fn to_value(&self) -> Value;
-}
-
-/// Specify how to filter entries by indexes. Input of [`Blackbox::filter`].
-pub enum IndexFilter {
-    /// Filter by session ID.
-    SessionId(u64),
-
-    /// Filter by time range.
-    Time(u64, u64),
-
-    /// No filter. Get everything.
-    Nop,
 }
 
 // The serialized format of `Entry` is:
@@ -235,47 +220,6 @@ impl Blackbox {
         }
     }
 
-    /// IndexFilter entries. Newest first.
-    ///
-    /// - `filter` is backed by indexes.
-    /// - `pattern` requires an expensive linear scan.
-    ///
-    /// Entries that cannot be read or deserialized are ignored silently.
-    pub fn filter<'a, 'b: 'a, T: Deserialize<'a> + ToValue>(
-        &'b self,
-        filter: IndexFilter,
-        pattern: Option<Value>,
-    ) -> Vec<Entry> {
-        // API: Consider returning an iterator to get some laziness.
-        let index_id = filter.index_id();
-        let (start, end) = filter.index_range();
-        let mut result = Vec::new();
-        for log in self.log.logs().iter() {
-            let range = (Included(&start[..]), Excluded(&end[..]));
-            if let Ok(iter) = log.lookup_range(index_id, range) {
-                for next in iter.rev() {
-                    if let Ok((_key, entries)) = next {
-                        for next in entries {
-                            if let Ok(bytes) = next {
-                                if let Some(entry) = Entry::from_slice(bytes) {
-                                    if let Some(ref pattern) = pattern {
-                                        let data: &Event = &entry.data;
-                                        let value = data.to_value();
-                                        if !match_pattern(&value, pattern) {
-                                            continue;
-                                        }
-                                    }
-                                    result.push(entry)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        result
-    }
-
     /// Filter blackbox by patterns.
     /// See `match_pattern.rs` for how to specify patterns.
     ///
@@ -408,49 +352,6 @@ impl Entry {
     }
 }
 
-impl IndexFilter {
-    fn index_id(&self) -> usize {
-        match self {
-            IndexFilter::SessionId(_) => INDEX_SESSION_ID,
-            IndexFilter::Time(_, _) => INDEX_TIMESTAMP,
-            IndexFilter::Nop => INDEX_TIMESTAMP,
-        }
-    }
-
-    fn index_range(&self) -> (Box<[u8]>, Box<[u8]>) {
-        match self {
-            IndexFilter::SessionId(id) => (
-                u64_to_slice(*id).to_vec().into_boxed_slice(),
-                u64_to_slice(*id + 1).to_vec().into_boxed_slice(),
-            ),
-            IndexFilter::Time(start, end) => (
-                u64_to_slice(*start).to_vec().into_boxed_slice(),
-                u64_to_slice(*end).to_vec().into_boxed_slice(),
-            ),
-            IndexFilter::Nop => (
-                u64_to_slice(0).to_vec().into_boxed_slice(),
-                u64_to_slice(u64::max_value()).to_vec().into_boxed_slice(),
-            ),
-        }
-    }
-}
-
-impl<T: RangeBounds<SystemTime>> From<T> for IndexFilter {
-    fn from(range: T) -> IndexFilter {
-        let start = match range.start_bound() {
-            Included(v) => time_to_u64(v),
-            Excluded(v) => time_to_u64(v) + 1,
-            Unbounded => 0,
-        };
-        let end = match range.end_bound() {
-            Included(v) => time_to_u64(v) + 1,
-            Excluded(v) => time_to_u64(v),
-            Unbounded => u64::max_value(),
-        };
-        IndexFilter::Time(start, end)
-    }
-}
-
 fn u64_to_slice(value: u64) -> [u8; 8] {
     // The field can be used for index range query. So it has to be BE.
     unsafe { std::mem::transmute(value.to_be()) }
@@ -484,89 +385,7 @@ fn new_session_id() -> u64 {
 pub(crate) mod tests {
     use super::*;
     use serde_json::json;
-    use std::collections::HashSet;
-    use std::{
-        fs,
-        io::{Seek, SeekFrom, Write},
-    };
     use tempfile::tempdir;
-
-    #[test]
-    fn test_basic() {
-        let time_start = SystemTime::now();
-        let dir = tempdir().unwrap();
-        let mut blackbox = BlackboxOptions::new().open(&dir.path().join("1")).unwrap();
-        let events = vec![
-            Event::Alias {
-                from: "a".to_string(),
-                to: "b".to_string(),
-            },
-            Event::Debug {
-                value: "foo".into(),
-            },
-            Event::Alias {
-                from: "c".to_string(),
-                to: "d".to_string(),
-            },
-            Event::Debug {
-                value: "bar".into(),
-            },
-        ];
-
-        let session_count = 4;
-        let first_session_id = blackbox.session_id().0;
-        for _ in 0..session_count {
-            for event in events.iter() {
-                blackbox.log(event);
-                let mut blackbox = BlackboxOptions::new().open(&dir.path().join("2")).unwrap();
-                blackbox.log(event);
-            }
-            blackbox.refresh_session_id();
-        }
-        let time_end = SystemTime::now();
-
-        // Test find by session id.
-        assert_eq!(
-            blackbox
-                .filter::<Event>(IndexFilter::SessionId(first_session_id), None)
-                .len(),
-            events.len()
-        );
-
-        // Test find by time range.
-        let entries = blackbox.filter::<Event>((time_start..=time_end).into(), None);
-
-        // The time range covers everything, so it should match "find all".
-        assert_eq!(
-            blackbox.filter::<Event>(IndexFilter::Nop, None).len(),
-            entries.len()
-        );
-        assert_eq!(entries.len(), events.len() * session_count);
-        assert_eq!(
-            entries
-                .iter()
-                .map(|e| e.session_id)
-                .collect::<HashSet<_>>()
-                .len(),
-            session_count,
-        );
-
-        // Entries match data (events), and are in the "newest first" order.
-        for (entry, event) in entries
-            .iter()
-            .rev()
-            .zip((0..session_count).flat_map(|_| events.iter()))
-        {
-            assert_eq!(&entry.data, event)
-        }
-
-        // Check logging with multiple blackboxes.
-        let blackbox = BlackboxOptions::new().open(&dir.path().join("2")).unwrap();
-        assert_eq!(
-            blackbox.filter::<Event>(IndexFilter::Nop, None).len(),
-            entries.len()
-        );
-    }
 
     #[test]
     fn test_query_by_session_ids() {
@@ -646,74 +465,11 @@ pub(crate) mod tests {
         assert_eq!(query(2), &events[4..5]);
     }
 
-    #[cfg(unix)]
-    #[test]
-    fn test_data_corruption() {
-        let dir = tempdir().unwrap();
-        let mut blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
-        let events: Vec<_> = (1..=400)
-            .map(|i| Event::Debug {
-                value: format!("{:030}", i).into(),
-            })
-            .collect();
-
-        for event in events.iter() {
-            blackbox.log(event);
-        }
-
-        let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
-        assert_eq!(entries.len(), events.len());
-        blackbox.sync();
-
-        // Corrupt log
-        let log_path = dir.path().join("0").join("log");
-        backup(&log_path);
-        for (bytes, corrupted_count) in [(1, 1), (160, 3), (250, 5)].iter() {
-            // Corrupt the last few bytes.
-            corrupt(&log_path, *bytes);
-
-            // The other entries can still be read without errors.
-            let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
-            assert_eq!(entries.len(), events.len() - corrupted_count);
-            assert!(entries
-                .iter()
-                .rev()
-                .map(|e| &e.data)
-                .eq(events.iter().take(entries.len())));
-        }
-        restore(&log_path);
-
-        // Corrupt index.
-        let index_path = dir.path().join("0").join("index-timestamp");
-        corrupt(&index_path, 1);
-
-        // Requires a reload of the blackbox so the in-memory checksum table
-        // gets updated.
-        let blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
-        let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
-
-        // Loading this Log would trigger a rewrite.
-        // TODO: Add some auto-recovery logic to the indexes on `Log`.
-        assert!(entries.is_empty());
-    }
-
-    /// Corrupt data at the end.
-    fn corrupt(path: &Path, size: usize) {
-        let mut file = fs::OpenOptions::new()
-            .read(true)
-            .create(false)
-            .write(true)
-            .open(path)
-            .unwrap();
-        file.seek(SeekFrom::End(-(size as i64))).unwrap();
-        file.write_all(&vec![0; size]).unwrap();
-    }
-
-    fn backup(path: &Path) {
-        fs::copy(path, path.with_extension("bak")).unwrap();
-    }
-
-    fn restore(path: &Path) {
-        fs::copy(path.with_extension("bak"), path).unwrap();
+    pub(crate) fn all_entries(blackbox: &Blackbox) -> Vec<Entry> {
+        let session_ids = blackbox.session_ids_by_pattern(&json!("_"));
+        session_ids
+            .into_iter()
+            .flat_map(|id| blackbox.entries_by_session_id(id))
+            .collect()
     }
 }

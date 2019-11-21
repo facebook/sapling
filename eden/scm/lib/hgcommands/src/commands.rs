@@ -14,7 +14,7 @@ use clidispatch::{
 use cliparser::define_flags;
 use failure::Fallible as Result;
 
-use blackbox::event::Event;
+use blackbox::{event::Event, json, SessionId};
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
@@ -125,22 +125,22 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
 }
 
 pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Result<u8> {
-    let filter = if opts.session_id != 0 {
-        blackbox::IndexFilter::SessionId(opts.session_id as u64)
-    } else if let Some(range) = hgtime::HgTime::parse_range(&opts.time_range) {
-        // Blackbox uses milliseconds. HgTime uses seconds.
-        let ratio = 1000;
-        blackbox::IndexFilter::Time(
-            range.start.unixtime.saturating_mul(ratio),
-            range.end.unixtime.saturating_mul(ratio),
-        )
-    } else {
-        return Err(errors::Abort("both --time-range and --session-id are invalid".into()).into());
-    };
-
     let entries = {
         let blackbox = blackbox::SINGLETON.lock();
-        blackbox.filter::<Event>(filter, None)
+        let session_ids = if opts.session_id != 0 {
+            vec![SessionId(opts.session_id as u64)]
+        } else if let Some(range) = hgtime::HgTime::parse_range(&opts.time_range) {
+            // Blackbox uses milliseconds. HgTime uses seconds.
+            let ratio = 1000;
+            blackbox.session_ids_by_pattern(&json!({"start": {
+                "timestamp_ms": ["range", range.start.unixtime.saturating_mul(ratio), range.end.unixtime.saturating_mul(ratio)]
+            }})).into_iter().collect()
+        } else {
+            return Err(
+                errors::Abort("both --time-range and --session-id are invalid".into()).into(),
+            );
+        };
+        blackbox.entries_by_session_ids(session_ids)
     };
 
     let mut tracing_data_list = Vec::new();

@@ -62,7 +62,7 @@ pub fn sync() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::blackbox::IndexFilter;
+    use crate::blackbox::tests::all_entries;
     use tempfile::tempdir;
 
     #[test]
@@ -91,7 +91,7 @@ mod tests {
 
         let mut singleton = SINGLETON.lock();
         let blackbox = singleton.deref_mut();
-        assert_eq!(blackbox.filter::<Event>(IndexFilter::Nop, None).len(), 3);
+        assert_eq!(all_entries(blackbox).len(), 3);
     }
 
 }

@@ -7,7 +7,7 @@
 
 //! Python bindings for native blackbox logging.
 
-use blackbox::{self, event::Event, init, log, serde_json, BlackboxOptions, ToValue};
+use blackbox::{self, event::Event, init, log, serde_json, BlackboxOptions, SessionId, ToValue};
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
@@ -28,8 +28,16 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "sync", py_fn!(py, sync()))?;
     m.add(
         py,
-        "filter",
-        py_fn!(py, filter(start: f64, end: f64, json: String)),
+        "sessions",
+        py_fn!(py, session_ids_by_pattern(json: &str)),
+    )?;
+    m.add(
+        py,
+        "events",
+        py_fn!(
+            py,
+            events_by_session_ids(session_ids: Vec<u64>, pattern: &str)
+        ),
     )?;
 
     // _logjson takes a JSON string. Make it easier to use by
@@ -75,33 +83,49 @@ fn sync(py: Python) -> PyResult<PyObject> {
 
 /// Read events in the given time span. Return `[(session_id, timestamp, message, json)]`.
 /// Timestamps are in seconds.
-fn filter(
-    py: Python,
-    start: f64,
-    end: f64,
-    json: String,
-) -> PyResult<Vec<(u64, f64, String, String)>> {
+fn session_ids_by_pattern(py: Python, pattern: &str) -> PyResult<Vec<u64>> {
+    let pattern: serde_json::Value =
+        serde_json::from_str(pattern).map_pyerr::<exc::ValueError>(py)?;
     let blackbox = blackbox::SINGLETON.lock();
     let blackbox = blackbox.deref();
-    // Blackbox uses millisecond integers. Translate seconds to milliseconds.
-    let filter = blackbox::IndexFilter::Time((start * 1000.0) as u64, (end * 1000.0) as u64);
-    let pattern = if json.is_empty() {
-        None
-    } else {
-        Some(serde_json::from_str(&json).map_pyerr::<exc::RuntimeError>(py)?)
-    };
-    let events = blackbox.filter::<Event>(filter, pattern);
-    return Ok(events
+    Ok(blackbox
+        .session_ids_by_pattern(&pattern)
         .into_iter()
-        .map(|e| {
-            (
-                e.session_id,
+        .map(|id| id.0)
+        .collect())
+}
+
+/// Read events with the given session ids.
+/// Return `[(session_id, timestamp, message, json)]`.
+fn events_by_session_ids(
+    py: Python,
+    session_ids: Vec<u64>,
+    pattern: &str,
+) -> PyResult<Vec<(u64, f64, String, String)>> {
+    let pattern: serde_json::Value =
+        serde_json::from_str(pattern).map_pyerr::<exc::ValueError>(py)?;
+    let blackbox = blackbox::SINGLETON.lock();
+    let blackbox = blackbox.deref();
+    let mut result = Vec::new();
+    for session_id in session_ids {
+        for entry in blackbox.entries_by_session_id(SessionId(session_id)) {
+            if !entry.match_pattern(&pattern) {
+                continue;
+            }
+            let json = match &entry.data {
+                // Skip converting TracingData to JSON.
+                &Event::TracingData { serialized: _ } => "{}".to_string(),
+                _ => serde_json::to_string(&entry.data.to_value()).unwrap(),
+            };
+
+            result.push((
+                entry.session_id,
                 // Translate back to float seconds.
-                (e.timestamp as f64) / 1000.0,
-                format!("{}", e.data),
-                // JSON formatted string.
-                serde_json::to_string(&e.data.to_value()).unwrap(),
-            )
-        })
-        .collect());
+                (entry.timestamp as f64) / 1000.0,
+                format!("{}", entry.data),
+                json,
+            ));
+        }
+    }
+    Ok(result)
 }

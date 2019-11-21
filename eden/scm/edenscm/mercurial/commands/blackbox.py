@@ -5,7 +5,7 @@
 
 import time
 
-from ..blackbox import filter
+from .. import blackbox as blackboxmod
 from ..i18n import _
 from .cmdtable import command
 
@@ -52,15 +52,21 @@ def blackbox(ui, repo, **opts):
     end = opts.get("end", 0)
     showtimestamp = opts.get("timestamp", True)
     showsid = opts.get("sid", True)
-    pattern = opts.get("pattern")
-
     now = time.time()
-    events = filter(now - start * 60, now - end * 60 + 1, pattern)
+    timepattern = '{"start": {"timestamp_ms": ["range", %d, %d]}}' % (
+        (now - start * 60) * 1000,
+        (now - end * 60 + 1) * 1000,
+    )
+
+    sessions = blackboxmod.sessions(timepattern)
+    events = blackboxmod.events(sessions, opts.get("pattern") or "{}")
 
     ui.pager("blackbox")
     sidcolor = {}
     debugflag = ui.debugflag
-    for sid, ts, msg, json in reversed(events):
+    # sort by timestamp
+    events = sorted(events, key=lambda t: t[1])
+    for sid, ts, msg, json in events:
         if showtimestamp:
             localtime = time.localtime(ts)
             timestr = time.strftime("%Y/%m/%d %H:%M:%S", localtime) + (
