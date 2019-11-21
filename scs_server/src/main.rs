@@ -20,10 +20,11 @@ use failure_ext::{err_msg, Error, ResultExt};
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
+use futures::future::IntoFuture;
 use futures::{future, sync, Future};
 use futures_preview::{FutureExt, TryFutureExt};
 use metaconfig_parser::RepoConfigs;
-use mononoke_api::Mononoke;
+use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
 use scuba_ext::ScubaSampleBuilder;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
@@ -37,6 +38,7 @@ use stats::schedule_stats_aggregation;
 use tokio::runtime::Runtime;
 
 mod facebook;
+mod monitoring;
 mod source_control_impl;
 
 const ARG_PORT: &str = "port";
@@ -139,20 +141,22 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let fb303 = move |proto| {
         make_FacebookService_server(proto, facebook::FacebookServiceImpl, fb303_base.clone())
     };
+    let source_control_server = source_control_impl::SourceControlServiceImpl::new(
+        fb,
+        mononoke.clone(),
+        logger.clone(),
+        scuba_builder.clone(),
+    );
     let service = {
-        cloned!(logger);
+        cloned!(source_control_server);
         move |proto| {
-            make_SourceControlService_server(
-                proto,
-                source_control_impl::SourceControlServiceImpl::new(
-                    fb,
-                    mononoke.clone(),
-                    logger.clone(),
-                    scuba_builder.clone(),
-                ),
-                fb303.clone(),
-            )
+            make_SourceControlService_server(proto, source_control_server.clone(), fb303.clone())
         }
+    };
+
+    let monitoring_forever = {
+        let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
+        monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
     };
 
     let thrift: ThriftServer = ThriftServerBuilder::new(fb)
@@ -173,20 +177,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     service_framework.add_module(ProfileModule)?;
 
     let (sender, receiver) = sync::oneshot::channel::<()>();
-    let main = stats_aggregation.select2(receiver).then({
-        cloned!(logger);
-        move |res| -> Result<(), ()> {
-            if let Ok(future::Either::B(_)) = res {
-                info!(logger, "Shut down server signalled");
-            } else {
-                // NOTE: We need to panic here, because otherwise main is going to be blocked on
-                // waiting for a signal forever. This shouldn't normally ever happen.
-                unreachable!("Server terminated or signal listener was dropped.")
-            }
+    let main = (stats_aggregation, monitoring_forever)
+        .into_future()
+        .select2(receiver)
+        .then({
+            cloned!(logger);
+            move |res| -> Result<(), ()> {
+                if let Ok(future::Either::B(_)) = res {
+                    info!(logger, "Shut down server signalled");
+                } else {
+                    // NOTE: We need to panic here, because otherwise main is going to be blocked on
+                    // waiting for a signal forever. This shouldn't normally ever happen.
+                    unreachable!("Server terminated or signal listener was dropped.")
+                }
 
-            Ok(())
-        }
-    });
+                Ok(())
+            }
+        });
 
     // Start listening.
     info!(logger, "Listening on {}:{}", &host, port);
