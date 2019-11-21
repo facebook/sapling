@@ -16,14 +16,19 @@ use failure_ext::Error;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use fsnodes::RootFsnodeMapping;
+
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
+use futures_preview::future::try_join_all;
 use mercurial_types::Globalrev;
-use metaconfig_types::{CommonConfig, MetadataDBConfig, RepoConfig};
+use metaconfig_types::{
+    CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
+};
 use mononoke_types::hash::{Sha1, Sha256};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
-use slog::Logger;
+use slog::{debug, error, Logger};
+use stats::service_data::{get_service_data_singleton, ServiceData};
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 use unodes::{derive_unodes, RootUnodeManifestMapping};
 use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
@@ -34,6 +39,11 @@ use crate::file::{FileContext, FileId};
 use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 use crate::tree::{TreeContext, TreeId};
 
+const COMMON_COUNTER_PREFIX: &'static str = "mononoke.api";
+const STALENESS_INFIX: &'static str = "staleness.secs";
+const MISSING_FROM_CACHE_INFIX: &'static str = "missing_from_cache";
+const MISSING_FROM_REPO_INFIX: &'static str = "missing_from_repo";
+
 pub(crate) struct Repo {
     pub(crate) blob_repo: BlobRepo,
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
@@ -42,6 +52,8 @@ pub(crate) struct Repo {
     pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    // Needed to report stats
+    pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
 }
 
 #[derive(Clone)]
@@ -85,6 +97,7 @@ impl Repo {
         let synced_commit_mapping = Arc::new(
             open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage).await?,
         );
+        let monitoring_config = config.source_control_service_monitoring.clone();
 
         let blob_repo = open_blobrepo(
             fb,
@@ -132,6 +145,7 @@ impl Repo {
             fsnodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
+            monitoring_config,
         })
     }
 
@@ -143,6 +157,7 @@ impl Repo {
         unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
         warm_bookmarks_cache: Arc<WarmBookmarksCache>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+        monitoring_config: Option<SourceControlServiceMonitoring>,
     ) -> Self {
         Self {
             blob_repo,
@@ -151,6 +166,7 @@ impl Repo {
             unodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
+            monitoring_config,
         }
     }
 
@@ -178,6 +194,7 @@ impl Repo {
             fsnodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
+            monitoring_config: None,
         })
     }
 }
@@ -260,10 +277,16 @@ impl RepoContext {
     /// Resolve a bookmark to a changeset.
     pub async fn resolve_bookmark(
         &self,
-        bookmark: impl ToString,
+        bookmark: impl AsRef<str>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let bookmark = BookmarkName::new(bookmark.to_string())?;
+        let bookmark = BookmarkName::new(bookmark.as_ref())?;
+        self.resolve_bookmark_impl(&bookmark).await
+    }
 
+    async fn resolve_bookmark_impl(
+        &self,
+        bookmark: &BookmarkName,
+    ) -> Result<Option<ChangesetContext>, MononokeError> {
         let mut cs_id = self.warm_bookmarks_cache().get(&bookmark);
 
         if cs_id.is_none() {
@@ -444,5 +467,122 @@ impl RepoContext {
             Some(changeset) => other.changeset(ChangesetSpecifier::Bonsai(changeset)).await,
             None => Ok(None),
         }
+    }
+
+    pub async fn report_monitoring_stats(&self) -> Result<(), MononokeError> {
+        match self.repo.monitoring_config.as_ref() {
+            None => Ok(()),
+            Some(monitoring_config) => {
+                let reporting_futs = monitoring_config
+                    .bookmarks_to_report_age
+                    .iter()
+                    .map(move |bookmark| self.report_bookmark_age_difference(&bookmark));
+                try_join_all(reporting_futs).await.map(|_| ())
+            }
+        }
+    }
+
+    fn set_counter(&self, name: &dyn AsRef<str>, value: i64) {
+        get_service_data_singleton(self.ctx.fb).set_counter(name, value);
+    }
+
+    fn report_bookmark_missing_from_cache(&self, bookmark: &BookmarkName) {
+        error!(
+            self.ctx().logger(),
+            "Monitored bookmark does not exist in the cache: {}", bookmark
+        );
+
+        let counter_name = format!(
+            "{}.{}.{}.{}",
+            COMMON_COUNTER_PREFIX,
+            MISSING_FROM_CACHE_INFIX,
+            self.blob_repo().get_repoid(),
+            bookmark,
+        );
+        self.set_counter(&counter_name, 1);
+    }
+
+    fn report_bookmark_missing_from_repo(&self, bookmark: &BookmarkName) {
+        error!(
+            self.ctx().logger(),
+            "Monitored bookmark does not exist in the repo: {}", bookmark
+        );
+
+        let counter_name = format!(
+            "{}.{}.{}.{}",
+            COMMON_COUNTER_PREFIX,
+            MISSING_FROM_REPO_INFIX,
+            self.blob_repo().get_repoid(),
+            bookmark,
+        );
+        self.set_counter(&counter_name, 1);
+    }
+
+    fn report_bookmark_staleness(&self, bookmark: &BookmarkName, staleness: i64) {
+        debug!(
+            self.ctx().logger(),
+            "Reporting staleness of {} to be {}s", bookmark, staleness
+        );
+
+        let counter_name = format!(
+            "{}.{}.{}.{}",
+            COMMON_COUNTER_PREFIX,
+            STALENESS_INFIX,
+            self.blob_repo().get_repoid(),
+            bookmark,
+        );
+        self.set_counter(&counter_name, staleness);
+    }
+
+    async fn report_bookmark_age_difference(
+        &self,
+        bookmark: &BookmarkName,
+    ) -> Result<(), MononokeError> {
+        let repo = self.blob_repo();
+        let ctx = self.ctx();
+
+        let maybe_changeset_context_from_service = self.resolve_bookmark_impl(bookmark).await?;
+        let maybe_bcs_id_from_blobrepo = repo
+            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .compat()
+            .await?;
+
+        if maybe_bcs_id_from_blobrepo.is_none() {
+            self.report_bookmark_missing_from_repo(bookmark);
+        }
+
+        if maybe_changeset_context_from_service.is_none() {
+            self.report_bookmark_missing_from_cache(bookmark);
+        }
+
+        let (changeset_context_from_service, bcs_id) = match (
+            maybe_changeset_context_from_service,
+            maybe_bcs_id_from_blobrepo,
+        ) {
+            (Some(changeset_context_from_service), Some(bcs_id)) => {
+                (changeset_context_from_service, bcs_id)
+            }
+            // At this point we've already reported missing monitored bookmark
+            // either in the cache, or in the repo, or in both. Let's just silenly
+            // return success, as we don't want the service to crash.
+            _ => return Ok(()),
+        };
+
+        let bcs = repo
+            .get_bonsai_changeset(ctx.clone(), bcs_id)
+            .compat()
+            .await?;
+
+        let timestamp_as_per_cache = changeset_context_from_service
+            .author_date()
+            .await?
+            .timestamp();
+
+        let timestamp_as_per_blobrepo = bcs.author_date().timestamp_secs();
+
+        let difference = timestamp_as_per_blobrepo - timestamp_as_per_cache;
+        self.report_bookmark_staleness(bookmark, difference);
+
+        Ok(())
     }
 }

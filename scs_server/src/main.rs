@@ -61,7 +61,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .default_value("::")
                 .value_name("HOST")
-                .help("Thrift port"),
+                .help("Thrift host"),
         )
         .arg(
             Arg::with_name(ARG_PORT)

@@ -43,7 +43,7 @@ use unodes::{derive_unodes, RootUnodeManifestId, RootUnodeManifestMapping};
 use mercurial_types::{
     blobs::HgBlobChangeset, manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,
 };
-use metaconfig_types::{CommonConfig, RepoConfig};
+use metaconfig_types::{CommonConfig, RepoConfig, SourceControlServiceMonitoring};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::{define_stats, Timeseries};
 use types::{
@@ -103,6 +103,8 @@ pub struct MononokeRepo {
     pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // Needed for the current way to create a new Mononoke object
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    // Needed to report stats
+    pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
 }
 
 impl MononokeRepo {
@@ -122,6 +124,7 @@ impl MononokeRepo {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = config.repoid;
+        let monitoring_config = config.source_control_service_monitoring.clone();
 
         // This is hacky, for the benefit of the new Mononoke object type
         open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage)
@@ -172,6 +175,7 @@ impl MononokeRepo {
                             unodes_derived_mapping,
                             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
                             synced_commit_mapping: Arc::new(synced_commit_mapping),
+                            monitoring_config,
                         }
                     },
                 )

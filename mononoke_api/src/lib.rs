@@ -18,6 +18,7 @@ use failure_ext::Error;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeMapping;
 use futures_preview::future;
+use futures_preview::future::try_join_all;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
 use synced_commit_mapping::SyncedCommitMapping;
@@ -25,6 +26,7 @@ use unodes::RootUnodeManifestMapping;
 use warm_bookmarks_cache::WarmBookmarksCache;
 
 use metaconfig_parser::RepoConfigs;
+use metaconfig_types::SourceControlServiceMonitoring;
 
 use crate::repo::Repo;
 
@@ -137,6 +139,7 @@ impl Mononoke {
                 Arc<RootUnodeManifestMapping>,
                 Arc<WarmBookmarksCache>,
                 Arc<dyn SyncedCommitMapping>,
+                Option<SourceControlServiceMonitoring>,
             ),
         >,
     ) -> Self {
@@ -151,6 +154,7 @@ impl Mononoke {
                         unodes_derived_mapping,
                         warm_bookmarks_cache,
                         synced_commit_mapping,
+                        monitoring_config,
                     )| {
                         let fsnodes_derived_mapping =
                             Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
@@ -163,6 +167,7 @@ impl Mononoke {
                                 unodes_derived_mapping,
                                 warm_bookmarks_cache,
                                 synced_commit_mapping,
+                                monitoring_config,
                             )),
                         )
                     },
@@ -188,5 +193,16 @@ impl Mononoke {
     /// Returns an `Iterator` over all repo names.
     pub fn repo_names(&self) -> impl Iterator<Item = &str> {
         self.repos.keys().map(AsRef::as_ref)
+    }
+
+    /// Report configured monitoring stats
+    pub async fn report_monitoring_stats(&self, ctx: CoreContext) -> Result<(), MononokeError> {
+        let reporting_futs: Vec<_> = self
+            .repos
+            .iter()
+            .map(|(_, repo)| RepoContext::new(ctx.clone(), repo.clone()))
+            .map(|repo| async move { repo.report_monitoring_stats().await })
+            .collect();
+        try_join_all(reporting_futs).await.map(|_| ())
     }
 }
