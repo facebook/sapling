@@ -6,11 +6,12 @@
  */
 
 use super::match_pattern;
+use crate::event::Event;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible as Result;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::Value;
 use std::cell::Cell;
 use std::fs;
@@ -49,10 +50,10 @@ pub struct BlackboxOptions {
 ///
 /// It adds two fields: `timestamp` and `session_id`.
 #[derive(Debug)]
-pub struct Entry<T> {
+pub struct Entry {
     pub timestamp: u64,
     pub session_id: u64,
-    pub data: T,
+    pub data: Event,
 
     // Prevent constructing `Entry` directly.
     phantom: (),
@@ -186,11 +187,11 @@ impl Blackbox {
         self.session_id
     }
 
-    /// Log an event. Write it to disk immediately.
+    /// Log an event. Maybe write it to disk immediately.
     ///
     /// If an error happens, `log` will try to rotate the bad logs and retry.
     /// If it still fails, `log` will simply give up.
-    pub fn log(&mut self, data: &impl Serialize) {
+    pub fn log(&mut self, data: &Event) {
         if self.is_broken.get() {
             return;
         }
@@ -243,7 +244,7 @@ impl Blackbox {
         &'b self,
         filter: IndexFilter,
         pattern: Option<Value>,
-    ) -> Vec<Entry<T>> {
+    ) -> Vec<Entry> {
         // API: Consider returning an iterator to get some laziness.
         let index_id = filter.index_id();
         let (start, end) = filter.index_range();
@@ -257,7 +258,7 @@ impl Blackbox {
                             if let Ok(bytes) = next {
                                 if let Some(entry) = Entry::from_slice(bytes) {
                                     if let Some(ref pattern) = pattern {
-                                        let data: &T = &entry.data;
+                                        let data: &Event = &entry.data;
                                         let value = data.to_value();
                                         if !match_pattern(&value, pattern) {
                                             continue;
@@ -281,8 +282,8 @@ impl Drop for Blackbox {
     }
 }
 
-impl<'a, T: Deserialize<'a>> Entry<T> {
-    fn from_slice(bytes: &'a [u8]) -> Option<Self> {
+impl Entry {
+    fn from_slice(bytes: &[u8]) -> Option<Self> {
         if bytes.len() >= HEADER_BYTES {
             let mut cur = Cursor::new(bytes);
             let timestamp = cur.read_u64::<BigEndian>().unwrap();
@@ -304,8 +305,8 @@ impl<'a, T: Deserialize<'a>> Entry<T> {
     }
 }
 
-impl<T: Serialize> Entry<T> {
-    fn to_vec(data: &T, timestamp: u64, session_id: u64) -> Option<Vec<u8>> {
+impl Entry {
+    fn to_vec(data: &Event, timestamp: u64, session_id: u64) -> Option<Vec<u8>> {
         let mut buf = Vec::with_capacity(32);
         buf.write_u64::<BigEndian>(timestamp).unwrap();
         buf.write_u64::<BigEndian>(session_id).unwrap();
@@ -393,7 +394,6 @@ fn new_session_id() -> u64 {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use serde_derive::{Deserialize, Serialize};
     use std::collections::HashSet;
     use std::{
         fs,
@@ -401,24 +401,27 @@ pub(crate) mod tests {
     };
     use tempfile::tempdir;
 
-    #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    pub(crate) enum Event {
-        A(u64),
-        B(String),
-    }
-
-    impl ToValue for Event {
-        fn to_value(&self) -> Value {
-            serde_json::to_value(self).unwrap()
-        }
-    }
-
     #[test]
     fn test_basic() {
         let time_start = SystemTime::now();
         let dir = tempdir().unwrap();
         let mut blackbox = BlackboxOptions::new().open(&dir.path().join("1")).unwrap();
-        let events = vec![Event::A(0), Event::B("Foo".to_string()), Event::A(12)];
+        let events = vec![
+            Event::Alias {
+                from: "a".to_string(),
+                to: "b".to_string(),
+            },
+            Event::Debug {
+                value: "foo".into(),
+            },
+            Event::Alias {
+                from: "c".to_string(),
+                to: "d".to_string(),
+            },
+            Event::Debug {
+                value: "bar".into(),
+            },
+        ];
 
         let session_count = 4;
         let first_session_id = blackbox.session_id();
@@ -480,7 +483,11 @@ pub(crate) mod tests {
     fn test_data_corruption() {
         let dir = tempdir().unwrap();
         let mut blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
-        let events: Vec<_> = (1..=400).map(|i| Event::B(format!("{:030}", i))).collect();
+        let events: Vec<_> = (1..=400)
+            .map(|i| Event::Debug {
+                value: format!("{:030}", i).into(),
+            })
+            .collect();
 
         for event in events.iter() {
             blackbox.log(event);
@@ -493,7 +500,7 @@ pub(crate) mod tests {
         // Corrupt log
         let log_path = dir.path().join("0").join("log");
         backup(&log_path);
-        for (bytes, corrupted_count) in [(1, 1), (60, 2), (160, 3)].iter() {
+        for (bytes, corrupted_count) in [(1, 1), (160, 3), (250, 5)].iter() {
             // Corrupt the last few bytes.
             corrupt(&log_path, *bytes);
 

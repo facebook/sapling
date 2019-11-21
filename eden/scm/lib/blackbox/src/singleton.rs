@@ -9,7 +9,7 @@
 //!
 //! Useful for cases where it's inconvenient to pass [`Blackbox`] around.
 
-use crate::{Blackbox, BlackboxOptions};
+use crate::{event::Event, Blackbox, BlackboxOptions};
 use indexedlog::rotate::RotateLowLevelExt;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -50,7 +50,7 @@ pub fn init(mut blackbox: Blackbox) {
 /// Log to the global [`Blackbox`] instance.
 ///
 /// If [`init`] was not called, log requests will be buffered in memory.
-pub fn log(data: &impl serde::Serialize) {
+pub fn log(data: &Event) {
     SINGLETON.lock().log(data);
 }
 
@@ -62,12 +62,21 @@ pub fn sync() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::blackbox::{tests::Event, IndexFilter};
+    use crate::blackbox::IndexFilter;
     use tempfile::tempdir;
 
     #[test]
     fn test_buffered_writes() {
-        let events = vec![Event::A(42), Event::B("foo".to_string())];
+        let events = vec![
+            Event::Alias {
+                from: "x".to_string(),
+                to: "y".to_string(),
+            },
+            Event::Alias {
+                from: "p".to_string(),
+                to: "q".to_string(),
+            },
+        ];
         for e in &events {
             log(e);
         }
