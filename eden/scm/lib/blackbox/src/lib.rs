@@ -21,7 +21,7 @@ mod singleton;
 
 pub use self::blackbox::{Blackbox, BlackboxOptions, Entry, SessionId, ToValue};
 pub use self::singleton::{init, log, sync, SINGLETON};
-pub use match_pattern::match_pattern;
+pub use match_pattern::{capture_pattern, match_pattern};
 pub use serde_json::{self, json, Value};
 
 pub mod event;
