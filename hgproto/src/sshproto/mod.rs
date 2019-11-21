@@ -12,7 +12,7 @@
 //! https://www.mercurial-scm.org/wiki/WireProtocol though they're scant on detail.
 //!
 //! The encoding is:
-//! ```
+//! ```text
 //! command := <command> '\n' <key-value>{N}
 //! key-value := star | kv
 //! star := '*' ' ' <count> kv{count}
@@ -27,14 +27,14 @@
 //! list := (<hash> ' ')* <item>
 //!
 //! Responses to commands are almost always:
-//! ```
+//! ```text
 //! <numbytes> '\n'
 //! <byte>{numbytes}
 //! ```
 //!
 //! The expections are requests that pass streaming arguments (f.e. unbundle). After such a
 //! requests the responder should respond with
-//! ```
+//! ```text
 //! '0\n'
 //! ```
 //! to acknowledge readiness for processing the stream. After the stream is fully read the

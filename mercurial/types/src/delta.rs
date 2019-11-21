@@ -277,7 +277,7 @@ pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Res
 }
 
 /// XXX: Compatibility functions for the old bdiff module for testing purposes. The delta
-/// module will replace that one once all instances of Vec<bdiff::Delta> are replaced
+/// module will replace that one once all instances of Vec\<bdiff::Delta\> are replaced
 /// with delta::Delta, and this compatibility module will be removed at that time.
 pub mod compat {
     use super::*;

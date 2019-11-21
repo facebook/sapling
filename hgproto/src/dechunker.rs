@@ -8,7 +8,7 @@
 
 //! Decodes stream of data that is "chunked" in the following format:
 //!
-//! ```
+//! ```text
 //! stream := <chunk>
 //! chunk := <numbytes> '\n' <byte>{numbytes} <chunk> | '0\n'
 //! ```
