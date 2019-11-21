@@ -166,7 +166,8 @@ impl EdenApi for EdenApiCurlClient {
         keys: Vec<Key>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
-        self.get_data(paths::DATA, keys, progress)
+        tracing::info_span!("api::get_files", count = keys.len())
+            .in_scope(|| self.get_data(paths::DATA, keys, progress))
     }
 
     fn get_history(
@@ -175,6 +176,13 @@ impl EdenApi for EdenApiCurlClient {
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = HistoryEntry>>, DownloadStats)> {
+        let span = tracing::info_span!(
+            "api::get_history",
+            count = keys.len(),
+            max_depth = max_depth.unwrap_or(1)
+        );
+        let _guard = span.enter();
+
         log::debug!("Fetching {} files", keys.len());
 
         let mut url = self.repo_base_url()?.join(paths::HISTORY)?;
@@ -247,7 +255,8 @@ impl EdenApi for EdenApiCurlClient {
         keys: Vec<Key>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
-        self.get_data(paths::TREES, keys, progress)
+        tracing::info_span!("api::get_trees", count = keys.len())
+            .in_scope(|| self.get_data(paths::TREES, keys, progress))
     }
 
     fn prefetch_trees(
@@ -258,6 +267,8 @@ impl EdenApi for EdenApiCurlClient {
         depth: Option<usize>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
+        let span = tracing::info_span!("api::prefetch_trees");
+        let _guard = span.enter();
         let mut url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
         if self.stream_trees {
             url.set_query(Some("stream=true"));
@@ -431,6 +442,16 @@ where
     progress.set_callback(progress_cb);
     driver.set_progress_reporter(progress);
 
+    let span = tracing::debug_span!(
+        "curl::multi_request",
+        url = &AsRef::<str>::as_ref(&url.to_string()),
+        downloaded = "",
+        uplaoded = "",
+        requests = num_requests,
+        latency = "",
+    );
+    let _guard = span.enter();
+
     log::debug!("Performing {} requests", num_requests);
     let start = Instant::now();
 
@@ -467,6 +488,12 @@ where
     };
 
     log::info!("{}", &dlstats);
+
+    if !span.is_disabled() {
+        span.record("downloaded", &dlstats.downloaded);
+        span.record("uploaded", &dlstats.uploaded);
+        span.record("latency_ms", &(dlstats.latency.as_millis() as u64));
+    }
 
     Ok(dlstats)
 }
