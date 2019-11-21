@@ -1775,23 +1775,28 @@ impl BlobRepo {
                     move |(mut generated_count, mut commits_to_generate)| match commits_to_generate
                         .pop()
                     {
-                        Some(bcs) => generate_single_hg_changeset(ctx.clone(), repo.clone(), bcs)
-                            .map({
-                                cloned!(ctx);
-                                move |(_, generated)| {
-                                    if generated {
-                                        debug!(
+                        Some(bcs) => {
+                            let bcs_id = bcs.get_changeset_id();
+
+                            generate_single_hg_changeset(ctx.clone(), repo.clone(), bcs)
+                                .map({
+                                    cloned!(ctx);
+                                    move |(hg_cs_id, generated)| {
+                                        if generated {
+                                            debug!(
                                             ctx.logger(),
-                                            "generated hg changeset for {}, {} more left to visit",
+                                            "generated hg changeset for {}: {} ({} left to visit)",
                                             bcs_id,
+                                            hg_cs_id,
                                             commits_to_generate.len(),
                                         );
-                                        generated_count += 1;
+                                            generated_count += 1;
+                                        }
+                                        Loop::Continue((generated_count, commits_to_generate))
                                     }
-                                    Loop::Continue((generated_count, commits_to_generate))
-                                }
-                            })
-                            .left_future(),
+                                })
+                                .left_future()
+                        }
                         None => {
                             return bonsai_hg_mapping
                                 .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
