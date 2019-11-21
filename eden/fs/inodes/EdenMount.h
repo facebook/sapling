@@ -115,6 +115,10 @@ struct Owner {
   gid_t gid;
 };
 
+struct CheckoutResult {
+  std::vector<CheckoutConflict> conflicts;
+};
+
 /**
  * EdenMount contains all of the data about a specific eden mount point.
  *
@@ -383,7 +387,7 @@ class EdenMount {
   /**
    * Check out the specified commit.
    */
-  folly::Future<std::vector<CheckoutConflict>> checkout(
+  folly::Future<CheckoutResult> checkout(
       Hash snapshotHash,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 

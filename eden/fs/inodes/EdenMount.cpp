@@ -704,7 +704,7 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
       });
 }
 
-folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
+folly::Future<CheckoutResult> EdenMount::checkout(
     Hash snapshotHash,
     CheckoutMode checkoutMode) {
   // Hold the snapshot lock for the duration of the entire checkout operation.
@@ -785,11 +785,13 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       })
       .thenValue([this, ctx, oldParents, snapshotHash, journalDiffCallback](
                      std::vector<CheckoutConflict>&& conflicts) {
+        CheckoutResult result;
+        result.conflicts = std::move(conflicts);
         if (ctx->isDryRun()) {
           // This is a dry run, so all we need to do is tell the caller about
           // the conflicts: we should not modify any files or add any entries to
           // the journal.
-          return std::move(conflicts);
+          return result;
         }
 
         // Save the new snapshot hash to the config
@@ -814,9 +816,9 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         journal_->recordUncleanPaths(
             oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
 
-        return std::move(conflicts);
+        return result;
       })
-      .thenTry([this, ctx](Try<std::vector<CheckoutConflict>>&& result) {
+      .thenTry([this, ctx](Try<CheckoutResult>&& result) {
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{ctx->getCheckoutDuration()};
         this->serverState_->getStructuredLogger()->logEvent(

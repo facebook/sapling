@@ -247,8 +247,8 @@ void testAddFile(
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = std::move(checkoutResult).get();
-  EXPECT_EQ(0, results.size());
+  auto result = std::move(checkoutResult).get();
+  EXPECT_EQ(0, result.conflicts.size());
 
   // Confirm that the tree has been updated correctly.
   auto newInode = testMount.getFileInode(newFilePath);
@@ -300,8 +300,8 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = std::move(checkoutResult).get();
-  EXPECT_EQ(0, results.size());
+  auto result = std::move(checkoutResult).get();
+  EXPECT_EQ(0, result.conflicts.size());
 
   // Make sure the path doesn't exist any more.
   EXPECT_THROW_ERRNO(testMount.getInode(filePath), ENOENT);
@@ -368,8 +368,8 @@ void testModifyFile(
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = std::move(checkoutResult).get();
-  EXPECT_EQ(0, results.size());
+  auto result = std::move(checkoutResult).get();
+  EXPECT_EQ(0, result.conflicts.size());
 
   // Make sure the path is updated as expected
   auto postInode = testMount.getFileInode(path);
@@ -496,9 +496,9 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   auto executor = mount.getServerExecutor().get();
   auto waitedCheckoutFuture = std::move(checkoutFuture).waitVia(executor);
   ASSERT_TRUE(waitedCheckoutFuture.isReady());
-  auto results = std::move(waitedCheckoutFuture).get();
+  auto result = std::move(waitedCheckoutFuture).get();
   EXPECT_THAT(
-      results,
+      result.conflicts,
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
 
@@ -557,11 +557,11 @@ void testModifyConflict(
                             ->checkout(makeTestHash("b"), checkoutMode)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = std::move(checkoutResult).get();
-  ASSERT_EQ(1, results.size());
+  auto result = std::move(checkoutResult).get();
+  ASSERT_EQ(1, result.conflicts.size());
 
-  EXPECT_EQ(path, results[0].path);
-  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, results[0].type);
+  EXPECT_EQ(path, result.conflicts[0].path);
+  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, result.conflicts[0].type);
 
   auto postInode = testMount.getFileInode(path);
   switch (checkoutMode) {
@@ -659,7 +659,7 @@ TEST(Checkout, modifyThenRevert) {
   ASSERT_TRUE(checkoutResult.isReady());
   // The checkout should report a/test.txt as a conflict
   EXPECT_THAT(
-      std::move(checkoutResult).get(),
+      std::move(checkoutResult).get().conflicts,
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
 
@@ -694,7 +694,7 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   ASSERT_TRUE(checkoutTo1.isReady());
 
   EXPECT_THAT(
-      std::move(checkoutTo1).get(),
+      std::move(checkoutTo1).get().conflicts,
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_REMOVED, "src/test.c")));
 }
@@ -721,7 +721,7 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
   ASSERT_TRUE(checkoutTo2.isReady());
 
   EXPECT_THAT(
-      std::move(checkoutTo2).get(),
+      std::move(checkoutTo2).get().conflicts,
       UnorderedElementsAre(
           makeConflict(ConflictType::UNTRACKED_ADDED, "src/test.c")));
 }
@@ -756,7 +756,7 @@ TEST(
   ASSERT_TRUE(checkoutTo2.isReady());
 
   EXPECT_THAT(
-      std::move(checkoutTo2).get(),
+      std::move(checkoutTo2).get().conflicts,
       UnorderedElementsAre(
           makeConflict(ConflictType::UNTRACKED_ADDED, "src/test/test.c")));
 }
@@ -784,8 +784,8 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
-  auto results = std::move(checkoutResult).get();
-  EXPECT_EQ(0, results.size());
+  auto result = std::move(checkoutResult).get();
+  EXPECT_EQ(0, result.conflicts.size());
 
   // Confirm that the tree has been updated correctly.
   EXPECT_FILE_INODE(
@@ -835,7 +835,7 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
       testMount.getEdenMount()->checkout(makeTestHash("2")).waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = std::move(checkoutResult).get();
-  EXPECT_EQ(0, results.size());
+  EXPECT_EQ(0, results.conflicts.size());
 
   // Confirm that the tree no longer exists.
   // None of the files should exist.
@@ -887,8 +887,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   auto executor = testMount.getServerExecutor().get();
   auto waitedCheckoutResult = std::move(checkoutResult).waitVia(executor);
   ASSERT_TRUE(waitedCheckoutResult.isReady());
-  auto results = std::move(waitedCheckoutResult).get();
-  EXPECT_EQ(0, results.size());
+  auto result = std::move(waitedCheckoutResult).get();
+  EXPECT_EQ(0, result.conflicts.size());
 
   auto inode = std::move(inodeFuture).get().asTreePtr();
   EXPECT_EQ(0, inode->getContents().rlock()->entries.count("file.txt"_pc));
@@ -931,7 +931,7 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).getVia(executor);
-  EXPECT_EQ(0, checkoutResult.size());
+  EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // The checkout kicked off an async deletion of a subtree - wait for it to
   // complete.
@@ -975,7 +975,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).getVia(executor);
-  EXPECT_EQ(0, checkoutResult.size());
+  EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // Try to load the same tree by its inode number. This will fail if the
   // unlinked bit wasn't set correctly.
@@ -1024,7 +1024,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).getVia(executor);
-  EXPECT_EQ(0, checkoutResult.size());
+  EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   testMount.remountGracefully();
 
@@ -1118,7 +1118,7 @@ TYPED_TEST(
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("2")).getVia(executor);
-  EXPECT_EQ(0, checkoutResult.size());
+  EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // Verify inode numbers for referenced inodes are the same.
 

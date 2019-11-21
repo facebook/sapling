@@ -391,7 +391,7 @@ void EdenServiceHandler::checkOutRevision(
 
   auto edenMount = server_->getMount(*mountPoint);
   auto checkoutFuture = edenMount->checkout(hashObj, checkoutMode);
-  results = std::move(checkoutFuture).get();
+  results = std::move(std::move(checkoutFuture).get().conflicts);
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
