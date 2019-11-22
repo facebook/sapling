@@ -20,7 +20,6 @@ use bytes::Bytes;
 use std::io::{self, BufRead, Read};
 use std::sync::{Arc, Mutex};
 
-use failure_ext::format_err;
 use futures::future::poll_fn;
 use futures::{Async, Future};
 use tokio_io::{try_nb, AsyncRead};
@@ -105,8 +104,7 @@ where
                         _ => {
                             return Err(io::Error::new(
                                 io::ErrorKind::InvalidData,
-                                format_err!("Failed to parse int for Dechunker from '{:?}'", buf)
-                                    .compat(),
+                                format!("Failed to parse int for Dechunker from '{:?}'", buf),
                             ));
                         }
                     }

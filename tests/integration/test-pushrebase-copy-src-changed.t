@@ -71,8 +71,6 @@ Create a copy on a client and push it
   remote:   Error:
   remote:     pushrebase failed Conflicts([PushrebaseConflict { left: MPath("A"), right: MPath("A") }])
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"A\"), right: MPath(\"A\") }])",
-  remote:     }
+  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"A\"), right: MPath(\"A\") }])"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

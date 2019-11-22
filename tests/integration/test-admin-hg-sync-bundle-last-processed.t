@@ -41,13 +41,13 @@ Check that we have no counter
 
 Check that conflicting commands fail
   $ mononoke_admin hg-sync-bundle last-processed --set 0 --skip-blobimport
-  * ErrorMessage { msg: "cannot pass both --set and --skip-blobimport" } (glob)
+  * cannot pass both --set and --skip-blobimport (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --set 0 --dry-run
-  * ErrorMessage { msg: "--dry-run is meaningless without --skip-blobimport" } (glob)
+  * --dry-run is meaningless without --skip-blobimport (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --dry-run
-  * ErrorMessage { msg: "--dry-run is meaningless without --skip-blobimport" } (glob)
+  * --dry-run is meaningless without --skip-blobimport (glob)
   [1]
 
 Skipping ahead from the start of a series of regular changes should fail
@@ -55,44 +55,44 @@ Skipping ahead from the start of a series of regular changes should fail
   * Counter for RepositoryId(0) set to 1 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
   * Counter for RepositoryId(0) has value 1 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport
   * Counter for RepositoryId(0) has value 1 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
 Skipping ahead from the middle of a series of regular changes should fail (1)
   $ mononoke_admin hg-sync-bundle last-processed --set 5
   * Counter for RepositoryId(0) set to 5 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
   * Counter for RepositoryId(0) has value 5 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport
   * Counter for RepositoryId(0) has value 5 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
 Skipping ahead from the middle of a series of regular changes should fail (2)
   $ mononoke_admin hg-sync-bundle last-processed --set 6
   * Counter for RepositoryId(0) set to 6 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
   * Counter for RepositoryId(0) has value 6 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport
   * Counter for RepositoryId(0) has value 6 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
 Skipping ahead from the edge of a series of regular changes should fail
   $ mononoke_admin hg-sync-bundle last-processed --set 4
   * Counter for RepositoryId(0) set to 4 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
   * Counter for RepositoryId(0) has value 4 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport
   * Counter for RepositoryId(0) has value 4 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
 Skipping ahead from the edge of a series of blobimports should succeed
   $ mononoke_admin hg-sync-bundle last-processed --set 2
@@ -131,11 +131,11 @@ Skipping ahead with no valid candidate should fail
   * Counter for RepositoryId(0) set to 8 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
   * Counter for RepositoryId(0) has value 8 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport
   * Counter for RepositoryId(0) has value 8 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
 It ignores unrelated repos when locating the first non-blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id > 4;"
@@ -143,11 +143,11 @@ It ignores unrelated repos when locating the first non-blobimport
   * Counter for RepositoryId(0) set to 2 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
   * Counter for RepositoryId(0) has value 2 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport
   * Counter for RepositoryId(0) has value 2 (glob)
-  * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
+  * no valid counter position to skip ahead to (glob)
   [1]
 It ignores unrelated repos when locating the last blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks_update_log SET repo_id = 0;"

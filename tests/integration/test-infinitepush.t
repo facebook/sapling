@@ -141,9 +141,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:   Error:
   remote:     While doing an infinitepush
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Unknown bookmark: scratch/123. Use --create to create one.",
-  remote:     }
+  remote:     "Unknown bookmark: scratch/123. Use --create to create one."
   remote:   Caused by:
   remote:     While verifying Infinite Push bookmark push
   remote:   Caused by:
@@ -170,9 +168,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:   Error:
   remote:     While doing an infinitepush
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move (try --force?)",
-  remote:     }
+  remote:     "Non fastforward bookmark move (try --force?)"
   remote:   Caused by:
   remote:     While verifying Infinite Push bookmark push
   remote:   Caused by:
@@ -198,9 +194,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "[push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$",
-  remote:     }
+  remote:     "[push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$"
   remote:   Caused by:
   remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

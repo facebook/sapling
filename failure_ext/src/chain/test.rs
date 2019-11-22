@@ -34,7 +34,7 @@ fn simple_result() {
     assert!(res2.is_err());
     assert_eq!(
         format!("{:?}", res2),
-        "Err(Chain { err: Bar, cause: Fail(RootError) })"
+        "Err(Chain { err: Bar, cause: Some(RootError) })"
     )
 }
 
@@ -80,7 +80,7 @@ fn simple_error_result() {
     assert!(res2.is_err());
     assert_eq!(
         format!("{:?}", res2),
-        "Err(Chain { err: Bar, cause: Error(RootError) })"
+        "Err(Chain { err: Bar, cause: Some(RootError badness\n\nStack backtrace:\n    Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace\n) })"
     )
 }
 

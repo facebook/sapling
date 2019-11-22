@@ -6,11 +6,12 @@
  * directory of this source tree.
  */
 
-use failure::{Context, Error, Fail};
+use anyhow::Error;
 use futures::{Future, Poll};
+use std::error::Error as StdError;
 use std::fmt::Display;
 
-// "Context" support for futures where the error is failure::Error.
+// "Context" support for futures where the error is anyhow::Error.
 pub trait FutureFailureErrorExt: Future + Sized {
     fn context<D>(self, context: D) -> ContextErrorFut<Self, D>
     where
@@ -68,7 +69,7 @@ where
     F: FnOnce() -> D,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.inner.poll() {
@@ -110,7 +111,7 @@ where
     D: Display + Send + Sync + 'static,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.inner.poll() {
@@ -124,7 +125,7 @@ where
     }
 }
 
-// "Context" support for futures where the error is an implementation of failure::Fail.
+// "Context" support for futures where the error is an implementation of std::error::Error.
 pub trait FutureFailureExt: Future + Sized {
     fn context<D>(self, context: D) -> ContextFut<Self, D>
     where
@@ -139,7 +140,7 @@ pub trait FutureFailureExt: Future + Sized {
 impl<F> FutureFailureExt for F
 where
     F: Future + Sized,
-    F::Error: Fail,
+    F::Error: StdError + Send + Sync + 'static,
 {
     fn context<D>(self, displayable: D) -> ContextFut<Self, D>
     where
@@ -165,7 +166,7 @@ pub struct ContextFut<A, D> {
 impl<A, D> ContextFut<A, D>
 where
     A: Future,
-    A::Error: Fail,
+    A::Error: StdError + Send + Sync + 'static,
     D: Display + Send + Sync + 'static,
 {
     pub fn new(future: A, displayable: D) -> Self {
@@ -179,15 +180,15 @@ where
 impl<A, D> Future for ContextFut<A, D>
 where
     A: Future,
-    A::Error: Fail,
+    A::Error: StdError + Send + Sync + 'static,
     D: Display + Send + Sync + 'static,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.inner.poll() {
-            Err(err) => Err(err.context(
+            Err(err) => Err(Error::new(err).context(
                 self.displayable
                     .take()
                     .expect("poll called after future completion"),
@@ -205,7 +206,7 @@ pub struct WithContextFut<A, F> {
 impl<A, D, F> WithContextFut<A, F>
 where
     A: Future,
-    A::Error: Fail,
+    A::Error: StdError + Send + Sync + 'static,
     D: Display + Send + Sync + 'static,
     F: FnOnce() -> D,
 {
@@ -220,12 +221,12 @@ where
 impl<A, D, F> Future for WithContextFut<A, F>
 where
     A: Future,
-    A::Error: Fail,
+    A::Error: StdError + Send + Sync + 'static,
     D: Display + Send + Sync + 'static,
     F: FnOnce() -> D,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.inner.poll() {
@@ -236,7 +237,7 @@ where
                     .expect("poll called after future completion");
 
                 let context = f();
-                Err(err.context(context))
+                Err(Error::new(err).context(context))
             }
             Ok(item) => Ok(item),
         }
@@ -246,6 +247,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::format_err;
     use futures::future::err;
 
     #[test]

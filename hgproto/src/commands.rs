@@ -17,7 +17,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use bytes::{Buf, Bytes, BytesMut};
-use failure_ext::{err_msg, FutureFailureErrorExt};
+use failure_ext::{err_msg, Error, FutureFailureErrorExt, Result};
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
@@ -67,7 +67,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .between(pairs)
                     .map(SingleResponse::Between)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -76,7 +75,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .branchmap()
                     .map(SingleResponse::Branchmap)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -85,7 +83,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .capabilities()
                     .map(SingleResponse::Capabilities)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -94,7 +91,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .clienttelemetry(args)
                     .map(SingleResponse::ClientTelemetry)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -102,7 +98,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Debugwireargs { one, two, all_args } => (
                 self.debugwireargs(one, two, all_args)
                     .map(SingleResponse::Debugwireargs)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -111,7 +106,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .getbundle(args)
                     .map(SingleResponse::Getbundle)
-                    .map_err(self::Error::into)
                     .boxify(),
                 ok(instream).boxify(),
             ),
@@ -119,7 +113,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .heads()
                     .map(SingleResponse::Heads)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -128,7 +121,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .hello()
                     .map(SingleResponse::Hello)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -137,7 +129,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .listkeys(namespace)
                     .map(SingleResponse::Listkeys)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -149,7 +140,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .listkeyspatterns(namespace, patterns)
                     .map(SingleResponse::ListKeysPatterns)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -158,7 +148,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .lookup(key)
                     .map(SingleResponse::Lookup)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -167,7 +156,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .known(nodes)
                     .map(SingleResponse::Known)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -176,7 +164,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .knownnodes(nodes)
                     .map(SingleResponse::Known)
-                    .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
@@ -240,7 +227,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .gettreepack(args)
                     .map(SingleResponse::Gettreepack)
-                    .map_err(self::Error::into)
                     .boxify(),
                 ok(instream).boxify(),
             ),
@@ -248,11 +234,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 let (reqs, instream) =
                     decode_getfiles_arg_stream(instream, || GetfilesArgDecoder {});
                 (
-                    hgcmds
-                        .getfiles(reqs)
-                        .map(SingleResponse::Getfiles)
-                        .map_err(self::Error::into)
-                        .boxify(),
+                    hgcmds.getfiles(reqs).map(SingleResponse::Getfiles).boxify(),
                     instream,
                 )
             }
@@ -260,7 +242,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .stream_out_shallow()
                     .map(SingleResponse::StreamOutShallow)
-                    .map_err(self::Error::into)
                     .boxify(),
                 ok(instream).boxify(),
             ),
@@ -271,7 +252,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     hgcmds
                         .getpackv1(reqs)
                         .map(SingleResponse::Getpackv1)
-                        .map_err(self::Error::into)
                         .boxify(),
                     instream,
                 )
@@ -283,7 +263,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     hgcmds
                         .getpackv2(reqs)
                         .map(SingleResponse::Getpackv2)
-                        .map_err(self::Error::into)
                         .boxify(),
                     instream,
                 )

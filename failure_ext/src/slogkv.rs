@@ -6,8 +6,10 @@
  * directory of this source tree.
  */
 
-use super::{Compat, Error, Fail};
+use super::{Compat, Error};
 use futures::future::SharedError;
+use std::error::Error as StdError;
+use std::ops::Deref;
 
 pub struct SlogKVError(pub Error);
 
@@ -20,14 +22,20 @@ impl slog::KV for SlogKVError {
         let err = &self.0;
 
         serializer.emit_str(Error.to_str(), &format!("{}", err))?;
-        serializer.emit_str(Backtrace.to_str(), &format!("{:#?}", err.backtrace()))?;
-
-        let mut fail = err.as_fail();
-        while let Some(cause) = cause_workaround(fail) {
-            serializer.emit_str(Cause.to_str(), &format!("{}", cause))?;
-            fail = cause;
+        #[cfg(fbcode)]
+        {
+            let backtrace = err.backtrace();
+            if let std::backtrace::BacktraceStatus::Captured = backtrace.status() {
+                serializer.emit_str(Backtrace.to_str(), &backtrace.to_string())?;
+            }
         }
-        serializer.emit_str(RootCause.to_str(), &format!("{:#?}", fail))?;
+
+        let mut err = err.deref() as &dyn StdError;
+        while let Some(cause) = cause_workaround(err) {
+            serializer.emit_str(Cause.to_str(), &format!("{}", cause))?;
+            err = cause;
+        }
+        serializer.emit_str(RootCause.to_str(), &format!("{:#?}", err))?;
 
         Ok(())
     }
@@ -65,10 +73,10 @@ impl SlogKVErrorKey {
 
 // Like Fail::cause, but handles SharedError whose Fail implementation
 // does not return the right underlying error.
-fn cause_workaround(fail: &dyn Fail) -> Option<&dyn Fail> {
-    let mut cause = fail.cause()?;
+pub fn cause_workaround(fail: &dyn StdError) -> Option<&dyn StdError> {
+    let mut cause = fail.source()?;
     if let Some(shared) = cause.downcast_ref::<SharedError<Compat<Error>>>() {
-        cause = shared.get_ref().as_fail();
+        cause = shared.0.deref();
     }
     Some(cause)
 }

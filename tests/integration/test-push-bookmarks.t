@@ -83,9 +83,7 @@ Try non fastforward moves (backwards and across branches)
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move",
-  remote:     }
+  remote:     "Non fastforward bookmark move"
   remote:   Caused by:
   remote:     Non fastforward bookmark move
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -98,9 +96,7 @@ Try non fastforward moves (backwards and across branches)
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move",
-  remote:     }
+  remote:     "Non fastforward bookmark move"
   remote:   Caused by:
   remote:     Non fastforward bookmark move
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -128,9 +124,7 @@ Try non fastfoward moves on regex bookmark
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move",
-  remote:     }
+  remote:     "Non fastforward bookmark move"
   remote:   Caused by:
   remote:     Non fastforward bookmark move
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -146,9 +140,7 @@ Try to delete master
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Deletion of bookmark master_bookmark is forbidden.",
-  remote:     }
+  remote:     "Deletion of bookmark master_bookmark is forbidden."
   remote:   Caused by:
   remote:     Deletion of bookmark master_bookmark is forbidden.
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

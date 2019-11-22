@@ -84,7 +84,7 @@ where
             bail_err!(ErrorKind::Bundle2Encode(msg.into()));
         }
         if is_mandatory_param(&key)
-            .with_context(|_| ErrorKind::Bundle2Encode("stream key is invalid".into()))?
+            .with_context(|| ErrorKind::Bundle2Encode("stream key is invalid".into()))?
         {
             self.header.m_stream_params.insert(key.to_lowercase(), val);
         } else {

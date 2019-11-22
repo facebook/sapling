@@ -127,13 +127,13 @@ impl MockManifest {
             .map(|(p, (ft, b, id))| Ok((MPath::new(p)?, (ft, b.into(), Some(id)))))
             .collect();
         let result = result
-            .with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()))?;
+            .with_context(|| ErrorKind::InvalidPathMap("error converting to MPath".into()))?;
 
         let dir_hashes: Result<BTreeMap<_, _>> = dir_hashes
             .into_iter()
             .map(|(p, hash)| Ok((MPath::new(p)?, hash)))
             .collect();
-        let dir_hashes = dir_hashes.with_context(|_| {
+        let dir_hashes = dir_hashes.with_context(|| {
             ErrorKind::InvalidDirectoryHashes("error converting to MPath".into())
         })?;
         Self::from_path_map(result, dir_hashes)
@@ -151,7 +151,7 @@ impl MockManifest {
             .map(|(p, (ft, b))| Ok((MPath::new(p)?, (ft, b.into(), None))))
             .collect();
         let result =
-            result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()));
+            result.with_context(|| ErrorKind::InvalidPathMap("error converting to MPath".into()));
         Self::from_path_map(result?, BTreeMap::new())
     }
 }

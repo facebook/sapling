@@ -55,7 +55,7 @@ pub struct HgManifestEnvelope {
 
 impl HgManifestEnvelope {
     pub(crate) fn from_thrift(fe: thrift::HgManifestEnvelope) -> Result<Self> {
-        let catch_block = || {
+        let catch_block = || -> Result<_> {
             Ok(Self {
                 inner: HgManifestEnvelopeMut {
                     node_id: HgNodeHash::from_thrift(fe.node_id)?,
@@ -70,7 +70,7 @@ impl HgManifestEnvelope {
             })
         };
 
-        Ok(catch_block().with_context(|_: &Error| {
+        Ok(catch_block().with_context(|| {
             ErrorKind::InvalidThrift(
                 "HgManifestEnvelope".into(),
                 "Invalid manifest envelope".into(),

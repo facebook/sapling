@@ -6,11 +6,12 @@
  * directory of this source tree.
  */
 
-use std::fmt;
-use std::fmt::Display;
+use std::backtrace::Backtrace;
+use std::error::Error;
+use std::fmt::{self, Display};
 
 use blobrepo_errors::ErrorKind as BlobRepoError;
-use failure_ext::{Backtrace, Fail};
+use thiserror::Error;
 
 #[derive(Debug)]
 pub struct BlobRepoErrorCause {
@@ -29,10 +30,10 @@ impl Display for BlobRepoErrorCause {
     }
 }
 
-impl Fail for BlobRepoErrorCause {
-    fn cause(&self) -> Option<&dyn Fail> {
+impl Error for BlobRepoErrorCause {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self.cause {
-            Some(ref error) => error.cause(),
+            Some(ref error) => error.source(),
             None => None,
         }
     }
@@ -45,16 +46,16 @@ impl Fail for BlobRepoErrorCause {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "{} not found in repo", _0)]
+    #[error("{0} not found in repo")]
     NodeNotFound(String),
-    #[fail(display = "failed to fetch node generation")]
-    GenerationFetchFailed(#[cause] BlobRepoErrorCause),
-    #[fail(display = "failed to fetch parent nodes")]
-    ParentsFetchFailed(#[cause] BlobRepoErrorCause),
-    #[fail(display = "checking existence failed")]
-    CheckExistenceFailed(String, #[cause] BlobRepoErrorCause),
-    #[fail(display = "Unknown field in thrift encoding")]
+    #[error("failed to fetch node generation")]
+    GenerationFetchFailed(#[source] BlobRepoErrorCause),
+    #[error("failed to fetch parent nodes")]
+    ParentsFetchFailed(#[source] BlobRepoErrorCause),
+    #[error("checking existence failed")]
+    CheckExistenceFailed(String, #[source] BlobRepoErrorCause),
+    #[error("Unknown field in thrift encoding")]
     UknownSkiplistThriftEncoding,
 }

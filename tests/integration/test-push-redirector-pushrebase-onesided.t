@@ -173,9 +173,7 @@ Force pushrebase should fail, because it pushes to a shared bookmark
   remote:   Error:
   remote:     cannot force pushrebase to shared bookmark master_bookmark
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "cannot force pushrebase to shared bookmark master_bookmark",
-  remote:     }
+  remote:     "cannot force pushrebase to shared bookmark master_bookmark"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [1]
 

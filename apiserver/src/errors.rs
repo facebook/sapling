@@ -6,15 +6,16 @@
  * directory of this source tree.
  */
 
-use std::fmt;
-
 use actix::MailboxError;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
-use failure_ext::{err_downcast, err_downcast_ref, Error, Fail};
+use anyhow::{anyhow, Error};
+use failure_ext::{err_downcast, err_downcast_ref};
 use futures::Canceled;
 use serde_derive::Serialize;
+use std::error::Error as _;
+use thiserror::Error;
 
 use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
 use blobrepo::ErrorKind as BlobRepoError;
@@ -28,12 +29,17 @@ struct ErrorResponse {
     causes: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    NotFound(String, Option<Error>),
-    InvalidInput(String, Option<Error>),
-    InternalError(Error),
+    #[error("{0} is not found")]
+    NotFound(String, #[source] Option<Error>),
+    #[error("Invalid input: {0}")]
+    InvalidInput(String, #[source] Option<Error>),
+    #[error("internal server error: {0}")]
+    InternalError(#[source] Error),
+    #[error("{0} is not a directory")]
     NotADirectory(String),
+    #[error("{0} is not a valid bookmark")]
     BookmarkNotFound(String),
 }
 
@@ -57,15 +63,17 @@ impl ErrorKind {
         }
     }
 
-    #[allow(deprecated)] // self.causes()
     fn into_error_response(&self) -> ErrorResponse {
+        let mut causes = Vec::new();
+        let mut next = self.source();
+        while let Some(cause) = next {
+            causes.push(cause.to_string());
+            next = cause.source();
+        }
+
         ErrorResponse {
             message: self.to_string(),
-            causes: self
-                .causes()
-                .skip(1)
-                .map(|cause| cause.to_string())
-                .collect(),
+            causes,
         }
     }
 
@@ -80,32 +88,6 @@ impl ErrorKind {
             }
             .unwrap_or(self),
             _ => self,
-        }
-    }
-}
-
-impl Fail for ErrorKind {
-    fn cause(&self) -> Option<&dyn Fail> {
-        use crate::errors::ErrorKind::*;
-
-        match self {
-            NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
-            InternalError(err) => Some(err.as_fail()),
-            NotADirectory(_) | BookmarkNotFound(_) => None,
-        }
-    }
-}
-
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use crate::errors::ErrorKind::*;
-
-        match self {
-            NotFound(_0, _) => write!(f, "{} is not found", _0),
-            InvalidInput(_0, _) => write!(f, "Invalid input: {}", _0),
-            InternalError(_0) => write!(f, "internal server error: {}", _0),
-            NotADirectory(_0) => write!(f, "{} is not a directory", _0),
-            BookmarkNotFound(_0) => write!(f, "{} is not a valid bookmark", _0),
         }
     }
 }
@@ -132,14 +114,13 @@ impl From<Error> for ErrorKind {
 
 impl From<Canceled> for ErrorKind {
     fn from(e: Canceled) -> ErrorKind {
-        let error = Error::from_boxed_compat(Box::new(e));
-        ErrorKind::InternalError(error)
+        ErrorKind::InternalError(anyhow!(e))
     }
 }
 
 impl From<MailboxError> for ErrorKind {
     fn from(e: MailboxError) -> ErrorKind {
-        ErrorKind::InternalError(e.into())
+        ErrorKind::InternalError(anyhow!(e))
     }
 }
 

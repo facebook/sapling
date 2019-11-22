@@ -14,6 +14,8 @@ mod concurrency;
 
 use std::cmp;
 use std::collections::HashMap;
+use std::error::Error as StdError;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -124,14 +126,16 @@ impl Blobimport {
         .map_err({
             let logger = logger.clone();
             move |err| {
-                error!(logger, "failed to blobimport: {}", err);
-
-                for cause in err.iter_chain() {
-                    info!(logger, "cause: {}", cause);
-                }
-                info!(logger, "root cause: {:?}", err.find_root_cause());
-
                 let msg = format!("failed to blobimport: {}", err);
+                error!(logger, "{}", msg);
+
+                let mut err = err.deref() as &dyn StdError;
+                while let Some(cause) = failure_ext::cause(err) {
+                    info!(logger, "cause: {}", cause);
+                    err = cause;
+                }
+                info!(logger, "root cause: {:?}", err);
+
                 err_msg(msg)
             }
         });

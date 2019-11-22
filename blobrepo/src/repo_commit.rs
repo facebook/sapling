@@ -100,13 +100,13 @@ impl ChangesetHandle {
         let can_be_parent = can_be_parent
             .into_future()
             .map_err(|e| format_err!("can_be_parent: {:?}", e))
-            .map_err(Error::compat)
+            .map_err(Compat)
             .boxify()
             .shared();
 
         let completion_future = bonsai_cs
             .join(cs)
-            .map_err(Error::compat)
+            .map_err(Compat)
             .inspect(move |(bonsai_cs, hg_cs)| {
                 let _ = trigger.send((
                     bonsai_cs.get_changeset_id(),

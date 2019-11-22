@@ -53,7 +53,7 @@ impl DateTime {
     /// https://tools.ietf.org/html/rfc3339.
     pub fn from_rfc3339(rfc3339: &str) -> Result<Self> {
         let dt = ChronoDateTime::parse_from_rfc3339(rfc3339)
-            .with_context(|_| ErrorKind::InvalidDateTime("while parsing rfc3339".into()))?;
+            .with_context(|| ErrorKind::InvalidDateTime("while parsing rfc3339".into()))?;
         Ok(Self::new(dt))
     }
 

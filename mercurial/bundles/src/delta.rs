@@ -63,9 +63,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
         ),));
     }
 
-    Delta::new(frags)
-        .with_context(|_| ErrorKind::InvalidDelta("invalid fragment list".into()))
-        .map_err(Error::from)
+    Delta::new(frags).with_context(|| ErrorKind::InvalidDelta("invalid fragment list".into()))
 }
 
 #[inline]

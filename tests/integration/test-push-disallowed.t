@@ -51,9 +51,7 @@ try doing a non-pushrebase push with the new commits
   remote:   Error:
   remote:     bundle2_resolver error
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Pure pushes are disallowed in this repo",
-  remote:     }
+  remote:     "Pure pushes are disallowed in this repo"
   remote:   Caused by:
   remote:     While resolving Changegroup
   remote:   Caused by:

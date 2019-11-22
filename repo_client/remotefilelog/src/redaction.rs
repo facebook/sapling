@@ -44,7 +44,7 @@ where
             Ok(Async::NotReady) => return Ok(Async::NotReady),
             Ok(Async::Ready(r)) => Ok(Async::Ready(r)),
             Err(e) => {
-                let root_cause = e.find_root_cause();
+                let root_cause = e.root_cause();
                 let maybe_redacted = root_cause.downcast_ref::<ErrorKind>();
 
                 // If the error was caused by redaction, then return a tombstone instead of the

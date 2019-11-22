@@ -32,7 +32,11 @@
 # Check that the rechunker complains about an unknown filenode
   $ mononoke_rechunker "ffffffffffffffffffffffffffffffffffffffff"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  Error: HgContentMissing(HgNodeHash(Sha1(ffffffffffffffffffffffffffffffffffffffff)), File(Regular))
+  Error: Mercurial content missing for node ffffffffffffffffffffffffffffffffffffffff (type regular)
+  
+  Stack backtrace:
+      Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace
+  
   [1]
 
 # Create a new config with the filestore configured

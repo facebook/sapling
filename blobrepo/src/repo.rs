@@ -24,7 +24,7 @@ use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt};
+use failure_ext::{format_err, prelude::*, Compat, Error, FutureFailureErrorExt, FutureFailureExt};
 use filenodes::{FilenodeInfo, Filenodes};
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Future, Loop};
@@ -756,7 +756,7 @@ impl BlobRepo {
                         .get_copy_info()
                         .with_context({
                             cloned!(path);
-                            move |_| format!("While parsing copy information for {} {}", path, node)
+                            move || format!("While parsing copy information for {} {}", path, node)
                         })?
                         .map(|(path, node)| (RepoPath::FilePath(path), node));
                     Ok(FilenodeInfo {
@@ -2221,7 +2221,6 @@ impl CreateChangeset {
                     expected_nodeid, uuid
                 )
             })
-            .map_err(Error::from)
             .timed({
                 move |stats, result| {
                     if result.is_ok() {
@@ -2239,14 +2238,14 @@ impl CreateChangeset {
                 Ok(res) => res,
                 Err(e) => Err(format_err!("can_be_parent: {:?}", e)),
             })
-            .map_err(|e| Error::from(e).compat())
+            .map_err(Compat)
             .boxify()
             .shared();
 
         ChangesetHandle::new_pending(
             can_be_parent,
             spawn_future(changeset_complete_fut)
-                .map_err(|e| Error::from(e).compat())
+                .map_err(Compat)
                 .boxify()
                 .shared(),
         )

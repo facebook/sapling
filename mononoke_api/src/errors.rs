@@ -6,10 +6,13 @@
  * directory of this source tree.
  */
 
+use std::backtrace::Backtrace;
+use std::error::Error as StdError;
 use std::fmt;
 use std::sync::Arc;
 
-use failure::{Backtrace, Error, Fail};
+use failure_ext::Error;
+use thiserror::Error;
 
 use source_control::services::source_control_service as service;
 use source_control::types as thrift;
@@ -29,9 +32,9 @@ impl From<Error> for InternalError {
     }
 }
 
-impl Fail for InternalError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        Some(self.0.as_fail())
+impl StdError for InternalError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        Some(&**self.0)
     }
 
     fn backtrace(&self) -> Option<&Backtrace> {
@@ -39,12 +42,12 @@ impl Fail for InternalError {
     }
 }
 
-#[derive(Clone, Debug, Fail)]
+#[derive(Clone, Debug, Error)]
 pub enum MononokeError {
-    #[fail(display = "invalid request: {}", _0)]
+    #[error("invalid request: {0}")]
     InvalidRequest(String),
-    #[fail(display = "internal error: {}", _0)]
-    InternalError(#[fail(cause)] InternalError),
+    #[error("internal error: {0}")]
+    InternalError(#[source] InternalError),
 }
 
 impl From<Error> for MononokeError {

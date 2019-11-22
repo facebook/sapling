@@ -48,7 +48,7 @@ pub fn http_error_to_handler_error(
     let HttpError { error, status_code } = error;
 
     let error_message = iter::once(error.to_string())
-        .chain(error.iter_causes().map(|c| c.to_string()))
+        .chain(error.chain().skip(1).map(|c| c.to_string()))
         .join(": ");
 
     let res = ResponseError {

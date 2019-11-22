@@ -58,7 +58,7 @@ impl FileChange {
     }
 
     pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &MPath) -> Result<Self> {
-        let catch_block = || {
+        let catch_block = || -> Result<_> {
             Ok(Self {
                 content_id: ContentId::from_thrift(fc.content_id)?,
                 file_type: FileType::from_thrift(fc.file_type)?,
@@ -73,7 +73,7 @@ impl FileChange {
             })
         };
 
-        Ok(catch_block().with_context(|_: &Error| {
+        Ok(catch_block().with_context(|| {
             ErrorKind::InvalidThrift(
                 "FileChange".into(),
                 format!("Invalid changed entry for path {}", mpath),

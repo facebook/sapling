@@ -57,9 +57,9 @@ pub fn create_bonsai_changeset_object(
             }
 
             let author = String::from_utf8(cs.user().to_vec())
-                .with_context(|_| format!("While converting author name {:?}", cs.user()))?;
+                .with_context(|| format!("While converting author name {:?}", cs.user()))?;
             let message = String::from_utf8(cs.comments().to_vec())
-                .with_context(|_| format!("While converting commit message {:?}", cs.comments()))?;
+                .with_context(|| format!("While converting commit message {:?}", cs.comments()))?;
             BonsaiChangesetMut {
                 parents,
                 author,

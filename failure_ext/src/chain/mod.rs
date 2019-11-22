@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
+use std::error::Error as StdError;
 use std::fmt::{self, Debug, Display};
-
-use super::{Backtrace, Error, Fail};
 
 mod exttraits;
 #[cfg(test)]
@@ -19,7 +19,7 @@ pub use self::exttraits::*;
 /// A wrapper around an error which is the consequence of another error, used to maintain
 /// causal chains.
 ///
-/// This is similar in many respects to `failure::Context`, except that the intent is to explicitly
+/// This is similar in many respects to `anyhow::Context`, except that the intent is to explicitly
 /// maintain causal chains for consumption, rather than hiding them away behind a user-palatable
 /// message.
 ///
@@ -29,7 +29,7 @@ pub use self::exttraits::*;
 #[derive(Debug)]
 pub struct Chain<ERR> {
     err: ERR,
-    cause: CauseKind,
+    cause: Option<Box<dyn StdError + Send + Sync>>,
 }
 
 impl<ERR> ChainExt<MarkerChainError, Error> for Chain<ERR>
@@ -45,37 +45,34 @@ where
 
 impl<ERR> Chain<ERR> {
     /// A new `Chain` error which has no cause. Useful for wrapping an instance of `Error`
-    /// so that implements `Fail`.
+    /// so that implements `std::error::Error`.
     pub fn new(err: ERR) -> Self {
-        Chain {
-            err,
-            cause: CauseKind::None,
-        }
+        Chain { err, cause: None }
     }
 
     pub fn with_result<T, F>(err: ERR, cause: Result<T, F>) -> Result<T, Self>
     where
-        F: Fail,
+        F: StdError + Send + Sync + 'static,
     {
         cause.map_err(|cause| Self::with_fail(err, cause))
     }
 
-    /// Chain a new error with an error which implements `Fail` as its cause.
+    /// Chain a new error with an error which implements `std::error::Error` as its cause.
     pub fn with_fail<F>(err: ERR, cause: F) -> Self
     where
-        F: Fail,
+        F: StdError + Send + Sync + 'static,
     {
         Chain {
             err,
-            cause: CauseKind::Fail(Box::new(cause)),
+            cause: Some(Box::new(cause)),
         }
     }
 
-    /// Chain a new error with `failure::Error` as its cause.
+    /// Chain a new error with `anyhow::Error` as its cause.
     pub fn with_error(err: ERR, cause: Error) -> Self {
         Chain {
             err,
-            cause: CauseKind::Error(cause),
+            cause: Some(Box::from(cause)),
         }
     }
 
@@ -94,13 +91,6 @@ impl<ERR> From<ERR> for Chain<ERR> {
     }
 }
 
-#[derive(Debug)]
-enum CauseKind {
-    None,
-    Fail(Box<dyn Fail>),
-    Error(Error),
-}
-
 impl<ERR> AsRef<ERR> for Chain<ERR> {
     fn as_ref(&self) -> &ERR {
         &self.err
@@ -114,31 +104,32 @@ where
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}", self.err.to_string())?;
         if fmt.alternate() {
-            for c in Fail::iter_causes(self) {
-                write!(fmt, "\n  caused by: {}", c)?;
+            let mut cause = self.source();
+            while let Some(e) = cause {
+                write!(fmt, "\n  caused by: {}", e)?;
+                cause = e.source();
             }
         }
         Ok(())
     }
 }
 
-impl<ERR> Fail for Chain<ERR>
+impl<ERR> StdError for Chain<ERR>
 where
     ERR: ToString + Debug + Send + Sync + 'static,
 {
-    fn cause(&self) -> Option<&dyn Fail> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match &self.cause {
-            CauseKind::None => None,
-            CauseKind::Fail(f) => Some(&*f),
-            CauseKind::Error(e) => Some(e.as_fail()),
+            Some(cause) => Some(&**cause),
+            None => None,
         }
     }
 
-    fn backtrace(&self) -> Option<&Backtrace> {
-        match &self.cause {
-            CauseKind::None => None,
-            CauseKind::Fail(f) => f.backtrace(),
-            CauseKind::Error(e) => Some(e.backtrace()),
-        }
+    #[cfg(fbcode)]
+    fn backtrace(&self) -> Option<&std::backtrace::Backtrace> {
+        self.cause
+            .as_ref()
+            .map(Box::as_ref)
+            .and_then(StdError::backtrace)
     }
 }

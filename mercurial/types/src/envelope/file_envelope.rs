@@ -66,7 +66,7 @@ pub struct HgFileEnvelope {
 
 impl HgFileEnvelope {
     pub(crate) fn from_thrift(fe: thrift::HgFileEnvelope) -> Result<Self> {
-        let catch_block = || {
+        let catch_block = || -> Result<_> {
             Ok(Self {
                 inner: HgFileEnvelopeMut {
                     node_id: HgFileNodeId::new(HgNodeHash::from_thrift(fe.node_id)?),
@@ -86,7 +86,7 @@ impl HgFileEnvelope {
             })
         };
 
-        Ok(catch_block().with_context(|_: &Error| {
+        Ok(catch_block().with_context(|| {
             ErrorKind::InvalidThrift("HgFileEnvelope".into(), "Invalid file envelope".into())
         })?)
     }

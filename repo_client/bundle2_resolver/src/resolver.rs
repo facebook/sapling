@@ -19,8 +19,8 @@ use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use core::fmt::{Debug, Display};
-use failure_ext::{ensure_msg, err_msg, format_err, Compat, Context, FutureFailureErrorExt};
+use core::fmt::Debug;
+use failure_ext::{ensure_msg, err_msg, format_err, Compat, Error, FutureFailureErrorExt, Result};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures::{Future, IntoFuture, Stream};
@@ -95,12 +95,6 @@ pub enum BundleResolverError {
 impl From<Error> for BundleResolverError {
     fn from(error: Error) -> Self {
         Self::Error(error)
-    }
-}
-
-impl<D: Display + Send + Sync + 'static> From<Context<D>> for BundleResolverError {
-    fn from(context: Context<D>) -> Self {
-        Self::Error(context.into())
     }
 }
 
@@ -1182,8 +1176,7 @@ impl Bundle2Resolver {
                             .boxify()
                     },
                 )
-                .chain_err(ErrorKind::WhileUploadingData(changesets_hashes))
-                .from_err()
+                .context(ErrorKind::WhileUploadingData(changesets_hashes))
                 .boxify();
         res
     }

@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::Error;
+use failure::Error; // required by gotham's NewHandler trait
 use futures::Future;
 use gotham::{
     handler::{Handler, HandlerFuture, IntoResponse, NewHandler},

@@ -1984,7 +1984,7 @@ mod test {
         let tmp_dir = write_files(&paths);
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
-        let msg = format!("{:?}", res);
+        let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("TooManyBypassOptions"));
@@ -2020,7 +2020,7 @@ mod test {
         let tmp_dir = write_files(&paths);
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
-        let msg = format!("{:?}", res);
+        let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("InvalidPushvar"));

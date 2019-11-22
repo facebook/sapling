@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+#![feature(backtrace)]
 #![deny(warnings)]
 
 use std::collections::HashMap;

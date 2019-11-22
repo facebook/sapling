@@ -6,82 +6,6 @@
  * directory of this source tree.
  */
 
-/// Exits a function early with an `Error`.
-///
-/// The `bail!` macro provides an easy way to exit a function. `bail_err!(X)` is
-/// equivalent to writing:
-///
-/// ```rust,ignore
-/// return Err(From::from(X));
-/// ```
-#[macro_export]
-macro_rules! bail_err {
-    ($e:expr) => {
-        return Err(From::from($e));
-    };
-}
-
-/// Exits a function early with an `Error`.
-///
-/// The `bail!` macro provides an easy way to exit a function. `bail_msg!(X)` is
-/// equivalent to writing:
-///
-/// ```rust,ignore
-/// return Err(format_err!(X));
-/// ```
-#[macro_export]
-macro_rules! bail_msg {
-    ($e:expr) => {
-        return Err($crate::err_msg($e));
-    };
-    ($fmt:expr, $($arg:tt)+) => {
-        return Err($crate::err_msg(format!($fmt, $($arg)+)));
-    };
-}
-
-/// Exits a function early with an `Error` if the condition is not satisfied.
-///
-/// Similar to `assert!`, `ensure!` takes a condition and exits the function
-/// if the condition fails. Unlike `assert!`, `ensure!` returns an `Error`,
-/// it does not panic.
-#[macro_export]
-macro_rules! ensure_err {
-    ($cond:expr, $e:expr) => {
-        if !($cond) {
-            $crate::bail_err!($e);
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! ensure_msg {
-    ($cond:expr, $e:expr) => {
-        if !($cond) {
-            $crate::bail_msg!($e);
-        }
-    };
-    ($cond:expr, $fmt:expr, $($arg:tt)+) => {
-        if !($cond) {
-            $crate::bail_msg!($fmt, $($arg)+);
-        }
-    };
-}
-
-/// Constructs an `Error` using the standard string interpolation syntax.
-///
-/// ```rust
-/// use failure::format_err;
-///
-/// fn main() {
-///     let code = 101;
-///     let err = format_err!("Error code: {}", code);
-/// }
-/// ```
-#[macro_export]
-macro_rules! format_err {
-    ($($arg:tt)*) => { $crate::err_msg(format!($($arg)*)) }
-}
-
 /// Downcast matching
 /// Usage:
 /// ```
@@ -171,18 +95,19 @@ macro_rules! err_downcast {
 #[cfg(test)]
 mod test {
     use crate::prelude::*;
+    use thiserror::Error;
 
-    #[derive(Fail, Debug)]
-    #[fail(display = "Foo badness")]
+    #[derive(Error, Debug)]
+    #[error("Foo badness")]
     struct Foo;
-    #[derive(Fail, Debug)]
-    #[fail(display = "Bar badness")]
+    #[derive(Error, Debug)]
+    #[error("Bar badness")]
     struct Bar;
-    #[derive(Fail, Debug)]
-    #[fail(display = "Blat badness")]
+    #[derive(Error, Debug)]
+    #[error("Blat badness")]
     struct Blat;
-    #[derive(Fail, Debug)]
-    #[fail(display = "Outer badness")]
+    #[derive(Error, Debug)]
+    #[error("Outer badness")]
     struct Outer;
 
     #[test]
@@ -236,15 +161,23 @@ mod test {
         let foo = Error::from(Foo);
         let outer = Error::from(foo.context(Outer));
 
-        let msg = err_downcast_ref! {
+        let msg1 = err_downcast_ref! {
             outer,
-            foo: Foo => foo.to_string(),
+            foo: Foo => foo.to_string(), // expected
             bar: Bar => bar.to_string(),
             blat: Blat => blat.to_string(),
             outer: Outer => outer.to_string(),
         };
+        let msg2 = err_downcast_ref! {
+            outer,
+            blat: Blat => blat.to_string(),
+            outer: Outer => outer.to_string(), // expected
+            foo: Foo => foo.to_string(),
+            bar: Bar => bar.to_string(),
+        };
 
-        assert_eq!(msg.unwrap(), "Outer badness".to_string());
+        assert_eq!(msg1.unwrap(), "Foo badness".to_string());
+        assert_eq!(msg2.unwrap(), "Outer badness".to_string());
     }
 
     #[test]

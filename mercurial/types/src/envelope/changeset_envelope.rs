@@ -53,7 +53,7 @@ pub struct HgChangesetEnvelope {
 
 impl HgChangesetEnvelope {
     pub(crate) fn from_thrift(fe: thrift::HgChangesetEnvelope) -> Result<Self> {
-        let catch_block = || {
+        let catch_block = || -> Result<_> {
             Ok(Self {
                 inner: HgChangesetEnvelopeMut {
                     node_id: HgChangesetId::from_thrift(fe.node_id)?,
@@ -67,7 +67,7 @@ impl HgChangesetEnvelope {
             })
         };
 
-        Ok(catch_block().with_context(|_: &Error| {
+        Ok(catch_block().with_context(|| {
             ErrorKind::InvalidThrift(
                 "HgChangesetEnvelope".into(),
                 "Invalid Changeset envelope".into(),

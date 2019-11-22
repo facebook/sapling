@@ -197,7 +197,7 @@ impl UnpackerInner {
                 )),
             }
         } else {
-            let mpath = buf.drain_path(filename_len).with_context(|_| {
+            let mpath = buf.drain_path(filename_len).with_context(|| {
                 let msg = format!("invalid filename of length {}", filename_len);
                 ErrorKind::WirePackDecode(msg)
             })?;
@@ -206,7 +206,7 @@ impl UnpackerInner {
                 Kind::Tree => RepoPath::dir(mpath),
                 Kind::File => RepoPath::file(mpath),
             }
-            .with_context(|_| ErrorKind::WirePackDecode("invalid filename".into()))?
+            .with_context(|| ErrorKind::WirePackDecode("invalid filename".into()))?
         };
 
         trace!(&self.logger, "decoding entries for filename: {}", filename);

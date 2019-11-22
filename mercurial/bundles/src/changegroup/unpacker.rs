@@ -323,7 +323,7 @@ impl CgUnpacker {
             return Ok(DecodeRes::None);
         }
         let _ = buf.split_to(4);
-        let filename = buf.drain_path(filename_len - 4).with_context(|_| {
+        let filename = buf.drain_path(filename_len - 4).with_context(|| {
             let msg = format!("invalid filename of length {}", filename_len);
             ErrorKind::CgDecode(msg)
         })?;

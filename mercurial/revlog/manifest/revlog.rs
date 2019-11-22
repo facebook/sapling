@@ -212,7 +212,7 @@ impl Details {
         let hash = str::from_utf8(hash)
             .map_err(|err| Error::from(err))
             .and_then(|hash| hash.parse::<HgNodeHash>())
-            .with_context(|_| format!("malformed hash: {:?}", hash))?;
+            .with_context(|| format!("malformed hash: {:?}", hash))?;
 
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
@@ -299,9 +299,9 @@ impl RevlogEntry {
         let name = (&path).into_iter().next_back().map(|path| path.clone());
         let path = match details.flag() {
             Type::Tree => RepoPath::dir(path)
-                .with_context(|_| ErrorKind::Path("error while creating RepoPath".into()))?,
+                .with_context(|| ErrorKind::Path("error while creating RepoPath".into()))?,
             _ => RepoPath::file(path)
-                .with_context(|_| ErrorKind::Path("error while creating RepoPath".into()))?,
+                .with_context(|| ErrorKind::Path("error while creating RepoPath".into()))?,
         };
 
         // For revlog we still need to store full path, because full path is used to find revlog

@@ -103,6 +103,7 @@ where
     let stream = entries
         .and_then(|entry| Ok(serde_cbor::to_vec(&entry)?))
         .map(Bytes::from)
+        .map_err(|e| failure::Error::from_boxed_compat(e.into()))
         .from_err()
         .boxify();
     HttpResponse::Ok()
@@ -112,7 +113,11 @@ where
 }
 
 fn streaming_binary_response(stream: FileStream) -> HttpResponse {
-    let stream = stream.into_bytes_stream().from_err().boxify();
+    let stream = stream
+        .into_bytes_stream()
+        .map_err(|e| failure::Error::from_boxed_compat(e.into()))
+        .from_err()
+        .boxify();
 
     HttpResponse::Ok()
         .content_type("application/octet-stream")

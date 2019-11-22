@@ -71,7 +71,7 @@ impl BonsaiChangesetMut {
                 .iter()
                 .map(|(path, change)| (path, change.is_some())),
         )
-        .with_context(|_| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
+        .with_context(|| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
 
         Ok(())
     }
@@ -84,7 +84,7 @@ pub struct BonsaiChangeset {
 
 impl BonsaiChangeset {
     pub(crate) fn from_thrift(tc: thrift::BonsaiChangeset) -> Result<Self> {
-        let catch_block = || {
+        let catch_block = || -> Result<_> {
             Ok(BonsaiChangesetMut {
                 parents: tc
                     .parents
@@ -116,7 +116,7 @@ impl BonsaiChangeset {
             .freeze()?)
         };
 
-        Ok(catch_block().with_context(|_: &Error| {
+        Ok(catch_block().with_context(|| {
             ErrorKind::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
         })?)
     }

@@ -9,24 +9,25 @@
 use futures::{Future, Poll, Stream};
 
 use super::Chain;
-use crate::{Error, Fail};
+use anyhow::Error;
+use std::error::Error as StdError;
 
 // Dummy types to distinguish different trait implementations, since we can't do
-// a blanket implementation for all `F: Fail` without getting conherence rule failures
-// for other types which might implement `Fail` in future.
-pub enum MarkerFail {} // Any F where F: Fail
+// a blanket implementation for all `F: StdError` without getting conherence
+// rule failures for other types which might implement `StdError` in future.
+pub enum MarkerFail {} // Any F where F: StdError
 pub enum MarkerError {} // Error
-pub enum MarkerResultFail {} // Result<T, F> where F: Fail
+pub enum MarkerResultFail {} // Result<T, F> where F: StdError
 pub enum MarkerResultError {} // Result<T, Error>
-pub enum MarkerFutureFail {} // Future<Error=F> where F: Fail
+pub enum MarkerFutureFail {} // Future<Error=F> where F: StdError
 pub enum MarkerFutureError {} // Future<Error=Error>
-pub enum MarkerStreamFail {} // Stream<Error=F> where F: Fail
+pub enum MarkerStreamFail {} // Stream<Error=F> where F: StdError
 pub enum MarkerStreamError {} // Stream<Error=Error>
-pub enum MarkerChainFail {} // Chain for F: Fail
+pub enum MarkerChainFail {} // Chain for F: StdError
 pub enum MarkerChainError {} // Chain for Error
 
 /// Extension of Error to wrap an error in a higher-level error. This is similar to
-/// failure::Context, but it is explicitly intended to maintain causal chains of errors.
+/// anyhow::Context, but it is explicitly intended to maintain causal chains of errors.
 pub trait ChainExt<MARKER, ERR> {
     type Chained;
 
@@ -43,7 +44,7 @@ impl<ERR> ChainExt<MarkerError, ERR> for Error {
 
 impl<F, ERR> ChainExt<MarkerFail, ERR> for F
 where
-    F: Fail,
+    F: StdError + Send + Sync + 'static,
 {
     type Chained = Chain<ERR>;
 
@@ -62,7 +63,7 @@ impl<T, ERR> ChainExt<MarkerResultError, ERR> for Result<T, Error> {
 
 impl<T, F, ERR> ChainExt<MarkerResultFail, ERR> for Result<T, F>
 where
-    F: Fail,
+    F: StdError + Send + Sync + 'static,
 {
     type Chained = Result<T, Chain<ERR>>;
 
@@ -118,7 +119,7 @@ where
 impl<F, ERR> ChainExt<MarkerFutureFail, ERR> for F
 where
     F: Future,
-    F::Error: Fail,
+    F::Error: StdError + Send + Sync + 'static,
     ERR: Send + 'static,
 {
     type Chained = ChainFuture<F, ERR>;
@@ -178,7 +179,7 @@ where
 impl<S, ERR> ChainExt<MarkerStreamFail, ERR> for S
 where
     S: Stream,
-    S::Error: Fail,
+    S::Error: StdError + Send + Sync + 'static,
     ERR: Send + 'static,
 {
     type Chained = ChainStream<S, ERR>;

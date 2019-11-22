@@ -171,7 +171,7 @@ impl Revlog {
         DP: AsRef<Path> + Debug,
     {
         let mut revlog = Self::from_idx_no_data(&idxpath)
-            .with_context(|_| format!("Can't open index {:?}", idxpath))?;
+            .with_context(|| format!("Can't open index {:?}", idxpath))?;
         let datapath = datapath.as_ref().map(DP::as_ref);
         let idxpath = idxpath.as_ref();
 
@@ -180,10 +180,10 @@ impl Revlog {
                 None => {
                     let path = idxpath.with_extension("d");
                     Datafile::map(&path)
-                        .with_context(|_| format!("Can't open data file {:?}", path))?
+                        .with_context(|| format!("Can't open data file {:?}", path))?
                 }
                 Some(path) => Datafile::map(&path)
-                    .with_context(|_| format!("Can't open data file {:?}", path))?,
+                    .with_context(|| format!("Can't open data file {:?}", path))?,
             };
             Arc::get_mut(&mut revlog.inner).unwrap().data = Some(datafile);
         }
@@ -426,7 +426,7 @@ impl RevlogInner {
         for idx in baserev.range_to(tgtidx.succ()) {
             let chunk = self
                 .get_chunk(idx)
-                .with_context(|_| format_err!("simple tgtidx {:?} idx {:?}", tgtidx, idx));
+                .with_context(|| format_err!("simple tgtidx {:?} idx {:?}", tgtidx, idx));
 
             match chunk? {
                 Chunk::Literal(v) => {
@@ -452,7 +452,7 @@ impl RevlogInner {
         let data = loop {
             chunks.push(idx);
 
-            let chunk = self.get_chunk(idx).with_context(|_| {
+            let chunk = self.get_chunk(idx).with_context(|| {
                 format_err!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx)
             })?;
 
@@ -552,16 +552,14 @@ impl RevlogInner {
     fn get_rev_by_nodeid(&self, id: HgNodeHash) -> Result<HgBlobNode> {
         self.get_idx_by_nodeid(id).and_then(move |idx| {
             self.get_rev(idx)
-                .with_context(|_| format!("can't get rev for id {}", id))
-                .map_err(Error::from)
+                .with_context(|| format!("can't get rev for id {}", id))
         })
     }
 
     fn get_rev_parents_by_nodeid(&self, id: HgNodeHash) -> Result<HgParents> {
         self.get_idx_by_nodeid(id).and_then(move |idx| {
             self.get_parents(idx)
-                .with_context(|_| format!("can't get parents for id {}", id))
-                .map_err(Error::from)
+                .with_context(|| format!("can't get parents for id {}", id))
         })
     }
 

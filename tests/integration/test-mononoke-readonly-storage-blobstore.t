@@ -29,4 +29,4 @@ blobimport, check blobstore puts are blocked
   $ cd ..
   $ rm -rf repo
   $ blobimport repo-hg/.hg repo --readonly-storage | grep 'root cause:'
-  * root cause: SharedError { error: Compat { error: ReadOnlyPut(* (glob)
+  * root cause: ReadOnlyPut("*") (glob)

@@ -413,10 +413,16 @@ fn main(fb: FacebookInit) -> ExitCode {
     match res {
         Ok(_) => ExitCode::SUCCESS,
         Err(SubcommandError::Error(err)) => {
-            error!(error_logger, "{:?}", err);
             if debug {
+                error!(error_logger, "{:?}", err);
                 error!(error_logger, "\n============ DEBUG ERROR ============");
                 error!(error_logger, "{:#?}", err);
+            } else {
+                let mut err_string = format!("{:?}", err);
+                if let Some(pos) = err_string.find("\n\nStack backtrace:") {
+                    err_string.truncate(pos);
+                }
+                error!(error_logger, "{}", err_string);
             }
             ExitCode::FAILURE
         }

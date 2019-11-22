@@ -136,20 +136,21 @@ impl HistoryEntry {
         let p2 = buf.drain_node();
         let linknode = buf.drain_node();
         let _ = buf.drain_u16();
-        let copy_from = if copy_from_len > 0 {
-            let path = buf.drain_path(copy_from_len)?;
-            match kind {
-                Kind::Tree => bail_err!(ErrorKind::WirePackDecode(format!(
-                    "tree entry {} is marked as copied from path {}, but they cannot be copied",
-                    node, path
-                ))),
-                Kind::File => Some(RepoPath::file(path).with_context(|_| {
-                    ErrorKind::WirePackDecode("invalid copy from path".into())
-                })?),
-            }
-        } else {
-            None
-        };
+        let copy_from =
+            if copy_from_len > 0 {
+                let path = buf.drain_path(copy_from_len)?;
+                match kind {
+                    Kind::Tree => bail_err!(ErrorKind::WirePackDecode(format!(
+                        "tree entry {} is marked as copied from path {}, but they cannot be copied",
+                        node, path
+                    ))),
+                    Kind::File => Some(RepoPath::file(path).with_context(|| {
+                        ErrorKind::WirePackDecode("invalid copy from path".into())
+                    })?),
+                }
+            } else {
+                None
+            };
         Ok(Some(Self {
             node,
             p1,
@@ -162,7 +163,7 @@ impl HistoryEntry {
     // This would ideally be generic over any BufMut, but that won't be very useful until
     // https://github.com/carllerche/bytes/issues/170 is fixed.
     pub(crate) fn encode(&self, kind: Kind, buf: &mut Vec<u8>) -> Result<()> {
-        self.verify(kind).with_context(|_| {
+        self.verify(kind).with_context(|| {
             ErrorKind::WirePackEncode("attempted to encode an invalid history entry".into())
         })?;
         buf.put_slice(self.node.as_ref());
@@ -297,8 +298,7 @@ impl DataEntry {
             DataEntryVersion::V1 => None,
             DataEntryVersion::V2 => {
                 let mut cursor = Cursor::new(buf.as_ref());
-                let metadata =
-                    Metadata::read(&mut cursor).map_err(|e| Error::from_boxed_compat(e.into()))?;
+                let metadata = Metadata::read(&mut cursor)?;
 
                 // Metadata::read doesn't consume bytes (it just reads them), but our
                 // implementation here wants to consume bytes we read. We work around this here.
@@ -339,9 +339,7 @@ impl DataEntry {
         }
 
         if let Some(ref metadata) = self.metadata {
-            metadata
-                .write(buf)
-                .map_err(|e| Error::from_boxed_compat(e.into()))?
+            metadata.write(buf)?
         }
 
         Ok(())

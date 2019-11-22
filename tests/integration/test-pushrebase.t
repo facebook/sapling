@@ -113,9 +113,7 @@ Push rebase fails with conflict in the bottom of the stack
   remote:   Error:
   remote: * pushrebase failed * (glob)
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])",
-  remote:     }
+  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
   abort: * (glob)
   [255]
   $ hg hide -r ".^ + ." -q
@@ -132,9 +130,7 @@ Push rebase fails with conflict in the top of the stack
   remote:   Error:
   remote: * pushrebase failed * (glob)
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])",
-  remote:     }
+  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
   abort: * (glob)
   [255]
   $ hg hide -r ".^ + ." -q
@@ -460,8 +456,6 @@ Test non-fast-forward force pushrebase
   remote:     You can remove the metadata from a commit with `hg amend --config mutation.record=false`.
   remote:     For more help, please contact the Source Control team at https://fburl.com/27qnuyl2
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Forced push blocked because it contains mutation metadata.\nYou can remove the metadata from a commit with `hg amend --config mutation.record=false`.\nFor more help, please contact the Source Control team at https://fburl.com/27qnuyl2",
-  remote:     }
+  remote:     "Forced push blocked because it contains mutation metadata.\nYou can remove the metadata from a commit with `hg amend --config mutation.record=false`.\nFor more help, please contact the Source Control team at https://fburl.com/27qnuyl2"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

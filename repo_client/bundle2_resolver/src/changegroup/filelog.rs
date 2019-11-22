@@ -12,7 +12,7 @@ use std::mem;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail_msg, format_err, Compat};
+use failure_ext::{bail_msg, Compat, FutureFailureErrorExt};
 use futures::future::Shared;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -92,10 +92,7 @@ impl UploadableHgBlob for Filelog {
         };
 
         let (cbinfo, fut) = upload.upload(ctx, repo.get_blobstore().boxed())?;
-        Ok((
-            node_key,
-            (cbinfo, fut.map_err(Error::compat).boxify().shared()),
-        ))
+        Ok((node_key, (cbinfo, fut.map_err(Compat).boxify().shared())))
     }
 }
 
@@ -221,9 +218,8 @@ impl DeltaCache {
 
                 let vec = match base {
                     None => delta::apply(b"", &delta)
-                        .with_context(|_| format!("File content empty, delta: {:?}", delta))
-                        .map_err(Error::from)
-                        .map_err(Error::compat)
+                        .with_context(|| format!("File content empty, delta: {:?}", delta))
+                        .map_err(Compat)
                         .into_future()
                         .boxify(),
                     Some(base) => {
@@ -233,7 +229,7 @@ impl DeltaCache {
                                 .map_err(Error::from)
                                 .and_then(move |bytes| {
                                     delta::apply(&bytes, &delta)
-                                        .with_context(|_| {
+                                        .with_context(|| {
                                             format!("File content: {:?} delta: {:?}", bytes, delta)
                                         })
                                         .map_err(Error::from)
@@ -249,7 +245,7 @@ impl DeltaCache {
                                 )
                                 .and_then(move |bytes| {
                                     delta::apply(bytes.as_ref(), &delta)
-                                        .with_context(|_| {
+                                        .with_context(|| {
                                             format!("File content: {:?} delta: {:?}", bytes, delta)
                                         })
                                         .map_err(Error::from)
@@ -258,12 +254,10 @@ impl DeltaCache {
                             }
                         };
                         fut.map_err(move |err| {
-                            Error::from(err.context(format_err!(
+                            Compat(err.context(format!(
                                 "While looking for base {:?} to apply on delta {:?}",
-                                base,
-                                node
+                                base, node
                             )))
-                            .compat()
                         })
                         .boxify()
                     }

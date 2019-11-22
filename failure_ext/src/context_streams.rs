@@ -6,11 +6,12 @@
  * directory of this source tree.
  */
 
-use failure::{Context, Error, Fail};
+use anyhow::Error;
 use futures::{Poll, Stream};
+use std::error::Error as StdError;
 use std::fmt::Display;
 
-// "Context" support for streams where the error is an implementation of failure::Fail.
+// "Context" support for streams where the error is an implementation of std::error::Error.
 pub trait StreamFailureExt: Stream + Sized {
     fn context<D>(self, context: D) -> ContextStream<Self, D>
     where
@@ -25,7 +26,7 @@ pub trait StreamFailureExt: Stream + Sized {
 impl<S> StreamFailureExt for S
 where
     S: Stream + Sized,
-    S::Error: Fail,
+    S::Error: StdError + Send + Sync + 'static,
 {
     fn context<D>(self, displayable: D) -> ContextStream<Self, D>
     where
@@ -60,15 +61,15 @@ impl<A, D> ContextStream<A, D> {
 impl<A, D> Stream for ContextStream<A, D>
 where
     A: Stream,
-    A::Error: Fail,
+    A::Error: StdError + Send + Sync + 'static,
     D: Display + Clone + Send + Sync + 'static,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.inner.poll() {
-            Err(err) => Err(err.context(self.displayable.clone())),
+            Err(err) => Err(Error::new(err).context(self.displayable.clone())),
             Ok(item) => Ok(item),
         }
     }
@@ -91,25 +92,25 @@ impl<A, F> WithContextStream<A, F> {
 impl<A, F, D> Stream for WithContextStream<A, F>
 where
     A: Stream,
-    A::Error: Fail,
+    A::Error: StdError + Send + Sync + 'static,
     D: Display + Clone + Send + Sync + 'static,
     F: FnMut() -> D,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.inner.poll() {
             Err(err) => {
                 let context = (&mut self.displayable)();
-                Err(err.context(context))
+                Err(Error::new(err).context(context))
             }
             Ok(item) => Ok(item),
         }
     }
 }
 
-// "Context" support for streams where the error is an implementation of failure::Error.
+// "Context" support for streams where the error is an implementation of anyhow::Error.
 pub trait StreamFailureErrorExt: Stream + Sized {
     fn context<D>(self, context: D) -> ContextErrorStream<Self, D>
     where
@@ -161,7 +162,7 @@ where
     D: Display + Clone + Send + Sync + 'static,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.inner.poll() {
@@ -192,7 +193,7 @@ where
     F: FnMut() -> D,
 {
     type Item = A::Item;
-    type Error = Context<D>;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.inner.poll() {
@@ -208,6 +209,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::format_err;
     use futures::stream::iter_result;
 
     #[test]

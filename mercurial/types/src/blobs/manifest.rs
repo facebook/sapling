@@ -184,7 +184,7 @@ impl BlobManifest {
 
     pub fn parse(blobstore: Arc<dyn Blobstore>, envelope: HgManifestEnvelope) -> Result<Self> {
         let envelope = envelope.into_mut();
-        let content = ManifestContent::parse(envelope.contents.as_ref()).with_context(|_| {
+        let content = ManifestContent::parse(envelope.contents.as_ref()).with_context(|| {
             format!(
                 "while parsing contents for manifest ID {}",
                 envelope.node_id
@@ -296,7 +296,7 @@ fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
     let hash = str::from_utf8(hash)
         .map_err(|err| Error::from(err))
         .and_then(|hash| hash.parse::<HgNodeHash>())
-        .with_context(|_| format!("malformed hash: {:?}", hash))?;
+        .with_context(|| format!("malformed hash: {:?}", hash))?;
     ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
     let hg_entry_id = if flags.len() == 0 {

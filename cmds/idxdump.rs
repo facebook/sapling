@@ -63,7 +63,7 @@ fn main() {
     if let Err(ref e) = run() {
         println!("Failed: {}", e);
 
-        for e in e.iter_chain() {
+        for e in e.chain() {
             println!("caused by: {}", e);
         }
 

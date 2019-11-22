@@ -79,7 +79,7 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
                 }
             } else {
                 fs::create_dir(&subdir)
-                    .with_context(|_| format!("failed to create subdirectory {:?}", subdir))?;
+                    .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
             }
         }
     }

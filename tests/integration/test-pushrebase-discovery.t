@@ -90,9 +90,7 @@ Unsuccessful push creates a draft commit on the server
   remote:     hooks failed:
   remote:     failing_hook for 812eca0823f97743f8d85cdef5cf338b54cebb01: failed
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nfailing_hook for 812eca0823f97743f8d85cdef5cf338b54cebb01: failed",
-  remote:     }
+  remote:     "hooks failed:\nfailing_hook for 812eca0823f97743f8d85cdef5cf338b54cebb01: failed"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

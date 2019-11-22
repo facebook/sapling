@@ -38,5 +38,8 @@ check that sql writes are blocked by --readonly-storage
   $ mononoke_admin --readonly-storage bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>&1
   * using repo "repo" repoid * (glob)
   * changeset resolved as: * (glob)
-  * Chain { err: "While executing ReplaceBookmarks query", cause: Error(SqliteFailure(Error { code: ReadOnly, extended_code: 8 }, Some("attempt to write a readonly database"))) }* (glob)
+  * While executing ReplaceBookmarks query (glob)
+  
+  Caused by:
+      attempt to write a readonly database
   [1]

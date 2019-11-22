@@ -13,7 +13,8 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{
-    err_msg, Error, Fail, FutureFailureErrorExt, FutureFailureExt, ResultExt, StreamFailureErrorExt,
+    err_msg, Compat, Error, FutureFailureErrorExt, FutureFailureExt, ResultExt,
+    StreamFailureErrorExt,
 };
 use futures::{
     future::{self, SharedItem},
@@ -57,7 +58,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
     let revlogcs = revlog_repo
         .get_changeset(csid)
         .with_context(move || format!("While reading changeset {:?}", csid))
-        .map_err(Fail::compat)
+        .map_err(Compat)
         .boxify()
         .shared();
 
@@ -81,7 +82,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
             }
         })
         .with_context(move || format!("While reading root manifest for {:?}", csid))
-        .map_err(Fail::compat)
+        .map_err(Compat)
         .boxify()
         .shared();
 
@@ -140,7 +141,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
             None => Ok(None),
             Some((manifest_id, ref mf)) => {
                 let mut bytes = Vec::new();
-                mf.generate(&mut bytes).with_context(|_| {
+                mf.generate(&mut bytes).with_context(|| {
                     format!("While generating root manifest blob for {:?}", csid)
                 })?;
 

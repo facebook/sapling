@@ -61,9 +61,7 @@ Do infinitepush (aka commit cloud) push
   remote:   Error:
   remote:     bundle2_resolver error
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Infinitepush is not enabled on this server. Contact Source Control @ FB.",
-  remote:     }
+  remote:     "Infinitepush is not enabled on this server. Contact Source Control @ FB."
   remote:   Caused by:
   remote:     While resolving Changegroup
   remote:   Caused by:

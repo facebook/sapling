@@ -102,7 +102,7 @@ impl UploadableHgBlob for TreemanifestEntry {
                         manifest_content,
                         p1,
                         p2,
-                        value.map_err(Error::compat).boxify().shared(),
+                        value.map_err(Compat).boxify().shared(),
                     ),
                 )
             })

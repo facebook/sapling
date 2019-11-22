@@ -596,9 +596,7 @@ mod tests {
             HashSet::from_iter(bids.into_iter()),
         );
         let r = fut.wait();
-        let msg = r
-            .err()
-            .and_then(|e| e.as_fail().cause().map(|f| (format!("{}", f))));
+        let msg = r.err().and_then(|e| e.source().map(ToString::to_string));
         assert_eq!(
             Some("None of the blobstores to fetch responded".to_string()),
             msg
@@ -625,9 +623,7 @@ mod tests {
             &entries,
         );
         let r = fut.wait();
-        let msg = r
-            .err()
-            .and_then(|e| e.as_fail().cause().map(|f| (format!("{}", f))));
+        let msg = r.err().and_then(|e| e.source().map(ToString::to_string));
         assert_eq!(
             Some("None of the blobstores to fetch responded".to_string()),
             msg

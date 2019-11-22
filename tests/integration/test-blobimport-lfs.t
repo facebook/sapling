@@ -42,23 +42,19 @@
   * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
   * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
   * failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
-  * cause: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
   * cause: While creating Changeset Some(HgNodeHash(Sha1(527169d71e0eac8abd0a25d18520cb3b8371edb5))), uuid: * (glob)
-  * root cause: SharedError { error: Compat { error: Os { code: 2, kind: NotFound, message: "No such file or directory" } (glob)
-  
-  While starting lfs_helper: "$TESTTMP/lfs"
-  
-  While uploading child entries
-  
-  While processing entries
-  
-  While creating Changeset Some(HgNodeHash(Sha1(527169d71e0eac8abd0a25d18520cb3b8371edb5))), uuid: * } } (glob)
-  * error while blobimporting, Root cause: ErrorMessage { (glob)
-      msg: "failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5",
-  }
+  * cause: While processing entries (glob)
+  * cause: While uploading child entries (glob)
+  * cause: While starting lfs_helper: "$TESTTMP/lfs" (glob)
+  * cause: No such file or directory (os error 2) (glob)
+  * root cause: Os { code: 2, kind: NotFound, message: "No such file or directory" } (glob)
+  * error while blobimporting, Root cause: "failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5" (glob)
   * Error: failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
-  * Originated in:  (glob)
-  Error: ErrorMessage { msg: "blobimport exited with a failure" }
+  Error: blobimport exited with a failure
+  
+  Stack backtrace:
+      Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace
+  
   [1]
 
 # Create the blobimport LFS helper

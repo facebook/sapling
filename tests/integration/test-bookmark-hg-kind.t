@@ -133,9 +133,7 @@ Exercise the limit (6 bookmarks should fail)
   remote:   Error:
   remote:     Bookmark query was truncated after 6 results, use a more specific prefix search.
   remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "Bookmark query was truncated after 6 results, use a more specific prefix search.",
-  remote:     }
+  remote:     "Bookmark query was truncated after 6 results, use a more specific prefix search."
   abort: unexpected response: empty string
   [255]
 

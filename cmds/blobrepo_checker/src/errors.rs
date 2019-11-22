@@ -7,47 +7,33 @@
  */
 
 use crate::checks::FileInformation;
-use failure_ext::{Error, Fail};
+use failure_ext::Error;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[fail(
-        display = "Blob hash does not match ChangesetId: looked up {}, hashed to {}",
-        _0, _1
-    )]
+    #[error("Blob hash does not match ChangesetId: looked up {0}, hashed to {1}")]
     BadChangesetHash(ChangesetId, ChangesetId),
-    #[fail(display = "Changeset {} is semantically invalid: {}", _0, _1)]
-    InvalidChangeset(ChangesetId, #[fail(cause)] Error),
-    #[fail(
-        display = "Changeset {} has different parents in thrift and database",
-        _0
-    )]
+    #[error("Changeset {0} is semantically invalid: {1}")]
+    InvalidChangeset(ChangesetId, #[source] Error),
+    #[error("Changeset {0} has different parents in thrift and database")]
     DbParentsMismatch(ChangesetId),
-    #[fail(
-        display = "File {} SHA256 alias does not round trip (SHA256 {} maps to ContentId {})",
-        _0, _1, _2
-    )]
+    #[error("File {0} SHA256 alias does not round trip (SHA256 {1} maps to ContentId {2})")]
     Sha256Mismatch(FileInformation, Sha256, ContentId),
-    #[fail(display = "File {} read wrong size {} in blobstore", _0, _1)]
+    #[error("File {0} read wrong size {1} in blobstore")]
     BadContentSize(FileInformation, u64),
-    #[fail(display = "File {} read wrong ContentId {} in blobstore", _0, _1)]
+    #[error("File {0} read wrong ContentId {1} in blobstore")]
     BadContentId(FileInformation, ContentId),
-    #[fail(
-        display = "Changeset {} maps to HG {} maps to wrong Changeset {}",
-        _0, _1, _2
-    )]
+    #[error("Changeset {0} maps to HG {1} maps to wrong Changeset {2}")]
     HgMappingBroken(ChangesetId, HgChangesetId, ChangesetId),
-    #[fail(
-        display = "Changeset {} maps to HG {} which has no matching Bonsai",
-        _0, _1
-    )]
+    #[error("Changeset {0} maps to HG {1} which has no matching Bonsai")]
     HgMappingNotPresent(ChangesetId, HgChangesetId),
-    #[fail(display = "HG {} has no matching Bonsai", _0)]
+    #[error("HG {0} has no matching Bonsai")]
     HgDangling(HgChangesetId),
-    #[fail(display = "HG {} has different parents to its matching Bonsai", _0)]
+    #[error("HG {0} has different parents to its matching Bonsai")]
     ParentsMismatch(HgChangesetId),
-    #[fail(display = "Requesting HG {} fetched changeset {}", _0, _1)]
+    #[error("Requesting HG {0} fetched changeset {1}")]
     HgChangesetIdMismatch(HgChangesetId, HgChangesetId),
 }

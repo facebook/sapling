@@ -100,9 +100,7 @@ pub fn create_getfiles_blob(
             raw_content.extend(file_history);
             raw_content
         })
-        .and_then(|content| {
-            lz4_pyframe::compress(&content).map_err(|e| Error::from_boxed_compat(e.into()))
-        })
+        .and_then(|content| lz4_pyframe::compress(&content))
         .map(|bytes| Bytes::from(bytes))
         .boxify()
 }

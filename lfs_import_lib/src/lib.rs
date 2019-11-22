@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Fail, Result};
+use failure_ext::{Error, Result};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
     future::{loop_fn, Loop},
@@ -36,18 +36,15 @@ fn lfs_stream(
         .stdout(Stdio::piped())
         .spawn_async();
 
-    cmd.map_err(|e| {
-        e.context(format!("While starting lfs_helper: {:?}", lfs_helper))
-            .into()
-    })
-    .map(|mut cmd| {
-        let stdout = cmd.stdout().take().expect("stdout was missing");
-        let stdout = BufReader::new(stdout);
-        let stream = codec::FramedRead::new(stdout, codec::BytesCodec::new())
-            .map(|bytes_mut| bytes_mut.freeze())
-            .from_err();
-        (cmd, stream)
-    })
+    cmd.map_err(|e| Error::new(e).context(format!("While starting lfs_helper: {:?}", lfs_helper)))
+        .map(|mut cmd| {
+            let stdout = cmd.stdout().take().expect("stdout was missing");
+            let stdout = BufReader::new(stdout);
+            let stream = codec::FramedRead::new(stdout, codec::BytesCodec::new())
+                .map(|bytes_mut| bytes_mut.freeze())
+                .from_err();
+            (cmd, stream)
+        })
 }
 
 fn do_lfs_upload(
