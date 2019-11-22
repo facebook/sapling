@@ -10,7 +10,6 @@
 #define EDEN_ETC_EDEN_DIR "${ETC_EDEN_DIR}"
 
 #cmakedefine EDEN_HAVE_CURL
-#cmakedefine EDEN_HAVE_EDENSCM
 #cmakedefine EDEN_HAVE_GIT
 #cmakedefine EDEN_HAVE_ROCKSDB
 #cmakedefine EDEN_HAVE_SELINUX

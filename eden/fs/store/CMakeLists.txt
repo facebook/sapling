@@ -41,9 +41,8 @@ if (NOT WIN32)
   )
 endif()
 
-if("${EDEN_HAVE_EDENSCM}")
-  add_subdirectory(hg)
-endif()
+add_subdirectory(hg)
+
 if("${EDEN_HAVE_GIT}")
   add_subdirectory(git)
 endif()

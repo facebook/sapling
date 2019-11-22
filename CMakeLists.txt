@@ -71,6 +71,8 @@ add_subdirectory(eden/cli)
 add_subdirectory(eden/fs)
 add_subdirectory(eden/integration)
 add_subdirectory(eden/py)
+add_subdirectory(eden/scm/edenscm/hgext/extlib)
+add_subdirectory(eden/scm/edenscm/mercurial)
 add_subdirectory(eden/scm/lib)
 add_subdirectory(eden/test_support)
 
