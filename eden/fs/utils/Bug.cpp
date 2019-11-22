@@ -24,28 +24,16 @@ EdenBug::EdenBug(EdenBug&& other) noexcept
     : file_(other.file_),
       lineNumber_(other.lineNumber_),
       message_(std::move(other.message_)) {
-  other.throwOnDestruction_ = false;
+  other.processed_ = true;
 }
 
-EdenBug::~EdenBug() noexcept(false) {
-  // If toException() has not been called, throw an exception on destruction.
-  //
-  // Throwing in a destructor is normally poor form, in case we were triggered
-  // by stack unwinding of another exception.  However our callers should
-  // always use EdenBug objects as temporaries when they want the EDEN_BUG()
-  // macro to throw directly.  Therefore we shouldn't have been triggered
-  // during stack unwinding of another exception.
-  //
-  // Callers should only ever store EdenBug objects if they plan to call
-  // toException() on them.
-  if (throwOnDestruction_) {
-    throwException();
-  }
+EdenBug::~EdenBug() {
+  XCHECK(processed_);
 }
 
 folly::exception_wrapper EdenBug::toException() {
   logError();
-  throwOnDestruction_ = false;
+  processed_ = true;
   return folly::exception_wrapper(std::runtime_error(message_));
 }
 

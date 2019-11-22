@@ -326,7 +326,6 @@ facebook::fb303::cpp2::fb303_status EdenServiceHandler::getStatus() {
       return facebook::fb303::cpp2::fb303_status::STOPPING;
   }
   EDEN_BUG() << "unexpected EdenServer status " << static_cast<int>(status);
-  return facebook::fb303::cpp2::fb303_status::WARNING;
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {

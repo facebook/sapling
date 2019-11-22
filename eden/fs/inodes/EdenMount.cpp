@@ -674,9 +674,8 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
 
   const auto fileInode = pInode.asFileOrNull();
   if (!fileInode) {
-    auto bug = EDEN_BUG() << "all symlink inodes must be FileInodes: "
-                          << pInode->getLogPath();
-    return makeFuture<InodePtr>(bug.toException());
+    return EDEN_BUG_FUTURE(InodePtr)
+        << "all symlink inodes must be FileInodes: " << pInode->getLogPath();
   }
 
   return fileInode->readlink(CacheHint::LikelyNeededAgain)

@@ -524,15 +524,14 @@ namespace detail {
 template <typename T>
 struct Migrator<T> {
   template <typename ConvertFn>
-  static MappedDiskVector<T> migrateFrom(
+  [[noreturn]] static MappedDiskVector<T> migrateFrom(
       folly::StringPiece /*path*/,
       folly::File /*file*/,
       off_t /*fileSize*/,
       size_t /*currentEntryCount*/,
       size_t /*oldVersionIndex*/,
       ConvertFn /*convert*/) {
-    auto bug = EDEN_BUG() << "oldVersionIndex >= sizeof...(OldVersions)";
-    bug.throwException();
+    EDEN_BUG() << "oldVersionIndex >= sizeof...(OldVersions)";
   }
 };
 

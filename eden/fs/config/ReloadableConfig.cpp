@@ -45,9 +45,7 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
       break;
     }
     default:
-      auto bug = EDEN_BUG()
-          << "Unexpected reload flag: " << static_cast<int>(reload);
-      bug.throwException();
+      EDEN_BUG() << "Unexpected reload flag: " << static_cast<int>(reload);
   }
 
   if (!shouldReload) {

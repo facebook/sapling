@@ -392,12 +392,12 @@ void TreeInode::loadUnlinkedChildInode(
     }
 
   } catch (const std::exception& exc) {
-    auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
-                          << "(" << name << " in " << getLogPath()
-                          << "), which has been unlinked, and we hit this "
-                          << "error while trying to load it from the overlay: "
-                          << exc.what();
-    getInodeMap()->inodeLoadFailed(number, bug.toException());
+    auto bug = EDEN_BUG_EXCEPTION()
+        << "InodeMap requested to load inode " << number << "(" << name
+        << " in " << getLogPath()
+        << "), which has been unlinked, and we hit this "
+        << "error while trying to load it from the overlay: " << exc.what();
+    getInodeMap()->inodeLoadFailed(number, bug);
   }
 }
 
@@ -407,10 +407,11 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
     auto contents = contents_.rlock();
     auto iter = contents->entries.find(name);
     if (iter == contents->entries.end()) {
-      auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
-                            << ", but there is no entry named \"" << name
-                            << "\" in " << getNodeId();
-      getInodeMap()->inodeLoadFailed(number, bug.toException());
+      auto bug = EDEN_BUG_EXCEPTION()
+          << "InodeMap requested to load inode " << number
+          << ", but there is no entry named \"" << name << "\" in "
+          << getNodeId();
+      getInodeMap()->inodeLoadFailed(number, bug);
       return;
     }
 
@@ -418,7 +419,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
     // InodeMap makes sure to only try loading each inode once, so this entry
     // should not already be loaded.
     if (entry.getInode() != nullptr) {
-      auto bug = EDEN_BUG()
+      auto bug = EDEN_BUG_EXCEPTION()
           << "InodeMap requested to load inode " << number << "(" << name
           << " in " << getNodeId() << "), which is already loaded";
       // Call inodeLoadFailed().  (Arguably we could call inodeLoadComplete()
@@ -428,7 +429,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
       // cause problems for anyone trying to access this child inode in the
       // future, but at least it shouldn't damage the InodeMap data structures
       // any further.)
-      getInodeMap()->inodeLoadFailed(number, bug.toException());
+      getInodeMap()->inodeLoadFailed(number, bug);
       return;
     }
 
@@ -632,9 +633,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   // The entry is materialized, so data must exist in the overlay.
   auto overlayDir = loadOverlayDir(entry.getInodeNumber());
   if (!overlayDir) {
-    auto bug = EDEN_BUG() << "missing overlay for " << getLogPath() << " / "
-                          << name;
-    return folly::makeFuture<unique_ptr<InodeBase>>(bug.toException());
+    return EDEN_BUG_FUTURE(unique_ptr<InodeBase>)
+        << "missing overlay for " << getLogPath() << " / " << name;
   }
   return make_unique<TreeInode>(
       entry.getInodeNumber(),
@@ -2682,16 +2682,14 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       // at this name should still be the specified inode.
       auto it = contents->entries.find(name);
       if (it == contents->entries.end()) {
-        auto bug = EDEN_BUG()
+        return EDEN_BUG_FUTURE(InvalidationRequired)
             << "entry removed while holding rename lock during checkout: "
             << inode->getLogPath();
-        return folly::makeFuture<InvalidationRequired>(bug.toException());
       }
       if (it->second.getInode() != inode.get()) {
-        auto bug = EDEN_BUG()
+        return EDEN_BUG_FUTURE(InvalidationRequired)
             << "entry changed while holding rename lock during checkout: "
             << inode->getLogPath();
-        return folly::makeFuture<InvalidationRequired>(bug.toException());
       }
 
       // This is a file, so we can simply unlink it, and replace/remove the

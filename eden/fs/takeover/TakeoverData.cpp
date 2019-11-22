@@ -51,10 +51,9 @@ IOBuf TakeoverData::serialize(int32_t protocolVersion) {
     case kTakeoverProtocolVersionThree:
       return serializeVersion3();
     default: {
-      auto bug = EDEN_BUG()
+      EDEN_BUG()
           << "only kTakeoverProtocolVersionOne is supported, but somehow "
           << "we were asked to handle version " << protocolVersion;
-      bug.throwException();
     }
   }
 }
@@ -72,10 +71,9 @@ folly::IOBuf TakeoverData::serializeError(
     case kTakeoverProtocolVersionThree:
       return serializeErrorVersion3(ew);
     default: {
-      auto bug = EDEN_BUG()
+      EDEN_BUG()
           << "only kTakeoverProtocolVersionOne is supported, but somehow "
           << "we were asked to handle version " << protocolVersion;
-      bug.throwException();
     }
   }
 }

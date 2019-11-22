@@ -79,9 +79,8 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
 
     auto treeInode = inode_.asTreePtrOrNull();
     if (!treeInode.get()) {
-      auto bug = EDEN_BUG()
+      return EDEN_BUG_FUTURE(Unit)
           << "UntrackedDiffEntry should only used with tree inodes";
-      return makeFuture<Unit>(bug.toException());
     }
 
     // Recursively diff the untracked directory.

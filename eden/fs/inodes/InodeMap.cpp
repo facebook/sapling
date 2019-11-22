@@ -201,9 +201,8 @@ Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
     // This generally shouldn't happen.  If a InodeNumber has been allocated we
     // should always know about it.  It's a bug if our caller calls us with an
     // invalid InodeNumber number.
-    auto bug = EDEN_BUG() << "InodeMap called with unknown inode number "
-                          << number;
-    return folly::makeFuture<InodePtr>(bug.toException());
+    return EDEN_BUG_FUTURE(InodePtr)
+        << "InodeMap called with unknown inode number " << number;
   }
 
   // Check to see if anyone else has already started loading this inode.
@@ -262,11 +261,12 @@ Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
     if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
       // This shouldn't happen.  We must know about the parent inode number if
       // we knew about the child.
-      auto bug = EDEN_BUG() << "unknown parent inode " << unloadedData->parent
-                            << " (of " << unloadedData->name << ")";
+      auto bug = EDEN_BUG_EXCEPTION()
+          << "unknown parent inode " << unloadedData->parent << " (of "
+          << unloadedData->name << ")";
       // Unlock our data before calling inodeLoadFailed()
       data.unlock();
-      inodeLoadFailed(childInodeNumber, bug.toException());
+      inodeLoadFailed(childInodeNumber, bug);
       return result;
     }
 
@@ -328,10 +328,10 @@ void InodeMap::startChildLookup(
     mode_t mode) {
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
-    auto bug = EDEN_BUG() << "parent inode " << parent->getNodeId() << " of ("
-                          << childName << ", " << childInodeNumber
-                          << ") does not refer to a tree";
-    return inodeLoadFailed(childInodeNumber, bug.toException());
+    auto bug = EDEN_BUG_EXCEPTION()
+        << "parent inode " << parent->getNodeId() << " of (" << childName
+        << ", " << childInodeNumber << ") does not refer to a tree";
+    return inodeLoadFailed(childInodeNumber, bug);
   }
 
   if (isUnlinked) {

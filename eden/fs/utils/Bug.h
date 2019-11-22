@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Conv.h>
+#include <folly/futures/Future.h>
 #include <folly/lang/ColdClass.h>
 #include <atomic>
 #include <string>
@@ -24,24 +25,28 @@
  * be handled by the calling code.
  *
  * Use XLOG(FATAL) if you want to crash the program even in production builds.
- *
- * Example uses:
- *
- * Log a message and throw an exception:
- *
- *   EDEN_BUG() << "bad stuff happened";
- *
- * Log a message, but convert the exception to a folly::exception_wrapper()
- * and return it as a folly::Future:
- *
- *   auto bug = EDEN_BUG() << "bad stuff happened";
- *   return folly::makeFuture<InodePtr>(bug.toException());
- *
- * You should only store the return value of EDEN_BUG() in order to call
- * toException() on it.  Storing the return value prevents it from immediately
- * throwing in the EDEN_BUG() statement.
  */
-#define EDEN_BUG() ::facebook::eden::EdenBug(__FILE__, __LINE__)
+#define EDEN_BUG()                   \
+  ::facebook::eden::EdenBugThrow() & \
+      ::facebook::eden::EdenBug(__FILE__, __LINE__)
+
+/**
+ * EDEN_BUG_FUTURE() is similar to EDEN_BUG() but should be used in context
+ * where a Future should be returned.
+ *
+ * In debug builds this will crash, but in production builds this will return a
+ * folly::Future<Type> containing an exception.
+ */
+#define EDEN_BUG_FUTURE(Type)               \
+  ::facebook::eden::EdenBugFuture<Type>() & \
+      ::facebook::eden::EdenBug(__FILE__, __LINE__)
+
+/**
+ * EDEN_BUG_EXCEPTION() is similar to EDEN_BUG() but returns an exception.
+ */
+#define EDEN_BUG_EXCEPTION()             \
+  ::facebook::eden::EdenBugException() & \
+      ::facebook::eden::EdenBug(__FILE__, __LINE__)
 
 namespace folly {
 class exception_wrapper;
@@ -65,7 +70,7 @@ class EdenBug : public folly::ColdClass {
   EdenBug(const char* file, int lineNumber);
   EdenBug(EdenBug&& other) noexcept;
   EdenBug& operator=(EdenBug&& other) = delete;
-  ~EdenBug() noexcept(false);
+  ~EdenBug();
 
   /**
    * Append to the bug message.
@@ -110,8 +115,34 @@ class EdenBug : public folly::ColdClass {
 
   const char* file_;
   int lineNumber_;
-  bool throwOnDestruction_{true};
+  bool processed_{false};
   std::string message_;
+};
+
+class EdenBugThrow {
+ public:
+  // We use operator&() here since it binds with lower precedence than the <<
+  // operator used to construct the EdenBug message.
+  [[noreturn]] void operator&(EdenBug&& bug) const {
+    bug.throwException();
+  }
+};
+
+template <typename T>
+class EdenBugFuture {
+ public:
+  FOLLY_NODISCARD
+  folly::Future<T> operator&(EdenBug&& bug) const {
+    return folly::makeFuture<T>(bug.toException());
+  }
+};
+
+class EdenBugException {
+ public:
+  FOLLY_NODISCARD
+  folly::exception_wrapper operator&(EdenBug&& bug) const {
+    return bug.toException();
+  }
 };
 
 /**

@@ -623,9 +623,8 @@ folly::Future<struct stat> FileInode::stat() {
       return st;
   }
 
-  auto bug = EDEN_BUG() << "unexpected FileInode state tag "
-                        << static_cast<int>(state->tag);
-  return folly::makeFuture<struct stat>(bug.toException());
+  return EDEN_BUG_FUTURE(struct stat)
+      << "unexpected FileInode state tag " << static_cast<int>(state->tag);
 }
 
 void FileInode::updateBlockCount(struct stat& st) {
@@ -820,7 +819,6 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
           case State::BLOB_NOT_LOADING:
             EDEN_BUG()
                 << "A blob load finished when the inode was in BLOB_NOT_LOADING state";
-            return;
 
           // Since the load doesn't hold the state lock for its duration,
           // sanity check that the inode is still in loading state.

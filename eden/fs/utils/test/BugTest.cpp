@@ -27,7 +27,6 @@ TEST(EdenBug, throws) {
 
 TEST(EdenBug, toException) {
   EdenBugDisabler noCrash;
-  auto bug = EDEN_BUG() << "whoops";
-  auto ew = bug.toException();
+  auto ew = EDEN_BUG_EXCEPTION() << "whoops";
   EXPECT_THROW_RE(ew.throw_exception(), std::runtime_error, "whoops");
 }
