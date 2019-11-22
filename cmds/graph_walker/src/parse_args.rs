@@ -49,6 +49,7 @@ const STORAGE_ID_ARG: &'static str = "storage-id";
 const DEFAULT_INCLUDE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
     NodeType::BonsaiChangeset,
+    NodeType::BonsaiChangesetFromHgChangeset,
     NodeType::HgChangesetFromBonsaiChangeset,
     NodeType::BonsaiParents,
     NodeType::HgChangeset,

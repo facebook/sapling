@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::graph::{FileContentData, Node, NodeData};
+use crate::graph::{FileContentData, Node, NodeData, NodeType};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use changeset_fetcher::ChangesetFetcher;
@@ -17,20 +17,22 @@ use futures::{
     future::{self},
     Future, Stream,
 };
-use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
+use futures_ext::{
+    bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, FutureExt,
+};
 use itertools::{Either, Itertools};
 use mercurial_types::{
     Changeset, HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath,
 };
 use mononoke_types::{ChangesetId, ContentId, MPath};
-use std::{iter::IntoIterator, sync::Arc};
+use std::{cmp, iter::IntoIterator, ops::Add, sync::Arc};
 
 pub trait NodeChecker {
-    // This is a simple check, no change to internal state
-    fn has_visited(self: &Self, n: &Node) -> bool;
-
     // This can mutate the internal state.  Returns true if we should visit the node
-    fn record_visit(self: &mut Self, n: &Node) -> bool;
+    fn record_visit(&self, n: &Node) -> bool;
+
+    // How many times has the checker seen this type
+    fn get_visit_count(&self, t: &NodeType) -> usize;
 }
 
 // This exists temporarily, until a step is put into the stream for next iteration
@@ -48,34 +50,22 @@ fn bookmark_step(ctx: CoreContext, repo: &BlobRepo, b: BookmarkName) -> BoxFutur
         .boxify()
 }
 
-fn bonsai_changeset_step<NC>(
+fn bonsai_changeset_step(
     ctx: CoreContext,
     repo: &BlobRepo,
-    node_checker: NC,
     bcs_id: ChangesetId,
-) -> BoxFuture<WalkStep, Error>
-where
-    NC: 'static + Send + Clone + NodeChecker,
-{
+) -> BoxFuture<WalkStep, Error> {
     // Get the data, and add direct file data for this bonsai changeset
     let bonsai_fut = repo
-        .get_bonsai_changeset(ctx.clone(), bcs_id)
+        .get_bonsai_changeset(ctx, bcs_id)
         .map({
-            cloned!(node_checker);
             move |bcs| {
                 let files_to_visit: Vec<Node> = bcs
                     .file_changes()
                     .filter_map(|(_mpath, fc_opt)| {
                         fc_opt // remove None
                     })
-                    .map(|fc| {
-                        vec![
-                            Node::FileContent(fc.content_id()),
-                            Node::FileContentMetadata(fc.content_id()),
-                        ]
-                    })
-                    .filter(|fc| !node_checker.has_visited(&fc[0]))
-                    .flatten()
+                    .map(|fc| Node::FileContent(fc.content_id()))
                     .collect();
                 (bcs, files_to_visit)
             }
@@ -84,11 +74,10 @@ where
 
     bonsai_fut
         .map(move |(bcs, mut children)| {
+            // Parents deliberately first to resolve dependent reads as early as possible
+            children.push(Node::BonsaiParents(bcs_id));
             // Allow Hg based lookup
             children.push(Node::HgChangesetFromBonsaiChangeset(bcs_id));
-            // Parents deliberately last to encourage wide walk when
-            // one of the manifest expansions is on
-            children.push(Node::BonsaiParents(bcs_id));
             WalkStep(NodeData::BonsaiChangeset(bcs), children)
         })
         .boxify()
@@ -100,7 +89,7 @@ fn bonsai_parents_step(
     bcs_id: ChangesetId,
 ) -> BoxFuture<WalkStep, Error> {
     changeset_fetcher
-        .get_parents(ctx.clone(), bcs_id)
+        .get_parents(ctx, bcs_id)
         .map({
             move |parents| {
                 let parents_to_visit: Vec<_> = {
@@ -149,7 +138,7 @@ fn hg_changeset_from_bonsai_step(
     repo: &BlobRepo,
     bcs_id: ChangesetId,
 ) -> BoxFuture<WalkStep, Error> {
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+    repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
         .map({
             |hg_cs_id| {
                 WalkStep(
@@ -161,6 +150,25 @@ fn hg_changeset_from_bonsai_step(
         .boxify()
 }
 
+fn bonsai_changeset_from_hg_step(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    id: HgChangesetId,
+) -> BoxFuture<WalkStep, Error> {
+    repo.get_bonsai_from_hg(ctx, id)
+        .map(move |maybe_bcs_id| match maybe_bcs_id {
+            Some(bcs_id) => {
+                let recurse = vec![Node::BonsaiChangeset(bcs_id)];
+                WalkStep(
+                    NodeData::BonsaiChangesetFromHgChangeset(Some(bcs_id)),
+                    recurse,
+                )
+            }
+            None => WalkStep(NodeData::BonsaiChangesetFromHgChangeset(None), vec![]),
+        })
+        .boxify()
+}
+
 fn hg_changeset_step(
     ctx: CoreContext,
     repo: &BlobRepo,
@@ -168,7 +176,6 @@ fn hg_changeset_step(
 ) -> BoxFuture<WalkStep, Error> {
     repo.get_changeset_by_changesetid(ctx, id)
         .map(|hgchangeset| {
-            // TODO - check assumption: this is root manifest for this change as no path known yet.
             let manifest_id = hgchangeset.manifestid();
             let recurse = vec![Node::HgManifest((None, manifest_id))];
             WalkStep(NodeData::HgChangeset(hgchangeset), recurse)
@@ -176,27 +183,19 @@ fn hg_changeset_step(
         .boxify()
 }
 
-fn hg_file_envelope_step<NC>(
+fn hg_file_envelope_step(
     ctx: CoreContext,
     repo: &BlobRepo,
-    node_checker: NC,
     hg_file_node_id: HgFileNodeId,
 ) -> BoxFuture<WalkStep, Error>
 where
-    NC: 'static + Send + Clone + NodeChecker,
 {
     repo.get_file_envelope(ctx, hg_file_node_id)
         .map({
-            cloned!(node_checker);
             move |envelope| {
                 let file_content_id = envelope.content_id();
                 let fnode = Node::FileContent(file_content_id);
-                let recurse = if !node_checker.has_visited(&fnode) {
-                    vec![fnode, Node::FileContentMetadata(file_content_id)]
-                } else {
-                    vec![]
-                };
-                WalkStep(NodeData::HgFileEnvelope(envelope), recurse)
+                WalkStep(NodeData::HgFileEnvelope(envelope), vec![fnode])
             }
         })
         .boxify()
@@ -205,11 +204,22 @@ where
 fn hg_file_node_step(
     ctx: CoreContext,
     repo: &BlobRepo,
-    path: &RepoPath,
+    path: Option<MPath>,
     hg_file_node_id: HgFileNodeId,
 ) -> BoxFuture<WalkStep, Error> {
-    repo.get_filenode_opt(ctx, path, hg_file_node_id)
-        .map(move |file_node_opt| WalkStep(NodeData::HgFileNode(file_node_opt), vec![]))
+    let repo_path = match path {
+        None => RepoPath::RootPath,
+        Some(mpath) => RepoPath::FilePath(mpath),
+    };
+    repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
+        .map(move |file_node_opt| match file_node_opt {
+            Some(file_node) => {
+                // Following linknode increases parallelism of walk
+                let linked_commit = Node::BonsaiChangesetFromHgChangeset(file_node.linknode);
+                WalkStep(NodeData::HgFileNode(Some(file_node)), vec![linked_commit])
+            }
+            None => WalkStep(NodeData::HgFileNode(None), vec![]),
+        })
         .boxify()
 }
 
@@ -224,25 +234,24 @@ fn hg_manifest_step(
             move |hgmanifest| {
                 let (manifests, filenodes): (Vec<_>, Vec<_>) =
                     hgmanifest.list().partition_map(|child| {
-                        let full_path = MPath::join_element_opt(path.as_ref(), child.get_name());
+                        let mpath_opt = MPath::join_element_opt(path.as_ref(), child.get_name());
                         match child.get_hash() {
                             HgEntryId::File(_, filenode_id) => {
-                                Either::Right((full_path, filenode_id.clone()))
+                                Either::Right((mpath_opt, filenode_id))
                             }
                             HgEntryId::Manifest(manifest_id) => {
-                                Either::Left((full_path, manifest_id.clone()))
+                                Either::Left((mpath_opt, manifest_id))
                             }
                         }
                     });
 
                 let mut children: Vec<_> = filenodes
                     .into_iter()
-                    .map(move |(full_path, hg_file_node_id)| match full_path {
-                        Some(fpath) => vec![
+                    .map(move |(full_path, hg_file_node_id)| {
+                        vec![
                             Node::HgFileEnvelope(hg_file_node_id),
-                            Node::HgFileNode((RepoPath::FilePath(fpath), hg_file_node_id)),
-                        ],
-                        None => vec![Node::HgFileEnvelope(hg_file_node_id)],
+                            Node::HgFileNode((full_path, hg_file_node_id)),
+                        ]
                     })
                     .flatten()
                     .collect();
@@ -262,6 +271,43 @@ fn hg_manifest_step(
         .boxify()
 }
 
+/// Expand nodes where check for a type is used as a check for other types.
+/// e.g. to make sure metadata looked up/considered for files.
+fn expand_checked_nodes(children: &mut Vec<Node>) -> () {
+    let mut extra = vec![];
+    for n in children.iter() {
+        match n {
+            Node::FileContent(fc_id) => {
+                extra.push(Node::FileContentMetadata(*fc_id));
+            }
+            _ => (),
+        }
+    }
+    if !extra.is_empty() {
+        children.append(&mut extra);
+    }
+}
+
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
+pub struct StepStats {
+    pub num_direct: usize,
+    pub num_direct_new: usize,
+    pub num_expanded_new: usize,
+    pub visited_of_type: usize,
+}
+
+impl Add for StepStats {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            num_direct: self.num_direct + other.num_direct,
+            num_direct_new: self.num_direct_new + other.num_direct_new,
+            num_expanded_new: self.num_expanded_new + other.num_expanded_new,
+            visited_of_type: cmp::max(self.visited_of_type, other.visited_of_type),
+        }
+    }
+}
+
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
 pub fn walk_exact<FilterItem, NC>(
     ctx: CoreContext,
@@ -270,9 +316,9 @@ pub fn walk_exact<FilterItem, NC>(
     node_checker: NC,
     filter_item: FilterItem,
     scheduled_max: usize,
-) -> impl Stream<Item = (Node, Option<NodeData>), Error = Error>
+) -> impl Stream<Item = (Node, Option<(StepStats, NodeData)>), Error = Error>
 where
-    FilterItem: 'static + Send + Fn(&Node) -> bool,
+    FilterItem: 'static + Send + Clone + Fn(&Node) -> bool,
     NC: 'static + Send + Clone + NodeChecker,
 {
     let changeset_fetcher = repo.get_changeset_fetcher();
@@ -280,11 +326,8 @@ where
     bounded_traversal_stream(scheduled_max, walk_roots, {
         // Each step returns the walk result (e.g. number of blobstore items), and next steps
         move |walk_item| {
-            if !filter_item(&walk_item) {
-                return future::ok(((walk_item, None), vec![])).boxify();
-            }
             cloned!(ctx);
-            match walk_item.clone() {
+            let next = match walk_item.clone() {
                 Node::Bookmark(bookmark_name) => bookmark_step(ctx, &repo, bookmark_name),
                 Node::FileContent(content_id) => file_content_step(ctx, &repo, content_id),
                 Node::FileContentMetadata(content_id) => {
@@ -292,11 +335,10 @@ where
                 }
                 Node::HgChangeset(hg_csid) => hg_changeset_step(ctx, &repo, hg_csid),
                 Node::HgFileEnvelope(hg_file_node_id) => {
-                    cloned!(node_checker);
-                    hg_file_envelope_step(ctx, &repo, node_checker, hg_file_node_id)
+                    hg_file_envelope_step(ctx, &repo, hg_file_node_id)
                 }
                 Node::HgFileNode((path, hg_file_node_id)) => {
-                    hg_file_node_step(ctx, &repo, &path, hg_file_node_id)
+                    hg_file_node_step(ctx, &repo, path, hg_file_node_id)
                 }
                 Node::HgManifest((path, hg_manifest_id)) => {
                     hg_manifest_step(ctx, &repo, path, hg_manifest_id)
@@ -304,24 +346,42 @@ where
                 Node::HgChangesetFromBonsaiChangeset(bcs_id) => {
                     hg_changeset_from_bonsai_step(ctx, &repo, bcs_id)
                 }
+                Node::BonsaiChangesetFromHgChangeset(hg_csid) => {
+                    bonsai_changeset_from_hg_step(ctx, &repo, hg_csid)
+                }
                 Node::BonsaiParents(bcs_id) => {
                     cloned!(changeset_fetcher);
                     bonsai_parents_step(ctx, changeset_fetcher, bcs_id)
                 }
-                Node::BonsaiChangeset(bcs_id) => {
-                    cloned!(node_checker);
-                    bonsai_changeset_step(ctx, &repo, node_checker, bcs_id)
-                }
+                Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
             }
             .map({
-                cloned!(mut node_checker);
+                cloned!(filter_item, mut node_checker);
                 move |WalkStep(nd, mut children)| {
+                    children.retain(|c| filter_item.clone()(c));
+                    let num_direct = children.len();
+
                     // Needs to remove before recurse to avoid seeing re-visited nodes in output stream
                     children.retain(|c| node_checker.record_visit(c));
-                    ((walk_item, Some(nd)), children)
+                    let num_direct_new = children.len();
+
+                    expand_checked_nodes(&mut children);
+                    // Make sure we don't add in types not wanted
+                    children.retain(|c| filter_item(c));
+                    let num_expanded_new = children.len();
+
+                    let visited_of_type = node_checker.get_visit_count(&walk_item.get_type());
+
+                    let stats = StepStats {
+                        num_direct,
+                        num_direct_new,
+                        num_expanded_new,
+                        visited_of_type,
+                    };
+                    ((walk_item, Some((stats, nd))), children)
                 }
-            })
-            .boxify()
+            });
+            spawn_future(next).boxify()
         }
     })
 }

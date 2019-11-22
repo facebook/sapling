@@ -12,15 +12,17 @@ use filenodes::FilenodeInfo;
 use futures_ext::BoxStream;
 use mercurial_types::{
     blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifest,
-    HgManifestId, RepoPath,
+    HgManifestId,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath};
+use std::fmt;
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NodeType {
     Bookmark,
     BonsaiChangeset,
+    BonsaiChangesetFromHgChangeset,
     BonsaiParents,
     HgChangesetFromBonsaiChangeset,
     HgChangeset,
@@ -31,12 +33,19 @@ pub enum NodeType {
     FileContentMetadata,
 }
 
+impl fmt::Display for NodeType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl FromStr for NodeType {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Bookmark" => Ok(NodeType::Bookmark),
             "BonsaiChangeset" => Ok(NodeType::BonsaiChangeset),
+            "BonsaiChangesetFromHgChangeset" => Ok(NodeType::BonsaiChangesetFromHgChangeset),
             "BonsaiParents" => Ok(NodeType::BonsaiParents),
             "HgChangesetFromBonsaiChangeset" => Ok(NodeType::HgChangesetFromBonsaiChangeset),
             "HgChangeset" => Ok(NodeType::HgChangeset),
@@ -55,12 +64,13 @@ impl FromStr for NodeType {
 pub enum Node {
     Bookmark(BookmarkName),
     BonsaiChangeset(ChangesetId),
+    BonsaiChangesetFromHgChangeset(HgChangesetId),
     HgChangesetFromBonsaiChangeset(ChangesetId),
     BonsaiParents(ChangesetId),
     HgChangeset(HgChangesetId),
     HgManifest((Option<MPath>, HgManifestId)),
     HgFileEnvelope(HgFileNodeId),
-    HgFileNode((RepoPath, HgFileNodeId)),
+    HgFileNode((Option<MPath>, HgFileNodeId)),
     FileContent(ContentId),
     FileContentMetadata(ContentId),
 }
@@ -76,6 +86,7 @@ pub enum FileContentData {
 pub enum NodeData {
     Bookmark(ChangesetId),
     BonsaiChangeset(BonsaiChangeset),
+    BonsaiChangesetFromHgChangeset(Option<ChangesetId>),
     HgChangesetFromBonsaiChangeset(HgChangesetId),
     BonsaiParents(Vec<ChangesetId>),
     HgChangeset(HgBlobChangeset),
@@ -91,6 +102,7 @@ impl Node {
         match self {
             Node::Bookmark(_) => NodeType::Bookmark,
             Node::BonsaiChangeset(_) => NodeType::BonsaiChangeset,
+            Node::BonsaiChangesetFromHgChangeset(_) => NodeType::BonsaiChangesetFromHgChangeset,
             Node::BonsaiParents(_) => NodeType::BonsaiParents,
             Node::HgChangesetFromBonsaiChangeset(_) => NodeType::HgChangesetFromBonsaiChangeset,
             Node::HgChangeset(_) => NodeType::HgChangeset,

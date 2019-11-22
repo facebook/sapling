@@ -9,8 +9,8 @@
 use crate::graph::{FileContentData, Node, NodeData};
 use crate::parse_args::parse_args_common;
 use crate::progress::{do_count, progress_stream};
-use crate::state::WalkStateArcMutex;
-use crate::walk::walk_exact;
+use crate::state::WalkState;
+use crate::walk::{walk_exact, StepStats};
 
 use clap::ArgMatches;
 use cloned::cloned;
@@ -29,12 +29,12 @@ use tokio_timer::Delay;
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream>(
     s: InStream,
-) -> impl Stream<Item = (Node, Option<NodeData>), Error = Error>
+) -> impl Stream<Item = (Node, Option<(StepStats, NodeData)>), Error = Error>
 where
-    InStream: Stream<Item = (Node, Option<NodeData>), Error = Error>,
+    InStream: Stream<Item = (Node, Option<(StepStats, NodeData)>), Error = Error>,
 {
-    s.map(move |(n, nd)| match nd {
-        Some(d) => match d {
+    s.map(move |(n, opt)| match opt {
+        Some((ss, nd)) => match nd {
             NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)) => {
                 file_bytes_stream
                     .fold(0, |acc, file_bytes| {
@@ -43,11 +43,11 @@ where
                     .map(|num_bytes| NodeData::FileContent(FileContentData::Consumed(num_bytes)))
                     .left_future()
             }
-            _ => future::ok(d).right_future(),
+            _ => future::ok(nd).right_future(),
         }
-        .map(move |d| (n, Some(d)))
+        .map(move |d| (n, Some((ss, d))))
         .left_future(),
-        None => future::ok((n, nd)).right_future(),
+        None => future::ok((n, opt)).right_future(),
     })
     .buffered(100)
 }
@@ -63,14 +63,14 @@ pub fn scrub_objects(
         try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    // Create this outside the loop so tail mode can reuse it
-    let node_checker = WalkStateArcMutex::new();
-
     // Run a simple traversal
     let traversal_fut = blobrepo_fut.and_then(move |repo| {
+        // Create this outside the loop so tail mode can reuse it
+        let node_checker = WalkState::new();
+
         loop_fn((), move |()| {
-            cloned!(ctx, repo, node_checker, walk_params,);
-            let include_types = walk_params.include_types;
+            let include_types = walk_params.include_types.clone();
+            cloned!(ctx, repo, walk_params, node_checker);
             let raw_stream = walk_exact(
                 ctx.clone(),
                 repo,

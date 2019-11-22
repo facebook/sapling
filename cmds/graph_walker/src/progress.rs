@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::graph::{Node, NodeData, NodeType};
+use crate::graph::{Node, NodeType};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
@@ -69,9 +69,12 @@ where
 }
 
 // Simple count.
-pub fn do_count<InStream>(ctx: CoreContext, s: InStream) -> impl Future<Item = (), Error = Error>
+pub fn do_count<InStream, ND>(
+    ctx: CoreContext,
+    s: InStream,
+) -> impl Future<Item = (), Error = Error>
 where
-    InStream: Stream<Item = (Node, Option<NodeData>), Error = Error>,
+    InStream: Stream<Item = (Node, Option<ND>), Error = Error>,
 {
     let init_stats: (usize, usize) = (0, 0);
 

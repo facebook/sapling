@@ -8,7 +8,7 @@
 
 use crate::parse_args::parse_args_common;
 use crate::progress::{do_count, progress_stream};
-use crate::state::WalkStateArcMutex;
+use crate::state::WalkState;
 use crate::walk::walk_exact;
 
 use clap::ArgMatches;
@@ -36,14 +36,14 @@ pub fn count_objects(
         try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    // Create this outside the loop so tail mode can reuse it
-    let node_checker = WalkStateArcMutex::new();
-
     // Run a simple traversal
     let traversal_fut = blobrepo_fut.and_then(move |repo| {
+        // Create this outside the loop so tail mode can reuse it
+        let node_checker = WalkState::new();
+
         loop_fn((), move |()| {
-            cloned!(ctx, repo, node_checker, walk_params,);
-            let include_types = walk_params.include_types;
+            let include_types = walk_params.include_types.clone();
+            cloned!(ctx, repo, walk_params, node_checker);
             let raw_stream = walk_exact(
                 ctx.clone(),
                 repo,
