@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::{format_err, Error};
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::{format_err, Error};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{hgid::HgId, key::Key, parents::Parents};

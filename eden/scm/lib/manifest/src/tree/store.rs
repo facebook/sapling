@@ -7,8 +7,8 @@
 
 use std::{str::from_utf8, sync::Arc};
 
+use anyhow::{format_err, Result};
 use bytes::{Bytes, BytesMut};
-use failure::{format_err, Fallible as Result};
 
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath};
 

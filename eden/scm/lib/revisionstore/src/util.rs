@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use failure::{format_err, Fallible as Result};
+use anyhow::{format_err, Result};
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use util::path::create_dir;

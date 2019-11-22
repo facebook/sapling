@@ -28,7 +28,7 @@ impl<T: ForeignError> From<T> for Error {
     }
 }
 
-impl ForeignError for failure::Error {}
+impl ForeignError for anyhow::Error {}
 impl ForeignError for indexedlog::Error {}
 impl ForeignError for mincode::Error {}
 impl ForeignError for std::io::Error {}

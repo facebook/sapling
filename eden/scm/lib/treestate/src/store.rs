@@ -8,7 +8,7 @@
 //! Trait defining an append-only storage system.
 
 use crate::errors::ErrorKind;
-use failure::{bail, Fallible as Result};
+use anyhow::{bail, Result};
 use std::borrow::Cow;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash)]

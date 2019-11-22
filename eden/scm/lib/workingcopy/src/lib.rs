@@ -9,7 +9,7 @@ use std::fs::{self, DirEntry};
 use std::io;
 use std::path::PathBuf;
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};

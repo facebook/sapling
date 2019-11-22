@@ -7,6 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
+use anyhow::Error;
 use cpython::*;
 use cpython_failure::{FallibleExt, ResultPyErrExt};
 use dag::{
@@ -15,7 +16,6 @@ use dag::{
     spanset::{SpanSet, SpanSetIter},
 };
 use encoding::local_bytes_to_path;
-use failure::Error;
 use std::cell::RefCell;
 
 type Result<T, E = Error> = std::result::Result<T, E>;

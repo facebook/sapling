@@ -9,7 +9,7 @@ python2 = []
 python3 = []
 
 [dependencies]
-failure = "0.1.3"
+anyhow = "1.0.20"
 serde = "1"
 
 [dependencies.cpython]

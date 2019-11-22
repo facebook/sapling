@@ -6,7 +6,7 @@
  */
 
 // Union data store
-use failure::{err_msg, Fallible as Result};
+use anyhow::{Error, Result};
 
 use mpatch::mpatch::get_full_text;
 
@@ -50,7 +50,7 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
             .collect();
 
         Ok(Some(
-            get_full_text(basetext.data.as_ref(), &deltas).map_err(|e| err_msg(e))?,
+            get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
         ))
     }
 

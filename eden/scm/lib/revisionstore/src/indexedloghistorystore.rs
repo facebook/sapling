@@ -11,9 +11,9 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::Fallible as Result;
 
 use indexedlog::{
     log::IndexOutput,

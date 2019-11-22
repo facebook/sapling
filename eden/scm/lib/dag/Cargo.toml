@@ -7,9 +7,9 @@ edition = "2018"
 indexedlog = { path = "../indexedlog" }
 vlqencoding = { path = "../vlqencoding" }
 
+anyhow = "1.0.20"
 bitflags = "1"
 byteorder = "1.2.7"
-failure = "0.1.5"
 fs2 = "0.4.3"
 indexmap = "1.0.1"
 tempfile = "3.0.7"

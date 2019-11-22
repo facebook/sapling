@@ -20,9 +20,9 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::{bail, Result};
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::{bail, Fallible as Result};
 use once_cell::sync::OnceCell;
 
 use pathmatcher::Matcher;

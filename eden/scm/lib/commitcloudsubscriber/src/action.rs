@@ -6,7 +6,7 @@
  */
 
 use crate::error::*;
-use failure::Fallible as Result;
+use anyhow::Result;
 use log::{error, info};
 use std::path::Path;
 use std::process::{Command, Stdio};

@@ -9,8 +9,8 @@
 //!
 //! See [`IdMap`] for the main structure.
 
+use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{bail, ensure, Fallible as Result};
 use fs2::FileExt;
 use indexedlog::log;
 use std::fs::{self, File};

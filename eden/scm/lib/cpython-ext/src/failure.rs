@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-//! Integrate cpython with failure
+//! Integrate cpython with anyhow
 
+use anyhow::{Error, Result};
 use cpython::{ObjectProtocol, PyClone, PyResult, Python, PythonObjectWithTypeObject};
-use failure::{AsFail, Error, Fallible as Result};
 use std::fmt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` by specifying a
@@ -20,9 +20,9 @@ use std::fmt;
 /// # Examples
 ///
 /// ```
+/// use anyhow::{format_err, Error};
 /// use cpython::{exc, Python, PyResult};
 /// use cpython_ext::failure::ResultPyErrExt;
-/// use failure::{format_err, Error};
 ///
 /// fn fail_if_negative(i: i32) -> Result<i32, Error> {
 ///    if (i >= 0) {
@@ -45,8 +45,8 @@ pub trait ResultPyErrExt<T> {
 /// # Examples
 ///
 /// ```
+/// use anyhow::Result;
 /// use cpython_ext::failure::{FallibleExt, PyErr};
-/// use failure::Fallible as Result;
 ///
 /// fn eval_py() -> Result<i32> {
 ///     let gil = cpython::Python::acquire_gil();
@@ -68,10 +68,10 @@ pub trait FallibleExt<T> {
     fn into_fallible(self) -> Result<T>;
 }
 
-impl<T, E: AsFail> ResultPyErrExt<T> for std::result::Result<T, E> {
+impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
     fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T> {
         self.map_err(|e| {
-            let e = e.as_fail();
+            let e = e.into();
             if let Some(e) = e.downcast_ref::<PyErr>() {
                 e.inner.clone_ref(py)
             } else {
@@ -83,7 +83,7 @@ impl<T, E: AsFail> ResultPyErrExt<T> for std::result::Result<T, E> {
 
 impl<T> FallibleExt<T> for PyResult<T> {
     fn into_fallible(self) -> Result<T> {
-        self.map_err(|e| Error::from_boxed_compat(Box::new(PyErr::from(e))))
+        self.map_err(|e| Error::new(PyErr::from(e)))
     }
 }
 

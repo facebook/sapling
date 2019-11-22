@@ -9,13 +9,13 @@ python2 = []
 python3 = []
 
 [dependencies]
+anyhow = "1.0.20"
 bindings = { path = "../../edenscmnative/bindings" }
 blackbox = { path = "../blackbox" }
 clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
 edenapi = { path = "../edenapi" }
-failure = "0.1"
 flate2 = "1"
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }

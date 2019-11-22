@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::{format_err, Result};
 use bytes::Bytes;
-use failure::{format_err, Fallible};
 use manifest::TreeStore;
 use revisionstore::{ContentStore, DataStore};
 use types::{HgId, Key, RepoPath};
@@ -22,7 +22,7 @@ impl TreeContentStore {
 }
 
 impl TreeStore for TreeContentStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes> {
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
         let key = Key::new(path.to_owned(), hgid);
 
         self.inner.get(&key).and_then(|opt| {
@@ -31,7 +31,7 @@ impl TreeStore for TreeContentStore {
         })
     }
 
-    fn insert(&self, _path: &RepoPath, _hgid: HgId, _data: Bytes) -> Fallible<()> {
+    fn insert(&self, _path: &RepoPath, _hgid: HgId, _data: Bytes) -> Result<()> {
         Err(format_err!("insert is not implemented."))
     }
 }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use winapi::shared::minwindef::DWORD;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::handleapi::{SetHandleInformation, INVALID_HANDLE_VALUE};

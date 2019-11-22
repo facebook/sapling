@@ -14,8 +14,8 @@ hgcommands = { path = "../../lib/hgcommands" }
 pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
 
 [target.'cfg(windows)'.dependencies]
+anyhow = "1.0.20"
 winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}
-failure = "0.1"
 
 [dependencies.encoding]
 path = "../../lib/encoding"

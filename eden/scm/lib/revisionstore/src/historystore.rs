@@ -7,7 +7,7 @@
 
 use std::{ops::Deref, path::PathBuf};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use types::{HistoryEntry, Key, NodeInfo};
 

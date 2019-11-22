@@ -12,7 +12,7 @@ use crate::filestore::FileStore;
 use crate::serialization::Serializable;
 use crate::store::{BlockId, NullStore, Store, StoreView};
 use crate::tree::{Key, KeyRef, Tree, VisitorResult};
-use failure::Fallible as Result;
+use anyhow::Result;
 use std::io::Cursor;
 use std::path::Path;
 

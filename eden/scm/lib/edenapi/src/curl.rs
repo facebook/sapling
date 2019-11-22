@@ -7,13 +7,13 @@
 
 use std::{cmp, sync::mpsc::channel, sync::Arc, thread, time::Instant};
 
+use anyhow::{format_err, Result};
 use bytes::Bytes;
 use curl::{
     self,
     easy::{Easy2, Handler, HttpVersion, List},
     multi::Multi,
 };
-use failure::{format_err, Fallible};
 use itertools::Itertools;
 use parking_lot::{Mutex, MutexGuard};
 use serde::{de::DeserializeOwned, Serialize};
@@ -583,7 +583,7 @@ fn prepare_cbor_post<H, R: Serialize>(
 /// Check the integrity of the data in this entry and either return
 /// the data or an integrity check failure depending on the validation
 /// result and the user's configuration.
-fn check_data(entry: &DataEntry, validate: bool) -> Fallible<Bytes> {
+fn check_data(entry: &DataEntry, validate: bool) -> Result<Bytes> {
     log::trace!("Validating data for: {}", entry.key());
 
     let (data, validity) = entry.data();

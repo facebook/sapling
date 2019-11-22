@@ -11,9 +11,9 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::{format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use failure::{format_err, Fallible as Result};
 use serde_derive::{Deserialize, Serialize};
 
 use types::Key;

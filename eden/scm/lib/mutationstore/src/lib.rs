@@ -27,8 +27,8 @@
 //! an error to refer to later commits, and any entry that causes a cycle will
 //! be ignored.
 
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible as Result;
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use std::io::{Cursor, Read, Write};
 use std::path::Path;

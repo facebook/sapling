@@ -9,7 +9,7 @@
 
 use std::{ops::Deref, path::Path};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use types::Key;
 

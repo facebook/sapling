@@ -90,8 +90,8 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::{format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{format_err, Fallible as Result};
 use memmap::{Mmap, MmapOptions};
 use thiserror::Error;
 

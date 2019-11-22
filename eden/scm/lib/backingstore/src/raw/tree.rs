@@ -10,7 +10,7 @@
 //! Structs in this file should be keep in sync with `eden/fs/model/{Tree, TreeEntry}.h`.
 
 use crate::raw::CBytes;
-use failure::{format_err, Fallible};
+use anyhow::{format_err, Result};
 use manifest::{tree::List, FileType, FsNode};
 use std::convert::TryFrom;
 use types::PathComponentBuf;
@@ -44,7 +44,7 @@ pub struct TreeEntry {
 }
 
 impl TreeEntry {
-    fn try_from_path_node(path: PathComponentBuf, node: FsNode) -> Fallible<Self> {
+    fn try_from_path_node(path: PathComponentBuf, node: FsNode) -> Result<Self> {
         let (ttype, hash) = match node {
             FsNode::Directory(Some(hgid)) => (TreeEntryType::Tree, hgid.as_ref().to_vec()),
             FsNode::File(metadata) => (metadata.file_type.into(), metadata.hgid.as_ref().to_vec()),
@@ -72,7 +72,7 @@ pub struct Tree {
 }
 
 impl TryFrom<List> for Tree {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(list: List) -> Result<Self, Self::Error> {
         match list {
@@ -81,7 +81,7 @@ impl TryFrom<List> for Tree {
                 let entries = list
                     .into_iter()
                     .map(|(path, node)| TreeEntry::try_from_path_node(path, node))
-                    .collect::<Fallible<Vec<_>>>()?;
+                    .collect::<Result<Vec<_>>>()?;
 
                 let entries = Box::new(entries);
                 let length = entries.len();

@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible as Result;
 use libc::{c_int, c_void};
 use lz4_sys::{
     LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue, LZ4_createStream,

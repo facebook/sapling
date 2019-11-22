@@ -15,8 +15,8 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::{format_err, Error};
 use cpython::*;
-use failure::{format_err, Error};
 use parking_lot::RwLock;
 
 use cpython_ext::{Bytes, PyErr};

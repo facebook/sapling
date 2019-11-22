@@ -16,9 +16,9 @@
 
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
+use anyhow::{bail, Result};
 use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
-use failure::{bail, Fallible as Result};
 use fs2::FileExt;
 use indexedlog::log;
 use indexmap::set::IndexSet;

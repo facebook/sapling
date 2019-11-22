@@ -13,6 +13,3 @@ pub mod errors;
 pub mod global_flags;
 pub mod io;
 pub mod repo;
-
-// Re-export
-pub use failure;

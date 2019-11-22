@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use indexedlog::log::{self, IndexOutput, Log};
 use std::path::Path;
 use thiserror::Error;

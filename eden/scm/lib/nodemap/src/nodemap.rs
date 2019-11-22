@@ -8,7 +8,7 @@
 use std::ops::Range;
 use std::path::Path;
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use indexedlog::log::{self, IndexOutput, Log};
 use thiserror::Error;
 use types::errors::KeyError;

@@ -7,8 +7,8 @@
 
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, str};
 
+use anyhow::{Error, Result};
 use bytes::Bytes;
-use failure::{err_msg, Error, Fallible as Result};
 use indexmap::IndexMap;
 use url::Url;
 
@@ -38,7 +38,7 @@ impl TryFrom<(&str, HashMap<&str, Bytes>)> for Auth {
             .map(bytes_to_str)
             .transpose()?
             .map(String::from)
-            .ok_or(err_msg("auth prefix missing"))?;
+            .ok_or_else(|| Error::msg("auth prefix missing"))?;
 
         let cert = settings
             .get("cert")

@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-pub use failure::Error;
+pub use anyhow::{Error, Result};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -15,5 +15,3 @@ pub enum ErrorKind {
     #[error("unexpected error {0}")]
     ScmDaemonUnexpectedError(String),
 }
-
-pub type Result<T> = ::std::result::Result<T, Error>;

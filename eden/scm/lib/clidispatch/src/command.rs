@@ -6,8 +6,8 @@
  */
 
 use crate::{io::IO, repo::Repo};
+use anyhow::Result;
 use cliparser::parser::{Flag, ParseOutput, StructFlags};
-use failure::Fallible as Result;
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
@@ -105,7 +105,7 @@ pub trait Register<FN, T> {
 // NoRepo commands.
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
-    S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(S, &mut IO) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
@@ -120,7 +120,7 @@ where
 // OptionalRepo commands.
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
-    S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
@@ -136,7 +136,7 @@ where
 // Repo commands.
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
-    S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(S, &mut IO, Repo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {

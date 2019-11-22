@@ -9,8 +9,8 @@ configparser = { path = "../configparser" }
 manifest = { path = "../manifest" }
 revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }
+anyhow = "1.0.20"
 bytes = "0.4.12"
-failure = "0.1.6"
 libc = "0.2.62"
 
 [lib]

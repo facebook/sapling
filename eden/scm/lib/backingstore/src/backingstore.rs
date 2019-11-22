@@ -7,9 +7,9 @@
 
 use crate::raw;
 use crate::treecontentstore::TreeContentStore;
+use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use failure::Fallible as Result;
 use manifest::Tree;
 use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
 use std::convert::TryFrom;

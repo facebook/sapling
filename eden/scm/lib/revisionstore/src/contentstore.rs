@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::Key;

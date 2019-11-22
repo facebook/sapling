@@ -7,8 +7,8 @@
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
+use anyhow::{Error, Result};
 use bytes::Bytes;
-use failure::{err_msg, Fallible as Result};
 
 use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
 use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
@@ -78,7 +78,7 @@ struct FakeRemoteDataStore {
 impl RemoteDataStore for FakeRemoteDataStore {
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         for k in keys {
-            let data = self.map.get(&k).ok_or(err_msg("Not found"))?;
+            let data = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
             let delta = Delta {
                 data: data.clone(),
                 base: None,
@@ -133,7 +133,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         for k in keys {
             self.store
-                .add(&k, self.map.get(&k).ok_or(err_msg("Not found"))?)?
+                .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?
         }
 
         Ok(())

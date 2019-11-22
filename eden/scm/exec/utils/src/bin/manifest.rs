@@ -7,8 +7,8 @@
 
 use std::{path::PathBuf, sync::Arc};
 
+use anyhow::{format_err, Result};
 use bytes::Bytes;
-use failure::{format_err, Fallible as Result};
 use structopt::StructOpt;
 
 use pathmatcher::AlwaysMatcher;

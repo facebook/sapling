@@ -6,7 +6,7 @@
  */
 
 // Union history store
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use types::{Key, NodeInfo};
 

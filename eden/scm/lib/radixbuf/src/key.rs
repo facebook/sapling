@@ -27,7 +27,7 @@
 
 use crate::errors::ErrorKind;
 use crate::traits::Resize;
-use failure::{bail, Fallible as Result};
+use anyhow::{bail, Result};
 use std::io::{Cursor, Seek, SeekFrom, Write};
 use vlqencoding::{VLQDecode, VLQEncode};
 

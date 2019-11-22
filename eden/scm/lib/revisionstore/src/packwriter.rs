@@ -11,7 +11,7 @@ use std::{
     io::{self, BufWriter, Write},
 };
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 /// A `PackWriter` will buffers all the writes to `T` and count the total number of bytes written.
 pub struct PackWriter<T: Write> {

@@ -11,9 +11,9 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use failure::{bail, ensure, Fallible as Result};
 use parking_lot::RwLock;
 
 use indexedlog::{

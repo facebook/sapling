@@ -14,10 +14,10 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::Result;
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::Fallible as Result;
 use parking_lot::Mutex;
 use tempfile::NamedTempFile;
 use thiserror::Error;

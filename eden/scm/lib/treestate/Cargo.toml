@@ -5,9 +5,9 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.20"
 bitflags = "1.0.4"
 byteorder = "1.2.7"
-failure = "0.1.5"
 thiserror = "1.0.5"
 twox-hash = "*"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }

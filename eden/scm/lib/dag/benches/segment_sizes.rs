@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use dag::{idmap::IdMap, segment::Dag};
-use failure::Fallible as Result;
 use minibench::{
     bench, elapsed,
     measure::{self, Measure},

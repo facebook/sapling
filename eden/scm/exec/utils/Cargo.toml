@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.20"
 bytes = { version = "0.4.11", features = ["serde"] }
-failure = "0.1.3"
 indexedlog = { path = "../../lib/indexedlog" }
 manifest = { path = "../../lib/manifest" }
 pathmatcher = { path = "../../lib/pathmatcher" }

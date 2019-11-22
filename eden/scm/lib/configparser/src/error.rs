@@ -9,24 +9,24 @@ use std::io;
 use std::path::PathBuf;
 use std::str;
 
-use failure::Fail;
+use thiserror::Error;
 
 /// The error type for parsing config files.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
     /// Unable to convert to a type.
-    #[fail(display = "{}", _0)]
+    #[error("{0}")]
     Convert(String),
 
     /// Unable to parse a file due to syntax.
-    #[fail(display = "{:?}:\n{}", _0, _1)]
+    #[error("{0:?}:\n{1}")]
     Parse(PathBuf, String),
 
     /// Unable to read a file due to IO errors.
-    #[fail(display = "{:?}: {}", _0, _1)]
-    Io(PathBuf, #[cause] io::Error),
+    #[error("{0:?}: {1}")]
+    Io(PathBuf, #[source] io::Error),
 
     /// Config file contains invalid UTF-8.
-    #[fail(display = "{:?}: {}", _0, _1)]
-    Utf8(PathBuf, #[cause] str::Utf8Error),
+    #[error("{0:?}: {1}")]
+    Utf8(PathBuf, #[source] str::Utf8Error),
 }

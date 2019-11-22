@@ -14,7 +14,7 @@ use std::fs::{self, remove_file as fs_remove_file};
 use std::io::{self, ErrorKind};
 use std::path::{Component, Path, PathBuf};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 #[cfg(not(unix))]
 use tempfile::Builder;
 

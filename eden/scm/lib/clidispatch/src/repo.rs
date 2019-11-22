@@ -6,8 +6,8 @@
  */
 
 use crate::errors;
+use anyhow::Result;
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
-use failure::Fallible as Result;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;

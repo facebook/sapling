@@ -6,7 +6,7 @@
  */
 
 use crate::error::*;
-use failure::Fallible as Result;
+use anyhow::Result;
 use std::io::{BufRead, Read, Write};
 
 pub trait Protocol {

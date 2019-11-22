@@ -5,8 +5,8 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.20"
 byteorder = "1"
-failure = "0"
 libc = "0.2"
 lz4-sys = "1"
 thiserror = "1.0.5"

@@ -12,7 +12,7 @@ use crate::serialization::Serializable;
 use crate::store::{BlockId, Store, StoreView};
 use crate::vecmap::VecMap;
 use crate::vecstack::VecStack;
-use failure::Fallible as Result;
+use anyhow::Result;
 use std::cell::Cell;
 use std::collections::Bound;
 use std::io::{Cursor, Read, Write};

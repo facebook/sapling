@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use failure::Error;
+use anyhow::Error;
 use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;

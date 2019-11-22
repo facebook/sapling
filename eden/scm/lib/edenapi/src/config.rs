@@ -187,7 +187,7 @@ mod tests {
 
     use std::fs::File;
 
-    use failure::Fallible as Result;
+    use anyhow::Result;
     use tempdir::TempDir;
 
     use configparser::config::Options;

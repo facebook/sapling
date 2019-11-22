@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

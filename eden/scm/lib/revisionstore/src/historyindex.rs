@@ -13,10 +13,10 @@ use std::{
     path::Path,
 };
 
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::Fallible as Result;
 use memmap::{Mmap, MmapOptions};
 use thiserror::Error;
 

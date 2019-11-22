@@ -12,7 +12,7 @@
 //! repository. The file path and file revision are then used to retrieve the contents of the
 //! file thus achieving the reconstruction of the entire repository state.
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use types::{HgId, RepoPath, RepoPathBuf};
 

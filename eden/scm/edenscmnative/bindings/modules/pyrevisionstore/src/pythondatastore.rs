@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use cpython::{
     exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
     PythonObject, PythonObjectWithTypeObject,
 };
-use failure::Fallible as Result;
 
 use cpython_ext::PyErr;
 use revisionstore::{DataStore, Delta, LocalStore, Metadata, RemoteDataStore};

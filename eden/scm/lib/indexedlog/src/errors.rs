@@ -21,7 +21,7 @@ use std::path::Path;
 // - The library can change error structure internals. That means accesses
 //   to the error object are via public methods instead of struct or enum
 //   fields. `Error` is the only opaque public error type.
-// - Compatible with std Error. Therefore failure::Error is supported too.
+// - Compatible with std Error. Therefore anyhow::Error is supported too.
 
 /// Represents all possible errors that can occur when using indexedlog.
 pub struct Error {

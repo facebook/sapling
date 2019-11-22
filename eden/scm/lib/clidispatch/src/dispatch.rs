@@ -10,12 +10,12 @@ use crate::errors;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::repo::OptionalRepo;
+use anyhow::Error;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use failure::Error;
 use std::convert::TryInto;
 use std::{env, path::Path};
 

@@ -23,8 +23,8 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 
+use anyhow::Error;
 use cpython::*;
-use failure::Error;
 
 use ::treestate::{
     errors::ErrorKind,

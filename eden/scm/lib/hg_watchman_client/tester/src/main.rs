@@ -55,7 +55,7 @@ macro_rules! println_result {
 }
 
 mod test_client {
-    use failure::bail;
+    use anyhow::{bail, Result};
     use hg_watchman_client::{
         HgWatchmanClient, QueryResponse, StateEnterResponse, StateLeaveResponse,
     };
@@ -68,8 +68,6 @@ mod test_client {
     use std::time::Instant;
     use watchman_client::protocol::{JsonProtocol, Protocol};
     use watchman_client::transport::Transport;
-
-    type Result<T> = std::result::Result<T, failure::Error>;
 
     static FILENAME: &str = "tester_watchmanstate";
 

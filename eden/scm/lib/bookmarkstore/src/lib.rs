@@ -16,7 +16,7 @@ use std::io::Write;
 use std::path::Path;
 use std::str;
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use types::hgid::HgId;

@@ -7,11 +7,12 @@
 
 use std::{
     convert::TryInto,
+    error::Error as StdError,
     fmt::{self, Display},
     path::PathBuf,
 };
 
-use failure::{Backtrace, Error, Fail};
+use anyhow::{Error, Result};
 use http::StatusCode;
 use thiserror::Error;
 
@@ -59,13 +60,12 @@ impl ApiError {
     }
 }
 
-impl Fail for ApiError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.cause.as_ref().map(Error::as_fail)
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.cause.as_ref().map(Error::backtrace)
+impl StdError for ApiError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match &self.cause {
+            Some(cause) => Some(&**cause),
+            None => None,
+        }
     }
 }
 

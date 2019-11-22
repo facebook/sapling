@@ -5,8 +5,8 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.20"
 atomicwrites = "0.2.2"
-failure = "0.1.5"
 types = { path = "../types" }
 indexedlog = { path = "../indexedlog" }
 thiserror = "1.0.5"

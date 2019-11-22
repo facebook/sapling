@@ -48,7 +48,7 @@ pub struct Abort(pub Cow<'static, str>);
 /// Print an error suitable for end-user consumption.
 ///
 /// This function adds `hg:` or `abort:` to error messages.
-pub fn print_error(err: &failure::Error, io: &mut crate::io::IO) {
+pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO) {
     use cliparser::parser::ParseError;
     if err.downcast_ref::<configparser::Error>().is_some() {
         let _ = io.write_err(format!("hg: parse error: {}\n", err));

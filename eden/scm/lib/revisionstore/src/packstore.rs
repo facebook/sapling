@@ -16,7 +16,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use parking_lot::Mutex;
 
 use types::{Key, NodeInfo};

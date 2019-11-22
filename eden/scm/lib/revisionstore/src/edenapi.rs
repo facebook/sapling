@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use edenapi::EdenApi;
 use types::Key;

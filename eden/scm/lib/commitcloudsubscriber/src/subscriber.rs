@@ -13,8 +13,8 @@ use crate::receiver::CommandName::{
     CommitCloudStartSubscriptions,
 };
 use crate::util;
+use anyhow::{bail, Result};
 use eventsource::reqwest::Client;
-use failure::{bail, Fallible as Result};
 use log::{error, info, warn};
 use reqwest::Url;
 use serde::Deserialize;

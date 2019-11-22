@@ -7,7 +7,7 @@
 
 use std::{fmt::Debug, slice::SliceIndex};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

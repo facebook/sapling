@@ -9,10 +9,11 @@
 
 use std::{cell::RefCell, io::Cursor};
 
+use anyhow::Error;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
-use failure::ResultExt;
+use thiserror::Error;
 
 use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore};
 use encoding::local_bytes_to_path;
@@ -75,6 +76,16 @@ fn unbundle(py: Python, data: PyBytes) -> PyResult<Vec<mutationentry>> {
     Ok(entries)
 }
 
+#[derive(Error, Debug)]
+enum InvalidNode {
+    #[error("Invalid successor node: {0}")]
+    Successor(Error),
+    #[error("Invalid predecessor node: {0}")]
+    Predecessor(Error),
+    #[error("Invalid split node: {0}")]
+    Split(Error),
+}
+
 py_class!(class mutationentry |py| {
     data entry: MutationEntry;
 
@@ -92,14 +103,14 @@ py_class!(class mutationentry |py| {
     ) -> PyResult<mutationentry> {
         let origin = MutationEntryOrigin::from_id(origin).map_pyerr::<exc::ValueError>(py)?;
         let succ = Node::from_slice(succ.data(py))
-            .with_context(|e| format!("Invalid successor node: {}", e))
+            .map_err(InvalidNode::Successor)
             .map_pyerr::<exc::ValueError>(py)?;
         let preds = {
             let mut nodes = Vec::new();
             if let Some(preds) = preds {
                 for p in preds {
                     nodes.push(Node::from_slice(p.data(py))
-                        .with_context(|e| format!("Invalid predecessor node: {}", e))
+                        .map_err(InvalidNode::Predecessor)
                         .map_pyerr::<exc::ValueError>(py)?);
                 }
             }
@@ -110,7 +121,7 @@ py_class!(class mutationentry |py| {
             if let Some(split) = split {
                 for s in split {
                     nodes.push(Node::from_slice(s.data(py))
-                        .with_context(|e| format!("Invalid split node: {}", e))
+                        .map_err(InvalidNode::Split)
                         .map_pyerr::<exc::ValueError>(py)?);
                 }
             }

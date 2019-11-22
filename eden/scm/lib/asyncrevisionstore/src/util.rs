@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use failure::{Error, Fallible as Result};
+use anyhow::{Error, Result};
 use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;

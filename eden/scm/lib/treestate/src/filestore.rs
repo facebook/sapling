@@ -9,8 +9,8 @@
 
 use crate::errors::ErrorKind;
 use crate::store::{BlockId, Store, StoreView};
+use anyhow::{bail, Result};
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use failure::{bail, Fallible as Result};
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fs::File;

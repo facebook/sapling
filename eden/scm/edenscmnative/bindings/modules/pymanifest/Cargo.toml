@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.20"
 bytes = { version = "0.4.11" }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 cpython-failure = { path = "../../../../lib/cpython-failure" }
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
 encoding = { path = "../../../../lib/encoding" }
-failure = "0.1.3"
 manifest = { path = "../../../../lib/manifest" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }

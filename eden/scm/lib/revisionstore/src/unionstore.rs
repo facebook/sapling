@@ -9,7 +9,7 @@
 
 use std::{slice::Iter, vec::IntoIter};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use types::Key;
 

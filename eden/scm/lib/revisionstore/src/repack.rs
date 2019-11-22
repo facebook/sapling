@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use failure::{format_err, Error, Fallible as Result};
+use anyhow::{format_err, Error, Result};
 use thiserror::Error;
 
 use types::Key;

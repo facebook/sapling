@@ -6,8 +6,8 @@
  */
 
 use crate::{commands, HgPython};
+use anyhow::Result;
 use clidispatch::{dispatch, errors};
-use failure::Fallible as Result;
 use parking_lot::Mutex;
 use std::env;
 use std::fs::File;

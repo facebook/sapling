@@ -13,8 +13,8 @@
 //! may want to use watchman to watch a portion of the scratch space
 //! and can arrange the directory structure to prevent over-watching.
 
+use anyhow::{bail, ensure, format_err, Result};
 use clap::{App, AppSettings, Arg, SubCommand};
-use failure::{bail, format_err, Fallible as Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
@@ -254,7 +254,7 @@ struct PasswordEntry {
 impl PasswordEntry {
     fn maybe_string(cstr: *const libc::c_char, context: &str) -> Result<String> {
         if cstr.is_null() {
-            Err(failure::err_msg(context.to_string()))
+            bail!(context.to_string());
         } else {
             let cstr = unsafe { std::ffi::CStr::from_ptr(cstr) };
             cstr.to_str().map_err(|e| e.into()).map(|x| x.to_owned())
@@ -262,7 +262,7 @@ impl PasswordEntry {
     }
 
     fn from_password(pwent: *const libc::passwd) -> Result<Self> {
-        failure::ensure!(!pwent.is_null(), "password ptr is null");
+        ensure!(!pwent.is_null(), "password ptr is null");
         let pw = unsafe { &*pwent };
         Ok(Self {
             unixname: Self::maybe_string(pw.pw_name, "pw_name is null")?,

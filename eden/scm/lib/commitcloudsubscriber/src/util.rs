@@ -7,7 +7,7 @@
 
 use crate::error::*;
 use crate::subscriber::Subscription;
-use failure::{bail, Fallible as Result};
+use anyhow::{bail, Result};
 use ini::Ini;
 use log::{error, info};
 use std::collections::HashMap;

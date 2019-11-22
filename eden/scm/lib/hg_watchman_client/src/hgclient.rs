@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use watchman_client::queries::*;

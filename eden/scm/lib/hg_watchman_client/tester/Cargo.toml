@@ -6,9 +6,9 @@ edition = "2018"
 [dependencies]
 hg_watchman_client = { version = "0.1.0", path = "../" }
 watchman_client = { version = "0.1.0", path = "../../watchman_client/" }
+anyhow = "1.0.20"
 clap = "2.32.0"
 serde = { version = "1", features = ["derive"] }
-failure = "0.1.3"
 
 [features]
 default = []

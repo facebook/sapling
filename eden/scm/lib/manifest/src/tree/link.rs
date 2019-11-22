@@ -7,7 +7,7 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use failure::{bail, format_err, Fallible as Result};
+use anyhow::{bail, format_err, Result};
 use once_cell::sync::OnceCell;
 
 use types::{HgId, PathComponentBuf, RepoPath};

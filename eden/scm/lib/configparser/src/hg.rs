@@ -13,8 +13,8 @@ use std::env;
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
 
+use anyhow::Result;
 use bytes::Bytes;
-use failure::Fallible as Result;
 use util::path::expand_path;
 
 use crate::config::{ConfigSet, Options};

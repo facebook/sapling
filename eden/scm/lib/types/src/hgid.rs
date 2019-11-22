@@ -10,7 +10,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 

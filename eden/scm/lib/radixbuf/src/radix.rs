@@ -77,7 +77,7 @@ use crate::base16::Base16Iter;
 use crate::errors::ErrorKind;
 use crate::key::KeyId;
 use crate::traits::Resize;
-use failure::{bail, Fallible as Result};
+use anyhow::{bail, Result};
 
 /// Number of children ("pointer"s) a radix node has
 pub const RADIX_NCHILDREN: usize = 16;
@@ -398,7 +398,6 @@ where
 mod tests {
     use super::*;
     use crate::key::{FixedKey, VariantKey};
-    use failure::AsFail;
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::mem::transmute;
@@ -413,33 +412,30 @@ mod tests {
         let key_id = (1u32 << 31).into();
         let r = radix_insert_with_key(&mut radix_buf, 0, key_id, &key, FixedKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(
-            t,
-            format!("{}", ErrorKind::OffsetOverflow(2147483648).as_fail())
-        );
+        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(2147483648)));
 
         // KeyId exceeds key buffer length
         let key_id = 30u32.into();
         let r = radix_insert(&mut radix_buf, 0, key_id, FixedKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(t, format!("{}", ErrorKind::InvalidKeyId(key_id).as_fail()));
+        assert_eq!(t, format!("{}", ErrorKind::InvalidKeyId(key_id)));
 
         // Radix root node offset exceeds radix buffer length
         let r = radix_insert_with_key(&mut radix_buf, 16, key_id, &key, FixedKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(16).as_fail()));
+        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(16)));
 
         // Radix node offset out of range during a lookup
         let prefix = [0xf].iter().cloned();
         let r = radix_prefix_lookup(&radix_buf, 0, prefix, FixedKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(15).as_fail()));
+        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(15)));
 
         // Base16 sequence overflow
         let prefix = [21].iter().cloned();
         let r = radix_prefix_lookup(&radix_buf, 0, prefix.clone(), FixedKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(t, format!("{}", ErrorKind::InvalidBase16(21).as_fail()));
+        assert_eq!(t, format!("{}", ErrorKind::InvalidBase16(21)));
 
         // Inserting a same key with a same `KeyId` is okay
         let key_id1 = VariantKey::append(&mut key_buf, &b"ab");
@@ -452,7 +448,7 @@ mod tests {
         let t = format!("{}", r.unwrap_err());
         assert_eq!(
             t,
-            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id2).as_fail())
+            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id2))
         );
 
         // A key cannot be a prefix of another key
@@ -476,12 +472,12 @@ mod tests {
         // Still impossible to cause key prefix conflicts
         let r = radix_insert(&mut radix_buf, 0, key_id4, VariantKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix.as_fail()));
+        assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix));
         let r = radix_insert(&mut radix_buf, 0, key_id5, VariantKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
         assert_eq!(
             t,
-            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id5).as_fail())
+            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id5))
         );
     }
 
@@ -502,7 +498,7 @@ mod tests {
             if i == 0 {
                 // This is sub-optimal. But see the NOTE in RadixOffset::follow.
                 let t = format!("{}", r.unwrap_err());
-                assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix.as_fail()));
+                assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix));
             } else if i <= key1.len() * 2 {
                 assert_eq!(r.unwrap(), Some(key1_id));
             } else {
@@ -519,7 +515,7 @@ mod tests {
             let r = radix_prefix_lookup(&radix_buf, 0, prefix, VariantKey::read, &key_buf);
             if i <= 5 {
                 let t = format!("{}", r.unwrap_err());
-                assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix.as_fail()));
+                assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix));
             } else if i <= key1.len() * 2 {
                 assert_eq!(r.unwrap(), Some(key1_id));
             } else {

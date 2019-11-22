@@ -14,10 +14,10 @@ use std::{
     u16,
 };
 
+use anyhow::{format_err, Result};
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{format_err, Fallible as Result};
 use parking_lot::Mutex;
 use tempfile::{Builder, NamedTempFile};
 use thiserror::Error;

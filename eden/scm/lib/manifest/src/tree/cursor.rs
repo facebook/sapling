@@ -7,7 +7,7 @@
 
 use std::collections::btree_map;
 
-use failure::Error;
+use anyhow::Error;
 
 use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 

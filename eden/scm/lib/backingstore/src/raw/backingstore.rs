@@ -7,7 +7,7 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use failure::{ensure, err_msg, Fallible as Result};
+use anyhow::{ensure, Error, Result};
 use libc::{c_char, size_t};
 use std::{slice, str};
 
@@ -59,7 +59,7 @@ fn backingstore_get_blob(
 
     store
         .get_blob(path, node)
-        .and_then(|opt| opt.ok_or_else(|| err_msg("no blob found")))
+        .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
         .map(CBytes::from_vec)
         .map(|result| Box::into_raw(Box::new(result)))
 }

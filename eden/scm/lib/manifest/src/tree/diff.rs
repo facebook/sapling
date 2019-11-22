@@ -7,7 +7,7 @@
 
 use std::{cmp::Ordering, collections::VecDeque, mem};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};

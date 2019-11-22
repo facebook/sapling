@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-failure = "0.1.5"
+anyhow = "1.0.20"
 indexedlog = { path = "../indexedlog" }
 lazy_static = "1"
 mincode = { path = "../mincode" }

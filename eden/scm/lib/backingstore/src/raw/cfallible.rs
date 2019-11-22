@@ -14,7 +14,7 @@
 //! Consumer of this struct needs to ensure the returned error string freed with
 //! `rust_cfallible_free_error`.
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use libc::c_char;
 use std::ffi::CString;
 

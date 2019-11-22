@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use failure::{Error, Fallible as Result};
+use anyhow::{Error, Result};
 use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 

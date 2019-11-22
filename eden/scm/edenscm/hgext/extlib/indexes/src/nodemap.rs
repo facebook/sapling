@@ -6,7 +6,7 @@
  */
 
 use crate::errors::ErrorKind;
-use failure::{bail, Fallible as Result};
+use anyhow::{bail, Result};
 use radixbuf::errors as rerrors;
 use radixbuf::key::KeyId;
 use radixbuf::radix::{

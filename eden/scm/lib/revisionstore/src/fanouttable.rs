@@ -18,8 +18,8 @@ use std::{
     option::Option,
 };
 
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible as Result;
 use thiserror::Error;
 
 use types::HgId;

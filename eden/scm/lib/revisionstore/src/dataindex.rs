@@ -12,8 +12,8 @@ use std::{
     path::Path,
 };
 
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible as Result;
 use memmap::{Mmap, MmapOptions};
 use thiserror::Error;
 

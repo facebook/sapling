@@ -9,9 +9,9 @@
 
 use std::{borrow::Borrow, cell::RefCell, ops::Deref, str, sync::Arc};
 
+use anyhow::{format_err, Error};
 use bytes::Bytes;
 use cpython::*;
-use failure::{format_err, Error};
 
 use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;

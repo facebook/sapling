@@ -14,7 +14,7 @@
 //! types of events that are outside this module.
 
 use super::ToValue;
-use failure::Fallible as Result;
+use anyhow::Result;
 use serde_alt::serde_alt;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;

@@ -9,7 +9,7 @@
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, io::ErrorKind, path::PathBuf};
 
-use failure::Fallible as Result;
+use anyhow::Result;
 use tempfile::NamedTempFile;
 
 use crate::error::EmptyMutablePack;

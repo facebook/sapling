@@ -7,8 +7,8 @@
 
 use super::{capture_pattern, json, match_pattern};
 use crate::event::Event;
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible as Result;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
 use lazy_static::lazy_static;

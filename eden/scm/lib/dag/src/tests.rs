@@ -8,7 +8,7 @@
 use crate::idmap::IdMap;
 use crate::segment::Dag;
 use crate::spanset::SpanSet;
-use failure::Fallible as Result;
+use anyhow::Result;
 use tempfile::tempdir;
 
 // Example from segmented-changelog.pdf

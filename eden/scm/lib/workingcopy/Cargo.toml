@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-failure = "0.1.3"
+anyhow = "1.0.20"
 pathmatcher = { path = "../pathmatcher"}
 types = { path = "../types"}
 

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use clidispatch::{
     command::{CommandTable, Register},
     errors,
@@ -12,7 +13,6 @@ use clidispatch::{
     repo::Repo,
 };
 use cliparser::define_flags;
-use failure::Fallible as Result;
 
 use blackbox::{event::Event, json, SessionId};
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};

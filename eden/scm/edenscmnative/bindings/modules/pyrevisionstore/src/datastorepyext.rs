@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use cpython::{
     PyBytes, PyDict, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
-use failure::Fallible as Result;
 
 use revisionstore::{DataStore, MutableDeltaStore, RemoteDataStore, ToKeys};
 use types::{Key, Node};
