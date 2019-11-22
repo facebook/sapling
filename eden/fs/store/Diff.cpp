@@ -330,11 +330,32 @@ void processBothPresent(
       processAddedSide(context, childFutures, parentPath, entry2);
     } else {
       // file-to-file diff
-      // We currently do not load the blob contents, and assume that blobs with
-      // different hashes have different contents.
-      if (entry1.getType() != entry2.getType() ||
-          entry1.getHash() != entry2.getHash()) {
+      // Even if blobs have different hashes, they could have the same contents.
+      // For example, if between the two revisions being compared, if a file was
+      // changed and then later reverted. In that case, the contents would be
+      // the same but the blobs would have different hashes
+      // If the types are different, then this entry is definitely modified
+      if (entry1.getType() != entry2.getType()) {
         context->callback->modifiedFile(parentPath + entry1.getName());
+      } else {
+        // If Mercurial eventually switches to using blob IDs that are solely
+        // based on the file contents (as opposed to file contents + history)
+        // then we could drop this extra load of the blob SHA-1, and rely only
+        // on the blob ID comparison instead.
+        auto compareEntryContents = folly::makeFutureWith(
+            [context, path = parentPath + entry1.getName(), &entry1, &entry2] {
+              auto f1 = context->store->getBlobSha1(entry1.getHash());
+              auto f2 = context->store->getBlobSha1(entry2.getHash());
+              return folly::collect(f1, f2).thenValue(
+                  [path, context](const std::tuple<Hash, Hash>& info) {
+                    const auto& [info1, info2] = info;
+                    if (info1 != info2) {
+                      context->callback->modifiedFile(path);
+                    }
+                  });
+            });
+        childFutures.add(
+            parentPath + entry1.getName(), std::move(compareEntryContents));
       }
     }
   }

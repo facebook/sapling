@@ -322,7 +322,8 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
     auto f2 = context_->store->getBlobSha1(currentBlobHash_);
     return folly::collect(f1, f2).thenValue(
         [this](const std::tuple<Hash, Hash>& info) {
-          if (std::get<0>(info) != std::get<1>(info)) {
+          const auto& [info1, info2] = info;
+          if (info1 != info2) {
             XLOG(DBG5) << "modified file: " << getPath();
             context_->callback->modifiedFile(getPath());
           }

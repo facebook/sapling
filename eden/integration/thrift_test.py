@@ -18,6 +18,7 @@ from .lib import testcase
 class ThriftTest(testcase.EdenRepoTest):
     commit1: str
     commit2: str
+    commit3: str
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -31,6 +32,10 @@ class ThriftTest(testcase.EdenRepoTest):
         self.repo.write_file("cdir/subdir/new.txt", "and improved")
         self.repo.remove_file("README")
         self.commit2 = self.repo.commit("Commit 2.")
+
+        # revert the change made to bdir/file
+        self.repo.write_file("bdir/file", "bar!\n")
+        self.commit3 = self.repo.commit("Commit 3.")
 
     def setUp(self) -> None:
         super().setUp()
@@ -211,6 +216,26 @@ class ThriftTest(testcase.EdenRepoTest):
             {
                 b"cdir/subdir/new.txt": ScmFileStatus.ADDED,
                 b"bdir/file": ScmFileStatus.MODIFIED,
+                b"README": ScmFileStatus.REMOVED,
+            },
+        )
+
+    def test_diff_revisions_with_reverted_file(self) -> None:
+        # Convert the commit hashes to binary for the thrift call
+        with self.get_thrift_client() as client:
+            diff = client.getScmStatusBetweenRevisions(
+                os.fsencode(self.mount),
+                binascii.unhexlify(self.commit1),
+                binascii.unhexlify(self.commit3),
+            )
+
+        self.assertDictEqual(diff.errors, {})
+        # bdir/file was modified twice between commit1 and commit3 but had a
+        # net change of 0 so it should not be reported in the diff results
+        self.assertDictEqual(
+            diff.entries,
+            {
+                b"cdir/subdir/new.txt": ScmFileStatus.ADDED,
                 b"README": ScmFileStatus.REMOVED,
             },
         )
