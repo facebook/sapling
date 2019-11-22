@@ -15,10 +15,11 @@ use context::CoreContext;
 use failure_ext::{format_err, Error};
 use futures::{
     future::{self},
-    Future, Stream,
+    Future,
 };
 use futures_ext::{
-    bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, FutureExt,
+    bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, BoxStream, FutureExt,
+    StreamExt,
 };
 use itertools::{Either, Itertools};
 use mercurial_types::{
@@ -316,10 +317,10 @@ pub fn walk_exact<FilterItem, NC>(
     node_checker: NC,
     filter_item: FilterItem,
     scheduled_max: usize,
-) -> impl Stream<Item = (Node, Option<(StepStats, NodeData)>), Error = Error>
+) -> BoxStream<(Node, Option<(StepStats, NodeData)>), Error>
 where
     FilterItem: 'static + Send + Clone + Fn(&Node) -> bool,
-    NC: 'static + Send + Clone + NodeChecker,
+    NC: 'static + Clone + NodeChecker + Send,
 {
     let changeset_fetcher = repo.get_changeset_fetcher();
 
@@ -356,7 +357,7 @@ where
                 Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
             }
             .map({
-                cloned!(filter_item, mut node_checker);
+                cloned!(filter_item, node_checker);
                 move |WalkStep(nd, mut children)| {
                     children.retain(|c| filter_item.clone()(c));
                     let num_direct = children.len();
@@ -381,7 +382,8 @@ where
                     ((walk_item, Some((stats, nd))), children)
                 }
             });
-            spawn_future(next).boxify()
+            spawn_future(next)
         }
     })
+    .boxify()
 }

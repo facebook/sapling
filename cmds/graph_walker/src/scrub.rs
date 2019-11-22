@@ -10,7 +10,8 @@ use crate::graph::{FileContentData, Node, NodeData};
 use crate::parse_args::parse_args_common;
 use crate::progress::{do_count, progress_stream};
 use crate::state::WalkState;
-use crate::walk::{walk_exact, StepStats};
+use crate::tail::walk_exact_tail;
+use crate::walk::StepStats;
 
 use clap::ArgMatches;
 use cloned::cloned;
@@ -18,13 +19,11 @@ use context::CoreContext;
 use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, loop_fn, Loop},
+    future::{self},
     Future, Stream,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;
-use std::time::{Duration, Instant};
-use tokio_timer::Delay;
 
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream>(
@@ -59,46 +58,19 @@ pub fn scrub_objects(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let (blobrepo_fut, walk_params) =
-        try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
+    let (blobrepo, walk_params) = try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    // Run a simple traversal
-    let traversal_fut = blobrepo_fut.and_then(move |repo| {
-        // Create this outside the loop so tail mode can reuse it
-        let node_checker = WalkState::new();
-
-        loop_fn((), move |()| {
-            let include_types = walk_params.include_types.clone();
-            cloned!(ctx, repo, walk_params, node_checker);
-            let raw_stream = walk_exact(
-                ctx.clone(),
-                repo,
-                walk_params.walk_roots,
-                node_checker,
-                move |walk_item| include_types.contains(&walk_item.get_type()),
-                walk_params.scheduled_max,
-            );
-            let loading = loading_stream(raw_stream);
-            let progress = progress_stream(ctx.clone(), 100, loading);
-            let one_fut = do_count(ctx, progress);
-
-            let tail_secs = walk_params.tail_secs;
-            let next_fut = one_fut.and_then(move |_| match tail_secs {
-                None => future::ok(Loop::Break(())).left_future(),
-                Some(interval) => {
-                    let start = Instant::now();
-                    let next_iter_deadline = start + Duration::from_secs(interval);
-                    Delay::new(next_iter_deadline)
-                        .map_err(Error::from)
-                        .and_then(|_| future::ok(Loop::Continue(())))
-                        .right_future()
-                }
-            });
-
-            next_fut
-        })
-    });
-
-    traversal_fut.boxify()
+    let make_sink = {
+        cloned!(ctx);
+        move |walk_output| {
+            cloned!(ctx);
+            let loading = loading_stream(walk_output);
+            let show_progress = progress_stream(ctx.clone(), 100, loading);
+            let one_fut = do_count(ctx, show_progress);
+            one_fut
+        }
+    };
+    let walk_state = WalkState::new();
+    walk_exact_tail(ctx, walk_params, walk_state, blobrepo, make_sink).boxify()
 }

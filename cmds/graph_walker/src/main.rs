@@ -24,6 +24,7 @@ mod parse_args;
 mod progress;
 mod scrub;
 mod state;
+mod tail;
 mod walk;
 
 #[fbinit::main]
