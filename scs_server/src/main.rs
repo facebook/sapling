@@ -148,7 +148,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         scuba_builder.clone(),
     );
     let service = {
-        cloned!(source_control_server);
         move |proto| {
             make_SourceControlService_server(proto, source_control_server.clone(), fb303.clone())
         }
