@@ -100,8 +100,7 @@ if (WIN32)
 endif()
 
 if (NOT WIN32)
-  find_package(mercurial CONFIG QUIET)
-  set(EDEN_HAVE_RUST_DATAPACK ${mercurial_FOUND})
+    set(EDEN_HAVE_RUST_DATAPACK ON)
 endif()
 
 set(EDEN_HAVE_MONONOKE OFF)

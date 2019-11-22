@@ -17,25 +17,19 @@ add_library(
     ${STORE_HG_SRCS}
 )
 
-list(
-  APPEND EDEN_STORE_HG_OPTIONAL_DEPS
-    datapack
-    eden_config
-)
 if (NOT WIN32)
   list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
 endif()
 
 if(EDEN_HAVE_RUST_DATAPACK)
-  list(
-    APPEND EDEN_STORE_HG_OPTIONAL_DEPS
-      Mercurial::backingstore
-  )
+  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS backingstore)
 endif()
 
 target_link_libraries(
   eden_store_hg
   PUBLIC
+    datapack
+    eden_config
     eden_model
     eden_store
     eden_utils

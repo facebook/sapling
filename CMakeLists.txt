@@ -23,8 +23,8 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/install")
 
 # CMake include directories
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake"
-  # For in-fbsource builds on mac
-  "${CMAKE_CURRENT_SOURCE_DIR}/../opensource/fbcode_builder/CMake"
+  # Eventually the files in eden/scm/CMake/ should be moved to CMake/
+  "${CMAKE_CURRENT_SOURCE_DIR}/eden/scm/CMake"
   # For shipit-transformed builds
   "${CMAKE_CURRENT_SOURCE_DIR}/build/fbcode_builder/CMake"
   ${CMAKE_MODULE_PATH})
@@ -57,6 +57,7 @@ endif()
 include(EdenConfigChecks)
 include(FBPythonBinary)
 include(FBThriftLibrary)
+include(RustStaticLibrary)
 
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -72,6 +73,9 @@ add_subdirectory(eden/cli)
 add_subdirectory(eden/fs)
 add_subdirectory(eden/integration)
 add_subdirectory(eden/py)
+if (NOT WIN32)
+  add_subdirectory(eden/scm/lib)
+endif()
 add_subdirectory(eden/test_support)
 
 configure_file(
