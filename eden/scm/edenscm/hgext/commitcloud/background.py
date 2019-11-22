@@ -192,7 +192,8 @@ def backgroundbackup(repo, command=None, dest=None):
         oldumask = os.umask(0o022)
         try:
             try:
-                username = util.shortuser(ui.username())
+                # the user name from the machine
+                username = util.getuser()
             except Exception:
                 username = "unknown"
 
