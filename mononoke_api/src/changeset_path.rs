@@ -10,14 +10,20 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
+use bytes::Bytes;
 use cloned::cloned;
+use failure::err_msg;
 use filestore::FetchKey;
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::{FutureExt, Shared};
+use futures_util::{try_join, try_stream::TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
 };
+use xdiff;
+
+pub use xdiff::CopyInfo;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -34,6 +40,14 @@ pub enum PathEntry {
     NotPresent,
     Tree(TreeContext),
     File(FileContext, FileType),
+}
+
+/// A diff between two files in extended unified diff format
+pub struct UnifiedDiff {
+    /// Raw diff as bytes.
+    pub raw_diff: Vec<u8>,
+    /// One of the diffed files is binary, raw diff contains just a placeholder.
+    pub is_binary: bool,
 }
 
 type FsnodeResult = Result<Option<Entry<FsnodeId, (ContentId, FileType)>>, MononokeError>;
@@ -183,6 +197,72 @@ impl ChangesetPathContext {
         };
         Ok(entry)
     }
+}
+
+/// Renders the diff (in the git diff format) against some other path.
+/// Provided with copy_info will render the diff as copy or move as requested.
+// (does not do the copy-tracking on its own) async fn unified_diff(
+pub async fn unified_diff(
+    // The diff applied to old_path with produce new_path
+    old_path: &Option<ChangesetPathContext>,
+    new_path: &Option<ChangesetPathContext>,
+    copy_info: CopyInfo,
+    context_lines: usize,
+) -> Result<UnifiedDiff, MononokeError> {
+    // Helper for getting file information.
+    async fn get_file_data(
+        path: &Option<ChangesetPathContext>,
+    ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
+        match path {
+            Some(path) => {
+                if let Some(file_type) = path.file_type().await? {
+                    let file = path.file().await?.ok_or_else(|| {
+                        MononokeError::from(err_msg("assertion error: file should exist"))
+                    })?;
+                    let contents = file.content().await.compat().try_concat().await?;
+                    let file_type = match file_type {
+                        FileType::Regular => xdiff::FileType::Regular,
+                        FileType::Executable => xdiff::FileType::Executable,
+                        FileType::Symlink => xdiff::FileType::Symlink,
+                    };
+                    Ok(Some(xdiff::DiffFile {
+                        path: path.to_string(),
+                        contents,
+                        file_type,
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    // Helper for checking if we should mark the diff as binary
+    fn is_binary(diff_file: &Option<xdiff::DiffFile<String, Bytes>>) -> bool {
+        diff_file
+            .as_ref()
+            .map(|f| f.contents.contains(&0))
+            .unwrap_or(false)
+    }
+
+    let (old_diff_file, new_diff_file) =
+        try_join!(get_file_data(&old_path), get_file_data(&new_path))?;
+    let is_binary = is_binary(&old_diff_file) || is_binary(&new_diff_file);
+    let copy_info = match copy_info {
+        CopyInfo::None => xdiff::CopyInfo::None,
+        CopyInfo::Move => xdiff::CopyInfo::Move,
+        CopyInfo::Copy => xdiff::CopyInfo::Copy,
+    };
+    let opts = xdiff::DiffOpts {
+        context: context_lines,
+        copy_info,
+    };
+    let raw_diff = xdiff::diff_unified(old_diff_file, new_diff_file, opts);
+    Ok(UnifiedDiff {
+        raw_diff,
+        is_binary,
+    })
 }
 
 impl fmt::Display for ChangesetPathContext {

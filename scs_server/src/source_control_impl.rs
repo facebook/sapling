@@ -14,21 +14,19 @@ use std::ops::RangeBounds;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bytes::{BufMut, Bytes};
+use bytes::BufMut;
 use context::generate_session_id;
 use faster_hex::hex_string;
 use fbinit::FacebookInit;
 use futures::stream::Stream;
-use futures_preview::{
-    compat::Future01CompatExt, compat::Stream01CompatExt, stream, StreamExt, TryStreamExt,
-};
+use futures_preview::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
 use futures_util::{future::FutureExt, try_future::try_join_all, try_join};
 use mercurial_types::Globalrev;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetPathDiffContext,
-    ChangesetSpecifier, CoreContext, FileContext, FileId, FileMetadata, FileType, HgChangesetId,
-    Mononoke, MononokeError, PathEntry, RepoContext, SessionContainer, TreeContext, TreeEntry,
-    TreeId,
+    unified_diff, ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetPathDiffContext,
+    ChangesetSpecifier, CopyInfo, CoreContext, FileContext, FileId, FileMetadata, FileType,
+    HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext, SessionContainer, TreeContext,
+    TreeEntry, TreeId, UnifiedDiff,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
@@ -38,7 +36,6 @@ use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
-use xdiff;
 
 // Magic number used when we want to limit concurrency with buffer_unordered.
 const CONCURRENCY_LIMIT: usize = 100;
@@ -484,84 +481,6 @@ async fn map_commit_identities(
     Ok(result)
 }
 
-// Diff file against other file.
-async fn changeset_path_diff(
-    old_path: &Option<ChangesetPathContext>,
-    new_path: &Option<ChangesetPathContext>,
-    copy_info: thrift::CopyInfo,
-    context_lines: usize,
-) -> Result<thrift::Diff, errors::ServiceError> {
-    // Helper for getting file information.
-    async fn get_file_data(
-        path: &Option<ChangesetPathContext>,
-    ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, errors::ServiceError> {
-        match path {
-            Some(path) => {
-                if let Some(file_type) = path.file_type().await? {
-                    let file = path.file().await?.ok_or_else(|| {
-                        errors::internal_error("assertion error: file should exist")
-                    })?;
-                    let contents = file
-                        .content()
-                        .await
-                        .compat()
-                        .try_concat()
-                        .await
-                        .map_err(errors::internal_error)?;
-                    let file_type = match file_type {
-                        FileType::Regular => xdiff::FileType::Regular,
-                        FileType::Executable => xdiff::FileType::Executable,
-                        FileType::Symlink => xdiff::FileType::Symlink,
-                    };
-                    Ok(Some(xdiff::DiffFile {
-                        path: path.to_string(),
-                        contents,
-                        file_type,
-                    }))
-                } else {
-                    Ok(None)
-                }
-            }
-            None => Ok(None),
-        }
-    }
-
-    // Helper for checking if we should mark the diff as binary
-    fn is_binary(
-        old_diff_file: &Option<xdiff::DiffFile<String, Bytes>>,
-        new_diff_file: &Option<xdiff::DiffFile<String, Bytes>>,
-    ) -> bool {
-        old_diff_file
-            .as_ref()
-            .map(|f| f.contents.contains(&0))
-            .unwrap_or(false)
-            || new_diff_file
-                .as_ref()
-                .map(|f| f.contents.contains(&0))
-                .unwrap_or(false)
-    }
-
-    let (old_diff_file, new_diff_file) =
-        try_join!(get_file_data(&old_path), get_file_data(&new_path))?;
-    let is_binary = is_binary(&old_diff_file, &new_diff_file);
-    let copy_info = match copy_info {
-        thrift::CopyInfo::NONE => xdiff::CopyInfo::None,
-        thrift::CopyInfo::MOVE => xdiff::CopyInfo::Move,
-        thrift::CopyInfo::COPY => xdiff::CopyInfo::Copy,
-        // thrift is using numbers under the hood so I have to add a default case
-        _ => Err(errors::internal_error("unexpected value of copy_info!"))?,
-    };
-    let opts = xdiff::DiffOpts {
-        context: context_lines,
-        copy_info,
-    };
-    let raw_diff = Some(xdiff::diff_unified(old_diff_file, new_diff_file, opts));
-    Ok(thrift::Diff::raw_diff(thrift::RawDiff {
-        raw_diff,
-        is_binary,
-    }))
-}
-
 /// Trait to extend CommitId with useful functions.
 trait CommitIdExt {
     fn scheme(&self) -> thrift::CommitIdentityScheme;
@@ -634,6 +553,20 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
             _ => Err(errors::invalid_request(format!(
                 "unsupported commit identity scheme ({})",
                 commit.scheme()
+            ))),
+        }
+    }
+}
+
+impl FromRequest<thrift::CopyInfo> for CopyInfo {
+    fn from_request(copy_info: &thrift::CopyInfo) -> Result<Self, thrift::RequestError> {
+        match copy_info {
+            &thrift::CopyInfo::NONE => Ok(CopyInfo::None),
+            &thrift::CopyInfo::COPY => Ok(CopyInfo::Copy),
+            &thrift::CopyInfo::MOVE => Ok(CopyInfo::Move),
+            &val => Err(errors::invalid_request(format!(
+                "unsupported copy info ({})",
+                val
             ))),
         }
     }
@@ -742,6 +675,15 @@ impl IntoResponse<thrift::FileInfo> for FileMetadata {
             content_sha1: self.sha1.as_ref().to_vec(),
             content_sha256: self.sha256.as_ref().to_vec(),
         }
+    }
+}
+
+impl IntoResponse<thrift::Diff> for UnifiedDiff {
+    fn into_response(self) -> thrift::Diff {
+        thrift::Diff::raw_diff(thrift::RawDiff {
+            raw_diff: Some(self.raw_diff),
+            is_binary: self.is_binary,
+        })
     }
 }
 
@@ -1079,7 +1021,7 @@ impl SourceControlService for SourceControlServiceImpl {
                         Some(path) => Some(other_commit.path(path)?),
                         None => None,
                     },
-                    path_pair.copy_info,
+                    CopyInfo::from_request(&path_pair.copy_info)?,
                 ))
             })
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
@@ -1111,13 +1053,12 @@ impl SourceControlService for SourceControlServiceImpl {
             try_join_all(paths.into_iter().map(|(base_path, other_path, copy_info)| {
                 async move {
                     let diff =
-                        changeset_path_diff(&other_path, &base_path, copy_info, context_lines)
-                            .await?;
+                        unified_diff(&other_path, &base_path, copy_info, context_lines).await?;
                     let r: Result<_, errors::ServiceError> =
                         Ok(thrift::CommitFileDiffsResponseElement {
                             base_path: base_path.map(|p| p.to_string()),
                             other_path: other_path.map(|p| p.to_string()),
-                            diff,
+                            diff: diff.into_response(),
                         });
                     r
                 }

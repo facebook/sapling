@@ -47,7 +47,9 @@ mod test;
 pub use crate::legacy::get_content_by_path;
 
 pub use crate::changeset::ChangesetContext;
-pub use crate::changeset_path::{ChangesetPathContext, PathEntry};
+pub use crate::changeset_path::{
+    unified_diff, ChangesetPathContext, CopyInfo, PathEntry, UnifiedDiff,
+};
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::errors::MononokeError;
 pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
