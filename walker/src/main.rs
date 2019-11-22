@@ -29,7 +29,7 @@ mod walk;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app_name = "graph_walker";
+    let app_name = "walker";
     let matches = parse_args::setup_toplevel_app(app_name).get_matches();
     let logger = args::init_logging(fb, &matches);
 
