@@ -23,8 +23,6 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/install")
 
 # CMake include directories
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake"
-  # Eventually the files in eden/scm/CMake/ should be moved to CMake/
-  "${CMAKE_CURRENT_SOURCE_DIR}/eden/scm/CMake"
   # For shipit-transformed builds
   "${CMAKE_CURRENT_SOURCE_DIR}/build/fbcode_builder/CMake"
   ${CMAKE_MODULE_PATH})
