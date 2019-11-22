@@ -9,9 +9,7 @@
 #include <folly/Range.h>
 #include <memory>
 
-// This is relative path because of the CMake build since it does not preserve
-// the directory structure we have in the repository
-#include "RustBackingStore.h" // @manual
+#include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
 
 namespace folly {
 class IOBuf;
@@ -21,8 +19,6 @@ class Optional;
 
 namespace facebook {
 namespace eden {
-class Tree;
-class Hash;
 
 class HgNativeBackingStore {
  public:
