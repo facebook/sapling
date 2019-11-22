@@ -327,6 +327,7 @@ Future<Unit> ensureDotEdenSymlink(
               directory->symlink(symlinkName, symlinkTarget.stringPiece());
             });
         }
+        EDEN_BUG() << "unexpected action type when configuring .eden directory";
       })
       .thenError([symlinkName](folly::exception_wrapper&& ew) {
         // Log the error but don't propagate it up to our caller.

@@ -18,6 +18,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/utils/Bug.h"
 
 namespace facebook {
 namespace eden {
@@ -33,6 +34,8 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
     case RustTreeEntryType::Symlink:
       return TreeEntryType::SYMLINK;
   }
+  EDEN_BUG() << "unknown tree entry type " << static_cast<uint32_t>(type)
+             << " loaded from data store";
 }
 
 TreeEntry fromRawTreeEntry(
