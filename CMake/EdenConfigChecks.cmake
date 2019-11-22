@@ -99,10 +99,6 @@ if (WIN32)
   find_package(Prjfs MODULE REQUIRED)
 endif()
 
-if (NOT WIN32)
-    set(EDEN_HAVE_RUST_DATAPACK ON)
-endif()
-
 set(EDEN_HAVE_MONONOKE OFF)
 
 # TODO(strager): Support systemd in the opensource build.

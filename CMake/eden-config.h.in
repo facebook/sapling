@@ -17,4 +17,4 @@
 #cmakedefine EDEN_HAVE_SQLITE3
 #cmakedefine EDEN_HAVE_SYSTEMD
 #cmakedefine EDEN_HAVE_MONONOKE
-#cmakedefine EDEN_HAVE_RUST_DATAPACK
+#define EDEN_HAVE_RUST_DATAPACK 1

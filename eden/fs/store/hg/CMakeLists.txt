@@ -5,13 +5,6 @@
 
 file(GLOB STORE_HG_SRCS "*.cpp")
 
-if (NOT EDEN_HAVE_RUST_DATAPACK)
-  list(
-    REMOVE_ITEM STORE_HG_SRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/HgDatapackStore.cpp
-  )
-endif()
-
 add_library(
   eden_store_hg STATIC
     ${STORE_HG_SRCS}
@@ -21,13 +14,10 @@ if (NOT WIN32)
   list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
 endif()
 
-if(EDEN_HAVE_RUST_DATAPACK)
-  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS backingstore)
-endif()
-
 target_link_libraries(
   eden_store_hg
   PUBLIC
+    backingstore
     datapack
     eden_config
     eden_model

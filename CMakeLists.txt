@@ -73,9 +73,7 @@ add_subdirectory(eden/cli)
 add_subdirectory(eden/fs)
 add_subdirectory(eden/integration)
 add_subdirectory(eden/py)
-if (NOT WIN32)
-  add_subdirectory(eden/scm/lib)
-endif()
+add_subdirectory(eden/scm/lib)
 add_subdirectory(eden/test_support)
 
 configure_file(
