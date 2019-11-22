@@ -1207,23 +1207,32 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::CommitCompareParams,
     ) -> Result<thrift::CommitCompareResponse, service::CommitCompareExn> {
         let ctx = self.create_ctx(Some(&commit));
-        let repo = self.repo(ctx, &commit.repo)?;
+        let (repo, base_changeset) = self.repo_changeset(ctx, &commit).await?;
 
-        let base_changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
-        let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
-        let (base_changeset, other_changeset_id) = try_join!(
-            repo.changeset(base_changeset_specifier),
-            repo.resolve_specifier(other_changeset_specifier),
-        )?;
-        let base_changeset =
-            base_changeset.ok_or_else(|| errors::commit_not_found(commit.description()))?;
-        let other_changeset_id = other_changeset_id.ok_or_else(|| {
-            errors::commit_not_found(format!(
-                "repo={} commit={}",
-                commit.repo.name,
-                params.other_commit_id.to_string()
-            ))
-        })?;
+        let other_changeset_id = match &params.other_commit_id {
+            Some(id) => {
+                let specifier = ChangesetSpecifier::from_request(id)?;
+                repo.resolve_specifier(specifier).await?.ok_or_else(|| {
+                    errors::commit_not_found(format!(
+                        "repo={} commit={}",
+                        commit.repo.name,
+                        id.to_string()
+                    ))
+                })?
+            }
+            None => base_changeset
+                .parents()
+                .await?
+                .into_iter()
+                .next()
+                .ok_or_else(|| {
+                    // TODO: compare with empty manifest in this case
+                    errors::commit_not_found(format!(
+                        "parent commit not found: {}",
+                        commit.description()
+                    ))
+                })?,
+        };
         let diff = base_changeset
             .diff(other_changeset_id, !params.skip_copies_renames)
             .await?;
@@ -1233,7 +1242,16 @@ impl SourceControlService for SourceControlServiceImpl {
             .try_collect()
             .await?;
 
-        Ok(thrift::CommitCompareResponse { diff_files })
+        let other_changeset = repo
+            .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
+            .await?
+            .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
+        let other_commit_ids =
+            map_commit_identity(&other_changeset, &params.identity_schemes).await?;
+        Ok(thrift::CommitCompareResponse {
+            diff_files,
+            other_commit_ids,
+        })
     }
 
     /// Returns information about the file or directory at a path in a commit.
