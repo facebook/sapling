@@ -214,10 +214,17 @@ fn hg_file_node_step(
     };
     repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
         .map(move |file_node_opt| match file_node_opt {
-            Some(file_node) => {
-                // Following linknode increases parallelism of walk
-                let linked_commit = Node::BonsaiChangesetFromHgChangeset(file_node.linknode);
-                WalkStep(NodeData::HgFileNode(Some(file_node)), vec![linked_commit])
+            Some(file_node_info) => {
+                // Following linknode increases parallelism of walk as well as validating link node
+                let linked_commit = Node::BonsaiChangesetFromHgChangeset(file_node_info.linknode);
+                let mut recurse = vec![linked_commit];
+                file_node_info.p1.map(|parent_file_node_id| {
+                    recurse.push(Node::HgFileEnvelope(parent_file_node_id))
+                });
+                file_node_info.p2.map(|parent_file_node_id| {
+                    recurse.push(Node::HgFileEnvelope(parent_file_node_id))
+                });
+                WalkStep(NodeData::HgFileNode(Some(file_node_info)), recurse)
             }
             None => WalkStep(NodeData::HgFileNode(None), vec![]),
         })
