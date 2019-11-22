@@ -12,7 +12,7 @@ use std::pin::Pin;
 
 use bytes::Bytes;
 use cloned::cloned;
-use failure::err_msg;
+use failure_ext::err_msg;
 use filestore::FetchKey;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::{FutureExt, Shared};
