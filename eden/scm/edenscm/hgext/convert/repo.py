@@ -229,11 +229,11 @@ class gitutil(object):
         cls.gitshowrawtreeregex = re.compile(r"^tree (?P<hash>[0-9a-f]+)\s*$")
         cls.gitshowrawparentregex = re.compile(r"^parent (?P<hash>[0-9a-f]+)\s*$")
         cls.gitshowrawauthorregex = re.compile(
-            r"^author (?P<username>[^<]+) <(?P<email>[^>]*)> (?P<time>\d*)"
+            r"^author (?P<username>[^<]*) <(?P<email>[^>]*)> (?P<time>\d*)"
             r" (?P<timezone>[+-]?\d{4})\s*$"
         )
         cls.gitshowrawcommitterregex = re.compile(
-            r"^committer (?P<username>[^<]+) <(?P<email>[^>]*)> (?P<time>\d*)"
+            r"^committer (?P<username>[^<]*) <(?P<email>[^>]*)> (?P<time>\d*)"
             r" (?P<timezone>[+-]?\d{4})\s*$"
         )
 
