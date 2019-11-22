@@ -26,17 +26,17 @@ try:
     import edenscm.mercurial.ui
     import edenscm.mercurial.util
 except ImportError:
-    import mercurial.error
-    import mercurial.hg
-    import mercurial.node
-    import mercurial.scmutil
-    import mercurial.txnutil
-    import mercurial.ui
-    import mercurial.util
+    import mercurial.error  # @manual
+    import mercurial.hg  # @manual
+    import mercurial.node  # @manual
+    import mercurial.scmutil  # @manual
+    import mercurial.txnutil  # @manual
+    import mercurial.ui  # @manual
+    import mercurial.util  # @manual
 
 
 if os.name == "nt":
-    from msvcrt import open_osfhandle
+    from msvcrt import open_osfhandle  # @manual
 
     def fdopen(handle, mode):
         os_mode = os.O_WRONLY if mode == "wb" else os.O_RDONLY
@@ -56,7 +56,7 @@ hex = binascii.hexlify
 try:
     from edenscm.hgext.remotefilelog import shallowutil, constants
 except ImportError:
-    from hgext.remotefilelog import shallowutil, constants
+    from hgext.remotefilelog import shallowutil, constants  # @manual
 
 #
 # Message chunk header format.
