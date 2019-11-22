@@ -16,6 +16,7 @@ target_include_directories(
 target_link_libraries(
   eden_sqlite
   PUBLIC
+    eden_utils
     Folly::folly
     ${SQLITE3_LIBRARY}
 )
