@@ -707,10 +707,15 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
 folly::Future<CheckoutResult> EdenMount::checkout(
     Hash snapshotHash,
     CheckoutMode checkoutMode) {
+  const folly::stop_watch<> stopWatch;
+  auto checkoutTimes = std::make_shared<CheckoutTimes>();
+
   // Hold the snapshot lock for the duration of the entire checkout operation.
   //
   // This prevents multiple checkout operations from running in parallel.
   auto parentsLock = parentInfo_.wlock();
+  checkoutTimes->didAcquireParentsLock = stopWatch.elapsed();
+
   auto oldParents = parentsLock->parents;
   auto ctx = std::make_shared<CheckoutContext>(
       this, std::move(parentsLock), checkoutMode);
@@ -734,9 +739,10 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
             return folly::collect(fromTreeFuture, toTreeFuture);
           })
-      .thenValue([this, ctx, journalDiffCallback](
+      .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                          treeResults) {
+        checkoutTimes->didLookupTrees = stopWatch.elapsed();
         // Call JournalDiffCallback::performDiff() to compute the changes
         // between the original working directory state and the source tree
         // state.
@@ -751,76 +757,89 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         return journalDiffCallback->performDiff(this, getRootInode(), fromTree)
             .thenValue([treeResults](Unit) { return treeResults; });
       })
-      .thenValue(
-          [this, ctx](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
-                          treeResults) {
-            // Perform the requested checkout operation after the journal diff
-            // completes.
-            auto& [fromTree, toTree] = treeResults;
-            ctx->start(this->acquireRenameLock());
+      .thenValue([this, ctx, checkoutTimes, stopWatch](
+                     std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
+                         treeResults) {
+        checkoutTimes->didDiff = stopWatch.elapsed();
+        // Perform the requested checkout operation after the journal diff
+        // completes.
+        auto& [fromTree, toTree] = treeResults;
+        ctx->start(this->acquireRenameLock());
 
-            /**
-             * If a significant number of tree inodes are loaded or referenced
-             * by FUSE, then checkout is slow, because Eden must precisely
-             * manage changes to each one, as if the checkout was actually
-             * creating and removing files in each directory. If a tree is
-             * unloaded and unmodified, Eden can pretend the checkout operation
-             * blew away the entire subtree and assigned new inode numbers to
-             * everything under it, which is much cheaper.
-             *
-             * To make checkout faster, enumerate all loaded, unreferenced
-             * inodes and unload them, allowing checkout to use the fast path.
-             *
-             * Note that this will not unload any inodes currently referenced by
-             * FUSE, including the kernel's cache, so rapidly switching between
-             * commits while working should not be materially affected.
-             */
-            this->getRootInode()->unloadChildrenUnreferencedByFuse();
+        checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
 
-            return this->getRootInode()->checkout(ctx.get(), fromTree, toTree);
-          })
-      .thenValue([ctx, snapshotHash](auto&&) {
+        /**
+         * If a significant number of tree inodes are loaded or referenced
+         * by FUSE, then checkout is slow, because Eden must precisely
+         * manage changes to each one, as if the checkout was actually
+         * creating and removing files in each directory. If a tree is
+         * unloaded and unmodified, Eden can pretend the checkout operation
+         * blew away the entire subtree and assigned new inode numbers to
+         * everything under it, which is much cheaper.
+         *
+         * To make checkout faster, enumerate all loaded, unreferenced
+         * inodes and unload them, allowing checkout to use the fast path.
+         *
+         * Note that this will not unload any inodes currently referenced by
+         * FUSE, including the kernel's cache, so rapidly switching between
+         * commits while working should not be materially affected.
+         */
+        this->getRootInode()->unloadChildrenUnreferencedByFuse();
+
+        return this->getRootInode()->checkout(ctx.get(), fromTree, toTree);
+      })
+      .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
+        checkoutTimes->didCheckout = stopWatch.elapsed();
         // Complete the checkout and save the new snapshot hash
         return ctx->finish(snapshotHash);
       })
-      .thenValue([this, ctx, oldParents, snapshotHash, journalDiffCallback](
-                     std::vector<CheckoutConflict>&& conflicts) {
-        CheckoutResult result;
-        result.conflicts = std::move(conflicts);
-        if (ctx->isDryRun()) {
-          // This is a dry run, so all we need to do is tell the caller about
-          // the conflicts: we should not modify any files or add any entries to
-          // the journal.
-          return result;
-        }
+      .thenValue(
+          [this,
+           ctx,
+           checkoutTimes,
+           stopWatch,
+           oldParents,
+           snapshotHash,
+           journalDiffCallback](std::vector<CheckoutConflict>&& conflicts) {
+            checkoutTimes->didFinish = stopWatch.elapsed();
 
-        // Save the new snapshot hash to the config
-        // TODO: This should probably be done by CheckoutConflict::finish()
-        // while still holding the parents lock.
-        this->config_->setParentCommits(snapshotHash);
-        XLOG(DBG1) << "updated snapshot for " << this->getPath() << " from "
-                   << oldParents << " to " << snapshotHash;
+            CheckoutResult result;
+            result.times = *checkoutTimes;
+            result.conflicts = std::move(conflicts);
+            if (ctx->isDryRun()) {
+              // This is a dry run, so all we need to do is tell the caller
+              // about the conflicts: we should not modify any files or add any
+              // entries to the journal.
+              return result;
+            }
 
-        // Write a journal entry
-        //
-        // Note that we do not call journalDiffCallback->performDiff() a second
-        // time here to compute the files that are now different from the
-        // new state.  The checkout operation will only touch files that are
-        // changed between fromTree and toTree.
-        //
-        // Any files that are unclean after the checkout operation must have
-        // either been unclean before it started, or different between the
-        // two trees.  Therefore the JournalDelta already includes information
-        // that these files changed.
-        auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
-        journal_->recordUncleanPaths(
-            oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
+            // Save the new snapshot hash to the config
+            // TODO: This should probably be done by CheckoutConflict::finish()
+            // while still holding the parents lock.
+            this->config_->setParentCommits(snapshotHash);
+            XLOG(DBG1) << "updated snapshot for " << this->getPath() << " from "
+                       << oldParents << " to " << snapshotHash;
 
-        return result;
-      })
-      .thenTry([this, ctx](Try<CheckoutResult>&& result) {
+            // Write a journal entry
+            //
+            // Note that we do not call journalDiffCallback->performDiff() a
+            // second time here to compute the files that are now different from
+            // the new state.  The checkout operation will only touch files that
+            // are changed between fromTree and toTree.
+            //
+            // Any files that are unclean after the checkout operation must have
+            // either been unclean before it started, or different between the
+            // two trees.  Therefore the JournalDelta already includes
+            // information that these files changed.
+            auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
+            journal_->recordUncleanPaths(
+                oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
+
+            return result;
+          })
+      .thenTry([this, stopWatch](Try<CheckoutResult>&& result) {
         auto checkoutTimeInSeconds =
-            std::chrono::duration<double>{ctx->getCheckoutDuration()};
+            std::chrono::duration<double>{stopWatch.elapsed()};
         this->serverState_->getStructuredLogger()->logEvent(
             FinishedCheckout{checkoutTimeInSeconds.count(), result.hasValue()});
         return std::move(result);

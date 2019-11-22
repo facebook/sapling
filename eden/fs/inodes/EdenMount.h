@@ -115,8 +115,22 @@ struct Owner {
   gid_t gid;
 };
 
+/**
+ * Durations of the various stages of checkout.
+ */
+struct CheckoutTimes {
+  using duration = std::chrono::steady_clock::duration;
+  duration didAcquireParentsLock{};
+  duration didLookupTrees{};
+  duration didDiff{};
+  duration didAcquireRenameLock{};
+  duration didCheckout{};
+  duration didFinish{};
+};
+
 struct CheckoutResult {
   std::vector<CheckoutConflict> conflicts;
+  CheckoutTimes times;
 };
 
 /**

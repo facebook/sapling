@@ -98,16 +98,7 @@ class CheckoutContext {
     return renameLock_;
   }
 
-  /**
-   * Return duration since checkout operation started.
-   */
-  typename folly::stop_watch<>::duration getCheckoutDuration() const {
-    return stopWatch_.elapsed();
-  }
-
  private:
-  const folly::stop_watch<> stopWatch_;
-
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
   folly::Synchronized<EdenMount::ParentInfo>::LockedPtr parentsLock_;
