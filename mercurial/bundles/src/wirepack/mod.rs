@@ -297,7 +297,8 @@ impl DataEntry {
             DataEntryVersion::V1 => None,
             DataEntryVersion::V2 => {
                 let mut cursor = Cursor::new(buf.as_ref());
-                let metadata = Metadata::read(&mut cursor)?;
+                let metadata =
+                    Metadata::read(&mut cursor).map_err(|e| Error::from_boxed_compat(e.into()))?;
 
                 // Metadata::read doesn't consume bytes (it just reads them), but our
                 // implementation here wants to consume bytes we read. We work around this here.
@@ -338,7 +339,9 @@ impl DataEntry {
         }
 
         if let Some(ref metadata) = self.metadata {
-            metadata.write(buf)?
+            metadata
+                .write(buf)
+                .map_err(|e| Error::from_boxed_compat(e.into()))?
         }
 
         Ok(())
