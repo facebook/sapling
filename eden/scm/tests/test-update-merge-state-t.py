@@ -112,6 +112,7 @@ sh % "hg continue"
 createstate(command="backout")
 sh % "hg continue" == r"""
     abort: outstanding merge conflicts
+    (use 'hg resolve -l' to see a list of conflicted files, 'hg resolve -m' to mark files as resolved)
     [255]"""
 sh % "hg resolve --all -t :local" == "(no more unresolved files)"
 sh % "hg status" == r"""

@@ -1910,7 +1910,12 @@ def continuecmd(ui, repo):
                 ui.status(_("(exiting merge state)\n"))
                 ms.reset()
             else:
-                raise error.Abort(_("outstanding merge conflicts"))
+                raise error.Abort(
+                    _("outstanding merge conflicts"),
+                    hint=_(
+                        "use 'hg resolve -l' to see a list of conflicted files, 'hg resolve -m' to mark files as resolved"
+                    ),
+                )
         else:
             raise error.Abort(_("nothing to continue"))
 
