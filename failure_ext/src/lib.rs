@@ -13,7 +13,6 @@ use std::error::Error as StdError;
 use std::fmt::{self, Debug, Display};
 
 pub use failure;
-pub use failure_derive;
 
 mod slogkv;
 pub use crate::slogkv::{cause_workaround as cause, SlogKVError, SlogKVErrorKey};
