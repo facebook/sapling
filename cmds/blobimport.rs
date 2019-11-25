@@ -27,10 +27,13 @@ use std::fs::read;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
+use synced_commit_mapping::SqlSyncedCommitMapping;
 use tracing::{trace_args, Traced};
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("revlog to blob importer")
+        .with_repo_required()
+        .with_source_repos()
         .build()
         .version("0.0.0")
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
@@ -179,6 +182,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let phases_store = args::open_sql::<SqlPhases>(&matches);
     let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(&matches);
+    let synced_commit_mapping = args::open_sql::<SqlSyncedCommitMapping>(&matches);
 
     let blobrepo = if matches.is_present("no-create") {
         args::open_repo_unredacted(fb, &ctx.logger(), &matches).left_future()
@@ -195,43 +199,50 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let has_globalrev = matches.is_present("has-globalrev");
 
-    let blobimport = blobrepo.join3(phases_store, globalrevs_store).and_then(
-        move |(blobrepo, phases_store, globalrevs_store)| {
-            let phases_store = Arc::new(phases_store);
-            let globalrevs_store = Arc::new(globalrevs_store);
+    let small_repo_id = args::get_source_repo_id_opt(&matches)?;
 
-            blobimport_lib::Blobimport {
-                ctx: ctx.clone(),
-                logger: ctx.logger().clone(),
-                blobrepo,
-                revlogrepo_path,
-                changeset,
-                skip,
-                commits_limit,
-                bookmark_import_policy,
-                phases_store,
-                globalrevs_store,
-                lfs_helper,
-                concurrent_changesets,
-                concurrent_blobs,
-                concurrent_lfs_imports,
-                fixed_parent_order,
-                has_globalrev,
-            }
-            .import()
-            .traced(ctx.trace(), "blobimport", trace_args!())
-            .map_err({
-                cloned!(ctx);
-                move |err| {
-                    // NOTE: We log the error immediatley, then provide another one for main's
-                    // Result (which will set our exit code).
-                    error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                    err_msg("blobimport exited with a failure")
+    let blobimport = blobrepo
+        .join4(phases_store, globalrevs_store, synced_commit_mapping)
+        .and_then(
+            move |(blobrepo, phases_store, globalrevs_store, synced_commit_mapping)| {
+                let phases_store = Arc::new(phases_store);
+                let globalrevs_store = Arc::new(globalrevs_store);
+                let synced_commit_mapping = Arc::new(synced_commit_mapping);
+
+                blobimport_lib::Blobimport {
+                    ctx: ctx.clone(),
+                    logger: ctx.logger().clone(),
+                    blobrepo,
+                    revlogrepo_path,
+                    changeset,
+                    skip,
+                    commits_limit,
+                    bookmark_import_policy,
+                    phases_store,
+                    globalrevs_store,
+                    synced_commit_mapping,
+                    lfs_helper,
+                    concurrent_changesets,
+                    concurrent_blobs,
+                    concurrent_lfs_imports,
+                    fixed_parent_order,
+                    has_globalrev,
+                    small_repo_id,
                 }
-            })
-            .then(move |result| helpers::upload_and_show_trace(ctx).then(move |_| result))
-        },
-    );
+                .import()
+                .traced(ctx.trace(), "blobimport", trace_args!())
+                .map_err({
+                    cloned!(ctx);
+                    move |err| {
+                        // NOTE: We log the error immediatley, then provide another one for main's
+                        // Result (which will set our exit code).
+                        error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+                        err_msg("blobimport exited with a failure")
+                    }
+                })
+                .then(move |result| helpers::upload_and_show_trace(ctx).then(move |_| result))
+            },
+        );
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);

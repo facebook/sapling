@@ -269,6 +269,13 @@ function mononoke_admin {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
+function mononoke_admin_sourcerepo {
+  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
+    "${CACHING_ARGS[@]}" \
+    --source-repo-id $REPOID \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+
+}
 function write_stub_log_entry {
   GLOG_minloglevel=5 "$WRITE_STUB_LOG_ENTRY" \
     "${CACHING_ARGS[@]}" \

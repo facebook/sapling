@@ -88,6 +88,9 @@ pub struct MononokeApp {
     /// Adds --source-repo-id/repo-name and --target-repo-id/repo-name options.
     /// Necessary for crossrepo operations
     source_and_target_repos: bool,
+
+    /// Adds just --source-repo-id/repo-name, for blobimport into a megarepo
+    source_repo: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -110,6 +113,7 @@ impl MononokeApp {
             all_repos: false,
             repo_required: false,
             source_and_target_repos: false,
+            source_repo: false,
         }
     }
 
@@ -143,6 +147,13 @@ impl MononokeApp {
         self
     }
 
+    /// This command operates on one repo (--repo-id/name), but needs to be aware that commits
+    /// are sourced from another repo.
+    pub fn with_source_repos(mut self) -> Self {
+        self.source_repo = true;
+        self
+    }
+
     /// Build a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> App<'a, 'b> {
         let mut app = App::new(self.name).arg(
@@ -153,12 +164,16 @@ impl MononokeApp {
         );
 
         if !self.all_repos {
-            let conflicts = &[
-                SOURCE_REPO_ID,
-                SOURCE_REPO_NAME,
-                TARGET_REPO_ID,
-                TARGET_REPO_NAME,
-            ];
+            let repo_conflicts: &[&str] = if self.source_repo {
+                &[TARGET_REPO_ID, TARGET_REPO_NAME]
+            } else {
+                &[
+                    SOURCE_REPO_ID,
+                    SOURCE_REPO_NAME,
+                    TARGET_REPO_ID,
+                    TARGET_REPO_NAME,
+                ]
+            };
 
             app = app
                 .arg(
@@ -168,14 +183,14 @@ impl MononokeApp {
                     .alias("repo_id")
                     .value_name("ID")
                     .help("numeric ID of repository")
-                    .conflicts_with_all(conflicts),
+                    .conflicts_with_all(repo_conflicts),
                 )
                 .arg(
                     Arg::with_name(REPO_NAME)
                         .long(REPO_NAME)
                         .value_name("NAME")
                         .help("Name of repository")
-                        .conflicts_with_all(conflicts),
+                        .conflicts_with_all(repo_conflicts),
                 )
                 .group(
                     ArgGroup::with_name("repo")
@@ -183,7 +198,7 @@ impl MononokeApp {
                         .required(self.repo_required),
                 );
 
-            if self.source_and_target_repos {
+            if self.source_repo || self.source_and_target_repos {
                 app = app
                     .arg(
                         Arg::with_name(SOURCE_REPO_ID)
@@ -201,6 +216,10 @@ impl MononokeApp {
                         ArgGroup::with_name(SOURCE_REPO_GROUP)
                             .args(&[SOURCE_REPO_ID, SOURCE_REPO_NAME])
                     )
+            }
+
+            if self.source_and_target_repos {
+                app = app
                     .arg(
                         Arg::with_name(TARGET_REPO_ID)
                         .long(TARGET_REPO_ID)
@@ -389,6 +408,16 @@ pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
 pub fn get_source_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
     let (repo_id, _) = get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
     Ok(repo_id)
+}
+
+pub fn get_source_repo_id_opt<'a>(matches: &ArgMatches<'a>) -> Result<Option<RepositoryId>> {
+    if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
+        let (repo_id, _) =
+            get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+        Ok(Some(repo_id))
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn get_target_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {

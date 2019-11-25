@@ -31,7 +31,9 @@ use bonsai_globalrev_mapping::{upload_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::{HgChangesetId, HgNodeHash};
+use mononoke_types::RepositoryId;
 use phases::Phases;
+use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 
 use crate::changeset::UploadChangesets;
 
@@ -54,12 +56,14 @@ pub struct Blobimport {
     pub bookmark_import_policy: BookmarkImportPolicy,
     pub phases_store: Arc<dyn Phases>,
     pub globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
+    pub synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
     pub concurrent_blobs: usize,
     pub concurrent_lfs_imports: usize,
     pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
     pub has_globalrev: bool,
+    pub small_repo_id: Option<RepositoryId>,
 }
 
 impl Blobimport {
@@ -75,13 +79,17 @@ impl Blobimport {
             bookmark_import_policy,
             phases_store,
             globalrevs_store,
+            synced_commit_mapping,
             lfs_helper,
             concurrent_changesets,
             concurrent_blobs,
             concurrent_lfs_imports,
             fixed_parent_order,
             has_globalrev,
+            small_repo_id,
         } = self;
+
+        let repo_id = blobrepo.get_repoid();
 
         let stale_bookmarks = {
             let revlogrepo = RevlogRepo::open(&revlogrepo_path).expect("cannot open revlogrepo");
@@ -149,22 +157,45 @@ impl Blobimport {
         stale_bookmarks
             .join(mononoke_bookmarks.collect())
             .and_then({
-                cloned!(blobrepo, ctx);
+                cloned!(ctx);
                 move |(stale_bookmarks, mononoke_bookmarks)| {
                     upload_changesets
                         .chunks(chunk_size)
-                        .and_then(move |chunk| {
-                            cloned!(blobrepo, globalrevs_store);
-                            if has_globalrev {
-                                upload_globalrevs(
-                                    ctx.clone(),
-                                    blobrepo.get_repoid(),
-                                    globalrevs_store,
-                                    chunk,
-                                )
-                                .left_future()
-                            } else {
-                                future::ok(()).right_future()
+                        .and_then({
+                            cloned!(ctx, globalrevs_store, synced_commit_mapping);
+                            move |chunk| {
+                                let synced_commit_mapping_work =
+                                    if let Some(small_repo_id) = small_repo_id {
+                                        let entries = chunk
+                                            .iter()
+                                            .map(|cs| SyncedCommitMappingEntry {
+                                                large_repo_id: repo_id,
+                                                large_bcs_id: cs.get_changeset_id(),
+                                                small_repo_id,
+                                                small_bcs_id: cs.get_changeset_id(),
+                                            })
+                                            .collect();
+                                        synced_commit_mapping
+                                            .add_bulk(ctx.clone(), entries)
+                                            .map(|_| ())
+                                            .left_future()
+                                    } else {
+                                        future::ok(()).right_future()
+                                    };
+
+                                let globalrevs_work = if has_globalrev {
+                                    upload_globalrevs(
+                                        ctx.clone(),
+                                        repo_id,
+                                        globalrevs_store.clone(),
+                                        chunk,
+                                    )
+                                    .left_future()
+                                } else {
+                                    future::ok(()).right_future()
+                                };
+
+                                globalrevs_work.join(synced_commit_mapping_work)
                             }
                         })
                         .for_each(|_| Ok(()))

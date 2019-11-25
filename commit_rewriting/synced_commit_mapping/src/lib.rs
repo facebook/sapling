@@ -38,6 +38,7 @@ define_stats! {
     gets: timeseries(RATE, SUM),
     gets_master: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),
+    add_bulks: timeseries(RATE, SUM),
     insert_working_copy_eqivalence: timeseries(RATE, SUM),
     get_equivalent_working_copy: timeseries(RATE, SUM),
 }
@@ -88,6 +89,14 @@ pub trait SyncedCommitMapping: Send + Sync {
     /// Future resolves to true if the mapping was saved, false otherwise
     fn add(&self, ctx: CoreContext, entry: SyncedCommitMappingEntry) -> BoxFuture<bool, Error>;
 
+    /// Bulk insert a set of large, small mappings
+    /// This is meant for blobimport and similar
+    fn add_bulk(
+        &self,
+        ctx: CoreContext,
+        entries: Vec<SyncedCommitMappingEntry>,
+    ) -> BoxFuture<u64, Error>;
+
     /// Find the mapping entry for a given source commit and target repo
     fn get(
         &self,
@@ -123,6 +132,14 @@ pub trait SyncedCommitMapping: Send + Sync {
 impl SyncedCommitMapping for Arc<dyn SyncedCommitMapping> {
     fn add(&self, ctx: CoreContext, entry: SyncedCommitMappingEntry) -> BoxFuture<bool, Error> {
         (**self).add(ctx, entry)
+    }
+
+    fn add_bulk(
+        &self,
+        ctx: CoreContext,
+        entries: Vec<SyncedCommitMappingEntry>,
+    ) -> BoxFuture<u64, Error> {
+        (**self).add_bulk(ctx, entries)
     }
 
     fn get(
@@ -228,46 +245,72 @@ impl SqlConstructors for SqlSyncedCommitMapping {
     }
 }
 
+impl SqlSyncedCommitMapping {
+    fn add_many(
+        &self,
+        entries: Vec<SyncedCommitMappingEntry>,
+    ) -> impl Future<Item = u64, Error = Error> {
+        self.write_connection
+            .start_transaction()
+            .and_then(move |txn| {
+                let insert_entries: Vec<_> = entries
+                    .iter()
+                    .map(|entry| {
+                        (
+                            &entry.large_repo_id,
+                            &entry.large_bcs_id,
+                            &entry.small_repo_id,
+                            &entry.small_bcs_id,
+                        )
+                    })
+                    .collect();
+                InsertMapping::query_with_transaction(txn, &insert_entries).and_then(
+                    move |(txn, _result)| {
+                        let wces: Vec<_> = entries
+                            .into_iter()
+                            .map(|e| EquivalentWorkingCopyEntry {
+                                large_repo_id: e.large_repo_id,
+                                large_bcs_id: e.large_bcs_id,
+                                small_repo_id: e.small_repo_id,
+                                small_bcs_id: Some(e.small_bcs_id),
+                            })
+                            .collect();
+                        let wce_entries: Vec<_> = wces
+                            .iter()
+                            .map(|entry| {
+                                (
+                                    &entry.large_repo_id,
+                                    &entry.large_bcs_id,
+                                    &entry.small_repo_id,
+                                    &entry.small_bcs_id,
+                                )
+                            })
+                            .collect();
+                        InsertWorkingCopyEquivalence::query_with_transaction(txn, &wce_entries)
+                            .and_then(|(txn, result)| {
+                                txn.commit().map(move |()| result.affected_rows())
+                            })
+                    },
+                )
+            })
+    }
+}
+
 impl SyncedCommitMapping for SqlSyncedCommitMapping {
     fn add(&self, _ctx: CoreContext, entry: SyncedCommitMappingEntry) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
 
-        let SyncedCommitMappingEntry {
-            large_repo_id,
-            large_bcs_id,
-            small_repo_id,
-            small_bcs_id,
-        } = entry;
+        self.add_many(vec![entry]).map(|count| count == 1).boxify()
+    }
 
-        self.write_connection
-            .start_transaction()
-            .and_then(move |txn| {
-                InsertMapping::query_with_transaction(
-                    txn,
-                    &[(&large_repo_id, &large_bcs_id, &small_repo_id, &small_bcs_id)],
-                )
-                .and_then(move |(txn, _result)| {
-                    InsertWorkingCopyEquivalence::query_with_transaction(
-                        txn,
-                        &[(
-                            &large_repo_id,
-                            &large_bcs_id,
-                            &small_repo_id,
-                            &Some(small_bcs_id),
-                        )],
-                    )
-                    .and_then(|(txn, result)| {
-                        txn.commit().map(move |()| {
-                            if result.affected_rows() == 1 {
-                                true
-                            } else {
-                                false
-                            }
-                        })
-                    })
-                })
-            })
-            .boxify()
+    fn add_bulk(
+        &self,
+        _ctx: CoreContext,
+        entries: Vec<SyncedCommitMappingEntry>,
+    ) -> BoxFuture<u64, Error> {
+        STATS::add_bulks.add_value(1);
+
+        self.add_many(entries).boxify()
     }
 
     fn get(
