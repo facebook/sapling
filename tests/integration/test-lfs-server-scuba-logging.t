@@ -55,6 +55,7 @@
       "time": * (glob)
     },
     "normal": {
+      "build_revision": *, (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -96,6 +97,7 @@
       "time": * (glob)
     },
     "normal": {
+      "build_revision": *, (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -138,6 +140,7 @@
     },
     "normal": {
       "batch_order": "*", (glob)
+      "build_revision": *, (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -180,6 +183,7 @@
       "time": * (glob)
     },
     "normal": {
+      "build_revision": *, (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -219,6 +223,7 @@
       "time": * (glob)
     },
     "normal": {
+      "build_revision": *, (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": *, (glob)
