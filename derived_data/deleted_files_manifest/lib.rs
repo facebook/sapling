@@ -10,16 +10,24 @@
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
 use failure_ext::Error;
-use futures_ext::BoxFuture;
+use futures::Future;
+use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
 
 mod derive;
+mod mapping;
+
+pub use mapping::{RootDeletedManifestId, RootDeletedManifestMapping};
 
 pub fn derive_deleted_manifest(
-    _ctx: CoreContext,
-    _repo: BlobRepo,
-    _cs_id: ChangesetId,
+    ctx: CoreContext,
+    repo: BlobRepo,
+    cs_id: ChangesetId,
 ) -> BoxFuture<(), Error> {
-    unimplemented!();
+    let deleted_manifest_derived_mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
+    RootDeletedManifestId::derive(ctx, repo, deleted_manifest_derived_mapping, cs_id)
+        .map(|_| ())
+        .boxify()
 }
