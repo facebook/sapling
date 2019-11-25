@@ -140,6 +140,58 @@ diff
   +e
   +x
 
+blame
+  $ scsc blame --repo repo -i "$COMMIT_C" --path b
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: b
+  c29e0e474e30ae40ed639fa6292797a7502bc590: c
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: d
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: e
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: f
+
+  $ scsc --json blame --repo repo -i "$COMMIT_C" --path b | jq -S .
+  [
+    {
+      "author": "test",
+      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "contents": "b",
+      "datetime": "1970-01-01T00:00:00+00:00",
+      "line": 1,
+      "path": "b"
+    },
+    {
+      "author": "test",
+      "commit": "c29e0e474e30ae40ed639fa6292797a7502bc590",
+      "contents": "c",
+      "datetime": "1970-01-01T00:00:00+00:00",
+      "line": 2,
+      "path": "b"
+    },
+    {
+      "author": "test",
+      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "contents": "d",
+      "datetime": "1970-01-01T00:00:00+00:00",
+      "line": 3,
+      "path": "b"
+    },
+    {
+      "author": "test",
+      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "contents": "e",
+      "datetime": "1970-01-01T00:00:00+00:00",
+      "line": 4,
+      "path": "b"
+    },
+    {
+      "author": "test",
+      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "contents": "f",
+      "datetime": "1970-01-01T00:00:00+00:00",
+      "line": 5,
+      "path": "b"
+    }
+  ]
+
 lookup using bookmarks
   $ scsc lookup --repo repo  -B BOOKMARK_B
   323afe77a1b1e632e54e8d5a683ba2cc8511f299

@@ -7,9 +7,10 @@
  */
 
 use std::cmp::min;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display};
+use std::iter::FromIterator;
 use std::ops::RangeBounds;
 use std::sync::Arc;
 
@@ -803,6 +804,7 @@ mod errors {
     impl_into_thrift_error!(service::CommitCompareExn);
     impl_into_thrift_error!(service::CommitIsAncestorOfExn);
     impl_into_thrift_error!(service::CommitPathInfoExn);
+    impl_into_thrift_error!(service::CommitPathBlameExn);
     impl_into_thrift_error!(service::TreeListExn);
     impl_into_thrift_error!(service::FileExistsExn);
     impl_into_thrift_error!(service::FileInfoExn);
@@ -1244,6 +1246,80 @@ impl SourceControlService for SourceControlServiceImpl {
             }
         };
         Ok(response)
+    }
+
+    async fn commit_path_blame(
+        &self,
+        commit_path: thrift::CommitPathSpecifier,
+        params: thrift::CommitPathBlameParams,
+    ) -> Result<thrift::CommitPathBlameResponse, service::CommitPathBlameExn> {
+        let ctx = self.create_ctx(Some(&commit_path));
+        let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let path = changeset.path(&commit_path.path)?;
+
+        let (content, blame) = path.blame().await?;
+        let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
+        let identities = map_commit_identities(
+            &repo,
+            csids.clone(),
+            &BTreeSet::from_iter(Some(params.identity_scheme)),
+        )
+        .await?;
+
+        // author and date fields
+        let info: HashMap<_, _> = try_join_all(csids.into_iter().map(move |csid| {
+            let repo = repo.clone();
+            async move {
+                let changeset = repo
+                    .changeset(ChangesetSpecifier::Bonsai(csid))
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!("failed to resolve commit: {}", csid))
+                    })?;
+                let date = changeset.author_date().await?;
+                let date = thrift::DateTime {
+                    timestamp: date.timestamp(),
+                    tz: date.offset().local_minus_utc(),
+                };
+                let author = changeset.author().await?;
+                Ok::<_, MononokeError>((csid, (author, date)))
+            }
+        }))
+        .await?
+        .into_iter()
+        .collect();
+
+        let lines = String::from_utf8_lossy(content.as_ref())
+            .lines()
+            .zip(blame.lines())
+            .enumerate()
+            .map(
+                |(line, (contents, (csid, path)))| -> Result<_, thrift::RequestError> {
+                    let commit = identities
+                        .get(&csid)
+                        .and_then(|ids| ids.get(&params.identity_scheme))
+                        .ok_or_else(|| {
+                            errors::commit_not_found(format!("failed to resolve commit: {}", csid))
+                        })?;
+                    let (author, date) = info.get(&csid).ok_or_else(|| {
+                        errors::commit_not_found(format!("failed to resolve commit: {}", csid))
+                    })?;
+                    Ok(thrift::BlameVerboseLine {
+                        line: (line + 1) as i32,
+                        contents: contents.to_string(),
+                        commit: commit.clone(),
+                        path: path.to_string(),
+                        author: author.clone(),
+                        date: date.clone(),
+                    })
+                },
+            )
+            .collect::<Result<Vec<_>, _>>()?;
+        let blame = thrift::BlameVerbose { lines };
+
+        Ok(thrift::CommitPathBlameResponse {
+            blame: thrift::Blame::blame_verbose(blame),
+        })
     }
 
     /// List the contents of a directory.

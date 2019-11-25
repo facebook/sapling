@@ -10,16 +10,18 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
+use blame::fetch_blame;
 use bytes::Bytes;
 use cloned::cloned;
-use failure_ext::err_msg;
+use failure_ext::{err_msg, Error};
 use filestore::FetchKey;
+use futures::Future as FutureLegacy;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::{FutureExt, Shared};
 use futures_util::{try_join, try_stream::TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
-    ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
+    Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
 };
 use xdiff;
 
@@ -196,6 +198,20 @@ impl ChangesetPathContext {
             _ => PathEntry::NotPresent,
         };
         Ok(entry)
+    }
+
+    pub async fn blame(&self) -> Result<(Bytes, Blame), MononokeError> {
+        let ctx = self.changeset.ctx().clone();
+        let repo = self.changeset.repo().blob_repo().clone();
+        let csid = self.changeset.id();
+        let path = self.mpath.as_ref().ok_or_else(|| {
+            MononokeError::InvalidRequest(format!("Blame is not available for directory: `/`"))
+        })?;
+
+        fetch_blame(ctx, repo, csid, path.clone())
+            .map_err(|error| MononokeError::from(Error::from(error)))
+            .compat()
+            .await
     }
 }
 

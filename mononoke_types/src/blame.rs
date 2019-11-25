@@ -414,7 +414,7 @@ impl Blame {
         Blame::new(ranges)
     }
 
-    fn lines<'a>(&'a self) -> BlameLines<'a> {
+    pub fn lines<'a>(&'a self) -> BlameLines<'a> {
         BlameLines::new(&self.ranges)
     }
 
@@ -509,7 +509,7 @@ fn blame_merge(csid: ChangesetId, blames: Vec<Blame>) -> Result<Blame, Error> {
 
 /// Iterator over balme object as if it was just a list of lines with associated
 /// changeset id and path. Implementation is not cloning anyting.
-struct BlameLines<'a> {
+pub struct BlameLines<'a> {
     ranges: &'a Vec<BlameRange>,
     ranges_index: usize,
     index: u32,
