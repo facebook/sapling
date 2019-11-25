@@ -283,6 +283,19 @@ function write_stub_log_entry {
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
+function wait_for_nonempty_file {
+    for _ in $(seq 1 10); do
+        if test -s "$0"; then 
+            return
+        fi
+
+        sleep 0.1
+    done
+
+    echo "File remained empty" >&2
+    exit 1
+}
+
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
   # MONONOKE_START_TIMEOUT is set in seconds

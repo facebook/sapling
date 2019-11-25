@@ -19,12 +19,15 @@
   $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
+  $ truncate -s 0 "$SCUBA"
+
 # Make a request with a valid encoded client identity header
 # NOTE: The LFS Server trusts the identity sslcurl passes as a trusted proxy
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
   200
 
 # Check for identities from header
+  $ wait_for_nonempty_file "$SCUBA"
   $ jq -S .normvector < "$SCUBA" | grep -v null
   {
     "client_identities": [
