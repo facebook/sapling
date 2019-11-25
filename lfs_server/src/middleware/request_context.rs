@@ -101,6 +101,10 @@ impl RequestContext {
         self.post_request_callbacks.push(Box::new(callback));
     }
 
+    pub fn start_time(&self) -> Instant {
+        self.start_time
+    }
+
     /// Delay post request until a callback has completed. This is useful to e.g. record how much data was sent.
     pub fn delay_post_request(&mut self) -> Sender<u64> {
         // NOTE: If this is called twice ... then the first one will be ignored

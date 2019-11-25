@@ -13,10 +13,12 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
+use scuba::ScubaValue;
 use serde::Deserialize;
 use slog::debug;
 use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
+use time_ext::DurationExt;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use failure_ext::chain::ChainExt;
@@ -30,7 +32,7 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
-use crate::middleware::{LfsMethod, ScubaKey, ScubaMiddlewareState};
+use crate::middleware::{LfsMethod, RequestContext, ScubaKey, ScubaMiddlewareState};
 
 define_stats! {
     prefix ="mononoke.lfs.batch";
@@ -308,9 +310,7 @@ fn batch_download_response_objects(
         })
         .collect();
 
-    if let Some(ref mut scuba) = scuba {
-        scuba.add(ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
-    }
+    add_to_sample(scuba, ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
 
     responses
 }
@@ -353,9 +353,7 @@ async fn batch_download(
     pin_mut!(upstream, internal);
 
     let mut update_batch_order = |status| {
-        if let Some(ref mut scuba) = scuba.as_mut() {
-            scuba.add(ScubaKey::BatchOrder, status);
-        }
+        add_to_sample(scuba, ScubaKey::BatchOrder, status);
     };
 
     update_batch_order("error");
@@ -400,11 +398,28 @@ async fn batch_download(
     })
 }
 
+fn add_to_sample(
+    scuba: &mut Option<&mut ScubaMiddlewareState>,
+    key: ScubaKey,
+    value: impl Into<ScubaValue>,
+) {
+    if let Some(ref mut scuba) = scuba {
+        scuba.add(key, value);
+    }
+}
+
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
+    let start_time = state.borrow::<RequestContext>().start_time();
 
     let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch)?;
+
+    add_to_sample(
+        &mut state.try_borrow_mut::<ScubaMiddlewareState>(),
+        ScubaKey::BatchRequestContextReadyUs,
+        start_time.elapsed().as_micros_unchecked(),
+    );
 
     let body = Body::take_from(state)
         .compat()
@@ -414,20 +429,40 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         .map_err(HttpError::e400)?
         .into_bytes();
 
+    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+
+    add_to_sample(
+        &mut scuba,
+        ScubaKey::BatchRequestReceivedUs,
+        start_time.elapsed().as_micros_unchecked(),
+    );
+
     let request_batch = serde_json::from_slice::<RequestBatch>(&body)
         .chain_err(ErrorKind::InvalidBatch)
         .map_err(HttpError::e400)?;
 
-    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+    add_to_sample(
+        &mut scuba,
+        ScubaKey::BatchObjectCount,
+        request_batch.objects.len(),
+    );
 
-    if let Some(ref mut scuba) = scuba {
-        scuba.add(ScubaKey::BatchObjectCount, request_batch.objects.len());
-    }
+    add_to_sample(
+        &mut scuba,
+        ScubaKey::BatchRequestParsedUs,
+        start_time.elapsed().as_micros_unchecked(),
+    );
 
     let res = match request_batch.operation {
         Operation::Upload => batch_upload(&ctx, request_batch).await,
         Operation::Download => batch_download(&ctx, request_batch, &mut scuba).await,
     };
+
+    add_to_sample(
+        &mut scuba,
+        ScubaKey::BatchResponseReadyUs,
+        start_time.elapsed().as_micros_unchecked(),
+    );
 
     let res = res.map_err(HttpError::e502)?;
     let body = serde_json::to_string(&res).map_err(HttpError::e500)?;

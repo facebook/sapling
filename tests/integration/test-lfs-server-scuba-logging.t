@@ -44,7 +44,11 @@
       "SqlReadsMaster": 0,
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
+      "batch_context_ready_us": *, (glob)
       "batch_object_count": 1,
+      "batch_request_parsed_us": *, (glob)
+      "batch_request_received_us": *, (glob)
+      "batch_response_ready_us": *, (glob)
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,
@@ -128,7 +132,11 @@
       "SqlReadsMaster": 0,
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
+      "batch_context_ready_us": *, (glob)
       "batch_object_count": 1,
+      "batch_request_parsed_us": *, (glob)
+      "batch_request_received_us": *, (glob)
+      "batch_response_ready_us": *, (glob)
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,

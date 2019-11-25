@@ -73,6 +73,11 @@ pub enum ScubaKey {
     BatchObjectCount,
     /// The objects that could not be serviced by this LFS server in a batch request
     BatchInternalMissingBlobs,
+    /// Timing checkpoints in batch requests
+    BatchRequestContextReadyUs,
+    BatchRequestReceivedUs,
+    BatchRequestParsedUs,
+    BatchResponseReadyUs,
 }
 
 impl AsRef<str> for ScubaKey {
@@ -103,6 +108,10 @@ impl AsRef<str> for ScubaKey {
             BatchOrder => "batch_order",
             BatchObjectCount => "batch_object_count",
             BatchInternalMissingBlobs => "batch_internal_missing_blobs",
+            BatchRequestContextReadyUs => "batch_context_ready_us",
+            BatchRequestReceivedUs => "batch_request_received_us",
+            BatchRequestParsedUs => "batch_request_parsed_us",
+            BatchResponseReadyUs => "batch_response_ready_us",
         }
     }
 }
