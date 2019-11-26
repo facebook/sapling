@@ -263,6 +263,8 @@ async fn subcommand_verify_bookmarks(
                 mapping,
             )
             .await?;
+
+            Ok(())
         } else {
             for d in &diff {
                 use BookmarkDiff::*;
@@ -289,9 +291,8 @@ async fn subcommand_verify_bookmarks(
                     }
                 }
             }
+            Err(format_err!("found {} inconsistencies", diff.len()).into())
         }
-
-        Err(format_err!("found {} inconsistencies", diff.len()).into())
     }
 }
 
