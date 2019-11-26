@@ -30,6 +30,9 @@ use tokio::runtime::Runtime;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 const HG_CHANGESET_TYPE: &'static str = "hg-changeset";
+const ARG_SEED: &'static str = "seed";
+const ARG_TYPE: &'static str = "type";
+const ARG_STACK_SIZE: &'static str = "stack-size";
 
 type DeriveFn = Arc<dyn Fn(ChangesetId) -> BoxFuture<String, Error> + Send + Sync + 'static>;
 
@@ -37,6 +40,7 @@ fn run(
     ctx: CoreContext,
     repo: BlobRepo,
     rng_seed: u64,
+    stack_size: usize,
     derive: DeriveFn,
 ) -> impl Future<Item = (), Error = Error> {
     println!("rng seed: {}", rng_seed);
@@ -50,7 +54,7 @@ fn run(
         &mut rng,
         &settings,
         None,
-        std::iter::repeat(16).take(50),
+        std::iter::repeat(16).take(stack_size),
     )
     .timed(move |stats, _| {
         println!("stack generated: {:?} {:?}", gen.size(), stats);
@@ -95,15 +99,22 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = {
         let app = App::new("mononoke benchmark")
             .arg(
-                Arg::with_name("seed")
+                Arg::with_name(ARG_SEED)
                     .short("s")
-                    .long("seed")
+                    .long(ARG_SEED)
                     .takes_value(true)
-                    .value_name("SEED")
+                    .value_name(ARG_SEED)
                     .help("seed changeset generator for u64 seed"),
             )
             .arg(
-                Arg::with_name("type")
+                Arg::with_name(ARG_STACK_SIZE)
+                    .long(ARG_STACK_SIZE)
+                    .takes_value(true)
+                    .value_name(ARG_STACK_SIZE)
+                    .help("Size of the generated stack"),
+            )
+            .arg(
+                Arg::with_name(ARG_TYPE)
                     .required(true)
                     .index(1)
                     .possible_values(&[HG_CHANGESET_TYPE, RootUnodeManifestId::NAME])
@@ -120,11 +131,18 @@ fn main(fb: FacebookInit) -> Result<()> {
     let repo = new_benchmark_repo(fb, Default::default())?;
 
     let seed = matches
-        .value_of("seed")
+        .value_of(ARG_SEED)
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or_else(|| rand::random());
-    let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of("type"))?;
+
+    let stack_size: usize = matches
+        .value_of(ARG_STACK_SIZE)
+        .unwrap_or("50")
+        .parse()
+        .expect("stack size must be a positive integer");
+
+    let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of(ARG_TYPE))?;
 
     let mut runtime = Runtime::new()?;
-    runtime.block_on(run(ctx, repo, seed, derive))
+    runtime.block_on(run(ctx, repo, seed, stack_size, derive))
 }

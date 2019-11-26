@@ -202,7 +202,7 @@ fn gen_ascii(len: usize, rng: &mut impl Rng) -> String {
         .take(len)
         .map(|i| chars[i])
         .collect();
-    String::from_utf8(bytes).expect("ascii convertoin failed")
+    String::from_utf8(bytes).expect("ascii conversion failed")
 }
 
 fn gen_filename(rng: &mut impl Rng) -> MPathElement {
