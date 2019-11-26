@@ -16,8 +16,8 @@ use hyper::{
 };
 use hyper::{Body, Response};
 use scuba::{ScubaSampleBuilder, ScubaValue};
-use std::fs::File;
-use std::io::{Seek, SeekFrom, Write};
+use std::fs::{File, OpenOptions};
+use std::io::Write;
 use std::path::Path;
 use std::result::Result;
 use std::sync::{Arc, Mutex};
@@ -135,7 +135,10 @@ impl ScubaMiddleware {
     ) -> Result<Self, Error> {
         let log_file: Result<_, Error> = log_file
             .map(|log_file| {
-                let log_file = File::create(log_file)?;
+                let log_file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(log_file)?;
                 Ok(Arc::new(Mutex::new(log_file)))
             })
             .transpose();
@@ -280,15 +283,11 @@ fn log_stats(
             // in tests, so it's largely fine).
             if let Some(log_file) = log_file {
                 let mut log_file = log_file.lock().expect("Poisoned lock");
-                // It's common to truncate the log file in tests, so make sure we
-                // write from the end of the file, rather than where we wrote last.
-                if log_file.seek(SeekFrom::End(0)).is_ok() {
-                    let _ = scuba.to_json().map_err(|_| ()).and_then(|sample| {
-                        log_file
-                            .write_all(sample.to_string().as_bytes())
-                            .map_err(|_| ())
-                    });
-                }
+                let _ = scuba.to_json().map_err(|_| ()).and_then(|sample| {
+                    log_file
+                        .write_all(sample.to_string().as_bytes())
+                        .map_err(|_| ())
+                });
             }
         },
     );

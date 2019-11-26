@@ -18,10 +18,9 @@ mod request_context;
 mod scuba;
 mod server_identity;
 mod timer;
+mod tls_session_data;
 
-pub use self::client_identity::{
-    CertIdentitiesPreStateData, ClientIdentity, ClientIdentityMiddleware,
-};
+pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use self::load::{LoadMiddleware, RequestLoad};
 pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
@@ -29,6 +28,7 @@ pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddlew
 pub use self::scuba::{ScubaKey, ScubaMiddleware, ScubaMiddlewareState};
 pub use self::server_identity::ServerIdentityMiddleware;
 pub use self::timer::TimerMiddleware;
+pub use self::tls_session_data::TlsSessionDataMiddleware;
 
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {
     fn inbound(&self, _state: &mut State) {

@@ -46,10 +46,11 @@ use crate::config::spawn_config_poller;
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
-    CertIdentitiesPreStateData, ClientIdentityMiddleware, LoadMiddleware, LogMiddleware,
-    OdsMiddleware, RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware,
-    TimerMiddleware,
+    ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
+    RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
+    TlsSessionDataMiddleware,
 };
+use crate::pre_state_data::TlsPreStateData;
 use crate::service::build_router;
 
 mod acl;
@@ -64,6 +65,7 @@ mod service;
 mod upload;
 #[macro_use]
 mod http;
+mod pre_state_data;
 
 const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";
@@ -82,6 +84,7 @@ const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 const ARG_TEST_IDENTITY: &str = "allowed-test-identity";
 const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
+const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -202,6 +205,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(false)
                 .required(false)
                 .help("Whether or not to use test-friendly logging"),
+        )
+        .arg(
+            Arg::with_name(ARG_TLS_SESSION_DATA_LOG_FILE)
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "A file to which to log TLS session data, including master secrets. \
+                     Use this for debugging with tcpdump. \
+                     Note that this compromises the secrecy of TLS sessions.",
+                )
+                .long(ARG_TLS_SESSION_DATA_LOG_FILE),
         );
 
     let app = args::add_fb303_args(app);
@@ -220,6 +234,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let tls_private_key = matches.value_of(ARG_TLS_PRIVATE_KEY);
     let tls_ca = matches.value_of(ARG_TLS_CA);
     let tls_ticket_seeds = matches.value_of(ARG_TLS_TICKET_SEEDS);
+
+    let scuba_log = matches.value_of(ARG_SCUBA_LOG_FILE);
+    let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
 
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of(ARG_SCUBA_DATASET) {
         ScubaSampleBuilder::new(fb, scuba_dataset)
@@ -335,15 +352,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let router = build_router(fb, ctx);
 
     let root = MononokeLfsHandler::builder()
+        .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(log_middleware)
         .add(ServerIdentityMiddleware::new())
         .add(LoadMiddleware::new())
-        .add(ScubaMiddleware::new(
-            scuba_logger,
-            matches.value_of(ARG_SCUBA_LOG_FILE),
-        )?)
+        .add(ScubaMiddleware::new(scuba_logger, scuba_log)?)
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())
         .build(router);
@@ -381,18 +396,21 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )?;
             let acceptor = fbs_tls_builder.build();
 
+            let capture_session_data = tls_session_data_log.is_some();
+
             bind_server_with_pre_state(listener, root, {
                 cloned!(logger);
                 move |socket| {
                     acceptor
                         .accept_async(socket)
                         .map({
-                            |ssl_stream| {
-                                let cert_idents = CertIdentitiesPreStateData::from_ssl(
+                            move |ssl_stream| {
+                                let tpsd = TlsPreStateData::from_ssl(
                                     ssl_stream.get_ref().ssl(),
+                                    capture_session_data,
                                 );
 
-                                (ssl_stream, cert_idents)
+                                (ssl_stream, tpsd)
                             }
                         })
                         .map_err({
