@@ -696,20 +696,19 @@ trait AsyncIntoResponse<T> {
 #[async_trait]
 impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
     async fn into_response(self) -> Result<Option<thrift::FilePathInfo>, errors::ServiceError> {
-        let path = &self;
         let (meta, type_) = try_join!(
             async {
-                let file = path.file().await?;
+                let file = self.file().await?;
                 match file {
                     Some(file) => Ok(Some(file.metadata().await?)),
                     None => Ok(None),
                 }
             },
-            path.file_type()
+            self.file_type()
         )?;
         if let (Some(meta), Some(type_)) = (meta, type_) {
             Ok(Some(thrift::FilePathInfo {
-                path: path.to_string(),
+                path: self.path().to_string(),
                 type_: type_.into_response(),
                 info: meta.into_response(),
             }))
@@ -1016,11 +1015,11 @@ impl SourceControlService for SourceControlServiceImpl {
             .map(|path_pair| {
                 Ok((
                     match path_pair.base_path {
-                        Some(path) => Some(base_commit.path(path)?),
+                        Some(path) => Some(base_commit.path(&path)?),
                         None => None,
                     },
                     match path_pair.other_path {
-                        Some(path) => Some(other_commit.path(path)?),
+                        Some(path) => Some(other_commit.path(&path)?),
                         None => None,
                     },
                     CopyInfo::from_request(&path_pair.copy_info)?,
@@ -1058,8 +1057,8 @@ impl SourceControlService for SourceControlServiceImpl {
                         unified_diff(&other_path, &base_path, copy_info, context_lines).await?;
                     let r: Result<_, errors::ServiceError> =
                         Ok(thrift::CommitFileDiffsResponseElement {
-                            base_path: base_path.map(|p| p.to_string()),
-                            other_path: other_path.map(|p| p.to_string()),
+                            base_path: base_path.map(|p| p.path().to_string()),
+                            other_path: other_path.map(|p| p.path().to_string()),
                             diff: diff.into_response(),
                         });
                     r

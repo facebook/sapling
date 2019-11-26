@@ -7,7 +7,7 @@
  */
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -23,13 +23,14 @@ use futures_util::{try_future::try_join_all, try_join};
 use manifest::ManifestOps;
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry};
 use mercurial_types::Globalrev;
-use mononoke_types::{BonsaiChangeset, MPath};
+use mononoke_types::BonsaiChangeset;
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
 use crate::changeset_path::ChangesetPathContext;
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
+use crate::path::MononokePath;
 use crate::repo::RepoContext;
 use crate::specifiers::{ChangesetId, HgChangesetId};
 
@@ -154,14 +155,12 @@ impl ChangesetContext {
 
     /// Query a path within the respository. This could be a file or a
     /// directory.
-    pub fn path(&self, path: impl AsRef<str>) -> Result<ChangesetPathContext, MononokeError> {
-        let path = path.as_ref();
-        let mpath = if path.is_empty() {
-            None
-        } else {
-            Some(MPath::try_from(path)?)
-        };
-        Ok(ChangesetPathContext::new(self.clone(), mpath))
+    pub fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
+    where
+        P: TryInto<MononokePath>,
+        MononokeError: From<P::Error>,
+    {
+        Ok(ChangesetPathContext::new(self.clone(), path.try_into()?))
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.
@@ -273,7 +272,7 @@ impl ChangesetContext {
         // set of paths from other that were copied in (not moved)
         let copied_paths: HashSet<_> =
             try_join_all(copy_path_map.iter().map(move |(from_path, _)| {
-                async move { self.path(from_path.to_string())?.file_type().await }
+                async move { self.path((*from_path).clone())?.file_type().await }
             }))
             .await?
             .into_iter()
@@ -297,26 +296,20 @@ impl ChangesetContext {
                         if copied_paths.contains(from_path) {
                             // If the source still exists in the current commit it was a copy.
                             Some(ChangesetPathDiffContext::Copied(
-                                ChangesetPathContext::new(self.clone(), Some(path.clone())),
-                                ChangesetPathContext::new(
-                                    other.clone(),
-                                    Some((*from_path).clone()),
-                                ),
+                                ChangesetPathContext::new(self.clone(), path.clone()),
+                                ChangesetPathContext::new(other.clone(), (*from_path).clone()),
                             ))
                         } else {
                             // If it doesn't it was a move
                             Some(ChangesetPathDiffContext::Moved(
-                                ChangesetPathContext::new(self.clone(), Some(path.clone())),
-                                ChangesetPathContext::new(
-                                    other.clone(),
-                                    Some((*from_path).clone()),
-                                ),
+                                ChangesetPathContext::new(self.clone(), path.clone()),
+                                ChangesetPathContext::new(other.clone(), (*from_path).clone()),
                             ))
                         }
                     } else {
                         Some(ChangesetPathDiffContext::Added(ChangesetPathContext::new(
                             self.clone(),
-                            Some(path),
+                            path,
                         )))
                     }
                 }
@@ -326,7 +319,7 @@ impl ChangesetContext {
                         None
                     } else {
                         Some(ChangesetPathDiffContext::Removed(
-                            ChangesetPathContext::new(other.clone(), Some(path)),
+                            ChangesetPathContext::new(other.clone(), path),
                         ))
                     }
                 }
@@ -335,8 +328,8 @@ impl ChangesetContext {
                     ManifestEntry::Leaf(_a),
                     ManifestEntry::Leaf(_b),
                 ) => Some(ChangesetPathDiffContext::Changed(
-                    ChangesetPathContext::new(self.clone(), Some(path.clone())),
-                    ChangesetPathContext::new(other.clone(), Some(path)),
+                    ChangesetPathContext::new(self.clone(), path.clone()),
+                    ChangesetPathContext::new(other.clone(), path),
                 )),
                 // We don't care about diffs not involving leaves
                 _ => None,

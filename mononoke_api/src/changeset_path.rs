@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -21,7 +20,7 @@ use futures_preview::future::{FutureExt, Shared};
 use futures_util::{try_join, try_stream::TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
-    Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
+    Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,
 };
 use xdiff;
 
@@ -30,6 +29,7 @@ pub use xdiff::CopyInfo;
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::FileContext;
+use crate::path::MononokePath;
 use crate::repo::RepoContext;
 use crate::tree::TreeContext;
 
@@ -62,20 +62,21 @@ type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeE
 #[derive(Clone)]
 pub struct ChangesetPathContext {
     changeset: ChangesetContext,
-    mpath: Option<MPath>,
+    path: MononokePath,
     fsnode_id: Shared<Pin<Box<dyn Future<Output = FsnodeResult> + Send>>>,
     unode_id: Shared<Pin<Box<dyn Future<Output = UnodeResult> + Send>>>,
 }
 
 impl ChangesetPathContext {
-    pub(crate) fn new(changeset: ChangesetContext, mpath: Option<MPath>) -> Self {
+    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+        let path = path.into();
         let fsnode_id = {
-            cloned!(changeset, mpath);
+            cloned!(changeset, path);
             async move {
                 let ctx = changeset.ctx().clone();
                 let blobstore = changeset.repo().blob_repo().get_blobstore();
                 let root_fsnode_id = changeset.root_fsnode_id().await?;
-                if let Some(mpath) = mpath {
+                if let Some(mpath) = path.into() {
                     root_fsnode_id
                         .fsnode_id()
                         .find_entry(ctx, blobstore, Some(mpath))
@@ -89,12 +90,12 @@ impl ChangesetPathContext {
         };
         let fsnode_id = fsnode_id.boxed().shared();
         let unode_id = {
-            cloned!(changeset, mpath);
+            cloned!(changeset, path);
             async move {
                 let blobstore = changeset.repo().blob_repo().get_blobstore();
                 let ctx = changeset.ctx().clone();
                 let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
-                if let Some(mpath) = mpath {
+                if let Some(mpath) = path.into() {
                     root_unode_manifest_id
                         .manifest_unode_id()
                         .find_entry(ctx.clone(), blobstore.clone(), Some(mpath))
@@ -111,7 +112,7 @@ impl ChangesetPathContext {
         let unode_id = unode_id.boxed().shared();
         Self {
             changeset,
-            mpath,
+            path,
             fsnode_id,
             unode_id,
         }
@@ -125,6 +126,11 @@ impl ChangesetPathContext {
     /// The `ChangesetContext` for this query.
     pub fn changeset(&self) -> &ChangesetContext {
         &self.changeset
+    }
+
+    /// The path for this query.
+    pub fn path(&self) -> &MononokePath {
+        &self.path
     }
 
     async fn fsnode_id(
@@ -204,11 +210,11 @@ impl ChangesetPathContext {
         let ctx = self.changeset.ctx().clone();
         let repo = self.changeset.repo().blob_repo().clone();
         let csid = self.changeset.id();
-        let path = self.mpath.as_ref().ok_or_else(|| {
+        let mpath = self.path.as_mpath().ok_or_else(|| {
             MononokeError::InvalidRequest(format!("Blame is not available for directory: `/`"))
         })?;
 
-        fetch_blame(ctx, repo, csid, path.clone())
+        fetch_blame(ctx, repo, csid, mpath.clone())
             .map_err(|error| MononokeError::from(Error::from(error)))
             .compat()
             .await
@@ -242,7 +248,7 @@ pub async fn unified_diff(
                         FileType::Symlink => xdiff::FileType::Symlink,
                     };
                     Ok(Some(xdiff::DiffFile {
-                        path: path.to_string(),
+                        path: path.path().to_string(),
                         contents,
                         file_type,
                     }))
@@ -279,14 +285,4 @@ pub async fn unified_diff(
         raw_diff,
         is_binary,
     })
-}
-
-impl fmt::Display for ChangesetPathContext {
-    /// Returns a slash-separated `String` path suitable for returning to API user.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(ref mpath) = self.mpath {
-            return write!(f, "{}", mpath);
-        }
-        write!(f, "")
-    }
 }

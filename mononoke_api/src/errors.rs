@@ -7,6 +7,7 @@
  */
 
 use std::backtrace::Backtrace;
+use std::convert::Infallible;
 use std::error::Error as StdError;
 use std::fmt;
 use std::sync::Arc;
@@ -53,6 +54,12 @@ pub enum MononokeError {
 impl From<Error> for MononokeError {
     fn from(e: Error) -> Self {
         MononokeError::InternalError(InternalError(Arc::new(e)))
+    }
+}
+
+impl From<Infallible> for MononokeError {
+    fn from(_i: Infallible) -> Self {
+        unreachable!()
     }
 }
 
