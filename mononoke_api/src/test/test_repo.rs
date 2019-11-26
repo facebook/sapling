@@ -7,6 +7,7 @@
  */
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::str::FromStr;
 
 use bytes::Bytes;
@@ -20,7 +21,7 @@ use futures_preview::future::{FutureExt, TryFutureExt};
 
 use crate::{
     ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,
-    Mononoke, TreeEntry, TreeId,
+    Mononoke, MononokePath, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{GitSha1, Sha1, Sha256};
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -221,6 +222,110 @@ fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
                     *is_ancestor_of
                 );
             }
+            Ok(())
+        }
+            .boxed()
+            .compat(),
+    )
+}
+
+#[fbinit::test]
+fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![("test".to_string(), many_files_dirs::getrepo(fb))],
+            )
+            .await?;
+            let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+            let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
+            let cs_id = ChangesetId::from_str(hash)?;
+            let cs = repo
+                .changeset(ChangesetSpecifier::Bonsai(cs_id))
+                .await?
+                .expect("changeset exists");
+
+            // Find everything
+            let mut files = cs
+                .find_files(None, None, 100)
+                .await?
+                .collect()
+                .compat()
+                .await?;
+            files.sort();
+            let expected_files = vec![
+                MononokePath::try_from("1")?,
+                MononokePath::try_from("2")?,
+                MononokePath::try_from("dir1/file_1_in_dir1")?,
+                MononokePath::try_from("dir1/file_2_in_dir1")?,
+                MononokePath::try_from("dir1/subdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ];
+            assert_eq!(files, expected_files);
+
+            // Prefixes
+            let mut files = cs
+                .find_files(
+                    Some(vec![
+                        MononokePath::try_from("dir1/subdir1/subsubdir1")?,
+                        MononokePath::try_from("dir2")?,
+                    ]),
+                    None,
+                    100,
+                )
+                .await?
+                .collect()
+                .compat()
+                .await?;
+            files.sort();
+            let expected_files = vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ];
+            assert_eq!(files, expected_files);
+
+            // Basenames
+            let mut files = cs
+                .find_files(None, Some(vec![String::from("file_1")]), 100)
+                .await?
+                .collect()
+                .compat()
+                .await?;
+            files.sort();
+            let expected_files = vec![
+                MononokePath::try_from("dir1/subdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+            ];
+            assert_eq!(files, expected_files);
+
+            // Basenames and Prefixes
+            let mut files = cs
+                .find_files(
+                    Some(vec![
+                        MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                        MononokePath::try_from("dir2")?,
+                    ]),
+                    Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
+                    100,
+                )
+                .await?
+                .collect()
+                .compat()
+                .await?;
+            files.sort();
+            let expected_files = vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ];
+            assert_eq!(files, expected_files);
+
             Ok(())
         }
             .boxed()

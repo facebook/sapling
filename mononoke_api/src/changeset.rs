@@ -17,13 +17,13 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::stream::Stream;
+use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
 use futures_util::{try_future::try_join_all, try_join};
-use manifest::ManifestOps;
-use manifest::{Diff as ManifestDiff, Entry as ManifestEntry};
+use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use mercurial_types::Globalrev;
-use mononoke_types::BonsaiChangeset;
+use mononoke_types::{BonsaiChangeset, MPathElement};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
@@ -338,5 +338,49 @@ impl ChangesetContext {
             .compat()
             .await?;
         return Ok(change_contexts);
+    }
+
+    pub async fn find_files(
+        &self,
+        prefixes: Option<Vec<MononokePath>>,
+        basenames: Option<Vec<String>>,
+        limit: u64,
+    ) -> Result<impl Stream<Item = MononokePath, Error = MononokeError>, MononokeError> {
+        let root = self.root_fsnode_id().await?;
+        let prefixes = match prefixes {
+            Some(prefixes) => prefixes
+                .into_iter()
+                .map(|prefix| PathOrPrefix::Prefix(prefix.into()))
+                .collect(),
+            None => vec![PathOrPrefix::Prefix(None)],
+        };
+        let mpaths = root
+            .fsnode_id()
+            .find_entries(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_blobstore(),
+                prefixes,
+            )
+            .filter_map(|(path, entry)| match (path, entry) {
+                (Some(mpath), ManifestEntry::Leaf(_)) => Some(mpath),
+                _ => None,
+            });
+        let mpaths = match basenames {
+            Some(basenames) => {
+                let basenames = basenames
+                    .into_iter()
+                    .map(|basename| MPathElement::new(basename.into()))
+                    .collect::<Result<HashSet<_>, _>>()
+                    .map_err(MononokeError::from)?;
+                mpaths
+                    .filter(move |mpath| basenames.contains(mpath.basename()))
+                    .left_stream()
+            }
+            None => mpaths.right_stream(),
+        };
+        Ok(mpaths
+            .take(limit)
+            .map(|mpath| MononokePath::new(Some(mpath)))
+            .map_err(MononokeError::from))
     }
 }

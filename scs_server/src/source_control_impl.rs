@@ -26,8 +26,8 @@ use mercurial_types::Globalrev;
 use mononoke_api::{
     unified_diff, ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetPathDiffContext,
     ChangesetSpecifier, CopyInfo, CoreContext, FileContext, FileId, FileMetadata, FileType,
-    HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext, SessionContainer, TreeContext,
-    TreeEntry, TreeId, UnifiedDiff,
+    HgChangesetId, Mononoke, MononokeError, MononokePath, PathEntry, RepoContext, SessionContainer,
+    TreeContext, TreeEntry, TreeId, UnifiedDiff,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
@@ -802,6 +802,7 @@ mod errors {
     impl_into_thrift_error!(service::CommitInfoExn);
     impl_into_thrift_error!(service::CommitCompareExn);
     impl_into_thrift_error!(service::CommitIsAncestorOfExn);
+    impl_into_thrift_error!(service::CommitFindFilesExn);
     impl_into_thrift_error!(service::CommitPathInfoExn);
     impl_into_thrift_error!(service::CommitPathBlameExn);
     impl_into_thrift_error!(service::TreeListExn);
@@ -1194,6 +1195,43 @@ impl SourceControlService for SourceControlServiceImpl {
             diff_files,
             other_commit_ids,
         })
+    }
+
+    /// Returns files that match the criteria
+    async fn commit_find_files(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitFindFilesParams,
+    ) -> Result<thrift::CommitFindFilesResponse, service::CommitFindFilesExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let limit: u64 = check_range_and_convert(
+            "limit",
+            params.limit,
+            0..=source_control::COMMIT_FIND_FILES_MAX_LIMIT,
+        )?;
+        let prefixes: Option<Vec<_>> = match params.prefixes {
+            Some(prefixes) => Some(
+                prefixes
+                    .into_iter()
+                    .map(|prefix| {
+                        MononokePath::try_from(&prefix).map_err(|e| {
+                            errors::invalid_request(format!("invalid prefix '{}': {}", prefix, e))
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+            None => None,
+        };
+
+        let files = changeset
+            .find_files(prefixes, params.basenames, limit)
+            .await?
+            .map(|path| path.to_string())
+            .collect()
+            .compat()
+            .await?;
+        Ok(thrift::CommitFindFilesResponse { files })
     }
 
     /// Returns information about the file or directory at a path in a commit.
