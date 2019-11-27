@@ -486,9 +486,10 @@ impl RepoClient {
         WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
         Content:
             Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
-        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
-            + Send
-            + 'static,
+        GetpackHandler:
+            Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
+                + Send
+                + 'static,
     {
         let (ctx, command_logger) = self.start_command(name);
 
