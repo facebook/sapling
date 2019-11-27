@@ -207,7 +207,14 @@ class transaction(util.transactional):
         # holds callbacks to call during abort
         self._abortcallback = {}
         # Reload metalog state when entering transaction.
-        opener.__dict__.pop("metalog", None)
+        metalog = opener.__dict__.pop("metalog", None)
+        if metalog and metalog.isdirty():
+            # |<- A ->|<----------- repo lock --------->|
+            #         |<- B ->|<- transaction ->|<- C ->|
+            #          ^^^^^^^
+            raise error.ProgrammingError(
+                "metalog should not be changed before transaction"
+            )
 
     def __del__(self):
         if self.journal:

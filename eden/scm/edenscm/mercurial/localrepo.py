@@ -1957,20 +1957,28 @@ class localrepository(object):
 
         svfs = self.svfs
         # Invalidate metalog state.
-        svfs.__dict__.pop("metalog", None)
+        metalog = svfs.__dict__.pop("metalog", None)
+        if metalog and metalog.isdirty():
+            # |<- A ->|<----------- repo lock --------->|
+            #         |<- B ->|<- transaction ->|<- C ->|
+            #  ^^^^^^^
+            raise errormod.ProgrammingError(
+                "metalog should not be changed before repo.lock"
+            )
         releasefn = None
         if self.ui.configbool("experimental", "metalog"):
             # XXX: metalog.commit should ideally be only called by a transaction
             # close. However, there are misuses across the code base, so we
             # cannot really rely on transaction now.
             def metalogcommit():
-                if "metalog" not in svfs.__dict__:
-                    # Already committed via transaction close.
-                    return
-                message = " ".join(map(util.shellquote, pycompat.sysargv[1:]))
-                svfs.metalog.commit(message, int(util.timer()))
-                # Force a reload of metalog to get the latest view.
-                del svfs.__dict__["metalog"]
+                metalog = svfs.__dict__.pop("metalog", None)
+                # |<- A ->|<----------- repo lock --------->|
+                #         |<- B ->|<- transaction ->|<- C ->|
+                #                                    ^^^^^^^
+                if metalog and metalog.isdirty():
+                    raise errormod.ProgrammingError(
+                        "metalog change outside a transaction is unsupported"
+                    )
 
             releasefn = metalogcommit
 
