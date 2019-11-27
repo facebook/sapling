@@ -8,7 +8,7 @@
 
 use crate::errors::*;
 
-use bundle2_resolver::{run_hooks, run_post_resolve_action, RepoSyncTarget};
+use unbundle::{run_hooks, run_post_resolve_action, RepoSyncTarget};
 
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
@@ -671,7 +671,7 @@ impl RepoClient {
     /// via the repo sync target, None if this should be a direct push
     fn maybe_get_repo_sync_target_for_action(
         &self,
-        action: &bundle2_resolver::PostResolveAction,
+        action: &unbundle::PostResolveAction,
     ) -> Result<Option<RepoSyncTarget>> {
         // Don't query configerator if we lack config
         if self.maybe_repo_sync_target.is_none() {
@@ -692,7 +692,7 @@ impl RepoClient {
 fn maybe_pushredirect_action(
     repo_id: RepositoryId,
     pushredirect_config: Option<&ConfigLoader>,
-    action: &bundle2_resolver::PostResolveAction,
+    action: &unbundle::PostResolveAction,
 ) -> Result<bool> {
     let maybe_config: Option<MononokePushRedirectEnable> = match pushredirect_config {
         // If you chose not to give us configerator, we won't allow redirect based purely on config
@@ -705,7 +705,7 @@ fn maybe_pushredirect_action(
 
     let enabled = maybe_config.and_then(move |config| {
         config.per_repo.get(&(repo_id.id() as i64)).map(|enables| {
-            use bundle2_resolver::PostResolveAction::*;
+            use unbundle::PostResolveAction::*;
 
             match action {
                 InfinitePush(_) => enables.draft_push,
@@ -1265,7 +1265,7 @@ impl HgCommands for RepoClient {
                 let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                 let pushrebase_params = client.repo.pushrebase_params().clone();
 
-                let res = bundle2_resolver::resolve(
+                let res = unbundle::resolve(
                     ctx.clone(),
                     client.repo.blobrepo().clone(),
                     infinitepush_writes_allowed,
@@ -1347,7 +1347,7 @@ impl HgCommands for RepoClient {
                     .inspect_err({
                         cloned!(reponame);
                         move |err| {
-                            use bundle2_resolver::BundleResolverError::*;
+                            use unbundle::BundleResolverError::*;
                             match err {
                                 HookError((cs_hooks, file_hooks)) => {
                                     let mut failed_hooks = HashSet::new();

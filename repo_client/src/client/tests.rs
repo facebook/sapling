@@ -65,7 +65,7 @@ fn test_parsing_caps_simple() {
 
 #[test]
 fn test_pushredirect_config() {
-    use bundle2_resolver::*;
+    use unbundle::*;
     // This ends up being exhaustive
     let json_config = String::from(
         r#"
