@@ -11,14 +11,26 @@
 
 mod changegroup;
 mod errors;
+mod hook_running;
+mod processing;
+mod push_redirector;
+mod rate_limits;
 mod resolver;
+mod response;
 mod stats;
 mod upload_blobs;
 mod upload_changesets;
 
+pub use hook_running::run_hooks;
+pub use processing::run_post_resolve_action;
+pub use push_redirector::{RepoSyncTarget, CONFIGERATOR_PUSHREDIRECT_ENABLE};
 pub use resolver::{
     resolve, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
     NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
     UploadedBonsais, UploadedHgChangesetIds,
+};
+pub use response::{
+    UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
+    UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
 };

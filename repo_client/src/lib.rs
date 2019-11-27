@@ -13,11 +13,9 @@
 
 mod client;
 mod errors;
-mod push_redirector;
-mod unbundle;
 
+pub use bundle2_resolver::{RepoSyncTarget, CONFIGERATOR_PUSHREDIRECT_ENABLE};
 pub use client::{gettreepack_entries, RepoClient, WireprotoLogging};
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
-pub use push_redirector::{RepoSyncTarget, CONFIGERATOR_PUSHREDIRECT_ENABLE};
 pub use repo_read_write_status::RepoReadWriteFetcher;
 pub use streaming_clone::SqlStreamingChunksFetcher;

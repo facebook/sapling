@@ -6,9 +6,7 @@
  * directory of this source tree.
  */
 
-use bundle2_resolver::{
-    BundleResolverError, PostResolveAction, PostResolvePush, PostResolvePushRebase,
-};
+use crate::{BundleResolverError, PostResolveAction, PostResolvePush, PostResolvePushRebase};
 use cloned::cloned;
 use context::CoreContext;
 use crypto::{digest::Digest, sha2::Sha256};

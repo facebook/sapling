@@ -8,21 +8,21 @@
 
 #![deny(warnings)]
 
-use crate::unbundle::run_post_resolve_action;
-use crate::unbundle::{
+use crate::run_post_resolve_action;
+use crate::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
     UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
 };
 
-use backsyncer::backsync_all_latest;
-use backsyncer::TargetRepoDbs;
-use bundle2_resolver::InfiniteBookmarkPush;
-use bundle2_resolver::PlainBookmarkPush;
-use bundle2_resolver::PushrebaseBookmarkSpec;
-use bundle2_resolver::{
+use crate::InfiniteBookmarkPush;
+use crate::PlainBookmarkPush;
+use crate::PushrebaseBookmarkSpec;
+use crate::{
     BundleResolverError, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedBonsais,
 };
+use backsyncer::backsync_all_latest;
+use backsyncer::TargetRepoDbs;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};

@@ -6,13 +6,13 @@
  * directory of this source tree.
  */
 
-use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
-use bundle2_resolver::{
+use crate::{
     BundleResolverError, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
     PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
+use blobrepo::BlobRepo;
+use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::prelude::*;

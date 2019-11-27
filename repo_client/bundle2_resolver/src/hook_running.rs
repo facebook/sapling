@@ -8,10 +8,10 @@
 
 #![deny(warnings)]
 
-use bookmarks::BookmarkName;
-use bundle2_resolver::{
+use crate::{
     BundleResolverError, PostResolveAction, PostResolvePushRebase, UploadedHgChangesetIds,
 };
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::ok;

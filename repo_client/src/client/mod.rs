@@ -7,8 +7,8 @@
  */
 
 use crate::errors::*;
-use crate::push_redirector::RepoSyncTarget;
-use crate::unbundle::{run_hooks, run_post_resolve_action};
+
+use bundle2_resolver::{run_hooks, run_post_resolve_action, RepoSyncTarget};
 
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};

@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use crate::CommonHeads;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
-use bundle2_resolver::CommonHeads;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure_ext::Error;
