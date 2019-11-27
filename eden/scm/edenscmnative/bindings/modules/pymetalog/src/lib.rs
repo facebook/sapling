@@ -78,6 +78,11 @@ py_class!(class metalog |py| {
         Ok(Bytes::from(id.as_ref().to_vec()))
     }
 
+    /// Test if there are uncommitted changes.
+    def isdirty(&self) -> PyResult<bool> {
+        Ok(self.log(py).borrow().is_dirty())
+    }
+
     /// Why the change was made.
     def message(&self) -> PyResult<Bytes> {
         Ok(Bytes::from(self.log(py).borrow().message().to_string()))

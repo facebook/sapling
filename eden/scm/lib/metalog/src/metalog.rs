@@ -162,8 +162,7 @@ impl MetaLog {
     /// newly created "root" object. This is similar to commit message and date
     /// used by source control.
     pub fn commit(&mut self, options: CommitOptions) -> Result<Id20> {
-        let bytes = mincode::serialize(&self.root)?;
-        if zstore::sha1(&bytes) == self.orig_root_id {
+        if !self.is_dirty() {
             // Nothing changed.
             return Ok(self.orig_root_id);
         }
@@ -187,6 +186,13 @@ impl MetaLog {
             self.orig_root_id = id;
         }
         Ok(id)
+    }
+
+    /// Test if there are uncommitted changes.
+    pub fn is_dirty(&self) -> bool {
+        let bytes =
+            mincode::serialize(&self.root).expect("in-memory mincode::serialize should success");
+        zstore::sha1(&bytes) != self.orig_root_id
     }
 
     /// Why this change was made.
