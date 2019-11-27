@@ -77,7 +77,6 @@ const MAX_REBASE_ATTEMPTS: usize = 100;
 
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
-// TODO: (torozco) T44843329 Why does this duplicate scm/mononoke/bundle2_resolver/src/errors.rs?
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("Bonsai not found for hg changeset: {0:?}")]

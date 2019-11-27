@@ -10,7 +10,7 @@
 #![cfg_attr(test, type_length_limit = "2097152")]
 
 mod changegroup;
-pub mod errors;
+mod errors;
 mod resolver;
 mod stats;
 mod upload_blobs;
