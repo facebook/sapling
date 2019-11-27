@@ -53,7 +53,7 @@
   no changes found
 
   $ hg rollback --dry-run --verbose
-  repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/) (glob)
+  repository tip rolled back to revision 0 (undo clone)
 
 Test pull of non-existing 20 character revision specification, making sure plain ascii identifiers
 not are encoded like a node:

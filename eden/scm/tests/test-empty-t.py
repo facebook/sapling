@@ -60,16 +60,24 @@ sh % "hg verify" == r"""
 sh % "ls .hg" == r"""
     00changelog.i
     blackbox
+    dirstate
     hgrc
     requires
     store
-    treestate"""
+    treestate
+    undo.bookmarks
+    undo.branch
+    undo.desc
+    undo.dirstate"""
 
 # Should be empty:
 # It's not really empty, though.
 
 sh % "ls .hg/store" == r"""
     allheads
-    metalog"""
+    metalog
+    undo
+    undo.backupfiles
+    undo.phaseroots"""
 
 sh % "cd .."

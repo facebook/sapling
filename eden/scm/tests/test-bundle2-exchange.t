@@ -87,10 +87,12 @@ clone --pull
   pre-close-tip:9520eea781bc draft 
   new changesets cd010b8cd998:9520eea781bc
   postclose-tip:9520eea781bc draft 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=9520eea781bcca16c1e15acc0ba14335a0e8e5ba HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
+  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=9520eea781bcca16c1e15acc0ba14335a0e8e5ba HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=clone HG_URL=file:$TESTTMP/main
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  pre-close-tip:9520eea781bc draft 
+  postclose-tip:9520eea781bc draft 
+  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=clone
   $ hg -R other log -G
   @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
   |

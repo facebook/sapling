@@ -17,6 +17,7 @@ import errno
 import hashlib
 import os
 import shutil
+import weakref
 
 from . import (
     bookmarks,
@@ -633,7 +634,7 @@ def clone(
                 stream=stream,
             )
 
-    srclock = destlock = cleandir = None
+    srclock = destlock = destlockw = cleandir = None
     srcrepo = srcpeer.local()
     try:
         abspath = origsource
@@ -690,6 +691,11 @@ def clone(
             # into it
             destpeer = peer(srcrepo, peeropts, dest)
             srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
+            # Attach "destlock" to the repo. So 'repo.lock()' wouldn't
+            # deadlock. wlock needs to be taken first.
+            if destlock:
+                destlockw = destpeer.local().wlock()
+                destpeer.local()._lockref = weakref.ref(destlock)
         else:
             try:
                 destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
@@ -714,22 +720,23 @@ def clone(
                 checkout = revs[0]
             local = destpeer.local()
             if local:
-                if not stream:
-                    if pull:
-                        stream = False
-                    else:
-                        stream = None
+                with local.wlock(), local.lock(), local.transaction("clone"):
+                    if not stream:
+                        if pull:
+                            stream = False
+                        else:
+                            stream = None
 
-                overrides = {
-                    # internal config: ui.quietbookmarkmove
-                    ("ui", "quietbookmarkmove"): True,
-                    # the normal pull process each commit and so is more expensive
-                    # than streaming bytes from disk to the wire.
-                    # disabling selectivepull allows to run a streamclone
-                    ("remotenames", "selectivepull"): False,
-                }
-                with local.ui.configoverride(overrides, "clone"):
-                    exchange.pull(local, srcpeer, revs, streamclonerequested=stream)
+                    overrides = {
+                        # internal config: ui.quietbookmarkmove
+                        ("ui", "quietbookmarkmove"): True,
+                        # the normal pull process each commit and so is more expensive
+                        # than streaming bytes from disk to the wire.
+                        # disabling selectivepull allows to run a streamclone
+                        ("remotenames", "selectivepull"): False,
+                    }
+                    with local.ui.configoverride(overrides, "clone"):
+                        exchange.pull(local, srcpeer, revs, streamclonerequested=stream)
             elif srcrepo:
                 exchange.push(
                     srcrepo, destpeer, revs=revs, bookmarks=srcrepo._bookmarks.keys()
@@ -741,53 +748,54 @@ def clone(
 
         destrepo = destpeer.local()
         if destrepo:
-            template = uimod.samplehgrcs["cloned"]
-            fp = destrepo.localvfs("hgrc", "wb")
-            u = util.url(abspath)
-            u.passwd = None
-            defaulturl = bytes(u)
-            fp.write(util.tonativeeol(template % defaulturl))
-            fp.close()
+            with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
+                template = uimod.samplehgrcs["cloned"]
+                fp = destrepo.localvfs("hgrc", "wb")
+                u = util.url(abspath)
+                u.passwd = None
+                defaulturl = bytes(u)
+                fp.write(util.tonativeeol(template % defaulturl))
+                fp.close()
 
-            destrepo.ui.setconfig("paths", "default", defaulturl, "clone")
+                destrepo.ui.setconfig("paths", "default", defaulturl, "clone")
 
-            if update:
-                if update is not True:
-                    checkout = srcpeer.lookup(update)
-                uprev = None
-                status = None
-                if checkout is not None:
-                    try:
-                        uprev = destrepo.lookup(checkout)
-                    except error.RepoLookupError:
-                        if update is not True:
-                            try:
-                                uprev = destrepo.lookup(update)
-                            except error.RepoLookupError:
-                                pass
-                if uprev is None:
-                    try:
-                        uprev = destrepo._bookmarks["@"]
-                        update = "@"
-                        bn = destrepo[uprev].branch()
-                        if bn == "default":
-                            status = _("updating to bookmark @\n")
-                        else:
-                            status = _("updating to bookmark @ on branch %s\n") % bn
-                    except KeyError:
+                if update:
+                    if update is not True:
+                        checkout = srcpeer.lookup(update)
+                    uprev = None
+                    status = None
+                    if checkout is not None:
                         try:
-                            uprev = destrepo.branchtip("default")
+                            uprev = destrepo.lookup(checkout)
                         except error.RepoLookupError:
-                            uprev = destrepo.lookup("tip")
-                if not status:
-                    bn = destrepo[uprev].branch()
-                    status = _("updating to branch %s\n") % bn
-                destrepo.ui.status(status)
-                _update(destrepo, uprev)
-                if update in destrepo._bookmarks:
-                    bookmarks.activate(destrepo, update)
+                            if update is not True:
+                                try:
+                                    uprev = destrepo.lookup(update)
+                                except error.RepoLookupError:
+                                    pass
+                    if uprev is None:
+                        try:
+                            uprev = destrepo._bookmarks["@"]
+                            update = "@"
+                            bn = destrepo[uprev].branch()
+                            if bn == "default":
+                                status = _("updating to bookmark @\n")
+                            else:
+                                status = _("updating to bookmark @ on branch %s\n") % bn
+                        except KeyError:
+                            try:
+                                uprev = destrepo.branchtip("default")
+                            except error.RepoLookupError:
+                                uprev = destrepo.lookup("tip")
+                    if not status:
+                        bn = destrepo[uprev].branch()
+                        status = _("updating to branch %s\n") % bn
+                    destrepo.ui.status(status)
+                    _update(destrepo, uprev)
+                    if update in destrepo._bookmarks:
+                        bookmarks.activate(destrepo, update)
     finally:
-        release(srclock, destlock)
+        release(srclock, destlockw, destlock)
         if srcpeer is not None:
             srcpeer.close()
         if destpeer is not None:
