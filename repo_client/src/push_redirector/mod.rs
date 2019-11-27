@@ -9,11 +9,11 @@
 #![deny(warnings)]
 
 use crate::mononoke_repo::MononokeRepo;
-use crate::unbundle::response::{
+use crate::unbundle::run_post_resolve_action;
+use crate::unbundle::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
     UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
 };
-use crate::unbundle::run_post_resolve_action;
 
 use backsyncer::backsync_all_latest;
 use backsyncer::TargetRepoDbs;
