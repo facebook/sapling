@@ -33,3 +33,4 @@ impl ForeignError for indexedlog::Error {}
 impl ForeignError for mincode::Error {}
 impl ForeignError for std::io::Error {}
 impl ForeignError for zstore::Error {}
+impl ForeignError for String {}

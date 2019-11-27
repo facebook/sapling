@@ -62,6 +62,15 @@ pub struct CommitOptions<'a> {
     /// This is useful for cross-process transactions.
     pub detached: bool,
 
+    /// How to resolve conflicts.
+    ///
+    /// The function takes the current MetaLog being written, and another MetaLog
+    /// containing the latest change, and an "ancestor" MetaLog that contains data
+    /// before the current pending changes.
+    /// The function should try to set resolved contents on the current MetaLog and
+    /// return `Ok(())` if it is able to resolve everything cleanly.
+    pub resolver: Option<Box<dyn FnMut(&mut MetaLog, &MetaLog, &MetaLog) -> Result<()>>>,
+
     /// Prevent constructing via fields.
     _private: (),
 }
@@ -162,10 +171,10 @@ impl MetaLog {
         if self.log.is_changed() && !options.detached {
             // If 'detached' is set, then just write it in a conflict-free way,
             // since the final root object is not committed yet.
-            //
-            // TODO: Make it possible to resolve conflicts somehow?
-            // For example, allow register 3-way merge algorithms for structures?
-            return Err(self.error("cannot write changes: conflicts detected"));
+            let ancestor = Self::open(&self.path, Some(self.orig_root_id))?;
+            let other = Self::open(&self.path, None)?;
+            let mut resolver = options.resolver.unwrap_or(Box::new(resolver::fail));
+            (resolver)(self, &other, &ancestor)?;
         }
         self.root.message = options.message.to_string();
         self.root.timestamp = options.timestamp;
@@ -190,7 +199,8 @@ impl MetaLog {
         self.root.timestamp
     }
 
-    fn error(&self, message: impl fmt::Display) -> Error {
+    /// Generate an error.
+    pub fn error(&self, message: impl fmt::Display) -> Error {
         Error(format!("{:?}: {}", &self.path, message))
     }
 
@@ -240,6 +250,44 @@ struct Root {
     message: String,
 }
 
+/// Predefined conflict resolutions.
+pub mod resolver {
+    use super::MetaLog;
+    use crate::Result;
+    use std::collections::BTreeSet;
+
+    /// Fail the merge unconditionally on any kind of conflicts.
+    pub fn fail(this: &mut MetaLog, other: &MetaLog, ancestor: &MetaLog) -> Result<()> {
+        let mut conflicts = BTreeSet::new();
+        for key in other.keys().iter().chain(this.keys().iter()) {
+            let ancestor_id = ancestor.root.map.get(&key.to_string());
+            let other_id = other.root.map.get(&key.to_string());
+            let this_id = this.root.map.get(&key.to_string());
+            let changed_description = match (
+                ancestor_id == this_id,
+                ancestor_id == other_id,
+                this_id == other_id,
+            ) {
+                (false, false, false) => "both changed, diverged",
+                (false, false, true) => "both changed, same",
+                (true, false, _) => "this changed",
+                (false, true, _) => "other changed",
+                (true, true, _) => continue,
+            };
+            conflicts.insert(format!("  {}: {}", key, changed_description));
+        }
+        let message = if conflicts.is_empty() {
+            "conflict detected".to_string()
+        } else {
+            format!(
+                "conflict detected:\n{}",
+                conflicts.into_iter().collect::<Vec<_>>().join("\n")
+            )
+        };
+        Err(this.error(message))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,6 +328,77 @@ mod tests {
         assert_eq!(metalog.get("foo").unwrap().unwrap(), b"bar2");
         assert_eq!(metalog.message(), "commit 2");
         assert_eq!(metalog.timestamp(), 22);
+    }
+
+    #[test]
+    fn test_default_resolver() {
+        let dir = TempDir::new().unwrap();
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+        metalog.set("00", b"0").unwrap();
+        metalog.set("10", b"0").unwrap();
+        metalog.set("01", b"0").unwrap();
+        metalog.set("11a", b"0").unwrap();
+        metalog.set("11b", b"0").unwrap();
+        metalog.commit(commit_opt("commit 0", 0)).unwrap();
+
+        let mut metalog1 = MetaLog::open(&dir, None).unwrap();
+        let mut metalog2 = MetaLog::open(&dir, None).unwrap();
+        metalog1.set("10", b"1").unwrap();
+        metalog1.set("11a", b"1").unwrap();
+        metalog1.set("11b", b"1").unwrap();
+        metalog2.set("01", b"1").unwrap();
+        metalog2.set("11a", b"1").unwrap();
+        metalog2.set("11b", b"2").unwrap();
+
+        metalog1.commit(commit_opt("commit 1", 1)).unwrap();
+        let err = metalog2
+            .commit(commit_opt("commit 2", 2))
+            .unwrap_err()
+            .to_string()
+            .replace(&format!("{:?}", dir.path()), "<path>");
+        assert_eq!(
+            err,
+            r#"<path>: conflict detected:
+  01: other changed
+  10: this changed
+  11a: both changed, same
+  11b: both changed, diverged"#
+        );
+    }
+
+    #[test]
+    fn test_custom_resolver() {
+        let dir = TempDir::new().unwrap();
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+        metalog.set("a", b"0").unwrap();
+        metalog.commit(commit_opt("commit 0", 0)).unwrap();
+
+        let mut metalog1 = MetaLog::open(&dir, None).unwrap();
+        let mut metalog2 = MetaLog::open(&dir, None).unwrap();
+        metalog1.set("a", b"1").unwrap();
+        metalog2.set("a", b"2").unwrap();
+        metalog1.commit(commit_opt("commit 1", 1)).unwrap();
+
+        let mut opts = commit_opt("commit 2", 2);
+        opts.resolver = Some(Box::new(
+            |this: &mut MetaLog, other: &MetaLog, _ancestor: &MetaLog| -> Result<()> {
+                // Concatenate both sides.
+                let mut v1 = this.get("a").unwrap().unwrap();
+                let mut v2 = other.get("a").unwrap().unwrap();
+                v1.append(&mut v2);
+                this.set("a", &v1).unwrap();
+                // Also try to write an extra key.
+                this.set("c", b"c").unwrap();
+                Ok(())
+            },
+        ));
+        metalog2.commit(opts).unwrap();
+
+        // Check the merged content.
+        let metalog3 = MetaLog::open(&dir, None).unwrap();
+        assert_eq!(metalog3.message(), "commit 2");
+        assert_eq!(metalog3.get("a").unwrap().unwrap(), b"21");
+        assert_eq!(metalog3.get("c").unwrap().unwrap(), b"c");
     }
 
     quickcheck! {

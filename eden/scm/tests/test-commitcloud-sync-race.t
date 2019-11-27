@@ -134,6 +134,7 @@ Wait for the background backup to finish and check its output.
   visibility: removed 1 heads [df4f53cec30a]; added 1 heads [79089e97b9e7]
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
   visibility: wrote 1 heads: 79089e97b9e7
-  abort: "$TESTTMP/client2/.hg/store/metalog": cannot write changes: conflicts detected
+  abort: "$TESTTMP/client2/.hg/store/metalog": conflict detected:
+    visibleheads: both changed, diverged
   transaction abort!
   rollback completed
