@@ -50,7 +50,13 @@ impl StockBookmarks {
     pub fn read<P: Into<PathBuf>>(base: P) -> Result<Self> {
         let base = base.into();
 
-        let file = fs::File::open(base.join("bookmarks"));
+        // Newer clients store bookmarks in storevfs.
+        let mut path = base.join("store/bookmarks");
+        if !path.exists() {
+            // Older clients store bookmarks in vfs.
+            path = base.join("bookmarks");
+        }
+        let file = fs::File::open(path);
         match file {
             Ok(file) => Self::from_reader(file),
             Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
