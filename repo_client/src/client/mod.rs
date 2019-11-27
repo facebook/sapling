@@ -7,7 +7,6 @@
  */
 
 use crate::errors::*;
-use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use crate::push_redirector::RepoSyncTarget;
 use crate::unbundle::{run_hooks, run_post_resolve_action};
 
@@ -43,6 +42,7 @@ use mercurial_types::{
     NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
+use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use rand::{self, Rng};
