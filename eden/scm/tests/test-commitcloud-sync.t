@@ -727,7 +727,7 @@ Create a shared client directory
   $ cat shared.rc >> client1b/.hg/hgrc
   $ cd client1b
   $ tglog
-  @  19: 715c1454ae33 'stack commit 2'
+  @  19: 715c1454ae33 'stack commit 2' testbookmark
   |
   o  18: 4b4f26511f8b 'race attempt'
   |
@@ -739,7 +739,7 @@ Make a new commit to be shared
   $ tglog
   @  20: 2c0ce859e76a 'shared commit'
   |
-  o  19: 715c1454ae33 'stack commit 2'
+  o  19: 715c1454ae33 'stack commit 2' testbookmark
   |
   o  18: 4b4f26511f8b 'race attempt'
   |

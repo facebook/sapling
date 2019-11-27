@@ -680,7 +680,6 @@ Clone from repo with content should result in shared store being created
   new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
-  adding remote bookmark bookA
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -727,9 +726,10 @@ Clone with existing share dir should result in pull + share
   $ cat share-dest1b/.hg/sharedpath; echo
   $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg
 
-We only get bookmarks from the remote, not everything in the share
+We get bookmarks from both the remote and in the share
 
   $ hg -R share-dest1b bookmarks
+     bookA                     2:e5bfe23c0b47
      branch1                   5:ec6257d0246c
      branch2                   6:79168763a548
      head1                     3:4a8dc1ab4c13
@@ -783,7 +783,6 @@ remote naming mode works as advertised
   new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
-  adding remote bookmark bookA
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -800,10 +799,6 @@ remote naming mode works as advertised
   new changesets b5f04eac9d8f:79168763a548
   searching for changes
   no changes found
-  adding remote bookmark branch1
-  adding remote bookmark branch2
-  adding remote bookmark head1
-  adding remote bookmark head2
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -821,7 +816,6 @@ request to clone a single revision is respected in sharing mode
   added 2 changesets with 2 changes to 1 files
   new changesets b5f04eac9d8f:4a8dc1ab4c13
   no changes found
-  adding remote bookmark head1
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -848,7 +842,6 @@ making another clone should only pull down requested rev
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  adding remote bookmark head1
   adding remote bookmark head2
   new changesets 99f71071f117
   updating working directory
@@ -881,7 +874,6 @@ making another clone should only pull down requested rev
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
   searching for changes
   no changes found
-  adding remote bookmark bookA
 
   $ ls share-1anowc
 
@@ -935,7 +927,6 @@ pooled".
   new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
-  adding remote bookmark bookA
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -943,7 +934,6 @@ pooled".
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
   searching for changes
   no changes found
-  adding remote bookmark bookA
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

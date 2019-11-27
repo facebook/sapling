@@ -45,12 +45,9 @@ def _getbkfile(repo):
     may need to tweak this behavior further.
     """
 
-    if repo._hassharedbookmarks:
-        fp, pending = txnutil.trysharedpending(
-            repo.root, repo.sharedroot, repo.sharedvfs, "bookmarks"
-        )
-    else:
-        fp, pending = txnutil.trypending(repo.root, repo.localvfs, "bookmarks")
+    fp, pending = txnutil.trysharedpending(
+        repo.root, repo.sharedroot, repo.sharedvfs, "bookmarks"
+    )
     return fp
 
 
@@ -158,10 +155,7 @@ class bmstore(dict):
 
         The transaction is then responsible for updating the file content."""
         tr.addfilegenerator("bookmarks", ("bookmarks",), self._write, location="local")
-        if (
-            self._repo._hassharedbookmarks
-            and self._repo.localvfs is not self._repo.sharedvfs
-        ):
+        if self._repo.localvfs is not self._repo.sharedvfs:
             tr.addfilegenerator(
                 "shared-bookmarks", ("bookmarks",), self._write, location="shared"
             )
