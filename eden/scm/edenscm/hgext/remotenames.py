@@ -127,16 +127,17 @@ def exbookcalcupdate(orig, ui, repo, checkout):
 
 
 def expush(orig, repo, remote, *args, **kwargs):
-    res = orig(repo, remote, *args, **kwargs)
+    with repo.wlock(), repo.lock(), repo.transaction("push"):
+        res = orig(repo, remote, *args, **kwargs)
 
-    if _isselectivepull(repo.ui):
-        remotebookmarkskeys = _getselectivepullinitbookmarks(repo, remote)
-        remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
-    else:
-        remotebookmarks = remote.listkeys("bookmarks")
-    pullremotenames(repo, remote, remotebookmarks)
+        if _isselectivepull(repo.ui):
+            remotebookmarkskeys = _getselectivepullinitbookmarks(repo, remote)
+            remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
+        else:
+            remotebookmarks = remote.listkeys("bookmarks")
+        pullremotenames(repo, remote, remotebookmarks)
 
-    return res
+        return res
 
 
 def expushop(
@@ -480,27 +481,26 @@ def exclone(orig, ui, *args, **opts):
     srcpeer, dstpeer = orig(ui, *args, **opts)
 
     repo = dstpeer.local()
-    if _isselectivepull(ui):
-        remotebookmarkskeys = _getselectivepullinitbookmarks(repo, srcpeer)
-        remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
-    else:
-        remotebookmarks = srcpeer.listkeys("bookmarks")
-    pullremotenames(repo, srcpeer, remotebookmarks)
+    with repo.wlock(), repo.lock(), repo.transaction("exclone") as tr:
+        if _isselectivepull(ui):
+            remotebookmarkskeys = _getselectivepullinitbookmarks(repo, srcpeer)
+            remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
+        else:
+            remotebookmarks = srcpeer.listkeys("bookmarks")
+        pullremotenames(repo, srcpeer, remotebookmarks)
 
-    if not ui.configbool("remotenames", "syncbookmarks"):
-        ui.debug("remotenames: removing cloned bookmarks\n")
-        wlock = repo.wlock()
-        try:
-            try:
-                vfs = repo.sharedvfs
-                vfs.unlink("bookmarks")
-            except OSError as inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-        finally:
-            wlock.release()
+        if not ui.configbool("remotenames", "syncbookmarks"):
+            ui.debug("remotenames: removing cloned bookmarks\n")
+            for vfs in [repo.localvfs, repo.sharedvfs, repo.svfs]:
+                if vfs.tryread("bookmarks"):
+                    vfs.write("bookmarks", "")
+            # Invalidate bookmark caches.
+            repo._filecache.pop("_bookmarks", None)
+            repo.unfiltered().__dict__.pop("_bookmarks", None)
+            # Avoid writing out bookmarks on transaction close.
+            tr.removefilegenerator("bookmarks")
 
-    return (srcpeer, dstpeer)
+        return (srcpeer, dstpeer)
 
 
 def excommit(orig, repo, *args, **opts):
@@ -2067,13 +2067,14 @@ def precachedistance(repo):
 def debugremotebookmark(ui, repo, name, rev):
     """Change a remote bookmark under the 'debugremote' namespace."""
     data = {}  # {'remote': {'master': '<commit hash>'}}
-    for hexnode, _nametype, remote, rname in readremotenames(repo):
-        data.setdefault(remote, {})[rname] = hexnode
+    with repo.wlock(), repo.lock(), repo.transaction("debugremotebookmark"):
+        for hexnode, _nametype, remote, rname in readremotenames(repo):
+            data.setdefault(remote, {})[rname] = hexnode
 
-    hexnode = scmutil.revsingle(repo, rev).hex()
-    data.setdefault("debugremote", {})[name] = hexnode
+        hexnode = scmutil.revsingle(repo, rev).hex()
+        data.setdefault("debugremote", {})[name] = hexnode
 
-    saveremotenames(repo, data)
+        saveremotenames(repo, data)
 
 
 #########
