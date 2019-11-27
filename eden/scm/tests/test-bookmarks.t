@@ -989,7 +989,7 @@ repositories visible to an external hook.
 .hg/bookmarks.pending in subsequent test)
 
   $ cat > $TESTTMP/savepending.sh <<EOF
-  > cp .hg/bookmarks.pending .hg/bookmarks.pending.saved
+  > cp .hg/store/bookmarks.pending .hg/store/bookmarks.pending.saved
   > exit 1 # to avoid adding new bookmark for subsequent tests
   > EOF
 
@@ -1003,7 +1003,7 @@ repositories visible to an external hook.
   rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
-  $ cp .hg/bookmarks.pending.saved .hg/bookmarks.pending
+  $ cp .hg/store/bookmarks.pending.saved .hg/store/bookmarks.pending
 
 (check visible bookmarks while transaction running in repo)
 

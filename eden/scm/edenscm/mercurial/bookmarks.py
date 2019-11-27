@@ -45,9 +45,7 @@ def _getbkfile(repo):
     may need to tweak this behavior further.
     """
 
-    fp, pending = txnutil.trysharedpending(
-        repo.root, repo.sharedroot, repo.sharedvfs, "bookmarks"
-    )
+    fp, pending = txnutil.trypending(repo.root, repo.svfs, "bookmarks")
     return fp
 
 
@@ -154,11 +152,7 @@ class bmstore(dict):
         """record that bookmarks have been changed in a transaction
 
         The transaction is then responsible for updating the file content."""
-        tr.addfilegenerator("bookmarks", ("bookmarks",), self._write, location="local")
-        if self._repo.localvfs is not self._repo.sharedvfs:
-            tr.addfilegenerator(
-                "shared-bookmarks", ("bookmarks",), self._write, location="shared"
-            )
+        tr.addfilegenerator("bookmarks", ("bookmarks",), self._write, location="")
         tr.hookargs["bookmark_moved"] = "1"
 
     def _writeactive(self):

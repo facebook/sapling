@@ -573,11 +573,12 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
 
-        # Migrate 'remotenames' state from sharedvfs to storevfs.
+        # Migrate 'remotenames' and 'bookmarks' state from sharedvfs to
+        # storevfs.
         # This cannot be safely done in the remotenames extension because
         # changelog might access 'remotenames' and other extensions might
         # use changelog before 'remotenames.reposetup'.
-        for name in ["remotenames"]:
+        for name in ["remotenames", "bookmarks"]:
             if self.sharedvfs.exists(name) and not self.svfs.exists(name):
                 with self.wlock(), self.lock():
                     self.svfs.write(name, self.sharedvfs.read(name))
@@ -825,9 +826,7 @@ class localrepository(object):
                 raise
             return set()
 
-    @repofilecache(
-        sharedpaths=["bookmarks"], localpaths=["bookmarks", "bookmarks.current"]
-    )
+    @repofilecache(sharedpaths=["store/bookmarks"], localpaths=["bookmarks.current"])
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
@@ -1614,7 +1613,7 @@ class localrepository(object):
             (self.localvfs, "journal.dirstate"),
             (self.localvfs, "journal.branch"),
             (self.localvfs, "journal.desc"),
-            (self.localvfs, "journal.bookmarks"),
+            (self.svfs, "journal.bookmarks"),
             (self.svfs, "journal.phaseroots"),
         )
 
@@ -1628,7 +1627,7 @@ class localrepository(object):
             "journal.branch", encoding.fromlocal(self.dirstate.branch())
         )
         self.localvfs.write("journal.desc", "%d\n%s\n" % (len(self), desc))
-        self.localvfs.write("journal.bookmarks", self.localvfs.tryread("bookmarks"))
+        self.svfs.write("journal.bookmarks", self.svfs.tryread("bookmarks"))
         self.svfs.write("journal.phaseroots", self.svfs.tryread("phaseroots"))
 
     def recover(self):
@@ -1707,8 +1706,8 @@ class localrepository(object):
         transaction.rollback(
             self.svfs, vfsmap, "undo", ui.warn, checkambigfiles=_cachedfiles
         )
-        if self.localvfs.exists("undo.bookmarks"):
-            self.localvfs.rename("undo.bookmarks", "bookmarks", checkambig=True)
+        if self.svfs.exists("undo.bookmarks"):
+            self.svfs.rename("undo.bookmarks", "bookmarks", checkambig=True)
         if self.svfs.exists("undo.phaseroots"):
             self.svfs.rename("undo.phaseroots", "phaseroots", checkambig=True)
         self.invalidate()

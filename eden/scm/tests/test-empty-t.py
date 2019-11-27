@@ -65,7 +65,6 @@ sh % "ls .hg" == r"""
     requires
     store
     treestate
-    undo.bookmarks
     undo.branch
     undo.desc
     undo.dirstate"""
@@ -78,6 +77,7 @@ sh % "ls .hg/store" == r"""
     metalog
     undo
     undo.backupfiles
+    undo.bookmarks
     undo.phaseroots"""
 
 sh % "cd .."

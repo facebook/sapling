@@ -682,8 +682,8 @@ def clone(
 
             destlock = copystore(ui, srcrepo, destpath)
             # copy bookmarks over
-            srcbookmarks = srcrepo.localvfs.join("bookmarks")
-            dstbookmarks = os.path.join(destpath, "bookmarks")
+            srcbookmarks = srcrepo.svfs.join("bookmarks")
+            dstbookmarks = os.path.join(destpath, "store", "bookmarks")
             if os.path.exists(srcbookmarks):
                 util.copyfile(srcbookmarks, dstbookmarks)
 

@@ -188,6 +188,7 @@ more there after
   allheads
   data
   fncache
+  journal.bookmarks
   journal.phaseroots
   metalog
   phaseroots
@@ -195,6 +196,7 @@ more there after
   undo
   undo.backup.fncache
   undo.backupfiles
+  undo.bookmarks
   undo.phaseroots
 
 

@@ -104,22 +104,17 @@ _hg_prompt() {
     command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
     builtin echo "empty")"
 
-  local remote="$hg/store/remotenames"
   local shared_hg="$hg"
   if [[ -f "$hg/sharedpath" ]]; then
     shared_hg="$(command cat $hg/sharedpath)"
-    remote="$shared_hg/store/remotenames"
   fi
+  local remote="$shared_hg/store/remotenames"
 
   local active="$hg/bookmarks.current"
   if  [[ -f "$active" ]]; then
     br="$(command cat "$active")"
     # check to see if active bookmark needs update (eg, moved after pull)
-    local marks="$hg/bookmarks"
-    if [[ -f "$hg/sharedpath" && -f "$hg/shared" ]] &&
-        command grep -q '^bookmarks$' "$hg/shared"; then
-      marks="$shared_hg/bookmarks"
-    fi
+    local marks="$shared_hg/store/bookmarks"
     if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
       local markstate="$(command grep " $br$" "$marks" | \
         command cut -f 1 -d ' ')"
