@@ -38,10 +38,6 @@ rename
 
 list bookmarks
 
-  $ cat .hg/bookmarks.current
-  Z (no-eol)
-  $ cat .hg/bookmarks
-  0000000000000000000000000000000000000000 Z
   $ hg bookmarks
    * Z                         -1:000000000000
 

@@ -746,27 +746,9 @@ We warn about divergent during bare update to the active bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 other divergent bookmarks for "Y"
 
-test wrongly formated bookmark
+remove all bookmarks
 
-  $ echo '' >> .hg/bookmarks
-  $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         3:125c9a1d6df6
-   * Z                         4:9c404beeabc2
-     x  y                      2:db815d6d32e6
-  $ echo "Ican'thasformatedlines" >> .hg/bookmarks
-  $ hg bookmarks
-  malformed line in .hg/bookmarks: "Ican'thasformatedlines"
-     X2                        1:925d80f479bb
-     Y                         3:125c9a1d6df6
-   * Z                         4:9c404beeabc2
-     x  y                      2:db815d6d32e6
-
-test missing revisions
-
-  $ echo "925d80f479b925d80f479bc925d80f479bccabab z" > .hg/bookmarks
-  $ hg book
-  no bookmarks set
+  $ hg book -d X2 Y Z 'x  y'
 
 test stripping a non-checked-out but bookmarked revision
 

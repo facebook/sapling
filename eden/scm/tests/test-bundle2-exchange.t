@@ -424,8 +424,6 @@ Check final content.
 
 (check that no 'pending' files remain)
 
-  $ ls -1 other/.hg/bookmarks*
-  other/.hg/bookmarks
   $ ls -1 other/.hg/store/phaseroots*
   other/.hg/store/phaseroots
   $ ls -1 other/.hg/store/00changelog.i*
@@ -619,8 +617,6 @@ Doing the actual push: hook abort
 
 (check that no 'pending' files remain)
 
-  $ ls -1 other/.hg/bookmarks*
-  other/.hg/bookmarks
   $ ls -1 other/.hg/store/phaseroots*
   other/.hg/store/phaseroots
   $ ls -1 other/.hg/store/00changelog.i*

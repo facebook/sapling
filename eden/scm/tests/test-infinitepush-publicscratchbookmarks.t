@@ -56,12 +56,12 @@ Attempt to push a draft commit to a scratch bookmark.  This should still work.
 
 Check the server data is correct.
 
-  $ cat $TESTTMP/server/.hg/bookmarks
-  e6c779c67aa947c951f334f4f312bd2b21d27e55 real-public
   $ cat $TESTTMP/server/.hg/scratchbranches/index/bookmarkmap/scratch/public
   e6c779c67aa947c951f334f4f312bd2b21d27e55 (no-eol)
   $ cat $TESTTMP/server/.hg/scratchbranches/index/bookmarkmap/scratch/draft
   3f2e32144a89cb84ece9ddd3ec1ac2ddf440d113 (no-eol)
+  $ hg bookmarks --cwd $TESTTMP/server
+     real-public               1:e6c779c67aa9
 
 Make another public scratch bookmark on an older commit.
 

@@ -155,8 +155,9 @@ Test a push that comes with out-of-date bookmark discovery
 
   $ hg -R server debugstrip -q 0
   $ hg -R client debugstrip -q 0
-  $ rm server/.hg/bookmarks*
-  $ rm client/.hg/bookmarks*
+
+  $ hg bookmarks --cwd server -d master newbook
+
   $ echo a >> server/a
   $ hg -R server commit -qAm 'aa'
   $ hg -R server bookmark bm -i

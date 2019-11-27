@@ -276,7 +276,7 @@ Test when a local bookmark that was tracking goes missing
 
   $ hg book -v
    * c                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-  $ rm .hg/bookmarks
+  $ hg book -d c
   $ hg book d
   $ hg book -v
    * d                         5:8d13dc14fef1
