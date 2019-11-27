@@ -13,7 +13,6 @@
 
 mod client;
 mod errors;
-mod getbundle_response;
 mod mononoke_repo;
 mod push_redirector;
 mod unbundle;

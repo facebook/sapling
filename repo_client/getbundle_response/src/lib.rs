@@ -27,6 +27,8 @@ use std::{
     sync::Arc,
 };
 
+mod errors;
+
 pub fn create_getbundle_response(
     ctx: CoreContext,
     blobrepo: BlobRepo,

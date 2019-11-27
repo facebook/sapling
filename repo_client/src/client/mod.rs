@@ -7,7 +7,6 @@
  */
 
 use crate::errors::*;
-use crate::getbundle_response;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use crate::push_redirector::RepoSyncTarget;
 use crate::unbundle::{run_hooks, run_post_resolve_action};
@@ -27,6 +26,7 @@ use futures_ext::{
     StreamExt, StreamTimeoutError,
 };
 use futures_stats::{Timed, TimedStreamTrait};
+use getbundle_response::create_getbundle_response;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::{HookExecution, HookManager};
 use itertools::Itertools;
@@ -399,7 +399,7 @@ impl RepoClient {
             }
         }
 
-        bundle2_parts.append(&mut getbundle_response::create_getbundle_response(
+        bundle2_parts.append(&mut create_getbundle_response(
             ctx.clone(),
             blobrepo.clone(),
             args.common,

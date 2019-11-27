@@ -6,8 +6,6 @@
  * directory of this source tree.
  */
 
-use crate::getbundle_response;
-
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bundle2_resolver::CommonHeads;
@@ -19,6 +17,7 @@ pub use failure_ext::{prelude::*, Fail};
 use futures::{Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
+use getbundle_response::create_getbundle_response;
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartId};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
@@ -166,14 +165,7 @@ impl UnbundleResponse {
                     heads.push(onto_head);
                 }
                 heads.push(pushrebased_hg_rev);
-                getbundle_response::create_getbundle_response(
-                    ctx,
-                    repo,
-                    common,
-                    heads,
-                    lca_hint,
-                    Some(phases),
-                )
+                create_getbundle_response(ctx, repo, common, heads, lca_hint, Some(phases))
             })
             .and_then(move |mut cg_part_builder| {
                 cg_part_builder.extend(bookmark_reply_part.into_iter());
