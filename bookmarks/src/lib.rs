@@ -156,6 +156,10 @@ impl BookmarkName {
         self.bookmark.into()
     }
 
+    pub fn into_byte_vec(self) -> Vec<u8> {
+        self.bookmark.into()
+    }
+
     pub fn as_str(&self) -> &str {
         self.bookmark.as_str()
     }

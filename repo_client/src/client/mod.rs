@@ -56,7 +56,6 @@ use serde_json::{self, json};
 use slog::{debug, info, o};
 use stats::{define_stats, DynamicTimeseries, Histogram, Timeseries};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::iter::FromIterator;
 use std::mem;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -141,6 +140,8 @@ where
 
 lazy_static! {
     static ref TIMEOUT: Duration = Duration::from_secs(15 * 60);
+    // Bookmarks taking a long time is unexpected and bad - limit them specially
+    static ref BOOKMARKS_TIMEOUT: Duration = Duration::from_secs(3 * 60);
     // getbundle requests can be very slow for huge commits
     static ref GETBUNDLE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
     // clone requests can be rather long. Let's bump the timeout
@@ -248,6 +249,58 @@ pub struct RepoClient {
     pushredirect_config: Option<ConfigLoader>,
 }
 
+fn get_pull_default_bookmarks_maybe_stale_raw(
+    ctx: CoreContext,
+    repo: BlobRepo,
+) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+    repo.get_pull_default_bookmarks_maybe_stale(ctx)
+        .map(|(book, cs): (Bookmark, HgChangesetId)| {
+            let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
+            (book.into_name().into_byte_vec(), hash)
+        })
+        .fold(HashMap::new(), |mut map, item| {
+            map.insert(item.0, item.1);
+            let ret: Result<_, Error> = Ok(map);
+            ret
+        })
+        .timeout(*BOOKMARKS_TIMEOUT)
+        .map_err(process_timeout_error)
+}
+
+fn update_pull_default_bookmarks_maybe_stale_cache_raw(
+    cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    bookmarks: HashMap<Vec<u8>, Vec<u8>>,
+) {
+    let mut maybe_cache = cache.lock().expect("lock poisoned");
+    *maybe_cache = Some(bookmarks);
+}
+
+fn update_pull_default_bookmarks_maybe_stale_cache(
+    ctx: CoreContext,
+    cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    repo: BlobRepo,
+) -> impl Future<Item = (), Error = Error> {
+    get_pull_default_bookmarks_maybe_stale_raw(ctx, repo)
+        .map(move |bookmarks| update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks))
+}
+
+fn get_pull_default_bookmarks_maybe_stale_updating_cache(
+    ctx: CoreContext,
+    cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    repo: BlobRepo,
+    update_cache: bool,
+) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+    if update_cache {
+        get_pull_default_bookmarks_maybe_stale_raw(ctx, repo)
+            .inspect(move |bookmarks| {
+                update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
+            })
+            .left_future()
+    } else {
+        get_pull_default_bookmarks_maybe_stale_raw(ctx, repo).right_future()
+    }
+}
+
 impl RepoClient {
     pub fn new(
         repo: MononokeRepo,
@@ -308,43 +361,18 @@ impl RepoClient {
         let maybe_cache = self
             .cached_pull_default_bookmarks_maybe_stale
             .lock()
-            .expect("lock poisoned");
+            .expect("lock poisoned")
+            .clone();
 
-        match *maybe_cache {
-            None => self
-                .repo
-                .blobrepo()
-                .get_pull_default_bookmarks_maybe_stale(ctx)
-                .map(|(book, cs): (Bookmark, HgChangesetId)| {
-                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (book.into_name(), hash)
-                })
-                .collect()
-                .map({
-                    cloned!(
-                        self.cached_pull_default_bookmarks_maybe_stale,
-                        self.support_bundle2_listkeys
-                    );
-                    move |bookmarks| {
-                        let bookiter = bookmarks
-                            .into_iter()
-                            .map(|(name, value)| (Vec::from(name.to_string()), value));
-                        if support_bundle2_listkeys {
-                            let mut maybe_cache = cached_pull_default_bookmarks_maybe_stale
-                                .lock()
-                                .expect("lock poisoned");
-                            maybe_cache
-                                .get_or_insert_with(|| HashMap::from_iter(bookiter))
-                                .clone()
-                        } else {
-                            HashMap::from_iter(bookiter)
-                        }
-                    }
-                })
-                .timeout(*TIMEOUT)
-                .map_err(process_timeout_error)
-                .left_future(),
-            Some(ref bookmarks) => future::ok(bookmarks.clone()).right_future(),
+        match maybe_cache {
+            None => get_pull_default_bookmarks_maybe_stale_updating_cache(
+                ctx,
+                self.cached_pull_default_bookmarks_maybe_stale.clone(),
+                self.repo.blobrepo().clone(),
+                self.support_bundle2_listkeys,
+            )
+            .left_future(),
+            Some(bookmarks) => future::ok(bookmarks).right_future(),
         }
     }
 
@@ -458,10 +486,9 @@ impl RepoClient {
         WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
         Content:
             Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
-        GetpackHandler:
-            Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
-                + Send
-                + 'static,
+        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
+            + Send
+            + 'static,
     {
         let (ctx, command_logger) = self.start_command(name);
 
@@ -1209,7 +1236,11 @@ impl HgCommands for RepoClient {
         let client = self.clone();
         let pure_push_allowed = self.pure_push_allowed;
         let reponame = self.repo.reponame().clone();
-        cloned!(self.hook_manager);
+        cloned!(
+            self.hook_manager,
+            self.cached_pull_default_bookmarks_maybe_stale,
+            self.support_bundle2_listkeys
+        );
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set
@@ -1275,14 +1306,40 @@ impl HgCommands for RepoClient {
                         }
                     }
                 }).and_then({
+                    // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
+                    // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
+                    // this is something we need to resolve by sending down the commits we know the client doesn't have,
+                    // or by getting bookmarks atomically with the commits we send back.
+                    //
+                    // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
+                    // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
+                    // will just be from this client's push, rather than from a later push that came in during the RTT
+                    // needed to get the `listkeys` request from the client.
+                    //
+                    // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
+                    // depend on the reply part with a bookmark change in - T57874233
+                    cloned!(ctx, blobrepo);
+                    move |response| {
+                        if support_bundle2_listkeys {
+                            // If this fails, we end up with a cold cache - but that just means we see the race and/or error again later
+                            update_pull_default_bookmarks_maybe_stale_cache(ctx, cached_pull_default_bookmarks_maybe_stale, blobrepo)
+                                .then(|_| Ok(response))
+                                .left_future()
+                        } else {
+                            future::ok(response).right_future()
+                        }
+                    }
+                }).and_then({
                     cloned!(ctx);
-                    move |response| response.generate_bytes(
+                    move |response| {
+                        response.generate_bytes(
                         ctx,
                         blobrepo,
                         pushrebase_params,
                         lca_hint,
                         phases_hint)
                         .from_err()
+                    }
                 });
 
                 res
