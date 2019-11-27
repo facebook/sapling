@@ -78,8 +78,8 @@ Fake land the commit
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
-  new changesets 031d760782fb:67d363c9001e
   obsoleted 1 changesets
+  new changesets 031d760782fb:67d363c9001e
   $ tglogp
   o  4: 67d363c9001e public 'public-commit-2'
   |

@@ -132,7 +132,9 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         ("experimental", "server-bundlestore-create"): create,
     }
 
-    with ui.configoverride(overrides, "infinitepush"):
+    with ui.configoverride(
+        overrides, "infinitepush"
+    ), repo.wlock(), repo.lock(), repo.transaction("push"):
         scratchpush = opts.get("bundle_store")
         if repo._scratchbranchmatcher.match(bookmark):
             # We are pushing to a scratch bookmark.  Check that there is
@@ -272,40 +274,41 @@ def _bookmarks(orig, ui, repo, *names, **opts):
     delete = opts.get("delete")
     remotepath = opts.get("remote_path")
     path = ui.paths.getpath(remotepath or None, default=("default"))
-    if pattern:
-        destpath = path.pushloc or path.loc
-        other = hg.peer(repo, opts, destpath)
-        if not names:
-            raise error.Abort(
-                "--list-remote requires a bookmark pattern",
-                hint='use "hg book" to get a list of your local bookmarks',
-            )
-        else:
-            fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
-        _showbookmarks(ui, fetchedbookmarks, **opts)
-        return
-    elif delete and "remotenames" in extensions._extensions:
-        existing_local_bms = set(repo._bookmarks.keys())
-        scratch_bms = []
-        other_bms = []
-        for name in names:
-            if (
-                repo._scratchbranchmatcher.match(name)
-                and name not in existing_local_bms
-            ):
-                scratch_bms.append(name)
+    with repo.wlock(), repo.lock(), repo.transaction("bookmarks"):
+        if pattern:
+            destpath = path.pushloc or path.loc
+            other = hg.peer(repo, opts, destpath)
+            if not names:
+                raise error.Abort(
+                    "--list-remote requires a bookmark pattern",
+                    hint='use "hg book" to get a list of your local bookmarks',
+                )
             else:
-                other_bms.append(name)
+                fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
+            _showbookmarks(ui, fetchedbookmarks, **opts)
+            return
+        elif delete and "remotenames" in extensions._extensions:
+            existing_local_bms = set(repo._bookmarks.keys())
+            scratch_bms = []
+            other_bms = []
+            for name in names:
+                if (
+                    repo._scratchbranchmatcher.match(name)
+                    and name not in existing_local_bms
+                ):
+                    scratch_bms.append(name)
+                else:
+                    other_bms.append(name)
 
-        if len(scratch_bms) > 0:
-            if remotepath == "":
-                remotepath = "default"
-            bookmarks.deleteremotebookmarks(ui, repo, remotepath, scratch_bms)
+            if len(scratch_bms) > 0:
+                if remotepath == "":
+                    remotepath = "default"
+                bookmarks.deleteremotebookmarks(ui, repo, remotepath, scratch_bms)
 
-        if len(other_bms) > 0 or len(scratch_bms) == 0:
-            return orig(ui, repo, *other_bms, **opts)
-    else:
-        return orig(ui, repo, *names, **opts)
+            if len(other_bms) > 0 or len(scratch_bms) == 0:
+                return orig(ui, repo, *other_bms, **opts)
+        else:
+            return orig(ui, repo, *names, **opts)
 
 
 def _showbookmarks(ui, remotebookmarks, **opts):
@@ -362,76 +365,79 @@ def _resetinfinitepushpath(ui):
 
 def _dopull(orig, ui, repo, source="default", **opts):
     # Copy paste from `pull` command
-    source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
+    with repo.wlock(), repo.lock(), repo.transaction("pull"):
+        source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
 
-    scratchbookmarks = {}
-    unfi = repo.unfiltered()
-    unknownnodes = []
-    pullbookmarks = opts.get("bookmark") or []
-    for rev in opts.get("rev", []):
-        if repo._scratchbranchmatcher.match(rev):
-            # rev is a scratch bookmark, treat it as a bookmark
-            pullbookmarks.append(rev)
-        elif rev not in unfi:
-            unknownnodes.append(rev)
-    if pullbookmarks:
-        realbookmarks = []
-        revs = opts.get("rev") or []
-        for bookmark in pullbookmarks:
-            if repo._scratchbranchmatcher.match(bookmark):
-                # rev is not known yet
-                # it will be fetched with listkeyspatterns next
-                scratchbookmarks[bookmark] = "REVTOFETCH"
-            else:
-                realbookmarks.append(bookmark)
+        scratchbookmarks = {}
+        unfi = repo.unfiltered()
+        unknownnodes = []
+        pullbookmarks = opts.get("bookmark") or []
+        for rev in opts.get("rev", []):
+            if repo._scratchbranchmatcher.match(rev):
+                # rev is a scratch bookmark, treat it as a bookmark
+                pullbookmarks.append(rev)
+            elif rev not in unfi:
+                unknownnodes.append(rev)
+        if pullbookmarks:
+            realbookmarks = []
+            revs = opts.get("rev") or []
+            for bookmark in pullbookmarks:
+                if repo._scratchbranchmatcher.match(bookmark):
+                    # rev is not known yet
+                    # it will be fetched with listkeyspatterns next
+                    scratchbookmarks[bookmark] = "REVTOFETCH"
+                else:
+                    realbookmarks.append(bookmark)
 
-        if scratchbookmarks:
-            other = hg.peer(repo, opts, source)
-            fetchedbookmarks = other.listkeyspatterns(
-                "bookmarks", patterns=scratchbookmarks
+            if scratchbookmarks:
+                other = hg.peer(repo, opts, source)
+                fetchedbookmarks = other.listkeyspatterns(
+                    "bookmarks", patterns=scratchbookmarks
+                )
+                for bookmark in scratchbookmarks:
+                    if bookmark not in fetchedbookmarks:
+                        raise error.Abort("remote bookmark %s not found!" % bookmark)
+                    scratchbookmarks[bookmark] = fetchedbookmarks[bookmark]
+                    revs.append(fetchedbookmarks[bookmark])
+            opts["bookmark"] = realbookmarks
+            opts["rev"] = [rev for rev in revs if rev not in scratchbookmarks]
+
+        # Pulling revisions that were filtered results in a error.
+        # Let's revive them.
+        unfi = repo.unfiltered()
+        torevive = []
+        for rev in opts.get("rev", []):
+            try:
+                repo[rev]
+            except error.FilteredRepoLookupError:
+                torevive.append(rev)
+            except error.RepoLookupError:
+                pass
+        obsolete.revive([unfi[r] for r in torevive])
+        visibility.add(repo, [unfi[r].node() for r in torevive])
+
+        if scratchbookmarks or unknownnodes:
+            # Set anyincoming to True
+            extensions.wrapfunction(
+                discovery, "findcommonincoming", _findcommonincoming
             )
-            for bookmark in scratchbookmarks:
-                if bookmark not in fetchedbookmarks:
-                    raise error.Abort("remote bookmark %s not found!" % bookmark)
-                scratchbookmarks[bookmark] = fetchedbookmarks[bookmark]
-                revs.append(fetchedbookmarks[bookmark])
-        opts["bookmark"] = realbookmarks
-        opts["rev"] = [rev for rev in revs if rev not in scratchbookmarks]
-
-    # Pulling revisions that were filtered results in a error.
-    # Let's revive them.
-    unfi = repo.unfiltered()
-    torevive = []
-    for rev in opts.get("rev", []):
         try:
-            repo[rev]
-        except error.FilteredRepoLookupError:
-            torevive.append(rev)
-        except error.RepoLookupError:
-            pass
-    obsolete.revive([unfi[r] for r in torevive])
-    visibility.add(repo, [unfi[r].node() for r in torevive])
-
-    if scratchbookmarks or unknownnodes:
-        # Set anyincoming to True
-        extensions.wrapfunction(discovery, "findcommonincoming", _findcommonincoming)
-    try:
-        # Remote scratch bookmarks will be deleted because remotenames doesn't
-        # know about them. Let's save it before pull and restore after
-        remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, source)
-        result = orig(ui, repo, source, **opts)
-        # TODO(stash): race condition is possible
-        # if scratch bookmarks was updated right after orig.
-        # But that's unlikely and shouldn't be harmful.
-        if bookmarks.remotebookmarksenabled(ui):
-            remotescratchbookmarks.update(scratchbookmarks)
-            bookmarks.saveremotebookmarks(repo, remotescratchbookmarks, source)
-        else:
-            bookmarks.savelocalbookmarks(repo, scratchbookmarks)
-        return result
-    finally:
-        if scratchbookmarks:
-            extensions.unwrapfunction(discovery, "findcommonincoming")
+            # Remote scratch bookmarks will be deleted because remotenames doesn't
+            # know about them. Let's save it before pull and restore after
+            remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, source)
+            result = orig(ui, repo, source, **opts)
+            # TODO(stash): race condition is possible
+            # if scratch bookmarks was updated right after orig.
+            # But that's unlikely and shouldn't be harmful.
+            if bookmarks.remotebookmarksenabled(ui):
+                remotescratchbookmarks.update(scratchbookmarks)
+                bookmarks.saveremotebookmarks(repo, remotescratchbookmarks, source)
+            else:
+                bookmarks.savelocalbookmarks(repo, scratchbookmarks)
+            return result
+        finally:
+            if scratchbookmarks:
+                extensions.unwrapfunction(discovery, "findcommonincoming")
 
 
 def _findcommonincoming(orig, *args, **kwargs):

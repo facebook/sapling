@@ -88,8 +88,8 @@ Push all pulled commit to backup
   adding file changes
   added 1 changesets with 0 changes to 1 files
   updating bookmark master
-  new changesets 948715751816
   obsoleted 1 changesets
+  new changesets 948715751816
   $ hg cloud backup
   backing up stack rooted at 9b3ead1d8005
   remote: pushing 2 commits:
