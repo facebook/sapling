@@ -522,18 +522,7 @@ test rollback
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6
-   * tmp-rollback              2:db815d6d32e6
      x  y                      2:db815d6d32e6
-  $ hg bookmark -f Z -r 1
-  $ hg rollback
-  repository tip rolled back to revision 2 (undo bookmark)
-  $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         2:db815d6d32e6
-   * tmp-rollback              2:db815d6d32e6
-     x  y                      2:db815d6d32e6
-  $ hg bookmark -d tmp-rollback
 
 activate bookmark on working dir parent without --force
 

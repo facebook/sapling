@@ -775,7 +775,7 @@ def store(requirements, path, vfstype, uiconfig=None):
             if uiconfig and uiconfig.configbool("experimental", "metalog"):
                 # Change remotenames and visibleheads to be backed by metalog,
                 # so they can be atomically read or written.
-                store.vfs.metapaths = {"remotenames", "visibleheads"}
+                store.vfs.metapaths = {"remotenames", "visibleheads", "bookmarks"}
             return store
         return encodedstore(path, vfstype)
     return basicstore(path, vfstype)

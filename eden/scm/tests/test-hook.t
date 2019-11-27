@@ -570,7 +570,6 @@ different between Python 2.6 and Python 2.7.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  adding remote bookmark quux
   new changesets 539e4b31b6dc
 
 post- python hooks that fail to *run* don't cause an abort

@@ -190,7 +190,6 @@ Pull -u takes us back to branch foo:
 
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (leaving bookmark foo)
 
   $ hg parents -q
   0:1f0dee641bb7
