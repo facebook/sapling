@@ -8,7 +8,7 @@
 
 use crate::errors::*;
 
-use unbundle::{run_hooks, run_post_resolve_action, RepoSyncTarget};
+use unbundle::{run_hooks, run_post_resolve_action, PushRedirector};
 
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
@@ -245,7 +245,7 @@ pub struct RepoClient {
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     support_bundle2_listkeys: bool,
     wireproto_logging: Option<Arc<WireprotoLogging>>,
-    maybe_repo_sync_target: Option<RepoSyncTarget>,
+    maybe_push_redirector: Option<PushRedirector>,
     pushredirect_config: Option<ConfigLoader>,
 }
 
@@ -312,7 +312,7 @@ impl RepoClient {
         hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
         wireproto_logging: Option<Arc<WireprotoLogging>>,
-        maybe_repo_sync_target: Option<RepoSyncTarget>,
+        maybe_push_redirector: Option<PushRedirector>,
         pushredirect_config: Option<ConfigLoader>,
     ) -> Self {
         RepoClient {
@@ -326,7 +326,7 @@ impl RepoClient {
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             support_bundle2_listkeys,
             wireproto_logging,
-            maybe_repo_sync_target,
+            maybe_push_redirector,
             pushredirect_config,
         }
     }
@@ -667,14 +667,14 @@ impl RepoClient {
         )
     }
 
-    /// Returns Some(repo_sync_target) if pushredirect should redirect this push
+    /// Returns Some(push_redirector) if pushredirect should redirect this push
     /// via the repo sync target, None if this should be a direct push
-    fn maybe_get_repo_sync_target_for_action(
+    fn maybe_get_push_redirector_for_action(
         &self,
         action: &unbundle::PostResolveAction,
-    ) -> Result<Option<RepoSyncTarget>> {
+    ) -> Result<Option<PushRedirector>> {
         // Don't query configerator if we lack config
-        if self.maybe_repo_sync_target.is_none() {
+        if self.maybe_push_redirector.is_none() {
             return Ok(None);
         }
         if maybe_pushredirect_action(
@@ -682,7 +682,7 @@ impl RepoClient {
             self.pushredirect_config.as_ref(),
             action,
         )? {
-            Ok(self.maybe_repo_sync_target.clone())
+            Ok(self.maybe_push_redirector.clone())
         } else {
             Ok(None)
         }
@@ -1282,15 +1282,15 @@ impl HgCommands for RepoClient {
                 }).and_then({
                     cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint, phases_hint);
                     move |action| {
-                        match try_boxfuture!(client.maybe_get_repo_sync_target_for_action(&action)) {
-                            Some(repo_sync_target) => {
+                        match try_boxfuture!(client.maybe_get_push_redirector_for_action(&action)) {
+                            Some(push_redirector) => {
                                 let ctx = ctx.with_mutated_scuba(|mut sample| {
-                                    sample.add("target_repo_name", repo_sync_target.repo.reponame().as_ref());
-                                    sample.add("target_repo_id", repo_sync_target.repo.repoid().id());
+                                    sample.add("target_repo_name", push_redirector.repo.reponame().as_ref());
+                                    sample.add("target_repo_id", push_redirector.repo.repoid().id());
                                     sample
                                 });
                                 ctx.scuba().clone().log_with_msg("Push redirected to large repo", None);
-                                repo_sync_target
+                                push_redirector
                                     .run_redirected_post_resolve_action_compat(ctx, action)
                                     .boxify()
                             }

@@ -47,7 +47,7 @@ pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/en
 /// Core push redirector struct. Performs conversions of pushes
 /// to be processed by the large repo, and conversions of results
 /// to be presented as if the pushes were processed by the small repo
-pub struct RepoSyncTarget {
+pub struct PushRedirector {
     // target (large) repo to sync into
     pub repo: MononokeRepo,
     // `CommitSyncer` struct to do push redirecion
@@ -60,7 +60,7 @@ pub struct RepoSyncTarget {
     pub commit_sync_config: CommitSyncConfig,
 }
 
-impl RepoSyncTarget {
+impl PushRedirector {
     /// To the external observer, this fn is just like `run_post_resolve_action`
     /// in that it will result in the repo having the action processed.
     /// Under the hood it will:
