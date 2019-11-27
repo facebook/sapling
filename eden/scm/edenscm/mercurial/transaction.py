@@ -206,6 +206,8 @@ class transaction(util.transactional):
         self._postclosecallback = {}
         # holds callbacks to call during abort
         self._abortcallback = {}
+        # Reload metalog state when entering transaction.
+        opener.__dict__.pop("metalog", None)
 
     def __del__(self):
         if self.journal:
@@ -576,12 +578,18 @@ class transaction(util.transactional):
             metalog.commit(
                 " ".join(map(util.shellquote, pycompat.sysargv[1:])), int(util.timer())
             )
+            # Discard metalog state when exiting transaction.
+            del svfs.__dict__["metalog"]
 
     def _abort(self):
         self.count = 0
         self.usages = 0
         self.file.close()
         self._backupsfile.close()
+
+        # Discard metalog state when exiting transaction.
+        svfs = self._vfsmap[""]
+        svfs.__dict__.pop("metalog", None)
 
         try:
             if not self.entries and not self._backupentries:

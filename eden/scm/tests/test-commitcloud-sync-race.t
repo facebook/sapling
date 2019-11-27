@@ -107,14 +107,27 @@ Let the background sync we started earlier continue, and start a concurrent clou
   backing up stack rooted at 1292cc1f1c17
   remote: pushing 1 commit:
   remote:     1292cc1f1c17  commit2
-  commitcloud_sync: synced to workspace user/test/default version 3: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  pulling 79089e97b9e7
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
+  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
+  new changesets 79089e97b9e7
   commitcloud: commits synchronized
   finished in 0.00 sec
 
   $ tglogp
-  visibility: read 1 heads: 1292cc1f1c17
-  o  1: 1292cc1f1c17 draft 'commit2'
+  visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
+  o  2: 79089e97b9e7 draft 'commit1'
   |
+  | o  1: 1292cc1f1c17 draft 'commit2'
+  |/
   @  0: df4f53cec30a public 'base'
   
 Wait for the background backup to finish and check its output.
@@ -123,18 +136,7 @@ Wait for the background backup to finish and check its output.
   $ cat $TESTTMP/bgsync.out
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  visibility: read 1 heads: df4f53cec30a
-  pulling 79089e97b9e7
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  visibility: removed 1 heads [df4f53cec30a]; added 1 heads [79089e97b9e7]
-  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
-  visibility: wrote 1 heads: 79089e97b9e7
-  abort: "$TESTTMP/client2/.hg/store/metalog": conflict detected:
-    visibleheads: both changed, diverged
-  transaction abort!
-  rollback completed
+  visibility: read 1 heads: 1292cc1f1c17
+  abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
+  (please retry 'hg cloud sync')
+  (please contact the Source Control Team if this error persists)

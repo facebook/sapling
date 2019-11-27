@@ -1955,15 +1955,22 @@ class localrepository(object):
                 "acquiring store lock for %s" % self.root, skip=1, depth=5
             )
 
+        svfs = self.svfs
+        # Invalidate metalog state.
+        svfs.__dict__.pop("metalog", None)
         releasefn = None
-        metalog = getattr(self.svfs, "metalog", None)
-        if metalog:
+        if self.ui.configbool("experimental", "metalog"):
             # XXX: metalog.commit should ideally be only called by a transaction
             # close. However, there are misuses across the code base, so we
             # cannot really rely on transaction now.
             def metalogcommit():
+                if "metalog" not in svfs.__dict__:
+                    # Already committed via transaction close.
+                    return
                 message = " ".join(map(util.shellquote, pycompat.sysargv[1:]))
-                metalog.commit(message, int(util.timer()))
+                svfs.metalog.commit(message, int(util.timer()))
+                # Force a reload of metalog to get the latest view.
+                del svfs.__dict__["metalog"]
 
             releasefn = metalogcommit
 

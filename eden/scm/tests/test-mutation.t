@@ -5,10 +5,6 @@
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
-XXX: "hg histedit" broke with metalog. An automatic conflict resolution is needed.
-
-  $ setconfig experimental.metalog=false
-
   $ cat >> $HGRCPATH <<EOF
   > [templatealias]
   > mutation_nodes = "{join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}"
