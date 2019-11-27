@@ -13,7 +13,6 @@
 from __future__ import absolute_import
 
 import errno
-import functools
 import hashlib
 import os
 import stat
@@ -609,7 +608,15 @@ class metavfs(object):
         if mode in {"r", "rb"}:
             return readablestream(self.metalog[path] or "")
         elif mode in {"w", "wb"}:
-            return writablestream(functools.partial(self.metalog.set, path))
+
+            def write(content, path=path, self=self):
+                self.metalog.set(path, content)
+                # Also write to disk for compatibility (ex. shell completion
+                # script might read them).
+                legacypath = self.join(path)
+                util.writefile(legacypath, content)
+
+            return writablestream(write)
         else:
             raise error.ProgrammingError("mode %s is unsupported for %s" % (mode, path))
 
