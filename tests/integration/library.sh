@@ -1091,27 +1091,6 @@ function mkcommit() {
    hg ci -m "$1"
 }
 
-function pushrebase_replay() {
-  DB_INDICES=$1
-
-  REPLAY_CA_PEM="$TEST_CERTDIR/root-ca.crt" \
-  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
-  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
-  GLOG_minloglevel=5 "$PUSHREBASE_REPLAY" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --reponame repo \
-    --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-admin "$MONONOKE_ADMIN" \
-    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
-    --mononoke-server-common-name localhost \
-    --db-indices "$DB_INDICES" \
-    --repo-id $REPOID \
-    --bundle-provider filesystem \
-    --filesystem-bundles-storage-path "$TESTTMP" \
-    --sqlite3-path "$TESTTMP/pushrebaserecording" \
-    "${CACHING_ARGS[@]}"
-}
-
 function enable_replay_verification_hook {
 
 cat >> "$TESTTMP"/replayverification.py <<EOF
