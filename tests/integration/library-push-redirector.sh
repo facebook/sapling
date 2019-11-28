@@ -31,7 +31,7 @@ common_pushrebase_bookmarks = ["master_bookmark"]
  default_action = "prepend_prefix"
  default_prefix = "smallrepofolder"
  direction = "large_to_small"
-    [megarepo_test.small_repos.map]
+    [megarepo_test.small_repos.mapping]
     "non_path_shifting" = "non_path_shifting"
 EOF
 

@@ -15,7 +15,7 @@ setup configuration
   >   default_action = "prepend_prefix"
   >   default_prefix = "smallrepofolder1"
   >   direction = "large_to_small"
-  >      [megarepo_test.small_repos.map]
+  >      [megarepo_test.small_repos.mapping]
   >      "special"="specialsmallrepofolder1"
   >   [[megarepo_test.small_repos]]
   >   repoid = 2
@@ -23,7 +23,7 @@ setup configuration
   >   default_action = "prepend_prefix"
   >   default_prefix = "smallrepofolder2"
   >   direction = "small_to_large"
-  >      [megarepo_test.small_repos.map]
+  >      [megarepo_test.small_repos.mapping]
   >      "special"="specialsmallrepofolder2"
   > EOF
 

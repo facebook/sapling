@@ -25,14 +25,18 @@ use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use failure_ext::{format_err, prelude::*};
 use itertools::Itertools;
+use metaconfig_thrift::{
+    RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawSourceControlServiceMonitoring,
+    RawWireprotoLoggingConfig,
+};
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, CommitSyncConfig, CommitSyncDirection, CommonConfig,
     DefaultSmallToLargeCommitSyncPathAction, FilestoreParams, HookBypass, HookConfig,
     HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
     MetadataDBConfig, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
-    ShardedFilenodesParams, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-    StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
+    ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
+    WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -317,7 +321,7 @@ impl RepoConfigs {
                             default_action,
                             default_prefix,
                             bookmark_prefix,
-                            map,
+                            mapping,
                             direction,
                         } = raw_small_repo_config;
 
@@ -333,7 +337,7 @@ impl RepoConfigs {
                             other => return Err(format_err!("unknown default_action: \"{}\"", other))
                         };
 
-                        let map: Result<HashMap<MPath, MPath>> = map
+                        let mapping: Result<HashMap<MPath, MPath>> = mapping
                             .into_iter()
                             .map(|(k, v)| {
                                 let k = MPath::new(k)?;
@@ -351,7 +355,7 @@ impl RepoConfigs {
 
                         Ok((RepositoryId::new(repoid), SmallRepoCommitSyncConfig {
                             default_action,
-                            map: map?,
+                            map: mapping?,
                             bookmark_prefix: bookmark_prefix?,
                             direction,
                         }))
@@ -1164,71 +1168,11 @@ impl From<RawFilestoreParams> for FilestoreParams {
     }
 }
 
-/// Raw Commit Sync Config for a small repo
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct RawCommitSyncSmallRepoConfig {
-    repoid: i32,
-    default_action: String,
-    default_prefix: Option<String>,
-    bookmark_prefix: String,
-    map: HashMap<String, String>,
-    direction: String,
-}
-
-/// Raw Commit Sync Config
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct RawCommitSyncConfig {
-    large_repo_id: i32,
-    common_pushrebase_bookmarks: Vec<String>,
-    small_repos: Vec<RawCommitSyncSmallRepoConfig>,
-}
-
-/// Raw Wireproto logging configuration
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct RawWireprotoLoggingConfig {
-    /// Scribe category to log requests to
-    pub scribe_category: String,
-    /// Storage where to store arguments for replay
-    pub storage_config: String,
-}
-
-/// Raw configuration for health monitoring of the source-control-as-a-service
-/// solutions
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct RawSourceControlServiceMonitoring {
-    /// Bookmarks, for which we want our services to log
-    /// freshness values to monitoring counters. For example,
-    /// a freshness value may be the `now - author_date` of
-    /// the commit, to which the bookmark points
-    pub bookmarks_to_report_age: Vec<String>,
-}
-
-impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitoring {
-    type Error = Error;
-
-    fn try_from(raw: RawSourceControlServiceMonitoring) -> Result<Self> {
-        let RawSourceControlServiceMonitoring {
-            bookmarks_to_report_age,
-        } = raw;
-        let converted: Result<Vec<BookmarkName>> = bookmarks_to_report_age
-            .into_iter()
-            .map(|bookmark| BookmarkName::new(bookmark))
-            .collect();
-
-        Ok(Self {
-            bookmarks_to_report_age: converted?,
-        })
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use maplit::{btreemap, hashmap};
+    use metaconfig_types::SourceControlServiceMonitoring;
     use pretty_assertions::assert_eq;
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
@@ -1263,7 +1207,7 @@ mod test {
                 bookmark_prefix = "repo2"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = ".r2-legacy/p1"
                     "p5" = ".r2-legacy/p5"
 
@@ -1274,7 +1218,7 @@ mod test {
                 default_prefix = "subdir"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "p1"
                     "p4" = "p5/p4"
         "#;
@@ -1329,7 +1273,7 @@ mod test {
                 default_action = "preserve"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = ".r2-legacy/p1"
                     "p5" = "subdir"
 
@@ -1340,7 +1284,7 @@ mod test {
                 default_prefix = "subdir"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "p1"
                     "p4" = "p5/p4"
         "#;
@@ -1367,7 +1311,7 @@ mod test {
                 default_action = "preserve"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p5" = "subdir"
 
                 [[mega.small_repos]]
@@ -1377,7 +1321,7 @@ mod test {
                 default_prefix = "subdir"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "p1"
         "#;
 
@@ -1400,7 +1344,7 @@ mod test {
                 default_action = "preserve"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p5" = "subdir/bla"
 
                 [[mega.small_repos]]
@@ -1410,7 +1354,7 @@ mod test {
                 default_prefix = "subdir"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "p1"
         "#;
 
@@ -1436,7 +1380,7 @@ mod test {
                 default_action = "preserve"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p5" = "subdir"
 
                 [[mega.small_repos]]
@@ -1446,7 +1390,7 @@ mod test {
                 default_prefix = "subdir"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "p1"
         "#;
 
@@ -1470,7 +1414,7 @@ mod test {
                 default_action = "preserve"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p5" = "subdir"
 
                 [[mega.small_repos]]
@@ -1480,7 +1424,7 @@ mod test {
                 default_prefix = "r3"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "subdir/bla"
 
                 [[mega.small_repos]]
@@ -1490,7 +1434,7 @@ mod test {
                 default_prefix = "r4"
                 direction = "large_to_small"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p4" = "subdir"
         "#;
 
@@ -1515,7 +1459,7 @@ mod test {
                 default_action = "preserve"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = ".r2-legacy/p1"
 
                 [[mega.small_repos]]
@@ -1525,7 +1469,7 @@ mod test {
                 default_prefix = "subdir"
                 direction = "small_to_large"
 
-                    [mega.small_repos.map]
+                    [mega.small_repos.mapping]
                     "p1" = "p1"
                     "p4" = "p5/p4"
         "#;

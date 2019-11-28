@@ -12,12 +12,15 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
+use anyhow::Error;
 use std::{
-    collections::HashMap, mem, num::NonZeroUsize, path::PathBuf, str, sync::Arc, time::Duration,
+    collections::HashMap, convert::TryFrom, mem, num::NonZeroUsize, path::PathBuf, str, sync::Arc,
+    time::Duration,
 };
 
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
+use metaconfig_thrift::RawSourceControlServiceMonitoring;
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use scuba::ScubaValue;
@@ -776,4 +779,19 @@ pub struct SourceControlServiceMonitoring {
     /// a freshness value may be the `now - author_date` of
     /// the commit, to which the bookmark points
     pub bookmarks_to_report_age: Vec<BookmarkName>,
+}
+
+impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitoring {
+    type Error = Error;
+
+    fn try_from(t: RawSourceControlServiceMonitoring) -> Result<Self, Error> {
+        let bookmarks_to_report_age = t
+            .bookmarks_to_report_age
+            .into_iter()
+            .map(|bookmark| BookmarkName::new(bookmark))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(SourceControlServiceMonitoring {
+            bookmarks_to_report_age,
+        })
+    }
 }

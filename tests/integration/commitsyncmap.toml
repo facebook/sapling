@@ -29,7 +29,7 @@ common_pushrebase_bookmarks = ["master"]
     default_action = "preserve"
     direction = "small_to_large"
 
-        [megarepo_test.small_repos.map]
+        [megarepo_test.small_repos.mapping]
         "arvr" = ".fbsource-rest/arvr"
 
     [[megarepo_test.small_repos]]
@@ -39,7 +39,7 @@ common_pushrebase_bookmarks = ["master"]
     default_prefix = "arvr-legacy"
     direction = "small_to_large"
 
-        [megarepo_test.small_repos.map]
+        [megarepo_test.small_repos.mapping]
         "arvr" = "arvr"
         "fbcode" = ".ovrsource-rest/fbcode"
         "fbandroid" = ".ovrsource-rest/fbandroid"

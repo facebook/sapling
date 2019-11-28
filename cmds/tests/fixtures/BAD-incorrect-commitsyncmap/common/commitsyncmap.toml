@@ -14,5 +14,5 @@ common_pushrebase_bookmarks = ["master"]
   bookmark_prefix = "repo2"
   default_action = "preserve"
 
-    [coolsync.small_repos.map]
+    [coolsync.small_repos.mapping]
     p1 = "subdir/p2"
