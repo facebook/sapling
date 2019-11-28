@@ -619,7 +619,7 @@ fi
 if [[ -v INFINITEPUSH_ALLOW_WRITES ]] || [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
   namespace=""
   if [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
-    namespace="namespace=\"$INFINITEPUSH_NAMESPACE_REGEX\""
+    namespace="namespace_pattern=\"$INFINITEPUSH_NAMESPACE_REGEX\""
   fi
 
   cat >> "repos/$reponame/server.toml" <<CONFIG

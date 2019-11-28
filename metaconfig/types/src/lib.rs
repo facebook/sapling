@@ -14,13 +14,19 @@
 
 use anyhow::Error;
 use std::{
-    collections::HashMap, convert::TryFrom, mem, num::NonZeroUsize, path::PathBuf, str, sync::Arc,
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    mem,
+    num::NonZeroUsize,
+    path::PathBuf,
+    str,
+    sync::Arc,
     time::Duration,
 };
 
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use metaconfig_thrift::RawSourceControlServiceMonitoring;
+use metaconfig_thrift::{RawFilestoreParams, RawSourceControlServiceMonitoring};
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use scuba::ScubaValue;
@@ -779,6 +785,22 @@ pub struct SourceControlServiceMonitoring {
     /// a freshness value may be the `now - author_date` of
     /// the commit, to which the bookmark points
     pub bookmarks_to_report_age: Vec<BookmarkName>,
+}
+
+impl TryFrom<RawFilestoreParams> for FilestoreParams {
+    type Error = Error;
+
+    fn try_from(raw: RawFilestoreParams) -> Result<Self, Error> {
+        let RawFilestoreParams {
+            chunk_size,
+            concurrency,
+        } = raw;
+
+        Ok(FilestoreParams {
+            chunk_size: chunk_size.try_into()?,
+            concurrency: concurrency.try_into()?,
+        })
+    }
 }
 
 impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitoring {

@@ -26,17 +26,17 @@ use bookmarks::BookmarkName;
 use failure_ext::{format_err, prelude::*};
 use itertools::Itertools;
 use metaconfig_thrift::{
-    RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawSourceControlServiceMonitoring,
-    RawWireprotoLoggingConfig,
+    RawBundle2ReplayParams, RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawFilestoreParams,
+    RawInfinitepushParams, RawLfsParams, RawShardedFilenodesParams,
+    RawSourceControlServiceMonitoring, RawWireprotoLoggingConfig,
 };
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, CommitSyncConfig, CommitSyncDirection, CommonConfig,
-    DefaultSmallToLargeCommitSyncPathAction, FilestoreParams, HookBypass, HookConfig,
-    HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
-    MetadataDBConfig, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
-    ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
-    WireprotoLoggingConfig,
+    DefaultSmallToLargeCommitSyncPathAction, HookBypass, HookConfig, HookManagerParams, HookParams,
+    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig, PushParams,
+    PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, ShardedFilenodesParams,
+    SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -684,7 +684,7 @@ impl RepoConfigs {
 
         let lfs = match this.lfs {
             Some(lfs_params) => LfsParams {
-                threshold: lfs_params.threshold,
+                threshold: lfs_params.threshold.map(|v| v.try_into()).transpose()?,
             },
             None => LfsParams { threshold: None },
         };
@@ -708,9 +708,18 @@ impl RepoConfigs {
             .map(
                 |RawInfinitepushParams {
                      allow_writes,
-                     namespace,
+                     namespace_pattern,
                  }| {
-                    let namespace = namespace.map(|ns| InfinitepushNamespace::new(ns.0));
+                    let namespace = match namespace_pattern {
+                        Some(ns) => {
+                            let regex = Regex::new(&ns);
+                            match regex {
+                                Ok(regex) => Some(InfinitepushNamespace::new(regex)),
+                                Err(_) => None,
+                            }
+                        }
+                        None => None,
+                    };
                     InfinitepushParams {
                         allow_writes,
                         namespace,
@@ -727,7 +736,7 @@ impl RepoConfigs {
             .hook_max_file_size
             .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
 
-        let filestore = this.filestore.map(|f| f.into());
+        let filestore = this.filestore.map(|f| f.try_into()).transpose()?;
 
         let source_control_service_monitoring = this
             .source_control_service_monitoring
@@ -967,9 +976,11 @@ impl TryFrom<RawStorageConfig> for StorageConfig {
                             shard_num,
                         }),
                 } => {
-                    let shard_num: Result<_> = NonZeroUsize::new(shard_num).ok_or_else(|| {
-                        ErrorKind::InvalidConfig("filenodes shard_num must be > 0".into()).into()
-                    });
+                    let shard_num: Result<_> =
+                        NonZeroUsize::new(shard_num.try_into()?).ok_or_else(|| {
+                            ErrorKind::InvalidConfig("filenodes shard_num must be > 0".into())
+                                .into()
+                        });
                     MetadataDBConfig::Mysql {
                         db_address,
                         sharded_filenodes: Some(ShardedFilenodesParams {
@@ -1048,7 +1059,7 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
                 mysql_shard_num,
             } => BlobConfig::Mysql {
                 shard_map: mysql_shardmap.clone(),
-                shard_num: NonZeroUsize::new(*mysql_shard_num as usize).ok_or(
+                shard_num: NonZeroUsize::new((*mysql_shard_num).try_into()?).ok_or(
                     ErrorKind::InvalidConfig(
                         "mysql shard num must be specified and an interger larger than 0".into(),
                     ),
@@ -1122,57 +1133,11 @@ struct RawPushrebaseParams {
     emit_obsmarkers: Option<bool>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawLfsParams {
-    threshold: Option<u64>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawBundle2ReplayParams {
-    preserve_raw_bundle2: Option<bool>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawShardedFilenodesParams {
-    shard_map: String,
-    shard_num: usize,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawInfinitepushParams {
-    allow_writes: bool,
-    namespace: Option<RawRegex>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawFilestoreParams {
-    chunk_size: u64,
-    concurrency: usize,
-}
-
-impl From<RawFilestoreParams> for FilestoreParams {
-    fn from(raw: RawFilestoreParams) -> Self {
-        let RawFilestoreParams {
-            chunk_size,
-            concurrency,
-        } = raw;
-        Self {
-            chunk_size,
-            concurrency,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use maplit::{btreemap, hashmap};
-    use metaconfig_types::SourceControlServiceMonitoring;
+    use metaconfig_types::{FilestoreParams, SourceControlServiceMonitoring};
     use pretty_assertions::assert_eq;
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
@@ -1614,7 +1579,7 @@ mod test {
 
             [infinitepush]
             allow_writes = true
-            namespace = "foobar/.+"
+            namespace_pattern = "foobar/.+"
 
             [filestore]
             chunk_size = 768

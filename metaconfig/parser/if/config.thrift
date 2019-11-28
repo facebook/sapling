@@ -6,6 +6,29 @@
  * directory of this source tree.
  */
 
+struct RawLfsParams {
+    1: optional i64 threshold,
+}
+
+struct RawBundle2ReplayParams {
+    1: optional bool preserve_raw_bundle2,
+}
+
+struct RawShardedFilenodesParams {
+    1: string shard_map,
+    2: i32 shard_num,
+}
+
+struct RawInfinitepushParams {
+    1: bool allow_writes,
+    2: optional string namespace_pattern,
+}
+
+struct RawFilestoreParams {
+    1: i64 chunk_size,
+    2: i32 concurrency,
+}
+
 struct RawCommitSyncSmallRepoConfig {
     1: i32 repoid,
     2: string default_action,
