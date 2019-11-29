@@ -155,7 +155,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     );
     let service = {
         move |proto| {
-            make_SourceControlService_server(proto, source_control_server.clone(), fb303.clone())
+            make_SourceControlService_server(
+                proto,
+                source_control_server.thrift_server(),
+                fb303.clone(),
+            )
         }
     };
 

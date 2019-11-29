@@ -30,12 +30,14 @@ use crate::from_request::FromRequest;
 use crate::specifiers::SpecifierExt;
 
 #[derive(Clone)]
-pub struct SourceControlServiceImpl {
+pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
     pub(crate) mononoke: Arc<Mononoke>,
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: ScubaSampleBuilder,
 }
+
+pub(crate) struct SourceControlServiceThriftImpl(SourceControlServiceImpl);
 
 impl SourceControlServiceImpl {
     pub fn new(
@@ -50,6 +52,10 @@ impl SourceControlServiceImpl {
             logger,
             scuba_builder,
         }
+    }
+
+    pub(crate) fn thrift_server(&self) -> SourceControlServiceThriftImpl {
+        SourceControlServiceThriftImpl(self.clone())
     }
 
     pub(crate) fn create_ctx(&self, specifier: Option<&dyn SpecifierExt>) -> CoreContext {
@@ -214,13 +220,13 @@ macro_rules! impl_thrift_methods {
                 'implementation: 'async_trait,
                 Self: Sync + 'async_trait,
             {
-                Box::pin(self.$method_name( $( $param_name ),* ))
+                Box::pin((self.0).$method_name( $( $param_name ),* ))
             }
         )*
     }
 }
 
-impl SourceControlService for SourceControlServiceImpl {
+impl SourceControlService for SourceControlServiceThriftImpl {
     impl_thrift_methods! {
         async fn list_repos(
             params: thrift::ListReposParams,
