@@ -1,5 +1,5 @@
 # @autocargo from //common/rust/futures-ext:futures-ext
-# Signature<<8281015201641804415e50e78ea963c238a0e032>>
+# Signature<<74d8bd7faaa16fe1ee391bd32a80da95bd4a38d7>>
 [package]
 name = "futures-ext"
 edition = "2018"
@@ -10,7 +10,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 cloned = { path = "../shed/cloned" }
-failure_ext = { path = "../failure_ext" }
+failure_ext = { path = "../shed/failure_ext" }
 bytes = { version="*", features=["serde"] }
 futures = "0.1"
 maplit = "*"
@@ -25,4 +25,4 @@ netstring = { path = "../netstring" }
 assert_matches = "*"
 pretty_assertions = "*"
 quickcheck = "0.9"
-# @end of Signature<<8281015201641804415e50e78ea963c238a0e032>>
+# @end of Signature<<74d8bd7faaa16fe1ee391bd32a80da95bd4a38d7>>
