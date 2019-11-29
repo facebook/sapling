@@ -16,18 +16,14 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Check for identities provided in X509 cert
-  $ jq -S .normvector < "$SCUBA" | grep -v null
-  {
-    "client_identities": [
-      "USER:myusername0",
-      "MACHINE:devvm000.lla0.facebook.com",
-      "MACHINE_TIER:devvm"
-    ]
-  }
-  {
-    "client_identities": [
-      "USER:myusername0",
-      "MACHINE:devvm000.lla0.facebook.com",
-      "MACHINE_TIER:devvm"
-    ]
-  }
+  $ jq -S .normvector.client_identities < "$SCUBA"
+  [
+    "USER:myusername0",
+    "MACHINE:devvm000.lla0.facebook.com",
+    "MACHINE_TIER:devvm"
+  ]
+  [
+    "USER:myusername0",
+    "MACHINE:devvm000.lla0.facebook.com",
+    "MACHINE_TIER:devvm"
+  ]

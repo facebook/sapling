@@ -28,11 +28,11 @@
 
 # Check for identities from header
   $ wait_for_nonempty_file "$SCUBA"
-  $ jq -S .normvector < "$SCUBA" | grep -v null
-  {
-    "client_identities": [
-      "USER:test",
-      "MACHINE:",
-      "MACHINE_TIER:"
-    ]
-  }
+  $ jq -S .normal.client_ip < "$SCUBA"
+  "$LOCALIP"
+  $ jq -S .normvector.client_identities < "$SCUBA"
+  [
+    "USER:test",
+    "MACHINE:",
+    "MACHINE_TIER:"
+  ]

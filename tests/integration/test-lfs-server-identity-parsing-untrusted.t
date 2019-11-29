@@ -21,21 +21,17 @@
 
 # Check for identities from header
   $ wait_for_nonempty_file "$SCUBA"
-  $ jq -S .normvector < "$SCUBA" | grep -v null
-  {
-    "client_identities": [
-      "USER:myusername0",
-      "MACHINE:devvm000.lla0.facebook.com",
-      "MACHINE_TIER:devvm"
-    ]
-  }
-  {
-    "client_identities": [
-      "USER:myusername0",
-      "MACHINE:devvm000.lla0.facebook.com",
-      "MACHINE_TIER:devvm"
-    ]
-  }
+  $ jq -S .normvector.client_identities < "$SCUBA"
+  [
+    "USER:myusername0",
+    "MACHINE:devvm000.lla0.facebook.com",
+    "MACHINE_TIER:devvm"
+  ]
+  [
+    "USER:myusername0",
+    "MACHINE:devvm000.lla0.facebook.com",
+    "MACHINE_TIER:devvm"
+  ]
 
 # Make a request with a valid encoded client identity header, but without being
 # the trusted proxy ident. This means that the LFS server should parse our
@@ -45,11 +41,9 @@
   200
 
   $ wait_for_nonempty_file "$SCUBA"
-  $ jq -S .normvector < "$SCUBA" | grep -v null
-  {
-    "client_identities": [
-      "USER:myusername0",
-      "MACHINE:devvm000.lla0.facebook.com",
-      "MACHINE_TIER:devvm"
-    ]
-  }
+  $ jq -S .normvector.client_identities < "$SCUBA"
+  [
+    "USER:myusername0",
+    "MACHINE:devvm000.lla0.facebook.com",
+    "MACHINE_TIER:devvm"
+  ]

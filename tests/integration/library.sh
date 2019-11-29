@@ -284,7 +284,7 @@ function write_stub_log_entry {
 }
 
 function wait_for_nonempty_file {
-    for _ in $(seq 1 10); do
+    for _ in $(seq 1 50); do
         if test -s "$0"; then 
             return
         fi
@@ -293,7 +293,7 @@ function wait_for_nonempty_file {
     done
 
     echo "File remained empty" >&2
-    exit 1
+    return 1
 }
 
 # Wait until a Mononoke server is available for this repo.
