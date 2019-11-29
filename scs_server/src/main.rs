@@ -37,9 +37,14 @@ use srserver::{ThriftServer, ThriftServerBuilder};
 use stats::schedule_stats_aggregation;
 use tokio::runtime::Runtime;
 
+mod commit_id;
+mod errors;
 mod facebook;
+mod from_request;
+mod into_response;
 mod monitoring;
 mod source_control_impl;
+mod specifiers;
 
 const ARG_PORT: &str = "port";
 const ARG_HOST: &str = "host";
