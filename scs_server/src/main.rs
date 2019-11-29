@@ -42,6 +42,7 @@ mod errors;
 mod facebook;
 mod from_request;
 mod into_response;
+mod methods;
 mod monitoring;
 mod source_control_impl;
 mod specifiers;
