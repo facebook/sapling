@@ -37,6 +37,8 @@ pub enum ScubaKey {
     HttpMethod,
     /// The Http "Host" header sent by the client.
     HttpHost,
+    /// The HTTP User Agent provided by the client.
+    HttpUserAgent,
     /// The "Content-Length" advertised by the client in their request.
     RequestContentLength,
     /// The "Content-Length" we returned in our response.
@@ -90,6 +92,7 @@ impl AsRef<str> for ScubaKey {
             HttpQuery => "http_query",
             HttpMethod => "http_method",
             HttpHost => "http_host",
+            HttpUserAgent => "http_user_agent",
             RequestContentLength => "request_content_length",
             ResponseContentLength => "response_content_length",
             ClientIp => "client_ip",
@@ -208,6 +211,14 @@ fn log_stats(
             ScubaKey::RequestContentLength,
             header::CONTENT_LENGTH,
             |header| header.parse::<u64>().unwrap_or(0),
+        );
+
+        add_header(
+            &mut scuba,
+            headers,
+            ScubaKey::HttpUserAgent,
+            header::USER_AGENT,
+            |header| header.to_string(),
         );
     }
 

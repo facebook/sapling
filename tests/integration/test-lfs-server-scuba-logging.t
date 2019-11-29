@@ -65,6 +65,7 @@
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
+      "http_user_agent": "mercurial/* git/*", (glob)
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -107,6 +108,7 @@
       "http_host": "*", (glob)
       "http_method": "PUT",
       "http_path": "/lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048",
+      "http_user_agent": "mercurial/* git/*", (glob)
       "method": "upload",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -154,6 +156,7 @@
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
+      "http_user_agent": "mercurial/* git/*", (glob)
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -197,6 +200,7 @@
       "http_host": "*", (glob)
       "http_method": "GET",
       "http_path": "/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d",
+      "http_user_agent": "mercurial/* git/*", (glob)
       "method": "download",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -238,6 +242,7 @@
       "http_method": "GET",
       "http_path": "/config",
       "http_query": "foo=bar",
+      "http_user_agent": "curl/*", (glob)
       "request_id": *, (glob)
       "server_hostname": *, (glob)
       "server_tier": "foo.bar",
