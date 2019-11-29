@@ -135,7 +135,7 @@ mod test {
     fn simple() {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        let decoder = NetstringDecoder::new();
+        let decoder = NetstringDecoder::default();
 
         let inp = stream::iter_ok::<_, io::Error>(vec![Bytes::from(&b"13:hello, world!,"[..])]);
 
@@ -160,7 +160,7 @@ mod test {
     fn large() {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        let decoder = NetstringDecoder::new();
+        let decoder = NetstringDecoder::default();
 
         let inp = stream::iter_ok::<_, io::Error>(vec![Bytes::from(
             "13:hello, world!,".repeat(5000).as_bytes(),
@@ -188,7 +188,7 @@ mod test {
     fn partial() {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        let decoder = NetstringDecoder::new();
+        let decoder = NetstringDecoder::default();
 
         let inp = stream::iter_ok::<_, io::Error>(vec![
             Bytes::from(&b"13:hel"[..]),

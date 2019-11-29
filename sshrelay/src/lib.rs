@@ -123,7 +123,7 @@ impl AsRef<[u8]> for SshMsg {
 
 impl SshDecoder {
     pub fn new() -> Self {
-        SshDecoder(NetstringDecoder::new())
+        SshDecoder(NetstringDecoder::default())
     }
 }
 
@@ -173,7 +173,7 @@ impl Decoder for SshDecoder {
 
 impl SshEncoder {
     pub fn new() -> Self {
-        SshEncoder(NetstringEncoder::new())
+        SshEncoder(NetstringEncoder::default())
     }
 }
 
