@@ -1,5 +1,5 @@
 # @autocargo from //common/rust/futures-ext:futures-ext
-# Signature<<e6f3a09153bca62e0e61acb253c837a267763785>>
+# Signature<<3b71873149119d74916fbd709a1869ac744a1fa1>>
 [package]
 name = "futures-ext"
 edition = "2018"
@@ -19,10 +19,10 @@ tokio-io = "0.1"
 tokio-threadpool = "0.1"
 
 [dev-dependencies]
-async-unit = { path = "../async-unit" }
+async_unit = { path = "../shed/async_unit" }
 lock_ext = { path = "../shed/lock_ext" }
 netstring = { path = "../shed/netstring" }
 assert_matches = "*"
 pretty_assertions = "*"
 quickcheck = "0.9"
-# @end of Signature<<e6f3a09153bca62e0e61acb253c837a267763785>>
+# @end of Signature<<3b71873149119d74916fbd709a1869ac744a1fa1>>
