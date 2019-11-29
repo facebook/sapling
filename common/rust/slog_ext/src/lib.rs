@@ -9,6 +9,7 @@
 use failure_ext::SlogKVErrorKey;
 use slog::{self, Drain, OwnedKVList, Record, Serializer, KV};
 use slog_term::Decorator;
+use std::str::FromStr;
 use std::{fmt, io};
 
 /// Drain that only prints the message and newline plus error if present, nothing more
@@ -81,7 +82,7 @@ struct ErrorSerializer {
 
 impl Serializer for ErrorSerializer {
     fn emit_arguments(&mut self, key: slog::Key, val: &fmt::Arguments) -> slog::Result {
-        if let Some(key) = SlogKVErrorKey::from_str(key) {
+        if let Ok(key) = SlogKVErrorKey::from_str(key) {
             use SlogKVErrorKey::*;
             match key {
                 Error => self.error = non_empty_str_maybe(format!("{}", val)),
