@@ -1,50 +1,16 @@
   $ . "${TEST_FIXTURES}/library.sh"
+  $ BLOB_TYPE="blob:files" default_setup
+  hg repo
+  o  C [draft;rev=2;26805aba1e60]
+  |
+  o  B [draft;rev=1;112478962961]
+  |
+  o  A [draft;rev=0;426bada5c675]
+  $
+  blobimporting
+  starting Mononoke
+  cloning repo in hg client 'repo2'
 
-setup configuration
-  $ setup_common_config "blob:files"
-  $ cd $TESTTMP
-
-setup common configuration
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh="$DUMMYSSH"
-  > [extensions]
-  > amend=
-  > EOF
-
-setup repo
-  $ hg init repo-hg
-  $ cd repo-hg
-  $ setup_hg_server
-  $ hg debugdrawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOF
-
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo-hg/.hg repo
-
-start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
-Clone the repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
-  $ cd repo2
-  $ setup_hg_client
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > pushrebase =
-  > remotenames =
-  > EOF
 
 Pushrebase commit 1
   $ hg up -q 0

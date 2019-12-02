@@ -1246,7 +1246,7 @@ function log() {
 
 # Default setup that many of the test use
 function default_setup() {
-  setup_common_config "blob:files"
+  setup_common_config "$BLOB_TYPE"
   cd "$TESTTMP" || exit 1
 
   cat >> "$HGRCPATH" <<EOF
