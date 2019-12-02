@@ -16,6 +16,7 @@ quickcheck = { version = "0.9", optional = true }
 rand = { version = "0.7", optional = true }
 pathmatcher = { path = "../pathmatcher" }
 rust-crypto = "0.2"
+thiserror = "1.0"
 tracing = "0.1"
 types = { path = "../types" }
 

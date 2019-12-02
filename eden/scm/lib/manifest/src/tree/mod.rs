@@ -20,10 +20,11 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
 use once_cell::sync::OnceCell;
+use thiserror::Error;
 
 use pathmatcher::Matcher;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
@@ -44,6 +45,14 @@ pub struct Tree {
     store: InnerStore,
     // TODO: root can't be a Leaf
     root: Link,
+}
+
+#[derive(Error, Debug)]
+pub enum InsertError {
+    #[error("Asked to insert '{0}' but '{1}' is already a file.")]
+    ParentFileExists(RepoPathBuf, RepoPathBuf),
+    #[error("Asked to insert '{0}' but it is already a directory.")]
+    DirectoryExistsForPath(RepoPathBuf),
 }
 
 impl Tree {
@@ -99,11 +108,10 @@ impl Manifest for Tree {
         let mut must_insert = false;
         for (parent, component) in path.parents().zip(path.components()) {
             let child = match cursor {
-                Leaf(_) => bail!(
-                    "Asked to insert '{}' but '{}' is already a file.",
-                    path,
-                    parent
-                ),
+                Leaf(_) => Err(InsertError::ParentFileExists(
+                    path.clone(),
+                    parent.to_owned(),
+                ))?,
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
                     let links = entry.get_links(&self.store, parent)?;
@@ -126,7 +134,7 @@ impl Manifest for Tree {
                     }
                 }
                 Ephemeral(_) | Durable(_) => {
-                    bail!("Asked to insert '{}' but it is already a directory.", path);
+                    Err(InsertError::DirectoryExistsForPath(path.clone()))?
                 }
             }
         }

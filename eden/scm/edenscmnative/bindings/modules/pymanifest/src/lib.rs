@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{borrow::Borrow, cell::RefCell, ops::Deref, str, sync::Arc};
+use std::{borrow::Borrow, cell::RefCell, collections::HashSet, ops::Deref, str, sync::Arc};
 
 use anyhow::{format_err, Error};
 use bytes::Bytes;
@@ -17,7 +17,7 @@ use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
 use manifest::{self, Diff, DiffType, FileMetadata, FileType, FsNode, Manifest};
-use pathmatcher::{AlwaysMatcher, Matcher};
+use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonDataStore;
 use revisionstore::{DataStore, RemoteDataStore};
@@ -91,6 +91,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 py_class!(class treemanifest |py| {
     data underlying: RefCell<manifest::Tree>;
+    data pending_delete: RefCell<HashSet<RepoPathBuf>>;
 
     def __new__(
         _cls,
@@ -103,13 +104,12 @@ py_class!(class treemanifest |py| {
             None => manifest::Tree::ephemeral(manifest_store),
             Some(value) => manifest::Tree::durable(manifest_store, pybytes_to_node(py, value)?),
         };
-        treemanifest::create_instance(py, RefCell::new(underlying))
+        treemanifest::create_instance(py, RefCell::new(underlying), RefCell::new(HashSet::new()))
     }
 
     // Returns a new instance of treemanifest that contains the same data as the base.
     def copy(&self) -> PyResult<treemanifest> {
-        let tree = self.underlying(py);
-        treemanifest::create_instance(py, tree.clone())
+        treemanifest::create_instance(py, self.underlying(py).clone(), self.pending_delete(py).clone())
     }
 
     // Returns (node, flag) for a given `path` in the manifest.
@@ -233,7 +233,8 @@ py_class!(class treemanifest |py| {
         let node = pybytes_to_node(py, binnode)?;
         let file_type = pystring_to_file_type(py, flag)?;
         let file_metadata = FileMetadata::new(node, file_type);
-        tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
+        insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path, file_metadata)
+            .map_pyerr::<exc::RuntimeError>(py)?;
         Ok(py.None())
     }
 
@@ -251,7 +252,8 @@ py_class!(class treemanifest |py| {
                 file_metadata
             }
         };
-        tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
+        insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path, file_metadata)
+            .map_pyerr::<exc::RuntimeError>(py)?;
         Ok(Python::None(py))
     }
 
@@ -330,7 +332,8 @@ py_class!(class treemanifest |py| {
                 file_metadata
             }
         };
-        tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
+        insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path, file_metadata)
+            .map_pyerr::<exc::RuntimeError>(py)?;
         Ok(())
     }
 
@@ -338,6 +341,8 @@ py_class!(class treemanifest |py| {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
         tree.remove(&repo_path).map_pyerr::<exc::RuntimeError>(py)?;
+        let mut pending_delete = self.pending_delete(py).borrow_mut();
+        pending_delete.remove(&repo_path);
         Ok(())
     }
 
@@ -410,6 +415,17 @@ py_class!(class treemanifest |py| {
         p1tree: Option<&treemanifest> = None,
         p2tree: Option<&treemanifest> = None
     ) -> PyResult<Vec<PyTuple>> {
+        let pending_delete = self.pending_delete(py).borrow();
+        if !pending_delete.is_empty() {
+            return Err(PyErr::new::<exc::RuntimeError, _>(
+                py,
+                format!(
+                    "Error finalizing manifest. Invalid state: \
+                    expecting deletion commands for the following paths: {:?}",
+                    pending_delete
+                )
+            ));
+        }
         let mut result = Vec::new();
         let mut tree = self.underlying(py).borrow_mut();
         let mut parents = vec!();
@@ -494,6 +510,38 @@ pub fn prefetch(
     let key = Key::new(path, node);
     manifest::prefetch(store, key, depth).map_pyerr::<exc::RuntimeError>(py)?;
     Ok(py.None())
+}
+
+fn insert(
+    tree: &mut manifest::Tree,
+    pending_delete: &mut HashSet<RepoPathBuf>,
+    path: RepoPathBuf,
+    file_metadata: FileMetadata,
+) -> Result<()> {
+    // TODO: InsertError should return back path and file_metadata
+    let insert_error = match tree.insert(path.clone(), file_metadata) {
+        Ok(result) => return Ok(result),
+        Err(error) => match error.downcast::<manifest::tree::InsertError>() {
+            Ok(insert_error) => insert_error,
+            Err(err) => return Err(err),
+        },
+    };
+    match insert_error {
+        manifest::tree::InsertError::ParentFileExists(_, file_path) => {
+            tree.remove(&file_path)?;
+            pending_delete.insert(file_path);
+        }
+        manifest::tree::InsertError::DirectoryExistsForPath(path) => {
+            let files: Vec<manifest::File> = tree
+                .files(&TreeMatcher::from_rules([format!("{}/**", path)].iter())?)
+                .collect::<Result<_>>()?;
+            for file in files {
+                tree.remove(&file.path)?;
+                pending_delete.insert(file.path);
+            }
+        }
+    }
+    tree.insert(path, file_metadata)
 }
 
 fn vec_to_iter<T: ToPyObject>(py: Python, items: Vec<T>) -> PyResult<PyObject> {
