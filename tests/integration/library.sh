@@ -738,7 +738,7 @@ function start_and_wait_for_scs_server {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     "${CACHING_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
-  echo "$SCS_SERVER_PID_PID" >> "$DAEMON_PIDS"
+  echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
 
   # Wait until a SCS server is available
   # MONONOKE_START_TIMEOUT is set in seconds
