@@ -23,7 +23,7 @@
 
 # Make a request with a valid encoded client identity header
 # NOTE: The LFS Server trusts the identity sslcurl passes as a trusted proxy
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
+  $ sslcurl -fsSL -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
   200
 
 # Check for identities from header

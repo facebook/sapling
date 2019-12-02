@@ -37,7 +37,7 @@
 # the trusted proxy ident. This means that the LFS server should parse our
 # client idents from the cert we provide.
   $ truncate -s 0 "$SCUBA"
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
+  $ sslcurl -fsSL -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
   200
 
   $ wait_for_nonempty_file "$SCUBA"
