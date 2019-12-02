@@ -111,10 +111,6 @@ setup hg client repos
   $ init_client large-hg-srv large-hg-client
 
 Setup helpers
-  $ log() {
-  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
-
   $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
   $ SMALL1_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL1 master_bookmark)
   $ SMALL2_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL2 master_bookmark)

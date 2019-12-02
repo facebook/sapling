@@ -12,11 +12,6 @@ setup common configuration
   > amend=
   > EOF
 
-Setup helpers
-  $ log() {
-  >   hg sl -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
-
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -64,7 +59,7 @@ Create a copy on a client and push it
   $ hg up -q tip
   $ hg cp A D
   $ hg ci -m 'make a copy'
-  $ hgmn push -r . --to master_bookmark 
+  $ hgmn push -r . --to master_bookmark
   pushing rev 726a45528732 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed

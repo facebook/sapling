@@ -12,11 +12,6 @@ setup common configuration
   > amend=
   > EOF
 
-Setup helpers
-  $ log() {
-  >   hg sl -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
-
 setup repo
   $ hg init repo-hg
   $ cd repo-hg

@@ -12,11 +12,6 @@ setup common configuration
   > amend=
   > EOF
 
-Setup helpers
-  $ log() {
-  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
-
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -75,7 +70,7 @@ Pushrebase commit 1
   o |  B [public;rev=1;112478962961]
   |/
   o  A [public;rev=0;426bada5c675]
-   (re)
+  $
 
 Check that the filenode for 1 does not point to the draft commit in a new clone
   $ cd ..
@@ -162,7 +157,7 @@ Push stack
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
-   (re)
+  $
 
 Push fast-forward
   $ hg up master_bookmark
@@ -190,7 +185,8 @@ Push fast-forward
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
-  
+  $
+
 
 Push with no new commits
   $ hgmn push -r . --to master_bookmark
@@ -230,7 +226,8 @@ Push a merge commit with both parents not ancestors of destination bookmark
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
-  
+  $
+
   $ hgmn push -r . --to master_bookmark
   pushing rev fad460d85200 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
@@ -260,7 +257,8 @@ Push a merge commit with both parents not ancestors of destination bookmark
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
-  
+  $
+
 
 Previously commits below were testing pushrebasing over merge.
 Keep them in place to not change the output for all the tests below

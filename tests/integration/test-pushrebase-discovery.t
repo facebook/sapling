@@ -38,11 +38,6 @@ setup common configuration
   > commitcloud=
   > EOF
 
-Setup helpers
-  $ log() {
-  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
-
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -126,7 +121,8 @@ not move a bookmark
   o |  B [public;rev=1;112478962961]
   |/
   o  A [public;rev=0;426bada5c675]
-  
+  $
+
 The same procedure, but with commit cloud commit
   $ hg up -q 0
   $ echo commitcloud > commitcloud && hg addremove -q
@@ -162,4 +158,4 @@ Now let's push commit cloud commit. Again, it should do pushrebase
   o |  B [public;rev=1;112478962961]
   |/
   o  A [public;rev=0;426bada5c675]
-  
+  $

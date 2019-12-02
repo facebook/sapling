@@ -11,11 +11,6 @@ setup common configuration
   > ssh="$DUMMYSSH"
   > EOF
 
-setup helpers
-  $ log() {
-  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@" | grep -v '^$'
-  > }
-
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -63,6 +58,7 @@ Push commits that will be obsoleted
   | o  B [public;rev=1;112478962961]
   |/
   o  A [public;rev=0;426bada5c675]
+  $
   $ hgmn push -r . --to master_bookmark
   pushing rev 0c67ec8c24b9 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
@@ -84,6 +80,7 @@ Push commits that will be obsoleted
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
+  $
 
 Push commits that will not be obsoleted
   $ hg up -q dc31470c8386
@@ -100,6 +97,7 @@ Push commits that will not be obsoleted
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
+  $
   $ hgmn push -r . --to master_bookmark
   pushing rev 6398085ceb9d to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
@@ -120,3 +118,4 @@ Push commits that will not be obsoleted
   o  B [public;rev=1;112478962961]
   |
   o  A [public;rev=0;426bada5c675]
+  $

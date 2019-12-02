@@ -11,10 +11,6 @@ setup common configuration
   > ssh="$DUMMYSSH"
   > EOF
 
-Setup helpers
-  $ log() {
-  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -67,7 +63,8 @@ Try to push merge commit
   | o  B [public;rev=1;112478962961]
   |/
   o  A [public;rev=0;426bada5c675]
-  
+  $
+
   $ hgmn push -r . --to master_bookmark
   pushing rev 3e1c4ca1f9be to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes

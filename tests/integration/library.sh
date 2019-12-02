@@ -1238,3 +1238,56 @@ function get_bonsai_bookmark() {
   mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
   export REPOID=$repoid_backup
 }
+
+function log() {
+  # Prepend "$" to the end of the log output to prevent having trailing whitespaces
+  hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@" | sed 's/^[ \t]*$/$/'
+}
+
+# Default setup that many of the test use
+function default_setup() {
+  setup_common_config "blob:files"
+  cd "$TESTTMP" || exit 1
+
+  cat >> "$HGRCPATH" <<EOF
+[ui]
+ssh="$DUMMYSSH"
+[extensions]
+amend=
+EOF
+
+hg init repo-hg
+cd repo-hg || exit 1
+setup_hg_server
+hg debugdrawdag <<EOF
+C
+|
+B
+|
+A
+EOF
+
+hg bookmark master_bookmark -r tip
+
+echo "hg repo"
+log -r ":"
+
+cd .. || exit 1
+echo "blobimporting"
+blobimport repo-hg/.hg repo
+
+echo "starting Mononoke"
+mononoke "$@"
+wait_for_mononoke "$TESTTMP/repo"
+
+echo "cloning repo in hg client 'repo2'"
+hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
+cd repo2 || exit 1
+setup_hg_client
+cat >> .hg/hgrc <<EOF
+[extensions]
+pushrebase =
+remotenames =
+EOF
+
+}
