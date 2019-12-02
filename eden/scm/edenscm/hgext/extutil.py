@@ -189,7 +189,7 @@ def flock(lockpath, description, timeout=-1):
     util.makedirs(os.path.dirname(lockpath))
     with open(lockpath, "a"):
         pass
-    lockfd = os.open(lockpath, os.O_RDONLY, 0o664)
+    lockfd = os.open(lockpath, os.O_RDWR, 0o664)
     start = time.time()
     while True:
         try:
