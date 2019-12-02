@@ -518,20 +518,20 @@ fn insert(
     path: RepoPathBuf,
     file_metadata: FileMetadata,
 ) -> Result<()> {
-    // TODO: InsertError should return back path and file_metadata
-    let insert_error = match tree.insert(path.clone(), file_metadata) {
+    let insert_error = match tree.insert(path, file_metadata) {
         Ok(result) => return Ok(result),
         Err(error) => match error.downcast::<manifest::tree::InsertError>() {
             Ok(insert_error) => insert_error,
             Err(err) => return Err(err),
         },
     };
-    match insert_error {
-        manifest::tree::InsertError::ParentFileExists(_, file_path) => {
+    let path = insert_error.path;
+    match insert_error.source {
+        manifest::tree::InsertErrorCause::ParentFileExists(file_path) => {
             tree.remove(&file_path)?;
             pending_delete.insert(file_path);
         }
-        manifest::tree::InsertError::DirectoryExistsForPath(path) => {
+        manifest::tree::InsertErrorCause::DirectoryExistsForPath => {
             let files: Vec<manifest::File> = tree
                 .files(&TreeMatcher::from_rules([format!("{}/**", path)].iter())?)
                 .collect::<Result<_>>()?;

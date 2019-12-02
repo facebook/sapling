@@ -48,11 +48,29 @@ pub struct Tree {
 }
 
 #[derive(Error, Debug)]
-pub enum InsertError {
-    #[error("Asked to insert '{0}' but '{1}' is already a file.")]
-    ParentFileExists(RepoPathBuf, RepoPathBuf),
-    #[error("Asked to insert '{0}' but it is already a directory.")]
-    DirectoryExistsForPath(RepoPathBuf),
+#[error("failure inserting '{path}' in manifest")]
+pub struct InsertError {
+    pub path: RepoPathBuf,
+    pub file_metadata: FileMetadata,
+    pub source: InsertErrorCause,
+}
+
+impl InsertError {
+    pub fn new(path: RepoPathBuf, file_metadata: FileMetadata, source: InsertErrorCause) -> Self {
+        Self {
+            path,
+            file_metadata,
+            source,
+        }
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum InsertErrorCause {
+    #[error("'{0}' is already a file")]
+    ParentFileExists(RepoPathBuf),
+    #[error("file path is already a directory")]
+    DirectoryExistsForPath,
 }
 
 impl Tree {
@@ -108,9 +126,10 @@ impl Manifest for Tree {
         let mut must_insert = false;
         for (parent, component) in path.parents().zip(path.components()) {
             let child = match cursor {
-                Leaf(_) => Err(InsertError::ParentFileExists(
-                    path.clone(),
-                    parent.to_owned(),
+                Leaf(_) => Err(InsertError::new(
+                    path.clone(), // TODO: get rid of clone (it is borrowed)
+                    file_metadata,
+                    InsertErrorCause::ParentFileExists(parent.to_owned()),
                 ))?,
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
@@ -133,9 +152,11 @@ impl Manifest for Tree {
                         return Ok(()); // nothing to do
                     }
                 }
-                Ephemeral(_) | Durable(_) => {
-                    Err(InsertError::DirectoryExistsForPath(path.clone()))?
-                }
+                Ephemeral(_) | Durable(_) => Err(InsertError::new(
+                    path.clone(), // TODO: get rid of clone (it is borrowed later)
+                    file_metadata,
+                    InsertErrorCause::DirectoryExistsForPath,
+                ))?,
             }
         }
         let (path_parent, last_component) = path.split_last_component().unwrap();
@@ -780,20 +801,26 @@ mod tests {
         );
 
         assert_eq!(
-            format!(
-                "{}",
-                tree.insert(repo_path_buf("foo/bar/error"), make_meta("40"))
-                    .unwrap_err()
-            ),
-            "Asked to insert 'foo/bar/error' but 'foo/bar' is already a file.",
+            tree.insert(repo_path_buf("foo/bar/error"), make_meta("40"))
+                .unwrap_err()
+                .chain()
+                .map(|e| format!("{}", e))
+                .collect::<Vec<_>>(),
+            vec![
+                "failure inserting 'foo/bar/error' in manifest",
+                "\'foo/bar\' is already a file",
+            ],
         );
         assert_eq!(
-            format!(
-                "{}",
-                tree.insert(repo_path_buf("foo"), make_meta("50"))
-                    .unwrap_err()
-            ),
-            "Asked to insert 'foo' but it is already a directory.",
+            tree.insert(repo_path_buf("foo"), make_meta("50"))
+                .unwrap_err()
+                .chain()
+                .map(|e| format!("{}", e))
+                .collect::<Vec<_>>(),
+            vec![
+                "failure inserting 'foo' in manifest",
+                "file path is already a directory",
+            ],
         );
     }
 
