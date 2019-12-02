@@ -118,7 +118,7 @@ blobimport
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
   $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
   remote: * ERRO Requested repo "disabled_repo" does not exist or disabled (glob)
   abort: no suitable response from remote hg!

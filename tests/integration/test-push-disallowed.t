@@ -31,7 +31,7 @@ blobimport the repo
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 setup the client repo
   $ cd $TESTTMP

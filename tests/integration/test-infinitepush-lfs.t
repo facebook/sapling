@@ -18,7 +18,7 @@ Setup repo
 
 Start Mononoke
   $ mononoke
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
   $ lfs_uri="$(lfs_server)/repo"
 
 Setup common client configuration for these tests

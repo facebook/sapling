@@ -18,7 +18,7 @@ setup data
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
   $ function s_client () { openssl s_client -connect localhost:$MONONOKE_SOCKET -CAfile "${TEST_CERTDIR}/root-ca.crt" -cert "${TEST_CERTDIR}/localhost.crt" -key "${TEST_CERTDIR}/localhost.key" -ign_eof "$@"; }
 
 test TLS Session/Ticket resumption when using client certs
@@ -41,7 +41,7 @@ test TLS Tickets use encryption keys from seeds - sessions should persist across
   $TESTTMP.sh: * Killed * (glob)
   [137]
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
   $ alias s_client="openssl s_client -connect localhost:$MONONOKE_SOCKET -CAfile \"${TEST_CERTDIR}/root-ca.crt\" -cert \"${TEST_CERTDIR}/localhost.crt\" -key \"${TEST_CERTDIR}/localhost.key\" -ign_eof"
   $ echo -e "hello\n" | s_client -sess_in $TMPFILE -state | grep -E "^SSL_connect"
   SSL_connect:before/connect initialization

@@ -89,7 +89,7 @@ merge things in both repos
 
 start mononoke server
   $ mononoke
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
 
 pull the result
   $ cd $TESTTMP/repo-pull

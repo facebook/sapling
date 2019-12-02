@@ -40,7 +40,7 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 switch to client and enable inifitepush extension
   $ cd repo-client

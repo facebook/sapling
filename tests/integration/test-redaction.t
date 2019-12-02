@@ -45,7 +45,7 @@ blobimport
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -170,7 +170,7 @@ Restart mononoke
   $ rm -rf "$TESTTMP/mononoke-config"
   $ setup_common_config blob:files
   $ mononoke
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr

@@ -23,7 +23,7 @@ Setup repo
 
 Setup Mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 Setup LFS server
   $ lfs_uri="$(lfs_server)/repo"

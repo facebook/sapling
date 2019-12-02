@@ -31,7 +31,7 @@
 
 # 3. Setup Mononoke. Introduce LFS_THRESHOLD into Mononoke server config.
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 # 4. Setup Mononoke API server.
   $ lfs_uri="$(lfs_server)/repo"

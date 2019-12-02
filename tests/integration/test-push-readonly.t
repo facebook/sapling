@@ -37,7 +37,7 @@ setup push source repo
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 create new commit in repo2 and check that push fails
 

@@ -81,7 +81,7 @@ blobimport
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 push an infinitepush commit with new content
   $ cd $TESTTMP/repo-push

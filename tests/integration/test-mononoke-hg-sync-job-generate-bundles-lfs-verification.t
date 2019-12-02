@@ -39,7 +39,7 @@ Start mononoke and a LFS server
   $ lfs_base="$(lfs_server)"
   $ lfs_uri="${lfs_base}/repo"
   $ lfs_uri_other="${lfs_base}/lfs_other"
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
 
 Make client repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames= -q

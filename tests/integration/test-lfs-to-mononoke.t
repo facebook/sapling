@@ -21,7 +21,7 @@ Blobimport the hg repo to Mononoke
 
 Start Mononoke with LFS enabled.
   $ mononoke
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
 
 Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/repo"

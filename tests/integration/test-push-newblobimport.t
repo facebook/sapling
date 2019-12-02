@@ -44,7 +44,7 @@ verify content
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
   $ cd client
   $ echo 'remotefilelog' >> .hg/requires

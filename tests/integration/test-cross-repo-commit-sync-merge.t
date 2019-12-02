@@ -69,7 +69,7 @@ setup hg client repos
 
 start mononoke server
   $ mononoke
-  $ wait_for_mononoke "$TESTTMP/repo"
+  $ wait_for_mononoke
 
 run the sync, expected to fail, as parent of the synced commit is not present in the mapping
   $ mononoke_x_repo_sync_once 1 0 megarepo_master once --commit fbsource_master

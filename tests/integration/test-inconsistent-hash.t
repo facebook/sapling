@@ -22,7 +22,7 @@
 
 # 2. Setup Mononoke.
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 # 3. Clone hg server repo to hg client repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-hg-client --noupdate --config extensions.remotenames=

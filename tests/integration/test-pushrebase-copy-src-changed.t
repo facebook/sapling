@@ -57,7 +57,7 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 Create a copy on a client and push it
   $ cd repo2

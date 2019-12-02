@@ -48,7 +48,7 @@ Prepare the server-side repo
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 Prepare the client-side repo
 

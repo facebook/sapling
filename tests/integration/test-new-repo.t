@@ -9,7 +9,7 @@ setup configuration
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 setup repo
   $ hgmn_init repo

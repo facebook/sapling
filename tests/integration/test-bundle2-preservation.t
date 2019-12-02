@@ -39,7 +39,7 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 Clone the repo, do not set up pushrebase
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
@@ -64,7 +64,7 @@ Restart mononoke with enabled bundle2 preservation
   $ export ENABLE_PRESERVE_BUNDLE2=1
   $ setup_common_config "blob:files"
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 Create a new commit in repo2
   $ cd $TESTTMP/repo2

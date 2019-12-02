@@ -39,7 +39,7 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 Pull from Mononoke
   $ cd repo2

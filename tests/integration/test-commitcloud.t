@@ -53,7 +53,7 @@ blobimport
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 
   $ cd client1

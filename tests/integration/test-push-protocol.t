@@ -47,7 +47,7 @@ to pull these pushed commits
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 BEGIN Creation of new commits
 

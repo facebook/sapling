@@ -39,7 +39,7 @@ blobimport
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 create new bookmarks, then update their properties
   $ cd repo-push

@@ -28,7 +28,7 @@ setup master bookmarks
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 setup two repos: one will be used to pull into, and one will be used to
 update master_bookmark concurrently.

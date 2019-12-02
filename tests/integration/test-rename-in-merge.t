@@ -50,7 +50,7 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
   $ cd repo2
   $ hgmn pull

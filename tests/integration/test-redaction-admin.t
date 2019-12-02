@@ -26,7 +26,7 @@ blobimport
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

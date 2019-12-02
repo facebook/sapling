@@ -37,7 +37,7 @@ blobimport
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 
 Do infinitepush (aka commit cloud) push

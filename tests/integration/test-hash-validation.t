@@ -44,7 +44,7 @@ Corrupt blobs by replacing one content blob with another
 start mononoke
 
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke
 
 
 Prefetch should fail with corruption error
