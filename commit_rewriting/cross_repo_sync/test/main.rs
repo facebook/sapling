@@ -32,7 +32,7 @@ use mononoke_types::{
 };
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 
-use cross_repo_sync::{sync_commit_compat, CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
@@ -128,14 +128,15 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let bookmark_name = BookmarkName::new("master").unwrap();
-    let source = config.get_source_repo();
-
-    let source_bcs = source
+    let source_bcs = config
+        .get_source_repo()
         .get_bonsai_changeset(ctx.clone(), source_bcs_id)
         .wait()
         .unwrap();
-
-    sync_commit_compat(ctx, source_bcs, config.clone(), bookmark_name).wait()
+    config
+        .clone()
+        .sync_commit_pushrebase_compat(ctx.clone(), source_bcs, bookmark_name)
+        .wait()
 }
 
 fn get_bcs_id<M>(

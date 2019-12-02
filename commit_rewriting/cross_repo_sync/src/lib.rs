@@ -388,6 +388,124 @@ where
         }
     }
 
+    pub fn sync_commit_pushrebase_compat(
+        self,
+        ctx: CoreContext,
+        source_cs: BonsaiChangeset,
+        bookmark: BookmarkName,
+    ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
+        async move { self.sync_commit_pushrebase(ctx, source_cs, bookmark).await }
+            .boxed()
+            .compat()
+    }
+
+    pub async fn sync_commit_pushrebase(
+        &self,
+        ctx: CoreContext,
+        source_cs: BonsaiChangeset,
+        bookmark: BookmarkName,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let hash = source_cs.get_changeset_id();
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
+
+        match remap_parents_and_rewrite_commit(ctx.clone(), source_cs.clone().into_mut(), self)
+            .await?
+        {
+            None => {
+                let mut remapped_parents_outcome = vec![];
+                for p in source_cs.parents() {
+                    let maybe_commit_sync_outcome = self
+                        .get_commit_sync_outcome(ctx.clone(), p)
+                        .await?
+                        .map(|sync_outcome| (sync_outcome, p));
+                    remapped_parents_outcome.extend(maybe_commit_sync_outcome.into_iter());
+                }
+
+                if remapped_parents_outcome.len() == 0 {
+                    self.update_wc_equivalence(ctx.clone(), hash, None).await?;
+                } else if remapped_parents_outcome.len() == 1 {
+                    use CommitSyncOutcome::*;
+                    let (sync_outcome, parent) = &remapped_parents_outcome[0];
+                    let wc_equivalence = match sync_outcome {
+                        NotSyncCandidate => None,
+                        RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(*cs_id),
+                        Preserved => Some(*parent),
+                    };
+
+                    self.update_wc_equivalence(ctx.clone(), hash, wc_equivalence)
+                        .await?;
+                } else {
+                    return Err(ErrorKind::AmbiguousWorkingCopyEquivalent(
+                        source_cs.get_changeset_id(),
+                    )
+                    .into());
+                }
+
+                Ok(None)
+            }
+            Some(rewritten) => {
+                // Special case - commits with no parents (=> beginning of a repo) graft directly
+                // to the bookmark, so that we can start a new sync with a fresh repo
+                // Note that this won't work if the bookmark does not yet exist - don't do that
+                let rewritten = {
+                    let mut rewritten = rewritten;
+                    if rewritten.parents.is_empty() {
+                        target_repo
+                            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+                            .map(|bookmark_cs| {
+                                bookmark_cs
+                                    .map(|bookmark_cs| rewritten.parents = vec![bookmark_cs]);
+                            })
+                            .compat()
+                            .await?
+                    }
+                    rewritten
+                };
+
+                // Sync commit
+                let frozen = rewritten.freeze()?;
+                let rewritten_list = hashset![frozen];
+                upload_commits(
+                    ctx.clone(),
+                    rewritten_list.clone().into_iter().collect(),
+                    source_repo.clone(),
+                    target_repo.clone(),
+                )
+                .await?;
+
+                let pushrebase_params = {
+                    let mut params = PushrebaseParams::default();
+                    params.rewritedates = false;
+                    params.forbid_p2_root_rebases = false;
+                    params.casefolding_check = false;
+                    params.recursion_limit = None;
+                    params
+                };
+                let bookmark = OntoBookmarkParams { bookmark };
+                let pushrebase_res = do_pushrebase_bonsai(
+                    ctx.clone(),
+                    target_repo,
+                    pushrebase_params,
+                    bookmark,
+                    rewritten_list,
+                    None,
+                )
+                .compat()
+                .await;
+                let pushrebase_res =
+                    pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
+                let pushrebased_changeset = pushrebase_res.head;
+                update_mapping(
+                    ctx.clone(),
+                    hashmap! { hash => pushrebased_changeset },
+                    self,
+                )
+                .await?;
+                Ok(Some(pushrebased_changeset))
+            }
+        }
+    }
+
     pub fn preserve_commit_compat(
         self,
         ctx: CoreContext,
@@ -808,142 +926,6 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
         mapping.add(ctx.clone(), entry).compat().await?;
     }
     Ok(())
-}
-
-/// Syncs `cs` from `source_repo` to `target_repo`, using `mapping` to rewrite commit hashes, and `rewrite_paths` to rewrite paths in the commit
-/// Returns the ID of the resulting synced commit
-pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
-    cs: BonsaiChangeset,
-    commit_syncer: &'a CommitSyncer<M>,
-    bookmark: BookmarkName,
-) -> Result<Option<ChangesetId>, Error> {
-    let CommitSyncer { repos, .. } = commit_syncer.clone();
-    let hash = cs.get_changeset_id();
-    let (source_repo, target_repo, _) = match repos.clone() {
-        CommitSyncRepos::LargeToSmall {
-            large_repo,
-            small_repo,
-            mover,
-            bookmark_renamer: _,
-        } => (large_repo, small_repo, mover),
-        CommitSyncRepos::SmallToLarge {
-            small_repo,
-            large_repo,
-            mover,
-            bookmark_renamer: _,
-        } => (small_repo, large_repo, mover),
-    };
-
-    // Rewrite the commit
-    match remap_parents_and_rewrite_commit(ctx.clone(), cs.clone().into_mut(), commit_syncer)
-        .await?
-    {
-        None => {
-            let mut remapped_parents_outcome = vec![];
-            for p in cs.parents() {
-                let maybe_commit_sync_outcome = commit_syncer
-                    .get_commit_sync_outcome(ctx.clone(), p)
-                    .await?
-                    .map(|sync_outcome| (sync_outcome, p));
-                remapped_parents_outcome.extend(maybe_commit_sync_outcome.into_iter());
-            }
-
-            if remapped_parents_outcome.len() == 0 {
-                commit_syncer
-                    .update_wc_equivalence(ctx.clone(), hash, None)
-                    .await?;
-            } else if remapped_parents_outcome.len() == 1 {
-                use CommitSyncOutcome::*;
-                let (sync_outcome, parent) = &remapped_parents_outcome[0];
-                let wc_equivalence = match sync_outcome {
-                    NotSyncCandidate => None,
-                    RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(*cs_id),
-                    Preserved => Some(*parent),
-                };
-
-                commit_syncer
-                    .update_wc_equivalence(ctx.clone(), hash, wc_equivalence)
-                    .await?;
-            } else {
-                return Err(
-                    ErrorKind::AmbiguousWorkingCopyEquivalent(cs.get_changeset_id()).into(),
-                );
-            }
-
-            Ok(None)
-        }
-        Some(rewritten) => {
-            // Special case - commits with no parents (=> beginning of a repo) graft directly
-            // to the bookmark, so that we can start a new sync with a fresh repo
-            // Note that this won't work if the bookmark does not yet exist - don't do that
-            let rewritten = {
-                let mut rewritten = rewritten;
-                if rewritten.parents.is_empty() {
-                    target_repo
-                        .get_bonsai_bookmark(ctx.clone(), &bookmark)
-                        .map(|bookmark_cs| {
-                            bookmark_cs.map(|bookmark_cs| rewritten.parents = vec![bookmark_cs]);
-                        })
-                        .compat()
-                        .await?
-                }
-                rewritten
-            };
-
-            // Sync commit
-            let frozen = rewritten.freeze()?;
-            let rewritten_list = hashset![frozen];
-            upload_commits(
-                ctx.clone(),
-                rewritten_list.clone().into_iter().collect(),
-                source_repo.clone(),
-                target_repo.clone(),
-            )
-            .await?;
-
-            let pushrebase_params = {
-                let mut params = PushrebaseParams::default();
-                params.rewritedates = false;
-                params.forbid_p2_root_rebases = false;
-                params.casefolding_check = false;
-                params.recursion_limit = None;
-                params
-            };
-            let bookmark = OntoBookmarkParams { bookmark };
-            let pushrebase_res = do_pushrebase_bonsai(
-                ctx.clone(),
-                target_repo,
-                pushrebase_params,
-                bookmark,
-                rewritten_list,
-                None,
-            )
-            .compat()
-            .await;
-            let pushrebase_res =
-                pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
-            let pushrebased_changeset = pushrebase_res.head;
-            update_mapping(
-                ctx.clone(),
-                hashmap! { hash => pushrebased_changeset },
-                commit_syncer,
-            )
-            .await?;
-            Ok(Some(pushrebased_changeset))
-        }
-    }
-}
-
-pub fn sync_commit_compat<M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
-    cs: BonsaiChangeset,
-    config: CommitSyncer<M>,
-    bookmark: BookmarkName,
-) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
-    async move { sync_commit(ctx, cs, &config, bookmark).await }
-        .boxed()
-        .compat()
 }
 
 pub struct Syncers<M: SyncedCommitMapping + Clone + 'static> {
