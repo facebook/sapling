@@ -1011,7 +1011,6 @@ std::string EdenMount::getCounterName(CounterName name) {
   }
   EDEN_BUG() << "unknown counter name "
              << static_cast<std::underlying_type_t<CounterName>>(name);
-  folly::assume_unreachable();
 }
 
 folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
