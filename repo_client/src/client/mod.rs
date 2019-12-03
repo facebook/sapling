@@ -71,8 +71,6 @@ mod logging;
 use logging::CommandLogger;
 pub use logging::WireprotoLogging;
 
-const MAX_NODES_TO_LOG: usize = 5;
-
 const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 
 define_stats! {
@@ -434,8 +432,6 @@ impl RepoClient {
         ctx: CoreContext,
         params: GettreepackArgs,
     ) -> BoxStream<Bytes, Error> {
-        debug!(self.logging.logger(), "gettreepack");
-
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blobrepo(), params)
             .filter({
@@ -752,8 +748,6 @@ impl HgCommands for RepoClient {
         &self,
         pairs: Vec<(HgChangesetId, HgChangesetId)>,
     ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
-        info!(self.logging.logger(), "between pairs {:?}", pairs);
-
         struct ParentStream<CS> {
             ctx: CoreContext,
             repo: MononokeRepo,
@@ -842,8 +836,6 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        info!(self.logging.logger(), "clienttelemetry");
-
         let fallback_hostname = "<no hostname found>";
         let hostname = match FbWhoAmI::new() {
             Ok(fbwhoami) => fbwhoami.get_name().unwrap_or(fallback_hostname).to_string(),
@@ -910,8 +902,6 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         let (ctx, command_logger) = self.start_command(ops::LOOKUP);
-
-        info!(self.logging.logger(), "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support prefixes
         let repo = self.repo.blobrepo().clone();
 
@@ -984,15 +974,6 @@ impl HgCommands for RepoClient {
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
         let (ctx, mut command_logger) = self.start_command(ops::KNOWN);
 
-        if nodes.len() > MAX_NODES_TO_LOG {
-            info!(
-                self.logging.logger(),
-                "known: {:?}...",
-                &nodes[..MAX_NODES_TO_LOG]
-            );
-        } else {
-            info!(self.logging.logger(), "known: {:?}", nodes);
-        }
         let blobrepo = self.repo.blobrepo().clone();
 
         let nodes_len = nodes.len();
@@ -1085,7 +1066,6 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('getbundle', '*')
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
         let (ctx, command_logger) = self.start_command(ops::GETBUNDLE);
-        info!(self.logging.logger(), "Getbundle: {:?}", args);
 
         let value = json!({
             "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
@@ -1120,7 +1100,6 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('hello')
     fn hello(&self) -> HgCommandRes<HashMap<String, Vec<String>>> {
         let (_ctx, command_logger) = self.start_command(ops::HELLO);
-        info!(self.logging.logger(), "Hello -> capabilities");
 
         let mut res = HashMap::new();
         let mut caps = wireprotocaps();
@@ -1143,7 +1122,6 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('listkeys', 'namespace')
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
-        info!(self.logging.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
             let (ctx, command_logger) = self.start_command(ops::LISTKEYS);
 
@@ -1169,10 +1147,6 @@ impl HgCommands for RepoClient {
         namespace: String,
         patterns: Vec<String>,
     ) -> HgCommandRes<BTreeMap<String, HgChangesetId>> {
-        info!(
-            self.logging.logger(),
-            "listkeyspatterns: {} {:?}", namespace, patterns
-        );
         if namespace != "bookmarks" {
             info!(
                 self.logging.logger(),
@@ -1444,8 +1418,6 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, params: BoxStream<(HgFileNodeId, MPath), Error>) -> BoxStream<Bytes, Error> {
-        info!(self.logging.logger(), "getfiles");
-
         let (ctx, command_logger) = self.start_command(ops::GETFILES);
         let this = self.clone();
         // TODO(stash): make it configurable
@@ -1555,7 +1527,6 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
-        info!(self.logging.logger(), "{}", ops::STREAMOUTSHALLOW);
         let (ctx, command_logger) = self.start_command(ops::STREAMOUTSHALLOW);
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
