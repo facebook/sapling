@@ -15,8 +15,8 @@ namespace facebook {
 namespace eden {
 
 /**
- * All exceptions received from the python hg_import_helper.py script
- * are thrown in C++ as HgImportPyError exceptions.
+ * All exceptions received from `hg debugedenimporthelper` are thrown in C++ as
+ * HgImportPyError exceptions.
  */
 class HgImportPyError : public std::exception {
  public:

@@ -51,8 +51,8 @@ constexpr edenfd_t kInvalidFd = -1;
 /**
  * Options for this HgImporter.
  *
- * This is parsed from the initial CMD_STARTED response from the
- * hg_import_helper process, and contains details about the configuration
+ * This is parsed from the initial CMD_STARTED response from `hg
+ * debugedenimporthelper` , and contains details about the configuration
  * for this mercurial repository.
  */
 struct ImporterOptions {
@@ -158,14 +158,14 @@ class HgImporter : public Importer {
     FLAG_MORE_CHUNKS = 0x02,
   };
   /**
-   * hg_import_helper protocol version number.
+   * hg debugedenimporthelper protocol version number.
    *
    * Bump this whenever you add new commands or change the command parameters
    * or response data.  This helps us identify if edenfs somehow ends up
-   * using an incompatible version of the hg_import_helper script.
+   * using an incompatible version of hg debugedenimporthelper.
    *
    * This must be kept in sync with the PROTOCOL_VERSION field in
-   * hg_import_helper.py
+   * hg debugedenimporthelper.
    */
   enum : uint32_t {
     PROTOCOL_VERSION = 1,
@@ -180,7 +180,7 @@ class HgImporter : public Importer {
   /**
    * Command type values.
    *
-   * See hg_import_helper.py for a more complete description of the
+   * See hg debugedenimporthelper for a more complete description of the
    * request/response formats.
    */
   enum : uint32_t {
@@ -220,8 +220,9 @@ class HgImporter : public Importer {
    * and throw a std::runtime_error.
    *
    * This will throw an HgImporterError if there is an error communicating with
-   * the hg_import_helper.py subprocess (for instance, if the helper process has
-   * exited, or if the response does not contain the expected transaction ID).
+   * hg debugedenimporthelper subprocess (for instance, if the helper process
+   * has exited, or if the response does not contain the expected transaction
+   * ID).
    */
   ChunkHeader readChunkHeader(TransactionID txnID, folly::StringPiece cmdName);
 
@@ -309,7 +310,7 @@ class HgImporterError : public std::exception {
 
 /**
  * A helper class that manages an HgImporter and recreates it after any error
- * communicating with the underlying python hg_import_helper.py script.
+ * communicating with hg debugedenimporthelper.
  *
  * Because HgImporter is thread-bound, HgImporterManager is also thread-bound.
  */

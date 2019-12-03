@@ -57,11 +57,6 @@ using std::make_unique;
 using std::string;
 using std::unique_ptr;
 
-DEFINE_string(
-    hgImportHelper,
-    "",
-    "The path to the mercurial import helper script");
-
 #ifdef _WIN32
 // We will use the known path to HG executable instead of searching in the
 // path. This would make sure we are picking the right mercurial. In future
@@ -74,15 +69,6 @@ DEFINE_string(
 #else
 DEFINE_string(hgPath, "hg", "The path to the mercurial executable");
 #endif
-
-constexpr bool kEnableHgImportSubcommand = true;
-
-DEFINE_bool(
-    hgImportUseDebugSubcommand,
-    // Once we swing through releasing some changes in debugedenimporthelper
-    // we can make this default to true everywhere
-    kEnableHgImportSubcommand,
-    "Use `hg debugedenimporthelper` rather than hgImportHelper");
 
 DEFINE_string(
     hgPythonPath,
@@ -113,97 +99,7 @@ using namespace facebook::eden;
  * printing data to stdout.  We don't want arbitrary log message data from
  * mercurial interfering with our normal communication protocol.
  */
-
 constexpr int HELPER_PIPE_FD = 5;
-
-/**
- * Internal helper function for use by getImportHelperPath().
- *
- * Callers should use getImportHelperPath() rather than directly calling this
- * function.
- */
-AbsolutePath findImportHelperPath() {
-  // If a path was specified on the command line, use that
-  if (!FLAGS_hgImportHelper.empty()) {
-    return realpath(FLAGS_hgImportHelper);
-  }
-
-  const char* argv0 = gflags::GetArgv0();
-  if (argv0 == nullptr) {
-    throw std::runtime_error(
-        "unable to find hg_import_helper.py script: "
-        "unable to determine edenfs executable path");
-  }
-
-  auto programPath = realpath(argv0);
-  XLOG(DBG4) << "edenfs path: " << programPath;
-  auto programDir = programPath.dirname();
-
-  auto isHelper = [](const AbsolutePath& path) {
-    XLOG(DBG8) << "checking for hg_import_helper at \"" << path << "\"";
-    return access(path.value().c_str(), X_OK) == 0;
-  };
-
-#ifdef _WIN32
-
-  // TODO EDENWIN: Remove the hardcoded path and use isHelper to find
-  AbsolutePath dir{"C:\\eden\\hg_import_helper\\hg_import_helper.exe"};
-
-  return dir;
-#else
-  // Check in ../../bin/ relative to the directory containing the edenfs binary.
-  // This is where we expect to find the helper script in normal
-  // deployments.
-  auto path = programDir.dirname().dirname() +
-      RelativePathPiece{"bin/hg_import_helper.py"};
-  if (isHelper(path)) {
-    return path;
-  }
-
-  // Check in the directory containing the edenfs binary as well.
-  // edenfs and hg_import_helper.py used to be installed in the same directory
-  // in the past.  We don't normally expect them to be kept in the same
-  // directory any more, but continue searching here just in case.  This may
-  // also make it easier to move hg_import_helper.py in the future if we ever
-  // want to do so.  (However we will likely just switch to invoking
-  // "hg debugedenimporthelper" instead.)
-  path = programDir + PathComponentPiece{"hg_import_helper.py"};
-  if (isHelper(path)) {
-    return path;
-  }
-
-  // Now check in all parent directories of the directory containing our
-  // binary.  This is where we will find the helper program if we are running
-  // from the build output directory in a source code repository.
-  AbsolutePathPiece dir = programDir;
-  RelativePathPiece helperPath{"eden/fs/store/hg/hg_import_helper.py"};
-  while (true) {
-    path = dir + helperPath;
-    if (isHelper(path)) {
-      return path;
-    }
-    auto parent = dir.dirname();
-    if (parent == dir) {
-      throw std::runtime_error("unable to find hg_import_helper.py script");
-    }
-    dir = parent;
-  }
-#endif
-}
-
-/**
- * Get the path to the hg_import_helper.py script.
- *
- * This function is thread-safe and caches the result once we have found
- * the  helper script once.
- */
-AbsolutePath getImportHelperPath() {
-  // C++11 guarantees that this static initialization will be thread-safe, and
-  // if findImportHelperPath() throws it will retry initialization the next
-  // time getImportHelperPath() is called.
-  static AbsolutePath helperPath = findImportHelperPath();
-  return helperPath;
-}
 
 #ifndef _WIN32
 std::string findInPath(folly::StringPiece executable) {
@@ -250,12 +146,9 @@ HgImporter::HgImporter(
   if (importHelperScript.has_value()) {
     cmd.push_back(importHelperScript.value().value());
     cmd.push_back(repoPath.value().str());
-  } else if (FLAGS_hgImportUseDebugSubcommand) {
+  } else {
     cmd.push_back(FLAGS_hgPath);
     cmd.push_back("debugedenimporthelper");
-  } else {
-    cmd.push_back(getImportHelperPath().value());
-    cmd.push_back(repoPath.value().str());
   }
 
 #ifndef _WIN32
