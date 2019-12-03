@@ -85,7 +85,7 @@ pub enum ErrorKind {
     PushrebaseBookmarkNotFound(BookmarkName),
     #[error("Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
-    #[error("Error while uploading data for changesets, hashes: {0:?}")]
+    #[error("No common pushrebase root for {0}, all possible roots: {1:?}")]
     PushrebaseNoCommonRoot(BookmarkName, HashSet<ChangesetId>),
     #[error("Internal error: root changeset {0} not found")]
     RootNotFound(ChangesetId),
