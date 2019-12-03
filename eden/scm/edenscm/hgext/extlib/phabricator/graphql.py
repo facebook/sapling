@@ -28,6 +28,10 @@ class ClientError(Exception):
         self.code = code
 
 
+class GraphQLConfigError(Exception):
+    pass
+
+
 class Client(object):
     def __init__(self, repodir=None, ca_bundle=None, repo=None):
         if repo is not None:
@@ -59,6 +63,11 @@ class Client(object):
             app_id = repo.ui.config("phabricator", "graphql_app_id")
             app_token = repo.ui.config("phabricator", "graphql_app_token")
             self._host = repo.ui.config("phabricator", "graphql_host")
+            if app_id is None or app_token is None or self._host is None:
+                raise GraphQLConfigError(
+                    "GraphQL unavailable because of missing configuration"
+                )
+
             self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
                 phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(),
                 self._cert,

@@ -29,21 +29,8 @@ from .extlib.phabricator import arcconfig, graphql
 
 namespacepredicate = registrar.namespacepredicate()
 
-conduit_host = None
-conduit_path = None
-conduit_protocol = None
-connection = None
-
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
-
-
-class ConduitError(Exception):
-    pass
-
-
-class HttpError(Exception):
-    pass
 
 
 githashre = re.compile("g([0-9a-f]{40})")
@@ -52,10 +39,6 @@ phabhashre = re.compile("^r([A-Z]+)([0-9a-f]{12,40})$")
 
 
 def uisetup(ui):
-    if not conduit_config(ui):
-        ui.warn(_("No conduit host specified in config; disabling fbconduit\n"))
-        return
-
     def _globalrevswrapper(loaded):
         if loaded:
             globalrevsmod = extensions.find("globalrevs")
@@ -68,68 +51,6 @@ def uisetup(ui):
 
     revset.symbols["gitnode"] = gitnode
     gitnode._weight = 10
-
-
-def conduit_config(ui, host=None, path=None, protocol=None):
-    global conduit_host, conduit_path, conduit_protocol
-    conduit_host = host or ui.config("fbconduit", "host")
-    conduit_path = path or ui.config("fbconduit", "path")
-    conduit_protocol = protocol or ui.config("fbconduit", "protocol")
-    if conduit_host is None:
-        return False
-
-    if conduit_protocol is None:
-        conduit_protocol = "https"
-
-    return True
-
-
-def call_conduit(method, timeout=DEFAULT_TIMEOUT, **kwargs):
-    global connection, conduit_host, conduit_path, conduit_protocol
-
-    # start connection
-    # TODO: move to python-requests
-    if connection is None:
-        if conduit_protocol == "https":
-            connection = httplib.HTTPSConnection(conduit_host, timeout=timeout)
-        elif conduit_protocol == "http":
-            connection = httplib.HTTPConnection(conduit_host, timeout=timeout)
-
-    # send request
-    path = conduit_path + method
-    args = urlencode({"params": json.dumps(kwargs)})
-    headers = {
-        "Connection": "Keep-Alive",
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
-    e = None
-    for attempt in range(MAX_CONNECT_RETRIES):
-        try:
-            connection.request("POST", path, args, headers)
-            break
-        except httplib.HTTPException:
-            connection.connect()
-    if e:
-        raise e
-
-    # read http response
-    response = connection.getresponse()
-    if response.status != 200:
-        raise HttpError(response.reason)
-    result = response.read()
-
-    # strip jsonp header and parse
-    assert result.startswith("for(;;);")
-    result = json.loads(result[8:])
-
-    # check for conduit errors
-    if result["error_code"]:
-        raise ConduitError(result["error_info"])
-
-    # return RPC result
-    return result["result"]
-
-    # don't close the connection b/c we want to avoid the connection overhead
 
 
 @templater.templatefunc("mirrornode")

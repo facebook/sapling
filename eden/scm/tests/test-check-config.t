@@ -55,9 +55,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fastlog.enabled (bool)
   undocumented: fbconduit.backingrepos (list) [[reponame]]
   undocumented: fbconduit.gitcallsigns (list)
-  undocumented: fbconduit.host (str)
-  undocumented: fbconduit.path (str)
-  undocumented: fbconduit.protocol (str)
   undocumented: fbconduit.reponame (str)
   undocumented: fbhistedit.exec_in_user_shell (str)
   undocumented: format.usehgsql (bool)

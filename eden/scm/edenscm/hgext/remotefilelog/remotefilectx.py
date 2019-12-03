@@ -31,27 +31,6 @@ conduit = None
 FASTLOG_TIMEOUT_IN_SECS = 0.5
 
 
-def createconduit(ui):
-    try:
-        conduit = extensions.find("fbconduit")
-    except KeyError:
-        try:
-            from edenscm.hgext import fbconduit as conduit
-        except ImportError:
-            ui.log("linkrevfixup", _("unable to find fbconduit extension\n"))
-            return False
-    if not util.safehasattr(conduit, "conduit_config"):
-        ui.log("linkrevfixup", _("incompatible conduit module; disabling fastlog\n"))
-        return False
-    if not conduit.conduit_config(ui):
-        ui.log(
-            "linkrevfixup",
-            _("no conduit host specified in config; disabling fastlog\n"),
-        )
-        return False
-    return conduit
-
-
 class remotefilectx(context.filectx):
     def __init__(
         self,
@@ -77,17 +56,6 @@ class remotefilectx(context.filectx):
 
     def size(self):
         return self._filelog.size(self._filenode)
-
-    @propertycache
-    def _conduit(self):
-        global conduit
-        if conduit is None:
-            conduit = createconduit(self._repo.ui)
-        # If createconduit fails, conduit will be set to False. We use this to
-        # avoid calling createconduit multiple times
-        if conduit is False:
-            return None
-        return conduit
 
     @propertycache
     def _changeid(self):
@@ -347,8 +315,6 @@ class remotefilectx(context.filectx):
         start = time.time()
         reponame = repo.ui.config("fbconduit", "reponame")
         logmsg = ""
-        if self._conduit is None:
-            return None
         try:
             srchex = repo[srcrev].hex()
             client = graphql.Client(repo=self._repo)
