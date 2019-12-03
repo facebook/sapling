@@ -34,7 +34,7 @@ struct InodeMetadata;
 template <typename T>
 class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
-struct SerializedInodeMap;
+class SerializedInodeMap;
 class OverlayFile;
 
 /** Manages the write overlay storage area.
