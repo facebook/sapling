@@ -786,7 +786,7 @@ fn make_file_change(
     let content_size = content.len() as u64;
     FileContents::new_bytes(content.as_ref())
         .into_blob()
-        .store(ctx, &repo.get_blobstore())
+        .store(ctx, repo.blobstore())
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
 }
 

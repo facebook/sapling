@@ -980,6 +980,10 @@ impl BlobRepo {
         )
     }
 
+    pub fn blobstore(&self) -> &RepoBlobstore {
+        &self.blobstore
+    }
+
     pub fn get_blobstore(&self) -> RepoBlobstore {
         self.blobstore.clone()
     }
@@ -1650,7 +1654,7 @@ impl BlobRepo {
                                 )))
                                 .left_future(),
                                 None => bcs_id
-                                    .load(ctx.clone(), &repo.get_blobstore())
+                                    .load(ctx.clone(), repo.blobstore())
                                     .from_err()
                                     .map(move |bcs| {
                                         commits_to_generate.push(bcs.clone());

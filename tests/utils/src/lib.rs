@@ -36,7 +36,7 @@ pub fn store_files<T: AsRef<str>>(
                 let content = FileContents::new_bytes(Bytes::from(content));
                 let content_id = content
                     .into_blob()
-                    .store(ctx.clone(), &repo.get_blobstore())
+                    .store(ctx.clone(), repo.blobstore())
                     .wait()
                     .unwrap();
 
@@ -63,7 +63,7 @@ pub fn store_rename(
     let content = FileContents::new_bytes(Bytes::from(content));
     let content_id = content
         .into_blob()
-        .store(ctx, &repo.get_blobstore())
+        .store(ctx, repo.blobstore())
         .wait()
         .unwrap();
 

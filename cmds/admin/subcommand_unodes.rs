@@ -208,7 +208,7 @@ fn single_verify(
             cloned!(ctx, repo);
             move |hg_csid| {
                 println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
-                hg_csid.load(ctx.clone(), &repo.get_blobstore()).from_err()
+                hg_csid.load(ctx.clone(), repo.blobstore()).from_err()
             }
         })
         .and_then({

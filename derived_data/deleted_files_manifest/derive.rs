@@ -325,7 +325,7 @@ fn do_derive_unfold(
 
     let parent_entries = if let Some(parent) = parents.first() {
         parent
-            .load(ctx.clone(), &repo.get_blobstore())
+            .load(ctx.clone(), repo.blobstore())
             .from_err()
             .map(move |parent_mf| {
                 parent_mf
@@ -735,7 +735,7 @@ mod tests {
         let dfm_id = runtime.block_on(f).unwrap();
         // Make sure it's saved in the blobstore
         runtime
-            .block_on(dfm_id.load(ctx.clone(), &repo.get_blobstore()))
+            .block_on(dfm_id.load(ctx.clone(), repo.blobstore()))
             .unwrap();
 
         let mut deleted_nodes = runtime

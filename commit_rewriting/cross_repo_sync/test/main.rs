@@ -44,7 +44,7 @@ fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let content = FileContents::new_bytes(Bytes::from(b"123" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), &repo.get_blobstore())
+        .store(ctx.clone(), repo.blobstore())
         .wait()
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
@@ -267,7 +267,7 @@ fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let content = FileContents::new_bytes(Bytes::from(b"456" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), &repo.get_blobstore())
+        .store(ctx.clone(), repo.blobstore())
         .wait()
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
@@ -439,7 +439,7 @@ fn megarepo_copy_file(
     let content = FileContents::new_bytes(Bytes::from(b"99\n" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), &repo.get_blobstore())
+        .store(ctx.clone(), repo.blobstore())
         .wait()
         .unwrap();
     let file_change = FileChange::new(
@@ -637,7 +637,7 @@ fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let content = FileContents::new_bytes(Bytes::from(b"999" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), &repo.get_blobstore())
+        .store(ctx.clone(), repo.blobstore())
         .wait()
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);

@@ -87,7 +87,7 @@ pub fn execute_command(
             .into_future()
             .and_then({
                 move |(blobrepo, key)| {
-                    filestore::get_metadata(&blobrepo.get_blobstore(), ctx, &key)
+                    filestore::get_metadata(blobrepo.blobstore(), ctx, &key)
                         .inspect({
                             cloned!(logger);
                             move |r| info!(logger, "{:?}", r)

@@ -49,7 +49,7 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
 
     // Query a stream out of the Filestore
     let fetch_stream = filestore::fetch_with_size(
-        &ctx.repo.get_blobstore(),
+        ctx.repo.blobstore(),
         ctx.ctx.clone(),
         &FetchKey::Canonical(content_id),
     )

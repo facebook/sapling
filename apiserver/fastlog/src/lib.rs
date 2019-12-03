@@ -907,7 +907,7 @@ mod tests {
         ) -> BoxFuture<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
             match self {
                 Entry::Leaf(file_unode_id) => file_unode_id
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -919,7 +919,7 @@ mod tests {
                     })
                     .boxify(),
                 Entry::Tree(mf_unode_id) => mf_unode_id
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -937,12 +937,12 @@ mod tests {
             match self {
                 Entry::Leaf(file_unode_id) => file_unode_id
                     .clone()
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_file| unode_file.linknode().clone())
                     .boxify(),
                 Entry::Tree(mf_unode_id) => mf_unode_id
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_mf| unode_mf.linknode().clone())
                     .boxify(),

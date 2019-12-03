@@ -794,7 +794,7 @@ fn prefetch_content(
             .boxify()
     }
 
-    csid.load(ctx.clone(), &repo.get_blobstore())
+    csid.load(ctx.clone(), repo.blobstore())
         .from_err()
         .and_then(move |bonsai| {
             let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));

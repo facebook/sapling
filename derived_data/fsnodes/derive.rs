@@ -430,7 +430,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -487,7 +487,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -574,7 +574,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -654,7 +654,7 @@ mod test {
                 _ => panic!("dir1/subdir1 fsnode should be a tree"),
             };
             let deep_fsnode = runtime
-                .block_on(deep_fsnode_id.load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(deep_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
             let deep_fsnode_entries: Vec<_> = deep_fsnode.list().collect();
             assert_eq!(
@@ -762,7 +762,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.

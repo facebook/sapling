@@ -72,7 +72,7 @@ pub fn fetch_blame(
                     BlameRoot::derive(ctx.clone(), repo.clone(), blame_mapping, csid)
                         .and_then(move |_| {
                             blame_id
-                                .load(ctx.clone(), &repo.get_blobstore())
+                                .load(ctx.clone(), repo.blobstore())
                                 .from_err()
                                 .and_then(|blame_maybe_rejected| blame_maybe_rejected.into_blame())
                                 .map(move |blame| (blame_id, blame))

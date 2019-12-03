@@ -55,15 +55,13 @@ impl FileContext {
         let metadata = {
             cloned!(repo, fetch_key);
             async move {
-                get_metadata(
-                    &repo.blob_repo().get_blobstore(),
-                    repo.ctx().clone(),
-                    &fetch_key,
-                )
-                .compat()
-                .await
-                .map_err(MononokeError::from)
-                .and_then(|metadata| metadata.ok_or_else(|| content_not_found_error(&fetch_key)))
+                get_metadata(repo.blob_repo().blobstore(), repo.ctx().clone(), &fetch_key)
+                    .compat()
+                    .await
+                    .map_err(MononokeError::from)
+                    .and_then(|metadata| {
+                        metadata.ok_or_else(|| content_not_found_error(&fetch_key))
+                    })
             }
         };
         let metadata = metadata.boxed().shared();
@@ -81,22 +79,18 @@ impl FileContext {
         fetch_key: FetchKey,
     ) -> Result<Option<Self>, MononokeError> {
         // Try to get the file metadata immediately to see if it exists.
-        let file = get_metadata(
-            &repo.blob_repo().get_blobstore(),
-            repo.ctx().clone(),
-            &fetch_key,
-        )
-        .compat()
-        .await?
-        .map(|metadata| {
-            let metadata = async move { Ok(metadata) };
-            let metadata = metadata.boxed().shared();
-            Self {
-                repo,
-                fetch_key,
-                metadata,
-            }
-        });
+        let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx().clone(), &fetch_key)
+            .compat()
+            .await?
+            .map(|metadata| {
+                let metadata = async move { Ok(metadata) };
+                let metadata = metadata.boxed().shared();
+                Self {
+                    repo,
+                    fetch_key,
+                    metadata,
+                }
+            });
         Ok(file)
     }
 
@@ -118,7 +112,7 @@ impl FileContext {
     /// Return a stream of the content for the file.
     pub async fn content(&self) -> impl Stream<Item = Bytes, Error = MononokeError> {
         let stream = fetch(
-            &self.repo().blob_repo().get_blobstore(),
+            self.repo().blob_repo().blobstore(),
             self.ctx().clone(),
             &self.fetch_key,
         )
@@ -142,7 +136,7 @@ impl FileContext {
         size: u64,
     ) -> impl Stream<Item = Bytes, Error = MononokeError> {
         let stream = fetch_range(
-            &self.repo().blob_repo().get_blobstore(),
+            self.repo().blob_repo().blobstore(),
             self.ctx().clone(),
             &self.fetch_key,
             start,

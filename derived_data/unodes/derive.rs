@@ -332,7 +332,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             runtime
-                .block_on(unode_id.load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(unode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
             let all_unodes = runtime
                 .block_on(
@@ -368,7 +368,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             let root_unode: ::std::result::Result<_, Error> =
-                runtime.block_on(unode_id.load(ctx.clone(), &repo.get_blobstore()).from_err());
+                runtime.block_on(unode_id.load(ctx.clone(), repo.blobstore()).from_err());
             let root_unode = root_unode.unwrap();
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
@@ -427,7 +427,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
 
             let unode_mf: ::std::result::Result<_, Error> =
-                runtime.block_on(unode_id.load(ctx.clone(), &repo.get_blobstore()).from_err());
+                runtime.block_on(unode_id.load(ctx.clone(), repo.blobstore()).from_err());
             let unode_mf = unode_mf.unwrap();
 
             // Unodes should be unique even if content is the same. Check it
@@ -722,7 +722,7 @@ mod tests {
                     let size = content.len();
                     let content = FileContents::Bytes(Bytes::from(content)).into_blob();
                     let content_id = runtime
-                        .block_on(content.store(ctx.clone(), &repo.get_blobstore()))
+                        .block_on(content.store(ctx.clone(), repo.blobstore()))
                         .unwrap();
 
                     let file_change = FileChange::new(content_id, file_type, size as u64, None);
@@ -754,7 +754,7 @@ mod tests {
         ) -> BoxFuture<Vec<UnodeEntry>, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => file_unode_id
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -766,7 +766,7 @@ mod tests {
                     })
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => mf_unode_id
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -784,12 +784,12 @@ mod tests {
             match self {
                 UnodeEntry::File(file_unode_id) => file_unode_id
                     .clone()
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_file| unode_file.linknode().clone())
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => mf_unode_id
-                    .load(ctx, &repo.get_blobstore())
+                    .load(ctx, repo.blobstore())
                     .from_err()
                     .map(|unode_mf| unode_mf.linknode().clone())
                     .boxify(),

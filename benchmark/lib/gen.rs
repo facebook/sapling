@@ -116,7 +116,7 @@ impl GenManifest {
                         let size = content.size();
                         let blob = content.into_blob();
                         let id = *blob.id();
-                        store_changes.push(blob.store(ctx.clone(), &repo.get_blobstore()));
+                        store_changes.push(blob.store(ctx.clone(), repo.blobstore()));
                         file_changes.insert(
                             path,
                             Some(FileChange::new(id, FileType::Regular, size as u64, None)),

@@ -45,7 +45,7 @@ impl TreeContext {
         let fsnode = {
             cloned!(repo);
             async move {
-                id.load(repo.ctx().clone(), &repo.blob_repo().get_blobstore())
+                id.load(repo.ctx().clone(), repo.blob_repo().blobstore())
                     .compat()
                     .await
                     .map_err(Error::from)
@@ -65,7 +65,7 @@ impl TreeContext {
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
         match id
-            .load(repo.ctx().clone(), &repo.blob_repo().get_blobstore())
+            .load(repo.ctx().clone(), repo.blob_repo().blobstore())
             .compat()
             .await
         {
