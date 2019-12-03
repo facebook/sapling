@@ -85,6 +85,7 @@ const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 const ARG_TEST_IDENTITY: &str = "allowed-test-identity";
 const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
+const ARG_MAX_UPLOAD_SIZE: &str = "max-upload-size";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -216,6 +217,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                      Note that this compromises the secrecy of TLS sessions.",
                 )
                 .long(ARG_TLS_SESSION_DATA_LOG_FILE),
+        )
+        .arg(
+            Arg::with_name(ARG_MAX_UPLOAD_SIZE)
+                .long(ARG_MAX_UPLOAD_SIZE)
+                .takes_value(true)
+                .required(false)
+                .help("A limit (in bytes) to enforce for uploads."),
         );
 
     let app = args::add_fb303_args(app);
@@ -336,10 +344,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     )
     .chain_err(err_msg("Failed to load configuration"))?;
 
+    let max_upload_size: Option<u64> = matches
+        .value_of(ARG_MAX_UPLOAD_SIZE)
+        .map(|u| u.parse())
+        .transpose()?;
+
     let ctx = LfsServerContext::new(
         repos,
         server,
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
+        max_upload_size,
         will_exit.clone(),
         config,
     )?;

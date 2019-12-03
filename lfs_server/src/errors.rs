@@ -63,6 +63,8 @@ pub enum ErrorKind {
     ResponseCreationFailure,
     #[error("Throttled by counter: {0} (value: {1}, limit: {2})")]
     Throttled(String, i64, i64),
+    #[error("Object size ({0}) exceeds max allowed size ({1})")]
+    UploadTooLarge(u64, u64),
 }
 
 #[derive(Debug, Error)]

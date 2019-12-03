@@ -150,6 +150,15 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
     STATS::size_bytes.add_value(size as i64);
 
+    if let Some(max_upload_size) = ctx.max_upload_size() {
+        if size > max_upload_size {
+            Err(HttpError::e400(ErrorKind::UploadTooLarge(
+                size,
+                max_upload_size,
+            )))?;
+        }
+    }
+
     ScubaMiddlewareState::try_borrow_add(state, ScubaKey::RequestContentLength, size);
 
     let (internal_send, internal_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);

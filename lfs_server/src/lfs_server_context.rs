@@ -49,6 +49,7 @@ struct LfsServerContextInner {
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
+    max_upload_size: Option<u64>,
     config_handle: ServerConfigHandle,
 }
 
@@ -63,6 +64,7 @@ impl LfsServerContext {
         repositories: HashMap<String, (BlobRepo, LfsAclChecker)>,
         server: ServerUris,
         always_wait_for_upstream: bool,
+        max_upload_size: Option<u64>,
         will_exit: Arc<AtomicBool>,
         config_handle: ServerConfigHandle,
     ) -> Result<Self, Error> {
@@ -77,6 +79,7 @@ impl LfsServerContext {
             server: Arc::new(server),
             client: Arc::new(client),
             always_wait_for_upstream,
+            max_upload_size,
             config_handle,
         };
 
@@ -96,7 +99,6 @@ impl LfsServerContext {
 
         match inner.repositories.get(&repository) {
             Some((repo, aclchecker)) => {
-                let always_wait_for_upstream = inner.always_wait_for_upstream;
                 let config = inner.config_handle.get();
 
                 if config.acl_check {
@@ -112,7 +114,8 @@ impl LfsServerContext {
                     },
                     client: inner.client.clone(),
                     config,
-                    always_wait_for_upstream,
+                    always_wait_for_upstream: inner.always_wait_for_upstream,
+                    max_upload_size: inner.max_upload_size,
                 })
             }
             None => Err(LfsServerContextErrorKind::RepositoryDoesNotExist(repository).into()),
@@ -162,6 +165,7 @@ pub struct RepositoryRequestContext {
     pub uri_builder: UriBuilder,
     pub config: Arc<ServerConfig>,
     always_wait_for_upstream: bool,
+    max_upload_size: Option<u64>,
     client: Arc<HttpsHyperClient>,
 }
 
@@ -192,6 +196,10 @@ impl RepositoryRequestContext {
 
     pub fn always_wait_for_upstream(&self) -> bool {
         self.always_wait_for_upstream
+    }
+
+    pub fn max_upload_size(&self) -> Option<u64> {
+        self.max_upload_size
     }
 
     pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Body, Error>> {

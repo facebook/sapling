@@ -41,6 +41,7 @@ define_stats! {
     download_unknown: timeseries(RATE, SUM),
     upload_redirect: timeseries(RATE, SUM),
     upload_no_redirect: timeseries(RATE, SUM),
+    upload_rejected: timeseries(RATE, SUM),
 }
 
 enum Source {
@@ -205,6 +206,7 @@ async fn internal_objects(
 
 fn batch_upload_response_objects(
     uri_builder: &UriBuilder,
+    max_upload_size: Option<u64>,
     objects: &[RequestObject],
     upstream: &UpstreamObjects,
     internal: &HashMap<RequestObject, ObjectAction>,
@@ -212,27 +214,50 @@ fn batch_upload_response_objects(
     let objects: Result<Vec<ResponseObject>, Error> = objects
         .iter()
         .map(|object| {
-            let actions = match (upstream.should_upload(object), internal.get(object)) {
-                (false, Some(_)) => {
+            let status = match (
+                upstream.should_upload(object),
+                internal.get(object),
+                max_upload_size,
+            ) {
+                (false, Some(_), _) => {
                     // Object doesn't need to be uploaded anywhere: move on.
                     STATS::upload_no_redirect.add_value(1);
-                    hashmap! {}
+
+                    ObjectStatus::Ok {
+                        authenticated: false,
+                        actions: hashmap! {},
+                    }
+                }
+                (_, _, Some(max_upload_size)) if object.size > max_upload_size => {
+                    // Object is too large and upload is required: reject it (note: this doesn't
+                    // enforce that uploads cannot be done: the upload endpoint has its own
+                    // validation too).
+                    STATS::upload_rejected.add_value(1);
+
+                    ObjectStatus::Err {
+                        error: ObjectError {
+                            code: StatusCode::BAD_REQUEST.as_u16(),
+                            message: ErrorKind::UploadTooLarge(object.size, max_upload_size)
+                                .to_string(),
+                        },
+                    }
                 }
                 _ => {
                     // Object is missing in at least one location. Require uploading it.
                     STATS::upload_redirect.add_value(1);
                     let uri = uri_builder.upload_uri(&object)?;
                     let action = ObjectAction::new(uri);
-                    hashmap! { Operation::Upload => action }
+
+                    ObjectStatus::Ok {
+                        authenticated: false,
+                        actions: hashmap! { Operation::Upload => action },
+                    }
                 }
             };
 
             Ok(ResponseObject {
                 object: *object,
-                status: ObjectStatus::Ok {
-                    authenticated: false,
-                    actions,
-                },
+                status,
             })
         })
         .collect();
@@ -251,8 +276,13 @@ async fn batch_upload(
         internal_objects(ctx, &batch.objects),
     )?;
 
-    let objects =
-        batch_upload_response_objects(&ctx.uri_builder, &batch.objects, &upstream, &internal)?;
+    let objects = batch_upload_response_objects(
+        &ctx.uri_builder,
+        ctx.max_upload_size(),
+        &batch.objects,
+        &upstream,
+        &internal,
+    )?;
 
     Ok(ResponseBatch {
         transfer: Transfer::Basic,
@@ -574,8 +604,9 @@ mod test {
         let o1 = obj(ONES_HASH, 123)?;
         let o2 = obj(TWOS_HASH, 456)?;
         let o3 = obj(THREES_HASH, 789)?;
+        let o4 = obj(THREES_HASH, 1111)?;
 
-        let req = vec![o1, o2, o3];
+        let req = vec![o1, o2, o3, o4];
 
         let upstream = hashmap! {
             o1 => ObjectAction::new("http://foo.com/1".parse()?),
@@ -595,6 +626,7 @@ mod test {
 
         let res = batch_upload_response_objects(
             &uri_builder,
+            Some(1000),
             &req,
             &UpstreamObjects::UpstreamPresence(upstream),
             &internal,
@@ -625,7 +657,17 @@ mod test {
                         // This is in internal only, so it needs uploading
                         actions: hashmap! { Operation::Upload =>  ObjectAction::new(upload_uri(&o3)?) }
                     }
-                }
+                },
+                ResponseObject {
+                    object: o4,
+                    status: ObjectStatus::Err {
+                        error: ObjectError {
+                            code: 400,
+                            message: "Object size (1111) exceeds max allowed size (1000)"
+                                .to_string(),
+                        }
+                    }
+                },
             ],
             res
         );

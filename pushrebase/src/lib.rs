@@ -79,7 +79,7 @@ pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("Bonsai not found for hg changeset: {0:?}")]
+    #[error("Bonsai not found for hg changeset: Z{0:?}")]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
     #[error("Pushrebase onto bookmark not found: {0:?}")]
     PushrebaseBookmarkNotFound(BookmarkName),

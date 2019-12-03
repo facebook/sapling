@@ -806,15 +806,12 @@ function lfs_server {
     elif [[ "$1" = "--always-wait-for-upstream" ]]; then
       opts=("${opts[@]}" "$1")
       shift
-    elif [[ "$1" = "--allowed-test-identity" ]]; then
-      opts=("${opts[@]}" "$1" "$2")
-      shift
-      shift
-    elif [[ "$1" = "--scuba-log-file" ]]; then
-      opts=("${opts[@]}" "$1" "$2")
-      shift
-      shift
-    elif [[ "$1" = "--trusted-proxy-identity" ]]; then
+    elif
+      [[ "$1" = "--allowed-test-identity" ]] ||
+      [[ "$1" = "--scuba-log-file" ]] ||
+      [[ "$1" = "--trusted-proxy-identity" ]] ||
+      [[ "$1" = "--max-upload-size" ]]
+    then
       opts=("${opts[@]}" "$1" "$2")
       shift
       shift
