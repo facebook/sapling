@@ -864,7 +864,7 @@ mod tests {
 
             let mf_fut = BlobManifest::load(
                 ctx.clone(),
-                &repo.get_blobstore().boxed(),
+                repo.get_blobstore().boxed(),
                 HgManifestId::new(filenode_id.into_nodehash()),
             );
 

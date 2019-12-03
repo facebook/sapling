@@ -233,7 +233,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 // Also fetch the manifest as we're interested in the computed node id.
                 let root_mf_id = HgManifestId::new(root_entry.get_hash().into_nodehash());
                 let root_mf_fut =
-                    BlobManifest::load(ctx.clone(), &repo.get_blobstore().boxed(), root_mf_id);
+                    BlobManifest::load(ctx.clone(), repo.get_blobstore().boxed(), root_mf_id);
 
                 bonsai_diff(ctx.clone(), root_entry, p1_entry, p2_entry)
                     .collect()

@@ -151,12 +151,12 @@ pub struct BlobManifest {
 impl BlobManifest {
     pub fn load(
         ctx: CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: Arc<dyn Blobstore>,
         manifestid: HgManifestId,
     ) -> impl Future<Item = Option<Self>, Error = Error> {
         if manifestid.clone().into_nodehash() == NULL_HASH {
             future::ok(Some(BlobManifest {
-                blobstore: blobstore.clone(),
+                blobstore,
                 node_id: NULL_HASH,
                 p1: None,
                 p2: None,
@@ -165,9 +165,8 @@ impl BlobManifest {
             }))
             .left_future()
         } else {
-            fetch_manifest_envelope_opt(ctx, &blobstore.clone(), manifestid)
+            fetch_manifest_envelope_opt(ctx, &blobstore, manifestid)
                 .and_then({
-                    let blobstore = blobstore.clone();
                     move |envelope| match envelope {
                         Some(envelope) => Ok(Some(Self::parse(blobstore, envelope)?)),
                         None => Ok(None),
@@ -231,7 +230,7 @@ impl Loadable for HgManifestId {
     ) -> BoxFuture<Self::Value, LoadableError> {
         let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore.clone());
         let id = *self;
-        BlobManifest::load(ctx, &blobstore, id)
+        BlobManifest::load(ctx, blobstore, id)
             .from_err()
             .and_then(move |value| value.ok_or_else(|| LoadableError::Missing(id.blobstore_key())))
             .boxify()

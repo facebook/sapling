@@ -308,7 +308,7 @@ impl HgEntry for HgBlobEntry {
         // gettreepack requests.
         match self.id {
             HgEntryId::Manifest(manifest_id) => lazy(move || {
-                BlobManifest::load(ctx, &blobstore, manifest_id)
+                BlobManifest::load(ctx, blobstore, manifest_id)
                     .and_then({
                         move |blob_manifest| {
                             let manifest = blob_manifest.ok_or(ErrorKind::HgContentMissing(
