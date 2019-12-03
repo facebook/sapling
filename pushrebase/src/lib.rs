@@ -54,7 +54,10 @@ use failure_ext::{Error, FutureFailureErrorExt, Result};
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{try_join, try_join_all},
+};
 use futures_util::{future::FutureExt as NewFutureExt, try_future::TryFutureExt};
 use manifest::ManifestOps;
 use maplit::hashmap;
@@ -177,6 +180,7 @@ impl From<ErrorKind> for PushrebaseError {
 
 type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
+#[derive(Clone)]
 pub struct PushrebaseChangesetPair {
     pub id_old: ChangesetId,
     pub id_new: ChangesetId,
@@ -263,21 +267,125 @@ pub fn do_pushrebase_bonsai(
                 )
                     .into_future()
                     .and_then(move |(client_cf, client_bcs)| {
-                        rebase_in_loop(
-                            ctx,
-                            repo,
-                            config,
-                            onto_bookmark,
-                            head,
-                            root,
-                            client_cf,
-                            client_bcs,
-                            maybe_hg_replay_data,
+                        backfill_filenodes(
+                            ctx.clone(),
+                            repo.clone(),
+                            pushed.into_iter().filter_map({
+                                cloned!(client_bcs);
+                                move |bcs| {
+                                    if !client_bcs.contains(&bcs) {
+                                        Some(bcs.get_changeset_id())
+                                    } else {
+                                        None
+                                    }
+                                }
+                            }),
                         )
+                        .from_err()
+                        .and_then(move |()| {
+                            rebase_in_loop(
+                                ctx.clone(),
+                                repo.clone(),
+                                config,
+                                onto_bookmark,
+                                head,
+                                root,
+                                client_cf,
+                                client_bcs,
+                                maybe_hg_replay_data,
+                            )
+                            // If commits weren't pushrebased, then we need to backfill
+                            // filenodes for them as well. That's quite a rare case, and most likely
+                            // it happens only in tests. Note also since we backfill after "onto"
+                            // bookmark was updated readers might already fetch commits with
+                            // missing filenodes.
+                            .and_then(move |res| {
+                                backfill_filenodes(
+                                    ctx.clone(),
+                                    repo,
+                                    res.rebased_changesets
+                                        .clone()
+                                        .into_iter()
+                                        .filter_map(|pair| {
+                                            if pair.id_old == pair.id_new {
+                                                Some(pair.id_old.clone())
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                )
+                                .map(move |()| res)
+                                .from_err()
+                            })
+                        })
                     })
             }
         })
     })
+}
+
+// We have a hack that intentionally doesn't generate filenodes for "pushed" set of commits.
+// The reason we have it is the following:
+// 1) "pushed" set of commits are draft commits. If we generate filenodes for them then
+//    linknodes will point to draft commit
+// 2) After the pushrebase new public commits will be created, but they will have the same filenodes
+//    which will point to draft commits.
+//
+// The hack mentioned above solves the problem of having linknodes pointing to draft commits.
+// However it creates a new one - in some case (most notably in merges) some of the commits are
+// not rebased, and they might miss filenodes completely
+//
+//   O <- onto
+//  ...
+//   |  P  <- This commit will be rebased on top of "onto", so new filenodes will be generated
+//   | /
+//   O
+//   | \
+//  ... P <- this commit WILL NOT be rebased on top of "onto". That means that some filenodes
+//           might be missing.
+//
+// The function below can be used to backfill filenodes for these commits.
+fn backfill_filenodes<'a>(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    to_backfill: impl IntoIterator<Item = ChangesetId>,
+) -> BoxFuture<(), Error> {
+    let mut futs = vec![];
+    for bcs_id in to_backfill {
+        cloned!(ctx, repo);
+        let closure = async move {
+            let hg_cs_id_fut = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat();
+            let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id).compat();
+            let (hg_cs_id, bcs) = try_join(hg_cs_id_fut, bcs_fut).await?;
+
+            let parents = bcs
+                .parents()
+                .map(|p| id_to_manifestid(ctx.clone(), repo.clone(), p).compat());
+
+            let parent_mfs = try_join_all(parents).await?;
+
+            let p1_mf = parent_mfs.get(0).cloned();
+            let p2_mf = parent_mfs.get(1).cloned();
+            let (_, incomplete_filenodes) = repo
+                .get_manifest_from_bonsai(ctx.clone(), bcs, p1_mf, p2_mf)
+                .compat()
+                .await?;
+
+            incomplete_filenodes
+                .upload(ctx.clone(), hg_cs_id, &repo)
+                .compat()
+                .await
+        };
+        futs.push(closure);
+    }
+
+    try_join_all(futs)
+        .map_ok(|_| ())
+        .compat()
+        .context("While backfilling filenodes")
+        .boxify()
 }
 
 fn rebase_in_loop(

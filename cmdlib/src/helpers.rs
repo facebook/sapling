@@ -21,7 +21,7 @@ use blobrepo_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use changesets::SqlConstructors;
 use context::CoreContext;
-use mercurial_types::HgChangesetId;
+use mercurial_types::{Changeset, HgChangesetId, HgManifestId};
 use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
 
@@ -268,6 +268,21 @@ pub fn csid_resolve(
                 hash_or_bookmark
             )
         })
+}
+
+pub fn get_root_manifest_id(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hash_or_bookmark: impl ToString,
+) -> impl Future<Item = HgManifestId, Error = Error> {
+    csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark).and_then(move |bcs_id| {
+        repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            .and_then({
+                cloned!(ctx, repo);
+                move |hg_cs_id| repo.get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+            })
+            .map(|cs| cs.manifestid())
+    })
 }
 
 pub fn open_sql_with_config_and_myrouter_port<T>(

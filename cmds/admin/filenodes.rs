@@ -17,8 +17,9 @@ use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use futures::future::{join_all, Future};
-use futures::IntoFuture;
+use futures::{IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
@@ -26,8 +27,9 @@ use slog::{debug, info, Logger};
 use crate::common::get_file_nodes;
 use crate::error::SubcommandError;
 
-const COMMAND_REVISION: &str = "by-revision";
 const COMMAND_ID: &str = "by-id";
+const COMMAND_REVISION: &str = "by-revision";
+const COMMAND_VALIDATE: &str = "validate";
 
 const ARG_ENVELOPE: &str = "envelope";
 
@@ -76,6 +78,16 @@ pub fn build_subcommand(name: &str) -> App {
                         .required(true)
                         .takes_value(true)
                         .help("filenode ID"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(COMMAND_VALIDATE)
+                .about("for a public changeset validates that all files and trees exist")
+                .arg(
+                    Arg::with_name(ARG_REVISION)
+                        .required(true)
+                        .takes_value(true)
+                        .help("hg/bonsai changeset id or bookmark"),
                 ),
         )
 }
@@ -241,6 +253,57 @@ pub fn subcommand_filenodes(
                         log_filenode(ctx.logger(), &filenode, envelope.as_ref());
                     }
                 })
+                .from_err()
+                .boxify()
+        }
+        (COMMAND_VALIDATE, Some(matches)) => {
+            let rev = matches.value_of(ARG_REVISION).unwrap().to_string();
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+            blobrepo
+                .and_then(move |repo| {
+                    helpers::get_root_manifest_id(ctx.clone(), repo.clone(), rev).and_then(
+                        move |mf_id| {
+                            mf_id
+                                .list_all_entries(ctx.clone(), repo.get_blobstore())
+                                .map(move |(path, entry)| {
+                                    let (repo_path, filenode_id) = match entry {
+                                        Entry::Leaf((_, filenode_id)) => (
+                                            RepoPath::FilePath(
+                                                path.expect("unexpected empty file path"),
+                                            ),
+                                            filenode_id,
+                                        ),
+                                        Entry::Tree(mf_id) => {
+                                            let filenode_id =
+                                                HgFileNodeId::new(mf_id.into_nodehash());
+                                            match path {
+                                                Some(path) => {
+                                                    (RepoPath::DirectoryPath(path), filenode_id)
+                                                }
+                                                None => (RepoPath::RootPath, filenode_id),
+                                            }
+                                        }
+                                    };
+
+                                    repo.get_filenode_opt(ctx.clone(), &repo_path, filenode_id)
+                                        .and_then(move |maybe_filenode| {
+                                            if maybe_filenode.is_some() {
+                                                Ok(())
+                                            } else {
+                                                Err(format_err!(
+                                                    "not found filenode for {}",
+                                                    repo_path
+                                                ))
+                                            }
+                                        })
+                                })
+                                .buffer_unordered(100)
+                                .for_each(|_| Ok(()))
+                        },
+                    )
+                })
+                .map(|_| ())
                 .from_err()
                 .boxify()
         }
