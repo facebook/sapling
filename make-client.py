@@ -158,5 +158,8 @@ with tempfile.TemporaryDirectory() as instdir:
 
     # Generate the `eden` executable zipfile.
     zipapp.create_archive(
-        instdir, target=args.output, interpreter=args.python, main="eden.cli.main:main"
+        instdir,
+        target=args.output,
+        interpreter=args.python,
+        main="eden.cli.main:zipapp_main",
     )
