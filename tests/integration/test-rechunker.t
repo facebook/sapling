@@ -33,10 +33,6 @@
   $ mononoke_rechunker "ffffffffffffffffffffffffffffffffffffffff"
   * using repo "repo" repoid RepositoryId(0) (glob)
   Error: Mercurial content missing for node ffffffffffffffffffffffffffffffffffffffff (type regular)
-  
-  Stack backtrace:
-      Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace
-  
   [1]
 
 # Create a new config with the filestore configured

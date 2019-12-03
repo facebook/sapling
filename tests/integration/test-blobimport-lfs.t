@@ -51,10 +51,6 @@
   * error while blobimporting, Root cause: "failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5" (glob)
   * Error: failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
   Error: blobimport exited with a failure
-  
-  Stack backtrace:
-      Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace
-  
   [1]
 
 # Create the blobimport LFS helper

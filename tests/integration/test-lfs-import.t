@@ -37,10 +37,6 @@
   * lfs_upload: importing blob Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38) (glob)
   lfs: d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38 128
   Error: Invalid Sha256: InvalidHash { expected: Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38), effective: Sha256(14217d6d598954662767fb151ff41cc10261f233d60d92aba9fdaa8534c2db33) }
-  
-  Stack backtrace:
-      Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace
-  
   [1]
 
   $ cat > bad_size << EOF
@@ -65,10 +61,6 @@
   * lfs_upload: importing blob Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38) (glob)
   lfs: d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38 128
   Error: Invalid Sha256: InvalidHash { expected: Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38), effective: Sha256(14217d6d598954662767fb151ff41cc10261f233d60d92aba9fdaa8534c2db33) }
-  
-  Stack backtrace:
-      Run with RUST_LIB_BACKTRACE=1 env variable to display a backtrace
-  
   [1]
 
   $ cat > ok << EOF
