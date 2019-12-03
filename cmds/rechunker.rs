@@ -19,7 +19,7 @@ use futures::stream::Stream;
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use std::str::FromStr;
 
-use cmdlib::args;
+use cmdlib::{args, helpers::create_runtime};
 
 const NAME: &str = "rechunker";
 const DEFAULT_NUM_JOBS: usize = 10;
@@ -89,7 +89,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .for_each(|_| Ok(()))
     });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     let result = runtime.block_on(rechunk);
     runtime.shutdown_on_idle();
     result

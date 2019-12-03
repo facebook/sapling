@@ -8,7 +8,7 @@
 
 use bytes::Bytes;
 use clap::Arg;
-use cmdlib::args;
+use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
 use failure_ext::{Error, Result};
 use fbinit::FacebookInit;
@@ -82,7 +82,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .for_each(|_| Ok(()))
         });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     let result = runtime.block_on(import);
     runtime.shutdown_on_idle();
     result

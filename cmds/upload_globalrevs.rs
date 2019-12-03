@@ -14,7 +14,7 @@ use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
 use failure_ext::Error;
 use fbinit::FacebookInit;
@@ -90,7 +90,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
         });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     runtime.block_on(run)?;
     runtime.shutdown_on_idle();
     Ok(())

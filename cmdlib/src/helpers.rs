@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use std::{cmp::min, fs, path::Path, str::FromStr, time::Duration};
+use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
 
 use cloned::cloned;
 use failure_ext::{bail_msg, err_msg, format_err, Error, Result, ResultExt};
@@ -294,4 +294,10 @@ where
         .into_future()
         .boxify(),
     }
+}
+
+pub fn create_runtime(log_thread_name_prefix: Option<&str>) -> io::Result<tokio::runtime::Runtime> {
+    tokio::runtime::Builder::new()
+        .name_prefix(log_thread_name_prefix.unwrap_or("tk-"))
+        .build()
 }

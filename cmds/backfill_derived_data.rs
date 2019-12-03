@@ -19,7 +19,7 @@ use changesets::{
 };
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers, monitoring::start_fb303_and_stats_agg};
+use cmdlib::{args, helpers, helpers::create_runtime, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
@@ -191,7 +191,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
 
     let run = match matches.subcommand() {
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {

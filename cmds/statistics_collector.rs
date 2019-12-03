@@ -13,7 +13,7 @@ use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, monitoring};
+use cmdlib::{args, helpers::create_runtime, monitoring};
 use context::CoreContext;
 use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
@@ -627,7 +627,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     monitoring::start_fb303_and_stats_agg(
         fb,
         &mut runtime,

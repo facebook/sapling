@@ -36,7 +36,7 @@ use tokio_openssl::SslAcceptorExt;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo;
-use cmdlib::{args, monitoring::start_fb303_server};
+use cmdlib::{args, helpers::create_runtime, monitoring::start_fb303_server};
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 use stats::schedule_stats_aggregation;
@@ -309,7 +309,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
         });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
 
     let stats_aggregation = schedule_stats_aggregation()
         .map_err(|_| err_msg("Failed to create stats aggregation worker"))?

@@ -1218,6 +1218,7 @@ fn create_bookmark_update_reason(
 mod tests {
 
     use super::*;
+    use cmdlib::helpers::create_runtime;
     use failure_ext::err_msg;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
@@ -2708,7 +2709,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_over_merge_even(fb: FacebookInit) -> Result<()> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let mut runtime = create_runtime(None)?;
         let ctx = CoreContext::test_mock(fb);
         let repo = merge_even::getrepo(fb);
 
@@ -2785,7 +2786,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge(fb: FacebookInit) -> Result<()> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let mut runtime = create_runtime(None)?;
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -2914,7 +2915,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge_with_removal(fb: FacebookInit) -> Result<()> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let mut runtime = create_runtime(None)?;
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -3025,7 +3026,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge_with_rename(fb: FacebookInit) -> Result<()> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let mut runtime = create_runtime(None)?;
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
 

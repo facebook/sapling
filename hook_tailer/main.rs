@@ -15,6 +15,7 @@ use blobrepo_factory::open_blobrepo;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
+use cmdlib::helpers::create_runtime;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error, Result};
 use fbinit::FacebookInit;
@@ -182,7 +183,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     runtime.block_on(fut)
 }
 

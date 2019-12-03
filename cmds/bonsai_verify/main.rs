@@ -13,7 +13,7 @@ mod config;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, DisplayChain, Result};
 use fbinit::FacebookInit;
@@ -428,6 +428,6 @@ fn subcommmand_hg_manifest_verify(
                 })
         });
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     runtime.block_on(run)
 }

@@ -13,7 +13,7 @@ use blobimport_lib;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::{args, helpers};
+use cmdlib::{args, helpers::create_runtime, helpers::upload_and_show_trace};
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error, Result, ResultExt, SlogKVError};
 use fbinit::FacebookInit;
@@ -240,11 +240,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                         err_msg("blobimport exited with a failure")
                     }
                 })
-                .then(move |result| helpers::upload_and_show_trace(ctx).then(move |_| result))
+                .then(move |result| upload_and_show_trace(ctx).then(move |_| result))
             },
         );
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let mut runtime = create_runtime(None)?;
     let result = runtime.block_on(blobimport);
     // Let the runtime finish remaining work - uploading logs etc
     runtime.shutdown_on_idle();
