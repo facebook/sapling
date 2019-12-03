@@ -52,9 +52,7 @@ def _cleanuplanded(repo, dryrun=False):
         client = graphql.Client(repo=repo)
         difftopublic = client.getlandednodes(list(difftodraft.keys()))
         if ui.configbool("pullcreatemarkers", "convert-git"):
-            from . import fbconduit
-
-            git2hg = fbconduit.getmirroredrevmap(
+            git2hg = client.getmirroredrevmap(
                 repo, list(difftopublic.values()), "git", "hg"
             )
             difftopublic = {

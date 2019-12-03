@@ -5,11 +5,22 @@ Start up translation service.
   $ hg debugpython -- "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
   $ cat conduit.pid >> $DAEMON_PIDS
   $ CONDUIT_PORT=`cat conduit.port`
+  $ cat > ~/.arcrc <<EOF
+  > {
+  >   "hosts": {
+  >     "https://phabricator.intern.facebook.com/api/": {
+  >       "user": "testuser",
+  >       "oauth": "testtoken"
+  >     }
+  >  }
+  > }
+  > EOF
 
 Basic functionality.
 
   $ hg init basic
   $ cd basic
+  $ echo {} > .arcconfig
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > fbconduit=
@@ -18,6 +29,12 @@ Basic functionality.
   > host = localhost:$CONDUIT_PORT
   > path = /intern/conduit/
   > protocol = http
+  > [phabricator]
+  > arcrc_host = https://phabricator.intern.facebook.com/api/
+  > graphql_host = http://localhost:$CONDUIT_PORT
+  > default_timeout = 60
+  > graphql_app_id = 1234
+  > graphql_app_token = TOKEN123
   > EOF
   $ touch file
   $ hg add file
@@ -48,6 +65,7 @@ HTTP error code.
 Test with one backing repos specified.
 
   $ hg init single_backingrepo
+  $ echo {} > .arcconfig
   $ cd single_backingrepo
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "fbconduit=" >> .hg/hgrc
@@ -57,6 +75,12 @@ Test with one backing repos specified.
   $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
   $ echo "path = /intern/conduit/" >> .hg/hgrc
   $ echo "protocol = http" >> .hg/hgrc
+  $ echo "[phabricator]" >> .hg/hgrc
+  $ echo "arcrc_host = https://phabricator.intern.facebook.com/api/" >> .hg/hgrc
+  $ echo "graphql_host = http://localhost:$CONDUIT_PORT" >> .hg/hgrc
+  > echo "default_timeout = 60" >> .hg/hgrc
+  > echo "graphql_app_id = 1234" >> .hg/hgrc
+  > echo "graphql_app_token = TOKEN123" >> .hg/hgrc
   $ touch file
   $ hg add file
   $ hg ci -m "initial commit"
@@ -75,6 +99,7 @@ Test with one backing repos specified.
 Test with multiple backing repos specified.
 
   $ hg init backingrepos
+  $ echo {} > .arcconfig
   $ cd backingrepos
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "fbconduit=" >> .hg/hgrc
@@ -84,6 +109,12 @@ Test with multiple backing repos specified.
   $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
   $ echo "path = /intern/conduit/" >> .hg/hgrc
   $ echo "protocol = http" >> .hg/hgrc
+  $ echo "[phabricator]" >> .hg/hgrc
+  $ echo "arcrc_host = https://phabricator.intern.facebook.com/api/" >> .hg/hgrc
+  $ echo "graphql_host = http://localhost:$CONDUIT_PORT" >> .hg/hgrc
+  > echo "default_timeout = 60" >> .hg/hgrc
+  > echo "graphql_app_id = 1234" >> .hg/hgrc
+  > echo "graphql_app_token = TOKEN123" >> .hg/hgrc
   $ touch file_a
   $ hg add file_a
   $ hg ci -m "commit 1"
@@ -136,6 +167,7 @@ Test with multiple backing repos specified.
 Test with a bad server port, where we get connection refused errors.
 
   $ hg init errortest
+  $ echo {} > .arcconfig
   $ cd errortest
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "fbconduit=" >> .hg/hgrc
@@ -180,7 +212,13 @@ Make sure that globalrevs work
   > fbconduit.protocol=http \
   > globalrevs.onlypushrebase=False \
   > globalrevs.startrev=5000 \
-  > globalrevs.svnrevinteroperation=True
+  > globalrevs.svnrevinteroperation=True \
+  > phabricator.arcrc_host=https://phabricator.intern.facebook.com/api/ \
+  > phabricator.graphql_host=http://localhost:$CONDUIT_PORT \
+  > phabricator.default_timeout=60 \
+  > phabricator.graphql_app_id=1234 \
+  > phabricator.graphql_app_token=TOKEN123
+  > echo {} > .arcconfig
 
   $ hg initglobalrev 5000 --i-know-what-i-am-doing
 
@@ -198,7 +236,7 @@ Make sure that globalrevs work
   [255]
 
   $ hg up -q rWWW5000
-  $ hg up -q rWWWHGff7a2f4908d3dd5010cc3a620bd8e8abc7ef634d
+  $ hg up -q rWWWHGb5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
 
 
 Make sure that the `globalrevs.scmquerylookup` configuration works as expected.
@@ -206,7 +244,7 @@ Make sure that the `globalrevs.scmquerylookup` configuration works as expected.
 - Set the configurations to ensure we are using the ScmQuery lookup for
 globalrevs.
 
-  $ setconfig globalrevs.scmquerylookup=True fbconduit.path=/invalid/path/
+  $ setconfig globalrevs.scmquerylookup=True phabricator.graphql_host=https://nonesuch.intern.facebook.com
 
 - Test that if the ScmQuery lookup throws an exception, we are still able to
 fallback to the slow lookup path.
@@ -215,7 +253,7 @@ fallback to the slow lookup path.
 
 - Fix the conduit configurations so that we can mock ScmQuery lookups.
 
-  $ setconfig fbconduit.path=/intern/conduit/
+  $ setconfig phabricator.graphql_host=http://localhost:$CONDUIT_PORT
 
 - Test that the lookup fails because ScmQuery returns no hash corresponding to
 the globalrev 5000.
@@ -227,7 +265,7 @@ the globalrev 5000.
 
 - Setup the `globalrev->hash` mapping for commit with globalrev 5000.
 
-  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/globalrev/basic/hg/5000/ff7a2f4908d3dd5010cc3a620bd8e8abc7ef634d
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/globalrev/basic/hg/5000/b5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
 
 - Test that the lookup succeeds now.
 

@@ -14,7 +14,7 @@ import json
 import operator
 
 from edenscm.mercurial import encoding, pycompat, util
-from edenscm.mercurial.node import bin
+from edenscm.mercurial.node import bin, hex
 
 from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_urllib
 
@@ -349,3 +349,80 @@ class Client(object):
             raise ClientError(None, "Unexpected graphql response format")
 
         return infos
+
+    def getmirroredrev(self, fromrepo, fromtype, torepo, totype, rev, timeout=15):
+        """Transale a single rev to other repo/type
+        """
+        query = self._getmirroredrevsquery()
+        params = {
+            "params": {
+                "caller_info": "hgext.exlib.phabricator.getmirroredrev",
+                "from_repo": fromrepo,
+                "from_scm_type": fromtype,
+                "to_repo": torepo,
+                "to_scm_type": totype,
+                "revs": [rev],
+            }
+        }
+        ret = self._client.query(timeout, query, json.dumps(params))
+        self._raise_errors(ret)
+        for pair in ret["data"]["query"]["rev_map"]:
+            if pair["from_rev"] == rev:
+                return pair["to_rev"]
+        return ""
+
+    def getmirroredrevmap(self, repo, nodes, fromtype, totype, timeout=15):
+        """Return a mapping {node: node}
+
+        Example:
+
+            getmirroredrevmap(repo, [gitnode1, gitnode2],"git", "hg")
+            # => {gitnode1: hgnode1, gitnode2: hgnode2}
+        """
+        reponame = repo.ui.config("fbconduit", "reponame")
+        if not reponame:
+            return {}
+
+        query = self._getmirroredrevsquery()
+        params = {
+            "params": {
+                "caller_info": "hgext.exlib.phabricator.getmirroredrevmap",
+                "from_repo": reponame,
+                "from_scm_type": fromtype,
+                "to_repo": reponame,
+                "to_scm_type": totype,
+                "revs": map(hex, nodes),
+            }
+        }
+        ret = self._client.query(timeout, query, json.dumps(params))
+        self._raise_errors(ret)
+        result = {}
+        for pair in ret["data"]["query"]["rev_map"]:
+            result[bin(pair["from_rev"])] = bin(pair["to_rev"])
+        return result
+
+    def _getmirroredrevsquery(self):
+        return """
+            query GetMirroredRevs(
+                $params: SCMQueryGetMirroredRevsParams!
+            ) {
+                query: scmquery_service_get_mirrored_revs(params: $params) {
+                    rev_map {
+                        from_rev,
+                        to_rev
+                    }
+                }
+            }
+        """
+
+    def _raise_errors(self, response):
+        try:
+            errormsg = None
+            if "error" in response:
+                errormsg = response["error"]
+            if "errors" in response:
+                errormsg = response["errors"][0]["message"]
+            if errormsg is not None:
+                raise ClientError(None, errormsg)
+        except (KeyError, TypeError):
+            pass

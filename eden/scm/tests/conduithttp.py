@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-HTTP server for use in conduit tests.
+HTTP server for use in graphql tests.
 """
 
 import BaseHTTPServer
@@ -25,54 +25,50 @@ next_error_message = []
 
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-    def handle_request(self, param):
+    def handle_get_mirrored_revs_request(self, param):
         from_repo = param["from_repo"]
-        from_scm = param["from_scm"]
+        from_scm = param["from_scm_type"]
         to_repo = param["to_repo"]
-        to_scm = param["to_scm"]
+        to_scm = param["to_scm_type"]
         revs = param["revs"]
 
         if next_error_message:
-            self.send_response(500, next_error_message[0])
+            self.send_response(500)
             self.end_headers()
+            self.wfile.write(json.dumps({"error": next_error_message[0]}))
             del next_error_message[0]
+            return
 
         translations = known_translations.get(
             (from_repo, from_scm, to_repo, to_scm), {}
         )
-        translated_revs = {}
+        translated_revs = []
         self.send_response(200)
         self.end_headers()
-
-        f = StringIO()
-        f.write("for(;;);")
 
         response = {}
 
         for rev in revs:
             if rev in translations:
-                translated_revs[rev] = translations[rev]
-            else:
-                translated_revs[rev] = ""
+                translated_revs.append({"from_rev": rev, "to_rev": translations[rev]})
         else:
-            response["result"] = translated_revs
-            response["error_code"] = None
-            response["error_info"] = None
+            response["data"] = {"query": {"rev_map": translated_revs}}
 
-        f.write(json.dumps(response))
-        self.wfile.write(f.getvalue())
+        self.wfile.write(json.dumps(response))
 
     def do_POST(self):
         content_len = int(self.headers.getheader("content-length", 0))
         data = self.rfile.read(content_len)
         params = urlparse.parse_qs(data)
-        if self.path.startswith("/intern/conduit/scmquery.get.mirrored.revs"):
-            param = json.loads(params["params"][0])
-            self.handle_request(param)
-            return
 
+        if self.path.startswith("/graphql"):
+            param = json.loads(params["variables"][0])
+            if "scmquery_service_get_mirrored_revs" in params["doc"][0]:
+                self.handle_get_mirrored_revs_request(param["params"])
+                return
         self.send_response(500)
         self.end_headers()
+        self.wfile.write(json.dumps({"error": "bad request"}))
 
     def get_path_comps(self):
         assert self.path.startswith("/")

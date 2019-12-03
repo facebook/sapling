@@ -20,9 +20,11 @@ from edenscm.mercurial import (
     templater,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex
+from edenscm.mercurial.node import bin
 from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.util import httplib
+
+from .extlib.phabricator import arcconfig, graphql
 
 
 namespacepredicate = registrar.namespacepredicate()
@@ -130,39 +132,6 @@ def call_conduit(method, timeout=DEFAULT_TIMEOUT, **kwargs):
     # don't close the connection b/c we want to avoid the connection overhead
 
 
-def getmirroredrev(fromrepo, fromtype, torepo, totype, rev):
-    return call_conduit(
-        "scmquery.get.mirrored.revs",
-        from_repo=fromrepo,
-        from_scm=fromtype,
-        to_repo=torepo,
-        to_scm=totype,
-        revs=[rev],
-    ).get(rev, "")
-
-
-def getmirroredrevmap(repo, nodes, fromtype, totype):
-    """Return a mapping {node: node}
-
-    Example:
-
-        getmirroredrevmap(repo, [gitnode1, gitnode2],"git", "hg")
-        # => {gitnode1: hgnode1, gitnode2: hgnode2}
-    """
-    reponame = repo.ui.config("fbconduit", "reponame")
-    if not reponame:
-        return {}
-    result = call_conduit(
-        "scmquery.get.mirrored.revs",
-        from_repo=reponame,
-        from_scm=fromtype,
-        to_repo=reponame,
-        to_scm=totype,
-        revs=map(hex, nodes),
-    )
-    return {bin(k): bin(v) for k, v in result.items()}
-
-
 @templater.templatefunc("mirrornode")
 def mirrornode(ctx, mapping, args):
     """template: find this commit in other repositories"""
@@ -184,10 +153,13 @@ def mirrornode(ctx, mapping, args):
         torepo, totype = args
 
     try:
-        return getmirroredrev(reponame, "hg", torepo, totype, node)
-    except ConduitError as e:
-        if "unknown revision" not in str(e.args):
-            mapping["repo"].ui.warn((str(e.args) + "\n"))
+        client = graphql.Client(repo=mapping["repo"])
+        return client.getmirroredrev(reponame, "hg", torepo, totype, node)
+    except arcconfig.ArcConfigError:
+        mapping["repo"].ui.warn(_("couldn't read .arcconfig or .arcrc"))
+        return ""
+    except graphql.ClientError as e:
+        mapping["repo"].ui.warn((str(e.msg) + "\n"))
         return ""
 
 
@@ -210,10 +182,13 @@ def showgitnode(repo, ctx, templ, **args):
     matches = []
     for backingrepo in backingrepos:
         try:
-            githash = getmirroredrev(reponame, "hg", backingrepo, "git", ctx.hex())
+            client = graphql.Client(repo=repo)
+            githash = client.getmirroredrev(
+                reponame, "hg", backingrepo, "git", ctx.hex()
+            )
             if githash != "":
                 matches.append((backingrepo, githash))
-        except ConduitError:
+        except (graphql.ClientError, arcconfig.ArcConfigError):
             pass
 
     if len(matches) == 0:
@@ -243,7 +218,8 @@ def gitnode(repo, subset, x):
     hghash = None
     for backingrepo in backingrepos:
         try:
-            hghash = getmirroredrev(backingrepo, "git", reponame, "hg", n)
+            client = graphql.Client(repo=repo)
+            hghash = client.getmirroredrev(backingrepo, "git", reponame, "hg", n)
             if hghash != "":
                 break
         except Exception as ex:
@@ -308,8 +284,9 @@ def _scmquerylookupglobalrev(orig, repo, rev):
     reponame = repo.ui.config("fbconduit", "reponame")
     if reponame:
         try:
+            client = graphql.Client(repo=repo)
             hghash = str(
-                getmirroredrev(reponame, "globalrev", reponame, "hg", str(rev))
+                client.getmirroredrev(reponame, "globalrev", reponame, "hg", str(rev))
             )
             matchedrevs = []
             if hghash:

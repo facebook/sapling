@@ -48,6 +48,5 @@ class PhabricatorGraphQLClientRequests(object):
             "Content-Type": "application/x-www-form-urlencoded",
         }
         self._connection.request("POST", (urlparts.path), query, headers)
-
         response = json.load(self._connection.getresponse())
         return response
