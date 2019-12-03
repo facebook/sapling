@@ -2,9 +2,28 @@
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
 
+
 # Tests for the complicated linknode logic in remotefilelog.py::ancestormap()
 
   $ . "$TESTDIR/library.sh"
+
+# Start up translation service.
+
+  $ hg debugpython -- "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
+  $ cat conduit.pid >> $DAEMON_PIDS
+  $ CONDUIT_PORT=`cat conduit.port`
+  $ cat > ~/.arcrc <<EOF
+  > {
+  >   "hosts": {
+  >     "https://phabricator.intern.facebook.com/api/": {
+  >       "user": "testuser",
+  >       "oauth": "testtoken"
+  >     }
+  >  }
+  > }
+  > EOF
+
+# Initialise repo
 
   $ hginit master
   $ cd master
@@ -234,17 +253,22 @@ Verfiy correct linkrev despite fastlog failures
 
 Case 1: fastlog service calls fails or times out
 
+  $ echo {} > .arcconfig
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbconduit=$TESTTMP/bad_conduit.py
+  > fbconduit=
   > [fastlog]
   > enabled=True
-  > EOF
-  $ cat > $TESTTMP/bad_conduit.py <<EOF
-  > def call_conduit(*args, **kwargs):
-  >   raise Exception('error')
-  > def conduit_config(*args, **kwargs):
-  >   return True
+  > [fbconduit]
+  > reponame = basic
+  > host = localhost:$CONDUIT_PORT
+  > path = /intern/conduit/
+  > [phabricator]
+  > arcrc_host = https://phabricator.intern.facebook.com/api/
+  > graphql_host = http://none_such.intern.facebook.com:$CONDUIT_PORT
+  > default_timeout = 60
+  > graphql_app_id = 1234
+  > graphql_app_token = TOKEN123
   > EOF
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
@@ -255,62 +279,47 @@ Case 1: fastlog service calls fails or times out
 
 Case 2: fastlog returns empty results
 
-  $ cat > $TESTTMP/bad_conduit.py <<EOF
-  > def call_conduit(*args, **kwargs):
-  >   return []
-  > def conduit_config(*args, **kwargs):
-  >   return True
+  $ clearcache
+  $ cat >> .hg/hgrc <<EOF
+  > [phabricator]
+  > graphql_host = http://localhost:$CONDUIT_PORT
   > EOF
-  $ rm $TESTTMP/bad_conduit.pyc
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Case 3: fastlog returns a bad hash
 
-  $ cat > $TESTTMP/bad_conduit.py <<EOF
-  > def call_conduit(*args, **kwargs):
-  >   return [{'hash': '123456'}]
-  > def conduit_config(*args, **kwargs):
-  >   return True
-  > EOF
-  $ rm $TESTTMP/bad_conduit.pyc
+  $ clearcache
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/123456
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Fastlog succeeds and returns the correct results
 
-  $ cat > $TESTTMP/bad_conduit.py <<EOF
-  > def call_conduit(*args, **kwargs):
-  >   return [{'hash': '32e6611f6149e85f58def77ee0c22549bb6953a2'}]
-  > def conduit_config(*args, **kwargs):
-  >   return True
-  > EOF
-  $ rm $TESTTMP/bad_conduit.pyc
+  $ clearcache
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/32e6611f6149e85f58def77ee0c22549bb6953a2
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Fastlog should never get called on draft commits
 
-  $ cat > $TESTTMP/bad_conduit.py <<EOF
-  > import sys
-  > def call_conduit(*args, **kwargs):
-  >   if kwargs['rev'].startswith('a5957b6bf0bd'):
-  >     sys.exit(80)
-  >   return [{'hash': '32e6611f6149e85f58def77ee0c22549bb6953a2'}]
-  > def conduit_config(*args, **kwargs):
-  >   return True
-  > EOF
-  $ rm $TESTTMP/bad_conduit.pyc
+  $ clearcache
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/a5957b6bf0bdeb9b96368bddd2838004ad966b7d/crash
   $ hg log -f x > /dev/null
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Test linknode fixup logging
 
@@ -329,11 +338,8 @@ Setup extension that logs ui.log linkrevfixup output on the stderr
   >         msgstr = msg[0] % msg[1:]
   >         self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
   >     return orig(self, service, *msg, **opts)
-  > def call_conduit(*args, **kwargs):
-  >   return [{'hash': '123456'}]
-  > def conduit_config(*args, **kwargs):
-  >   return True
   > EOF
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/a5957b6bf0bdeb9b96368bddd2838004ad966b7d/12356
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > uilog=$TESTTMP/uilog.py
@@ -346,15 +352,9 @@ Silencing stdout because we are interested only in ui.log output
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Fastlog fails
-  $ cat > $TESTTMP/bad_conduit.py <<EOF
-  > def call_conduit(*args, **kwargs):
-  >   raise Exception('error')
-  > def conduit_config(*args, **kwargs):
-  >   return True
-  > EOF
-  $ rm $TESTTMP/bad_conduit.pyc
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/crash
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
-  linkrevfixup: fastlog failed (error) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
+  linkrevfixup: fastlog failed (No JSON object could be decoded) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   linkrevfixup: remotefilelog prefetching succeeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s

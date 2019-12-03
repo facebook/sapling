@@ -22,6 +22,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
 
+from ..extlib.phabricator import graphql
 from . import shallowutil
 
 
@@ -350,20 +351,20 @@ class remotefilectx(context.filectx):
             return None
         try:
             srchex = repo[srcrev].hex()
-            results = self._conduit.call_conduit(
-                "scmquery.log_v2",
-                timeout=FASTLOG_TIMEOUT_IN_SECS,
-                repo=reponame,
-                scm_type="hg",
-                rev=srchex,
+            client = graphql.Client(repo=self._repo)
+            results = client.scmquery_log(
+                reponame,
+                "hg",
+                srchex,
                 file_paths=[path],
                 skip=0,
+                timeout=FASTLOG_TIMEOUT_IN_SECS,
             )
-            if results is None:
+            if results is None or len(results) == 0:
                 logmsg = "fastlog returned 0 results"
                 return None
             for anc in results:
-                ancrev = repo[str(anc["hash"])].rev()
+                ancrev = repo[str(anc)].rev()
                 lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
                 if lnode is not None:
                     logmsg = "fastlog succeded"

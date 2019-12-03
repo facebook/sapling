@@ -22,6 +22,7 @@ except ImportError:
 
 known_translations = {}
 next_error_message = []
+log_responses = {}
 
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -56,6 +57,29 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         self.wfile.write(json.dumps(response))
 
+    def handle_log_request(self, param):
+        if next_error_message:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": next_error_message[0]}))
+            del next_error_message[0]
+            return
+
+        if param["rev"] in log_responses and log_responses[param["rev"]] != ["error"]:
+            answer = log_responses[param["rev"]]
+            if answer == ["crash"]:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write("crash")
+                return
+            self.send_response(200)
+            response = {"data": {"query": log_responses[param["rev"]]}}
+        else:
+            self.send_response(500)
+            response = {"error": "rev not found"}
+        self.end_headers()
+        self.wfile.write(json.dumps(response))
+
     def do_POST(self):
         content_len = int(self.headers.getheader("content-length", 0))
         data = self.rfile.read(content_len)
@@ -65,6 +89,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             param = json.loads(params["variables"][0])
             if "scmquery_service_get_mirrored_revs" in params["doc"][0]:
                 self.handle_get_mirrored_revs_request(param["params"])
+                return
+            if "scmquery_service_log" in params["doc"][0]:
+                self.handle_log_request(param["params"])
                 return
         self.send_response(500)
         self.end_headers()
@@ -97,6 +124,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif len(path_comps) == 2 and path_comps[0] == "fail_next":
             # This allows tests to ask us to fail the next HTTP request
             next_error_message.append(path_comps[1])
+            self.send_response(200)
+            self.end_headers()
+            return
+        elif len(path_comps) == 3 and path_comps[0] == "set_log_response":
+            log_responses[path_comps[1]] = path_comps[2].split(",")
             self.send_response(200)
             self.end_headers()
             return

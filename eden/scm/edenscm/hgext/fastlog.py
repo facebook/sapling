@@ -39,6 +39,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullrev
 
+from .extlib.phabricator import graphql
+
 
 conduit = None
 
@@ -48,21 +50,6 @@ FASTLOG_TIMEOUT = 20
 
 
 def extsetup(ui):
-    global conduit
-    try:
-        conduit = extensions.find("fbconduit")
-    except KeyError:
-        from . import fbconduit as conduit
-    except ImportError:
-        ui.warn(_("Unable to find fbconduit extension\n"))
-        return
-    if not util.safehasattr(conduit, "conduit_config"):
-        ui.warn(_("Incompatible conduit module; disabling fastlog\n"))
-        return
-    if not conduit.conduit_config(ui):
-        ui.warn(_("No conduit host specified in config; disabling fastlog\n"))
-        return
-
     extensions.wrapfunction(revset, "_follow", fastlogfollow)
 
 
@@ -450,6 +437,7 @@ class FastLogThread(Thread):
         self.scm = scm
         self.rev = rev
         self.paths = list(paths)
+        self.repo = repo
         self.ui = repo.ui
         self.changelog = readonlychangelog(repo.svfs, uiconfig=repo.ui.uiconfig())
         self._stop = Event()
@@ -480,14 +468,9 @@ class FastLogThread(Thread):
             results = None
             todo = self.gettodo()
             try:
-                results = conduit.call_conduit(
-                    "scmquery.log_v2",
-                    repo=reponame,
-                    scm_type=self.scm,
-                    rev=start,
-                    file_paths=[path],
-                    skip=skip,
-                    number=todo,
+                client = graphql.Client(repo=self.repo)
+                results = client.scmquery_log(
+                    reponame, self.scm, start, file_paths=[path], skip=skip, number=todo
                 )
             except Exception as e:
                 if self.ui.config("fastlog", "debug"):
@@ -501,8 +484,7 @@ class FastLogThread(Thread):
                 self.stop()
                 return
 
-            for result in results:
-                hash = result["hash"]
+            for hash in results:
                 try:
                     if len(hash) != 40:
                         raise ValueError("Received invalid hash %s" % hash)

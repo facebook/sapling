@@ -415,6 +415,50 @@ class Client(object):
             }
         """
 
+    def scmquery_log(
+        self,
+        repo,
+        scm_type,
+        rev,
+        file_paths=None,
+        number=None,
+        skip=None,
+        exclude_rev_and_ancestors=None,
+        before_timestamp=None,
+        after_timestamp=None,
+        timeout=10,
+    ):
+        """List commits from the repo meeting given criteria.
+
+        Returns list of hashes.
+        """
+        query = """
+            query ScmQueryLogV2(
+                $params: SCMQueryServiceLogParams!
+            ) {
+                query: scmquery_service_log(params: $params) {
+                    hash,
+                }
+            }
+        """
+        params = {
+            "params": {
+                "caller_info": "hgext.extlib.phabricator.graphql.scmquery_log",
+                "repo": repo,
+                "scm_type": scm_type,
+                "rev": rev,
+                "file_paths": file_paths,
+                "number": number,
+                "skip": skip,
+                "exclude_rev_and_ancestors": exclude_rev_and_ancestors,
+                "before_timestamp": before_timestamp,
+                "after_timestamp": after_timestamp,
+            }
+        }
+        ret = self._client.query(timeout, query, json.dumps(params))
+        self._raise_errors(ret)
+        return ret["data"]["query"]
+
     def _raise_errors(self, response):
         try:
             errormsg = None
