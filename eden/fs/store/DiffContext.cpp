@@ -34,7 +34,7 @@ DiffContext::DiffContext(DiffCallback* cb, const ObjectStore* os)
       store{os},
       listIgnored{true},
       topLevelIgnores_{std::unique_ptr<TopLevelIgnores>()},
-      request_{nullptr} {};
+      request_{nullptr} {}
 
 DiffContext::~DiffContext() = default;
 

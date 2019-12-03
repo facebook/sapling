@@ -22,10 +22,10 @@
 namespace facebook {
 namespace eden {
 
-ServiceAddress::ServiceAddress(std::string name) : name_(std::move(name)){};
+ServiceAddress::ServiceAddress(std::string name) : name_(std::move(name)) {}
 
 ServiceAddress::ServiceAddress(std::string hostname, uint16_t port)
-    : name_(std::make_pair(std::move(hostname), port)){};
+    : name_(std::make_pair(std::move(hostname), port)) {}
 
 std::optional<SocketAddressWithHostname>
 ServiceAddress::getSocketAddressBlocking() {
