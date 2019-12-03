@@ -87,7 +87,7 @@ def _cleanuplanded(repo, dryrun=False):
         if diffprops.parserevfromcommitmsg(unfi[publicnode].description()) != diffid:
             continue
         draftnodestr = ", ".join(short(d) for d in draftnodes)
-        ui.status(
+        ui.debug(
             _("marking D%s (%s) as landed as %s\n")
             % (diffid, draftnodestr, short(publicnode))
         )
