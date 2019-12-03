@@ -214,7 +214,7 @@ class Redirection:
                     "-type",
                     "SPARSE",
                     "-fs",
-                    "APFS",
+                    "HFS+",
                     "-volname",
                     f"Eden redirection for {mount_path}",
                     str(image_file_name),
