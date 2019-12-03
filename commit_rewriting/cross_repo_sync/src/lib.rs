@@ -7,6 +7,7 @@
  */
 
 #![feature(option_flattening)]
+#![deny(warnings)]
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -406,7 +407,7 @@ where
         bookmark: BookmarkName,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
+        let (source_repo, target_repo, _) = self.get_source_target_mover();
 
         match remap_parents_and_rewrite_commit(ctx.clone(), source_cs.clone().into_mut(), self)
             .await?
