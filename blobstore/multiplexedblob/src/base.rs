@@ -33,7 +33,8 @@ use tokio::timer::timeout::Error as TimeoutError;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
-const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / 100.0);
+const SAMPLE_RATE: i32 = 100;
+const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / (SAMPLE_RATE as f32));
 
 type BlobstoresWithEntry = HashSet<BlobstoreId>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
@@ -80,6 +81,7 @@ impl MultiplexedBlobstoreBase {
         mut scuba: ScubaSampleBuilder,
     ) -> Self {
         scuba.add_common_server_data();
+        scuba.add("sample_rate", SAMPLE_RATE);
 
         Self {
             blobstores: blobstores.into(),
