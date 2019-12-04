@@ -234,7 +234,7 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout):
         mount_path = checkout.path / self.repo_path
-        run_cmd_quietly(["hdiutil", "unmount", str(mount_path)])
+        run_cmd_quietly(["hdiutil", "detach", str(mount_path)])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: bytes, target: bytes
