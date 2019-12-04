@@ -26,10 +26,10 @@ use bookmarks::BookmarkName;
 use failure_ext::{format_err, prelude::*};
 use itertools::Itertools;
 use metaconfig_thrift::{
-    RawBookmarkHook, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitSyncConfig,
+    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitSyncConfig,
     RawCommitSyncSmallRepoConfig, RawCommonConfig, RawFilestoreParams, RawHookConfig,
-    RawInfinitepushParams, RawLfsParams, RawShardedFilenodesParams,
-    RawSourceControlServiceMonitoring, RawWireprotoLoggingConfig,
+    RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams,
+    RawShardedFilenodesParams, RawSourceControlServiceMonitoring, RawWireprotoLoggingConfig,
 };
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
@@ -626,7 +626,16 @@ impl RepoConfigs {
                     (None, Some(name)) => {
                         BookmarkOrRegex::Bookmark(BookmarkName::new(name).unwrap())
                     }
-                    (Some(regex), None) => BookmarkOrRegex::Regex(regex.0),
+                    (Some(regex), None) => match Regex::new(&regex) {
+                        Ok(regex) => BookmarkOrRegex::Regex(regex),
+                        Err(err) => {
+                            return Err(ErrorKind::InvalidConfig(format!(
+                                "invalid bookmark regex: {}",
+                                err
+                            ))
+                            .into())
+                        }
+                    },
                     _ => {
                         return Err(ErrorKind::InvalidConfig(
                             "bookmark's params need to specify regex xor name".into(),
@@ -636,7 +645,10 @@ impl RepoConfigs {
                 };
 
                 let only_fast_forward = bookmark.only_fast_forward;
-                let allowed_users = bookmark.allowed_users.map(|re| re.0);
+                let allowed_users = bookmark
+                    .allowed_users
+                    .map(|re| Regex::new(&re))
+                    .transpose()?;
                 let rewrite_dates = bookmark.rewrite_dates;
 
                 bookmark_params.push(BookmarkParams {
@@ -667,11 +679,15 @@ impl RepoConfigs {
 
         let pushrebase = this
             .pushrebase
-            .map(|raw| {
+            .map(|raw| -> Result<_, Error> {
                 let default = PushrebaseParams::default();
-                PushrebaseParams {
+                Ok(PushrebaseParams {
                     rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
-                    recursion_limit: raw.recursion_limit.or(default.recursion_limit),
+                    recursion_limit: raw
+                        .recursion_limit
+                        .map(|v| v.try_into())
+                        .transpose()?
+                        .or(default.recursion_limit),
                     commit_scribe_category: raw.commit_scribe_category,
                     block_merges: raw.block_merges.unwrap_or(default.block_merges),
                     forbid_p2_root_rebases: raw
@@ -679,8 +695,9 @@ impl RepoConfigs {
                         .unwrap_or(default.forbid_p2_root_rebases),
                     casefolding_check: raw.casefolding_check.unwrap_or(default.casefolding_check),
                     emit_obsmarkers: raw.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
-                }
+                })
             })
+            .transpose()?
             .unwrap_or_default();
 
         let bundle2_replay_params = this
@@ -885,29 +902,6 @@ struct RawRepoConfig {
     source_control_service_monitoring: Option<RawSourceControlServiceMonitoring>,
 }
 
-/// This structure helps to resolve an issue that when using serde_regex on Option<Regex> parsing
-/// the toml file fails when the "regex" field is not provided. It works as expected when the
-/// indirect Option<RawRegex> is used.
-#[derive(Debug, Deserialize, Clone)]
-struct RawRegex(#[serde(with = "serde_regex")] Regex);
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawBookmarkConfig {
-    /// Either the regex or the name should be provided, not both
-    regex: Option<RawRegex>,
-    name: Option<String>,
-    #[serde(default)]
-    hooks: Vec<RawBookmarkHook>,
-    // Are non fastforward moves allowed for this bookmark
-    #[serde(default)]
-    only_fast_forward: bool,
-    /// Only users matching this pattern will be allowed to move this bookmark
-    allowed_users: Option<RawRegex>,
-    /// Whether or not to rewrite dates when processing pushrebase pushes
-    rewrite_dates: Option<bool>,
-}
-
 #[derive(Debug, Deserialize, Clone)]
 //#[serde(deny_unknown_fields)] -- incompatible with flatten
 struct RawStorageConfig {
@@ -1078,24 +1072,6 @@ enum RawDbConfig {
         db_address: String,
         sharded_filenodes: Option<RawShardedFilenodesParams>,
     },
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawPushParams {
-    pure_push_allowed: Option<bool>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawPushrebaseParams {
-    rewritedates: Option<bool>,
-    recursion_limit: Option<usize>,
-    commit_scribe_category: Option<String>,
-    block_merges: Option<bool>,
-    forbid_p2_root_rebases: Option<bool>,
-    casefolding_check: Option<bool>,
-    emit_obsmarkers: Option<bool>,
 }
 
 #[cfg(test)]

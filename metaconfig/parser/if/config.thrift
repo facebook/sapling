@@ -6,6 +6,34 @@
  * directory of this source tree.
  */
 
+struct RawPushParams {
+    1: optional bool pure_push_allowed,
+}
+
+struct RawPushrebaseParams {
+    1: optional bool rewritedates,
+    2: optional i64 recursion_limit,
+    3: optional string commit_scribe_category,
+    4: optional bool block_merges,
+    5: optional bool forbid_p2_root_rebases,
+    6: optional bool casefolding_check,
+    7: optional bool emit_obsmarkers,
+}
+
+struct RawBookmarkConfig {
+    // Either the regex or the name should be provided, not both
+    1: optional string regex,
+    2: optional string name,
+    3: list<RawBookmarkHook> hooks,
+    // Are non fastforward moves allowed for this bookmark
+    4: bool only_fast_forward,
+    // Only users matching this pattern (regex) will be allowed
+    // to move this bookmark
+    5: optional string allowed_users,
+    // Whether or not to rewrite dates when processing pushrebase pushes
+    6: optional bool rewrite_dates,
+}
+
 struct RawWhitelistEntry {
     1: optional string tier,
     2: optional string identity_data,
