@@ -7,20 +7,21 @@
  */
 
 use cloned::cloned;
-use configerator::{ConfigLoader, ConfigSource, Entity};
+use configerator::{ConfigLoader, ConfigSource};
+use configerator_cached::CachedConfigHandler;
 use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
-use slog::{debug, info, warn, Logger};
+use slog::{info, warn, Logger};
 use std::default::Default;
 use std::path::PathBuf;
 use std::result::Result;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, RwLock,
+    Arc,
 };
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 const FETCH_TIMEOUT: u64 = 10;
 
@@ -53,81 +54,26 @@ impl Default for ServerConfig {
     }
 }
 
-/// Struct representing a stored config and its source's idea of freshness.
-#[derive(Debug, Clone)]
-struct ServerConfigContainer {
-    mod_time: u64,
-    version: Option<String>,
-    config: Arc<ServerConfig>,
-}
-
-impl ServerConfigContainer {
-    fn new(entity: Entity) -> Result<Self, Error> {
-        let Entity {
-            mod_time,
-            version,
-            contents,
-        } = entity;
-
-        let config = Arc::new(serde_json::from_str(&contents)?);
-
-        Ok(Self {
-            mod_time,
-            version,
-            config,
-        })
-    }
-
-    fn maybe_update(&self, entity: Entity) -> Option<Result<Self, Error>> {
-        // NOTE: We look at both mod time and version because canaries don't have a mod_time.
-        if entity.mod_time == self.mod_time && entity.version == self.version {
-            return None;
-        }
-
-        Some(Self::new(entity))
-    }
-}
-
 /// Accessor for the config
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ServerConfigHandle {
-    inner: Arc<RwLock<ServerConfigContainer>>,
+    inner: Arc<CachedConfigHandler<ServerConfig>>,
 }
 
 impl ServerConfigHandle {
-    fn new(inner: ServerConfigContainer) -> Self {
+    fn new(inner: CachedConfigHandler<ServerConfig>) -> Self {
         Self {
-            inner: Arc::new(RwLock::new(inner)),
+            inner: Arc::new(inner),
         }
     }
 
-    fn maybe_update(&self, entity: Entity) -> Result<Option<u64>, Error> {
-        let new_inner = self.with_inner(|inner| inner.maybe_update(entity));
-
-        match new_inner {
-            None => Ok(None),
-            Some(Err(err)) => Err(err),
-            Some(Ok(new_inner)) => {
-                let mod_time = new_inner.mod_time;
-
-                let mut inner = self.inner.write().expect("Lock poisoned");
-                *inner = new_inner;
-
-                Ok(Some(mod_time))
-            }
-        }
-    }
-
-    fn with_inner<T, F>(&self, f: F) -> T
-    where
-        F: FnOnce(&ServerConfigContainer) -> T,
-    {
-        let inner = self.inner.read().expect("Lock poisoned");
-        f(&inner)
+    fn maybe_refresh(&self, timeout: Duration) -> Result<bool, Error> {
+        self.inner.maybe_refresh(timeout)
     }
 
     pub fn get(&self) -> Arc<ServerConfig> {
-        self.with_inner(|inner| inner.config.clone())
+        // We rely on the loop in `spawn_config_poller` updating us, so we should never be badly stale
+        self.inner.get_maybe_stale()
     }
 }
 
@@ -173,38 +119,28 @@ pub fn spawn_config_poller(
         "Loading initial LFS configuration through {:?} with timeout {:?}", loader, timeout,
     );
 
-    let entity = loader.load(timeout)?;
-    let config = ServerConfigHandle::new(ServerConfigContainer::new(entity)?);
+    let config = ServerConfigHandle::new(CachedConfigHandler::new(
+        loader,
+        Duration::from_secs(fetch_interval),
+        timeout,
+    )?);
 
     let handle = thread::spawn({
         cloned!(config);
-        let mut last_poll = Instant::now();
-
         move || loop {
             if will_exit.load(Ordering::Relaxed) {
                 info!(&logger, "Shutting down configuration poller...");
                 return;
             }
 
+            match config.maybe_refresh(timeout) {
+                Ok(false) => {}
+                Ok(true) => info!(&logger, "Updated LFS configuration"),
+                Err(e) => warn!(&logger, "Updating LFS configuration failed: {:?}", e),
+            }
             // NOTE: We only sleep for 1 second here in order to exit the thread quickly if we are
             // asked to exit.
-            if last_poll.elapsed() <= Duration::from_secs(fetch_interval) {
-                thread::sleep(Duration::from_secs(1));
-                continue;
-            }
-
-            last_poll = Instant::now();
-
-            let outcome = loader.load(timeout).and_then(|entity| {
-                debug!(&logger, "Polled LFS Configuration: {:?}", entity);
-                config.maybe_update(entity)
-            });
-
-            match outcome {
-                Ok(None) => {}
-                Ok(Some(mod_time)) => info!(&logger, "Updated LFS configuration ({})", mod_time),
-                Err(e) => warn!(&logger, "Updating LFS configuration failed: {:?}", e),
-            };
+            thread::sleep(Duration::from_secs(1));
         }
     });
 
