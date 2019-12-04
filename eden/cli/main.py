@@ -1294,10 +1294,20 @@ class StartCmd(Subcmd):
         )
 
 
+def unmount_redirections_for_path(repo_path: str) -> None:
+    parser = create_parser()
+    args = parser.parse_args(["redirect", "unmount", "--mount", repo_path])
+    try:
+        args.func(args)
+    except Exception as exc:
+        print(f"ignoring error while unmounting bind mounts: {exc}", file=sys.stderr)
+
+
 def stop_aux_processes_for_path(repo_path: str) -> None:
     """Tear down processes that will hold onto file handles and prevent shutdown
     for a given mount point/repo"""
     buck.stop_buckd_for_repo(repo_path)
+    unmount_redirections_for_path(repo_path)
 
 
 def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
