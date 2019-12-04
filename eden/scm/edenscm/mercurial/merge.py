@@ -537,6 +537,7 @@ class mergestate(object):
             actx = self._repo[anccommitnode]
         else:
             actx = None
+
         self._repo.ui.log(
             "merge_resolve", "resolving %s, preresolve = %s", dfile, preresolve
         )
@@ -1818,6 +1819,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         try:
             # premerge
             tocomplete = []
+            completed = []
             for f, args, msg in mergeactions:
                 repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
                 z += 1
@@ -1827,13 +1829,26 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 if not complete:
                     numupdates += 1
                     tocomplete.append((f, args, msg))
+                else:
+                    completed.append(f)
 
             # merge
+            files = []
             for f, args, msg in tocomplete:
                 repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
                 ms.resolve(f, wctx)
+                files.append(f)
+            reponame = repo.ui.config("fbconduit", "reponame")
+            command = " ".join(util.shellquote(a) for a in pycompat.sysargv)
+            repo.ui.log(
+                "manualmergefiles",
+                manual_merge_files=",".join(files),
+                auto_merge_files=",".join(completed),
+                command=command,
+                repo=reponame,
+            )
 
         finally:
             ms.commit()
