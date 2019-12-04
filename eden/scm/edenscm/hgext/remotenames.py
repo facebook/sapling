@@ -27,6 +27,7 @@ import os
 import re
 import shutil
 import sys
+import typing
 import UserDict
 
 from edenscm.mercurial import (
@@ -1287,7 +1288,9 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     revs = opts.get("rev")
 
     paths = dict((path, url) for path, url in ui.configitems("paths"))
-    revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+    # XXX T58629567: The following line triggers an infinite loop in pyre, let's disable it for now.
+    if not typing.TYPE_CHECKING:
+        revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
 
     origdest = dest
     defaultpush = ui.paths.get("default-push") or ui.paths.get("default")
