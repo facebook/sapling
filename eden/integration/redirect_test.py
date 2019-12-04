@@ -289,3 +289,34 @@ buck-out = "buck-out"
                 }
             ],
         )
+
+    def test_unmount_unmounts_things(self) -> None:
+        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+
+        output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    "state": "ok",
+                }
+            ],
+        )
+        self.eden.run_cmd("redirect", "unmount", "--mount", self.mount)
+        output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    "state": "not-mounted",
+                }
+            ],
+        )

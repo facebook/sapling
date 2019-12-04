@@ -571,6 +571,45 @@ class ListCmd(Subcmd):
 
 
 @redirect_cmd(
+    "unmount",
+    (
+        "Unmount all effective redirection configuration, but preserve "
+        "the configuration so that a subsequent fixup will restore it"
+    ),
+)
+class UnmountCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--mount", help="The eden mount point path.", default=None)
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+        vers_date, _vers_time = get_running_eden_version_parts(instance)
+        if vers_date and vers_date < "20190701":
+            # The redirection feature was shipped internally around the end
+            # of June; using July 1st as a cutoff is reasonable.  If they
+            # aren't running a new enough build, just silently bail out
+            # early.
+            return 0
+
+        mount_table = mtab.new()
+        redirs = get_effective_redirections(checkout, mount_table)
+
+        for redir in redirs.values():
+            print(f"Removing {redir.repo_path}", file=sys.stderr)
+            redir.remove_existing(checkout)
+            if redir.type == RedirectionType.UNKNOWN:
+                continue
+
+        # recompute and display the current state
+        redirs = get_effective_redirections(checkout, mount_table)
+        ok = True
+        for redir in redirs.values():
+            if redir.state == RedirectionState.MATCHES_CONFIGURATION:
+                ok = False
+        return 0 if ok else 1
+
+
+@redirect_cmd(
     "fixup",
     (
         "Fixup redirection configuration; redirect things that "
