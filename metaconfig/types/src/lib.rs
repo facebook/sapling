@@ -12,7 +12,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -20,6 +20,7 @@ use std::{
     num::NonZeroUsize,
     path::PathBuf,
     str,
+    str::FromStr,
     sync::Arc,
     time::Duration,
 };
@@ -325,6 +326,18 @@ pub enum HookType {
     PerChangeset,
     /// A hook that runs on a file in a changeset
     PerAddedOrModifiedFile,
+}
+
+impl FromStr for HookType {
+    type Err = Error;
+
+    fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
+        match string {
+            "PerChangeset" => Ok(HookType::PerChangeset),
+            "PerAddedOrModifiedFile" => Ok(HookType::PerAddedOrModifiedFile),
+            _ => Err(anyhow!("Unable to parse {} as {}", string, "HookType")),
+        }
+    }
 }
 
 /// Hook bypass

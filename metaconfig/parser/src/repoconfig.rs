@@ -26,7 +26,8 @@ use bookmarks::BookmarkName;
 use failure_ext::{format_err, prelude::*};
 use itertools::Itertools;
 use metaconfig_thrift::{
-    RawBundle2ReplayParams, RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawFilestoreParams,
+    RawBookmarkHook, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitSyncConfig,
+    RawCommitSyncSmallRepoConfig, RawCommonConfig, RawFilestoreParams, RawHookConfig,
     RawInfinitepushParams, RawLfsParams, RawShardedFilenodesParams,
     RawSourceControlServiceMonitoring, RawWireprotoLoggingConfig,
 };
@@ -478,7 +479,7 @@ impl RepoConfigs {
                 HookParams {
                     name: raw_hook_config.name,
                     code: None,
-                    hook_type: raw_hook_config.hook_type,
+                    hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
                     config,
                 }
             } else {
@@ -505,7 +506,7 @@ impl RepoConfigs {
                 HookParams {
                     name: raw_hook_config.name,
                     code: Some(code),
-                    hook_type: raw_hook_config.hook_type,
+                    hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
                     config,
                 }
             };
@@ -603,11 +604,18 @@ impl RepoConfigs {
             })
             .transpose()?;
 
-        let cache_warmup = this.cache_warmup.map(|cache_warmup| CacheWarmupParams {
-            bookmark: BookmarkName::new(cache_warmup.bookmark)
-                .expect("bookmark name must be ascii"),
-            commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
-        });
+        let cache_warmup = match this.cache_warmup {
+            Some(raw) => Some(CacheWarmupParams {
+                bookmark: BookmarkName::new(raw.bookmark)?,
+                commit_limit: raw
+                    .commit_limit
+                    .map(|v| v.try_into())
+                    .transpose()?
+                    .unwrap_or(200000),
+            }),
+            None => None,
+        };
+
         let hook_manager_params = this.hook_manager_params.map(|params| HookManagerParams {
             disable_acl_checker: params.disable_acl_checker,
         });
@@ -808,24 +816,6 @@ impl RepoConfigs {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawCommonConfig {
-    whitelist_entry: Option<Vec<RawWhitelistEntry>>,
-    loadlimiter_category: Option<String>,
-
-    /// Scuba table for logging redacted file access attempts
-    scuba_censored_table: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawWhitelistEntry {
-    tier: Option<String>,
-    identity_data: Option<String>,
-    identity_type: Option<String>,
-}
-
 fn is_true() -> bool {
     true
 }
@@ -895,13 +885,6 @@ struct RawRepoConfig {
     source_control_service_monitoring: Option<RawSourceControlServiceMonitoring>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawCacheWarmupConfig {
-    bookmark: String,
-    commit_limit: Option<usize>,
-}
-
 /// This structure helps to resolve an issue that when using serde_regex on Option<Regex> parsing
 /// the toml file fails when the "regex" field is not provided. It works as expected when the
 /// indirect Option<RawRegex> is used.
@@ -923,24 +906,6 @@ struct RawBookmarkConfig {
     allowed_users: Option<RawRegex>,
     /// Whether or not to rewrite dates when processing pushrebase pushes
     rewrite_dates: Option<bool>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawBookmarkHook {
-    hook_name: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawHookConfig {
-    name: String,
-    path: Option<String>,
-    hook_type: HookType,
-    bypass_commit_string: Option<String>,
-    bypass_pushvar: Option<String>,
-    config_strings: Option<HashMap<String, String>>,
-    config_ints: Option<HashMap<String, i32>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]

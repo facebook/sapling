@@ -6,6 +6,39 @@
  * directory of this source tree.
  */
 
+struct RawWhitelistEntry {
+    1: optional string tier,
+    2: optional string identity_data,
+    3: optional string identity_type,
+}
+
+struct RawCommonConfig {
+    1: optional list<RawWhitelistEntry> whitelist_entry,
+    2: optional string loadlimiter_category,
+
+    // Scuba table for logging redacted file access attempts
+    3: optional string scuba_censored_table,
+}
+
+struct RawCacheWarmupConfig {
+    1: string bookmark,
+    2: optional i64 commit_limit,
+}
+
+struct RawBookmarkHook {
+    1: string hook_name,
+}
+
+struct RawHookConfig {
+    1: string name,
+    2: optional string path,
+    3: string hook_type,
+    4: optional string bypass_commit_string,
+    5: optional string bypass_pushvar,
+    6: optional map<string, string> (rust.type = "HashMap") config_strings,
+    7: optional map<string, i32> (rust.type = "HashMap") config_ints,
+}
+
 struct RawLfsParams {
     1: optional i64 threshold,
 }
