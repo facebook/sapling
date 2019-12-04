@@ -564,10 +564,12 @@ pub fn compat_subtree_diff(
                     let other_entry = self.store.get_entry(&self.path, other_hgid)?;
                     for other_element_result in other_entry.elements() {
                         let other_element = other_element_result?;
-                        others_map
-                            .entry(other_element.component)
-                            .or_insert(vec![])
-                            .push(other_element.hgid);
+                        if other_element.flag == store::Flag::Directory {
+                            others_map
+                                .entry(other_element.component)
+                                .or_insert(vec![])
+                                .push(other_element.hgid);
+                        }
                     }
                 }
                 for element_result in entry.elements() {
@@ -1442,6 +1444,73 @@ mod tests {
             vec![]
         );
         // it is illegal to call compat_subtree_diff with "baz" but we can't validate for it
+    }
+
+    #[test]
+    fn test_compat_subtree_diff_file_to_directory() {
+        let store = Arc::new(TestStore::new());
+        // add ("", 1), ("foo", 11)
+        let root_1_entry = store::Entry::from_elements(vec![store_element(
+            "foo",
+            "11",
+            store::Flag::File(FileType::Regular),
+        )])
+        .unwrap();
+        store
+            .insert(
+                RepoPath::empty(),
+                hgid("1"),
+                root_1_entry.clone().to_bytes(),
+            )
+            .unwrap();
+
+        // add ("", 2), ("foo", 12), ("foo/bar", 121)
+        let root_2_entry =
+            store::Entry::from_elements(vec![store_element("foo", "12", store::Flag::Directory)])
+                .unwrap();
+        store
+            .insert(
+                RepoPath::empty(),
+                hgid("2"),
+                root_2_entry.clone().to_bytes(),
+            )
+            .unwrap();
+        let foo_12_entry = store::Entry::from_elements(vec![store_element(
+            "bar",
+            "121",
+            store::Flag::File(FileType::Regular),
+        )])
+        .unwrap();
+        store
+            .insert(
+                repo_path("foo"),
+                hgid("12"),
+                foo_12_entry.clone().to_bytes(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            compat_subtree_diff(
+                store.clone(),
+                RepoPath::empty(),
+                hgid("2"),
+                vec![hgid("1")],
+                3
+            )
+            .unwrap(),
+            vec![
+                (
+                    repo_path_buf("foo"),
+                    hgid("12"),
+                    foo_12_entry.clone().to_bytes()
+                ),
+                (
+                    RepoPathBuf::new(),
+                    hgid("2"),
+                    root_2_entry.clone().to_bytes()
+                ),
+            ]
+        );
     }
 
     #[test]
