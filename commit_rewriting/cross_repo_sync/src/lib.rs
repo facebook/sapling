@@ -16,12 +16,12 @@ use blobsync::copy_content;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{err_msg, format_err, Error};
 use futures::Future;
 use futures_preview::{
     compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    stream::{futures_unordered::FuturesUnordered, TryStreamExt},
+    future::{self, FutureExt, TryFutureExt},
+    stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
 use maplit::{hashmap, hashset};
 use metaconfig_types::{CommitSyncConfig, PushrebaseParams};
@@ -117,11 +117,20 @@ pub fn rewrite_commit(
                 do_rewrite(path, change, &remapped_parents, rewrite_path.clone()).transpose()
             })
             .collect();
+
         let path_rewritten_changes = path_rewritten_changes?;
-        if !path_rewritten_changes.is_empty() {
-            cs.file_changes = path_rewritten_changes;
-        } else {
+        let is_merge = cs.parents.len() >= 2;
+
+        // If all parent has < 2 commits then it's not a merge, and it was completely rewritten
+        // out. In that case we can just discard it because there are not changes to the working copy.
+        // However if it's a merge then we can't discard it, because even
+        // though bonsai merge commit might not have file changes inside it can still change
+        // a working copy. E.g. if p1 has fileA, p2 has fileB, then empty merge(p1, p2)
+        // contains both fileA and fileB.
+        if path_rewritten_changes.is_empty() && !is_merge {
             return Ok(None);
+        } else {
+            cs.file_changes = path_rewritten_changes;
         }
     }
 
@@ -385,7 +394,7 @@ where
         } else if parents.len() == 1 {
             self.sync_commit_single_parent(ctx.clone(), cs).await
         } else {
-            return Err(err_msg("only single-parent changesets are supported now"));
+            self.sync_merge(ctx.clone(), cs).await
         }
     }
 
@@ -677,6 +686,200 @@ where
                 Ok(Some(source_cs_id))
             }
         }
+    }
+
+    // See more details about the algorithm in https://fb.quip.com/s8fYAOxEohtJ
+    // A few important notes:
+    // 1) Merges are synced only in LARGE -> SMALL direction.
+    // 2) If a large repo merge has any parent after big merge, then this merge will appear
+    //    in all small repos
+    async fn sync_merge(
+        &self,
+        ctx: CoreContext,
+        cs: BonsaiChangeset,
+    ) -> Result<Option<ChangesetId>, Error> {
+        if let CommitSyncRepos::SmallToLarge { .. } = self.repos {
+            return Err(err_msg(
+                "syncing merge commits is supported only in large to small direction",
+            ));
+        }
+
+        let source_cs_id = cs.get_changeset_id();
+        let cs = cs.into_mut();
+        let (_, _, rewrite_paths) = self.get_source_target_mover();
+
+        let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
+            self.get_commit_sync_outcome(ctx.clone(), p)
+                .and_then(move |maybe_outcome| match maybe_outcome {
+                    Some(outcome) => future::ok((p, outcome)),
+                    None => future::err(format_err!("{} does not have CommitSyncOutcome", p)),
+                })
+        }));
+
+        let sync_outcomes = parent_outcomes
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        if sync_outcomes
+            .iter()
+            .all(|(_, outcome)| outcome == &CommitSyncOutcome::Preserved)
+        {
+            // All parents being `Preserved` means that merge happens
+            // purely in the pre-big-merge area of the repo, so it can
+            // just be safely preserved.
+            self.preserve_commit(ctx.clone(), source_cs_id).await?;
+            return Ok(Some(source_cs_id));
+        }
+
+        // We can have both NotSyncCandidate and Preserved, see example below
+        //
+        // "X" - NotSyncCandidate
+        // "P", "R" - already synced commits (preserved or rewritten)
+        // "A", "B" - new commits to sync
+        //
+        //   R
+        //   |
+        //   BM  <- Big merge
+        //  / \
+        // P  X   B <- Merge commit, has NotSyncCandidate and Preserved
+        //    | / |
+        //    X   A <- this commit can be preserved (e.g. if it touches shared directory)
+        //
+        //
+        // In the case like that let's mark a commit as NotSyncCandidate
+        if sync_outcomes.iter().all(|(_, outcome)| {
+            outcome == &CommitSyncOutcome::Preserved
+                || outcome == &CommitSyncOutcome::NotSyncCandidate
+        }) {
+            self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
+                .await?;
+            return Ok(None);
+        }
+
+        // At this point we know that there's at least parent after big merge. However we still
+        // might have a parent that's NotSyncCandidate
+        //
+        //   B
+        //   | \
+        //   |  \
+        //   R   X  <- new repo was merged, however this repo was not synced at all.
+        //   |   |
+        //   |   ...
+        //   ...
+        //   BM  <- Big merge
+        //  / \
+        //  ...
+        //
+        // This parents will be completely removed. However when these parents are removed
+        // we also need to be careful to strip all copy info
+        let new_parents: HashMap<_, _> = sync_outcomes
+            .iter()
+            .filter_map(|(p, outcome)| {
+                use CommitSyncOutcome::*;
+                match outcome {
+                    EquivalentWorkingCopyAncestor(cs_id) | RewrittenAs(cs_id) => Some((*p, *cs_id)),
+                    Preserved => Some((*p, *p)),
+                    NotSyncCandidate => None,
+                }
+            })
+            .collect();
+        let cs = self.strip_removed_parents(cs, new_parents.keys().collect())?;
+
+        if new_parents.len() >= 1 {
+            match rewrite_commit(cs, &new_parents, rewrite_paths)? {
+                Some(rewritten) => {
+                    let target_cs_id = self
+                        .upload_rewritten_and_update_mapping(ctx.clone(), source_cs_id, rewritten)
+                        .await?;
+                    Ok(Some(target_cs_id))
+                }
+                None => {
+                    // We should end up in this branch only if we have a single
+                    // parent, because merges are never skipped during rewriting
+                    let parent_cs_id = new_parents
+                        .values()
+                        .next()
+                        .ok_or(err_msg("logic merge: cannot find merge parent"))?;
+                    self.update_wc_equivalence(ctx.clone(), source_cs_id, Some(*parent_cs_id))
+                        .await?;
+                    Ok(Some(*parent_cs_id))
+                }
+            }
+        } else {
+            // All parents of the merge commit are NotSyncCandidate, mark it as NotSyncCandidate
+            // as well
+            self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
+                .await?;
+            Ok(None)
+        }
+    }
+
+    // Rewrites a commit and uploads it
+    async fn upload_rewritten_and_update_mapping(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+        rewritten: BonsaiChangesetMut,
+    ) -> Result<ChangesetId, Error> {
+        let (source_repo, target_repo, _) = self.get_source_target_mover();
+
+        let frozen = rewritten.freeze()?;
+        let target_cs_id = frozen.get_changeset_id();
+        upload_commits(
+            ctx.clone(),
+            vec![frozen],
+            source_repo.clone(),
+            target_repo.clone(),
+        )
+        .await?;
+
+        // update_mapping also updates working copy equivalence, so no need
+        // to do it separately
+        update_mapping(
+            ctx.clone(),
+            hashmap! { source_cs_id =>  target_cs_id},
+            &self,
+        )
+        .await?;
+        return Ok(target_cs_id);
+    }
+
+    // Some of the parents were removed - we need to remove copy-info that's not necessary
+    // anymore
+    fn strip_removed_parents(
+        &self,
+        mut source_cs: BonsaiChangesetMut,
+        new_source_parents: Vec<&ChangesetId>,
+    ) -> Result<BonsaiChangesetMut, Error> {
+        source_cs.parents = source_cs
+            .parents
+            .clone()
+            .into_iter()
+            .filter(|p| new_source_parents.contains(&p))
+            .collect();
+
+        for (_, maybe_file_change) in source_cs.file_changes.iter_mut() {
+            let new_file_change = if let Some(file_change) = maybe_file_change {
+                match file_change.copy_from() {
+                    Some((_, parent)) if !new_source_parents.contains(&parent) => {
+                        Some(FileChange::new(
+                            file_change.content_id(),
+                            file_change.file_type(),
+                            file_change.size(),
+                            None,
+                        ))
+                    }
+                    _ => Some(file_change.clone()),
+                }
+            } else {
+                None
+            };
+
+            *maybe_file_change = new_file_change;
+        }
+
+        Ok(source_cs)
     }
 
     fn get_source_target_mover(&self) -> (BlobRepo, BlobRepo, Mover) {

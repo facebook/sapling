@@ -114,3 +114,11 @@ EOF
 function log() {
  hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
 }
+
+function backsync_large_to_small() {
+  "$BACKSYNCER" "${CACHING_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
+    --source-tier-config "$TESTTMP/mononoke-config" \
+    --target-repo-id "$REPOIDSMALL" \
+    --target-tier-config "$TESTTMP/mononoke-config" \
+    backsync-all
+}

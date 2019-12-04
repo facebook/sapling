@@ -126,6 +126,11 @@ impl BonsaiChangeset {
         self.inner.parents.iter().cloned()
     }
 
+    #[inline]
+    pub fn is_merge(&self) -> bool {
+        self.inner.parents.len() > 1
+    }
+
     /// Get the files changed in this changeset. The items returned are guaranteed
     /// to be in depth-first traversal order: once all the changes to a particular
     /// tree have been applied, it will never be referred to again.
