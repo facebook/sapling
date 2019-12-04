@@ -53,6 +53,16 @@ fn download_handler(mut state: State) -> Box<HandlerFuture> {
         .boxify()
 }
 
+fn download_sha256_handler(mut state: State) -> Box<HandlerFuture> {
+    async move {
+        let res = download::download_sha256(&mut state).await;
+        build_response(res, state)
+    }
+        .boxed()
+        .compat()
+        .boxify()
+}
+
 fn upload_handler(mut state: State) -> Box<HandlerFuture> {
     async move {
         let res = upload::upload(&mut state).await;
@@ -100,8 +110,13 @@ pub fn build_router(fb: FacebookInit, lfs_ctx: LfsServerContext) -> Router {
 
         route
             .get("/:repository/download/:content_id")
-            .with_path_extractor::<download::DownloadParams>()
+            .with_path_extractor::<download::DownloadParamsContentId>()
             .to(download_handler);
+
+        route
+            .get("/:repository/download_sha256/:oid")
+            .with_path_extractor::<download::DownloadParamsSha256>()
+            .to(download_sha256_handler);
 
         route
             .put("/:repository/upload/:oid/:size")

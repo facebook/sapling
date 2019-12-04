@@ -38,6 +38,7 @@ type PostRequestCallback =
 pub enum LfsMethod {
     Upload,
     Download,
+    DownloadSha256,
     Batch,
 }
 
@@ -46,6 +47,7 @@ impl fmt::Display for LfsMethod {
         let name = match self {
             Self::Upload => "upload",
             Self::Download => "download",
+            Self::DownloadSha256 => "download_sha256",
             Self::Batch => "batch",
         };
         write!(f, "{}", name)

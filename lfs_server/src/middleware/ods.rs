@@ -22,6 +22,7 @@ define_stats! {
     failure_5xx: dynamic_timeseries("{}.failure_5xx", (repo_and_method: String); RATE, SUM),
     upload_duration: dynamic_histogram("{}.upload_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     download_duration: dynamic_histogram("{}.download_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    download_sha256_duration: dynamic_histogram("{}.download_sha256_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     batch_duration: dynamic_histogram("{}.batch_ms", (repo: String); 10, 0, 500, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (repo_and_method: String); 1_500_000, 0, 150_000_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
@@ -44,6 +45,8 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             LfsMethod::Download => {
                 STATS::download_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
             }
+            LfsMethod::DownloadSha256 => STATS::download_sha256_duration
+                .add_value(duration.as_millis_unchecked() as i64, (repo,)),
             LfsMethod::Batch => {
                 STATS::batch_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
             }

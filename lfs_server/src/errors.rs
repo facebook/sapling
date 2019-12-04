@@ -11,7 +11,8 @@ use hyper::StatusCode;
 use thiserror::Error;
 
 use lfs_protocol::{RequestObject, ResponseObject};
-use mononoke_types::ContentId;
+
+use filestore::FetchKey;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -29,8 +30,8 @@ pub enum ErrorKind {
     UriBuilderFailed(&'static str),
     #[error("Invalid Uri {0}: {1}")]
     InvalidUri(String, &'static str),
-    #[error("Object does not exist: {0}")]
-    ObjectDoesNotExist(ContentId),
+    #[error("Object does not exist: {0:?}")]
+    ObjectDoesNotExist(FetchKey),
     #[error("Could not dispatch batch request to upstream")]
     UpstreamBatchNoResponse,
     #[error("Upstream batch response is invalid")]
@@ -55,6 +56,8 @@ pub enum ErrorKind {
     InvalidBatch,
     #[error("Could not parse Content ID")]
     InvalidContentId,
+    #[error("Could not parse SHA256")]
+    InvalidOid,
     #[error("Could not access Filestore for reads")]
     FilestoreReadFailure,
     #[error("Could not access Filestore for writes")]

@@ -126,3 +126,10 @@
   $ cat "$LFS_LOG"
   POST /repo/objects/batch 200 OK
   GET /repo/download/1267b7f944920cc2c6a5d48bcf0996735d3fe984b09d5d3bdbccb710c0b99635 200 OK
+
+# Check that downloading file by its sha256 works
+  $ DOWNLOAD_URL="${lfs_uri}/download_sha256/2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe"
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL"
+  200
+  $ sslcurl -s "$DOWNLOAD_URL" | sha256sum
+  2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe  -

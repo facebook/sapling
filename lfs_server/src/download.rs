@@ -6,6 +6,8 @@
  * directory of this source tree.
  */
 
+use mononoke_types::hash::Sha256;
+
 use failure_ext::chain::ChainExt;
 use futures::Stream;
 use futures_ext::StreamExt;
@@ -13,8 +15,9 @@ use futures_preview::compat::Future01CompatExt;
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
+use std::str::FromStr;
 
-use filestore::{self, FetchKey};
+use filestore::{self, Alias, FetchKey};
 use mononoke_types::ContentId;
 use stats::{define_stats, Timeseries};
 
@@ -29,38 +32,31 @@ define_stats! {
 }
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
-pub struct DownloadParams {
+pub struct DownloadParamsContentId {
     repository: String,
     content_id: String,
 }
 
-pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let DownloadParams {
-        repository,
-        content_id,
-    } = state.take();
+#[derive(Deserialize, StateData, StaticResponseExtender)]
+pub struct DownloadParamsSha256 {
+    repository: String,
+    oid: String,
+}
 
-    let ctx =
-        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)?;
-
-    let content_id = ContentId::from_str(&content_id)
-        .chain_err(ErrorKind::InvalidContentId)
-        .map_err(HttpError::e400)?;
-
+async fn fetch_by_key(
+    ctx: RepositoryRequestContext,
+    key: FetchKey,
+) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
-    let fetch_stream = filestore::fetch_with_size(
-        ctx.repo.blobstore(),
-        ctx.ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    )
-    .compat()
-    .await
-    .chain_err(ErrorKind::FilestoreReadFailure)
-    .map_err(HttpError::e500)?;
+    let fetch_stream = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
+        .compat()
+        .await
+        .chain_err(ErrorKind::FilestoreReadFailure)
+        .map_err(HttpError::e500)?;
 
     // Return a 404 if the stream doesn't exist.
     let (stream, size) = fetch_stream
-        .ok_or_else(|| ErrorKind::ObjectDoesNotExist(content_id))
+        .ok_or_else(|| ErrorKind::ObjectDoesNotExist(key))
         .map_err(HttpError::e404)?;
 
     let stream = if ctx.config.track_bytes_sent {
@@ -76,4 +72,40 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         size,
         mime::APPLICATION_OCTET_STREAM,
     ))
+}
+
+pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let DownloadParamsContentId {
+        repository,
+        content_id,
+    } = state.take();
+
+    let content_id = ContentId::from_str(&content_id)
+        .chain_err(ErrorKind::InvalidContentId)
+        .map_err(HttpError::e400)?;
+
+    let key = FetchKey::Canonical(content_id);
+
+    let ctx =
+        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)?;
+
+    fetch_by_key(ctx, key).await
+}
+
+pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let DownloadParamsSha256 { repository, oid } = state.take();
+
+    let oid = Sha256::from_str(&oid)
+        .chain_err(ErrorKind::InvalidOid)
+        .map_err(HttpError::e400)?;
+
+    let key = FetchKey::Aliased(Alias::Sha256(oid));
+
+    let ctx = RepositoryRequestContext::instantiate(
+        state,
+        repository.clone(),
+        LfsMethod::DownloadSha256,
+    )?;
+
+    fetch_by_key(ctx, key).await
 }
