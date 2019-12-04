@@ -23,15 +23,13 @@ callsign = E
 """
 
 import json
-import os
 import re
-import signal
 import threading
 
 from edenscm.mercurial import error, hg, namespaces, pycompat, registrar, util
 from edenscm.mercurial.i18n import _
 
-from .extlib.phabricator import arcconfig, diffprops, graphql
+from .extlib.phabricator import graphql
 
 
 configtable = {}
@@ -257,21 +255,19 @@ def revsetdiff(repo, diffid):
         # find their counterpart by parsing the log
         results = set()
         for rev in revs:
-            # TODO: This really should be searching in repo.unfiltered(),
-            # and then resolving successors if the commit was hidden.
             try:
-                node = repo[rev.encode("utf-8")]
-                results.add(node.rev())
+                unfiltered = repo.unfiltered()
+                node = unfiltered[rev.encode("utf-8")]
             except error.RepoLookupError:
-                repo.ui.warn(_("Commit not found - doing a linear search\n"))
-                parsed_rev = finddiff(repo, diffid)
-
-                if not parsed_rev:
-                    raise error.Abort(
-                        "Could not find diff " "D%s in changelog" % diffid
-                    )
-
-                results.add(parsed_rev)
+                raise error.Abort(
+                    "Commit %s corresponding to D%s\n not found in the repo"
+                    % (rev, diffid)
+                )
+            successors = list(repo.revs("last(successors(%n))", node.node()))
+            if len(successors) != 1:
+                results.add(node.rev())
+            else:
+                results.add(successors[0])
 
         if not results:
             raise error.Abort("Could not find local commit for D%s" % diffid)
@@ -282,7 +278,7 @@ def revsetdiff(repo, diffid):
         if not vcs:
             msg = (
                 "D%s does not have an associated version control system\n"
-                "You can view the diff at http://phabricator.fb.com/D%s\n\n"
+                "You can view the diff at https:///our.internmc.facebook.com/intern/diff/D%s\n"
             )
             repo.ui.warn(msg % (diffid, diffid))
 
