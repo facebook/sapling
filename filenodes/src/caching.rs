@@ -110,14 +110,14 @@ impl Filenodes for CachingFilenodes {
         let cache_key = format!("{}.{}.{}", repo_id.prefix(), filenode_id, path).to_string();
         cloned!(self.filenodes, self.memcache, self.keygen);
 
-        let path_hash = PathHash({
-            let path = match path.mpath() {
-                Some(path) => path.to_vec(),
-                None => Vec::new(),
-            };
-            blake2_path_hash(&path).to_string()
-        });
         get_cached_or_fill(&self.cache_pool, cache_key, || {
+            let path_hash = PathHash({
+                let path = match path.mpath() {
+                    Some(path) => path.to_vec(),
+                    None => Vec::new(),
+                };
+                blake2_path_hash(&path).to_string()
+            });
             get_single_filenode_from_memcache(
                 self.memcache.clone(),
                 self.keygen.clone(),
