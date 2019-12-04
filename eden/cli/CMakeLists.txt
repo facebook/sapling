@@ -15,3 +15,4 @@ add_fb_python_executable(
     FBThrift::thrift_py_inspect
     python-toml::python-toml
 )
+install_fb_python_executable(edenfsctl)
