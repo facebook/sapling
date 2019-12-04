@@ -37,9 +37,9 @@ use mercurial_types::manifest_utils::{
     Pruner,
 };
 use mercurial_types::{
-    blobs::HgBlobChangeset, convert_parents_to_remotefilelog_format, percent_encode, Delta,
-    HgBlobNode, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type,
-    NULL_CSID, NULL_HASH,
+    blobs::HgBlobChangeset, calculate_hg_node_id, convert_parents_to_remotefilelog_format,
+    percent_encode, Delta, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
@@ -1797,7 +1797,7 @@ fn get_changed_manifests_stream(
     changed_entries.chain(root_entry_stream).boxify()
 }
 
-fn fetch_treepack_part_input(
+pub fn fetch_treepack_part_input(
     ctx: CoreContext,
     repo: &BlobRepo,
     entry: Box<dyn HgEntry + Sync>,
@@ -1816,71 +1816,93 @@ fn fetch_treepack_part_input(
         None => RepoPath::RootPath,
     };
 
-    let node = entry.get_hash().clone();
-    let path = repo_path.clone();
-
-    let parents = entry.get_parents(ctx.clone());
-
-    let linknode_fut = repo.get_linknode_opt(
-        ctx.clone(),
-        &repo_path,
-        HgFileNodeId::new(entry.get_hash().into_nodehash()),
-    );
+    let node = entry.get_hash();
 
     let content_fut = entry
         .get_raw_content(ctx.clone())
         .map(|blob| blob.into_inner());
 
-    let validate_content = if validate_content {
-        entry
-            .get_raw_content(ctx.clone())
-            .join(entry.get_parents(ctx.clone()))
-            .and_then(move |(content, parents)| {
-                let (p1, p2) = parents.get_nodes();
-                let actual = node.into_nodehash();
-                // Do not do verification for a root node because it might be broken
-                // because of migration to tree manifest.
-                let expected = HgBlobNode::new(content, p1, p2).nodeid();
-                if path.is_root() || actual == expected {
-                    Ok(())
-                } else {
-                    let error_msg = format!(
-                        "gettreepack: {} expected: {} actual: {}",
-                        path, expected, actual
-                    );
-                    ctx.scuba()
-                        .clone()
-                        .log_with_msg("Data corruption", Some(error_msg));
-                    Err(ErrorKind::DataCorruption {
-                        path,
-                        expected,
-                        actual,
-                    }
-                    .into())
+    let filenode_fut = repo
+        .get_filenode_opt(
+            ctx.clone(),
+            &repo_path,
+            HgFileNodeId::new(entry.get_hash().into_nodehash()),
+        )
+        .and_then({
+            cloned!(ctx);
+            move |maybe_filenode| match maybe_filenode {
+                Some(filenode) => {
+                    let p1 = filenode.p1.map(|p| p.into_nodehash());
+                    let p2 = filenode.p2.map(|p| p.into_nodehash());
+                    let parents = HgParents::new(p1, p2);
+                    let linknode = filenode.linknode;
+                    future::ok((parents, linknode)).left_future()
                 }
-            })
-            .left_future()
-    } else {
-        future::ok(()).right_future()
-    };
+                // Filenodes might not be present. For example we don't have filenodes for
+                // infinitepush commits. In that case fetch parents from the blobstore using
+                // `get_parents()` function. This is slower though.
+                None => entry
+                    .get_parents(ctx.clone())
+                    .map(|parents| (parents, NULL_CSID))
+                    .right_future(),
+            }
+        });
 
-    parents
-        .join(linknode_fut)
-        .join(content_fut)
-        .join(validate_content)
-        .map(|(val, ())| val)
-        .map(move |((parents, linknode_opt), content)| {
+    content_fut
+        .join(filenode_fut)
+        .and_then(move |(content, (parents, linknode))| {
+            if validate_content {
+                validate_manifest_content(
+                    ctx,
+                    node.into_nodehash(),
+                    &content,
+                    &repo_path,
+                    &parents,
+                )?;
+            }
+
+            let fullpath = repo_path.into_mpath();
             let (p1, p2) = parents.get_nodes();
-            parts::TreepackPartInput {
+            Ok(parts::TreepackPartInput {
                 node: node.into_nodehash(),
                 p1,
                 p2,
                 content,
-                fullpath: MPath::join_element_opt(basepath.as_ref(), entry.get_name()),
-                linknode: linknode_opt.unwrap_or(NULL_CSID).into_nodehash(),
-            }
+                fullpath,
+                linknode: linknode.into_nodehash(),
+            })
         })
         .boxify()
+}
+
+fn validate_manifest_content(
+    ctx: CoreContext,
+    actual: HgNodeHash,
+    content: &[u8],
+    path: &RepoPath,
+    parents: &HgParents,
+) -> Result<(), Error> {
+    let expected = calculate_hg_node_id(&content, &parents);
+
+    // Do not do verification for a root node because it might be broken
+    // because of migration to tree manifest.
+    if path.is_root() || actual == expected {
+        Ok(())
+    } else {
+        let error_msg = format!(
+            "gettreepack: {} expected: {} actual: {}",
+            path, expected, actual
+        );
+        ctx.scuba()
+            .clone()
+            .log_with_msg("Data corruption", Some(error_msg));
+        Err(ErrorKind::DataCorruption {
+            path: path.clone(),
+            expected,
+            actual,
+        }
+        .into())
+    }
 }
 
 /// getbundle capabilities have tricky format.
