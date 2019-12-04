@@ -46,6 +46,8 @@ class _lazyloaderex(importlib.util.LazyLoader):
     the ignore list.
     """
 
+    # pyre-fixme[15]: `exec_module` overrides method defined in `LazyLoader`
+    #  inconsistently.
     def exec_module(self, module):
         """Make the module load lazily."""
         if _deactivated or module.__name__ in ignore:
@@ -56,8 +58,11 @@ class _lazyloaderex(importlib.util.LazyLoader):
 
 # This is 3.6+ because with Python 3.5 it isn't possible to lazily load
 # extensions. See the discussion in https://python.org/sf/26186 for more.
+# pyre-fixme[6]: Expected `Loader` for 1st param but got `Type[ExtensionFileLoader]`.
 _extensions_loader = _lazyloaderex.factory(importlib.machinery.ExtensionFileLoader)
+# pyre-fixme[6]: Expected `Loader` for 1st param but got `Type[SourcelessFileLoader]`.
 _bytecode_loader = _lazyloaderex.factory(importlib.machinery.SourcelessFileLoader)
+# pyre-fixme[6]: Expected `Loader` for 1st param but got `Type[SourceFileLoader]`.
 _source_loader = _lazyloaderex.factory(importlib.machinery.SourceFileLoader)
 
 

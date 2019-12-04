@@ -110,6 +110,7 @@ from __future__ import absolute_import
 import errno
 import struct
 
+# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility

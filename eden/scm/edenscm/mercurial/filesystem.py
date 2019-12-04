@@ -12,6 +12,7 @@ import errno
 import os
 import stat
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import workingcopy
 from edenscm.mercurial import registrar
 

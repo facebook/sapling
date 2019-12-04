@@ -16,7 +16,9 @@ from ..pure.mpatch import *  # noqa: F401, F403
 from . import _mpatch
 
 
+# pyre-fixme[16]: Module `cffi` has no attribute `_mpatch`.
 ffi = _mpatch.ffi
+# pyre-fixme[16]: Module `cffi` has no attribute `_mpatch`.
 lib = _mpatch.lib
 
 

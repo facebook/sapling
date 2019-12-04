@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import errno
 
+# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 from edenscm.mercurial import error, node, util
 from edenscm.mercurial.i18n import _

@@ -16,6 +16,7 @@ from . import encoding, pycompat, util, win32
 
 
 try:
+    # pyre-fixme[21]: Could not find `_winreg`.
     import _winreg as winreg
 
     winreg.CloseKey

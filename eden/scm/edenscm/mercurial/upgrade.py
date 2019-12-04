@@ -227,10 +227,16 @@ class requirementformatvariant(formatvariant):
 
 @registerformatvariant
 class fncache(requirementformatvariant):
+    # pyre-fixme[15]: `name` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     name = "fncache"
 
+    # pyre-fixme[15]: `_requirement` overrides attribute defined in
+    #  `requirementformatvariant` inconsistently.
     _requirement = "fncache"
 
+    # pyre-fixme[15]: `default` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     default = True
 
     description = _(
@@ -247,10 +253,16 @@ class fncache(requirementformatvariant):
 
 @registerformatvariant
 class dotencode(requirementformatvariant):
+    # pyre-fixme[15]: `name` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     name = "dotencode"
 
+    # pyre-fixme[15]: `_requirement` overrides attribute defined in
+    #  `requirementformatvariant` inconsistently.
     _requirement = "dotencode"
 
+    # pyre-fixme[15]: `default` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     default = True
 
     description = _(
@@ -266,10 +278,16 @@ class dotencode(requirementformatvariant):
 
 @registerformatvariant
 class generaldelta(requirementformatvariant):
+    # pyre-fixme[15]: `name` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     name = "generaldelta"
 
+    # pyre-fixme[15]: `_requirement` overrides attribute defined in
+    #  `requirementformatvariant` inconsistently.
     _requirement = "generaldelta"
 
+    # pyre-fixme[15]: `default` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     default = True
 
     description = _(
@@ -293,8 +311,12 @@ class generaldelta(requirementformatvariant):
 
 @registerformatvariant
 class removecldeltachain(formatvariant):
+    # pyre-fixme[15]: `name` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     name = "plain-cl-delta"
 
+    # pyre-fixme[15]: `default` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     default = True
 
     description = _(
@@ -325,7 +347,11 @@ class removecldeltachain(formatvariant):
 
 @registerformatvariant
 class compressionengine(formatvariant):
+    # pyre-fixme[15]: `name` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     name = "compression"
+    # pyre-fixme[15]: `default` overrides attribute defined in `formatvariant`
+    #  inconsistently.
     default = "zlib"
 
     description = _(

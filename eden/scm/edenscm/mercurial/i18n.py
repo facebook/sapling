@@ -27,6 +27,7 @@ else:
     module = pycompat.fsencode(__file__)
 
 try:
+    # pyre-fixme[18]: Global name `unicode` is undefined.
     unicode
 except NameError:
     unicode = str
@@ -34,6 +35,7 @@ except NameError:
 _languages = None
 if (
     pycompat.iswindows
+    # pyre-fixme[16]: Optional type has no attribute `__getitem__`.
     and "LANGUAGE" not in encoding.environ
     and "LC_ALL" not in encoding.environ
     and "LC_MESSAGES" not in encoding.environ
@@ -46,6 +48,7 @@ if (
     try:
         import ctypes
 
+        # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
         langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
         _languages = [locale.windows_locale[langid]]
     except (ImportError, AttributeError, KeyError):

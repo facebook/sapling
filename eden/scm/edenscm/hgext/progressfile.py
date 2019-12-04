@@ -103,6 +103,7 @@ def uisetup(ui):
         global _pid
         _pid = ui.configint("progress", "fakedpid") or util.getpid()
 
+        # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
         class fileengine(progress._engine.__class__):
             def _show(self, now):
                 super(fileengine, self)._show(now)

@@ -1,17 +1,29 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# pyre-fixme[21]: Could not find `util`.
 import util
 from edenscm.mercurial import localrepo, util as hgutil
 from edenscm.mercurial.node import bin
+
+# pyre-fixme[21]: Could not find `git_handler`.
 from git_handler import GitHandler
+
+# pyre-fixme[21]: Could not find `gitrepo`.
 from gitrepo import gitrepo
 
 
 try:
+    # pyre-fixme[18]: Global name `unicode` is undefined.
     unicode
 except NameError:
     unicode = str
 
 
 def generate_repo_subclass(baseclass):
+    # pyre-fixme[11]: Annotation `baseclass` is not defined as a type.
     class hgrepo(baseclass):
         if hgutil.safehasattr(localrepo.localrepository, "pull"):
             # Mercurial < 3.2

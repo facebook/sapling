@@ -15,6 +15,7 @@ from . import context
 
 
 try:
+    # pyre-fixme[18]: Global name `buffer` is undefined.
     buffer
 except NameError:
     buffer = memoryview
@@ -127,6 +128,7 @@ def _parseresponse(payload):
 
 
 def peersetup(ui, peer):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class fastannotatepeer(peer.__class__):
         @wireproto.batchable
         def getannotate(self, path, lastnode=None):
@@ -240,6 +242,7 @@ def _filterfetchpaths(repo, paths):
 
 
 def localreposetup(ui, repo):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class fastannotaterepo(repo.__class__):
         def prefetchfastannotate(self, paths, peer=None):
             master = _getmaster(self.ui)

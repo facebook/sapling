@@ -17,8 +17,11 @@ import code
 import os
 import sys
 
+# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 import edenscm
+
+# pyre-fixme[21]: Could not find `edenscmnative`.
 import edenscmnative
 from edenscm import hgext, mercurial
 from edenscm.mercurial import registrar

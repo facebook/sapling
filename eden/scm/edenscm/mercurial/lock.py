@@ -182,6 +182,7 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
     return l
 
 
+# pyre-fixme[30]: Terminating analysis - type `lock` not defined.
 class lock(object):
     """An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts

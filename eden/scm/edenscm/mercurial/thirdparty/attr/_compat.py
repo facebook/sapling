@@ -7,6 +7,7 @@ import types
 PY2 = sys.version_info[0] == 2
 
 if PY2:
+    # pyre-fixme[21]: Could not find `UserDict`.
     from UserDict import IterableUserDict
 
     # We 'bundle' isclass instead of using inspect as importing inspect is

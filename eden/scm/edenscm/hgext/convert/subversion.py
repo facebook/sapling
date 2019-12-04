@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import os
 import re
 import tempfile
+
+# pyre-fixme[21]: Could not find `dom`.
 import xml.dom.minidom
 
 from edenscm.mercurial import encoding, error, progress, pycompat, util, vfs as vfsmod
@@ -41,6 +43,7 @@ NoRepo = common.NoRepo
 # these bindings.
 
 try:
+    # pyre-fixme[21]: Could not find `svn`.
     import svn
     import svn.client
     import svn.core

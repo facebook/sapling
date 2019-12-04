@@ -360,7 +360,9 @@ class localrepository(object):
 
     # sets of (ui, featureset) functions for repo and store features.
     # only functions defined in module of enabled extensions are invoked
+    # pyre-fixme[20]: Argument `expr` expected.
     featuresetupfuncs = set()
+    # pyre-fixme[20]: Argument `expr` expected.
     storefeaturesetupfuncs = set()
 
     # list of prefix for file which can be written without 'wlock'
@@ -389,6 +391,7 @@ class localrepository(object):
 
     # Set of prefixes of store files which can be written without 'lock'.
     # Extensions should extend this set when necessary.
+    # pyre-fixme[20]: Argument `expr` expected.
     _lockfreeprefix = set()
 
     def __init__(self, baseui, path, create=False):

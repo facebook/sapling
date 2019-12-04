@@ -360,6 +360,7 @@ elif pycompat.isdarwin:
     import ctypes.util
 
     F_GETPATH = 50
+    # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
     libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
     getpathfcntl = libc.fcntl
     getpathfcntl.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_char_p]

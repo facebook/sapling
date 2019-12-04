@@ -22,7 +22,9 @@ from ..pure.osutil import *  # noqa: F401, F403
 if pycompat.isdarwin:
     from . import _osutil
 
+    # pyre-fixme[16]: Module `cffi` has no attribute `_osutil`.
     ffi = _osutil.ffi
+    # pyre-fixme[16]: Module `cffi` has no attribute `_osutil`.
     lib = _osutil.lib
 
     listdir_batch_size = 4096

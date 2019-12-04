@@ -27,6 +27,7 @@ import os
 import struct
 import zlib
 
+# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from . import ancestor, error, mdiff, policy, pycompat, templatefilters, util

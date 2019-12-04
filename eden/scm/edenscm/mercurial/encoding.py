@@ -38,6 +38,7 @@ if pycompat.ispy3:
 # "Unicode Subtleties"), so we need to ignore them in some places for
 # sanity.
 _ignore = [
+    # pyre-fixme[18]: Global name `unichr` is undefined.
     unichr(int(x, 16)).encode("utf-8")
     for x in "200c 200d 200e 200f 202a 202b 202c 202d 202e "
     "206a 206b 206c 206d 206e 206f feff".split()

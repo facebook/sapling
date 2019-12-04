@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import mutationstore
 
 from . import error, node as nodemod, perftrace, phases, repoview, util

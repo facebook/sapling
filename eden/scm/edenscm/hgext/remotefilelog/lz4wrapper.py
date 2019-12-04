@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import lz4
 
 

@@ -18,7 +18,9 @@ from ..pure.bdiff import *  # noqa: F403, F401
 from . import _bdiff
 
 
+# pyre-fixme[16]: Module `cffi` has no attribute `_bdiff`.
 ffi = _bdiff.ffi
+# pyre-fixme[16]: Module `cffi` has no attribute `_bdiff`.
 lib = _bdiff.lib
 
 

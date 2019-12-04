@@ -166,6 +166,8 @@ LOGFMT = "%(levelname)s:%(name)s:%(lineno)d:%(message)s"
 # Subclass BOTH of these because otherwise urllib2 "helpfully"
 # reinserts them since it notices we don't include any subclasses of
 # them.
+# pyre-fixme[11]: Annotation `httphandler` is not defined as a type.
+# pyre-fixme[11]: Annotation `httpshandler` is not defined as a type.
 class http2handler(urlreq.httphandler, urlreq.httpshandler):
     def __init__(self, ui, pwmgr):
         global _configuredlogging

@@ -27,6 +27,7 @@ demandimport.ignore.extend(["bzrlib.transactions", "bzrlib.urlutils", "ElementPa
 
 try:
     # bazaar imports
+    # pyre-fixme[21]: Could not find `bzrlib`.
     import bzrlib.bzrdir
     import bzrlib.errors
     import bzrlib.revision

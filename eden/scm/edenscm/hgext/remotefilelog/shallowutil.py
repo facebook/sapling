@@ -210,6 +210,7 @@ def _buildpackmeta(metadict):
 
 
 _metaitemtypes = {
+    # pyre-fixme[18]: Global name `long` is undefined.
     constants.METAKEYFLAG: (int, long),  # noqa
     constants.METAKEYSIZE: (int, long),  # noqa
 }

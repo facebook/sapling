@@ -28,6 +28,8 @@ import re
 import shutil
 import sys
 import typing
+
+# pyre-fixme[21]: Could not find `UserDict`.
 import UserDict
 
 from edenscm.mercurial import (
@@ -585,6 +587,7 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 
 
+# pyre-fixme[11]: Annotation `DictMixin` is not defined as a type.
 class lazyremotenamedict(UserDict.DictMixin):
     """Read-only dict-like Class to lazily resolve remotename entries
 

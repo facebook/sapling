@@ -17,6 +17,7 @@ import hashlib
 import os
 import stat
 
+# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from . import error, policy, pycompat, util, vfs as vfsmod

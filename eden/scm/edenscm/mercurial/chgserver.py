@@ -53,6 +53,7 @@ import socket
 import struct
 import time
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import commands
 
 from . import commandserver, encoding, error, extensions, pycompat, ui as uimod, util
@@ -63,6 +64,7 @@ _log = commandserver.log
 
 
 def _newchgui(srcui, csystem, attachio):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class chgui(srcui.__class__):
         def __init__(self, src=None):
             super(chgui, self).__init__(src)
@@ -328,6 +330,7 @@ class chgcmdserver(commandserver.server):
             _log("setprocname: %r\n" % name)
             util.setprocname(name)
 
+        # pyre-fixme[16]: `chgcmdserver` has no attribute `setprocname`.
         capabilities["setprocname"] = setprocname
 
 

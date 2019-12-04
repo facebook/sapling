@@ -115,6 +115,7 @@ class branchcache(dict):
         for bn, heads in self.iteritems():
             yield (bn, heads) + self._branchtip(heads)
 
+    # pyre-fixme[15]: `copy` overrides method defined in `dict` inconsistently.
     def copy(self):
         """return an deep copy of the branchcache object"""
         return branchcache(

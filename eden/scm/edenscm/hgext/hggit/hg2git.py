@@ -5,8 +5,11 @@
 import os
 import stat
 
+# pyre-fixme[21]: Could not find `compat`.
 import compat
 import dulwich.objects as dulobjs
+
+# pyre-fixme[21]: Could not find `util`.
 import util
 from edenscm.mercurial import util as hgutil
 from edenscm.mercurial.i18n import _

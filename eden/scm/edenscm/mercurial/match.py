@@ -16,6 +16,7 @@ import copy
 import os
 import re
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import pathmatcher
 
 from . import error, pathutil, util

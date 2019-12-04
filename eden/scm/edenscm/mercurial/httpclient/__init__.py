@@ -59,6 +59,7 @@ from . import _readers
 
 
 try:
+    # pyre-fixme[21]: Could not find `httplib`.
     import httplib
 
     httplib.HTTPException

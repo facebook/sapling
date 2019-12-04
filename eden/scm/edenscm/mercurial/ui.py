@@ -27,6 +27,7 @@ import tempfile
 import time
 import traceback
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import configparser
 
 from . import (

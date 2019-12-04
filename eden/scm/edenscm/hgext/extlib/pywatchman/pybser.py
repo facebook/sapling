@@ -62,6 +62,7 @@ if compat.PYTHON3:
 
     long = int
 else:
+    # pyre-fixme[18]: Global name `unicode` is undefined.
     STRING_TYPES = (unicode, str)
     tobytes = bytes
 

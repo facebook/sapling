@@ -11,6 +11,7 @@ import time
 import traceback
 from contextlib import contextmanager
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import revisionstore
 from edenscm.mercurial import encoding, error, progress, util, vfs
 from edenscm.mercurial.i18n import _

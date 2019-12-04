@@ -59,7 +59,7 @@ _simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
 # default set of valid characters for the initial letter of symbols
 _syminitletters = set(
     pycompat.iterbytestr(
-        string.ascii_letters.encode("ascii") + string.digits.encode("ascii") + "._@"
+        string.ascii_letters.encode("ascii") + string.digits.encode("ascii") + b"._@"
     )
 ) | set(map(pycompat.bytechr, range(128, 256)))
 

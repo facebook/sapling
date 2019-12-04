@@ -28,6 +28,8 @@ import signal
 import socket
 import sys
 import tempfile
+
+# pyre-fixme[21]: Could not find `reduction`.
 from multiprocessing.reduction import recv_handle, send_handle
 
 

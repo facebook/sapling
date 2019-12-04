@@ -20,6 +20,7 @@ import stat
 import sys
 import tempfile
 
+# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import osutil
 
 from . import encoding, error, policy, pycompat, win32
@@ -27,6 +28,7 @@ from .i18n import _
 
 
 try:
+    # pyre-fixme[21]: Could not find `_winreg`.
     import _winreg as winreg
 
     winreg.CloseKey

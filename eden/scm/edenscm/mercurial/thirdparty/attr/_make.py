@@ -934,6 +934,7 @@ _a = [
 ]
 
 Attribute = _add_hash(
+    # pyre-fixme[16]: `Attribute` has no attribute `hash`.
     _add_cmp(_add_repr(Attribute, attrs=_a), attrs=_a), attrs=[a for a in _a if a.hash]
 )
 

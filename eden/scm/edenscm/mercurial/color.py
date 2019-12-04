@@ -463,6 +463,7 @@ w32effects = None
 if pycompat.iswindows:
     import ctypes
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     _kernel32 = ctypes.windll.kernel32
 
     _WORD = ctypes.c_ushort

@@ -24,6 +24,8 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import range
+
+# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import linelog as linelogmod
 
 from . import error as faerror, revmap as revmapmod

@@ -36,6 +36,8 @@ if sys.version_info[0] >= 3:
     class hgpathentryfinder(importlib.abc.MetaPathFinder):
         """A sys.meta_path finder that uses a custom module loader."""
 
+        # pyre-fixme[15]: `find_spec` overrides method defined in `MetaPathFinder`
+        #  inconsistently.
         def find_spec(self, fullname, path, target=None):
             # Only handle Mercurial-related modules.
             if not fullname.startswith(("mercurial.", "hgext.")):
@@ -236,6 +238,8 @@ if sys.version_info[0] >= 3:
     # the new transformation mechanisms applied.
     BYTECODEHEADER = b"HG\x00\x0a"
 
+    # pyre-fixme[13]: Attribute `name` is never initialized.
+    # pyre-fixme[13]: Attribute `path` is never initialized.
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
 
@@ -266,6 +270,8 @@ if sys.version_info[0] >= 3:
         ``HG`` with 2 binary bytes indicating the transformation version.
         """
 
+        # pyre-fixme[15]: `get_data` overrides method defined in `FileLoader`
+        #  inconsistently.
         def get_data(self, path):
             data = super(hgloader, self).get_data(path)
 
@@ -284,12 +290,16 @@ if sys.version_info[0] >= 3:
 
             return data[4:]
 
+        # pyre-fixme[15]: `set_data` overrides method defined in `SourceLoader`
+        #  inconsistently.
         def set_data(self, path, data, *args, **kwargs):
             if path.endswith(tuple(importlib.machinery.BYTECODE_SUFFIXES)):
                 data = BYTECODEHEADER + data
 
             return super(hgloader, self).set_data(path, data, *args, **kwargs)
 
+        # pyre-fixme[15]: `source_to_code` overrides method defined in
+        #  `InspectLoader` inconsistently.
         def source_to_code(self, data, path):
             """Perform token transformation before compilation."""
             buf = io.BytesIO(data)

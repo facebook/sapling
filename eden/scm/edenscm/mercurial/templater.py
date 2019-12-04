@@ -1472,6 +1472,7 @@ exprmethods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
     "template": buildtemplate,
+    # pyre-fixme[18]: Global name `exprmethods` is undefined.
     "group": lambda e, c: compileexp(e[1], c, exprmethods),
     ".": buildmember,
     "|": buildfilter,
@@ -1494,6 +1495,8 @@ class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of template aliases"""
 
     _section = _("template alias")
+    # pyre-fixme[15]: `_parse` overrides attribute defined in `basealiasrules`
+    #  inconsistently.
     _parse = staticmethod(_parseexpr)
 
     @staticmethod

@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, print_function
 
+# pyre-fixme[21]: Could not find `_lsprof`.
 import _lsprof
 import sys
 
@@ -154,6 +155,7 @@ if __name__ == "__main__":
         print("usage: lsprof.py <script> <arguments...>", file=sys.stderr)
         sys.exit(2)
     sys.path.insert(0, os.path.abspath(os.path.dirname(sys.argv[0])))
+    # pyre-fixme[18]: Global name `execfile` is undefined.
     stats = profile(execfile, sys.argv[0], globals(), locals())  # noqa
     stats.sort()
     stats.pprint()

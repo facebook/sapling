@@ -21,6 +21,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import
 
+# pyre-fixme[21]: Could not find `svn`.
 import svn.client
 import svn.core
 import svn.ra
@@ -41,6 +42,7 @@ svn_config = None
 
 def _create_auth_baton(pool):
     """Create a Subversion authentication baton. """
+    # pyre-fixme[21]: Could not find `svn`.
     import svn.client
 
     # Give the client context baton a suite of authentication
@@ -68,6 +70,7 @@ def _create_auth_baton(pool):
     return svn.core.svn_auth_open(providers, pool)
 
 
+# pyre-fixme[11]: Annotation `SubversionException` is not defined as a type.
 class NotBranchError(SubversionException):
     pass
 

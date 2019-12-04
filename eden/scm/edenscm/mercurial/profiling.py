@@ -74,6 +74,7 @@ def lsprofile(ui, fp, section):
 @contextlib.contextmanager
 def flameprofile(ui, fp, section):
     try:
+        # pyre-fixme[21]: Could not find `flamegraph`.
         from flamegraph import flamegraph
     except ImportError:
         raise error.Abort(

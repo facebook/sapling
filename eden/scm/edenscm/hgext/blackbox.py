@@ -113,6 +113,7 @@ def _openlogfile(ui, vfs):
 
 
 def wrapui(ui):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class blackboxui(ui.__class__):
         @property
         def _bbvfs(self):

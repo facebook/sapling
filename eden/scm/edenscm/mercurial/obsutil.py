@@ -356,6 +356,7 @@ class _succs(list):
         super(_succs, self).__init__(*args, **kwargs)
         self.markers = set()
 
+    # pyre-fixme[15]: `copy` overrides method defined in `list` inconsistently.
     def copy(self):
         new = _succs(self)
         new.markers = self.markers.copy()

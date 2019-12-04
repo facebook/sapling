@@ -351,10 +351,12 @@ class KeepAliveHandler(object):
             h.send(data)
 
 
+# pyre-fixme[11]: Annotation `httphandler` is not defined as a type.
 class HTTPHandler(KeepAliveHandler, urlreq.httphandler):
     pass
 
 
+# pyre-fixme[11]: Annotation `HTTPResponse` is not defined as a type.
 class HTTPResponse(httplib.HTTPResponse):
     # we need to subclass HTTPResponse in order to
     # 1) add readline() and readlines() methods
@@ -628,6 +630,7 @@ def wrapgetresponse(cls):
     return safegetresponse
 
 
+# pyre-fixme[11]: Annotation `HTTPConnection` is not defined as a type.
 class HTTPConnection(httplib.HTTPConnection):
     # use the modified response class
     response_class = HTTPResponse

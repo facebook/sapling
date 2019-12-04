@@ -51,6 +51,7 @@ class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
 
 
+# pyre-fixme[11]: Annotation `basehandler` is not defined as a type.
 class HTTPRangeHandler(urlreq.basehandler):
     """Handler that enables HTTP Range headers.
 
@@ -216,6 +217,7 @@ class RangeableFileObject(object):
             pos += bufsize
 
 
+# pyre-fixme[11]: Annotation `filehandler` is not defined as a type.
 class FileRangeHandler(urlreq.filehandler):
     """FileHandler subclass that adds Range support.
     This class handles Range headers exactly like an HTTP
@@ -261,6 +263,7 @@ class FileRangeHandler(urlreq.filehandler):
 # -- range support modifications start/end here
 
 
+# pyre-fixme[11]: Annotation `ftphandler` is not defined as a type.
 class FTPRangeHandler(urlreq.ftphandler):
     def ftp_open(self, req):
         host = urllibcompat.gethost(req)
@@ -351,6 +354,7 @@ class FTPRangeHandler(urlreq.ftphandler):
         return fw
 
 
+# pyre-fixme[11]: Annotation `ftpwrapper` is not defined as a type.
 class ftpwrapper(urlreq.ftpwrapper):
     # range support note:
     # this ftpwrapper code is copied directly from

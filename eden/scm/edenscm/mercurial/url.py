@@ -106,6 +106,7 @@ class passwordmgr(object):
         return self.passwddb.find_user_password(None, authuri)
 
 
+# pyre-fixme[11]: Annotation `proxyhandler` is not defined as a type.
 class proxyhandler(urlreq.proxyhandler):
     def __init__(self, ui):
         proxyurl = ui.config("http_proxy", "host") or encoding.environ.get("http_proxy")
@@ -393,6 +394,7 @@ if has_https:
             return conn
 
 
+# pyre-fixme[11]: Annotation `httpdigestauthhandler` is not defined as a type.
 class httpdigestauthhandler(urlreq.httpdigestauthhandler):
     def __init__(self, *args, **kwargs):
         urlreq.httpdigestauthhandler.__init__(self, *args, **kwargs)
@@ -414,6 +416,7 @@ class httpdigestauthhandler(urlreq.httpdigestauthhandler):
         )
 
 
+# pyre-fixme[11]: Annotation `httpbasicauthhandler` is not defined as a type.
 class httpbasicauthhandler(urlreq.httpbasicauthhandler):
     def __init__(self, *args, **kwargs):
         self.auth = None
@@ -461,6 +464,7 @@ class httpbasicauthhandler(urlreq.httpbasicauthhandler):
             return None
 
 
+# pyre-fixme[11]: Annotation `basehandler` is not defined as a type.
 class cookiehandler(urlreq.basehandler):
     def __init__(self, ui):
         self.cookiejar = None

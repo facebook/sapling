@@ -63,6 +63,7 @@ try:
 except ImportError:
     # I have no idea if wcurses works with crecord...
     try:
+        # pyre-fixme[21]: Could not find `wcurses`.
         import wcurses as curses
 
         curses.error

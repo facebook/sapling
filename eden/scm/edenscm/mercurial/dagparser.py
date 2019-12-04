@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import re
 import string
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import vlq
 
 from . import error, pycompat, util

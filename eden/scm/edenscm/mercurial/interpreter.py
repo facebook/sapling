@@ -24,6 +24,7 @@ if __name__ == "__main__":
     argv = sys.argv
     # PYTHONPATH is not always respected by a "python binary" wrapper.
     # Also respect HGPYTHONPATH.
+    # pyre-fixme[16]: Optional type has no attribute `get`.
     sys.path.extend(encoding.environ.get("PYTHONPATH", "").split(pycompat.ospathsep))
     sys.path[0:0] = encoding.environ.get("HGPYTHONPATH", "").split(pycompat.ospathsep)
 

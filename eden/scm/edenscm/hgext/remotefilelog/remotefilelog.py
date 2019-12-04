@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import collections
 import os
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import revisionstore
 from edenscm.mercurial import ancestor, error, filelog, mdiff, revlog, util
 from edenscm.mercurial.i18n import _

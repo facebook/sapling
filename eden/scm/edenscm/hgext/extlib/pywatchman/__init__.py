@@ -36,6 +36,7 @@ import socket
 import subprocess
 import time
 
+# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import bser
 
 from . import capabilities, compat, encoding, load  # noqa: F401
@@ -85,6 +86,7 @@ if os.name == "nt":
 
     LPDWORD = ctypes.POINTER(wintypes.DWORD)
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     CreateFile = ctypes.windll.kernel32.CreateFileA
     CreateFile.argtypes = [
         wintypes.LPSTR,
@@ -97,10 +99,12 @@ if os.name == "nt":
     ]
     CreateFile.restype = wintypes.HANDLE
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     CloseHandle = ctypes.windll.kernel32.CloseHandle
     CloseHandle.argtypes = [wintypes.HANDLE]
     CloseHandle.restype = wintypes.BOOL
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     ReadFile = ctypes.windll.kernel32.ReadFile
     ReadFile.argtypes = [
         wintypes.HANDLE,
@@ -111,6 +115,7 @@ if os.name == "nt":
     ]
     ReadFile.restype = wintypes.BOOL
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     WriteFile = ctypes.windll.kernel32.WriteFile
     WriteFile.argtypes = [
         wintypes.HANDLE,
@@ -121,14 +126,17 @@ if os.name == "nt":
     ]
     WriteFile.restype = wintypes.BOOL
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     GetLastError = ctypes.windll.kernel32.GetLastError
     GetLastError.argtypes = []
     GetLastError.restype = wintypes.DWORD
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     SetLastError = ctypes.windll.kernel32.SetLastError
     SetLastError.argtypes = [wintypes.DWORD]
     SetLastError.restype = None
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     FormatMessage = ctypes.windll.kernel32.FormatMessageA
     FormatMessage.argtypes = [
         wintypes.DWORD,
@@ -141,8 +149,10 @@ if os.name == "nt":
     ]
     FormatMessage.restype = wintypes.DWORD
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     LocalFree = ctypes.windll.kernel32.LocalFree
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     GetOverlappedResult = ctypes.windll.kernel32.GetOverlappedResult
     GetOverlappedResult.argtypes = [
         wintypes.HANDLE,
@@ -153,7 +163,10 @@ if os.name == "nt":
     GetOverlappedResult.restype = wintypes.BOOL
 
     GetOverlappedResultEx = getattr(
-        ctypes.windll.kernel32, "GetOverlappedResultEx", None
+        # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
+        ctypes.windll.kernel32,
+        "GetOverlappedResultEx",
+        None,
     )
     if GetOverlappedResultEx is not None:
         GetOverlappedResultEx.argtypes = [
@@ -165,10 +178,12 @@ if os.name == "nt":
         ]
         GetOverlappedResultEx.restype = wintypes.BOOL
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     WaitForSingleObjectEx = ctypes.windll.kernel32.WaitForSingleObjectEx
     WaitForSingleObjectEx.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.BOOL]
     WaitForSingleObjectEx.restype = wintypes.DWORD
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     CreateEvent = ctypes.windll.kernel32.CreateEventA
     # Skip setting argtypes to avoid conflicts with prompt_toolkit used by
     # IPython. Otherwise it can error out like:
@@ -187,6 +202,7 @@ if os.name == "nt":
     CreateEvent.restype = wintypes.HANDLE
 
     # Windows Vista is the minimum supported client for CancelIoEx.
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     CancelIoEx = ctypes.windll.kernel32.CancelIoEx
     CancelIoEx.argtypes = [wintypes.HANDLE, ctypes.POINTER(OVERLAPPED)]
     CancelIoEx.restype = wintypes.BOOL

@@ -29,6 +29,7 @@ this extension.
 
 from __future__ import absolute_import
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import lz4
 from edenscm.mercurial import error, extensions, localrepo, revlog, util
 from edenscm.mercurial.i18n import _

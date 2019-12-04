@@ -165,6 +165,7 @@ import shutil
 import struct
 import time
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import manifest as rustmanifest, revisionstore
 from edenscm.mercurial import (
     bundle2,
@@ -199,6 +200,8 @@ from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscm.mercurial.pycompat import range
+
+# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import cstore
 
 from ..extutil import flock
@@ -469,6 +472,7 @@ def clientreposetup(repo):
 
 
 def wraprepo(repo):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class treerepository(repo.__class__):
         def transaction(self, *args, **kwargs):
             tr = super(treerepository, self).transaction(*args, **kwargs)
@@ -1325,6 +1329,7 @@ def getbundlemanifestlog(orig, self):
 
             return dpack, hpack
 
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class bundlemanifestlog(wrapmfl.__class__):
         def add(
             self,

@@ -243,6 +243,8 @@ class namespacepredicate(_funcregistrarbase):
     See namespaces.py for priorities of builtin namespaces.
     """
 
+    # pyre-fixme[15]: `_docformat` overrides attribute defined in
+    #  `_funcregistrarbase` inconsistently.
     _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, priority):
@@ -294,6 +296,8 @@ class revsetpredicate(_funcregistrarbase):
     """
 
     _getname = _funcregistrarbase._parsefuncdecl
+    # pyre-fixme[15]: `_docformat` overrides attribute defined in
+    #  `_funcregistrarbase` inconsistently.
     _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, safe=False, takeorder=False, weight=1):
@@ -336,6 +340,8 @@ class filesetpredicate(_funcregistrarbase):
     """
 
     _getname = _funcregistrarbase._parsefuncdecl
+    # pyre-fixme[15]: `_docformat` overrides attribute defined in
+    #  `_funcregistrarbase` inconsistently.
     _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, callstatus=False, callexisting=False):
@@ -347,6 +353,8 @@ class _templateregistrarbase(_funcregistrarbase):
     """Base of decorator to register functions as template specific one
     """
 
+    # pyre-fixme[15]: `_docformat` overrides attribute defined in
+    #  `_funcregistrarbase` inconsistently.
     _docformat = ":%s: %s"
 
 
@@ -487,6 +495,8 @@ class internalmerge(_funcregistrarbase):
     Otherwise, explicit 'filemerge.loadinternalmerge()' is needed.
     """
 
+    # pyre-fixme[15]: `_docformat` overrides attribute defined in
+    #  `_funcregistrarbase` inconsistently.
     _docformat = "``:%s``\n    %s"
 
     # merge type definitions:

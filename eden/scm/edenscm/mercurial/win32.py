@@ -24,9 +24,13 @@ from . import encoding, pycompat
 from .pycompat import range
 
 
+# pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+# pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
 _advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+# pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
 _user32 = ctypes.WinDLL("user32", use_last_error=True)
+# pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
 _crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
 
 _BOOL = ctypes.c_long
@@ -56,7 +60,9 @@ if ctypes.sizeof(ctypes.c_long) == ctypes.sizeof(ctypes.c_void_p):
     _WPARAM = ctypes.c_ulong
     _LPARAM = ctypes.c_long
 elif ctypes.sizeof(ctypes.c_longlong) == ctypes.sizeof(ctypes.c_void_p):
+    # pyre-fixme[9]: _WPARAM has type `Type[c_ulong]`; used as `Type[c_ulonglong]`.
     _WPARAM = ctypes.c_ulonglong
+    # pyre-fixme[9]: _LPARAM has type `Type[c_long]`; used as `Type[c_longlong]`.
     _LPARAM = ctypes.c_longlong
 
 
@@ -323,6 +329,7 @@ _kernel32.ExitProcess.restype = None
 _kernel32.GetCurrentProcessId.argtypes = []
 _kernel32.GetCurrentProcessId.restype = _DWORD
 
+# pyre-fixme[16]: Module `ctypes` has no attribute `WINFUNCTYPE`.
 _SIGNAL_HANDLER = ctypes.WINFUNCTYPE(_BOOL, _DWORD)
 _kernel32.SetConsoleCtrlHandler.argtypes = [_SIGNAL_HANDLER, _BOOL]
 _kernel32.SetConsoleCtrlHandler.restype = _BOOL
@@ -357,7 +364,9 @@ _user32.GetWindowThreadProcessId.restype = _DWORD
 _user32.ShowWindow.argtypes = [_HANDLE, ctypes.c_int]
 _user32.ShowWindow.restype = _BOOL
 
+# pyre-fixme[16]: Module `ctypes` has no attribute `WINFUNCTYPE`.
 _WNDENUMPROC = ctypes.WINFUNCTYPE(_BOOL, _HWND, _LPARAM)
+# pyre-fixme[18]: Global name `_LPARAM` is undefined.
 _user32.EnumWindows.argtypes = [_WNDENUMPROC, _LPARAM]
 _user32.EnumWindows.restype = _BOOL
 

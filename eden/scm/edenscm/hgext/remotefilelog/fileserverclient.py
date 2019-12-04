@@ -58,6 +58,7 @@ def getlocalkey(file, id):
 
 
 def peersetup(ui, peer):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class remotefilepeer(peer.__class__):
         @wireproto.batchable
         def getfile(self, file, node):

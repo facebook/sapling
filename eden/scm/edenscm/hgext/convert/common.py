@@ -26,6 +26,7 @@ pickle = util.pickle
 propertycache = util.propertycache
 
 try:
+    # pyre-fixme[18]: Global name `unicode` is undefined.
     unicode
 except NameError:
     unicode = str

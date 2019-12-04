@@ -35,6 +35,7 @@
 
 """
 
+# pyre-fixme[21]: Could not find `anydbm`.
 import anydbm
 import collections
 import json
@@ -58,6 +59,7 @@ from edenscm.mercurial.i18n import _
 
 
 try:
+    # pyre-fixme[21]: Could not find `gdbm`.
     import gdbm
 
     gdbm.open

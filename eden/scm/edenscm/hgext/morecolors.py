@@ -50,6 +50,7 @@ def _handlecommandexception(orig, ui):
 
 
 def uisetup(ui):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class morecolorsui(ui.__class__):
         def traceback(self, exc=None, force=False):
             if exc is None:

@@ -46,6 +46,7 @@ if util.safehasattr(ssl, "PROTOCOL_TLSv1_2"):
 try:
     # ssl.SSLContext was added in 2.7.9 and presence indicates modern
     # SSL/TLS features are available.
+    # pyre-fixme[9]: SSLContext has type `Type[SSLContext]`; used as `Type[SSLContext]`.
     SSLContext = ssl.SSLContext
     modernssl = True
     _canloaddefaultcerts = util.safehasattr(SSLContext, "load_default_certs")

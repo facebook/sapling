@@ -31,6 +31,7 @@ These imports will not be delayed:
 
 from __future__ import absolute_import
 
+# pyre-fixme[21]: Could not find `__builtin__`.
 import __builtin__ as builtins
 import contextlib
 import sys

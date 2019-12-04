@@ -1,5 +1,7 @@
 from edenscm.mercurial import error, util
 from edenscm.mercurial.error import RepoError
+
+# pyre-fixme[21]: Could not find `util`.
 from util import isgitsshuri
 
 

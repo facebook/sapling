@@ -18,6 +18,7 @@ from edenscm.mercurial import error, lock as lockmod, pycompat, util, vfs as vfs
 
 if pycompat.iswindows:
     CREATE_NO_WINDOW = 0x08000000
+    # pyre-fixme[16]: Module `subprocess` has no attribute `CREATE_NEW_PROCESS_GROUP`.
     _creationflags = CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
     def runbgcommand(script, env, shell=False, stdout=None, stderr=None):

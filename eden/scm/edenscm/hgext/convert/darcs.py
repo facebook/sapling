@@ -24,6 +24,7 @@ from . import common
 
 
 try:
+    # pyre-fixme[18]: Global name `unicode` is undefined.
     unicode
 except NameError:
     unicode = str
@@ -34,14 +35,21 @@ NoRepo = common.NoRepo
 # The naming drift of ElementTree is fun!
 
 try:
+    # pyre-fixme[21]: Could not find `ElementTree`.
     import xml.etree.cElementTree.ElementTree as ElementTree
+
+    # pyre-fixme[21]: Could not find `XMLParser`.
     import xml.etree.cElementTree.XMLParser as XMLParser
 except ImportError:
     try:
+        # pyre-fixme[21]: Could not find `ElementTree`.
         import xml.etree.ElementTree.ElementTree as ElementTree
+
+        # pyre-fixme[21]: Could not find `XMLParser`.
         import xml.etree.ElementTree.XMLParser as XMLParser
     except ImportError:
         try:
+            # pyre-fixme[21]: Could not find `elementtree`.
             import elementtree.cElementTree.ElementTree as ElementTree
             import elementtree.cElementTree.XMLParser as XMLParser
         except ImportError:

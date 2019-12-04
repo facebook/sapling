@@ -68,6 +68,7 @@ def _wraphttpresponse(resp):
     """
     origread = resp.read
 
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class readerproxy(resp.__class__):
         def read(self, size=None):
             try:

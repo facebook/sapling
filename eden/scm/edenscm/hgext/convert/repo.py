@@ -12,6 +12,8 @@ import functools
 import os
 import pprint
 import re
+
+# pyre-fixme[21]: Could not find `dom`.
 import xml.dom.minidom
 
 from edenscm.mercurial import error, node as nodemod, pycompat

@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import os
 import sys
 
+# pyre-fixme[21]: Could not find `memcache`.
 import memcache
 
 

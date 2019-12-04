@@ -50,6 +50,7 @@ else:
 termsize = scmplatform.termsize
 
 
+# pyre-fixme[39]: `Tuple[Any, ...]` is not a valid parent class.
 class status(tuple):
     """Named tuple with a list of files per status. The 'deleted', 'unknown'
        and 'ignored' properties are only relevant to the working copy.

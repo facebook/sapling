@@ -116,7 +116,9 @@ if pycompat.ispy3:
         s = urllib.parse.urlencode(query, doseq=doseq)
         return s.encode("ascii")
 
+    # pyre-fixme[16]: `_pycompatstub` has no attribute `quote`.
     urlreq.quote = quote
+    # pyre-fixme[16]: `_pycompatstub` has no attribute `urlencode`.
     urlreq.urlencode = urlencode
 
     def getfullurl(req):
@@ -136,11 +138,20 @@ if pycompat.ispy3:
 
 
 else:
+    # pyre-fixme[21]: Could not find `BaseHTTPServer`.
     import BaseHTTPServer
+
+    # pyre-fixme[21]: Could not find `CGIHTTPServer`.
     import CGIHTTPServer
+
+    # pyre-fixme[21]: Could not find `SimpleHTTPServer`.
     import SimpleHTTPServer
+
+    # pyre-fixme[21]: Could not find `urllib2`.
     import urllib2
     import urllib
+
+    # pyre-fixme[21]: Could not find `urlparse`.
     import urlparse
 
     urlreq._registeraliases(

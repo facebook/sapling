@@ -20,6 +20,8 @@ def doctor(ui, repo, **opts):
     """
     if "remotefilelog" in repo.requirements:
         from ...hgext.remotefilelog import shallowutil
+
+        # pyre-fixme[21]: Could not find `bindings`.
         from bindings import revisionstore
 
         if repo.ui.configbool("remotefilelog", "indexedlogdatastore"):

@@ -352,6 +352,7 @@ def reposetup(ui, repo):
 
     ui.setconfig("patch", "eol", "auto", "eol")
 
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class eolrepo(repo.__class__):
         def loadeol(self, nodes):
             eol = parseeol(self.ui, self, nodes)

@@ -52,6 +52,7 @@ import traceback
 import warnings
 import zlib
 
+# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
@@ -65,11 +66,15 @@ parsers = policy.importmod(r"parsers")
 b85decode = base85.b85decode
 b85encode = base85.b85encode
 
+# pyre-fixme[16]: Module `pycompat` has no attribute `cookielib`.
 cookielib = pycompat.cookielib
 empty = pycompat.empty
+# pyre-fixme[16]: Module `pycompat` has no attribute `httplib`.
 httplib = pycompat.httplib
+# pyre-fixme[16]: Module `pycompat` has no attribute `pickle`.
 pickle = pycompat.pickle
 queue = pycompat.queue.Queue
+# pyre-fixme[16]: Module `pycompat` has no attribute `socketserver`.
 socketserver = pycompat.socketserver
 stderr = pycompat.stderr
 stdin = pycompat.stdin
@@ -81,6 +86,7 @@ urlerr = urllibcompat.urlerr
 urlreq = urllibcompat.urlreq
 
 # workaround for win32mbcs
+# pyre-fixme[9]: _filenamebytestr has type `Type[str]`; used as `Type[bytestr]`.
 _filenamebytestr = pycompat.bytestr
 
 
@@ -189,6 +195,7 @@ _notset = object()
 # disable Python's problematic floating point timestamps (issue4836)
 # (Python hypocritically says you shouldn't change this behavior in
 # libraries, and sure enough Mercurial is not a library.)
+# pyre-fixme[16]: Module `os` has no attribute `stat_float_times`.
 os.stat_float_times(False)
 
 
@@ -217,6 +224,7 @@ def bitsfrom(container):
 # python 2.6 still have deprecation warning enabled by default. We do not want
 # to display anything to standard user so detect if we are running test and
 # only use python deprecation warning in this case.
+# pyre-fixme[16]: Optional type has no attribute `get`.
 _dowarn = bool(encoding.environ.get("HGEMITWARNINGS"))
 if _dowarn:
     # explicitly unfilter our warning for python 2.7
@@ -1245,6 +1253,7 @@ def mainfrozen():
 if mainfrozen() and getattr(sys, "frozen", None) != "macosx_app":
     # executable version (py2exe) doesn't support __file__
     datapath = os.path.dirname(pycompat.sysexecutable)
+# pyre-fixme[16]: Optional type has no attribute `__getitem__`.
 elif "HGDATAPATH" in encoding.environ:
     datapath = encoding.environ["HGDATAPATH"]
 else:
@@ -1604,6 +1613,7 @@ except ImportError:
     try:
         import re2
 
+        # pyre-fixme[18]: Global name `_re2` is undefined.
         re2._re2.escape  # the C module might be missing
         _re2 = None
     except (AttributeError, ImportError):
@@ -2690,6 +2700,8 @@ def MBTextWrapper(**kwargs):
             return ucstr, ""
 
         # overriding of base class
+        # pyre-fixme[15]: `_handle_long_word` overrides method defined in
+        #  `TextWrapper` inconsistently.
         def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
             space_left = max(width - cur_len, 1)
 
@@ -2702,6 +2714,8 @@ def MBTextWrapper(**kwargs):
 
         # this overriding code is imported from TextWrapper of Python 2.6
         # to calculate columns of string by 'encoding.ucolwidth()'
+        # pyre-fixme[15]: `_wrap_chunks` overrides method defined in `TextWrapper`
+        #  inconsistently.
         def _wrap_chunks(self, chunks):
             colwidth = encoding.ucolwidth
 
@@ -4105,6 +4119,7 @@ class _zstdengine(compressionengine):
         # Not all installs have the zstd module available. So defer importing
         # until first access.
         try:
+            # pyre-fixme[21]: Could not find `bindings`.
             from bindings import zstd
 
             # Force delayed import.

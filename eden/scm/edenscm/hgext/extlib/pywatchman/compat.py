@@ -68,4 +68,5 @@ def reraise(tp, value, tb=None):
 if PYTHON3:
     UNICODE = str
 else:
+    # pyre-fixme[18]: Global name `unicode` is undefined.
     UNICODE = unicode  # noqa: F821 We handled versioning above

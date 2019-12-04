@@ -46,6 +46,7 @@ def defineactions():
     @histedit.action(
         ["stop", "s"], _("pick changeset, and stop after committing changes")
     )
+    # pyre-fixme[11]: Annotation `histeditaction` is not defined as a type.
     class stop(histedit.histeditaction):
         def run(self):
             parentctx, replacements = super(stop, self).run()
@@ -67,6 +68,7 @@ def defineactions():
             return super(stop, self).continueclean()
 
     @histedit.action(["exec", "x"], _("execute given command"))
+    # pyre-fixme[11]: Annotation `histeditaction` is not defined as a type.
     class execute(histedit.histeditaction):
         def __init__(self, state, command):
             self.state = state
@@ -162,6 +164,7 @@ def defineactions():
             self.cwd = pycompat.getcwd()
 
     @histedit.action(["graft", "g"], _("graft a commit from elsewhere"))
+    # pyre-fixme[11]: Annotation `histeditaction` is not defined as a type.
     class graft(histedit.histeditaction):
         def _verifynodeconstraints(self, prev, expected, seen):
             if self.node in expected:

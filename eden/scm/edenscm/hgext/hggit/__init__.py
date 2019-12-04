@@ -24,12 +24,25 @@ import warnings
 from bisect import insort
 
 # local modules
+# pyre-fixme[21]: Could not find `compat`.
 import compat
+
+# pyre-fixme[21]: Could not find `gitrepo`.
 import gitrepo
+
+# pyre-fixme[21]: Could not find `hgrepo`.
 import hgrepo
+
+# pyre-fixme[21]: Could not find `overlay`.
 import overlay
+
+# pyre-fixme[21]: Could not find `util`.
 import util
+
+# pyre-fixme[21]: Could not find `verify`.
 import verify
+
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import nodemap as nodemapmod
 from edenscm.mercurial import (
     bundlerepo,
@@ -52,6 +65,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.error import LookupError
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
+
+# pyre-fixme[21]: Could not find `git_handler`.
 from git_handler import GitHandler
 
 
@@ -70,6 +85,7 @@ except (AttributeError, ImportError):
 try:
     from edenscm.mercurial import ignore
 
+    # pyre-fixme[16]: Module `mercurial` has no attribute `ignore`.
     ignore.readpats
     ignoremod = True
 except (AttributeError, ImportError):
@@ -114,6 +130,7 @@ for _scheme in util.gitschemes:
 _oldlocal = hg.schemes["file"]
 
 try:
+    # pyre-fixme[9]: urlcls has type `Type[urlcls]`; used as `Type[url]`.
     urlcls = hgutil.url
 except AttributeError:
 

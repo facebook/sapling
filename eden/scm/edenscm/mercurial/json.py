@@ -18,6 +18,7 @@ from edenscm.mercurial import encoding, error, pycompat, util
 
 
 try:
+    # pyre-fixme[18]: Global name `long` is undefined.
     long
 except NameError:
     long = int

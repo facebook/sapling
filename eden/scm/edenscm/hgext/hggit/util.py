@@ -10,6 +10,7 @@ from edenscm.mercurial.i18n import _
 try:
     from collections import OrderedDict
 except ImportError:
+    # pyre-fixme[21]: Could not find `ordereddict`.
     from ordereddict import OrderedDict
 
 

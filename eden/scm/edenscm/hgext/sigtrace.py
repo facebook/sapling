@@ -58,6 +58,7 @@ memorytracker = []
 
 def printmemory(sig, currentframe):
     try:
+        # pyre-fixme[21]: Could not find `pympler`.
         from pympler import muppy, summary
 
         muppy.get_objects

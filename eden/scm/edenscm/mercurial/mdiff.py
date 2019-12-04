@@ -17,6 +17,7 @@ import struct
 import zlib
 from hashlib import sha1
 
+# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import xdiff
 
 from . import error, policy, pycompat, util

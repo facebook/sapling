@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import struct
 
+# pyre-fixme[21]: Could not find `bindings`.
 from bindings import revisionstore
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid

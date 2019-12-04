@@ -28,10 +28,19 @@ ispy3 = sys.version_info[0] >= 3
 ispypy = r"__pypy__" in sys.builtin_module_names
 
 if not ispy3:
+    # pyre-fixme[21]: Could not find `cookielib`.
     import cookielib
+
+    # pyre-fixme[21]: Could not find `cPickle`.
     import cPickle as pickle
+
+    # pyre-fixme[21]: Could not find `httplib`.
     import httplib
+
+    # pyre-fixme[21]: Could not find `Queue`.
     import Queue as _queue
+
+    # pyre-fixme[21]: Could not find `SocketServer`.
     import SocketServer as socketserver
 else:
     import http.cookiejar as cookielib  # noqa: F401
@@ -62,6 +71,7 @@ if ispy3:
     ossep = os.sep.encode("ascii")
     osaltsep = os.altsep
     if osaltsep:
+        # pyre-fixme[16]: Optional type has no attribute `encode`.
         osaltsep = osaltsep.encode("ascii")
     # os.getcwd() on Python 3 returns string, but it has os.getcwdb() which
     # returns bytes.
@@ -270,15 +280,18 @@ if ispy3:
 
 
 else:
+    # pyre-fixme[21]: Could not find `cStringIO`.
     import cStringIO
 
     bytechr = chr
+    # pyre-fixme[9]: bytestr has type `Type[bytestr]`; used as `Type[str]`.
     bytestr = str
     iterbytestr = iter
     sysbytes = identity
     sysstr = identity
     strurl = identity
     bytesurl = identity
+    # pyre-fixme[18]: Global name `xrange` is undefined.
     range = xrange  # noqa: F821
 
     # this can't be parsed on Python 3
@@ -327,11 +340,14 @@ else:
     stringio = cStringIO.StringIO
     maplist = map
     ziplist = zip
+    # pyre-fixme[18]: Global name `raw_input` is undefined.
     rawinput = raw_input  # noqa
 
+# pyre-fixme[6]: Expected `Union[bytes, Tuple[bytes, ...]]` for 1st param but got `str`.
 isjython = sysplatform.startswith("java")
 
 isdarwin = sysplatform == "darwin"
+# pyre-fixme[6]: Expected `Union[bytes, Tuple[bytes, ...]]` for 1st param but got `str`.
 islinux = sysplatform.startswith("linux")
 isposix = osname == "posix"
 iswindows = osname == "nt"

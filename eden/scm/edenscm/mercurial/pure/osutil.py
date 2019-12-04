@@ -72,6 +72,11 @@ def listdir(path, stat=False, skip=None):
 
 
 if not pycompat.iswindows:
+    # pyre-fixme[9]: posixfile has type `Type[posixfile]`; used as `(file:
+    #  Union[_PathLike[Any], bytes, int, str], mode: str = ..., buffering: int = ...,
+    #  encoding: Optional[str] = ..., errors: Optional[str] = ..., newline:
+    #  Optional[str] = ..., closefd: bool = ..., opener: Optional[(str, int) -> int] =
+    #  ...) -> IO[Any]`.
     posixfile = open
 
     _SCM_RIGHTS = 0x01
@@ -84,8 +89,12 @@ if not pycompat.iswindows:
         _msg_controllen_t = ctypes.c_size_t
         _msg_iovlen_t = ctypes.c_size_t
     else:
+        # pyre-fixme[9]: _cmsg_len_t has type `Type[c_size_t]`; used as `Type[c_uint]`.
         _cmsg_len_t = _socklen_t
+        # pyre-fixme[9]: _msg_controllen_t has type `Type[c_size_t]`; used as
+        #  `Type[c_uint]`.
         _msg_controllen_t = _socklen_t
+        # pyre-fixme[9]: _msg_iovlen_t has type `Type[c_size_t]`; used as `Type[c_int]`.
         _msg_iovlen_t = ctypes.c_int
 
     class _iovec(ctypes.Structure):
@@ -110,6 +119,7 @@ if not pycompat.iswindows:
             (u"cmsg_data", ctypes.c_ubyte * 0),
         ]
 
+    # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
     _libc = ctypes.CDLL(ctypes.util.find_library(u"c"), use_errno=True)
     _recvmsg = getattr(_libc, "recvmsg", None)
     if _recvmsg:
@@ -164,6 +174,7 @@ if not pycompat.iswindows:
 else:
     import msvcrt
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
     _kernel32 = ctypes.windll.kernel32
 
     _DWORD = ctypes.c_ulong

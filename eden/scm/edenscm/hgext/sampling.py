@@ -43,6 +43,7 @@ def _getcandidatelocation(ui):
 
 
 def uisetup(ui):
+    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class logtofile(ui.__class__):
         @classmethod
         def computesamplingfilters(cls, self):

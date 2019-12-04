@@ -40,6 +40,7 @@ _packageprefs = {
 try:
     from . import __modulepolicy__
 
+    # pyre-fixme[16]: Module `edenscm.mercurial` has no attribute `__modulepolicy__`.
     policy = __modulepolicy__.modulepolicy
 except ImportError:
     pass

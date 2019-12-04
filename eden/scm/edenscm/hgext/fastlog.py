@@ -389,6 +389,7 @@ class LocalIteratorThread(Thread):
     def stopped(self):
         return self._stop.isSet()
 
+    # pyre-fixme[15]: `run` overrides method defined in `Thread` inconsistently.
     def run(self):
         generator = self.generator
         match = self.localmatch
@@ -503,6 +504,7 @@ class FastLogThread(Thread):
                 self.finishpath(path)
                 return
 
+    # pyre-fixme[15]: `run` overrides method defined in `Thread` inconsistently.
     def run(self):
         revs = None
         paths = self.paths
