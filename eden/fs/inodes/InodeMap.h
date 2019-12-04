@@ -393,12 +393,8 @@ class InodeMap {
    * we return to callers.  This class tracks more state.
    */
   struct UnloadedInode {
+    UnloadedInode(InodeNumber parentNum, PathComponentPiece entryName);
     UnloadedInode(
-        InodeNumber num,
-        InodeNumber parentNum,
-        PathComponentPiece entryName);
-    UnloadedInode(
-        InodeNumber num,
         InodeNumber parentNum,
         PathComponentPiece entryName,
         bool isUnlinked,
@@ -419,7 +415,6 @@ class InodeMap {
         bool isUnlinked,
         uint32_t fuseRefcount);
 
-    InodeNumber const number;
     InodeNumber const parent;
     PathComponent const name;
 

@@ -30,21 +30,18 @@ namespace facebook {
 namespace eden {
 
 InodeMap::UnloadedInode::UnloadedInode(
-    InodeNumber num,
     InodeNumber parentNum,
     PathComponentPiece entryName)
-    : number(num), parent(parentNum), name(entryName) {}
+    : parent(parentNum), name(entryName) {}
 
 InodeMap::UnloadedInode::UnloadedInode(
-    InodeNumber num,
     InodeNumber parentNum,
     PathComponentPiece entryName,
     bool isUnlinked,
     mode_t mode,
     std::optional<Hash> hash,
     uint32_t fuseRefcount)
-    : number(num),
-      parent(parentNum),
+    : parent(parentNum),
       name(entryName),
       isUnlinked{isUnlinked},
       mode{mode},
@@ -58,8 +55,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     bool isUnlinked,
     std::optional<Hash> hash,
     uint32_t fuseRefcount)
-    : number{inode->getNodeId()},
-      parent{parent->getNodeId()},
+    : parent{parent->getNodeId()},
       name{entryName},
       isUnlinked{isUnlinked},
       // There is no asTree->getMode() we can call,
@@ -76,8 +72,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     PathComponentPiece entryName,
     bool isUnlinked,
     uint32_t fuseRefcount)
-    : number{inode->getNodeId()},
-      parent{parent->getNodeId()},
+    : parent{parent->getNodeId()},
       name{entryName},
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
@@ -150,7 +145,6 @@ void InodeMap::initializeFromTakeover(
     }
 
     auto unloadedEntry = UnloadedInode(
-        InodeNumber::fromThrift(entry.inodeNumber),
         InodeNumber::fromThrift(entry.parentInode),
         PathComponentPiece{entry.name},
         entry.isUnlinked,
@@ -612,14 +606,13 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
 
     SerializedInodeMap result;
     result.unloadedInodes.reserve(data->unloadedInodes_.size());
-    for (const auto& it : data->unloadedInodes_) {
-      const auto& entry = it.second;
+    for (const auto& [inodeNumber, entry] : data->unloadedInodes_) {
       SerializedInodeMapEntry serializedEntry;
 
-      XLOG(DBG5) << "  serializing unloaded inode " << entry.number.get()
+      XLOG(DBG5) << "  serializing unloaded inode " << inodeNumber
                  << " parent=" << entry.parent.get() << " name=" << entry.name;
 
-      serializedEntry.inodeNumber = entry.number.get();
+      serializedEntry.inodeNumber = inodeNumber.get();
       serializedEntry.parentInode = entry.parent.get();
       serializedEntry.name = entry.name.stringPiece().str();
       serializedEntry.isUnlinked = entry.isUnlinked;
@@ -868,14 +861,13 @@ bool InodeMap::shouldLoadChild(
   auto iter = data->unloadedInodes_.find(childInode);
   if (iter == data->unloadedInodes_.end()) {
     InodeNumber parentNumber = parent->getNodeId();
-    auto newUnloadedData = UnloadedInode(childInode, parentNumber, name);
+    auto newUnloadedData = UnloadedInode(parentNumber, name);
     auto ret =
         data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
     DCHECK(ret.second);
     unloadedData = &ret.first->second;
   } else {
     unloadedData = &iter->second;
-    DCHECK_EQ(unloadedData->number, childInode);
   }
 
   bool isFirstPromise = unloadedData->promises.empty();
@@ -918,11 +910,9 @@ std::vector<InodeNumber> InodeMap::getReferencedInodes() const {
       inodes.push_back(loadedInode->getNodeId());
     }
 
-    for (auto& kv : data->unloadedInodes_) {
-      auto& unloadedInode = kv.second;
-
+    for (const auto& [ino, unloadedInode] : data->unloadedInodes_) {
       if (unloadedInode.numFuseReferences > 0) {
-        inodes.push_back(unloadedInode.number);
+        inodes.push_back(ino);
       }
     }
   }
