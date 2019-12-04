@@ -29,8 +29,10 @@ using std::optional;
 using std::string;
 
 namespace {
-const facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{".edenignore"};
-const facebook::eden::RelativePathPiece kDefaultSystemIgnoreFile{"ignore"};
+constexpr facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{
+    ".edenignore"};
+constexpr facebook::eden::RelativePathPiece kDefaultSystemIgnoreFile{"ignore"};
+constexpr facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
 
 template <typename String>
 void toAppend(facebook::eden::EdenConfig& ec, String* result) {
@@ -61,7 +63,6 @@ void getConfigStat(
 namespace facebook {
 namespace eden {
 
-const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
 const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
 std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {

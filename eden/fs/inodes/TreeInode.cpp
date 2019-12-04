@@ -62,6 +62,10 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
+namespace {
+static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
+}
+
 /**
  * A helper class to track info about inode loads that we started while holding
  * the contents_ lock.
@@ -1776,8 +1780,6 @@ Future<Unit> TreeInode::diff(
     shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
-  static const PathComponentPiece kIgnoreFilename{".gitignore"};
-
   if (context->isCancelled()) {
     XLOG(DBG7) << "diff() on directory " << getLogPath()
                << " cancelled due to client request no longer being active";

@@ -239,17 +239,18 @@ class PathBase :
   using stored_type = Stored;
 
   /** Default construct an empty value. */
-  PathBase() {}
+  constexpr PathBase() {}
 
   /** Construct from an untyped string value.
    * Applies sanity checks. */
-  explicit PathBase(folly::StringPiece src) : path_(src.data(), src.size()) {
+  constexpr explicit PathBase(folly::StringPiece src)
+      : path_(src.data(), src.size()) {
     SanityChecker()(src);
   }
 
   /** Construct from an untyped string value.
    * Skips sanity checks. */
-  explicit PathBase(folly::StringPiece src, SkipPathSanityCheck)
+  constexpr explicit PathBase(folly::StringPiece src, SkipPathSanityCheck)
       : path_(src.data(), src.size()) {}
 
   /** Construct from a stored variation of this type.
@@ -346,19 +347,23 @@ class PathBase :
 
 /// Asserts that val is a well formed path component
 struct PathComponentSanityCheck {
-  void operator()(folly::StringPiece val) const {
-    if (val.find(kDirSeparator) != std::string::npos) {
-      throw std::domain_error(folly::to<std::string>(
-          "attempt to construct a PathComponent from a string containing a "
-          "directory separator: ",
-          val));
+  constexpr void operator()(folly::StringPiece val) const {
+    for (auto c : val) {
+      if (c == kDirSeparator) {
+        throw std::domain_error(folly::to<std::string>(
+            "attempt to construct a PathComponent from a string containing a "
+            "directory separator: ",
+            val));
+      }
     }
 
     if (val.empty()) {
       throw std::domain_error("cannot have an empty PathComponent");
     }
 
-    if (val == "." || val == "..") {
+    const char* data = val.data();
+    if (data[0] == '.' &&
+        (val.size() == 1 || (val.size() == 2 && data[1] == '.'))) {
       throw std::domain_error("PathComponent must not be . or ..");
     }
   }
@@ -823,15 +828,19 @@ class ComposedPathBase
 
 /// Asserts that val is well formed relative path
 struct RelativePathSanityCheck {
-  void operator()(folly::StringPiece val) const {
-    if (val.startsWith(kDirSeparator)) {
-      throw std::domain_error(folly::to<std::string>(
-          "attempt to construct a RelativePath from an absolute path string: ",
-          val));
-    }
-    if (val.endsWith(kDirSeparator)) {
-      throw std::domain_error(folly::to<std::string>(
-          "RelativePath must not end with a slash: ", val));
+  constexpr void operator()(folly::StringPiece val) const {
+    if (!val.empty()) {
+      const char* data = val.data();
+      if (data[0] == kDirSeparator) {
+        throw std::domain_error(folly::to<std::string>(
+            "attempt to construct a RelativePath from an absolute path string: ",
+            val));
+      }
+
+      if (data[val.size() - 1] == kDirSeparator) {
+        throw std::domain_error(folly::to<std::string>(
+            "RelativePath must not end with a slash: ", val));
+      }
     }
   }
 };
@@ -1711,7 +1720,9 @@ bool removeRecursively(AbsolutePathPiece path);
  * Convenient literals for constructing path types.
  */
 inline namespace path_literals {
-inline PathComponentPiece operator"" _pc(const char* str, size_t len) noexcept {
+constexpr inline PathComponentPiece operator"" _pc(
+    const char* str,
+    size_t len) noexcept {
   return PathComponentPiece{folly::StringPiece{str, str + len}};
 }
 

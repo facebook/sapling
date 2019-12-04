@@ -76,7 +76,7 @@ namespace {
 // to the .eden directory inode in the root.
 // The name of that symlink is `this-dir`:
 // .eden/this-dir -> /abs/path/to/mount/.eden
-const PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
+constexpr PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
 } // namespace
 
 /**

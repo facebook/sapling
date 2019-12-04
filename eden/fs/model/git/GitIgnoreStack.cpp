@@ -12,6 +12,11 @@
 namespace facebook {
 namespace eden {
 
+namespace {
+constexpr static PathComponentPiece kHgName{".hg"};
+constexpr static PathComponentPiece kEdenName{".eden"};
+} // namespace
+
 GitIgnore::MatchResult GitIgnoreStack::match(
     RelativePathPiece path,
     GitIgnore::FileType fileType) const {
@@ -21,8 +26,6 @@ GitIgnore::MatchResult GitIgnoreStack::match(
   // directories are hidden the status code generally should not descend into
   // them and have to check ignore status for path names inside these
   // directories.
-  const static PathComponentPiece kHgName{".hg"};
-  const static PathComponentPiece kEdenName{".eden"};
   const auto basename = path.basename();
   if (basename == kHgName || basename == kEdenName) {
     return GitIgnore::HIDDEN;

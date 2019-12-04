@@ -26,7 +26,6 @@
 namespace facebook {
 namespace eden {
 
-extern const facebook::eden::RelativePathPiece kDefaultEdenDirectory;
 extern const facebook::eden::AbsolutePath kUnspecifiedDefault;
 
 /**
