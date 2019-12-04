@@ -321,6 +321,7 @@ class KeepAliveHandler(object):
         headers.update(sorted(req.unredirected_hdrs.items()))
         headers = util.altsortdict((n.lower(), v) for n, v in headers.items())
         skipheaders = {}
+        data = None
         for n in ("host", "accept-encoding"):
             if n in headers:
                 skipheaders["skip_" + n.replace("-", "_")] = 1
@@ -346,9 +347,7 @@ class KeepAliveHandler(object):
             raise urlerr.urlerror(err)
         for k, v in headers.items():
             h.putheader(k, v)
-        h.endheaders()
-        if urllibcompat.hasdata(req):
-            h.send(data)
+        h.endheaders(message_body=data)
 
 
 # pyre-fixme[11]: Annotation `httphandler` is not defined as a type.
