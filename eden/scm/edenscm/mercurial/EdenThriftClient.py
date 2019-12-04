@@ -17,8 +17,10 @@ import sys
 import time
 
 import toml
+from thrift.Thrift import TApplicationException
 
-from . import demandimport, node, pycompat
+from . import demandimport, error, node, pycompat
+from .i18n import _
 
 
 if sys.version_info < (2, 7, 6):
@@ -57,11 +59,13 @@ with demandimport.deactivated():
 
 create_thrift_client = eden_thrift_module.create_thrift_client
 ScmFileStatus = eden_ttypes.ScmFileStatus
+GetScmStatusParams = eden_ttypes.GetScmStatusParams
 CheckoutMode = eden_ttypes.CheckoutMode
 ConflictType = eden_ttypes.ConflictType
 FileInformationOrError = eden_ttypes.FileInformationOrError
 ManifestEntry = eden_ttypes.ManifestEntry
 NoValueForKeyError = eden_ttypes.NoValueForKeyError
+EdenError = eden_ttypes.EdenError
 
 
 def readlink_retry_estale(path):
@@ -124,7 +128,6 @@ class EdenThriftClient(object):
             client.resetParentCommits(self._eden_root, parents)
 
     def getStatus(self, parent, list_ignored):  # noqa: C901
-        # type(str, bool) -> Dict[str, int]
 
         # If we are in a pending transaction the parent commit we are querying against
         # might not have been stored to disk yet.  Flush the pending transaction state
@@ -132,7 +135,24 @@ class EdenThriftClient(object):
         self._flushPendingTransactions()
 
         with self._get_client() as client:
-            return client.getScmStatus(self._eden_root, list_ignored, parent)
+            try:
+                edenstatus = client.getScmStatusV2(
+                    GetScmStatusParams(self._eden_root, parent, list_ignored)
+                ).status.entries
+            except TApplicationException as e:
+                # Fallback to old getScmStatus in the case that this is running
+                # against an older version of edenfs in which getScmStatusV2 is
+                # not known
+                if e.type == TApplicationException.UNKNOWN_METHOD:
+                    edenstatus = client.getScmStatus(
+                        self._eden_root, list_ignored, parent
+                    ).entries
+                else:
+                    raise
+            except EdenError as e:
+                raise error.Abort(_("cannot fetch eden status: %s") % e.message)
+
+            return edenstatus
 
     def checkout(self, node, checkout_mode, need_flush=True):
         if need_flush:

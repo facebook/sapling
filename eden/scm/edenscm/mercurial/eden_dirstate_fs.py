@@ -18,7 +18,7 @@ class eden_filesystem(filesystem.physicalfilesystem):
             perftrace.traceflag("status")
             edenstatus = self.dirstate.eden_client.getStatus(
                 self.dirstate.p1(), list_ignored=listignored
-            ).entries
+            )
 
         MODIFIED = ScmFileStatus.MODIFIED
         REMOVED = ScmFileStatus.REMOVED
