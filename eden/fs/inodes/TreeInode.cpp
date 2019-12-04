@@ -648,7 +648,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       std::nullopt,
       std::move(*overlayDir),
       std::nullopt);
-} // namespace eden
+}
 
 void TreeInode::materialize(const RenameLock* renameLock) {
   // If we don't have the rename lock yet, do a quick check first
@@ -1787,7 +1787,7 @@ Future<Unit> TreeInode::diff(
   }
 
   InodePtr inode;
-  auto inodeFuture = Future<InodePtr>::makeEmpty();
+  auto gitignoreInodeFuture = Future<InodePtr>::makeEmpty();
   vector<IncompleteInodeLoad> pendingLoads;
   {
     // We have to get a write lock since we may have to load
@@ -1834,18 +1834,18 @@ Future<Unit> TreeInode::diff(
     // When there is no .gitignore file we avoid acquiring and releasing the
     // contents_ lock twice, and we avoid creating a Future to load the
     // .gitignore data.
-    DirEntry* inodeEntry = nullptr;
+    DirEntry* gitignoreEntry = nullptr;
     auto iter = contents->entries.find(kIgnoreFilename);
     if (iter != contents->entries.end()) {
-      inodeEntry = &iter->second;
-      if (inodeEntry->isDirectory()) {
+      gitignoreEntry = &iter->second;
+      if (gitignoreEntry->isDirectory()) {
         // Ignore .gitignore directories
         XLOG(DBG4) << "Ignoring .gitignore directory in " << getLogPath();
-        inodeEntry = nullptr;
+        gitignoreEntry = nullptr;
       }
     }
 
-    if (!inodeEntry) {
+    if (!gitignoreEntry) {
       return computeDiff(
           std::move(contents),
           context,
@@ -1856,10 +1856,10 @@ Future<Unit> TreeInode::diff(
     }
 
     XLOG(DBG7) << "Loading ignore file for " << getLogPath();
-    inode = inodeEntry->getInodePtr();
+    inode = gitignoreEntry->getInodePtr();
     if (!inode) {
-      inodeFuture = loadChildLocked(
-          contents->entries, kIgnoreFilename, *inodeEntry, pendingLoads);
+      gitignoreInodeFuture = loadChildLocked(
+          contents->entries, kIgnoreFilename, *gitignoreEntry, pendingLoads);
     }
   }
 
@@ -1870,7 +1870,7 @@ Future<Unit> TreeInode::diff(
   }
 
   if (!inode) {
-    return std::move(inodeFuture)
+    return std::move(gitignoreInodeFuture)
         .thenValue([self = inodePtrFromThis(),
                     context,
                     currentPath = RelativePath{currentPath},

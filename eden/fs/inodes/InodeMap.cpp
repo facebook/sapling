@@ -864,8 +864,8 @@ bool InodeMap::shouldLoadChild(
     InodeNumber childInode,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
-  auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
+  auto iter = data->unloadedInodes_.find(childInode);
   if (iter == data->unloadedInodes_.end()) {
     InodeNumber parentNumber = parent->getNodeId();
     auto newUnloadedData = UnloadedInode(childInode, parentNumber, name);
