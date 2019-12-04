@@ -85,30 +85,10 @@ class ChownTest(testcase.EdenRepoTest):
         self.assert_chown_worked(self.mount)
 
     def test_chown_with_bindmount(self) -> None:
-        edenrc = os.path.join(os.environ["HOME"], ".edenrc")
-        with open(edenrc, "w") as f:
-            f.write(
-                """\
-["repository {repo_name}"]
-path = "{repo_path}"
-type = "{repo_type}"
+        self.eden.run_cmd("redirect", "add", "buck-out", "bind", "--mount", self.mount)
 
-["bindmounts {repo_name}"]
-buck-out = "buck-out"
-""".format(
-                    repo_name=self.repo_name,
-                    repo_path=self.repo.get_canonical_root(),
-                    repo_type=self.repo.get_type(),
-                )
-            )
-
-        basename = "eden_mount"
-        tmp_mount = os.path.join(self.tmp_dir, basename)
-
-        self.eden.run_cmd("clone", self.repo_name, tmp_mount)
-
-        with open(os.path.join(tmp_mount, "buck-out", "bindmountedfile"), "w") as f:
+        with open(os.path.join(self.mount, "buck-out", "bindmountedfile"), "w") as f:
             f.write("created\n")
 
-        self.run_chown(tmp_mount)
-        self.assert_chown_worked(tmp_mount)
+        self.run_chown(self.mount)
+        self.assert_chown_worked(self.mount)

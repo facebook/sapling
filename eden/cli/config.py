@@ -1050,13 +1050,7 @@ class EdenCheckout:
         # configuration.
         from eden.cli.redirect import RedirectionType  # noqa: F811
 
-        redirections = {
-            k: str(v)
-            for k, v in checkout_config.redirections.items()
-            # We don't want to duplicate the legacy config in the
-            # new redirections config.
-            if v != RedirectionType.LEGACY
-        }
+        redirections = {k: str(v) for k, v in checkout_config.redirections.items()}
         config_data = {
             "repository": {
                 "path": str(checkout_config.backing_repo),

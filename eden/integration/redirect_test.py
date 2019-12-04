@@ -122,7 +122,6 @@ buck-out = "buck-out"
 
     def test_list_with_legacy_bind_mount(self) -> None:
         tmp = self.clone_with_legacy_bind_mounts()
-        client_dir = os.readlink(os.path.join(tmp, ".eden/client"))
 
         profile_path = scratch_path(tmp, "edenfs/redirections/via-profile")
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", tmp)
@@ -130,19 +129,12 @@ buck-out = "buck-out"
             json.loads(output),
             [
                 {
-                    "repo_path": "buck-out",
-                    "type": "legacy",
-                    "target": f"{client_dir}/bind-mounts/buck-out",
-                    "source": ".eden/client/config.toml:bind-mounts",
-                    "state": "ok",
-                },
-                {
                     "repo_path": "via-profile",
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
                     "state": "ok",
-                },
+                }
             ],
             msg="We can interpret the saved bind mount configuration",
         )
@@ -162,13 +154,6 @@ buck-out = "buck-out"
                     "type": "bind",
                     "target": target_path,
                     "source": ".eden/client/config.toml:redirections",
-                    "state": "ok",
-                },
-                {
-                    "repo_path": "buck-out",
-                    "type": "legacy",
-                    "target": f"{client_dir}/bind-mounts/buck-out",
-                    "source": ".eden/client/config.toml:bind-mounts",
                     "state": "ok",
                 },
                 {
@@ -207,13 +192,6 @@ buck-out = "buck-out"
                     "state": "ok",
                 },
                 {
-                    "repo_path": "buck-out",
-                    "type": "legacy",
-                    "target": f"{client_dir}/bind-mounts/buck-out",
-                    "source": ".eden/client/config.toml:bind-mounts",
-                    "state": "ok",
-                },
-                {
                     "repo_path": "via-profile",
                     "type": "bind",
                     "target": profile_path,
@@ -238,19 +216,12 @@ buck-out = "buck-out"
             json.loads(list_output),
             [
                 {
-                    "repo_path": "buck-out",
-                    "type": "legacy",
-                    "target": f"{client_dir}/bind-mounts/buck-out",
-                    "source": ".eden/client/config.toml:bind-mounts",
-                    "state": "ok",
-                },
-                {
                     "repo_path": "via-profile",
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
                     "state": "ok",
-                },
+                }
             ],
             msg="saved config agrees with last output",
         )

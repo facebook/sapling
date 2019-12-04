@@ -29,7 +29,6 @@ redirect_cmd = subcmd_mod.Decorator()
 
 log = logging.getLogger(__name__)
 
-LEGACY_BIND_MOUNTS_SOURCE = ".eden/client/config.toml:bind-mounts"
 USER_REDIRECTION_SOURCE = ".eden/client/config.toml:redirections"
 REPO_SOURCE = ".eden-redirections"
 PLEASE_RESTART = "Please run `eden restart` to pick up the new redirections feature set"
@@ -100,8 +99,6 @@ class RepoPathDisposition(enum.Enum):
 
 
 class RedirectionType(enum.Enum):
-    # A bind mount specified by the legacy configuration
-    LEGACY = "legacy"
     # Linux: a bind mount to a mkscratch generated path
     # macOS: a mounted dmg file in a mkscratch generated path
     BIND = "bind"
@@ -114,7 +111,7 @@ class RedirectionType(enum.Enum):
 
     @classmethod
     def from_arg_str(cls, arg: str) -> "RedirectionType":
-        name_to_value = {"legacy": cls.LEGACY, "bind": cls.BIND, "symlink": cls.SYMLINK}
+        name_to_value = {"bind": cls.BIND, "symlink": cls.SYMLINK}
         value = name_to_value.get(arg)
         if value:
             return value
@@ -171,12 +168,7 @@ class Redirection:
         return res
 
     def expand_target_abspath(self, checkout: EdenCheckout) -> Optional[Path]:
-        if self.type == RedirectionType.LEGACY:
-            assert self.target is not None
-            # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but
-            #  got `Optional[Path]`.
-            return checkout.state_dir / "bind-mounts" / self.target
-        elif self.type in (RedirectionType.SYMLINK, RedirectionType.BIND):
+        if self.type in (RedirectionType.SYMLINK, RedirectionType.BIND):
             return make_scratch_dir(checkout, str(self.repo_path))
         elif self.type == RedirectionType.UNKNOWN:
             return None
@@ -192,9 +184,6 @@ class Redirection:
     def _bind_mount_darwin(
         self, instance: EdenInstance, checkout_path: bytes, target: bytes
     ):
-        if self.type == RedirectionType.LEGACY:
-            raise Exception("legacy redirections are not supported on macOS")
-
         # Since we don't have bind mounts, we set up a disk image file
         # and mount that instead.
         image_file_name = self._dmg_file_name(target)
@@ -334,7 +323,7 @@ class Redirection:
             )
         if disposition == RepoPathDisposition.IS_FILE:
             raise Exception(f"Cannot redirect {self.repo_path} because it is a file")
-        if self.type in (RedirectionType.LEGACY, RedirectionType.BIND):
+        if self.type == RedirectionType.BIND:
             target = self.expand_target_abspath(checkout)
             assert target is not None
             self._bind_mount(checkout.instance, bytes(checkout.path), bytes(target))
@@ -369,16 +358,7 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
 
     config = checkout.get_config()
 
-    # Legacy configuration has lowest precedence
-    for store_path, repo_path in config.bind_mounts.items():
-        redirs[repo_path] = Redirection(
-            Path(repo_path),
-            RedirectionType.LEGACY,
-            Path(store_path),
-            LEGACY_BIND_MOUNTS_SOURCE,
-        )
-
-    # Repo-specified settings have next level of precedence
+    # Repo-specified settings have the lowest level of precedence
     repo_redirection_config_file_name = checkout.path.joinpath(".eden-redirections")
     if os.path.exists(repo_redirection_config_file_name):
         for repo_path, redir_type in load_redirection_profile(
@@ -436,14 +416,14 @@ def get_effective_redirections(
     for rel_path, redir in get_configured_redirections(checkout).items():
         is_in_mount_table = rel_path in redirs
         if is_in_mount_table:
-            if redir.type not in (RedirectionType.LEGACY, RedirectionType.BIND):
+            if redir.type != RedirectionType.BIND:
                 redir.state = RedirectionState.UNKNOWN_MOUNT
             # else: we expected them to be in the mount table and they were.
             # we don't know enough to tell whether the mount points where
             # we want it to point, so we just assume that it is in the right
             # state.
         else:
-            if redir.type in (RedirectionType.LEGACY, RedirectionType.BIND):
+            if redir.type == RedirectionType.BIND:
                 # We expected both of these types to be visible in the
                 # mount table, but they were not, so we consider them to
                 # be in the NOT_MOUNTED state.
@@ -495,7 +475,7 @@ def compact_redirection_sparse_images(instance: EdenInstance) -> None:
     mount_table = mtab.new()
     for checkout in instance.get_checkouts():
         for redir in get_effective_redirections(checkout, mount_table).values():
-            if redir.type in (RedirectionType.LEGACY, RedirectionType.BIND):
+            if redir.type == RedirectionType.BIND:
                 target = redir.expand_target_abspath(checkout)
                 assert target is not None
                 dmg_file = redir._dmg_file_name(bytes(target))
@@ -514,18 +494,15 @@ def apply_redirection_configs_to_checkout_config(
     """ Translate the redirections into a new CheckoutConfig """
 
     config = checkout.get_config()
-    bind_mounts = {}
     redirections = {}
     for r in redirs:
-        if r.type == RedirectionType.LEGACY:
-            bind_mounts[str(r.target)] = str(r.repo_path)
-        elif r.source != REPO_SOURCE:
+        if r.source != REPO_SOURCE:
             redirections[str(r.repo_path)] = r.type
     return CheckoutConfig(
         backing_repo=config.backing_repo,
         scm_type=config.scm_type,
         default_revision=config.default_revision,
-        bind_mounts=bind_mounts,
+        bind_mounts={},
         redirections=redirections,
     )
 
@@ -645,8 +622,7 @@ class FixupCmd(Subcmd):
 
         for redir in redirs.values():
             if redir.state == RedirectionState.MATCHES_CONFIGURATION and not (
-                args.force_remount_bind_mounts
-                and redir.type in (RedirectionType.LEGACY, RedirectionType.BIND)
+                args.force_remount_bind_mounts and redir.type == RedirectionType.BIND
             ):
                 continue
 

@@ -97,9 +97,6 @@ class CloneTest(testcase.EdenRepoTest):
     def test_clone_with_arcconfig(self) -> None:
         project_id = "special_project"
 
-        # Remember this state for later
-        before_arcconfig = self.repo.get_head_hash()
-
         # Add an .arcconfig file to the repository
         arcconfig_data = {
             "project_id": project_id,
@@ -131,41 +128,14 @@ class CloneTest(testcase.EdenRepoTest):
         # the .arcconfig file
         eden_clone = self.make_temporary_directory()
         self.eden.run_cmd("clone", self.repo.path, eden_clone)
-        self.assertTrue(
+        self.assertFalse(
             os.path.isdir(os.path.join(eden_clone, "foo/stuff/build_output")),
-            msg="clone should create bind mounts",
+            msg="clone should not create bind mounts from legacy config",
         )
-        self.assertTrue(
+        self.assertFalse(
             os.path.isdir(os.path.join(eden_clone, "node_modules")),
-            msg="clone should create bind mounts",
+            msg="clone should not create bind mounts from legacy config",
         )
-
-        # Let's also check that passing in a rev is effective when
-        # the repo is "bare".  We're not actually making it bare here
-        # as I'm not sure if we support that concept with git also,
-        # so instead I'm moving the repo back to before the arcconfig
-        # exists to simulate a similar situation.  The problem that we're
-        # testing here is (for mercurial at least), since the default head
-        # rev is '.', if the source repo doesn't have an arcconfig we'd
-        # never set up the bindmounts, even if the --rev option was passed in.
-
-        # TODO: GitRepository doesn't yet have an update() method, so make
-        # this hg specific for now.
-        if self.repo.get_type() == "hg":
-            assert isinstance(self.repo, HgRepository)
-            head_rev = self.repo.get_head_hash()
-            # pyre-fixme[16]: `Repository` has no attribute `update`.
-            self.repo.update(before_arcconfig)
-            alt_eden_clone = self.make_temporary_directory()
-            self.eden.run_cmd("clone", "-r", head_rev, self.repo.path, alt_eden_clone)
-            self.assertTrue(
-                os.path.isdir(os.path.join(alt_eden_clone, "foo/stuff/build_output")),
-                msg="clone should create bind mounts",
-            )
-            self.assertTrue(
-                os.path.isdir(os.path.join(alt_eden_clone, "node_modules")),
-                msg="clone should create bind mounts",
-            )
 
     def test_clone_from_eden_repo(self) -> None:
         # Add a config alias for a repo with some bind mounts.
@@ -188,9 +158,10 @@ class CloneTest(testcase.EdenRepoTest):
         # Create an Eden mount from the config alias.
         eden_clone1 = self.make_temporary_directory()
         self.eden.run_cmd("clone", repo_name, eden_clone1)
-        self.assertTrue(
+
+        self.assertFalse(
             os.path.isdir(os.path.join(eden_clone1, "tmp/bm1")),
-            msg="clone should create bind mount",
+            msg="clone should not create bind mount from the legacy config",
         )
 
         # Clone the Eden clone! Note it should inherit its config.
@@ -198,10 +169,9 @@ class CloneTest(testcase.EdenRepoTest):
         self.eden.run_cmd(
             "clone", "--rev", self.repo.get_head_hash(), eden_clone1, eden_clone2
         )
-        self.assertTrue(
+        self.assertFalse(
             os.path.isdir(os.path.join(eden_clone2, "tmp/bm1")),
-            msg="clone should inherit its config from eden_clone1, "
-            "which should include the bind mounts.",
+            msg="clone should not mount legacy bind mounts",
         )
 
     def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
