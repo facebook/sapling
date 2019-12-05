@@ -335,12 +335,10 @@ else:
     ziplist = zip
     rawinput = raw_input  # noqa
 
-# pyre-fixme[6]: Expected `Union[bytes, Tuple[bytes, ...]]` for 1st param but got `str`.
-isjython = sysplatform.startswith("java")
+isjython = sysplatform.startswith(b"java")
 
-isdarwin = sysplatform == "darwin"
-# pyre-fixme[6]: Expected `Union[bytes, Tuple[bytes, ...]]` for 1st param but got `str`.
-islinux = sysplatform.startswith("linux")
+isdarwin = sysplatform == b"darwin"
+islinux = sysplatform.startswith(b"linux")
 isposix = osname == "posix"
 iswindows = osname == "nt"
 
