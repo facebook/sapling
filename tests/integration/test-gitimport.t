@@ -17,16 +17,16 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees
+  $ gitimport "$GIT_REPO" --derive-trees --hggit-compatibility
   * using repo "repo" repoid RepositoryId(0) (glob)
-  Created e45fd71023e1daf8bcadd9a63086c66180aa8c64 => ChangesetId(Blake2(9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd))
-  Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd)))
+  Created e45fd71023e1daf8bcadd9a63086c66180aa8c64 => ChangesetId(Blake2(3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a))
+  Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a)))
   1 tree(s) are valid!
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master 9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd
+  $ mononoke_admin bookmarks set master 3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a)) (glob)
 
 # Start Mononoke
   $ mononoke
@@ -38,3 +38,8 @@
   $ cd "$HG_REPO"
   $ cat "file1"
   this is file1
+
+# Try out hggit compatibility
+  $ hg --config extensions.hggit= git-updatemeta
+  $ hg --config extensions.hggit= log -T '{gitnode}'
+  e45fd71023e1daf8bcadd9a63086c66180aa8c64 (no-eol)

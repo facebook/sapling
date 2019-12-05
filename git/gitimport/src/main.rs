@@ -39,6 +39,9 @@ use tokio::runtime::Runtime;
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DERIVE_TREES: &str = "derive-trees";
+const ARG_HGGIT_COMPATIBILITY: &str = "hggit-compatibility";
+
+const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 struct GitTree(Oid);
@@ -172,6 +175,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name(ARG_HGGIT_COMPATIBILITY)
+                .long(ARG_HGGIT_COMPATIBILITY)
+                .help("Set commit extras for hggit compatibility")
+                .required(false)
+                .takes_value(false),
+        )
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
 
     let matches = app.get_matches();
@@ -184,6 +194,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
 
     let derive_trees = matches.is_present(ARG_DERIVE_TREES);
+    let hggit_compatibility = matches.is_present(ARG_HGGIT_COMPATIBILITY);
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
     let walk_repo = Repository::open(&path)?;
@@ -245,7 +256,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
         let time = commit.time();
 
-        // TODO: Should we have extras?
+        let mut extra = BTreeMap::new();
+        if hggit_compatibility {
+            extra.insert(
+                HGGIT_COMMIT_ID_EXTRA.to_string(),
+                commit.id().to_string().into_bytes(),
+            );
+        }
+
+        // TODO: Should we have furhter extras?
         let bonsai_cs = BonsaiChangesetMut {
             parents: parents.clone(),
             author,
@@ -253,7 +272,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             committer: None,
             committer_date: None,
             message,
-            extra: BTreeMap::new(),
+            extra,
             file_changes,
         }
         .freeze()?;
