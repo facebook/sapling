@@ -1119,7 +1119,7 @@ mod test {
 #[cfg(test)]
 mod test_parse {
     use super::*;
-    use maplit::{hashmap, hashset};
+    use maplit::{btreeset, hashmap, hashset};
     use std::fmt::Debug;
 
     fn hash_ones() -> HgChangesetId {
@@ -1416,8 +1416,8 @@ mod test_parse {
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
                 rootdir: Bytes::new(),
-                mfnodes: hashset![hash_ones_manifest()],
-                basemfnodes: hashset![hash_ones_manifest()],
+                mfnodes: btreeset![hash_ones_manifest()],
+                basemfnodes: btreeset![hash_ones_manifest()],
                 directories: vec![],
                 depth: None,
             })),
@@ -1441,8 +1441,8 @@ mod test_parse {
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
                 rootdir: Bytes::from("ololo".as_bytes()),
-                mfnodes: hashset![hash_ones_manifest(), hash_twos_manifest()],
-                basemfnodes: hashset![hash_twos_manifest(), hash_ones_manifest()],
+                mfnodes: btreeset![hash_ones_manifest(), hash_twos_manifest()],
+                basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
                 depth: Some(1),
             })),

@@ -16,7 +16,7 @@
 
 use bytes::Bytes;
 use mercurial_types::{HgChangesetId, HgManifestId};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Debug};
 use std::sync::Mutex;
 use types::api::TreeRequest;
@@ -166,9 +166,9 @@ pub struct GettreepackArgs {
     /// "root of the repo".
     pub rootdir: Bytes,
     /// The manifest nodes of the specified root directory to send.
-    pub mfnodes: HashSet<HgManifestId>,
+    pub mfnodes: BTreeSet<HgManifestId>,
     /// The manifest nodes of the rootdir that are already on the client.
-    pub basemfnodes: HashSet<HgManifestId>,
+    pub basemfnodes: BTreeSet<HgManifestId>,
     /// The fullpath (not relative path) of directories underneath
     /// the rootdir that should be sent.
     pub directories: Vec<Bytes>,

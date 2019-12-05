@@ -116,12 +116,12 @@ mod ops {
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
-fn format_nodes_list(nodes: &Vec<HgChangesetId>) -> String {
-    nodes.iter().map(|node| format!("{}", node)).join(" ")
+fn format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
+    nodes.into_iter().map(|node| format!("{}", node)).join(" ")
 }
 
-fn format_manifests_set(nodes: &HashSet<HgManifestId>) -> String {
-    nodes.iter().map(|node| format!("{}", node)).join(" ")
+fn format_manifests<'a>(nodes: impl IntoIterator<Item = &'a HgManifestId>) -> String {
+    nodes.into_iter().map(|node| format!("{}", node)).join(" ")
 }
 
 // Generic for HashSet, Vec, etc...
@@ -1069,8 +1069,8 @@ impl HgCommands for RepoClient {
 
         let value = json!({
             "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
-            "common": format_nodes_list(&args.common),
-            "heads": format_nodes_list(&args.heads),
+            "common": format_nodes(&args.common),
+            "heads": format_nodes(&args.heads),
             "listkeys": format_utf8_bytes_list(&args.listkeys),
         });
         let value = json!(vec![value]);
@@ -1371,8 +1371,8 @@ impl HgCommands for RepoClient {
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         let args = json!({
             "rootdir": String::from_utf8_lossy(&params.rootdir),
-            "mfnodes": format_manifests_set(&params.mfnodes),
-            "basemfnodes": format_manifests_set(&params.basemfnodes),
+            "mfnodes": format_manifests(&params.mfnodes),
+            "basemfnodes": format_manifests(&params.basemfnodes),
             "directories": format_utf8_bytes_list(&params.directories),
         });
         let args = json!(vec![args]);
