@@ -9,6 +9,7 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+use anyhow::format_err;
 use bytes::Bytes;
 use futures::sync::{mpsc, oneshot};
 use futures::{
@@ -653,7 +654,7 @@ impl<In: Stream> Stream for ReturnRemainder<In> {
 }
 
 pub enum StreamTimeoutError {
-    Error(failure_ext::Error),
+    Error(anyhow::Error),
     Timeout,
 }
 
@@ -662,7 +663,7 @@ pub struct StreamWithTimeout<S> {
     stream: S,
 }
 
-impl<S: Stream<Error = failure_ext::Error>> Stream for StreamWithTimeout<S> {
+impl<S: Stream<Error = anyhow::Error>> Stream for StreamWithTimeout<S> {
     type Item = S::Item;
     type Error = StreamTimeoutError;
 
@@ -672,10 +673,10 @@ impl<S: Stream<Error = failure_ext::Error>> Stream for StreamWithTimeout<S> {
                 return Err(StreamTimeoutError::Timeout);
             }
             Err(err) => {
-                return Err(StreamTimeoutError::Error(failure_ext::err_msg(format!(
+                return Err(StreamTimeoutError::Error(format_err!(
                     "internal error: timeout failed {}",
                     err
-                ))));
+                )));
             }
             _ => {}
         };
@@ -839,7 +840,7 @@ where
 /// Stream as a result. See pseudocode below
 ///
 ///  ```
-/// # use failure_ext::Error;
+/// # use anyhow::Error;
 /// # use futures::Future;
 /// # use futures_ext::{BoxFuture, SinkToAsyncWrite};
 /// # use tokio_io::AsyncWrite;
@@ -984,6 +985,7 @@ mod test {
 
     use std::time::{self, Duration};
 
+    use anyhow::{Error, Result};
     use assert_matches::assert_matches;
     use futures::stream;
     use futures::sync::mpsc;
@@ -1021,7 +1023,7 @@ mod test {
             .core_threads(THREAD_COUNT)
             .build()
             .unwrap();
-        fn sleep() -> Result<(), failure_ext::Error> {
+        fn sleep() -> Result<()> {
             std::thread::sleep(SLEEP_TIME);
             Ok(())
         }
@@ -1260,7 +1262,7 @@ mod test {
                     item
                 }
             })
-            .map_err(|_| failure_ext::err_msg("error"))
+            .map_err(|_| Error::msg("error"))
             .take(10)
             .whole_stream_timeout(Duration::new(3, 0))
             .collect();

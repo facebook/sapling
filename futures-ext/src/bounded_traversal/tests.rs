@@ -7,7 +7,7 @@
  */
 
 use super::{bounded_traversal, bounded_traversal_dag, bounded_traversal_stream};
-use failure_ext::Error;
+use anyhow::Result;
 use futures::{
     future,
     sync::oneshot::{channel, Sender},
@@ -165,7 +165,7 @@ impl<V: Ord + Clone> PartialEq for StateLog<V> {
 }
 
 #[test]
-fn test_tick() -> Result<(), Error> {
+fn test_tick() -> Result<()> {
     use futures::stream::{FuturesUnordered, Stream};
 
     let log = Arc::new(Mutex::new(Vec::new()));
@@ -211,7 +211,7 @@ fn test_tick() -> Result<(), Error> {
 }
 
 #[test]
-fn test_bounded_traversal() -> Result<(), Error> {
+fn test_bounded_traversal() -> Result<()> {
     // tree
     //      0
     //     / \
@@ -315,7 +315,7 @@ fn test_bounded_traversal() -> Result<(), Error> {
 }
 
 #[test]
-fn test_bounded_traversal_dag() -> Result<(), Error> {
+fn test_bounded_traversal_dag() -> Result<()> {
     // dag
     //   0
     //  / \
@@ -437,7 +437,7 @@ fn test_bounded_traversal_dag() -> Result<(), Error> {
 }
 
 #[test]
-fn test_bounded_traversal_dag_with_cycle() -> Result<(), Error> {
+fn test_bounded_traversal_dag_with_cycle() -> Result<()> {
     // graph with cycle
     //   0
     //  / \
@@ -519,7 +519,7 @@ fn test_bounded_traversal_dag_with_cycle() -> Result<(), Error> {
 }
 
 #[test]
-fn test_bounded_traversal_stream() -> Result<(), Error> {
+fn test_bounded_traversal_stream() -> Result<()> {
     // tree
     //      0
     //     / \

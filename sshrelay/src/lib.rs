@@ -127,7 +127,7 @@ impl SshDecoder {
     }
 }
 
-fn ioerr_cvt(err: netstring::Error) -> io::Error {
+fn ioerr_cvt(err: anyhow::Error) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, format!("{}", err))
 }
 
