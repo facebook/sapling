@@ -255,8 +255,8 @@ def _windowsworker(ui, func, staticargs, args):
         def interrupt(self):
             self._interrupted = True
 
-        # pyre-fixme[15]: `run` overrides method defined in `Thread` inconsistently.
         def run(self):
+            # type: () -> None
             try:
                 while not self._taskqueue.empty():
                     try:
