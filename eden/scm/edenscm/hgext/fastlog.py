@@ -389,8 +389,8 @@ class LocalIteratorThread(Thread):
     def stopped(self):
         return self._stop.isSet()
 
-    # pyre-fixme[15]: `run` overrides method defined in `Thread` inconsistently.
     def run(self):
+        # type: () -> None
         generator = self.generator
         match = self.localmatch
         dirs = self.dirs
@@ -504,8 +504,8 @@ class FastLogThread(Thread):
                 self.finishpath(path)
                 return
 
-    # pyre-fixme[15]: `run` overrides method defined in `Thread` inconsistently.
     def run(self):
+        # type: () -> None
         revs = None
         paths = self.paths
 
@@ -519,10 +519,11 @@ class FastLogThread(Thread):
             else:
                 revs = gen
 
-        for rev in revs:
-            if self.stopped():
-                break
-            self.queue.put((self.id, True, rev))
+        if revs:
+            for rev in revs:
+                if self.stopped():
+                    break
+                self.queue.put((self.id, True, rev))
         # The end marker (self.id, True, None) indicates that the thread
         # completed successfully. Don't send it if the thread is stopped.
         # The thread can be stopped for one of two reasons:
