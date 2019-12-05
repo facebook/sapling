@@ -674,7 +674,8 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
         },
     )?;
 
-    let diffs = runtime.with(|rt| rt.block_on(mf0.diff(ctx, blobstore, mf1).collect()))?;
+    let diffs =
+        runtime.with(|rt| rt.block_on(mf0.diff(ctx.clone(), blobstore.clone(), mf1).collect()))?;
 
     let mut added = BTreeSet::new();
     let mut removed = BTreeSet::new();
@@ -708,6 +709,72 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
             "dir/removed_file",
             "dir/removed_dir",
             "dir/removed_dir/3",
+            "dir_file_conflict",
+            "dir_file_conflict/5"
+        ])?
+    );
+    assert_eq!(changed, make_paths(&["/", "dir", "dir/changed_file"])?);
+
+    let diffs = runtime.with(|rt| {
+        rt.block_on(
+            mf0.filtered_diff(
+                ctx,
+                blobstore,
+                mf1,
+                |diff| {
+                    let path = match &diff {
+                        Diff::Added(path, ..)
+                        | Diff::Removed(path, ..)
+                        | Diff::Changed(path, ..) => path,
+                    };
+
+                    let badpath = MPath::new("dir/added_dir/3").unwrap();
+                    if &Some(badpath) != path {
+                        Some(diff)
+                    } else {
+                        None
+                    }
+                },
+                |diff| {
+                    let path = match diff {
+                        Diff::Added(path, ..)
+                        | Diff::Removed(path, ..)
+                        | Diff::Changed(path, ..) => path,
+                    };
+
+                    let badpath = MPath::new("dir/removed_dir").unwrap();
+                    &Some(badpath) != path
+                },
+            )
+            .collect(),
+        )
+    })?;
+
+    let mut added = BTreeSet::new();
+    let mut removed = BTreeSet::new();
+    let mut changed = BTreeSet::new();
+    for diff in diffs {
+        match diff {
+            Diff::Added(path, _) => {
+                added.insert(path);
+            }
+            Diff::Removed(path, _) => {
+                removed.insert(path);
+            }
+            Diff::Changed(path, _, _) => {
+                changed.insert(path);
+            }
+        };
+    }
+
+    assert_eq!(
+        added,
+        make_paths(&["added_file", "dir/added_dir", "dir_file_conflict"])?
+    );
+    assert_eq!(
+        removed,
+        make_paths(&[
+            "dir/removed_file",
             "dir_file_conflict",
             "dir_file_conflict/5"
         ])?

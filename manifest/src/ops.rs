@@ -16,6 +16,7 @@ use futures_ext::{
 };
 use mononoke_types::MPath;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -222,6 +223,31 @@ where
         Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
         Error,
     > {
+        self.filtered_diff(ctx, store, other, Some, |_| true)
+    }
+
+    /// Do a diff, but with knobs to filter_map output and prune some subtrees.
+    /// `output_filter` let's us configure what will be returned from filtered_diff. it accepts
+    /// every diff entry and returns Option<Out>, so it acts similar to filter_map() function
+    /// recurse_pruner is a function that allows us to skip iterating over some subtrees
+    fn filtered_diff<FilterMap, Out, RecursePruner>(
+        &self,
+        ctx: CoreContext,
+        store: Store,
+        other: Self,
+        output_filter: FilterMap,
+        recurse_pruner: RecursePruner,
+    ) -> BoxStream<Out, Error>
+    where
+        FilterMap: Fn(
+                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+            ) -> Option<Out>
+            + Clone
+            + Send
+            + 'static,
+        RecursePruner: Fn(&Diff<Self>) -> bool + Clone + Send + 'static,
+        Out: Send + 'static,
+    {
         if self == &other {
             return stream::empty().boxify();
         }
@@ -229,95 +255,153 @@ where
         bounded_traversal_stream(
             256,
             Some(Diff::Changed(None, self.clone(), other)),
-            move |input| match input {
-                Diff::Changed(path, left, right) => left
-                    .load(ctx.clone(), &store)
-                    .join(right.load(ctx.clone(), &store))
-                    .map(move |(left_mf, right_mf)| {
-                        let mut output = Vec::new();
-                        let mut recurse = Vec::new();
+            move |input| {
+                let mut output = OutputHolder::new(output_filter.clone());
+                let mut recurse = RecurseHolder::new(recurse_pruner.clone());
 
-                        for (name, left) in left_mf.list() {
-                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                            if let Some(right) = right_mf.lookup(&name) {
-                                if left != right {
-                                    match (left, right) {
-                                        (left @ Entry::Leaf(_), right @ Entry::Leaf(_)) => {
-                                            output.push(Diff::Changed(path, left, right))
-                                        }
-                                        (Entry::Tree(tree), right @ Entry::Leaf(_)) => {
-                                            output.push(Diff::Added(path.clone(), right));
-                                            recurse.push(Diff::Removed(path, tree));
-                                        }
-                                        (left @ Entry::Leaf(_), Entry::Tree(tree)) => {
-                                            output.push(Diff::Removed(path.clone(), left));
-                                            recurse.push(Diff::Added(path, tree));
-                                        }
-                                        (Entry::Tree(left), Entry::Tree(right)) => {
-                                            recurse.push(Diff::Changed(path, left, right))
+                match input {
+                    Diff::Changed(path, left, right) => left
+                        .load(ctx.clone(), &store)
+                        .join(right.load(ctx.clone(), &store))
+                        .map(move |(left_mf, right_mf)| {
+                            for (name, left) in left_mf.list() {
+                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                if let Some(right) = right_mf.lookup(&name) {
+                                    if left != right {
+                                        match (left, right) {
+                                            (left @ Entry::Leaf(_), right @ Entry::Leaf(_)) => {
+                                                output.push(Diff::Changed(path, left, right));
+                                            }
+                                            (Entry::Tree(tree), right @ Entry::Leaf(_)) => {
+                                                output.push(Diff::Added(path.clone(), right));
+                                                recurse.push(Diff::Removed(path, tree));
+                                            }
+                                            (left @ Entry::Leaf(_), Entry::Tree(tree)) => {
+                                                output.push(Diff::Removed(path.clone(), left));
+                                                recurse.push(Diff::Added(path, tree));
+                                            }
+                                            (Entry::Tree(left), Entry::Tree(right)) => {
+                                                recurse.push(Diff::Changed(path, left, right))
+                                            }
                                         }
                                     }
-                                }
-                            } else {
-                                match left {
-                                    Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
-                                    _ => output.push(Diff::Removed(path, left)),
-                                }
-                            }
-                        }
-                        for (name, right) in right_mf.list() {
-                            if left_mf.lookup(&name).is_none() {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                                match right {
-                                    Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
-                                    _ => output.push(Diff::Added(path, right)),
+                                } else {
+                                    match left {
+                                        Entry::Tree(tree) => {
+                                            recurse.push(Diff::Removed(path, tree))
+                                        }
+                                        _ => output.push(Diff::Removed(path, left)),
+                                    }
                                 }
                             }
-                        }
-                        output.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
+                            for (name, right) in right_mf.list() {
+                                if left_mf.lookup(&name).is_none() {
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match right {
+                                        Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
+                                        _ => output.push(Diff::Added(path, right)),
+                                    }
+                                }
+                            }
+                            output.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
 
-                        (output, recurse)
-                    })
-                    .left_future(),
-                Diff::Added(path, tree) => {
-                    tree.load(ctx.clone(), &store).map(move |manifest| {
-                        let mut output = Vec::new();
-                        let mut recurse = Vec::new();
-                        for (name, entry) in manifest.list() {
-                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                            match entry {
-                                Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
-                                _ => output.push(Diff::Added(path, entry)),
+                            (output.into_output(), recurse.into_diffs())
+                        })
+                        .left_future(),
+                    Diff::Added(path, tree) => {
+                        tree.load(ctx.clone(), &store).map(move |manifest| {
+                            for (name, entry) in manifest.list() {
+                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                match entry {
+                                    Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
+                                    _ => output.push(Diff::Added(path, entry)),
+                                }
                             }
-                        }
-                        output.push(Diff::Added(path, Entry::Tree(tree)));
-                        (output, recurse)
-                    })
-                }
-                .left_future()
-                .right_future(),
-                Diff::Removed(path, tree) => {
-                    tree.load(ctx.clone(), &store).map(move |manifest| {
-                        let mut output = Vec::new();
-                        let mut recurse = Vec::new();
-                        for (name, entry) in manifest.list() {
-                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                            match entry {
-                                Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
-                                _ => output.push(Diff::Removed(path, entry)),
+                            output.push(Diff::Added(path, Entry::Tree(tree)));
+                            (output.into_output(), recurse.into_diffs())
+                        })
+                    }
+                    .left_future()
+                    .right_future(),
+                    Diff::Removed(path, tree) => {
+                        tree.load(ctx.clone(), &store).map(move |manifest| {
+                            for (name, entry) in manifest.list() {
+                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                match entry {
+                                    Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
+                                    _ => output.push(Diff::Removed(path, entry)),
+                                }
                             }
-                        }
-                        output.push(Diff::Removed(path, Entry::Tree(tree)));
-                        (output, recurse)
-                    })
+                            output.push(Diff::Removed(path, Entry::Tree(tree)));
+                            (output.into_output(), recurse.into_diffs())
+                        })
+                    }
+                    .right_future()
+                    .right_future(),
                 }
-                .right_future()
-                .right_future(),
             },
         )
         .map(|output| stream::iter_ok(output))
         .flatten()
         .boxify()
+    }
+}
+
+// Stores output of diff_filtered_function() for a single iterator of bounded traversal.
+// It's just a simple vector together with a function that converts the output
+struct OutputHolder<Entry, FilterMap, Out> {
+    output: Vec<Out>,
+    filter_map: FilterMap,
+    __phantom: PhantomData<Entry>,
+}
+
+impl<Entry, FilterMap, Out> OutputHolder<Entry, FilterMap, Out>
+where
+    FilterMap: Fn(Diff<Entry>) -> Option<Out>,
+{
+    fn new(filter_map: FilterMap) -> Self {
+        Self {
+            output: vec![],
+            filter_map,
+            __phantom: PhantomData,
+        }
+    }
+
+    fn push(&mut self, diff: Diff<Entry>) {
+        self.output.extend((self.filter_map)(diff));
+    }
+
+    fn into_output(self) -> Vec<Out> {
+        self.output
+    }
+}
+
+// Stores bounded traversal recursion
+// It's just a simple vector with a filter function
+struct RecurseHolder<Entry, Pruner> {
+    diffs: Vec<Diff<Entry>>,
+    pruner: Pruner,
+}
+
+impl<Entry, Pruner> RecurseHolder<Entry, Pruner>
+where
+    Pruner: Fn(&Diff<Entry>) -> bool,
+{
+    fn new(pruner: Pruner) -> Self {
+        Self {
+            diffs: vec![],
+            pruner,
+        }
+    }
+
+    fn push(&mut self, diff: Diff<Entry>) {
+        if (self.pruner)(&diff) {
+            self.diffs.push(diff);
+        }
+    }
+
+    fn into_diffs(self) -> Vec<Diff<Entry>> {
+        self.diffs
     }
 }
 
