@@ -285,6 +285,7 @@ else:
     strurl = identity
     bytesurl = identity
     range = xrange  # noqa: F821
+    unicode = unicode
 
     # this can't be parsed on Python 3
     exec("def raisewithtb(exc, tb):\n" "    raise exc, None, tb\n")

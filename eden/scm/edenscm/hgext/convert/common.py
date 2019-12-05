@@ -18,18 +18,12 @@ import os
 import re
 import subprocess
 
-from edenscm.mercurial import encoding, error, phases, util
+from edenscm.mercurial import encoding, error, phases, pycompat, util
 from edenscm.mercurial.i18n import _
 
 
 pickle = util.pickle
 propertycache = util.propertycache
-
-try:
-    # pyre-fixme[18]: Global name `unicode` is undefined.
-    unicode
-except NameError:
-    unicode = str
 
 
 def encodeargs(args):
@@ -185,7 +179,7 @@ class converter_source(object):
         if not encoding:
             encoding = self.encoding or "utf-8"
 
-        if isinstance(s, unicode):
+        if isinstance(s, pycompat.unicode):
             return s.encode("utf-8")
         try:
             return s.decode(encoding).encode("utf-8")
