@@ -819,7 +819,7 @@ class fetchbuilddeps(Command):
         fbsourcepylibrary("eden", "../../eden/py/eden"),
     ]
     pyassets += [
-        edenpythrift(name="eden-rust-deps-ea4913daef53b814b9b40b58511a24bdb1c0cb7b.zip")
+        edenpythrift(name="eden-rust-deps-e0fd3d6d06542b491712b6e7fdedfae9b6e7ad15.zip")
     ]
 
     assets = re2assets + pyassets
