@@ -16,7 +16,7 @@ pub mod idmap;
 pub mod segment;
 pub mod spanset;
 
-pub use id::Id;
+pub use id::{GroupId, Id};
 
 #[cfg(test)]
 mod tests;

@@ -24,7 +24,7 @@ pub struct Id(pub u64);
 ///
 /// `(Group, Id)` are also topologically sorted.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct GroupId(usize);
+pub struct GroupId(pub(crate) usize);
 
 impl GroupId {
     /// The "master" group. `ancestors(master)`.

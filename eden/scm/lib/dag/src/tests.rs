@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::id::Id;
+use crate::id::{GroupId, Id};
 use crate::idmap::IdMap;
 use crate::segment::Dag;
 use crate::spanset::SpanSet;
@@ -509,7 +509,7 @@ impl IdMap {
     /// Replace names in an ASCII DAG using the ids assigned.
     fn replace(&self, text: &str) -> String {
         let mut result = text.to_string();
-        for id in 0..self.next_free_id().0 {
+        for id in 0..self.next_free_id(GroupId::MASTER).unwrap().0 {
             let id = Id(id);
             if let Ok(Some(name)) = self.find_slice_by_id(id) {
                 let name = String::from_utf8(name.to_vec()).unwrap();
@@ -561,7 +561,9 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
         .split(' ')
         .map(|head| {
             let head = head.as_bytes();
-            id_map.assign_head(head, &parents_by_name).unwrap();
+            id_map
+                .assign_head(head, &parents_by_name, GroupId::MASTER)
+                .unwrap();
             let head_id = id_map.find_id_by_slice(head).unwrap().unwrap();
             let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
             dag.set_new_segment_size(segment_size);

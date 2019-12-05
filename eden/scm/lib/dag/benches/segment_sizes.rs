@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag, Id};
+use dag::{idmap::IdMap, segment::Dag, GroupId, Id};
 use minibench::{
     bench, elapsed,
     measure::{self, Measure},
@@ -32,7 +32,9 @@ fn main() {
 
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
-    id_map.assign_head(&head_name, &parents_by_name).unwrap();
+    id_map
+        .assign_head(&head_name, &parents_by_name, GroupId::MASTER)
+        .unwrap();
 
     let head_id = id_map.find_id_by_slice(&head_name).unwrap().unwrap();
     let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);

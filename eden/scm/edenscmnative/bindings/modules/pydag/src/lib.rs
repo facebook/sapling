@@ -11,7 +11,7 @@ use anyhow::Error;
 use cpython::*;
 use cpython_failure::{FallibleExt, ResultPyErrExt};
 use dag::{
-    id::Id,
+    id::{GroupId, Id},
     idmap::IdMap,
     segment::Dag,
     spanset::{SpanSet, SpanSetIter},
@@ -180,38 +180,39 @@ py_class!(class dagindex |py| {
     }
 
     /// Build segments on disk. This discards changes by `buildmem`.
-    def builddisk(&self, nodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
+    def builddisk(&self, masternodes: Vec<PyBytes>, othernodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
         // Build indexes towards `node`. Save state on disk.
         // Must be called from a clean state (ex. `build_mem` is not called).
-        if nodes.is_empty() {
+        if masternodes.is_empty() && othernodes.is_empty() {
             return Ok(None);
         }
         let get_parents = translate_get_parents(py, parentfunc);
         let mut map = self.map(py).borrow_mut();
-        let id = {
-            let mut map = map.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-            let mut id = 0;
+        let mut map = map.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
+        for (nodes, group) in [(masternodes, GroupId::MASTER), (othernodes, GroupId::NON_MASTER)].iter() {
             for node in nodes {
                 let node = node.data(py);
-                id = id.max(map.assign_head(&node, &get_parents).map_pyerr::<exc::RuntimeError>(py)?.0);
+                map.assign_head(&node, &get_parents, *group).map_pyerr::<exc::RuntimeError>(py)?;
             }
-            map.sync().map_pyerr::<exc::IOError>(py)?;
-            id
-        };
-        let get_parents = map.build_get_parents_by_id(&get_parents);
-
-        let mut dag = self.dag(py).borrow_mut();
-        {
-            use std::ops::DerefMut;
-            let mut syncable = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-            syncable.build_segments_persistent(Id(id), &get_parents).map_pyerr::<exc::IOError>(py)?;
-            syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr::<exc::IOError>(py)?;
         }
+        map.sync().map_pyerr::<exc::IOError>(py)?;
+
+        let get_parents = map.build_get_parents_by_id(&get_parents);
+        let mut dag = self.dag(py).borrow_mut();
+        use std::ops::DerefMut;
+        let mut syncable = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
+        for &group in GroupId::ALL.iter() {
+            let id = map.next_free_id(group).map_pyerr::<exc::IOError>(py)?;
+            if id > group.min_id() {
+                syncable.build_segments_persistent(id - 1, &get_parents).map_pyerr::<exc::IOError>(py)?;
+            }
+        }
+        syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr::<exc::IOError>(py)?;
         Ok(None)
     }
 
     /// Build segments in memory. Note: This gets discarded by `builddisk`.
-    def buildmem(&self, nodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
+    def buildmem(&self, nodes: Vec<PyBytes>, parentfunc: PyObject, master: bool = true) -> PyResult<Option<u8>> {
         // Build indexes towards `node`. Do not save state to disk.
         if nodes.is_empty() {
             return Ok(None);
@@ -222,7 +223,7 @@ py_class!(class dagindex |py| {
             let mut id = 0;
             for node in nodes {
                 let node = node.data(py);
-                id = id.max(map.assign_head(&node, &get_parents).map_pyerr::<exc::RuntimeError>(py)?.0);
+                id = id.max(map.assign_head(&node, &get_parents, group_id(master)).map_pyerr::<exc::RuntimeError>(py)?.0);
             }
             id
         };
@@ -301,6 +302,14 @@ py_class!(class dagindex |py| {
         Ok(Spans(dag.common_ancestors(set).map_pyerr::<exc::IOError>(py)?))
     }
 });
+
+fn group_id(master: bool) -> GroupId {
+    if master {
+        GroupId::MASTER
+    } else {
+        GroupId::NON_MASTER
+    }
+}
 
 /// Translate a Python `get_parents(node) -> [node]` function to a Rust one.
 fn translate_get_parents<'a>(

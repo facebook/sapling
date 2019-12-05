@@ -9,7 +9,7 @@
 //!
 //! See [`IdMap`] for the main structure.
 
-use crate::id::Id;
+use crate::id::{GroupId, Id};
 use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
@@ -18,12 +18,13 @@ use std::fs::{self, File};
 use std::io::{Cursor, Write};
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{self, AtomicU64};
 
 /// Bi-directional mapping between an integer id and `[u8]`.
 pub struct IdMap {
     log: log::Log,
     path: PathBuf,
-    next_free_id: Id,
+    cached_next_free_ids: [AtomicU64; GroupId::MAX],
 }
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
@@ -57,11 +58,10 @@ impl IdMap {
             }))
             .open(path)?;
         let path = path.to_path_buf();
-        let next_free_id = Self::get_next_free_id(&log)?;
         Ok(Self {
             log,
             path,
-            next_free_id,
+            cached_next_free_ids: Default::default(),
         })
     }
 
@@ -96,7 +96,8 @@ impl IdMap {
 
         // Reload. So we get latest data.
         self.log.sync()?;
-        self.next_free_id = Self::get_next_free_id(&self.log)?;
+        // Invalidate the next free id cache.
+        self.cached_next_free_ids = Default::default();
 
         Ok(SyncableIdMap {
             map: self,
@@ -136,48 +137,76 @@ impl IdMap {
     ///
     /// Panic if the new entry conflicts with existing entries.
     pub fn insert(&mut self, id: Id, slice: &[u8]) -> Result<()> {
-        if id < self.next_free_id {
+        let group = id.group_id();
+        if id < self.next_free_id(group)? {
             let existing_slice = self.find_slice_by_id(id)?;
             if let Some(existing_slice) = existing_slice {
-                assert_eq!(
-                    existing_slice, slice,
-                    "logic error: new entry conflicts with an existing entry"
-                );
+                if existing_slice != slice {
+                    bail!(
+                        "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
+                        id,
+                        slice,
+                        id,
+                        existing_slice
+                    );
+                }
             }
         }
         let existing_id = self.find_id_by_slice(slice)?;
         if let Some(existing_id) = existing_id {
-            assert_eq!(
-                existing_id, id,
-                "logic error: new entry conflicts with an existing entry"
-            );
+            if existing_id != id {
+                bail!(
+                    "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
+                    id,
+                    slice,
+                    existing_id,
+                    slice
+                );
+            }
         }
 
         let mut data = Vec::with_capacity(8 + slice.len());
         data.write_u64::<BigEndian>(id.0).unwrap();
         data.write_all(slice).unwrap();
         self.log.append(data)?;
-        if id >= self.next_free_id {
-            self.next_free_id = id + 1;
+        let next_free_id = self.cached_next_free_ids[group.0].get_mut();
+        if id.0 >= *next_free_id {
+            *next_free_id = id.0 + 1;
         }
         Ok(())
     }
 
-    /// Return the next unused id.
-    pub fn next_free_id(&self) -> Id {
-        self.next_free_id
+    /// Return the next unused id in the given group.
+    pub fn next_free_id(&self, group: GroupId) -> Result<Id> {
+        let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
+        let id = if cached == 0 {
+            let id = Self::get_next_free_id(&self.log, group)?;
+            self.cached_next_free_ids[group.0].store(id.0, atomic::Ordering::SeqCst);
+            id
+        } else {
+            Id(cached)
+        };
+        Ok(id)
     }
 
     // Find an unused id that is bigger than existing ids.
     // Used internally. It should match `next_free_id`.
-    fn get_next_free_id(log: &log::Log) -> Result<Id> {
-        let mut iter = log.lookup_range(Self::INDEX_ID_TO_SLICE, ..)?.rev();
+    fn get_next_free_id(log: &log::Log, group: GroupId) -> Result<Id> {
+        // Checks should have been done at callsite.
+        let lower_bound_id = group.min_id();
+        let upper_bound_id = group.max_id();
+        let lower_bound = lower_bound_id.to_bytearray();
+        let upper_bound = upper_bound_id.to_bytearray();
+        let range = &lower_bound[..]..=&upper_bound[..];
+        let mut iter = log.lookup_range(Self::INDEX_ID_TO_SLICE, range)?.rev();
         let id = match iter.nth(0) {
-            None => 0,
-            Some(Ok((key, _))) => Cursor::new(key).read_u64::<BigEndian>()? + 1,
-            _ => bail!("cannot read next_free_id"),
+            None => lower_bound_id,
+            Some(Ok((key, _))) => Id(Cursor::new(key).read_u64::<BigEndian>()? + 1),
+            _ => bail!("cannot read next_free_id for group {}", group),
         };
-        Ok(Id(id))
+        debug_assert!(id >= lower_bound_id);
+        debug_assert!(id <= upper_bound_id);
+        Ok(id)
     }
 }
 
@@ -193,7 +222,11 @@ impl IdMap {
     /// This function needs roughly `O(N)` heap memory. `N` is the number of
     /// ids to assign. When `N` is very large, try assigning ids to a known
     /// ancestor first.
-    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F) -> Result<Id>
+    ///
+    /// New `id`s inserted by this function will have the specified `group`.
+    /// Existing `id`s that are ancestors of `head` will get re-assigned
+    /// if they have a higher `group`.
+    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F, group: GroupId) -> Result<Id>
     where
         F: Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
     {
@@ -264,7 +297,8 @@ impl IdMap {
                 }
                 Assign(head) => {
                     if let None = self.find_id_by_slice(&head)? {
-                        self.insert(self.next_free_id(), &head)?;
+                        let id = self.next_free_id(group)?;
+                        self.insert(id, &head)?;
                     }
                 }
             }
@@ -343,13 +377,24 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut map = IdMap::open(dir.path()).unwrap();
         let mut map = map.prepare_filesystem_sync().unwrap();
-        assert_eq!(map.next_free_id().0, 0);
+        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 0);
         map.insert(Id(1), b"abc").unwrap();
-        assert_eq!(map.next_free_id().0, 2);
+        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 2);
         map.insert(Id(2), b"def").unwrap();
-        assert_eq!(map.next_free_id().0, 3);
+        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 3);
         map.insert(Id(10), b"ghi").unwrap();
-        assert_eq!(map.next_free_id().0, 11);
+        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 11);
+        map.insert(Id(11), b"ghi").unwrap_err(); // ghi maps to 10
+        map.insert(Id(10), b"ghi2").unwrap_err(); // 10 maps to ghi
+
+        // Test another group.
+        let id = map.next_free_id(GroupId::NON_MASTER).unwrap();
+        map.insert(id, b"jkl").unwrap();
+        map.insert(id, b"jkl").unwrap();
+        map.insert(id, b"jkl2").unwrap_err(); // id maps to jkl
+        map.insert(id + 1, b"jkl2").unwrap();
+        map.insert(id + 2, b"jkl2").unwrap_err(); // jkl2 maps to id + 1
+        assert_eq!(map.next_free_id(GroupId::NON_MASTER).unwrap(), id + 2);
 
         for _ in 0..=1 {
             assert_eq!(map.find_slice_by_id(Id(1)).unwrap().unwrap(), b"abc");
@@ -360,7 +405,9 @@ mod tests {
             assert_eq!(map.find_id_by_slice(b"abc").unwrap().unwrap().0, 1);
             assert_eq!(map.find_id_by_slice(b"def").unwrap().unwrap().0, 2);
             assert_eq!(map.find_id_by_slice(b"ghi").unwrap().unwrap().0, 10);
-            assert!(map.find_id_by_slice(b"jkl").unwrap().is_none());
+            assert_eq!(map.find_id_by_slice(b"jkl").unwrap().unwrap(), id);
+            assert_eq!(map.find_id_by_slice(b"jkl2").unwrap().unwrap(), id + 1);
+            assert!(map.find_id_by_slice(b"jkl3").unwrap().is_none());
             map.sync().unwrap();
         }
     }
