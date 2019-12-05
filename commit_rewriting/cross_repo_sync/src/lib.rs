@@ -57,10 +57,23 @@ async fn identity<T>(res: T) -> Result<T, Error> {
     Ok(res)
 }
 
+/// Create a version of `cs` with `Mover` applied to all changes
+/// The return value can be:
+/// - `Err` if the rewrite failed
+/// - `Ok(None)` if the rewrite decided that this commit should
+///              not be present in the rewrite target
+/// - `Ok(Some(rewritten))` for a successful rewrite, which should be
+///                         present in the rewrite target
+/// The notion that the commit "should not be present in the rewrite
+/// target" means that the commit is not a merge and all of its changes
+/// were rewritten into nothingness by the `Mover`.
+///
+/// Precondition: this function expects all `cs` parents to be present
+/// in `remapped_parents` as keys, and their remapped versions as values.
 pub fn rewrite_commit(
     mut cs: BonsaiChangesetMut,
     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-    rewrite_path: Mover,
+    mover: Mover,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     if !cs.file_changes.is_empty() {
         let path_rewritten_changes: Result<BTreeMap<_, _>, _> = cs
@@ -71,10 +84,10 @@ pub fn rewrite_commit(
                 fn rewrite_copy_from(
                     copy_from: &(MPath, ChangesetId),
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-                    rewrite_path: Mover,
+                    mover: Mover,
                 ) -> Result<Option<(MPath, ChangesetId)>, Error> {
                     let (path, copy_from_commit) = copy_from;
-                    let new_path = rewrite_path(&path)?;
+                    let new_path = mover(&path)?;
                     let copy_from_commit = remapped_parents.get(copy_from_commit).ok_or(
                         Error::from(ErrorKind::MissingRemappedCommit(*copy_from_commit)),
                     )?;
@@ -87,12 +100,12 @@ pub fn rewrite_commit(
                 fn rewrite_file_change(
                     change: FileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-                    rewrite_path: Mover,
+                    mover: Mover,
                 ) -> Result<FileChange, Error> {
                     let new_copy_from = change
                         .copy_from()
                         .and_then(|copy_from| {
-                            rewrite_copy_from(copy_from, remapped_parents, rewrite_path).transpose()
+                            rewrite_copy_from(copy_from, remapped_parents, mover).transpose()
                         })
                         .transpose()?;
 
@@ -104,17 +117,15 @@ pub fn rewrite_commit(
                     path: MPath,
                     change: Option<FileChange>,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-                    rewrite_path: Mover,
+                    mover: Mover,
                 ) -> Result<Option<(MPath, Option<FileChange>)>, Error> {
-                    let new_path = rewrite_path(&path)?;
+                    let new_path = mover(&path)?;
                     let change = change
-                        .map(|change| {
-                            rewrite_file_change(change, remapped_parents, rewrite_path.clone())
-                        })
+                        .map(|change| rewrite_file_change(change, remapped_parents, mover.clone()))
                         .transpose()?;
                     Ok(new_path.map(|new_path| (new_path, change)))
                 }
-                do_rewrite(path, change, &remapped_parents, rewrite_path.clone()).transpose()
+                do_rewrite(path, change, &remapped_parents, mover.clone()).transpose()
             })
             .collect();
 
@@ -164,8 +175,8 @@ async fn remap_changeset_id<'a, M: SyncedCommitMapping>(
         .await
 }
 
-/// Applies `rewrite_path` to all paths in `cs`, dropping any entry whose path rewrites to `None`
-/// E.g. adding a prefix can be done by a `rewrite` that adds the prefix and returns `Some(path)`.
+/// Applies `Mover` to all paths in `cs`, dropping any entry whose path rewrites to `None`
+/// E.g. adding a prefix can be done by a `Mover` that adds the prefix and returns `Some(path)`.
 /// Removing a prefix would be like adding, but returning `None` if the path does not have the prefix
 /// Additionally, changeset IDs are rewritten.
 ///
@@ -176,7 +187,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     cs: BonsaiChangesetMut,
     commit_syncer: &'a CommitSyncer<M>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let (_, _, rewrite_path) = commit_syncer.get_source_target_mover();
+    let (_, _, mover) = commit_syncer.get_source_target_mover();
     let mut remapped_parents = HashMap::new();
     for commit in &cs.parents {
         let maybe_sync_outcome = commit_syncer
@@ -198,7 +209,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
         remapped_parents.insert(*commit, remapped_parent);
     }
 
-    rewrite_commit(cs, &remapped_parents, rewrite_path)
+    rewrite_commit(cs, &remapped_parents, mover)
 }
 
 /// The state of a source repo commit in a target repo
@@ -375,6 +386,11 @@ where
             .compat()
     }
 
+    /// Create a changeset, equivalent to `source_cs_id` in the target repo
+    /// The difference between this function and `rewrite_commit` is that
+    /// `rewrite_commit` does not know anything about the repo and only produces
+    /// a `BonsaiChangesetMut` object, which later may or may not be uploaded
+    /// into the repository.
     pub async fn sync_commit(
         &self,
         ctx: CoreContext,
