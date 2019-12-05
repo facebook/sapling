@@ -72,10 +72,8 @@ impl IdMap {
     /// actually writes changes to disk.
     ///
     /// Block if another instance is taking the lock.
-    ///
-    /// Panic if there are pending in-memory writes.
     pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdMap> {
-        assert!(
+        ensure!(
             self.log.iter_dirty().next().is_none(),
             "programming error: prepare_filesystem_sync must be called without dirty in-memory entries",
         );
@@ -135,7 +133,7 @@ impl IdMap {
 
     /// Insert a new entry mapping from a slice to an id.
     ///
-    /// Panic if the new entry conflicts with existing entries.
+    /// Errors if the new entry conflicts with existing entries.
     pub fn insert(&mut self, id: Id, slice: &[u8]) -> Result<()> {
         let group = id.group_id();
         if id < self.next_free_id(group)? {
@@ -314,16 +312,23 @@ impl IdMap {
         get_parents_by_name: &'a dyn Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
     ) -> impl Fn(Id) -> Result<Vec<Id>> + 'a {
         let func = move |id: Id| -> Result<Vec<Id>> {
-            let name = self
-                .find_slice_by_id(id)?
-                .unwrap_or_else(|| panic!("logic error: id {} is referred but not assigned", id));
+            let name = match self.find_slice_by_id(id)? {
+                Some(name) => name,
+                None => {
+                    let name = match self.find_slice_by_id(id) {
+                        Ok(Some(name)) => format!("{} ({:?})", id, name),
+                        _ => format!("{}", id),
+                    };
+                    bail!("logic error: {} is referred but not assigned", name)
+                }
+            };
             let parent_names = get_parents_by_name(&name)?;
             let mut result = Vec::with_capacity(parent_names.len());
             for parent_name in parent_names {
                 if let Some(parent_id) = self.find_id_by_slice(&parent_name)? {
                     result.push(parent_id);
                 } else {
-                    panic!("logic error: ancestor ids must be available");
+                    bail!("logic error: ancestor ids must be available");
                 }
             }
             Ok(result)

@@ -17,7 +17,7 @@
 use crate::id::Id;
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use fs2::FileExt;
@@ -237,8 +237,7 @@ impl Dag {
     /// This might help performance a bit for certain rare types of DAGs.
     /// The default value is Usually good enough.
     pub fn set_new_segment_size(&mut self, size: usize) {
-        assert!(size > 1);
-        self.new_seg_size = size;
+        self.new_seg_size = size.max(2);
     }
 
     // Used internally to generate the index key for lookup
@@ -388,7 +387,7 @@ impl Dag {
     ///
     /// Return number of segments inserted.
     fn build_high_level_segments(&mut self, level: Level, drop_last: bool) -> Result<usize> {
-        assert!(level > 0);
+        ensure!(level > 0, "build_high_level_segments requires level > 0");
         let size = self.new_seg_size;
 
         // `get_parents` is on the previous level of segments.
@@ -396,7 +395,7 @@ impl Dag {
             if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
                 seg.parents()
             } else {
-                panic!("programming error: get_parents called with wrong head");
+                bail!("programming error: get_parents called with wrong head");
             }
         };
 
@@ -558,7 +557,7 @@ impl Dag {
                     continue 'outer;
                 }
             }
-            panic!("logic error: flat segments are expected to cover everything but they are not");
+            bail!("logic error: flat segments are expected to cover everything but they are not");
         }
 
         Ok(result)
@@ -1123,7 +1122,7 @@ impl<'a> Segment<'a> {
         high: Id,
         parents: &[Id],
     ) -> Vec<u8> {
-        assert!(high >= low);
+        debug_assert!(high >= low);
         let mut buf = Vec::with_capacity(1 + 8 + (parents.len() + 2) * 4);
         buf.write_u8(flags.bits()).unwrap();
         buf.write_u8(level).unwrap();
