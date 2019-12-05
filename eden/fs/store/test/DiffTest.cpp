@@ -200,14 +200,15 @@ TEST_F(DiffTest, newDirectory) {
 
   auto result = diffCommits("1", "2").get(100ms);
   EXPECT_THAT(result->errors, UnorderedElementsAre());
-  auto expectedResults = UnorderedElementsAre(
-      Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
-      Pair("src/foo/a/b/d.txt", ScmFileStatus::ADDED),
-      Pair("src/foo/a/b/e.txt", ScmFileStatus::ADDED),
-      Pair("src/foo/a/b/f/g.txt", ScmFileStatus::ADDED),
-      Pair("src/foo/z/y/x.txt", ScmFileStatus::ADDED),
-      Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED));
-  EXPECT_THAT(result->entries, expectedResults);
+  EXPECT_THAT(
+      result->entries,
+      UnorderedElementsAre(
+          Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
+          Pair("src/foo/a/b/d.txt", ScmFileStatus::ADDED),
+          Pair("src/foo/a/b/e.txt", ScmFileStatus::ADDED),
+          Pair("src/foo/a/b/f/g.txt", ScmFileStatus::ADDED),
+          Pair("src/foo/z/y/x.txt", ScmFileStatus::ADDED),
+          Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
   EXPECT_THAT(result2->errors, UnorderedElementsAre());
@@ -220,37 +221,6 @@ TEST_F(DiffTest, newDirectory) {
           Pair("src/foo/a/b/f/g.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/z/y/x.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/z/y/w.txt", ScmFileStatus::REMOVED)));
-
-  // Test calling diffTrees() with hashes
-  auto callback = std::make_unique<ScmStatusDiffCallback>();
-  auto callbackPtr = callback.get();
-
-  auto diffContext = DiffContext(callbackPtr, store_.get());
-  auto treeResult = diffTrees(
-                        &diffContext,
-                        builder.getRoot()->get().getHash(),
-                        builder2.getRoot()->get().getHash())
-                        .thenValue([callback = std::move(callback)](auto&&) {
-                          return callback->extractStatus();
-                        })
-                        .get(100ms);
-  EXPECT_THAT(treeResult.errors, UnorderedElementsAre());
-  EXPECT_THAT(treeResult.entries, expectedResults);
-
-  // Test calling diffTrees() with Tree objects
-  auto callback2 = std::make_unique<ScmStatusDiffCallback>();
-  auto callbackPtr2 = callback2.get();
-  auto diffContext2 = DiffContext(callbackPtr2, store_.get());
-
-  auto treeResult2 =
-      diffTrees(
-          &diffContext2, builder.getRoot()->get(), builder2.getRoot()->get())
-          .thenValue([callback2 = std::move(callback2)](auto&&) {
-            return callback2->extractStatus();
-          })
-          .get(100ms);
-  EXPECT_THAT(treeResult2.errors, UnorderedElementsAre());
-  EXPECT_THAT(treeResult2.entries, expectedResults);
 }
 
 TEST_F(DiffTest, fileToDirectory) {

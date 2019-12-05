@@ -50,7 +50,6 @@ struct DiffState {
   ScmStatusDiffCallback callback;
   DiffContext context;
 };
-} // namespace
 
 Future<Unit>
 diffAddedTree(const DiffContext* context, RelativePathPiece path, Hash hash);
@@ -169,25 +168,6 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
             const auto& [tree1, tree2] = tup;
             return diffTrees(context, path, *tree1, *tree2);
           });
-}
-
-/**
- * Diff two commits.
- *
- * The differences will be recorded using a callback inside of DiffState and
- * will be extracted and returned to the caller.
- */
-FOLLY_NODISCARD Future<Unit>
-diffCommits(const DiffContext* context, Hash hash1, Hash hash2) {
-  auto future1 = context->store->getTreeForCommit(hash1);
-  auto future2 = context->store->getTreeForCommit(hash2);
-  return collect(future1, future2)
-      .thenValue([context](std::tuple<
-                           std::shared_ptr<const Tree>,
-                           std::shared_ptr<const Tree>>&& tup) {
-        const auto& [tree1, tree2] = tup;
-        return diffTrees(context, RelativePathPiece{}, *tree1, *tree2);
-      });
 }
 
 FOLLY_NODISCARD Future<Unit>
@@ -385,6 +365,34 @@ Future<Unit> waitOnResults(
       });
 }
 
+/**
+ * Diff two commits.
+ *
+ * The differences will be recorded using a callback inside of DiffState and
+ * will be extracted and returned to the caller.
+ */
+FOLLY_NODISCARD Future<Unit>
+diffCommits(const DiffContext* context, Hash hash1, Hash hash2) {
+  auto future1 = context->store->getTreeForCommit(hash1);
+  auto future2 = context->store->getTreeForCommit(hash2);
+  return collect(future1, future2)
+      .thenValue([context](std::tuple<
+                           std::shared_ptr<const Tree>,
+                           std::shared_ptr<const Tree>>&& tup) {
+        const auto& [tree1, tree2] = tup;
+
+        // This happens in the case in which the CLI (during eden doctor) calls
+        // getScmStatusBetweenRevisions() with the same hash in order to check
+        // if a commit hash is valid.
+        if (tree1->getHash() == tree2->getHash()) {
+          return makeFuture();
+        }
+
+        return diffTrees(context, RelativePathPiece{}, *tree1, *tree2);
+      });
+}
+} // namespace
+
 Future<std::unique_ptr<ScmStatus>>
 diffCommitsForStatus(const ObjectStore* store, Hash hash1, Hash hash2) {
   return folly::makeFutureWith([&] {
@@ -396,17 +404,6 @@ diffCommitsForStatus(const ObjectStore* store, Hash hash1, Hash hash2) {
           return std::make_unique<ScmStatus>(state->callback.extractStatus());
         });
   });
-}
-
-Future<Unit> diffTrees(const DiffContext* context, Hash tree1, Hash tree2) {
-  return folly::makeFutureWith(
-      [&] { return diffTrees(context, RelativePathPiece{}, tree1, tree2); });
-}
-
-Future<Unit>
-diffTrees(const DiffContext* context, const Tree& tree1, const Tree& tree2) {
-  return folly::makeFutureWith(
-      [&] { return diffTrees(context, RelativePathPiece{}, tree1, tree2); });
 }
 
 } // namespace eden
