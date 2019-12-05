@@ -97,8 +97,8 @@ pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
 ) -> impl Future<Item = Option<TreeId>, Error = Error>
 where
     Store: Sync + Send + Clone + 'static,
-    LeafId: Send + Copy + Eq + Hash + fmt::Debug + 'static,
-    TreeId: StoreLoadable<Store> + Send + Copy + Eq + Hash + fmt::Debug + 'static,
+    LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    TreeId: StoreLoadable<Store> + Send + Clone + Eq + Hash + fmt::Debug + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
     T: FnMut(TreeInfo<TreeId, LeafId, Ctx>) -> TFut,
     TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
@@ -251,8 +251,8 @@ fn merge<TreeId, LeafId, Leaf, Store>(
 >
 where
     Store: Sync + Send + Clone + 'static,
-    LeafId: Copy + Eq + Hash + fmt::Debug,
-    TreeId: StoreLoadable<Store> + Copy + Eq + Hash + fmt::Debug,
+    LeafId: Clone + Eq + Hash + fmt::Debug,
+    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
 {
     let MergeNode {
@@ -265,18 +265,18 @@ where
         mut parents,
     } = node;
 
-    // Deduplicate entries in parents list, **preseriving order** of entries.
-    // Essencially perfroming trivial merge between identical entries.
+    // Deduplicate entries in parents list, **preserving order** of entries.
+    // Essentially performing a trivial merge between identical entries.
     {
         let mut visited = HashSet::new();
-        parents.retain(|parent| visited.insert(*parent));
+        parents.retain(|parent| visited.insert(parent.clone()));
     }
 
     // Apply change
-    // If we create `parnte_trees` (none of the return statement have been reached), this
+    // If we create `parent_subtrees` (none of the return statement have been reached), this
     // indicates that file/tree conflict if any, has been resolved in favour of tree merge.
     let parent_subtrees = match change {
-        None => match *parents {
+        None => match parents.as_slice() {
             // Changes does not have entry associated with current path
             [parent_entry] => {
                 // Only one tree/leaf is left
@@ -295,7 +295,7 @@ where
                         Entry::Tree(tree_id) => {
                             // We have tree entry, and changes that needs to be applied
                             // to its subentries, we cannot reuse this entry and have to recurse
-                            vec![tree_id]
+                            vec![tree_id.clone()]
                         }
                     }
                 } else {
@@ -304,7 +304,7 @@ where
                     return future::ok((
                         MergeResult::Reuse {
                             name,
-                            entry: parent_entry,
+                            entry: parent_entry.clone(),
                         },
                         Vec::new(),
                     ))
@@ -317,19 +317,19 @@ where
                 let mut trees = Vec::new();
                 for entry in parents.iter() {
                     match entry {
-                        Entry::Leaf(leaf) => leaves.push(*leaf),
-                        Entry::Tree(tree) => trees.push(*tree),
+                        Entry::Leaf(leaf) => leaves.push(leaf.clone()),
+                        Entry::Tree(tree) => trees.push(tree.clone()),
                     }
                 }
 
                 if leaves.is_empty() {
                     // We do not have any leaves at this point, and should proceed with
-                    // merging of threes
+                    // merging of trees
                     trees
                 } else if trees.is_empty() && subentries.is_empty() {
                     // We have leaves only but their ids are not equal to each other,
                     // this should immediately indicate conflict, as mercurial can successfully
-                    // merge this leaves if they have identical content.
+                    // merge these leaves if they have identical content.
                     return future::ok((
                         MergeResult::CreateLeaf {
                             leaf: None,

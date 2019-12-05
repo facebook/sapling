@@ -45,9 +45,9 @@ impl From<Option<MPath>> for PathOrPrefix {
 pub trait ManifestOps<Store>
 where
     Store: Sync + Send + Clone + 'static,
-    Self: StoreLoadable<Store> + Copy + Send + Eq + 'static,
+    Self: StoreLoadable<Store> + Clone + Send + Eq + 'static,
     <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + Send,
-    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Copy + Send + Eq,
+    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Clone + Send + Eq,
 {
     fn find_entries<I, P>(
         &self,
@@ -242,14 +242,14 @@ where
                             if let Some(right) = right_mf.lookup(&name) {
                                 if left != right {
                                     match (left, right) {
-                                        (Entry::Leaf(_), Entry::Leaf(_)) => {
+                                        (left @ Entry::Leaf(_), right @ Entry::Leaf(_)) => {
                                             output.push(Diff::Changed(path, left, right))
                                         }
-                                        (Entry::Tree(tree), Entry::Leaf(_)) => {
+                                        (Entry::Tree(tree), right @ Entry::Leaf(_)) => {
                                             output.push(Diff::Added(path.clone(), right));
                                             recurse.push(Diff::Removed(path, tree));
                                         }
-                                        (Entry::Leaf(_), Entry::Tree(tree)) => {
+                                        (left @ Entry::Leaf(_), Entry::Tree(tree)) => {
                                             output.push(Diff::Removed(path.clone(), left));
                                             recurse.push(Diff::Added(path, tree));
                                         }
@@ -335,9 +335,9 @@ pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
 ) -> impl Stream<Item = (Option<MPath>, Entry<TreeId, LeafId>), Error = Error>
 where
     Store: Sync + Send + Clone + 'static,
-    TreeId: StoreLoadable<Store> + Copy + Send + Eq + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Eq + 'static,
     <TreeId as StoreLoadable<Store>>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
-    LeafId: Copy + Send + Eq + 'static,
+    LeafId: Clone + Send + Eq + 'static,
 {
     match diff_against.get(0) {
         Some(parent) => (*parent)
@@ -395,8 +395,8 @@ where
 impl<TreeId, Store> ManifestOps<Store> for TreeId
 where
     Store: Sync + Send + Clone + 'static,
-    Self: StoreLoadable<Store> + Copy + Send + Eq + 'static,
+    Self: StoreLoadable<Store> + Clone + Send + Eq + 'static,
     <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + Send,
-    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
+    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Clone + Eq,
 {
 }
