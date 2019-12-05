@@ -19,11 +19,12 @@ pub use crate::changeset::{visit_changesets, ChangesetVisitor};
 pub use crate::errors::ErrorKind;
 
 use blobrepo::BlobRepo;
-use bonsai_utils::BonsaiDiffResult;
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{future::ok, Future};
 use futures_ext::FutureExt;
+use manifest::BonsaiDiffFileChange;
+use mercurial_types::HgFileNodeId;
 use mononoke_types::{FileChange, MPath};
 
 /// This is a function that's used to generate additional file changes for rebased diamond merges.
@@ -33,11 +34,11 @@ use mononoke_types::{FileChange, MPath};
 pub fn convert_diff_result_into_file_change_for_diamond_merge(
     ctx: CoreContext,
     repo: &BlobRepo,
-    diff_result: BonsaiDiffResult,
+    diff_result: BonsaiDiffFileChange<HgFileNodeId>,
 ) -> impl Future<Item = (MPath, Option<FileChange>), Error = Error> {
     match diff_result {
-        BonsaiDiffResult::Changed(path, ty, node_id)
-        | BonsaiDiffResult::ChangedReusedId(path, ty, node_id) => {
+        BonsaiDiffFileChange::Changed(path, ty, node_id)
+        | BonsaiDiffFileChange::ChangedReusedId(path, ty, node_id) => {
             let content_id_fut = repo.get_file_content_id(ctx.clone(), node_id);
             let file_size_fut = repo.get_file_size(ctx.clone(), node_id);
 
@@ -55,6 +56,6 @@ pub fn convert_diff_result_into_file_change_for_diamond_merge(
                 })
                 .left_future()
         }
-        BonsaiDiffResult::Deleted(path) => ok((path, None)).right_future(),
+        BonsaiDiffFileChange::Deleted(path) => ok((path, None)).right_future(),
     }
 }

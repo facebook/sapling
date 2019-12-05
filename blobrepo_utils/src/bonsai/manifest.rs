@@ -6,15 +6,11 @@
  * directory of this source tree.
  */
 
-// NOTE: This isn't in `bonsai_utils` because blobrepo depends on it, while this depends on
-// blobrepo.
-
 use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use crate::errors::*;
 use blobrepo::derive_hg_manifest::derive_hg_manifest;
 use blobrepo::internal::IncompleteFilenodes;
 use blobrepo::BlobRepo;
-use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::bail_msg;
@@ -23,10 +19,11 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
     manifest_utils::{changed_entry_stream, ChangedEntry},
-    Changeset, HgChangesetId, HgEntry, HgManifestId, HgNodeHash, Type,
+    Changeset, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, Type,
 };
 use mononoke_types::DateTime;
 use slog::{debug, Logger};
@@ -216,9 +213,9 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
         let bonsai_diff_fut = parents_fut.and_then({
             cloned!(ctx, repo);
             move |parents| {
-                let mut parents = parents.into_iter();
-                let p1: Option<_> = parents.next();
-                let p2: Option<_> = parents.next();
+                let mut xx = parents.iter().cloned();
+                let p1: Option<_> = xx.next();
+                let p2: Option<_> = xx.next();
 
                 let root_entry = get_root_entry(&repo, &changeset);
                 let p1_entry = p1.map(|parent| get_root_entry(&repo, &parent));
@@ -235,16 +232,21 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 let root_mf_fut =
                     BlobManifest::load(ctx.clone(), repo.get_blobstore().boxed(), root_mf_id);
 
-                bonsai_diff(ctx.clone(), root_entry, p1_entry, p2_entry)
-                    .collect()
-                    .join(root_mf_fut)
-                    .and_then(move |(diff, root_mf)| match root_mf {
-                        Some(root_mf) => Ok((diff, root_mf, manifest_p1, manifest_p2)),
-                        None => bail_msg!(
-                            "internal error: didn't find root manifest id {}",
-                            root_mf_id
-                        ),
-                    })
+                bonsai_diff(
+                    ctx.clone(),
+                    repo.get_blobstore(),
+                    changeset.manifestid(),
+                    parents.into_iter().map(|p| p.manifestid()).collect(),
+                )
+                .collect()
+                .join(root_mf_fut)
+                .and_then(move |(diff, root_mf)| match root_mf {
+                    Some(root_mf) => Ok((diff, root_mf, manifest_p1, manifest_p2)),
+                    None => bail_msg!(
+                        "internal error: didn't find root manifest id {}",
+                        root_mf_id
+                    ),
+                })
             }
         });
 
@@ -259,7 +261,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                     );
                     if self.debug_bonsai_diff {
                         for diff in &diff_result {
-                            debug!(logger, "diff result: {}", diff);
+                            debug!(logger, "diff result: {:?}", diff);
                         }
                     }
 
@@ -343,7 +345,7 @@ fn apply_diff(
     ctx: CoreContext,
     _logger: Logger,
     repo: BlobRepo,
-    diff_result: Vec<BonsaiDiffResult>,
+    diff_result: Vec<BonsaiDiffFileChange<HgFileNodeId>>,
     manifest_p1: Option<HgNodeHash>,
     manifest_p2: Option<HgNodeHash>,
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
@@ -365,8 +367,11 @@ fn apply_diff(
 }
 
 // XXX should this be in a more central place?
-fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobEntry> {
-    use self::BonsaiDiffResult::*;
+fn make_entry(
+    repo: &BlobRepo,
+    diff_result: &BonsaiDiffFileChange<HgFileNodeId>,
+) -> Option<HgBlobEntry> {
+    use self::BonsaiDiffFileChange::*;
 
     match diff_result {
         Changed(path, ft, entry_id) | ChangedReusedId(path, ft, entry_id) => {

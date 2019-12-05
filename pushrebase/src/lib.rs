@@ -45,7 +45,6 @@
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
-use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
@@ -58,9 +57,9 @@ use futures_preview::{
     future::{try_join, try_join_all},
 };
 use futures_util::{future::FutureExt as NewFutureExt, try_future::TryFutureExt};
-use manifest::ManifestOps;
+use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
-use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath};
+use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, HgManifestId, MPath};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{
     check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
@@ -697,9 +696,9 @@ fn find_changed_files_between_manfiests(
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
     find_bonsai_diff(ctx, repo, ancestor, descendant)
         .map(|diff| match diff {
-            BonsaiDiffResult::Changed(path, ..)
-            | BonsaiDiffResult::ChangedReusedId(path, ..)
-            | BonsaiDiffResult::Deleted(path) => path,
+            BonsaiDiffFileChange::Changed(path, ..)
+            | BonsaiDiffFileChange::ChangedReusedId(path, ..)
+            | BonsaiDiffFileChange::Deleted(path) => path,
         })
         .collect()
         .from_err()
@@ -710,22 +709,22 @@ fn find_bonsai_diff(
     repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> BoxStream<BonsaiDiffResult, Error> {
-    let id_to_manifest = {
-        cloned!(ctx);
-        move |bcs_id| {
-            id_to_manifestid(ctx.clone(), repo.clone(), bcs_id).map({
-                cloned!(repo);
-                move |manifest_id| repo.get_root_entry(manifest_id)
-            })
-        }
-    };
-
-    (id_to_manifest(descendant), id_to_manifest(ancestor))
+) -> BoxStream<BonsaiDiffFileChange<HgFileNodeId>, Error> {
+    (
+        id_to_manifestid(ctx.clone(), repo.clone(), descendant),
+        id_to_manifestid(ctx.clone(), repo.clone(), ancestor),
+    )
         .into_future()
         .map({
-            cloned!(ctx);
-            move |(d_mf, a_mf)| bonsai_diff(ctx, Box::new(d_mf), Some(Box::new(a_mf)), None)
+            cloned!(ctx, repo);
+            move |(d_mf, a_mf)| {
+                bonsai_diff(
+                    ctx,
+                    repo.get_blobstore(),
+                    d_mf,
+                    Some(a_mf).into_iter().collect(),
+                )
+            }
         })
         .flatten_stream()
         .boxify()
@@ -1136,11 +1135,11 @@ async fn generate_additional_bonsai_file_changes(
         let mut paths = vec![];
         for res in &bonsai_diff {
             match res {
-                BonsaiDiffResult::Changed(path, ..)
-                | BonsaiDiffResult::ChangedReusedId(path, ..) => {
+                BonsaiDiffFileChange::Changed(path, ..)
+                | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
                     paths.push(path.clone());
                 }
-                BonsaiDiffResult::Deleted(path) => {
+                BonsaiDiffFileChange::Deleted(path) => {
                     paths.push(path.clone());
                 }
             }
@@ -1171,9 +1170,9 @@ async fn generate_additional_bonsai_file_changes(
         let mut new_file_changes = vec![];
         for res in bonsai_diff {
             match res {
-                BonsaiDiffResult::Changed(ref path, ..)
-                | BonsaiDiffResult::ChangedReusedId(ref path, ..)
-                | BonsaiDiffResult::Deleted(ref path) => {
+                BonsaiDiffFileChange::Changed(ref path, ..)
+                | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
+                | BonsaiDiffFileChange::Deleted(ref path) => {
                     if !stale_entries.contains(path) {
                         continue;
                     }

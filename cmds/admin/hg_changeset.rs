@@ -7,7 +7,6 @@
  */
 
 use blobrepo::BlobRepo;
-use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
@@ -16,6 +15,7 @@ use failure_ext::{err_msg, format_err, Error};
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
+use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath};
 use revset::RangeNodeStream;
 use serde_derive::Serialize;
@@ -195,9 +195,9 @@ fn hg_manifest_diff(
 ) -> impl Future<Item = Option<ChangesetAttrDiff>, Error = Error> {
     bonsai_diff(
         ctx,
-        Box::new(repo.get_root_entry(left)),
-        Some(Box::new(repo.get_root_entry(right))),
-        None,
+        repo.get_blobstore(),
+        left,
+        Some(right).into_iter().collect(),
     )
     .collect()
     .map(|diffs| {
@@ -208,11 +208,11 @@ fn hg_manifest_diff(
             },
             |mut mdiff, diff| {
                 match diff {
-                    BonsaiDiffResult::Changed(path, ..)
-                    | BonsaiDiffResult::ChangedReusedId(path, ..) => {
+                    BonsaiDiffFileChange::Changed(path, ..)
+                    | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
                         mdiff.modified.push(mpath_to_str(path))
                     }
-                    BonsaiDiffResult::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
+                    BonsaiDiffFileChange::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
                 };
                 mdiff
             },
