@@ -17,10 +17,11 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO"
+  $ gitimport "$GIT_REPO" --derive-trees
   * using repo "repo" repoid RepositoryId(0) (glob)
   Created e45fd71023e1daf8bcadd9a63086c66180aa8c64 => ChangesetId(Blake2(9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd))
   Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd)))
+  1 tree(s) are valid!
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 9f0036550c46f77a800c6106c083c70937304def04d9d3eef9d665a8e33ef9dd

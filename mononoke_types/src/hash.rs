@@ -312,6 +312,14 @@ impl GitSha1 {
         GitSha1 { sha1, ty, size }
     }
 
+    pub fn ty(&self) -> &'static str {
+        self.ty
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
     pub fn to_hex(&self) -> AsciiString {
         self.sha1.to_hex()
     }

@@ -7,6 +7,7 @@
  */
 
 #[deny(warnings)]
+use derived_data::BonsaiDerived;
 use failure_ext::{format_err, Error};
 use futures::Future;
 use futures::{
@@ -28,6 +29,7 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FilestoreConfig, StoreRequest};
+use git_types::{mode, TreeHandle, TreeMapping};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, Manifest, StoreLoadable};
 use mononoke_types::{
     hash::GitSha1, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
@@ -36,12 +38,7 @@ use mononoke_types::{
 use tokio::runtime::Runtime;
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
-
-// Filemodes as per:
-// https://github.com/libgit2/libgit2/blob/68cfb580e19c419992ba0b0a299e5fd6dc60ed99/include/git2/types.h#L210-L217
-const GIT_FILEMODE_BLOB: i32 = 0o100644;
-const GIT_FILEMODE_BLOB_EXECUTABLE: i32 = 0o100755;
-const GIT_FILEMODE_LINK: i32 = 0o120000;
+const ARG_DERIVE_TREES: &str = "derive-trees";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 struct GitTree(Oid);
@@ -77,9 +74,9 @@ fn load_git_tree(oid: Oid, repo: &Repository) -> Result<GitManifest, Error> {
             let r = match entry.kind() {
                 Some(ObjectType::Blob) => {
                     let ft = match filemode {
-                        GIT_FILEMODE_BLOB => FileType::Regular,
-                        GIT_FILEMODE_BLOB_EXECUTABLE => FileType::Executable,
-                        GIT_FILEMODE_LINK => FileType::Symlink,
+                        mode::GIT_FILEMODE_BLOB => FileType::Regular,
+                        mode::GIT_FILEMODE_BLOB_EXECUTABLE => FileType::Executable,
+                        mode::GIT_FILEMODE_LINK => FileType::Symlink,
                         _ => Err(format_err!("Invalid filemode: {:?}", filemode))?,
                     };
 
@@ -169,6 +166,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp::new("Mononoke Git Importer")
         .with_advanced_args_hidden()
         .build()
+        .arg(
+            Arg::with_name(ARG_DERIVE_TREES)
+                .long(ARG_DERIVE_TREES)
+                .required(false)
+                .takes_value(false),
+        )
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
 
     let matches = app.get_matches();
@@ -178,8 +181,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = runtime.block_on(args::open_repo(fb, &logger, &matches))?;
+    let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
 
+    let derive_trees = matches.is_present(ARG_DERIVE_TREES);
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
+
     let walk_repo = Repository::open(&path)?;
     let store_repo = Arc::new(Mutex::new(Repository::open(&path)?));
 
@@ -201,7 +207,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     for commit in walk {
         let commit = walk_repo.find_commit(commit?)?;
-
         let root = GitTree(commit.tree()?.id());
 
         let parents: Result<HashSet<_>, Error> = commit
@@ -261,13 +266,47 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         println!("Created {:?} => {:?}", commit.id(), bcs_id);
     }
 
+    runtime.block_on(save_bonsai_changesets(
+        changesets,
+        ctx.clone(),
+        repo.clone(),
+    ))?;
+
     for reference in walk_repo.references()? {
         let reference = reference?;
-        let oid = reference.peel_to_commit()?.id();
-        println!("Ref: {:?}: {:?}", reference.name(), import_map.get(&oid));
+
+        let commit = reference.peel_to_commit()?;
+        let bcs_id = import_map.get(&commit.id());
+        println!("Ref: {:?}: {:?}", reference.name(), bcs_id);
     }
 
-    runtime.block_on(save_bonsai_changesets(changesets, ctx.clone(), repo))?;
+    if derive_trees {
+        for (id, bcs_id) in import_map.iter() {
+            let commit = walk_repo.find_commit(*id)?;
+            let tree_id = commit.tree()?.id();
+
+            let derived_tree = runtime.block_on(TreeHandle::derive(
+                ctx.clone(),
+                repo.clone(),
+                tree_mapping.clone(),
+                *bcs_id,
+            ))?;
+
+            let derived_tree_id = Oid::from_bytes(derived_tree.oid().as_ref())?;
+
+            if tree_id != derived_tree_id {
+                let e = format_err!(
+                    "Invalid tree was derived for {:?}: {:?} (expected {:?})",
+                    commit.id(),
+                    derived_tree_id,
+                    tree_id
+                );
+                Err(e)?;
+            }
+        }
+
+        println!("{} tree(s) are valid!", import_map.len());
+    }
 
     Ok(())
 }

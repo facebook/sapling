@@ -196,7 +196,7 @@ impl FileType {
         }
     }
 
-    pub(crate) fn from_thrift(ft: thrift::FileType) -> Result<Self> {
+    pub fn from_thrift(ft: thrift::FileType) -> Result<Self> {
         let file_type = match ft {
             thrift::FileType::Regular => FileType::Regular,
             thrift::FileType::Executable => FileType::Executable,
@@ -209,7 +209,7 @@ impl FileType {
         Ok(file_type)
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FileType {
+    pub fn into_thrift(self) -> thrift::FileType {
         match self {
             FileType::Regular => thrift::FileType::Regular,
             FileType::Executable => thrift::FileType::Executable,

@@ -23,6 +23,7 @@ use sql::mysql_async::{
 };
 use sql_ext::TransactionResult;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Bound, Range, RangeBounds, RangeFrom, RangeFull};
 use std::sync::Arc;
@@ -162,6 +163,14 @@ impl BookmarkName {
 
     pub fn as_str(&self) -> &str {
         self.bookmark.as_str()
+    }
+}
+
+impl TryFrom<&str> for BookmarkName {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self> {
+        Self::new(s)
     }
 }
 

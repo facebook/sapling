@@ -240,7 +240,7 @@ impl MPathElement {
     }
 
     #[inline]
-    pub(crate) fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
+    pub fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
         Self::verify(&element.0).chain_err(ErrorKind::InvalidThrift(
             "MPathElement".into(),
             "invalid path element".into(),
@@ -296,7 +296,7 @@ impl MPathElement {
     }
 
     #[inline]
-    pub(crate) fn into_thrift(self) -> thrift::MPathElement {
+    pub fn into_thrift(self) -> thrift::MPathElement {
         thrift::MPathElement(Vec::from(self.as_ref()))
     }
 }
@@ -578,7 +578,7 @@ impl MPath {
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::MPath {
+    pub fn into_thrift(self) -> thrift::MPath {
         thrift::MPath(
             self.elements
                 .into_iter()
@@ -835,6 +835,12 @@ impl Arbitrary for RepoPath {
             2 => RepoPath::FilePath(MPath::arbitrary(g)),
             _ => panic!("Unexpected number in RepoPath::arbitrary"),
         }
+    }
+}
+
+impl Display for MPathElement {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", String::from_utf8_lossy(&self.0))
     }
 }
 
