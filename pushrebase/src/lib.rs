@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-#![cfg_attr(test, type_length_limit = "2434476")]
 #![deny(warnings)]
 
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
@@ -321,6 +320,7 @@ pub fn do_pushrebase_bonsai(
                     })
             }
         })
+        .boxify()
     })
 }
 
