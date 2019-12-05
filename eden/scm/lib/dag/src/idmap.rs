@@ -339,9 +339,6 @@ impl IdMap {
 
 impl<'a> SyncableIdMap<'a> {
     /// Write pending changes to disk.
-    ///
-    /// This method must be called if there are new entries inserted.
-    /// Otherwise [`SyncableIdMap`] will panic once it gets dropped.
     pub fn sync(&mut self) -> Result<()> {
         self.map.log.sync()?;
         Ok(())
@@ -359,16 +356,6 @@ impl<'a> Deref for SyncableIdMap<'a> {
 impl<'a> DerefMut for SyncableIdMap<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.map
-    }
-}
-
-impl<'a> Drop for SyncableIdMap<'a> {
-    fn drop(&mut self) {
-        // TODO: handles `sync` failures gracefully.
-        assert!(
-            self.map.log.iter_dirty().next().is_none(),
-            "programming error: sync must be called before dropping WritableIdMap"
-        );
     }
 }
 
@@ -415,14 +402,5 @@ mod tests {
             assert!(map.find_id_by_slice(b"jkl3").unwrap().is_none());
             map.sync().unwrap();
         }
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_panic_with_dirty_changes() {
-        let dir = tempdir().unwrap();
-        let mut map = IdMap::open(dir.path()).unwrap();
-        let mut map = map.prepare_filesystem_sync().unwrap();
-        map.insert(Id(0), b"abc").unwrap();
     }
 }
