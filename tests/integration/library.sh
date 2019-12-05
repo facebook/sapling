@@ -1286,5 +1286,20 @@ cat >> .hg/hgrc <<EOF
 pushrebase =
 remotenames =
 EOF
+}
 
+function gitimport() {
+  log="$TESTTMP/gitimport.out"
+
+  "$MONONOKE_GITIMPORT" \
+    "${CACHING_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
+function git() {
+  local date
+  date="01/01/0000 00:00 +0000"
+  GIT_COMMITTER_DATE="$date" GIT_AUTHOR_DATE="$date" command git "$@"
 }
