@@ -596,6 +596,35 @@ impl MPath {
         context.update(self.to_vec());
         context.finish()
     }
+
+    /// Get an iterator over the parent directories of this `MPath`
+    /// Note: it contains the `self` as the first element
+    pub fn into_parent_dir_iter(self) -> ParentDirIterator {
+        ParentDirIterator {
+            current: Some(self),
+        }
+    }
+}
+
+/// Iterator over parent directories of a given `MPath`
+pub struct ParentDirIterator {
+    current: Option<MPath>,
+}
+
+impl Iterator for ParentDirIterator {
+    type Item = MPath;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_current = self.current.take();
+        match maybe_current {
+            None => None,
+            Some(current) => {
+                let (maybe_dirname, _) = current.split_dirname();
+                self.current = maybe_dirname;
+                Some(current)
+            }
+        }
+    }
 }
 
 /// Hash of the file path (used in unode)
@@ -1062,6 +1091,24 @@ mod test {
         assert_empty("//");
         assert_empty("///");
         assert_empty("////");
+    }
+
+    #[test]
+    fn parent_dir_iterator() {
+        fn path(p: &str) -> MPath {
+            MPath::new(p).unwrap()
+        }
+
+        fn parent_vec(p: &str) -> Vec<MPath> {
+            path(p).into_parent_dir_iter().collect()
+        }
+
+        assert_eq!(parent_vec("a"), vec![path("a")]);
+        assert_eq!(parent_vec("a/b"), vec![path("a/b"), path("a")]);
+        assert_eq!(
+            parent_vec("a/b/c"),
+            vec![path("a/b/c"), path("a/b"), path("a")]
+        );
     }
 
     #[test]
