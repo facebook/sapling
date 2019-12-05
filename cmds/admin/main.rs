@@ -67,7 +67,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("decode-as")
                 .short("d")
                 .takes_value(true)
-                .possible_values(&["auto", "changeset", "manifest", "file", "contents"])
+                .possible_values(&["auto", "changeset", "manifest", "file", "contents", "git-tree"])
                 .required(false)
                 .help("if provided decode the value"),
         )

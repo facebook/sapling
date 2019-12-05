@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::convert::TryInto;
 use std::fmt;
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use futures::future;
+use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
 use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
@@ -175,6 +177,7 @@ pub fn subcommand_blobstore_fetch(
                         Some("contents") => {
                             println!("{:?}", FileContents::from_encoded_bytes(value.into_bytes()))
                         }
+                        Some("git-tree") => display::<GitTree>(&value.try_into()),
                         _ => (),
                     }
                 }
@@ -244,6 +247,9 @@ fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
     } else if key.find("content.").is_some() {
         info!(logger, "Detected content key");
         Some("contents")
+    } else if key.find("git.tree.").is_some() {
+        info!(logger, "Detected git-tree key");
+        Some("git-tree")
     } else {
         warn!(
             logger,
