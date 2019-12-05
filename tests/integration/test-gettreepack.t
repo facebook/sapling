@@ -96,14 +96,10 @@ because everything has been already downloaded.
   $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
   remote: Command failed
   remote:   Error:
-  remote:     Manifest id 1111111111111111111111111111111111111111 is missing
+  remote:     Blob is missing: hgmanifest.sha1.1111111111111111111111111111111111111111
   remote:   Root cause:
-  remote:     ManifestMissing(
-  remote:         HgManifestId(
-  remote:             HgNodeHash(
-  remote:                 Sha1(1111111111111111111111111111111111111111),
-  remote:             ),
-  remote:         ),
+  remote:     Missing(
+  remote:         "hgmanifest.sha1.1111111111111111111111111111111111111111",
   remote:     )
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

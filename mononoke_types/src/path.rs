@@ -331,6 +331,24 @@ pub struct MPath {
     elements: Vec<MPathElement>,
 }
 
+impl Extend<MPathElement> for Option<MPath> {
+    fn extend<T: IntoIterator<Item = MPathElement>>(&mut self, iter: T) {
+        match self {
+            Some(ref mut path) => {
+                path.elements.extend(iter);
+            }
+            None => {
+                let elements = Vec::from_iter(iter);
+                if elements.is_empty() {
+                    *self = None;
+                } else {
+                    *self = Some(MPath { elements });
+                }
+            }
+        }
+    }
+}
+
 impl MPath {
     pub fn new<P: AsRef<[u8]>>(p: P) -> Result<MPath> {
         let p = p.as_ref();

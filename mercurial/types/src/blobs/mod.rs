@@ -31,7 +31,9 @@ pub use file::{
 };
 
 mod manifest;
-pub use self::manifest::{fetch_manifest_envelope, BlobManifest, ManifestContent};
+pub use self::manifest::{
+    fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest, ManifestContent,
+};
 
 mod changeset;
 pub use changeset::{

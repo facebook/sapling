@@ -14,7 +14,7 @@
 mod client;
 mod errors;
 
-pub use client::{gettreepack_entries, RepoClient, WireprotoLogging};
+pub use client::{fetch_treepack_part_input, gettreepack_entries, RepoClient, WireprotoLogging};
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
 pub use repo_read_write_status::RepoReadWriteFetcher;
 pub use unbundle::{PushRedirector, CONFIGERATOR_PUSHREDIRECT_ENABLE};

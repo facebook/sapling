@@ -375,15 +375,8 @@ async fn fetch_mfs(
         root_mf_id,
         base_root_mf_id,
         base_path,
-        CombinatorPruner::new(FilePruner, DeletedPruner),
         depth,
     )
-    .map(|(entry, path)| {
-        (
-            HgManifestId::new(entry.get_hash().into_nodehash()),
-            MPath::join_opt(path.as_ref(), entry.get_name()),
-        )
-    })
     .collect()
     .compat()
     .await?;

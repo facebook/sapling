@@ -30,16 +30,13 @@ use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::{HookExecution, HookManager};
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
-use mercurial_types::manifest_utils::{
-    changed_entry_stream_with_pruner, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
-    Pruner,
-};
 use mercurial_types::{
     blobs::HgBlobChangeset, calculate_hg_node_id, convert_parents_to_remotefilelog_format,
-    percent_encode, Delta, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
+    fetch_manifest_envelope, percent_encode, Delta, HgChangesetId, HgFileNodeId, HgManifestId,
+    HgNodeHash, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
@@ -436,12 +433,12 @@ impl RepoClient {
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blobrepo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
-                move |entry| used_hashes.insert(entry.0.get_hash())
+                move |(hg_mf_id, _)| used_hashes.insert(hg_mf_id.clone())
             })
             .map({
                 cloned!(ctx);
                 let blobrepo = self.repo.blobrepo().clone();
-                move |(entry, basepath)| {
+                move |(hg_mf_id, path)| {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
@@ -450,14 +447,7 @@ impl RepoClient {
                     if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
                     }
-
-                    fetch_treepack_part_input(
-                        ctx.clone(),
-                        &blobrepo,
-                        entry,
-                        basepath,
-                        validate_hash,
-                    )
+                    fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, validate_hash)
                 }
             });
 
@@ -1689,7 +1679,7 @@ pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,
-) -> BoxStream<(Box<dyn HgEntry + Sync>, Option<MPath>), Error> {
+) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
     if !params.directories.is_empty() {
         // This param is not used by core hg, don't worry about implementing it now
         return stream::once(Err(err_msg("directories param is not supported"))).boxify();
@@ -1737,7 +1727,6 @@ pub fn gettreepack_entries(
                     *mfnode,
                     cur_basemfnode,
                     rootpath.clone(),
-                    CombinatorPruner::new(FilePruner, DeletedPruner),
                     fetchdepth,
                 )
             }),
@@ -1751,128 +1740,111 @@ fn get_changed_manifests_stream(
     mfid: HgManifestId,
     basemfid: HgManifestId,
     rootpath: Option<MPath>,
-    pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
-) -> BoxStream<(Box<dyn HgEntry + Sync>, Option<MPath>), Error> {
-    let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid);
-    let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid);
-    let entry: Box<dyn HgEntry + Sync> = Box::new(repo.get_root_entry(mfid));
-    let root_entry_stream = stream::once(Ok((entry, rootpath.clone())));
-
+) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
     if max_depth == 1 {
-        return root_entry_stream.boxify();
+        return stream::iter_ok(vec![(mfid, rootpath)]).boxify();
     }
 
-    let changed_entries = manifest
-        .join(basemanifest)
-        .map({
-            cloned!(ctx, rootpath);
-            move |(mf, basemf)| {
-                changed_entry_stream_with_pruner(
-                    ctx,
-                    &mf,
-                    &basemf,
-                    rootpath,
-                    pruner,
-                    Some(max_depth),
-                )
-            }
+    basemfid
+        .filtered_diff(
+            ctx.clone(),
+            repo.get_blobstore(),
+            mfid,
+            |output_diff| {
+                let (path, entry) = match output_diff {
+                    Diff::Added(path, entry) | Diff::Changed(path, _, entry) => (path, entry),
+                    Diff::Removed(..) => {
+                        return None;
+                    }
+                };
+                match entry {
+                    Entry::Tree(hg_mf_id) => Some((path, hg_mf_id)),
+                    Entry::Leaf(_) => None,
+                }
+            },
+            move |tree_diff| match tree_diff {
+                Diff::Added(path, ..) | Diff::Changed(path, ..) => match path {
+                    Some(path) => path.num_components() <= max_depth,
+                    None => true,
+                },
+                Diff::Removed(..) => false,
+            },
+        )
+        .map(move |(path_no_root_path, hg_mf_id)| {
+            let mut path = rootpath.clone();
+            path.extend(MPath::into_iter_opt(path_no_root_path));
+            (hg_mf_id, path)
         })
-        .flatten_stream();
-
-    let changed_entries = changed_entries.map(move |entry_status| match entry_status.status {
-        EntryStatus::Added(to_entry) | EntryStatus::Modified { to_entry, .. } => {
-            assert!(
-                to_entry.get_type() == Type::Tree,
-                "FilePruner should have removed file entries"
-            );
-            (to_entry, entry_status.dirname)
-        }
-        EntryStatus::Deleted(..) => {
-            panic!("DeletedPruner should have removed deleted entries");
-        }
-    });
-
-    // Append root manifest as well
-    changed_entries.chain(root_entry_stream).boxify()
+        .boxify()
 }
 
 pub fn fetch_treepack_part_input(
     ctx: CoreContext,
     repo: &BlobRepo,
-    entry: Box<dyn HgEntry + Sync>,
-    basepath: Option<MPath>,
+    hg_mf_id: HgManifestId,
+    path: Option<MPath>,
     validate_content: bool,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
-    let path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
     let repo_path = match path {
-        Some(path) => {
-            if entry.get_type() == Type::Tree {
-                RepoPath::DirectoryPath(path)
-            } else {
-                RepoPath::FilePath(path)
-            }
-        }
+        Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
     };
 
-    let node = entry.get_hash();
+    let envelope_fut =
+        fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), hg_mf_id);
 
-    let content_fut = entry
-        .get_raw_content(ctx.clone())
-        .map(|blob| blob.into_inner());
-
-    let filenode_fut = repo
-        .get_filenode_opt(
-            ctx.clone(),
-            &repo_path,
-            HgFileNodeId::new(entry.get_hash().into_nodehash()),
-        )
-        .and_then({
-            cloned!(ctx);
-            move |maybe_filenode| match maybe_filenode {
-                Some(filenode) => {
-                    let p1 = filenode.p1.map(|p| p.into_nodehash());
-                    let p2 = filenode.p2.map(|p| p.into_nodehash());
-                    let parents = HgParents::new(p1, p2);
-                    let linknode = filenode.linknode;
-                    future::ok((parents, linknode)).left_future()
-                }
-                // Filenodes might not be present. For example we don't have filenodes for
-                // infinitepush commits. In that case fetch parents from the blobstore using
-                // `get_parents()` function. This is slower though.
-                None => entry
-                    .get_parents(ctx.clone())
-                    .map(|parents| (parents, NULL_CSID))
-                    .right_future(),
+    repo.get_filenode_opt(
+        ctx.clone(),
+        &repo_path,
+        HgFileNodeId::new(hg_mf_id.into_nodehash()),
+    )
+    .join(envelope_fut)
+    .map(move |(maybe_filenode, envelope)| {
+        let content = envelope.contents().clone();
+        match maybe_filenode {
+            Some(filenode) => {
+                let p1 = filenode.p1.map(|p| p.into_nodehash());
+                let p2 = filenode.p2.map(|p| p.into_nodehash());
+                let parents = HgParents::new(p1, p2);
+                let linknode = filenode.linknode;
+                (parents, linknode, content)
             }
-        });
+            // Filenodes might not be present. For example we don't have filenodes for
+            // infinitepush commits. In that case fetch parents from manifest, but we can't
+            // fetch the linknode, so set it to NULL_CSID. Client can handle null linknode,
+            // though it can cause slowness sometimes.
+            None => {
+                let (p1, p2) = envelope.parents();
+                let parents = HgParents::new(p1, p2);
 
-    content_fut
-        .join(filenode_fut)
-        .and_then(move |(content, (parents, linknode))| {
-            if validate_content {
-                validate_manifest_content(
-                    ctx,
-                    node.into_nodehash(),
-                    &content,
-                    &repo_path,
-                    &parents,
-                )?;
+                (parents, NULL_CSID, content)
             }
+        }
+    })
+    .and_then(move |(parents, linknode, content)| {
+        if validate_content {
+            validate_manifest_content(
+                ctx,
+                hg_mf_id.into_nodehash(),
+                &content,
+                &repo_path,
+                &parents,
+            )?;
+        }
 
-            let fullpath = repo_path.into_mpath();
-            let (p1, p2) = parents.get_nodes();
-            Ok(parts::TreepackPartInput {
-                node: node.into_nodehash(),
-                p1,
-                p2,
-                content,
-                fullpath,
-                linknode: linknode.into_nodehash(),
-            })
+        let fullpath = repo_path.into_mpath();
+        let (p1, p2) = parents.get_nodes();
+        Ok(parts::TreepackPartInput {
+            node: hg_mf_id.into_nodehash(),
+            p1,
+            p2,
+            content,
+            fullpath,
+            linknode: linknode.into_nodehash(),
         })
-        .boxify()
+    })
+    .boxify()
 }
 
 fn validate_manifest_content(

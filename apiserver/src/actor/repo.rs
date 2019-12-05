@@ -41,7 +41,8 @@ use time_ext::DurationExt;
 use unodes::{derive_unodes, RootUnodeManifestId, RootUnodeManifestMapping};
 
 use mercurial_types::{
-    blobs::HgBlobChangeset, manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,
+    blobs::HgBlobChangeset, fetch_manifest_envelope, manifest::Content, HgChangesetId, HgEntry,
+    HgFileNodeId, HgManifestId, HgParents,
 };
 use metaconfig_types::{CommonConfig, RepoConfig, SourceControlServiceMonitoring};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -1055,24 +1056,22 @@ impl MononokeRepo {
         stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_prefetch_trees.add_value(1);
+        cloned!(self.repo);
         let entries = gettreepack_entries(ctx.clone(), &self.repo, req.into()).and_then(
-            move |(entry, basepath)| {
-                let full_path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
+            move |(hg_mf_id, full_path)| {
                 let path_bytes = full_path
+                    .clone()
                     .map(|mpath| mpath.to_vec())
                     .unwrap_or_else(Vec::new);
                 let path = try_boxfuture!(RepoPathBuf::from_utf8(path_bytes));
 
-                let node = entry.get_hash().into_nodehash().into();
-                let key = Key::new(path, node);
-
-                let get_parents = entry.get_parents(ctx.clone());
-                let get_content = entry.get_raw_content(ctx.clone());
-                get_parents
-                    .and_then(move |parents| {
-                        get_content.map(move |content| {
-                            DataEntry::new(key, content.into_inner(), parents.into())
-                        })
+                let key = Key::new(path, hg_mf_id.into_nodehash().into());
+                fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), hg_mf_id)
+                    .map(move |envelope| {
+                        let content = envelope.contents().clone();
+                        let (p1, p2) = envelope.parents();
+                        let parents = HgParents::new(p1, p2);
+                        DataEntry::new(key, content, parents.into())
                     })
                     .boxify()
             },
