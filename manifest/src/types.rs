@@ -19,8 +19,27 @@ use mononoke_types::{
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::BTreeMap, iter::FromIterator};
 
+/// StoreLoadable represents an object that be loaded asynchronously through a given store of type
+/// S. This offers a bit more flexibility over Blobstore's Loadable, which requires that the object
+/// be asynchronously load loadable from a Blobstore. This level of indirection allows for using
+/// Manifest's implementations with Manifests that are not backed by a Blobstore.
+pub trait StoreLoadable<S> {
+    type Value;
+
+    fn load(&self, ctx: CoreContext, store: &S) -> BoxFuture<Self::Value, Error>;
+}
+
+/// For convenience, all Blobstore Loadables are StoreLoadable through any Blobstore.
+impl<L: Loadable, S: Blobstore + Clone> StoreLoadable<S> for L {
+    type Value = <L as Loadable>::Value;
+
+    fn load(&self, ctx: CoreContext, store: &S) -> BoxFuture<Self::Value, Error> {
+        self.load(ctx, store).map_err(Error::from).boxify()
+    }
+}
+
 pub trait Manifest: Sized + 'static {
-    type TreeId: Loadable<Value = Self>;
+    type TreeId;
     type LeafId;
 
     fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>>;

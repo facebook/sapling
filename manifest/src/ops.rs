@@ -6,8 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::{Entry, Manifest, PathTree};
-use blobstore::{Blobstore, Loadable};
+use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
@@ -17,7 +16,6 @@ use futures_ext::{
 };
 use mononoke_types::MPath;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -44,21 +42,22 @@ impl From<Option<MPath>> for PathOrPrefix {
     }
 }
 
-pub trait ManifestOps
+pub trait ManifestOps<Store>
 where
-    Self: Loadable + Copy + Send + Eq,
-    <Self as Loadable>::Value: Manifest<TreeId = Self> + Send,
-    <<Self as Loadable>::Value as Manifest>::LeafId: Copy + Send + Eq,
+    Store: Sync + Send + Clone + 'static,
+    Self: StoreLoadable<Store> + Copy + Send + Eq + 'static,
+    <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + Send,
+    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Copy + Send + Eq,
 {
     fn find_entries<I, P>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        store: Store,
         paths_or_prefixes: I,
     ) -> BoxStream<
         (
             Option<MPath>,
-            Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>,
+            Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>,
         ),
         Error,
     >
@@ -111,48 +110,46 @@ where
                     value: select,
                 } = selector;
 
-                manifest_id
-                    .load(ctx.clone(), &blobstore)
-                    .map(move |manifest| {
-                        let mut output = Vec::new();
-                        let mut recurse = Vec::new();
+                manifest_id.load(ctx.clone(), &store).map(move |manifest| {
+                    let mut output = Vec::new();
+                    let mut recurse = Vec::new();
 
-                        if recursive || select.is_recursive() {
+                    if recursive || select.is_recursive() {
+                        output.push((path.clone(), Entry::Tree(manifest_id)));
+                        for (name, entry) in manifest.list() {
+                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                            match entry {
+                                Entry::Leaf(_) => {
+                                    output.push((path.clone(), entry));
+                                }
+                                Entry::Tree(manifest_id) => {
+                                    recurse.push((manifest_id, Default::default(), path, true));
+                                }
+                            }
+                        }
+                    } else {
+                        if select.is_selected() {
                             output.push((path.clone(), Entry::Tree(manifest_id)));
-                            for (name, entry) in manifest.list() {
+                        }
+                        for (name, selector) in subentries {
+                            if let Some(entry) = manifest.lookup(&name) {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Leaf(_) => {
-                                        output.push((path.clone(), entry));
+                                        if selector.value.is_selected() {
+                                            output.push((path.clone(), entry));
+                                        }
                                     }
                                     Entry::Tree(manifest_id) => {
-                                        recurse.push((manifest_id, Default::default(), path, true));
-                                    }
-                                }
-                            }
-                        } else {
-                            if select.is_selected() {
-                                output.push((path.clone(), Entry::Tree(manifest_id)));
-                            }
-                            for (name, selector) in subentries {
-                                if let Some(entry) = manifest.lookup(&name) {
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                                    match entry {
-                                        Entry::Leaf(_) => {
-                                            if selector.value.is_selected() {
-                                                output.push((path.clone(), entry));
-                                            }
-                                        }
-                                        Entry::Tree(manifest_id) => {
-                                            recurse.push((manifest_id, selector, path, false));
-                                        }
+                                        recurse.push((manifest_id, selector, path, false));
                                     }
                                 }
                             }
                         }
+                    }
 
-                        (output, recurse)
-                    })
+                    (output, recurse)
+                })
             },
         )
         .map(|entries| stream::iter_ok(entries))
@@ -163,11 +160,13 @@ where
     fn find_entry(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        store: Store,
         path: Option<MPath>,
-    ) -> BoxFuture<Option<Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>>, Error>
-    {
-        self.find_entries(ctx, blobstore, Some(PathOrPrefix::Path(path)))
+    ) -> BoxFuture<
+        Option<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+        Error,
+    > {
+        self.find_entries(ctx, store, Some(PathOrPrefix::Path(path)))
             .into_future()
             .then(|result| match result {
                 Ok((Some((_path, entry)), _stream)) => Ok(Some(entry)),
@@ -180,33 +179,29 @@ where
     fn list_all_entries(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        store: Store,
     ) -> BoxStream<
         (
             Option<MPath>,
-            Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>,
+            Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>,
         ),
         Error,
     > {
-        self.find_entries(
-            ctx.clone(),
-            blobstore.clone(),
-            vec![PathOrPrefix::Prefix(None)],
-        )
+        self.find_entries(ctx.clone(), store.clone(), vec![PathOrPrefix::Prefix(None)])
     }
 
     fn list_leaf_entries(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        store: Store,
     ) -> BoxStream<
         (
             Option<MPath>,
-            <<Self as Loadable>::Value as Manifest>::LeafId,
+            <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId,
         ),
         Error,
     > {
-        self.list_all_entries(ctx, blobstore)
+        self.list_all_entries(ctx, store)
             .filter_map(|(path, entry)| match entry {
                 Entry::Leaf(filenode_id) => Some((path, filenode_id)),
                 _ => None,
@@ -221,9 +216,12 @@ where
     fn diff(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        store: Store,
         other: Self,
-    ) -> BoxStream<Diff<Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>>, Error> {
+    ) -> BoxStream<
+        Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+        Error,
+    > {
         if self == &other {
             return stream::empty().boxify();
         }
@@ -233,8 +231,8 @@ where
             Some(Diff::Changed(None, self.clone(), other)),
             move |input| match input {
                 Diff::Changed(path, left, right) => left
-                    .load(ctx.clone(), &blobstore)
-                    .join(right.load(ctx.clone(), &blobstore))
+                    .load(ctx.clone(), &store)
+                    .join(right.load(ctx.clone(), &store))
                     .map(move |(left_mf, right_mf)| {
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
@@ -282,7 +280,7 @@ where
                     })
                     .left_future(),
                 Diff::Added(path, tree) => {
-                    tree.load(ctx.clone(), &blobstore).map(move |manifest| {
+                    tree.load(ctx.clone(), &store).map(move |manifest| {
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
                         for (name, entry) in manifest.list() {
@@ -299,7 +297,7 @@ where
                 .left_future()
                 .right_future(),
                 Diff::Removed(path, tree) => {
-                    tree.load(ctx.clone(), &blobstore).map(move |manifest| {
+                    tree.load(ctx.clone(), &store).map(move |manifest| {
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
                         for (name, entry) in manifest.list() {
@@ -329,20 +327,21 @@ where
 /// be returned. But if file 'A' has HASH_2 then it wont' be returned because it matches
 /// HASH_2 in diff_against.
 /// This implementation is more efficient for merges.
-pub fn find_intersection_of_diffs<TreeId, LeafId>(
+pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
 ) -> impl Stream<Item = (Option<MPath>, Entry<TreeId, LeafId>), Error = Error>
 where
-    TreeId: Loadable + Copy + Send + Eq,
-    <TreeId as Loadable>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
+    Store: Sync + Send + Clone + 'static,
+    TreeId: StoreLoadable<Store> + Copy + Send + Eq + 'static,
+    <TreeId as StoreLoadable<Store>>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
     LeafId: Copy + Send + Eq + 'static,
 {
     match diff_against.get(0) {
         Some(parent) => (*parent)
-            .diff(ctx.clone(), blobstore.clone(), mf_id)
+            .diff(ctx.clone(), store.clone(), mf_id)
             .filter_map(|diff_entry| match diff_entry {
                 Diff::Added(path, entry) => Some((path, entry)),
                 Diff::Removed(..) => None,
@@ -359,7 +358,7 @@ where
                         .collect();
 
                     let futs = diff_against.into_iter().skip(1).map(move |p| {
-                        p.find_entries(ctx.clone(), blobstore.clone(), paths.clone())
+                        p.find_entries(ctx.clone(), store.clone(), paths.clone())
                             .collect_to::<HashMap<_, _>>()
                     });
 
@@ -388,15 +387,16 @@ where
             .flatten_stream()
             .left_stream(),
         None => mf_id
-            .list_all_entries(ctx.clone(), blobstore.clone())
+            .list_all_entries(ctx.clone(), store.clone())
             .right_stream(),
     }
 }
 
-impl<TreeId> ManifestOps for TreeId
+impl<TreeId, Store> ManifestOps<Store> for TreeId
 where
-    Self: Loadable + Copy + Send + Eq,
-    <Self as Loadable>::Value: Manifest<TreeId = Self> + Send,
-    <<Self as Loadable>::Value as Manifest>::LeafId: Send + Copy + Eq,
+    Store: Sync + Send + Clone + 'static,
+    Self: StoreLoadable<Store> + Copy + Send + Eq + 'static,
+    <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + Send,
+    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
 {
 }

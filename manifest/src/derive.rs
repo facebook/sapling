@@ -6,8 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::{Entry, Manifest, PathTree};
-use blobstore::{Blobstore, Loadable};
+use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use context::CoreContext;
 use failure_ext::{format_err, Error};
 use futures::{future, Future, IntoFuture};
@@ -88,17 +87,18 @@ pub struct LeafInfo<LeafId, Leaf> {
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
 ///
-pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx>(
+pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
-    blobstore: impl Blobstore + Clone,
+    store: Store,
     parents: impl IntoIterator<Item = TreeId>,
     changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
     mut create_tree: T,
     mut create_leaf: L,
 ) -> impl Future<Item = Option<TreeId>, Error = Error>
 where
+    Store: Sync + Send + Clone + 'static,
     LeafId: Send + Copy + Eq + Hash + fmt::Debug + 'static,
-    TreeId: Loadable + Send + Copy + Eq + Hash + fmt::Debug + 'static,
+    TreeId: StoreLoadable<Store> + Send + Copy + Eq + Hash + fmt::Debug + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
     T: FnMut(TreeInfo<TreeId, LeafId, Ctx>) -> TFut,
     TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
@@ -124,7 +124,7 @@ where
         // unfold, all merge logic happens in this unfold function
         {
             let ctx = ctx.clone();
-            move |merge_node| merge_node.merge(ctx.clone(), blobstore.clone())
+            move |merge_node| merge(ctx.clone(), store.clone(), merge_node)
         },
         // fold, this function only creates entries from merge result and already merged subentries
         {
@@ -238,190 +238,194 @@ struct MergeNode<TreeId, LeafId, Leaf> {
     parents: Vec<Entry<TreeId, LeafId>>, // unmerged parents of current node
 }
 
-impl<TreeId, LeafId, Leaf> MergeNode<TreeId, LeafId, Leaf>
+fn merge<TreeId, LeafId, Leaf, Store>(
+    ctx: CoreContext,
+    store: Store,
+    node: MergeNode<TreeId, LeafId, Leaf>,
+) -> impl Future<
+    Item = (
+        MergeResult<TreeId, LeafId, Leaf>,
+        Vec<MergeNode<TreeId, LeafId, Leaf>>,
+    ),
+    Error = Error,
+>
 where
+    Store: Sync + Send + Clone + 'static,
     LeafId: Copy + Eq + Hash + fmt::Debug,
-    TreeId: Loadable + Copy + Eq + Hash + fmt::Debug,
+    TreeId: StoreLoadable<Store> + Copy + Eq + Hash + fmt::Debug,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
 {
-    fn merge(
-        self,
-        ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
-    ) -> impl Future<Item = (MergeResult<TreeId, LeafId, Leaf>, Vec<Self>), Error = Error> {
-        let MergeNode {
-            name,
-            path,
-            changes:
-                PathTree {
-                    value: change,
-                    subentries,
+    let MergeNode {
+        name,
+        path,
+        changes: PathTree {
+            value: change,
+            subentries,
+        },
+        mut parents,
+    } = node;
+
+    // Deduplicate entries in parents list, **preseriving order** of entries.
+    // Essencially perfroming trivial merge between identical entries.
+    {
+        let mut visited = HashSet::new();
+        parents.retain(|parent| visited.insert(*parent));
+    }
+
+    // Apply change
+    // If we create `parnte_trees` (none of the return statement have been reached), this
+    // indicates that file/tree conflict if any, has been resolved in favour of tree merge.
+    let parent_subtrees = match change {
+        None => match *parents {
+            // Changes does not have entry associated with current path
+            [parent_entry] => {
+                // Only one tree/leaf is left
+                if !subentries.is_empty() {
+                    match parent_entry {
+                        Entry::Leaf(_) => {
+                            // Current entry is a leaf but we still have changes that needs
+                            // to be applied to its subentries, we cannot resolve this merge.
+                            let error = format_err!(
+                                "Can not apply changes to a leaf:\npath: {:?}\nparents: {:?}",
+                                path,
+                                parents
+                            );
+                            return future::err(error).left_future();
+                        }
+                        Entry::Tree(tree_id) => {
+                            // We have tree entry, and changes that needs to be applied
+                            // to its subentries, we cannot reuse this entry and have to recurse
+                            vec![tree_id]
+                        }
+                    }
+                } else {
+                    // We have single entry and do not have any changes associated with it subentries,
+                    // it is safe to reuse current entry as is.
+                    return future::ok((
+                        MergeResult::Reuse {
+                            name,
+                            entry: parent_entry,
+                        },
+                        Vec::new(),
+                    ))
+                    .left_future();
+                }
+            }
+            _ => {
+                // Split entries int leaves and trees.
+                let mut leaves = Vec::new();
+                let mut trees = Vec::new();
+                for entry in parents.iter() {
+                    match entry {
+                        Entry::Leaf(leaf) => leaves.push(*leaf),
+                        Entry::Tree(tree) => trees.push(*tree),
+                    }
+                }
+
+                if leaves.is_empty() {
+                    // We do not have any leaves at this point, and should proceed with
+                    // merging of threes
+                    trees
+                } else if trees.is_empty() && subentries.is_empty() {
+                    // We have leaves only but their ids are not equal to each other,
+                    // this should immediately indicate conflict, as mercurial can successfully
+                    // merge this leaves if they have identical content.
+                    return future::ok((
+                        MergeResult::CreateLeaf {
+                            leaf: None,
+                            name,
+                            path: path.expect("leaf can not have empty path"),
+                            parents: leaves,
+                        },
+                        Vec::new(),
+                    ))
+                    .left_future();
+                } else {
+                    // We can get here in two cases:
+                    //   - we have mix of trees and leaves.
+                    //   - all of the parents are leaves, but we have changes that need to be
+                    //     applied to it current nodes subentries.
+                    // both of this situation result in unresolvable conflict.
+                    let error = format_err!(
+                        "Unresolved conflict at:\npath: {:?}\nparents: {:?}",
+                        path,
+                        parents
+                    );
+                    return future::err(error).left_future();
+                }
+            }
+        },
+        Some(Change::Remove) => {
+            // Remove associated Leaf entr{y|ies}, leaving only trees.
+            // This case is used to either remove leaf entry or resolve file/tree conflict
+            // in favour of tree merge.
+            parents.into_iter().filter_map(Entry::into_tree).collect()
+        }
+        Some(Change::Add(leaf)) => {
+            // Replace current merge node with a leaf, and stop traversal.
+            // This case is used ot either replace leaf entry or resolve file/tree conflict
+            // in favour or file.
+            return future::ok((
+                MergeResult::CreateLeaf {
+                    leaf: Some(leaf),
+                    name,
+                    path: path.expect("leaf can not have empty path"),
+                    parents: parents.into_iter().filter_map(Entry::into_leaf).collect(),
                 },
-            mut parents,
-        } = self;
-
-        // Deduplicate entries in parents list, **preseriving order** of entries.
-        // Essencially perfroming trivial merge between identical entries.
-        {
-            let mut visited = HashSet::new();
-            parents.retain(|parent| visited.insert(*parent));
+                Vec::new(),
+            ))
+            .left_future();
         }
+    };
 
-        // Apply change
-        // If we create `parnte_trees` (none of the return statement have been reached), this
-        // indicates that file/tree conflict if any, has been resolved in favour of tree merge.
-        let parent_subtrees = match change {
-            None => match *parents {
-                // Changes does not have entry associated with current path
-                [parent_entry] => {
-                    // Only one tree/leaf is left
-                    if !subentries.is_empty() {
-                        match parent_entry {
-                            Entry::Leaf(_) => {
-                                // Current entry is a leaf but we still have changes that needs
-                                // to be applied to its subentries, we cannot resolve this merge.
-                                let error = format_err!(
-                                    "Can not apply changes to a leaf:\npath: {:?}\nparents: {:?}",
-                                    path,
-                                    parents
-                                );
-                                return future::err(error).left_future();
-                            }
-                            Entry::Tree(tree_id) => {
-                                // We have tree entry, and changes that needs to be applied
-                                // to its subentries, we cannot reuse this entry and have to recurse
-                                vec![tree_id]
-                            }
-                        }
-                    } else {
-                        // We have single entry and do not have any changes associated with it subentries,
-                        // it is safe to reuse current entry as is.
-                        return future::ok((
-                            MergeResult::Reuse {
-                                name,
-                                entry: parent_entry,
-                            },
-                            Vec::new(),
-                        ))
-                        .left_future();
-                    }
-                }
-                _ => {
-                    // Split entries int leaves and trees.
-                    let mut leaves = Vec::new();
-                    let mut trees = Vec::new();
-                    for entry in parents.iter() {
-                        match entry {
-                            Entry::Leaf(leaf) => leaves.push(*leaf),
-                            Entry::Tree(tree) => trees.push(*tree),
-                        }
-                    }
+    if parent_subtrees.is_empty() && subentries.is_empty() {
+        // All elements of this merge tree have been deleted.
+        // Nothing left to do apart from inidicating that this node needs to be removed
+        // from its parent.
+        return future::ok((MergeResult::Delete, Vec::new())).left_future();
+    }
 
-                    if leaves.is_empty() {
-                        // We do not have any leaves at this point, and should proceed with
-                        // merging of threes
-                        trees
-                    } else if trees.is_empty() && subentries.is_empty() {
-                        // We have leaves only but their ids are not equal to each other,
-                        // this should immediately indicate conflict, as mercurial can successfully
-                        // merge this leaves if they have identical content.
-                        return future::ok((
-                            MergeResult::CreateLeaf {
-                                leaf: None,
-                                name,
-                                path: path.expect("leaf can not have empty path"),
-                                parents: leaves,
-                            },
-                            Vec::new(),
-                        ))
-                        .left_future();
-                    } else {
-                        // We can get here in two cases:
-                        //   - we have mix of trees and leaves.
-                        //   - all of the parents are leaves, but we have changes that need to be
-                        //     applied to it current nodes subentries.
-                        // both of this situation result in unresolvable conflict.
-                        let error = format_err!(
-                            "Unresolved conflict at:\npath: {:?}\nparents: {:?}",
-                            path,
-                            parents
-                        );
-                        return future::err(error).left_future();
-                    }
-                }
-            },
-            Some(Change::Remove) => {
-                // Remove associated Leaf entr{y|ies}, leaving only trees.
-                // This case is used to either remove leaf entry or resolve file/tree conflict
-                // in favour of tree merge.
-                parents.into_iter().filter_map(Entry::into_tree).collect()
-            }
-            Some(Change::Add(leaf)) => {
-                // Replace current merge node with a leaf, and stop traversal.
-                // This case is used ot either replace leaf entry or resolve file/tree conflict
-                // in favour or file.
-                return future::ok((
-                    MergeResult::CreateLeaf {
-                        leaf: Some(leaf),
-                        name,
-                        path: path.expect("leaf can not have empty path"),
-                        parents: parents.into_iter().filter_map(Entry::into_leaf).collect(),
-                    },
-                    Vec::new(),
-                ))
-                .left_future();
-            }
-        };
-
-        if parent_subtrees.is_empty() && subentries.is_empty() {
-            // All elements of this merge tree have been deleted.
-            // Nothing left to do apart from inidicating that this node needs to be removed
-            // from its parent.
-            return future::ok((MergeResult::Delete, Vec::new())).left_future();
-        }
-
-        // Fetch parent trees and merge them.
-        future::join_all(
-            parent_subtrees
-                .iter()
-                .map(move |tree_id| tree_id.load(ctx.clone(), &blobstore))
-                .collect::<Vec<_>>(),
-        )
-        .from_err()
-        .map(move |manifests| {
-            let mut deps: BTreeMap<MPathElement, Self> = Default::default();
-            // add subentries from all parents
-            for manifest in manifests {
-                for (name, entry) in manifest.list() {
-                    let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-                        path: Some(MPath::join_opt_element(path.as_ref(), &name)),
-                        name: Some(name),
-                        changes: Default::default(),
-                        parents: Default::default(),
-                    });
-                    subentry.parents.push(entry);
-                }
-            }
-            // add subentries from changes
-            for (name, change) in subentries {
+    // Fetch parent trees and merge them.
+    future::join_all(
+        parent_subtrees
+            .iter()
+            .map(move |tree_id| tree_id.load(ctx.clone(), &store))
+            .collect::<Vec<_>>(),
+    )
+    .from_err()
+    .map(move |manifests| {
+        let mut deps: BTreeMap<MPathElement, _> = Default::default();
+        // add subentries from all parents
+        for manifest in manifests {
+            for (name, entry) in manifest.list() {
                 let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
                     path: Some(MPath::join_opt_element(path.as_ref(), &name)),
                     name: Some(name),
                     changes: Default::default(),
                     parents: Default::default(),
                 });
-                mem::replace(&mut subentry.changes, change);
+                subentry.parents.push(entry);
             }
+        }
+        // add subentries from changes
+        for (name, change) in subentries {
+            let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
+                path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+                name: Some(name),
+                changes: Default::default(),
+                parents: Default::default(),
+            });
+            mem::replace(&mut subentry.changes, change);
+        }
 
-            (
-                MergeResult::CreateTree {
-                    name,
-                    path,
-                    parents: parent_subtrees,
-                },
-                deps.into_iter().map(|(_name, dep)| dep).collect(),
-            )
-        })
-        .right_future()
-    }
+        (
+            MergeResult::CreateTree {
+                name,
+                path,
+                parents: parent_subtrees,
+            },
+            deps.into_iter().map(|(_name, dep)| dep).collect(),
+        )
+    })
+    .right_future()
 }
