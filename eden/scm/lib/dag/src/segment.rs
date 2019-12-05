@@ -14,6 +14,7 @@
 //! have in-memory-only changes. [`SyncableDag`] is the only way to update
 //! the filesystem state, and does not support queires.
 
+use crate::id::Id;
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use anyhow::{bail, Result};
@@ -29,7 +30,6 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
-pub type Id = u64;
 pub type Level = u8;
 
 /// Structure to store a DAG of integers, with indexes to speed up ancestry queries.
@@ -172,7 +172,7 @@ impl Dag {
             .rev()
             .nth(0)
         {
-            None => Ok(0),
+            None => Ok(Id(0)),
             Some(result) => {
                 let (key, mut values) = result?;
                 // PERF: The "next id" information can be also extracted from
@@ -247,7 +247,7 @@ impl Dag {
         {
             let mut cur = Cursor::new(&mut buf[..]);
             cur.write_u8(level).unwrap();
-            cur.write_u64::<BigEndian>(value).unwrap();
+            cur.write_u64::<BigEndian>(value.0).unwrap();
             debug_assert_eq!(cur.position(), Self::KEY_LEVEL_HEAD_LEN as u64);
         }
         buf
@@ -290,7 +290,7 @@ impl Dag {
         &mut self,
         high: Id,
         get_parents: &F,
-        last_threshold: Id,
+        last_threshold: u64,
     ) -> Result<usize>
     where
         F: Fn(Id) -> Result<Vec<Id>>,
@@ -299,12 +299,12 @@ impl Dag {
         let mut current_low = None;
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
-        for id in low..=high {
+        for id in low.to(high) {
             let parents = get_parents(id)?;
             if parents.len() != 1 || parents[0] + 1 != id {
                 // Must start a new segment.
                 if let Some(low) = current_low {
-                    debug_assert!(id > 0);
+                    debug_assert!(id > Id(0));
                     let flags = if current_parents.is_empty() {
                         SegmentFlags::HAS_ROOT
                     } else {
@@ -357,7 +357,7 @@ impl Dag {
         max_high_id: Id,
         level: Level,
     ) -> Result<impl Iterator<Item = Result<Segment>>> {
-        let lower_bound = Self::serialize_head_level_lookup_key(0, level);
+        let lower_bound = Self::serialize_head_level_lookup_key(Id(0), level);
         let upper_bound = Self::serialize_head_level_lookup_key(max_high_id, level);
         let iter = self
             .log
@@ -521,8 +521,8 @@ impl Dag {
     /// Return a [`SpanSet`] that covers all ids stored in this [`Dag`].
     pub fn all(&self) -> Result<SpanSet> {
         match self.next_free_id(0)? {
-            0 => Ok(SpanSet::empty()),
-            n => Ok(SpanSet::from(0..=(n - 1))),
+            Id(0) => Ok(SpanSet::empty()),
+            n => Ok(SpanSet::from(Id(0)..=(n - 1))),
         }
     }
 
@@ -601,7 +601,7 @@ impl Dag {
 
             // Get parents for a linear set (ex. parent(i) is (i - 1)).
             fn parents_linear(set: &SpanSet) -> SpanSet {
-                debug_assert!(!set.contains(0));
+                debug_assert!(!set.contains(Id(0)));
                 SpanSet::from_sorted_spans(set.as_spans().iter().map(|s| s.low - 1..=s.high - 1))
             }
 
@@ -732,7 +732,7 @@ impl Dag {
             result: SpanSet::empty(),
         };
 
-        visit_segments(&mut ctx, (0..=Id::max_value()).into(), self.max_level)?;
+        visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
         Ok(ctx.result)
     }
 
@@ -932,7 +932,7 @@ impl Dag {
         };
 
         if ctx.roots_min <= ctx.ancestors_max {
-            visit_segments(&mut ctx, (0..=Id::max_value()).into(), self.max_level)?;
+            visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
         }
         Ok(ctx.result)
     }
@@ -1010,7 +1010,7 @@ impl Dag {
             result: SpanSet::empty(),
         };
 
-        visit_segments(&mut ctx, (0..=Id::max_value()).into(), self.max_level)?;
+        visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
         Ok(ctx.result)
     }
 }
@@ -1075,13 +1075,13 @@ impl<'a> Segment<'a> {
 
     pub(crate) fn high(&self) -> Result<Id> {
         match self.0.get(Self::OFFSET_HIGH..Self::OFFSET_HIGH + 8) {
-            Some(slice) => Ok(BigEndian::read_u64(slice)),
+            Some(slice) => Ok(Id(BigEndian::read_u64(slice))),
             None => bail!("cannot read high"),
         }
     }
 
     // high - low
-    fn delta(&self) -> Result<Id> {
+    fn delta(&self) -> Result<u64> {
         let (len, _) = self.0.read_vlq_at(Self::OFFSET_DELTA)?;
         Ok(len)
     }
@@ -1111,7 +1111,7 @@ impl<'a> Segment<'a> {
         let parent_count: usize = cur.read_vlq()?;
         let mut result = Vec::with_capacity(parent_count);
         for _ in 0..parent_count {
-            result.push(cur.read_vlq()?);
+            result.push(Id(cur.read_vlq()?));
         }
         Ok(result)
     }
@@ -1127,11 +1127,11 @@ impl<'a> Segment<'a> {
         let mut buf = Vec::with_capacity(1 + 8 + (parents.len() + 2) * 4);
         buf.write_u8(flags.bits()).unwrap();
         buf.write_u8(level).unwrap();
-        buf.write_u64::<BigEndian>(high).unwrap();
-        buf.write_vlq(high - low).unwrap();
+        buf.write_u64::<BigEndian>(high.0).unwrap();
+        buf.write_vlq(high.0 - low.0).unwrap();
         buf.write_vlq(parents.len()).unwrap();
         for parent in parents {
-            buf.write_vlq(*parent).unwrap();
+            buf.write_vlq(parent.0).unwrap();
         }
         buf
     }
@@ -1164,13 +1164,13 @@ impl Debug for Dag {
             if segment.has_root().unwrap() {
                 write!(f, "R")?;
             }
-            write!(
-                f,
-                "{}-{}{:?}",
-                span.low,
-                span.high,
-                segment.parents().unwrap(),
-            )?;
+            let parents = segment
+                .parents()
+                .unwrap()
+                .into_iter()
+                .map(|i| i.0)
+                .collect::<Vec<_>>();
+            write!(f, "{}-{}{:?}", span.low, span.high, parents,)?;
         }
         Ok(())
     }
@@ -1237,13 +1237,16 @@ mod tests {
 
     #[test]
     fn test_segment_roundtrip() {
-        fn prop(has_root: bool, level: Level, low: Id, delta: Id, parents: Vec<Id>) -> bool {
+        fn prop(has_root: bool, level: Level, low: u64, delta: u64, parents: Vec<u64>) -> bool {
             let flags = if has_root {
                 SegmentFlags::HAS_ROOT
             } else {
                 SegmentFlags::empty()
             };
             let high = low + delta;
+            let low = Id(low);
+            let high = Id(high);
+            let parents: Vec<Id> = parents.into_iter().map(Id).collect();
             let buf = Segment::serialize(flags, level, low, high, &parents);
             let node = Segment(&buf);
             node.flags().unwrap() == flags
@@ -1251,39 +1254,42 @@ mod tests {
                 && node.span().unwrap() == (low..=high).into()
                 && node.parents().unwrap() == parents
         }
-        quickcheck(prop as fn(bool, Level, Id, Id, Vec<Id>) -> bool);
+        quickcheck(prop as fn(bool, Level, u64, u64, Vec<u64>) -> bool);
     }
 
     #[test]
     fn test_segment_basic_lookups() {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap(), 0);
-        assert_eq!(dag.next_free_id(1).unwrap(), 0);
+        assert_eq!(dag.next_free_id(0).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(1).unwrap().0, 0);
 
         let flags = SegmentFlags::empty();
 
-        dag.insert(flags, 0, 0, 50, &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap(), 51);
-        dag.insert(flags, 0, 51, 100, &vec![50]).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap(), 101);
-        dag.insert(flags, 0, 101, 150, &vec![100]).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap(), 151);
-        assert_eq!(dag.next_free_id(1).unwrap(), 0);
-        dag.insert(flags, 1, 0, 100, &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(1).unwrap(), 101);
-        dag.insert(flags, 1, 101, 150, &vec![100]).unwrap();
-        assert_eq!(dag.next_free_id(1).unwrap(), 151);
+        dag.insert(flags, 0, Id(0), Id(50), &vec![]).unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap().0, 51);
+        dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
+            .unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap().0, 101);
+        dag.insert(flags, 0, Id(101), Id(150), &vec![Id(100)])
+            .unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap().0, 151);
+        assert_eq!(dag.next_free_id(1).unwrap().0, 0);
+        dag.insert(flags, 1, Id(0), Id(100), &vec![]).unwrap();
+        assert_eq!(dag.next_free_id(1).unwrap().0, 101);
+        dag.insert(flags, 1, Id(101), Id(150), &vec![Id(100)])
+            .unwrap();
+        assert_eq!(dag.next_free_id(1).unwrap().0, 151);
 
         // Helper functions to make the below lines shorter.
-        let low_by_head = |head, level| match dag.find_segment_by_head_and_level(head, level) {
-            Ok(Some(seg)) => seg.span().unwrap().low as i64,
+        let low_by_head = |head, level| match dag.find_segment_by_head_and_level(Id(head), level) {
+            Ok(Some(seg)) => seg.span().unwrap().low.0 as i64,
             Ok(None) => -1,
             _ => panic!("unexpected error"),
         };
 
-        let low_by_id = |id| match dag.find_flat_segment_including_id(id) {
-            Ok(Some(seg)) => seg.span().unwrap().low as i64,
+        let low_by_id = |id| match dag.find_flat_segment_including_id(Id(id)) {
+            Ok(Some(seg)) => seg.span().unwrap().low.0 as i64,
             Ok(None) => -1,
             _ => panic!("unexpected error"),
         };
@@ -1311,9 +1317,9 @@ mod tests {
     }
 
     fn get_parents(id: Id) -> Result<Vec<Id>> {
-        match id {
+        match id.0 {
             0 | 1 | 2 => Ok(Vec::new()),
-            _ => Ok(vec![id - 1, id / 2]),
+            _ => Ok(vec![id - 1, Id(id.0 / 2)]),
         }
     }
 
@@ -1321,19 +1327,19 @@ mod tests {
     fn test_sync_reload() {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap(), 0);
+        assert_eq!(dag.next_free_id(0).unwrap().0, 0);
 
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
         syncable
-            .build_segments_persistent(1001, &get_parents)
+            .build_segments_persistent(Id(1001), &get_parents)
             .unwrap();
 
         syncable.sync(std::iter::once(&mut dag)).unwrap();
 
         assert_eq!(dag.max_level, 3);
         assert_eq!(
-            dag.children(1000).unwrap().iter().collect::<Vec<Id>>(),
-            vec![1001]
+            dag.children(Id(1000)).unwrap().iter().collect::<Vec<Id>>(),
+            vec![Id(1001)]
         );
     }
 
@@ -1342,7 +1348,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
         assert!(dag.all().unwrap().is_empty());
-        dag.build_segments_volatile(1001, &get_parents).unwrap();
+        dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
         assert_eq!(dag.all().unwrap().count(), 1002);
     }
 }

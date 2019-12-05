@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use dag::spanset::SpanSet;
+use dag::{spanset::SpanSet, Id};
 use minibench::{bench, elapsed};
 
 fn main() {
@@ -21,7 +21,7 @@ fn main() {
         405..=410, 416..=421, 422..=424, 431..=432, 433..=434, 440..=444, 452..=460, 465..=466,
         469..=475, 480..=488, 492..=496, 502..=509, 513..=515, 523..=528, 530..=538, 545..=548,
         549..=553, 557..=563
-    ]);
+    ].into_iter().map(|r| Id(*r.start())..=Id(*r.end())));
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     let span2 = SpanSet::from_spans(vec![                                                                                                
@@ -33,7 +33,7 @@ fn main() {
         350..=352, 353..=360, 368..=371, 375..=382, 387..=389, 390..=395, 396..=402, 408..=411,
         413..=415, 416..=419, 425..=433, 439..=444, 445..=446, 454..=460, 461..=465, 472..=475,
         480..=486, 487..=491
-    ]);
+    ].into_iter().map(|r| Id(*r.start())..=Id(*r.end())));
 
     const N: usize = 10000;
 

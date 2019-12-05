@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag};
+use dag::{idmap::IdMap, segment::Dag, Id};
 use minibench::{
     bench, elapsed,
     measure::{self, Measure},
@@ -65,7 +65,7 @@ fn main() {
                 elapsed(|| {
                     for i in (0..parents.len() as u64).step_by(10079) {
                         for j in (1..parents.len() as u64).step_by(2351) {
-                            dag.gca_one((i, j)).unwrap();
+                            dag.gca_one((Id(i), Id(j))).unwrap();
                         }
                     }
                 })

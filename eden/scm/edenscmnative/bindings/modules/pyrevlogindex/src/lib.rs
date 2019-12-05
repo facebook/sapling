@@ -9,7 +9,7 @@
 
 use cpython::*;
 use cpython_ext::SimplePyBuf;
-use dag::spanset::{Id, SpanSet};
+use dag::{id::Id, spanset::SpanSet};
 use pydag::Spans;
 use std::cell::RefCell;
 
@@ -115,8 +115,8 @@ py_class!(class revlogindex |py| {
         for rev in (0..revlog.len()).rev() {
             let phase = phases[rev as usize];
             match phase {
-                Phase::Public => public_set.push(rev as Id),
-                Phase::Draft => draft_set.push(rev as Id),
+                Phase::Public => public_set.push(Id(rev as u64)),
+                Phase::Draft => draft_set.push(Id(rev as u64)),
                 // Do not track "unknown" explicitly. This is future-proof,
                 // since tracking "unknown" explicitly is quite expensive
                 // with the new "dag" abstraction.

@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet};
+use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet, Id};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
@@ -57,7 +57,7 @@ fn main() {
         .flat_map(|i| {
             (1..parents.len() as u64)
                 .step_by(7919)
-                .map(move |j| (i, j).into())
+                .map(move |j| (Id(i), Id(j)).into())
         })
         .collect(); // 2679 samples
     let sample_sets: Vec<SpanSet> = (0..parents.len() as u64)
@@ -65,7 +65,7 @@ fn main() {
         .flat_map(|i| {
             ((i + 7919)..parents.len() as u64)
                 .step_by(7919)
-                .map(move |j| (i..=j).into())
+                .map(move |j| (Id(i)..=Id(j)).into())
         })
         .collect(); // 1471 samples
 

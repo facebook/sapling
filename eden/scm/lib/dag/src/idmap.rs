@@ -9,6 +9,7 @@
 //!
 //! See [`IdMap`] for the main structure.
 
+use crate::id::Id;
 use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
@@ -17,8 +18,6 @@ use std::fs::{self, File};
 use std::io::{Cursor, Write};
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
-
-pub type Id = u64;
 
 /// Bi-directional mapping between an integer id and `[u8]`.
 pub struct IdMap {
@@ -108,7 +107,7 @@ impl IdMap {
     /// Find slice by a specified integer id.
     pub fn find_slice_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
         let mut key = Vec::with_capacity(8);
-        key.write_u64::<BigEndian>(id).unwrap();
+        key.write_u64::<BigEndian>(id.0).unwrap();
         let key = self.log.lookup(Self::INDEX_ID_TO_SLICE, key)?.nth(0);
         match key {
             Some(Ok(entry)) => {
@@ -126,7 +125,7 @@ impl IdMap {
         match key {
             Some(Ok(mut entry)) => {
                 ensure!(entry.len() >= 8, "index key should have 8 bytes at least");
-                Ok(Some(entry.read_u64::<BigEndian>().unwrap()))
+                Ok(Some(Id(entry.read_u64::<BigEndian>().unwrap())))
             }
             None => Ok(None),
             Some(Err(err)) => Err(err.into()),
@@ -155,7 +154,7 @@ impl IdMap {
         }
 
         let mut data = Vec::with_capacity(8 + slice.len());
-        data.write_u64::<BigEndian>(id).unwrap();
+        data.write_u64::<BigEndian>(id.0).unwrap();
         data.write_all(slice).unwrap();
         self.log.append(data)?;
         if id >= self.next_free_id {
@@ -173,11 +172,12 @@ impl IdMap {
     // Used internally. It should match `next_free_id`.
     fn get_next_free_id(log: &log::Log) -> Result<Id> {
         let mut iter = log.lookup_range(Self::INDEX_ID_TO_SLICE, ..)?.rev();
-        match iter.nth(0) {
-            None => Ok(0),
-            Some(Ok((key, _))) => Ok(Cursor::new(key).read_u64::<BigEndian>()? + 1),
+        let id = match iter.nth(0) {
+            None => 0,
+            Some(Ok((key, _))) => Cursor::new(key).read_u64::<BigEndian>()? + 1,
             _ => bail!("cannot read next_free_id"),
-        }
+        };
+        Ok(Id(id))
     }
 }
 
@@ -343,23 +343,23 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut map = IdMap::open(dir.path()).unwrap();
         let mut map = map.prepare_filesystem_sync().unwrap();
-        assert_eq!(map.next_free_id(), 0);
-        map.insert(1, b"abc").unwrap();
-        assert_eq!(map.next_free_id(), 2);
-        map.insert(2, b"def").unwrap();
-        assert_eq!(map.next_free_id(), 3);
-        map.insert(10, b"ghi").unwrap();
-        assert_eq!(map.next_free_id(), 11);
+        assert_eq!(map.next_free_id().0, 0);
+        map.insert(Id(1), b"abc").unwrap();
+        assert_eq!(map.next_free_id().0, 2);
+        map.insert(Id(2), b"def").unwrap();
+        assert_eq!(map.next_free_id().0, 3);
+        map.insert(Id(10), b"ghi").unwrap();
+        assert_eq!(map.next_free_id().0, 11);
 
         for _ in 0..=1 {
-            assert_eq!(map.find_slice_by_id(1).unwrap().unwrap(), b"abc");
-            assert_eq!(map.find_slice_by_id(2).unwrap().unwrap(), b"def");
-            assert!(map.find_slice_by_id(3).unwrap().is_none());
-            assert_eq!(map.find_slice_by_id(10).unwrap().unwrap(), b"ghi");
+            assert_eq!(map.find_slice_by_id(Id(1)).unwrap().unwrap(), b"abc");
+            assert_eq!(map.find_slice_by_id(Id(2)).unwrap().unwrap(), b"def");
+            assert!(map.find_slice_by_id(Id(3)).unwrap().is_none());
+            assert_eq!(map.find_slice_by_id(Id(10)).unwrap().unwrap(), b"ghi");
 
-            assert_eq!(map.find_id_by_slice(b"abc").unwrap().unwrap(), 1);
-            assert_eq!(map.find_id_by_slice(b"def").unwrap().unwrap(), 2);
-            assert_eq!(map.find_id_by_slice(b"ghi").unwrap().unwrap(), 10);
+            assert_eq!(map.find_id_by_slice(b"abc").unwrap().unwrap().0, 1);
+            assert_eq!(map.find_id_by_slice(b"def").unwrap().unwrap().0, 2);
+            assert_eq!(map.find_id_by_slice(b"ghi").unwrap().unwrap().0, 10);
             assert!(map.find_id_by_slice(b"jkl").unwrap().is_none());
             map.sync().unwrap();
         }
@@ -371,6 +371,6 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut map = IdMap::open(dir.path()).unwrap();
         let mut map = map.prepare_filesystem_sync().unwrap();
-        map.insert(0, b"abc").unwrap();
+        map.insert(Id(0), b"abc").unwrap();
     }
 }

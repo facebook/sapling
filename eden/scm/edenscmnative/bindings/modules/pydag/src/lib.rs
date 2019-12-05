@@ -11,7 +11,8 @@ use anyhow::Error;
 use cpython::*;
 use cpython_failure::{FallibleExt, ResultPyErrExt};
 use dag::{
-    idmap::{Id, IdMap},
+    id::Id,
+    idmap::IdMap,
     segment::Dag,
     spanset::{SpanSet, SpanSetIter},
 };
@@ -55,7 +56,7 @@ py_class!(pub class spans |py| {
         if id < 0 {
             Ok(false)
         } else {
-            Ok(self.inner(py).contains(id as Id))
+            Ok(self.inner(py).contains(Id(id as u64)))
         }
     }
 
@@ -77,12 +78,12 @@ py_class!(pub class spans |py| {
         spansiter::create_instance(py, iter, false)
     }
 
-    def min(&self) -> PyResult<Option<Id>> {
-        Ok(self.inner(py).min())
+    def min(&self) -> PyResult<Option<u64>> {
+        Ok(self.inner(py).min().map(|id| id.0))
     }
 
-    def max(&self) -> PyResult<Option<Id>> {
-        Ok(self.inner(py).max())
+    def max(&self) -> PyResult<Option<u64>> {
+        Ok(self.inner(py).max().map(|id| id.0))
     }
 
     def __repr__(&self) -> PyResult<String> {
@@ -113,14 +114,14 @@ py_class!(pub class spansiter |py| {
     data iter: RefCell<SpanSetIter<SpanSet>>;
     data ascending: bool;
 
-    def __next__(&self) -> PyResult<Option<Id>> {
+    def __next__(&self) -> PyResult<Option<u64>> {
         let mut iter = self.iter(py).borrow_mut();
         let next = if *self.ascending(py) {
             iter.next_back()
         } else {
             iter.next()
         };
-        Ok(next)
+        Ok(next.map(|id| id.0))
     }
 
     // Makes code like `list(spans.iterasc())` work.
@@ -148,7 +149,10 @@ impl<'a> FromPyObject<'a> for Spans {
 
         // Then iterate through obj and collect all ids.
         // Collecting ids to a Vec first to preserve error handling.
-        let ids: PyResult<Vec<Id>> = obj.iter(py)?.map(|o| o?.extract(py)).collect();
+        let ids: PyResult<Vec<Id>> = obj
+            .iter(py)?
+            .map(|o| Ok(Id(o?.extract::<u64>(py)?)))
+            .collect();
         Ok(Spans(SpanSet::from_spans(ids?)))
     }
 }
@@ -189,7 +193,7 @@ py_class!(class dagindex |py| {
             let mut id = 0;
             for node in nodes {
                 let node = node.data(py);
-                id = id.max(map.assign_head(&node, &get_parents).map_pyerr::<exc::RuntimeError>(py)?);
+                id = id.max(map.assign_head(&node, &get_parents).map_pyerr::<exc::RuntimeError>(py)?.0);
             }
             map.sync().map_pyerr::<exc::IOError>(py)?;
             id
@@ -200,7 +204,7 @@ py_class!(class dagindex |py| {
         {
             use std::ops::DerefMut;
             let mut syncable = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-            syncable.build_segments_persistent(id, &get_parents).map_pyerr::<exc::IOError>(py)?;
+            syncable.build_segments_persistent(Id(id), &get_parents).map_pyerr::<exc::IOError>(py)?;
             syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr::<exc::IOError>(py)?;
         }
         Ok(None)
@@ -218,33 +222,33 @@ py_class!(class dagindex |py| {
             let mut id = 0;
             for node in nodes {
                 let node = node.data(py);
-                id = id.max(map.assign_head(&node, &get_parents).map_pyerr::<exc::RuntimeError>(py)?);
+                id = id.max(map.assign_head(&node, &get_parents).map_pyerr::<exc::RuntimeError>(py)?.0);
             }
             id
         };
         let get_parents = map.build_get_parents_by_id(&get_parents);
 
         let mut dag = self.dag(py).borrow_mut();
-        dag.build_segments_volatile(id, &get_parents).map_pyerr::<exc::IOError>(py)?;
+        dag.build_segments_volatile(Id(id), &get_parents).map_pyerr::<exc::IOError>(py)?;
         Ok(None)
     }
 
-    def id2node(&self, id: Id) -> PyResult<Option<PyBytes>> {
+    def id2node(&self, id: u64) -> PyResult<Option<PyBytes>> {
         // Translate id to node.
         let map = self.map(py).borrow();
         Ok(map
-            .find_slice_by_id(id)
+            .find_slice_by_id(Id(id))
             .map_pyerr::<exc::IOError>(py)?
             .map(|node| PyBytes::new(py, node)))
     }
 
-    def node2id(&self, node: PyBytes) -> PyResult<Option<Id>> {
+    def node2id(&self, node: PyBytes) -> PyResult<Option<u64>> {
         // Translate node to id.
         let node = node.data(py);
         let map = self.map(py).borrow();
         Ok(map
             .find_id_by_slice(&node)
-            .map_pyerr::<exc::IOError>(py)?)
+            .map_pyerr::<exc::IOError>(py)?.map(|id| id.0))
     }
 
     /// Calculate all ancestors reachable from the set.
@@ -267,9 +271,9 @@ py_class!(class dagindex |py| {
 
     /// Calculate one greatest common ancestor of a set.
     /// If there are multiple greatest common ancestors, pick an arbitrary one.
-    def gcaone(&self, set: Spans) -> PyResult<Option<Id>> {
+    def gcaone(&self, set: Spans) -> PyResult<Option<u64>> {
         let dag = self.dag(py).borrow();
-        dag.gca_one(set).map_pyerr::<exc::IOError>(py)
+        Ok(dag.gca_one(set).map_pyerr::<exc::IOError>(py)?.map(|id| id.0))
     }
 
     /// Calculate all greatest common ancestors of a set.
@@ -285,9 +289,9 @@ py_class!(class dagindex |py| {
     }
 
     /// Check if `ancestor` is an ancestor of `descentant`.
-    def isancestor(&self, ancestor: Id, descentant: Id) -> PyResult<bool> {
+    def isancestor(&self, ancestor: u64, descentant: u64) -> PyResult<bool> {
         let dag = self.dag(py).borrow();
-        dag.is_ancestor(ancestor, descentant).map_pyerr::<exc::IOError>(py)
+        dag.is_ancestor(Id(ancestor), Id(descentant)).map_pyerr::<exc::IOError>(py)
     }
 
     /// Calculate `heads(ancestors(set))`.

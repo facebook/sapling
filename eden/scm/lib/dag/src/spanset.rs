@@ -9,6 +9,7 @@
 //!
 //! See [`SpanSet`] for the main structure.
 
+use crate::id::Id;
 use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
     PartialOrd,
@@ -16,8 +17,6 @@ use std::cmp::{
 use std::collections::BinaryHeap;
 use std::fmt::{self, Debug};
 use std::ops::{Bound, RangeBounds, RangeInclusive};
-
-pub type Id = u64;
 
 /// Range `low..=high`. `low` must be <= `high`.
 #[derive(Copy, Clone, Debug, Eq)]
@@ -65,7 +64,7 @@ impl Span {
     }
 
     pub fn count(self) -> u64 {
-        self.high - self.low + 1
+        self.high.0 - self.low.0 + 1
     }
 
     /// Get the n-th [`Id`] in this [`Span`].
@@ -87,7 +86,7 @@ impl Span {
     /// Construct a full [`Span`] that contains everything.
     /// Warning: The [`Id`] in this span might be unknown to an actual storage.
     pub fn full() -> Self {
-        (0..=Id::max_value()).into()
+        (Id::MIN..=Id::MAX).into()
     }
 
     fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
@@ -200,7 +199,10 @@ impl SpanSet {
             .rev()
             .cloned()
             .fold((-1, true), |(last_high, is_sorted), span| {
-                (span.high as i64, is_sorted && last_high < span.low as i64)
+                (
+                    span.high.0 as i64,
+                    is_sorted && last_high < span.low.0 as i64,
+                )
             })
             .1
     }
@@ -366,7 +368,7 @@ impl SpanSet {
                 self.spans.len() as isize - 1,
                 self.spans
                     .last()
-                    .map(|span| span.high - span.low)
+                    .map(|span| span.high.0 - span.low.0)
                     .unwrap_or(0),
             ),
         }
@@ -457,7 +459,7 @@ impl Debug for SpanSet {
             .flat_map(|s| {
                 if s.low + 2 >= s.high {
                     // "low..=high" form is not shorter.
-                    (s.low..=s.high).map(|i| format!("{}", i)).collect()
+                    (s.low.to(s.high)).map(|i| format!("{}", i)).collect()
                 } else {
                     vec![format!("{}..={}", s.low, s.high)]
                 }
@@ -471,8 +473,8 @@ impl Debug for SpanSet {
 pub struct SpanSetIter<T> {
     span_set: T,
     // (index of span_set.spans, index of span_set.spans[i])
-    front: (isize, Id),
-    back: (isize, Id),
+    front: (isize, u64),
+    back: (isize, u64),
 }
 
 impl<T: AsRef<SpanSet>> Iterator for SpanSetIter<T> {
@@ -484,7 +486,7 @@ impl<T: AsRef<SpanSet>> Iterator for SpanSetIter<T> {
         } else {
             let (vec_id, span_id) = self.front;
             let span = &self.span_set.as_ref().spans[vec_id as usize];
-            self.front = if span_id == span.high - span.low {
+            self.front = if span_id == span.high.0 - span.low.0 {
                 (vec_id + 1, 0)
             } else {
                 (vec_id, span_id + 1)
@@ -504,7 +506,7 @@ impl<T: AsRef<SpanSet>> DoubleEndedIterator for SpanSetIter<T> {
             self.back = if span_id == 0 {
                 let span_len = if vec_id > 0 {
                     let span = self.span_set.as_ref().spans[(vec_id - 1) as usize];
-                    span.high - span.low
+                    span.high.0 - span.low.0
                 } else {
                     0
                 };
@@ -527,7 +529,7 @@ impl IntoIterator for SpanSet {
             self.spans.len() as isize - 1,
             self.spans
                 .last()
-                .map(|span| span.high - span.low)
+                .map(|span| span.high.0 - span.low.0)
                 .unwrap_or(0),
         );
         SpanSetIter {
@@ -547,6 +549,37 @@ impl AsRef<SpanSet> for SpanSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    impl From<RangeInclusive<u64>> for Span {
+        fn from(range: RangeInclusive<u64>) -> Span {
+            Span::new(Id(*range.start()), Id(*range.end()))
+        }
+    }
+
+    impl From<u64> for Span {
+        fn from(id: u64) -> Span {
+            let id = Id(id);
+            Span::new(id, id)
+        }
+    }
+
+    impl From<(u64, u64)> for SpanSet {
+        fn from(ids: (u64, u64)) -> SpanSet {
+            SpanSet::from_spans([ids.0, ids.1].iter().cloned().map(Id))
+        }
+    }
+
+    impl From<Span> for RangeInclusive<u64> {
+        fn from(span: Span) -> RangeInclusive<u64> {
+            span.low.0..=span.high.0
+        }
+    }
+
+    impl std::cmp::PartialEq<u64> for Id {
+        fn eq(&self, other: &u64) -> bool {
+            self.0 == *other
+        }
+    }
 
     #[test]
     fn test_overlapped_spans() {
@@ -611,7 +644,7 @@ mod tests {
         assert!(!set.contains(30..=41));
     }
 
-    fn union(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
+    fn union(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<u64>> {
         let a = SpanSet::from_spans(a);
         let b = SpanSet::from_spans(b);
         let spans1 = a.union(&b).spans;
@@ -631,7 +664,7 @@ mod tests {
         );
     }
 
-    fn intersect(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
+    fn intersect(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<u64>> {
         let a = SpanSet::from_spans(a);
         let b = SpanSet::from_spans(b);
         let spans1 = a.intersection(&b).spans;
@@ -657,7 +690,7 @@ mod tests {
         assert_eq!(intersect(vec![10, 9, 8, 7], vec![5..=8]), vec![7..=8]);
     }
 
-    fn difference(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
+    fn difference(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<u64>> {
         let a = SpanSet::from_spans(a);
         let b = SpanSet::from_spans(b);
         let spans1 = a.difference(&b).spans;

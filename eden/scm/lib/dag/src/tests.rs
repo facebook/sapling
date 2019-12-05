@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::id::Id;
 use crate::idmap::IdMap;
 use crate::segment::Dag;
 use crate::spanset::SpanSet;
@@ -195,6 +196,9 @@ fn test_segment_ancestors_example1() {
         (9, 2, 2.into()),
         (9, 7, 6.into()),
     ] {
+        let ancestor = ancestor.map(Id);
+        let a = Id(a);
+        let b = Id(b);
         assert_eq!(dag.gca_one((a, b)).unwrap(), ancestor);
         assert_eq!(dag.gca_all((a, b)).unwrap().iter().nth(0), ancestor);
         assert_eq!(dag.gca_all((a, b)).unwrap().iter().nth(1), None);
@@ -221,7 +225,7 @@ Lv1: R0-2[] 3-3[0, 1]"#
     );
     let dag = result.dag;
     // This is kind of "undefined" whether it's 1 or 0.
-    assert_eq!(dag.gca_one((2, 3)).unwrap(), Some(1));
+    assert_eq!(dag.gca_one((2, 3)).unwrap(), Some(Id(1)));
     assert_eq!(
         dag.gca_all((2, 3)).unwrap().iter().collect::<Vec<_>>(),
         vec![1, 0]
@@ -505,7 +509,8 @@ impl IdMap {
     /// Replace names in an ASCII DAG using the ids assigned.
     fn replace(&self, text: &str) -> String {
         let mut result = text.to_string();
-        for id in 0..self.next_free_id() {
+        for id in 0..self.next_free_id().0 {
+            let id = Id(id);
             if let Ok(Some(name)) = self.find_slice_by_id(id) {
                 let name = String::from_utf8(name.to_vec()).unwrap();
                 let id_str = format!("{:01$}", id, name.len());
