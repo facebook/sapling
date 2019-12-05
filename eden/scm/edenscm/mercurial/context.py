@@ -17,6 +17,7 @@ import filecmp
 import os
 import re
 import stat
+import sys
 
 from . import (
     encoding,
@@ -485,7 +486,7 @@ class changectx(basectx):
                 self._node = repo.changelog.node(changeid)
                 self._rev = changeid
                 return
-            if not pycompat.ispy3 and isinstance(changeid, long):  # noqa
+            if sys.version_info[0] < 3 and isinstance(changeid, long):  # noqa
                 changeid = str(changeid)
             if changeid == "null":
                 self._node = nullid

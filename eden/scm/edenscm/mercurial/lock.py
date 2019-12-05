@@ -16,6 +16,7 @@ import contextlib
 import errno
 import os
 import socket
+import sys
 import time
 import warnings
 
@@ -97,7 +98,7 @@ class lockinfo(object):
         if cls._currentnamespace is not None:
             return cls._currentnamespace
         result = socket.gethostname()
-        if pycompat.ispy3:
+        if sys.version_info[0] >= 3:
             result = result.encode(pycompat.sysstr(encoding.encoding), "replace")
         if pycompat.sysplatform.startswith("linux"):
             try:

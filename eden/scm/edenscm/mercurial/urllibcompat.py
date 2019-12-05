@@ -11,6 +11,8 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+import sys
+
 from . import pycompat
 
 
@@ -46,7 +48,7 @@ httpserver = _pycompatstub()
 urlreq = _pycompatstub()
 urlerr = _pycompatstub()
 
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     import urllib.parse
 
     urlreq._registeraliases(
@@ -138,20 +140,15 @@ if pycompat.ispy3:
 
 
 else:
-    # pyre-fixme[21]: Could not find `BaseHTTPServer`.
     import BaseHTTPServer
 
-    # pyre-fixme[21]: Could not find `CGIHTTPServer`.
     import CGIHTTPServer
 
-    # pyre-fixme[21]: Could not find `SimpleHTTPServer`.
     import SimpleHTTPServer
 
-    # pyre-fixme[21]: Could not find `urllib2`.
     import urllib2
     import urllib
 
-    # pyre-fixme[21]: Could not find `urlparse`.
     import urlparse
 
     urlreq._registeraliases(

@@ -15,6 +15,7 @@ from __future__ import absolute_import, print_function
 import io
 import locale
 import os
+import sys
 import unicodedata
 
 from . import error, policy, pycompat
@@ -31,20 +32,19 @@ _jsonescapeu8fast = charencode.jsonescapeu8fast
 
 _sysstr = pycompat.sysstr
 
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     unichr = chr
 
 # These unicode characters are ignored by HFS+ (Apple Technote 1150,
 # "Unicode Subtleties"), so we need to ignore them in some places for
 # sanity.
 _ignore = [
-    # pyre-fixme[18]: Global name `unichr` is undefined.
     unichr(int(x, 16)).encode("utf-8")
     for x in "200c 200d 200e 200f 202a 202b 202c 202d 202e "
     "206a 206b 206c 206d 206e 206f feff".split()
 ]
 # verify the next function will work
-assert all(i.startswith(("\xe2", "\xef")) for i in _ignore)
+assert all(i.startswith((b"\xe2", b"\xef")) for i in _ignore)
 
 
 def hfsignoreclean(s):
@@ -66,8 +66,8 @@ def setfromenviron():
     global encoding, encodingmode, environ, _wide
     # encoding.environ is provided read-only, which may not be used to modify
     # the process environment
-    _nativeenviron = not pycompat.ispy3 or os.supports_bytes_environ
-    if not pycompat.ispy3:
+    _nativeenviron = sys.version_info[0] < 3 or os.supports_bytes_environ
+    if sys.version_info[0] < 3:
         environ = os.environ  # re-exports
     elif _nativeenviron:
         environ = os.environb  # re-exports
@@ -107,7 +107,7 @@ _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 # cp65001 is a Windows variant of utf-8, which isn't supported on Python 2.
 # No idea if it should be rewritten to the canonical name 'utf-8' on Python 3.
 # https://bugs.python.org/issue13216
-if pycompat.iswindows and not pycompat.ispy3:
+if pycompat.iswindows and sys.version_info[0] < 3:
     _encodingfixers["cp65001"] = lambda: "utf-8"
 
 environ = encoding = encodingmode = _wide = None
@@ -251,7 +251,7 @@ def unimethod(bytesfunc):
 # converter functions between native str and byte string. use these if the
 # character encoding is not aware (e.g. exception message) or is known to
 # be locale dependent (e.g. date formatting.)
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     strtolocal = unitolocal
     strfromlocal = unifromlocal
     strmethod = unimethod
@@ -499,7 +499,7 @@ def jsonescape(s, paranoid=False):
 
 # We need to decode/encode U+DCxx codes transparently since invalid UTF-8
 # bytes are mapped to that range.
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     _utf8strict = r"surrogatepass"
 else:
     _utf8strict = r"strict"
@@ -634,7 +634,7 @@ def fromutf8b(s):
     return r
 
 
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
 
     class strio(io.TextIOWrapper):
         """Wrapper around TextIOWrapper that respects hg's encoding assumptions.

@@ -145,7 +145,7 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         if query:
             env[r"QUERY_STRING"] = query
 
-        if pycompat.ispy3:
+        if sys.version_info[0] >= 3:
             if self.headers.get_content_type() is None:
                 env[r"CONTENT_TYPE"] = self.headers.get_default_type()
             else:

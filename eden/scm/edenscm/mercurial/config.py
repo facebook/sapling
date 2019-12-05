@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import os
+import sys
 
 from . import error, pycompat, util
 
@@ -87,7 +88,7 @@ class config(object):
         return list(self._data.get(section, {}).iteritems())
 
     def set(self, section, item, value, source=""):
-        if pycompat.ispy3:
+        if sys.version_info[0] >= 3:
             assert not isinstance(
                 value, str
             ), "config values may not be unicode strings on Python 3"

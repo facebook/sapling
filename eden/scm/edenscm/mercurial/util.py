@@ -66,15 +66,11 @@ parsers = policy.importmod(r"parsers")
 b85decode = base85.b85decode
 b85encode = base85.b85encode
 
-# pyre-fixme[16]: Module `pycompat` has no attribute `cookielib`.
 cookielib = pycompat.cookielib
 empty = pycompat.empty
-# pyre-fixme[16]: Module `pycompat` has no attribute `httplib`.
 httplib = pycompat.httplib
-# pyre-fixme[16]: Module `pycompat` has no attribute `pickle`.
 pickle = pycompat.pickle
 queue = pycompat.queue.Queue
-# pyre-fixme[16]: Module `pycompat` has no attribute `socketserver`.
 socketserver = pycompat.socketserver
 stderr = pycompat.stderr
 stdin = pycompat.stdin
@@ -86,7 +82,6 @@ urlerr = urllibcompat.urlerr
 urlreq = urllibcompat.urlreq
 
 # workaround for win32mbcs
-# pyre-fixme[9]: _filenamebytestr has type `Type[str]`; used as `Type[bytestr]`.
 _filenamebytestr = pycompat.bytestr
 
 

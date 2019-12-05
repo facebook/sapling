@@ -89,11 +89,13 @@ EXTRA ATTRIBUTES AND METHODS
 
 from __future__ import absolute_import, print_function
 
+import email
 import errno
 import hashlib
 import socket
 import sys
 import threading
+from typing import List
 
 from . import pycompat, urllibcompat, util
 from .i18n import _
@@ -355,7 +357,6 @@ class HTTPHandler(KeepAliveHandler, urlreq.httphandler):
     pass
 
 
-# pyre-fixme[11]: Annotation `HTTPResponse` is not defined as a type.
 class HTTPResponse(httplib.HTTPResponse):
     # we need to subclass HTTPResponse in order to
     # 1) add readline() and readlines() methods
@@ -377,7 +378,7 @@ class HTTPResponse(httplib.HTTPResponse):
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
         extrakw = {}
-        if not pycompat.ispy3:
+        if sys.version_info[0] < 3:
             extrakw[r"strict"] = True
             extrakw[r"buffering"] = True
         httplib.HTTPResponse.__init__(
@@ -385,46 +386,51 @@ class HTTPResponse(httplib.HTTPResponse):
         )
         self.fileno = sock.fileno
         self.code = None
-        self._rbuf = ""
+        self._rbuf = b""
         self._rbufsize = 8096
         self._handler = None  # inserted by the handler later
         self._host = None  # (same)
-        self._url = None  # (same)
+        self._url = ""  # (same)
         self._connection = None  # (same)
 
     _raw_read = httplib.HTTPResponse.read
 
     def close(self):
-        if self.fp:
-            self.fp.close()
-            self.fp = None
-            if self._handler:
-                self._handler._request_closed(self, self._host, self._connection)
+        # type: () -> None
+        httplib.HTTPResponse.close(self)
+
+        handler = self._handler
+        if handler:
+            handler._request_closed(self, self._host, self._connection)
 
     def close_connection(self):
         self._handler._remove_connection(self._host, self._connection, close=1)
         self.close()
 
     def info(self):
+        # type: () -> email.message.Message
         return self.headers
 
     def geturl(self):
+        # type: () -> str
         return self._url
 
     def read(self, amt=None):
+        # type: (...) -> bytes
         # the _rbuf test is only in this first if for speed.  It's not
         # logically necessary
-        if self._rbuf and amt is not None:
-            L = len(self._rbuf)
-            if amt > L:
-                amt -= L
-            else:
-                s = self._rbuf[:amt]
-                self._rbuf = self._rbuf[amt:]
-                return s
+        if amt:
+            if self._rbuf:
+                L = len(self._rbuf)
+                if amt > L:
+                    amt -= L
+                else:
+                    s = self._rbuf[:amt]
+                    self._rbuf = self._rbuf[amt:]
+                    return s
 
         s = self._rbuf + self._raw_read(amt)
-        self._rbuf = ""
+        self._rbuf = b""
         return s
 
     # stolen from Python SVN #68532 to fix issue1088
@@ -482,9 +488,10 @@ class HTTPResponse(httplib.HTTPResponse):
 
         return "".join(parts)
 
-    def readline(self):
+    def readline(self, size=-1):
+        # type: (int) -> bytes
         # Fast path for a line is already available in read buffer.
-        i = self._rbuf.find("\n")
+        i = self._rbuf.find(b"\n")
         if i >= 0:
             i += 1
             line = self._rbuf[:i]
@@ -501,7 +508,7 @@ class HTTPResponse(httplib.HTTPResponse):
                 break
 
             chunks.append(new)
-            i = new.find("\n")
+            i = new.find(b"\n")
             if i >= 0:
                 break
 
@@ -509,15 +516,16 @@ class HTTPResponse(httplib.HTTPResponse):
 
         # EOF
         if i == -1:
-            self._rbuf = ""
-            return "".join(chunks)
+            self._rbuf = b""
+            return b"".join(chunks)
 
         i += 1
         self._rbuf = chunks[-1][i:]
         chunks[-1] = chunks[-1][:i]
-        return "".join(chunks)
+        return b"".join(chunks)
 
-    def readlines(self, sizehint=0):
+    def readlines(self, hint=0):
+        # type: (int) -> List[bytes]
         total = 0
         list = []
         while True:
@@ -526,7 +534,7 @@ class HTTPResponse(httplib.HTTPResponse):
                 break
             list.append(line)
             total += len(line)
-            if sizehint and total >= sizehint:
+            if hint and total >= hint:
                 break
         return list
 
@@ -629,7 +637,6 @@ def wrapgetresponse(cls):
     return safegetresponse
 
 
-# pyre-fixme[11]: Annotation `HTTPConnection` is not defined as a type.
 class HTTPConnection(httplib.HTTPConnection):
     # use the modified response class
     response_class = HTTPResponse

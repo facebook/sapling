@@ -24,23 +24,17 @@ import shlex
 import sys
 
 
-ispy3 = sys.version_info[0] >= 3
 ispypy = r"__pypy__" in sys.builtin_module_names
 
-if not ispy3:
-    # pyre-fixme[21]: Could not find `cookielib`.
+if sys.version_info[0] < 3:
     import cookielib
 
-    # pyre-fixme[21]: Could not find `cPickle`.
     import cPickle as pickle
 
-    # pyre-fixme[21]: Could not find `httplib`.
     import httplib
 
-    # pyre-fixme[21]: Could not find `Queue`.
     import Queue as _queue
 
-    # pyre-fixme[21]: Could not find `SocketServer`.
     import SocketServer as socketserver
 else:
     import http.cookiejar as cookielib  # noqa: F401
@@ -57,7 +51,7 @@ def identity(a):
     return a
 
 
-if ispy3:
+if sys.version_info[0] >= 3:
     import builtins
     import functools
     import io
@@ -84,6 +78,7 @@ if ispy3:
     maplist = lambda *args: list(map(*args))
     ziplist = lambda *args: list(zip(*args))
     rawinput = input
+    range = range
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -280,18 +275,15 @@ if ispy3:
 
 
 else:
-    # pyre-fixme[21]: Could not find `cStringIO`.
     import cStringIO
 
     bytechr = chr
-    # pyre-fixme[9]: bytestr has type `Type[bytestr]`; used as `Type[str]`.
     bytestr = str
     iterbytestr = iter
     sysbytes = identity
     sysstr = identity
     strurl = identity
     bytesurl = identity
-    # pyre-fixme[18]: Global name `xrange` is undefined.
     range = xrange  # noqa: F821
 
     # this can't be parsed on Python 3
@@ -340,7 +332,6 @@ else:
     stringio = cStringIO.StringIO
     maplist = map
     ziplist = zip
-    # pyre-fixme[18]: Global name `raw_input` is undefined.
     rawinput = raw_input  # noqa
 
 # pyre-fixme[6]: Expected `Union[bytes, Tuple[bytes, ...]]` for 1st param but got `str`.

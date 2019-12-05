@@ -12,7 +12,7 @@ from edenscm.mercurial import ancestor, debugcommands, hg, pycompat, ui as uimod
 from edenscm.mercurial.node import nullrev
 
 
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     long = int
     xrange = range
 

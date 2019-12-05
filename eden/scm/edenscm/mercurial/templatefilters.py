@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import os
 import re
+import sys
 import time
 
 from . import (
@@ -33,7 +34,7 @@ from .pycompat import range
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     long = int
 
 # filters are callables like:

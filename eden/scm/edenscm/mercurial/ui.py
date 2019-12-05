@@ -1309,7 +1309,7 @@ class ui(object):
             else:
                 output = traceback.format_exception(exc[0], exc[1], exc[2])
                 data = r"".join(output)
-                if pycompat.ispy3:
+                if sys.version_info[0] >= 3:
                     enc = pycompat.sysstr(encoding.encoding)
                     data = data.encode(enc, errors=r"replace")
                 self.write_err(data)

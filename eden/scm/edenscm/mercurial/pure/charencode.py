@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import array
+import sys
 
 from .. import pycompat
 
@@ -73,7 +74,7 @@ def jsonescapeu8fast(u8chars, paranoid):
         raise ValueError
 
 
-if pycompat.ispy3:
+if sys.version_info[0] >= 3:
     _utf8strict = r"surrogatepass"
 else:
     _utf8strict = r"strict"

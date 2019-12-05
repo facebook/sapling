@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import cgi
 import struct
+import sys
 
 from .. import error, pycompat, util, wireproto
 from .common import HTTP_OK
@@ -71,7 +72,7 @@ class webproto(wireproto.abstractserverproto):
 
     def _args(self):
         args = self.req.form.copy()
-        if pycompat.ispy3:
+        if sys.version_info[0] >= 3:
             args = {
                 k.encode("ascii"): [v.encode("ascii") for v in vs]
                 for k, vs in args.items()
