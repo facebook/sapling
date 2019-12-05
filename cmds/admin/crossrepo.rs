@@ -32,7 +32,7 @@ use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::{ChangesetId, MPath, RepositoryId};
 use movers::{get_large_to_small_mover, Mover};
-use slog::{debug, info, warn, Logger};
+use slog::{debug, error, info, warn, Logger};
 use std::collections::{HashMap, HashSet};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -213,12 +213,23 @@ async fn subcommand_verify_wc(
     )
     .await?;
 
+    let mut missing_count = 0;
     for (path, _) in small_repo_entries {
         if moved_large_repo_entries.get(&path).is_none() {
-            return Err(
-                format_err!("{:?} is present in small repo, but not in large", path).into(),
+            error!(
+                ctx.logger(),
+                "{:?} is present in small repo, but not in large", path
             );
+            missing_count = missing_count + 1;
         }
+    }
+
+    if missing_count > 0 {
+        return Err(format_err!(
+            "{} files are present in small repo, but not in large",
+            missing_count
+        )
+        .into());
     }
 
     info!(ctx.logger(), "all is well!");
