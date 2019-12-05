@@ -8,7 +8,8 @@
 
 #![deny(warnings)]
 
-use bookmarks::BookmarkName;
+use blobrepo::BlobRepo;
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use failure_ext::Error;
 use fbinit::FacebookInit;
@@ -25,7 +26,7 @@ use hooks_content_stores::{
     BlobRepoChangesetStore, BlobRepoFileContentStore, ChangedFileType, InMemoryChangesetStore,
     InMemoryFileContentStore,
 };
-use maplit::{hashmap, hashset};
+use maplit::{btreemap, hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
@@ -40,6 +41,7 @@ use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
+use tests_utils::{create_commit, store_files};
 
 #[derive(Clone, Debug)]
 struct FnChangesetHook {
@@ -632,7 +634,15 @@ fn test_file_hook_accepted(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -654,7 +664,15 @@ fn test_file_hook_rejected(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -684,7 +702,15 @@ fn test_file_hook_mix(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -710,7 +736,15 @@ fn test_file_hooks_paths(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -745,7 +779,15 @@ fn test_file_hooks_paths_mix(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -781,7 +823,15 @@ fn test_file_hook_file_text(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -811,7 +861,15 @@ fn test_file_hook_is_symlink(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -853,7 +911,15 @@ fn test_file_hook_length(fb: FacebookInit) {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
+        run_file_hooks(
+            ctx,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::InMemory,
+        );
     });
 }
 
@@ -874,7 +940,7 @@ fn test_register_changeset_hooks(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-fn test_with_blob_store(fb: FacebookInit) {
+fn test_cs_hooks_with_blob_store(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
@@ -887,8 +953,93 @@ fn test_with_blob_store(fb: FacebookInit) {
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted
         };
-        run_changeset_hooks_with_mgr(ctx, "bm1", hooks, bookmarks, regexes, expected, false);
+        run_changeset_hooks_with_mgr(
+            ctx.clone(),
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes.clone(),
+            expected,
+            ContentStoreType::Blob(many_files_dirs::getrepo(ctx.fb)),
+        );
     });
+}
+
+#[fbinit::test]
+fn test_file_hooks_with_blob_store(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
+        // Create an init a repo
+        let (repo, hg_cs_id) = {
+            let repo = blobrepo_factory::new_memblob_empty(None).unwrap();
+
+            let parent = create_commit(
+                ctx.clone(),
+                repo.clone(),
+                vec![],
+                store_files(
+                    ctx.clone(),
+                    btreemap! {"toremove" => Some("content")},
+                    repo.clone(),
+                ),
+            );
+            let bcs_id = create_commit(
+                ctx.clone(),
+                repo.clone(),
+                vec![parent],
+                store_files(
+                    ctx.clone(),
+                    btreemap! {
+                        "toremove" => None,
+                        "newfile" => Some("newcontent"),
+                        "dir/somefile" => Some("good"),
+                    },
+                    repo.clone(),
+                ),
+            );
+
+            let mut txn = repo.update_bookmark_transaction(ctx.clone());
+            txn.force_set(
+                &BookmarkName::new("master").unwrap(),
+                bcs_id,
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                },
+            )
+            .unwrap();
+            txn.commit().wait().unwrap();
+            let hg_cs_id = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .wait()
+                .unwrap();
+            (repo, hg_cs_id)
+        };
+
+        let bookmarks = hashmap! {
+            "master".to_string() => vec!["hook1".to_string()]
+        };
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
+            "hook1".to_string() => length_matching_file_hook(4),
+        };
+        let regexes = hashmap! {};
+
+        let expected = hashmap! {
+            "hook1".to_string() => hashmap! {
+                "newfile".to_string() => default_rejection(),
+                "dir/somefile".to_string() => HookExecution::Accepted,
+            },
+        };
+        run_file_hooks_for_cs(
+            ctx,
+            "master",
+            hooks,
+            bookmarks,
+            regexes,
+            expected,
+            ContentStoreType::Blob(repo),
+            hg_cs_id,
+        );
+    })
 }
 
 fn run_changeset_hooks(
@@ -906,7 +1057,7 @@ fn run_changeset_hooks(
         bookmarks,
         regexes,
         expected,
-        true,
+        ContentStoreType::InMemory,
     )
 }
 
@@ -917,9 +1068,9 @@ fn run_changeset_hooks_with_mgr(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HookExecution>,
-    inmem: bool,
+    content_store_type: ContentStoreType,
 ) {
-    let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes, inmem);
+    let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes, content_store_type);
     for (hook_name, hook) in hooks {
         hook_manager.register_changeset_hook(&hook_name, hook.into(), Default::default());
     }
@@ -937,6 +1088,11 @@ fn run_changeset_hooks_with_mgr(
     assert_eq!(expected, map);
 }
 
+enum ContentStoreType {
+    InMemory,
+    Blob(BlobRepo),
+}
+
 fn run_file_hooks(
     ctx: CoreContext,
     bookmark_name: &str,
@@ -944,6 +1100,7 @@ fn run_file_hooks(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
+    content_store_type: ContentStoreType,
 ) {
     run_file_hooks_with_mgr(
         ctx,
@@ -952,7 +1109,30 @@ fn run_file_hooks(
         bookmarks,
         regexes,
         expected,
-        true,
+        content_store_type,
+        default_changeset_id(),
+    )
+}
+
+fn run_file_hooks_for_cs(
+    ctx: CoreContext,
+    bookmark_name: &str,
+    hooks: HashMap<String, Box<dyn Hook<HookFile>>>,
+    bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
+    expected: HashMap<String, HashMap<String, HookExecution>>,
+    content_store_type: ContentStoreType,
+    hg_cs_id: HgChangesetId,
+) {
+    run_file_hooks_with_mgr(
+        ctx,
+        bookmark_name,
+        hooks,
+        bookmarks,
+        regexes,
+        expected,
+        content_store_type,
+        hg_cs_id,
     )
 }
 
@@ -963,16 +1143,17 @@ fn run_file_hooks_with_mgr(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
-    inmem: bool,
+    content_store_type: ContentStoreType,
+    hg_cs_id: HgChangesetId,
 ) {
-    let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes, inmem);
+    let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes, content_store_type);
     for (hook_name, hook) in hooks {
         hook_manager.register_file_hook(&hook_name, hook.into(), Default::default());
     }
     let fut: BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> = hook_manager
         .run_file_hooks_for_bookmark(
             ctx,
-            default_changeset_id(),
+            hg_cs_id,
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
         );
@@ -993,12 +1174,11 @@ fn setup_hook_manager(
     fb: FacebookInit,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
-    inmem: bool,
+    content_store_type: ContentStoreType,
 ) -> HookManager {
-    let mut hook_manager = if inmem {
-        hook_manager_inmem(fb)
-    } else {
-        hook_manager_blobrepo(fb)
+    let mut hook_manager = match content_store_type {
+        ContentStoreType::InMemory => hook_manager_inmem(fb),
+        ContentStoreType::Blob(repo) => hook_manager_blobrepo(fb, repo),
     };
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
@@ -1021,9 +1201,8 @@ fn default_changeset_id() -> HgChangesetId {
     HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap()
 }
 
-fn hook_manager_blobrepo(fb: FacebookInit) -> HookManager {
+fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
-    let repo = many_files_dirs::getrepo(fb);
     let changeset_store = BlobRepoChangesetStore::new(repo.clone());
     let content_store = BlobRepoFileContentStore::new(repo);
     HookManager::new(
@@ -1033,6 +1212,10 @@ fn hook_manager_blobrepo(fb: FacebookInit) -> HookManager {
         Default::default(),
         ScubaSampleBuilder::with_discard(),
     )
+}
+
+fn hook_manager_many_files_dirs_blobrepo(fb: FacebookInit) -> HookManager {
+    hook_manager_blobrepo(fb, many_files_dirs::getrepo(fb))
 }
 
 fn to_mpath(string: &str) -> MPath {
@@ -1188,7 +1371,7 @@ fn test_load_hooks(fb: FacebookInit) {
             },
         ];
 
-        let mut hm = hook_manager_blobrepo(fb);
+        let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
         match load_hooks(fb, &mut hm, config, &hashset![]) {
             Err(e) => assert!(false, format!("Failed to load hooks {}", e)),
             Ok(()) => (),
@@ -1216,7 +1399,7 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         },
     }];
 
-    let mut hm = hook_manager_blobrepo(fb);
+    let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
     load_hooks(fb, &mut hm, config, &hashset![])
         .expect_err("`verify_integrity` hook loading should have failed");
 }
@@ -1241,7 +1424,7 @@ fn test_load_hooks_no_such_hook(fb: FacebookInit) {
             config: Default::default(),
         }];
 
-        let mut hm = hook_manager_blobrepo(fb);
+        let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
 
         match load_hooks(fb, &mut hm, config, &hashset![])
             .unwrap_err()
@@ -1274,7 +1457,7 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
             config: Default::default(),
         }];
 
-        let mut hm = hook_manager_blobrepo(fb);
+        let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
 
         match load_hooks(fb, &mut hm, config, &hashset![])
             .unwrap_err()
@@ -1301,7 +1484,7 @@ fn test_load_disabled_hooks(fb: FacebookInit) {
         config: Default::default(),
     }];
 
-    let mut hm = hook_manager_blobrepo(fb);
+    let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
 
     load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
         .expect("disabling a broken hook should allow loading to succeed");
@@ -1326,7 +1509,7 @@ fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
         config: Default::default(),
     }];
 
-    let mut hm = hook_manager_blobrepo(fb);
+    let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
 
     load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
         .expect("disabling a broken hook should allow loading to succeed");
@@ -1339,7 +1522,7 @@ fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
     config.bookmarks = vec![];
     config.hooks = vec![];
 
-    let mut hm = hook_manager_blobrepo(fb);
+    let mut hm = hook_manager_many_files_dirs_blobrepo(fb);
 
     match load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
         .unwrap_err()

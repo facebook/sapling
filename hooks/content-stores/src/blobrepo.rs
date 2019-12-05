@@ -10,12 +10,11 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
-use futures::{future, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::manifest_utils::{self, EntryStatus};
+use futures::{Future, Stream};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{
-    blobs::HgBlobChangeset, manifest::get_empty_manifest, Changeset, FileBytes, HgChangesetId,
-    HgFileNodeId, MPath, Type,
+    blobs::HgBlobChangeset, Changeset, FileBytes, HgChangesetId, HgFileNodeId, MPath,
 };
 use mononoke_types::FileType;
 
@@ -91,60 +90,72 @@ impl ChangesetStore for BlobRepoChangesetStore {
         cloned!(self.repo);
         self.repo
             .get_changeset_by_changesetid(ctx.clone(), changesetid)
-            .and_then({
+            .map({
                 cloned!(ctx);
                 move |cs| {
                     let mf_id = cs.manifestid();
-                    let mf = repo.get_manifest_by_nodeid(ctx.clone(), mf_id);
                     let parents = cs.parents();
                     let (maybe_p1, _) = parents.get_nodes();
-                    // TODO(stash): generate changed file stream correctly for merges
-                    let p_mf = match maybe_p1 {
+                    match maybe_p1 {
                         Some(p1) => repo
                             .get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(p1))
-                            .and_then({
+                            .map(|p1| p1.manifestid())
+                            .map({
                                 cloned!(repo);
-                                move |p1| repo.get_manifest_by_nodeid(ctx, p1.manifestid())
+                                move |p_mf_id| {
+                                    p_mf_id.diff(ctx.clone(), repo.get_blobstore(), mf_id)
+                                }
                             })
-                            .left_future(),
-                        None => future::ok(get_empty_manifest()).right_future(),
-                    };
-                    (mf, p_mf)
+                            .flatten_stream()
+                            .filter_map(|diff| {
+                                let (path, entry) = match diff.clone() {
+                                    Diff::Added(path, entry) => (path, entry),
+                                    Diff::Removed(path, entry) => (path, entry),
+                                    Diff::Changed(path, .., entry) => (path, entry),
+                                };
+
+                                let hash_and_type = match entry {
+                                    Entry::Leaf((ty, hash)) => (hash, ty),
+                                    Entry::Tree(_) => {
+                                        return None;
+                                    }
+                                };
+
+                                match diff {
+                                    Diff::Added(..) => {
+                                        Some((path, ChangedFileType::Added, Some(hash_and_type)))
+                                    }
+                                    Diff::Changed(..) => {
+                                        Some((path, ChangedFileType::Modified, Some(hash_and_type)))
+                                    }
+                                    Diff::Removed(..) => {
+                                        Some((path, ChangedFileType::Deleted, None))
+                                    }
+                                }
+                            })
+                            .filter_map(|(maybe_path, ty, hash_and_type)| {
+                                maybe_path.map(|path| (path, ty, hash_and_type))
+                            })
+                            .boxify(),
+                        None => mf_id
+                            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+                            .filter_map(|(path, entry)| path.map(|path| (path, entry)))
+                            .map(|(path, (ty, filenode))| {
+                                (path, ChangedFileType::Added, Some((filenode, ty)))
+                            })
+                            .boxify(),
+                    }
                 }
             })
-            .and_then(move |(mf, p_mf)| {
-                manifest_utils::changed_file_stream(ctx, &mf, &p_mf, None)
-                    .map(|changed_entry| {
-                        let path = changed_entry
-                            .get_full_path()
-                            .expect("File should have a path");
-                        let entry = match &changed_entry.status {
-                            EntryStatus::Added(entry) => Some(entry),
-                            EntryStatus::Deleted(_entry) => None,
-                            EntryStatus::Modified { to_entry, .. } => Some(to_entry),
-                        };
-
-                        let hash_and_type = entry.map(|entry| {
-                            let file_type = match entry.get_type() {
-                                Type::File(file_type) => file_type,
-                                Type::Tree => {
-                                    panic!("unexpected tree returned");
-                                }
-                            };
-
-                            let filenode = HgFileNodeId::new(entry.get_hash().into_nodehash());
-                            (filenode, file_type)
-                        });
-
-                        let change_ty = ChangedFileType::from(changed_entry.status);
-                        (
-                            String::from_utf8_lossy(&path.to_vec()).into_owned(),
-                            change_ty,
-                            hash_and_type,
-                        )
-                    })
-                    .collect()
+            .flatten_stream()
+            .map(|(path, ty, hash_and_type)| {
+                (
+                    String::from_utf8_lossy(&path.to_vec()).into_owned(),
+                    ty,
+                    hash_and_type,
+                )
             })
+            .collect()
             .boxify()
     }
 }

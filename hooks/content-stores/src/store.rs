@@ -9,10 +9,7 @@
 use context::CoreContext;
 use failure_ext::Error;
 use futures_ext::BoxFuture;
-use mercurial_types::{
-    blobs::HgBlobChangeset, manifest_utils::EntryStatus, FileBytes, HgChangesetId, HgFileNodeId,
-    MPath,
-};
+use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::FileType;
 
 #[derive(Clone)]
@@ -22,15 +19,6 @@ pub enum ChangedFileType {
     Modified,
 }
 
-impl From<EntryStatus> for ChangedFileType {
-    fn from(entry_status: EntryStatus) -> Self {
-        match entry_status {
-            EntryStatus::Added(_) => ChangedFileType::Added,
-            EntryStatus::Deleted(_) => ChangedFileType::Deleted,
-            EntryStatus::Modified { .. } => ChangedFileType::Modified,
-        }
-    }
-}
 pub trait FileContentStore: Send + Sync {
     fn resolve_path(
         &self,
