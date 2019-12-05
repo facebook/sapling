@@ -13,7 +13,7 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
-use failure_ext::{bail_err, err_msg};
+use failure_ext::{bail, err_msg};
 use slog::Logger;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
@@ -130,14 +130,14 @@ impl Decoder for CgUnpacker {
                          buffer. State: {:?}, First 128 bytes: {:?}",
                         len, self.state, bytes,
                     );
-                    bail_err!(ErrorKind::CgDecode(msg));
+                    bail!(ErrorKind::CgDecode(msg));
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete changegroup: expected state End, found {:?}",
                         self.state
                     );
-                    bail_err!(ErrorKind::CgDecode(msg));
+                    bail!(ErrorKind::CgDecode(msg));
                 }
                 Ok(None)
             }
@@ -253,7 +253,7 @@ impl CgUnpacker {
                 Self::chunk_header_len(version),
                 chunk_len,
             );
-            bail_err!(ErrorKind::CgDecode(msg));
+            bail!(ErrorKind::CgDecode(msg));
         }
 
         if buf.len() < chunk_len {

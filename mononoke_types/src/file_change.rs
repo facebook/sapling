@@ -8,7 +8,7 @@
 
 use std::fmt;
 
-use failure_ext::bail_err;
+use failure_ext::bail;
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
@@ -201,7 +201,7 @@ impl FileType {
             thrift::FileType::Regular => FileType::Regular,
             thrift::FileType::Executable => FileType::Executable,
             thrift::FileType::Symlink => FileType::Symlink,
-            thrift::FileType(x) => bail_err!(ErrorKind::InvalidThrift(
+            thrift::FileType(x) => bail!(ErrorKind::InvalidThrift(
                 "FileType".into(),
                 format!("unknown file type '{}'", x)
             )),

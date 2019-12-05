@@ -9,7 +9,7 @@
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure_ext::{bail_err, chain::*};
+use failure_ext::{bail, chain::*};
 use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
@@ -32,7 +32,7 @@ impl RawBundle2 {
     pub(crate) fn from_thrift(fc: thrift::RawBundle2) -> Result<Self> {
         match fc {
             thrift::RawBundle2::Bytes(bytes) => Ok(RawBundle2::Bytes(bytes.into())),
-            thrift::RawBundle2::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+            thrift::RawBundle2::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                 "RawBundle2".into(),
                 format!("unknown rawbundle2 field: {}", x)
             )),

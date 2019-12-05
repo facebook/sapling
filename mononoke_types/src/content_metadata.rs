@@ -10,7 +10,7 @@ use std::convert::TryInto;
 
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
-use failure_ext::{bail_err, chain::*};
+use failure_ext::{bail, chain::*};
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 
@@ -40,7 +40,7 @@ impl ContentAlias {
             thrift::ContentAlias::ContentId(id) => {
                 Ok(Self::from_content_id(ContentId::from_thrift(id)?))
             }
-            thrift::ContentAlias::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+            thrift::ContentAlias::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                 "ContentAlias".into(),
                 format!("unknown content alias field: {}", x)
             )),

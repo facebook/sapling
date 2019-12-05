@@ -13,7 +13,7 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
-use failure_ext::{bail_err, ensure_err};
+use failure_ext::{bail, ensure_err};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 use revisionstore::Metadata;
@@ -140,7 +140,7 @@ impl HistoryEntry {
             if copy_from_len > 0 {
                 let path = buf.drain_path(copy_from_len)?;
                 match kind {
-                    Kind::Tree => bail_err!(ErrorKind::WirePackDecode(format!(
+                    Kind::Tree => bail!(ErrorKind::WirePackDecode(format!(
                         "tree entry {} is marked as copied from path {}, but they cannot be copied",
                         node, path
                     ))),
@@ -185,12 +185,12 @@ impl HistoryEntry {
     pub fn verify(&self, kind: Kind) -> Result<()> {
         if let Some(ref path) = self.copy_from {
             match *path {
-                RepoPath::RootPath => bail_err!(ErrorKind::InvalidWirePackEntry(format!(
+                RepoPath::RootPath => bail!(ErrorKind::InvalidWirePackEntry(format!(
                     "history entry for {} is copied from the root path, which isn't allowed",
                     self.node
                 ))),
                 RepoPath::DirectoryPath(ref path) => {
-                    bail_err!(ErrorKind::InvalidWirePackEntry(format!(
+                    bail!(ErrorKind::InvalidWirePackEntry(format!(
                         "history entry for {} is copied from directory {}, which isn't allowed",
                         self.node, path
                     )))

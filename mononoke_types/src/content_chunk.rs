@@ -10,7 +10,7 @@ use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure_ext::{bail_err, chain::*};
+use failure_ext::{bail, chain::*};
 use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
@@ -34,7 +34,7 @@ impl ContentChunk {
     pub(crate) fn from_thrift(fc: thrift::ContentChunk) -> Result<Self> {
         match fc {
             thrift::ContentChunk::Bytes(bytes) => Ok(ContentChunk(bytes.into())),
-            thrift::ContentChunk::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+            thrift::ContentChunk::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                 "ContentChunk".into(),
                 format!("unknown ContentChunk variant: {}", x)
             )),

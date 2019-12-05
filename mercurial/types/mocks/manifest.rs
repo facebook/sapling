@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use failure_ext::{bail_err, Error, ResultExt};
+use failure_ext::{bail, Error, ResultExt};
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
@@ -183,7 +183,7 @@ fn finalize_dirs(
         {
             BTreeEntry::Vacant(v) => v.insert(dir_entry),
             BTreeEntry::Occupied(o) => {
-                bail_err!(ErrorKind::InvalidPathMap(format!(
+                bail!(ErrorKind::InvalidPathMap(format!(
                     "directory {} already present as type {:?}",
                     dir_entry.path,
                     o.get().get_type()

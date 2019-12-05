@@ -7,7 +7,7 @@
  */
 
 use bytes::{BufMut, Bytes, BytesMut};
-use failure_ext::{bail, bail_err};
+use failure_ext::bail;
 use tokio_codec::{Decoder, Encoder};
 
 use crate::errors::*;
@@ -43,7 +43,7 @@ impl Chunk {
     pub fn new<T: Into<Bytes>>(val: T) -> Result<Self> {
         let bytes: Bytes = val.into();
         if bytes.len() > i32::max_value() as usize {
-            bail_err!(ErrorKind::Bundle2Chunk(format!(
+            bail!(ErrorKind::Bundle2Chunk(format!(
                 "chunk of length {} exceeds maximum {}",
                 bytes.len(),
                 i32::max_value()
@@ -136,7 +136,7 @@ impl Decoder for ChunkDecoder {
             return Ok(Some(Chunk::error()));
         }
         if len < 0 {
-            bail_err!(ErrorKind::Bundle2Chunk(format!(
+            bail!(ErrorKind::Bundle2Chunk(format!(
                 "chunk length must be >= -1, found {}",
                 len
             ),));

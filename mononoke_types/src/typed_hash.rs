@@ -13,7 +13,7 @@ use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use failure_ext::bail_err;
+use failure_ext::bail;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
@@ -120,7 +120,7 @@ macro_rules! impl_typed_hash_no_context {
                 // case.
                 match h.0 {
                     thrift::IdType::Blake2(blake2) => Ok($typed(Blake2::from_thrift(blake2)?)),
-                    thrift::IdType::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+                    thrift::IdType::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                         stringify!($typed).into(),
                         format!("unknown id type field: {}", x)
                     )),

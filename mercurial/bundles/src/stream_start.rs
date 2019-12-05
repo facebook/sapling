@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
-use failure_ext::bail_err;
+use failure_ext::bail;
 use tokio_io::codec::Decoder;
 
 use crate::errors::*;
@@ -32,7 +32,7 @@ impl Decoder for StartDecoder {
 
         let header_len = {
             if &buf[..4] != b"HG20" {
-                bail_err!(ErrorKind::Bundle2Decode(
+                bail!(ErrorKind::Bundle2Decode(
                     "invalid bundle magic string".into(),
                 ));
             }

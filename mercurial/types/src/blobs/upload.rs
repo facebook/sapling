@@ -17,7 +17,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
-use failure_ext::{bail_err, FutureFailureErrorExt, Result};
+use failure_ext::{bail, FutureFailureErrorExt, Result};
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -104,7 +104,7 @@ impl UploadHgTreeEntry {
             UploadHgNodeHash::Supplied(node_id) => node_id,
             UploadHgNodeHash::Checked(node_id) => {
                 if node_id != computed_node_id {
-                    bail_err!(ErrorKind::InconsistentEntryHash(
+                    bail!(ErrorKind::InconsistentEntryHash(
                         path,
                         node_id,
                         computed_node_id

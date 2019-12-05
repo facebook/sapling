@@ -11,7 +11,7 @@
 use bytes::{BufMut, BytesMut};
 
 use bufsize::SizeCounter;
-use failure_ext::bail_err;
+use failure_ext::bail;
 use mercurial_types::delta::{Delta, Fragment};
 
 use crate::errors::*;
@@ -40,7 +40,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
 
         let delta_len = (new_len as usize) + DELTA_HEADER_LEN;
         if remaining < delta_len {
-            bail_err!(ErrorKind::InvalidDelta(format!(
+            bail!(ErrorKind::InvalidDelta(format!(
                 "expected {} bytes, {} remaining",
                 delta_len, remaining
             )));
@@ -57,7 +57,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     }
 
     if remaining != 0 {
-        bail_err!(ErrorKind::InvalidDelta(format!(
+        bail!(ErrorKind::InvalidDelta(format!(
             "{} trailing bytes in encoded delta",
             remaining
         ),));

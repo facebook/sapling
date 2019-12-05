@@ -9,7 +9,7 @@
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 #[cfg(test)]
-use failure_ext::bail_err;
+use failure_ext::bail;
 use futures::future::Future;
 use futures::stream::Stream;
 use futures_ext::{BoxStream, StreamExt};
@@ -108,7 +108,7 @@ impl Stream for RepoErrorStream<HgNodeHash> {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        bail_err!(ErrorKind::RepoNodeError(self.item));
+        bail!(ErrorKind::RepoNodeError(self.item));
     }
 }
 
@@ -118,6 +118,6 @@ impl Stream for RepoErrorStream<ChangesetId> {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        bail_err!(ErrorKind::RepoChangesetError(self.item));
+        bail!(ErrorKind::RepoChangesetError(self.item));
     }
 }

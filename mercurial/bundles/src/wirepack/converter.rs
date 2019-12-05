@@ -10,7 +10,7 @@
 
 use std::mem;
 
-use failure_ext::{bail_err, ensure_err};
+use failure_ext::{bail, ensure_err};
 use futures::{try_ready, Async, Poll, Stream};
 
 use mercurial_types::RepoPath;
@@ -142,7 +142,7 @@ impl State {
         *self = match state {
             State::HistoryMeta => Self::next_history_state(path, entry_count),
             other => {
-                bail_err!(ErrorKind::WirePackEncode(format!(
+                bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: unexpected history meta entry (state: {:?})",
                     other
                 )));
@@ -165,7 +165,7 @@ impl State {
                 Self::next_history_state(path, entry_count - 1)
             }
             other => {
-                bail_err!(ErrorKind::WirePackEncode(format!(
+                bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: unexpected history entry for {} (state: {:?})",
                     entry.node, other
                 )));
@@ -191,7 +191,7 @@ impl State {
                 Self::next_data_state(path, entry_count)
             }
             other => {
-                bail_err!(ErrorKind::WirePackEncode(format!(
+                bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: saw unexpected data meta for {} (entry count: {}, \
                      state: {:?}",
                     path, entry_count, other
@@ -215,7 +215,7 @@ impl State {
                 Self::next_data_state(path, entry_count - 1)
             }
             other => {
-                bail_err!(ErrorKind::WirePackEncode(format!(
+                bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: unexpected data entry for {} (state: {:?})",
                     entry.node, other
                 )));
@@ -229,7 +229,7 @@ impl State {
         *self = match state {
             State::HistoryMeta => State::End,
             other => {
-                bail_err!(ErrorKind::WirePackEncode(format!(
+                bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: unexpected end (state: {:?})",
                     other
                 )));
@@ -243,7 +243,7 @@ impl State {
         *self = match state {
             State::End => State::End,
             other => {
-                bail_err!(ErrorKind::WirePackEncode(format!(
+                bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: unexpected None (state: {:?})",
                     other
                 )));

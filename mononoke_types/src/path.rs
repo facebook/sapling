@@ -19,7 +19,7 @@ use std::slice::Iter;
 use abomonation_derive::Abomonation;
 use asyncmemo::Weight;
 use bytes::Bytes;
-use failure_ext::{bail, bail_err, chain::*, err_msg};
+use failure_ext::{bail, chain::*, err_msg};
 use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
@@ -250,13 +250,13 @@ impl MPathElement {
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.is_empty() {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 "".into(),
                 "path elements cannot be empty".into()
             ));
         }
         if p.contains(&0) {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\0'".into(),
             ));
@@ -265,19 +265,19 @@ impl MPathElement {
             // MPath can not contain '\x01', in particular if mpath ends with '\x01'
             // and it is part of move metadata, because key-value pairs are separated
             // by '\n', you will get '\x01\n' which is also metadata separator.
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\1'".into(),
             ));
         }
         if p.contains(&b'/') {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '/'".into(),
             ));
         }
         if p.contains(&b'\n') {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\n'".into(),
             ));
@@ -346,7 +346,7 @@ impl MPath {
             })
             .collect();
         if elements.is_empty() {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path cannot be empty".into()
             ));
@@ -371,19 +371,19 @@ impl MPath {
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.contains(&0) {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "paths cannot contain '\\0'".into(),
             ));
         }
         if p.contains(&1) {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "paths cannot contain '\\1'".into(),
             ));
         }
         if p.contains(&b'\n') {
-            bail_err!(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "paths cannot contain '\\n'".into(),
             ));
@@ -635,7 +635,7 @@ impl MPathHash {
     pub fn from_thrift(thrift_path: thrift::MPathHash) -> Result<MPathHash> {
         match thrift_path.0 {
             thrift::IdType::Blake2(blake2) => Ok(MPathHash(Blake2::from_thrift(blake2)?)),
-            thrift::IdType::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+            thrift::IdType::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                 "MPathHash".into(),
                 format!("unknown id type field: {}", x)
             )),
@@ -700,7 +700,7 @@ where
     for (path, is_changed) in sorted_paths {
         if let Some(last_changed_path) = last_changed_path {
             if last_changed_path.is_prefix_of(path) {
-                bail_err!(ErrorKind::NotPathConflictFree(
+                bail!(ErrorKind::NotPathConflictFree(
                     last_changed_path.clone(),
                     path.clone(),
                 ));

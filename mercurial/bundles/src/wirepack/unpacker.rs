@@ -12,7 +12,7 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
-use failure_ext::bail_err;
+use failure_ext::bail;
 use slog::{trace, Logger};
 use tokio_codec::Decoder;
 
@@ -59,14 +59,14 @@ impl Decoder for WirePackUnpacker {
                          buffer. State: {:?}, First 128 bytes: {:?}",
                         len, self.state, bytes,
                     );
-                    bail_err!(ErrorKind::WirePackDecode(msg));
+                    bail!(ErrorKind::WirePackDecode(msg));
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete wirepack: expected state End, found {:?}",
                         self.state
                     );
-                    bail_err!(ErrorKind::WirePackDecode(msg));
+                    bail!(ErrorKind::WirePackDecode(msg));
                 }
                 Ok(None)
             }
@@ -146,7 +146,7 @@ impl UnpackerInner {
                     None => return Ok((None, Data(f, entry_count))),
                 },
                 End => return Ok((None, End)),
-                Invalid => bail_err!(ErrorKind::WirePackDecode("byte stream corrupt".into())),
+                Invalid => bail!(ErrorKind::WirePackDecode("byte stream corrupt".into())),
             }
         }
     }
@@ -192,7 +192,7 @@ impl UnpackerInner {
         let filename = if filename_len == 0 {
             match self.kind {
                 Kind::Tree => RepoPath::root(),
-                Kind::File => bail_err!(ErrorKind::WirePackDecode(
+                Kind::File => bail!(ErrorKind::WirePackDecode(
                     "file packs cannot contain zero-length filenames".into(),
                 )),
             }

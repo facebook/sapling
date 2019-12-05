@@ -16,7 +16,7 @@ use blake2::{
     digest::{Input, VariableOutput},
     VarBlake2b,
 };
-use failure_ext::bail_err;
+use failure_ext::bail;
 use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
@@ -58,7 +58,7 @@ impl Blake2 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() != 32 {
-            bail_err!(ErrorKind::InvalidBlake2Input(
+            bail!(ErrorKind::InvalidBlake2Input(
                 "need exactly 32 bytes".into()
             ));
         } else {
@@ -79,7 +79,7 @@ impl Blake2 {
         // Currently this doesn't require consuming b, but hopefully with T26959816 this
         // code will be able to convert a SmallVec directly into an array.
         if b.0.len() != 32 {
-            bail_err!(ErrorKind::InvalidThrift(
+            bail!(ErrorKind::InvalidThrift(
                 "Blake2".into(),
                 format!("wrong length: expected 32, got {}", b.0.len())
             ));
@@ -159,7 +159,7 @@ impl FromStr for Blake2 {
 
     fn from_str(s: &str) -> Result<Self> {
         if s.len() != 64 {
-            bail_err!(ErrorKind::InvalidBlake2Input(
+            bail!(ErrorKind::InvalidBlake2Input(
                 "need exactly 64 hex digits".into()
             ));
         }
@@ -167,7 +167,7 @@ impl FromStr for Blake2 {
         let mut ret = Blake2([0; 32]);
         match hex_decode(s.as_bytes(), &mut ret.0) {
             Ok(_) => Ok(ret),
-            Err(_) => bail_err!(ErrorKind::InvalidBlake2Input("bad hex character".into())),
+            Err(_) => bail!(ErrorKind::InvalidBlake2Input("bad hex character".into())),
         }
     }
 }
@@ -244,7 +244,7 @@ macro_rules! impl_hash {
 
             fn from_str(s: &str) -> Result<Self> {
                 if s.len() != $size * 2 {
-                    bail_err!(ErrorKind::$error(format!(
+                    bail!(ErrorKind::$error(format!(
                         "must be {} hex digits",
                         $size * 2
                     )));
@@ -254,7 +254,7 @@ macro_rules! impl_hash {
 
                 let ret = match hex_decode(s.as_bytes(), &mut ret.0) {
                     Ok(_) => ret,
-                    Err(_) => bail_err!(ErrorKind::$error("bad digit".into())),
+                    Err(_) => bail!(ErrorKind::$error("bad digit".into())),
                 };
 
                 Ok(ret)

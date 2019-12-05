@@ -10,7 +10,7 @@ use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure_ext::{bail_err, chain::*};
+use failure_ext::{bail, chain::*};
 use fbthrift::compact_protocol;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 
@@ -42,7 +42,7 @@ impl FileContents {
                 let contents = ChunkedFileContents::from_thrift(chunked)?;
                 Ok(FileContents::Chunked(contents))
             }
-            thrift::FileContents::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+            thrift::FileContents::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                 "FileContents".into(),
                 format!("unknown file contents field: {}", x)
             )),

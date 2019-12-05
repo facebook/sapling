@@ -14,7 +14,7 @@ use std::io::BufRead;
 use std::str;
 
 use bytes::{Bytes, BytesMut};
-use failure_ext::{bail_err, ensure_msg};
+use failure_ext::{bail, ensure_msg};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
 use lazy_static::lazy_static;
@@ -69,7 +69,7 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
                 .map(|param| param.clone())
                 .collect();
             if !unknown_params.is_empty() {
-                bail_err!(ErrorKind::BundleUnknownPartParams(
+                bail!(ErrorKind::BundleUnknownPartParams(
                     *header.part_type(),
                     unknown_params,
                 ));
@@ -78,7 +78,7 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
         }
         None => {
             if header.mandatory() {
-                bail_err!(ErrorKind::BundleUnknownPart(header));
+                bail!(ErrorKind::BundleUnknownPart(header));
             }
             Ok(None)
         }

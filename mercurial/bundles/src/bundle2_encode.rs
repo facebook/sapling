@@ -13,7 +13,7 @@ use std::vec::IntoIter;
 
 use byteorder::ByteOrder;
 use bytes::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
-use failure_ext::{bail_err, prelude::*};
+use failure_ext::{bail, prelude::*};
 use futures::stream::Forward;
 use futures::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
@@ -81,7 +81,7 @@ where
     pub fn add_stream_param(&mut self, key: String, val: String) -> Result<&mut Self> {
         if &key.to_lowercase() == "compression" {
             let msg = "stream compression should be set through set_compressor_type";
-            bail_err!(ErrorKind::Bundle2Encode(msg.into()));
+            bail!(ErrorKind::Bundle2Encode(msg.into()));
         }
         if is_mandatory_param(&key)
             .with_context(|| ErrorKind::Bundle2Encode("stream key is invalid".into()))?

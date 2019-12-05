@@ -13,7 +13,7 @@ use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
-use failure_ext::{bail, bail_err};
+use failure_ext::bail;
 
 use async_compression::{CompressorType, DecompressorType};
 use mercurial_types::{HgNodeHash, MPath};
@@ -136,7 +136,7 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<Option<Decompr
         Some("GZ") => Ok(Some(DecompressorType::Gzip)),
         Some("ZS") => Ok(Some(DecompressorType::OverreadingZstd)),
         Some("UN") => Ok(None),
-        Some(s) => bail_err!(ErrorKind::Bundle2Decode(format!(
+        Some(s) => bail!(ErrorKind::Bundle2Decode(format!(
             "unknown compression '{}'",
             s
         ),)),

@@ -11,7 +11,7 @@ use std::fmt::{self, Display};
 use chrono::{
     DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, NaiveDateTime, TimeZone,
 };
-use failure_ext::bail_err;
+use failure_ext::bail;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -39,7 +39,7 @@ impl DateTime {
         })?;
         let dt = match tz.timestamp_opt(secs, 0) {
             LocalResult::Single(dt) => dt,
-            _ => bail_err!(ErrorKind::InvalidDateTime(format!(
+            _ => bail!(ErrorKind::InvalidDateTime(format!(
                 "seconds out of range: {}",
                 secs
             ))),

@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use failure_ext::{bail_err, chain::*, err_msg};
+use failure_ext::{bail, chain::*, err_msg};
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
@@ -55,7 +55,7 @@ impl BonsaiChangesetMut {
             if let &Some(ref fc) = fc_opt {
                 if let Some(&(ref copy_from_path, ref copy_from_id)) = fc.copy_from() {
                     if !self.parents.contains(copy_from_id) {
-                        bail_err!(ErrorKind::InvalidBonsaiChangeset(format!(
+                        bail!(ErrorKind::InvalidBonsaiChangeset(format!(
                             "copy information for path '{}' (from '{}') has parent {} which isn't \
                              recognized",
                             path, copy_from_path, copy_from_id

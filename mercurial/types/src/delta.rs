@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, bail_err, ensure_msg, format_err};
+use failure_ext::{bail, ensure_msg, format_err};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
@@ -72,7 +72,7 @@ impl Delta {
                         "fragment {}: previous end {} overlaps with start {}",
                         i, prev.end, frag.start
                     );
-                    bail_err!(ErrorKind::InvalidFragmentList(msg));
+                    bail!(ErrorKind::InvalidFragmentList(msg));
                 }
             }
             prev_frag = Some(frag);

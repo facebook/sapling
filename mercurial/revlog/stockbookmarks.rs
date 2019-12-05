@@ -12,7 +12,7 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
-use failure_ext::{bail_err, chain::*, Error, Result};
+use failure_ext::{bail, chain::*, Error, Result};
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
@@ -79,7 +79,7 @@ impl StockBookmarks {
             // <hash><space><bookmark name>, where hash is 40 bytes, the space is 1 byte
             // and the bookmark name is at least 1 byte.
             if line.len() < 42 || line[40] != b' ' {
-                bail_err!(ErrorKind::InvalidBookmarkLine(
+                bail!(ErrorKind::InvalidBookmarkLine(
                     String::from_utf8_lossy(line.as_ref()).into_owned(),
                 ));
             }

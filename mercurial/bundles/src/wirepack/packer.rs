@@ -14,7 +14,7 @@
 
 use byteorder::BigEndian;
 use bytes::BufMut;
-use failure_ext::bail_err;
+use failure_ext::bail;
 use futures::{Poll, Stream};
 
 use crate::chunk::Chunk;
@@ -113,12 +113,12 @@ impl ChunkBuilder {
     fn encode_filename(&mut self, filename: &RepoPath) -> Result<&mut Self> {
         let mpath = match (self.kind, filename) {
             (Kind::Tree, &RepoPath::RootPath) => None,
-            (Kind::File, &RepoPath::RootPath) => bail_err!(ErrorKind::WirePackEncode(
+            (Kind::File, &RepoPath::RootPath) => bail!(ErrorKind::WirePackEncode(
                 "attempted to encode a zero-length filename into a file wirepack".into()
             )),
             (Kind::Tree, &RepoPath::DirectoryPath(ref dir_path)) => Some(verify_path(dir_path)?),
             (Kind::File, &RepoPath::FilePath(ref file_path)) => Some(verify_path(file_path)?),
-            (kind, path) => bail_err!(ErrorKind::WirePackEncode(format!(
+            (kind, path) => bail!(ErrorKind::WirePackEncode(format!(
                 "attempted to encode incompatible path into wirepack (kind: {}, path: {:?})",
                 kind, path
             ))),
@@ -169,7 +169,7 @@ impl ChunkBuilder {
 fn verify_path<'a>(mpath: &'a MPath) -> Result<&'a MPath> {
     let len = mpath.len();
     if len > (u16::max_value() as usize) {
-        bail_err!(ErrorKind::WirePackEncode(format!(
+        bail!(ErrorKind::WirePackEncode(format!(
             "attempted to encode a filename of length {} -- maximum length supported is {}",
             len,
             u16::max_value()

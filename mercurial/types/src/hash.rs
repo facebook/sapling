@@ -12,7 +12,7 @@ use std::str::FromStr;
 use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use crypto::{digest::Digest, sha1};
-use failure_ext::bail_err;
+use failure_ext::bail;
 use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
@@ -38,7 +38,7 @@ impl Sha1 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Sha1> {
         let bytes = bytes.as_ref();
         if bytes.len() != 20 {
-            bail_err!(ErrorKind::InvalidSha1Input("need exactly 20 bytes".into()));
+            bail!(ErrorKind::InvalidSha1Input("need exactly 20 bytes".into()));
         } else {
             let mut ret = Sha1([0; 20]);
             &mut ret.0[..].copy_from_slice(bytes);
@@ -50,7 +50,7 @@ impl Sha1 {
         // Currently this doesn't require consuming b, but hopefully with T26959816 this
         // code will be able to convert a SmallVec directly into an array.
         if h.0.len() != 20 {
-            bail_err!(ErrorKind::InvalidThrift(
+            bail!(ErrorKind::InvalidThrift(
                 "Sha1".into(),
                 format!("wrong length: expected 20, got {}", h.0.len())
             ));
@@ -126,7 +126,7 @@ impl FromStr for Sha1 {
 
     fn from_str(s: &str) -> Result<Sha1> {
         if s.len() != 40 {
-            bail_err!(ErrorKind::InvalidSha1Input(
+            bail!(ErrorKind::InvalidSha1Input(
                 "need exactly 40 hex digits".into()
             ));
         }
@@ -134,7 +134,7 @@ impl FromStr for Sha1 {
         let mut ret = Sha1([0; 20]);
         match hex_decode(s.as_bytes(), &mut ret.0) {
             Ok(_) => Ok(ret),
-            Err(_) => bail_err!(ErrorKind::InvalidSha1Input("bad hex character".into())),
+            Err(_) => bail!(ErrorKind::InvalidSha1Input("bad hex character".into())),
         }
     }
 }
