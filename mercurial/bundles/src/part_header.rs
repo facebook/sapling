@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 
 use bytes::{BufMut, Bytes};
-use failure_ext::bail_msg;
+use failure_ext::bail;
 use quickcheck::{Arbitrary, Gen};
 use rand::seq::SliceRandom;
 
@@ -101,7 +101,7 @@ impl PartHeaderType {
             "pushvars" => Ok(Pushvars),
             "phase-heads" => Ok(PhaseHeads),
             "obsmarkers" => Ok(Obsmarkers),
-            bad => bail_msg!("unknown header type {}", bad),
+            bad => bail!("unknown header type {}", bad),
         }
     }
 
@@ -346,7 +346,7 @@ impl PartHeaderBuilder {
         let val = val.into();
         self.check_param(&key, &val)?;
         if self.mparams.len() >= u8::max_value() as usize {
-            bail_msg!(
+            bail!(
                 "number of mandatory params exceeds maximum {}",
                 u8::max_value()
             );
@@ -364,7 +364,7 @@ impl PartHeaderBuilder {
         let val = val.into();
         self.check_param(&key, &val)?;
         if self.aparams.len() >= u8::max_value() as usize {
-            bail_msg!(
+            bail!(
                 "number of advisory params exceeds maximum {}",
                 u8::max_value()
             );
@@ -393,17 +393,17 @@ impl PartHeaderBuilder {
 
     fn check_param(&self, key: &str, val: &[u8]) -> Result<()> {
         if self.mparams.contains_key(key) || self.aparams.contains_key(key) {
-            bail_msg!(
+            bail!(
                 "part '{:?}': key '{}' already present in this part",
                 self.part_type,
                 key
             );
         }
         if key.is_empty() {
-            bail_msg!("part '{:?}': empty key", self.part_type);
+            bail!("part '{:?}': empty key", self.part_type);
         }
         if key.len() > u8::max_value() as usize {
-            bail_msg!(
+            bail!(
                 "part '{:?}': key '{}' exceeds max length {}",
                 self.part_type,
                 key,
@@ -411,7 +411,7 @@ impl PartHeaderBuilder {
             );
         }
         if val.len() > u8::max_value() as usize {
-            bail_msg!(
+            bail!(
                 "part '{:?}': value for key '{}' exceeds max length {}",
                 self.part_type,
                 key,

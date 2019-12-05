@@ -11,7 +11,7 @@ use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
 use context::CoreContext;
-use failure_ext::{bail_msg, Compat, StreamFailureErrorExt};
+use failure_ext::{bail, Compat, StreamFailureErrorExt};
 use futures::future::{self, ok, Shared};
 use futures::Future;
 use futures::{stream, Stream};
@@ -143,7 +143,7 @@ impl NewBlobs {
         content_blobs: &ContentBlobs,
     ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobInfo>, WalkHelperCounters)> {
         if path_taken.len() > 4096 {
-            bail_msg!(
+            bail!(
                 "Exceeded max manifest path during walking with path: {:?}",
                 path_taken
             );
@@ -170,7 +170,7 @@ impl NewBlobs {
             let next_path = MPath::join_opt(path_taken.mpath(), name);
             let next_path = match next_path {
                 Some(path) => path,
-                None => bail_msg!("internal error: joined root path with root manifest"),
+                None => bail!("internal error: joined root path with root manifest"),
             };
 
             if details.is_tree() {
@@ -220,9 +220,7 @@ impl NewBlobs {
                     );
                     match content_blobs.get(&key) {
                         Some(cbinfo) => cbinfos.push(cbinfo.clone()),
-                        None => {
-                            bail_msg!("internal error: content blob future missing for filenode")
-                        }
+                        None => bail!("internal error: content blob future missing for filenode"),
                     }
                 }
             }

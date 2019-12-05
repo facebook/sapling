@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail_err, bail_msg, ensure_msg, format_err};
+use failure_ext::{bail, bail_err, ensure_msg, format_err};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
@@ -155,7 +155,7 @@ impl Fragment {
 
     fn verify(&self) -> Result<()> {
         if self.start > self.end {
-            bail_msg!("invalid fragment: start {} > end {}", self.start, self.end);
+            bail!("invalid fragment: start {} > end {}", self.start, self.end);
         }
         Ok(())
     }
@@ -239,11 +239,11 @@ pub fn apply(text: &[u8], delta: &Delta) -> Result<Vec<u8>> {
     if off < text.len() {
         chunks.push(&text[off..text.len()]);
     } else if off > text.len() {
-        bail_msg!(format!(
+        bail!(
             "Invalid delta, fragment is referencing out of bounds content: {} > {}",
             off,
             text.len()
-        ));
+        );
     }
 
     let size = chunks.iter().map(|c| c.len()).sum::<usize>();

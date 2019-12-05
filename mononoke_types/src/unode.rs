@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail_msg, chain::*};
+use failure_ext::{bail, chain::*};
 
 use crate::blob::{Blob, BlobstoreValue, FileUnodeBlob, ManifestUnodeBlob};
 use crate::errors::*;
@@ -293,7 +293,7 @@ impl UnodeEntry {
                 let manifest_unode_id = ManifestUnodeId::from_thrift(manifest_unode_id)?;
                 Ok(UnodeEntry::Directory(manifest_unode_id))
             }
-            thrift::UnodeEntry::UnknownField(unknown) => bail_msg!(
+            thrift::UnodeEntry::UnknownField(unknown) => bail!(
                 "Unknown field encountered when parsing thrift::UnodeEntry: {}",
                 unknown,
             ),

@@ -13,7 +13,7 @@ use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
-use failure_ext::{bail_err, bail_msg};
+use failure_ext::{bail, bail_err};
 
 use async_compression::{CompressorType, DecompressorType};
 use mercurial_types::{HgNodeHash, MPath};
@@ -122,11 +122,11 @@ pub fn is_mandatory_param(s: &str) -> Result<bool> {
     match s.chars().next() {
         Some(ch) => {
             if !ch.is_alphabetic() {
-                bail_msg!("'{}': first char '{}' is not alphabetic", s, ch);
+                bail!("'{}': first char '{}' is not alphabetic", s, ch);
             }
             Ok(ch.is_uppercase())
         }
-        None => bail_msg!("string is empty"),
+        None => bail!("string is empty"),
     }
 }
 

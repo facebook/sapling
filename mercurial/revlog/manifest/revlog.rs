@@ -72,13 +72,13 @@ impl ManifestContent {
             }
 
             let (name, rest) = match find(line, &0) {
-                None => bail_msg!("Malformed entry: no \\0"),
+                None => bail!("Malformed entry: no \\0"),
                 Some(nil) => {
                     let (name, rest) = line.split_at(nil);
                     if let Some((_, hash)) = rest.split_first() {
                         (name, hash)
                     } else {
-                        bail_msg!("Malformed entry: no hash");
+                        bail!("Malformed entry: no hash");
                     }
                 }
             };
@@ -223,7 +223,7 @@ impl Details {
                 b'l' => Type::File(FileType::Symlink),
                 b'x' => Type::File(FileType::Executable),
                 b't' => Type::Tree,
-                unk => bail_msg!("Unknown flag {}", unk),
+                unk => bail!("Unknown flag {}", unk),
             }
         };
 

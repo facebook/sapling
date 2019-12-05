@@ -12,7 +12,7 @@ use std::mem;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail_msg, Compat, FutureFailureErrorExt};
+use failure_ext::{bail, Compat, FutureFailureErrorExt};
 use futures::future::Shared;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -72,7 +72,7 @@ impl UploadableHgBlob for Filelog {
         let node_key = self.node_key;
         let path = match &node_key.path {
             RepoPath::FilePath(path) => path.clone(),
-            other => bail_msg!("internal error: expected file path, got {}", other),
+            other => bail!("internal error: expected file path, got {}", other),
         };
 
         // If LFSMetaData

@@ -22,7 +22,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt};
+use failure_ext::{bail, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt};
 use filestore::{self, FetchKey};
 use futures::{
     future::{lazy, Future},
@@ -208,7 +208,7 @@ pub fn fetch_file_envelope_opt(
             };
             let envelope = HgFileEnvelope::from_blob(blobstore_bytes.into())?;
             if node_id != envelope.node_id() {
-                bail_msg!(
+                bail!(
                     "Manifest ID mismatch (requested: {}, got: {})",
                     node_id,
                     envelope.node_id()

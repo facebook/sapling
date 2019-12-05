@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail_msg, chain::*};
+use failure_ext::{bail, chain::*};
 
 use crate::blob::{Blob, BlobstoreValue, FsnodeBlob};
 use crate::errors::*;
@@ -141,7 +141,7 @@ impl FsnodeEntry {
                 let fsnode_directory = FsnodeDirectory::from_thrift(fsnode_directory)?;
                 Ok(FsnodeEntry::Directory(fsnode_directory))
             }
-            thrift::FsnodeEntry::UnknownField(unknown) => bail_msg!(
+            thrift::FsnodeEntry::UnknownField(unknown) => bail!(
                 "Unknown field encountered when parsing thrift::FsnodeEntry: {}",
                 unknown,
             ),

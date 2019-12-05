@@ -7,7 +7,7 @@
  */
 
 use clap::App;
-use failure_ext::{bail_msg, Result};
+use failure_ext::{bail, Result};
 use mercurial_revlog::revlog::{RevIdx, Revlog};
 use std::str::FromStr;
 
@@ -28,14 +28,14 @@ fn run() -> Result<()> {
     // Get optional index of entry within index file to start dumping from
     let revidx: Option<RevIdx> = match matches.value_of("REV").map(FromStr::from_str) {
         Some(Ok(v)) => Some(v),
-        Some(Err(err)) => bail_msg!("idx malformed: {:?}", err),
+        Some(Err(err)) => bail!("idx malformed: {:?}", err),
         None => None,
     };
 
     // Construct a `Revlog` from the index file
     let revlog = match Revlog::from_idx_no_data(idxpath) {
         Ok(revlog) => revlog,
-        Err(err) => bail_msg!("failed to load idx {}: {:?}", idxpath, err),
+        Err(err) => bail!("failed to load idx {}: {:?}", idxpath, err),
     };
 
     // Print the header, using its `Debug` implementation

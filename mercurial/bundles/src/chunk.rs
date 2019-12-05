@@ -7,7 +7,7 @@
  */
 
 use bytes::{BufMut, Bytes, BytesMut};
-use failure_ext::{bail_err, bail_msg};
+use failure_ext::{bail, bail_err};
 use tokio_codec::{Decoder, Encoder};
 
 use crate::errors::*;
@@ -88,7 +88,7 @@ impl Chunk {
     pub fn into_bytes(self) -> Result<Bytes> {
         match self.0 {
             ChunkInner::Normal(bytes) => Ok(bytes),
-            ChunkInner::Error => bail_msg!("error chunk, no associated bytes"),
+            ChunkInner::Error => bail!("error chunk, no associated bytes"),
         }
     }
 }

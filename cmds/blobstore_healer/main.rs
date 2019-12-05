@@ -20,7 +20,7 @@ use cmdlib::{args, helpers::create_runtime, monitoring};
 use configerator::ConfigeratorAPI;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure_ext::{bail_msg, err_msg, format_err, prelude::*};
+use failure_ext::{bail, err_msg, format_err, prelude::*};
 use fbinit::FacebookInit;
 use futures::{
     future::{join_all, loop_fn, ok, Loop},
@@ -59,7 +59,7 @@ fn maybe_schedule_healer_for_storage(
             dbconfig: MetadataDBConfig::Mysql { db_address, .. },
             blobstore: BlobConfig::Multiplexed { blobstores, .. },
         } => (db_address.clone(), blobstores.clone()),
-        _ => bail_msg!("Repo doesn't use Multiplexed blobstore"),
+        _ => bail!("Repo doesn't use Multiplexed blobstore"),
     };
 
     let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
@@ -87,7 +87,7 @@ fn maybe_schedule_healer_for_storage(
                     .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
                     blobstores.insert(id, blobstore.boxify());
                 }
-                unsupported => bail_msg!("Unsupported blobstore type {:?}", unsupported),
+                unsupported => bail!("Unsupported blobstore type {:?}", unsupported),
             }
         }
 

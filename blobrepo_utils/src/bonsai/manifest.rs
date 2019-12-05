@@ -13,7 +13,7 @@ use blobrepo::internal::IncompleteFilenodes;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::bail_msg;
+use failure_ext::bail;
 use futures::{
     future::{self, Either},
     Future, Stream,
@@ -242,7 +242,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 .join(root_mf_fut)
                 .and_then(move |(diff, root_mf)| match root_mf {
                     Some(root_mf) => Ok((diff, root_mf, manifest_p1, manifest_p2)),
-                    None => bail_msg!(
+                    None => bail!(
                         "internal error: didn't find root manifest id {}",
                         root_mf_id
                     ),

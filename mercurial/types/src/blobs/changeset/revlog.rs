@@ -11,7 +11,7 @@ use crate::{
     MPath, NULL_HASH,
 };
 use bytes::Bytes;
-use failure_ext::{bail_msg, Error, Result, ResultExt};
+use failure_ext::{bail, Error, Result, ResultExt};
 use mononoke_types::DateTime;
 use std::{
     collections::BTreeMap,
@@ -51,7 +51,7 @@ where
 {
     match lines.next() {
         Some(s) => parse(s).map_err(Into::into),
-        None => bail_msg!("premature end"),
+        None => bail!("premature end"),
     }
 }
 
@@ -159,7 +159,7 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(DateTime, Extra)> {
     let parts: Vec<_> = s.splitn(3, |c| *c == b' ').collect();
 
     if parts.len() < 2 {
-        bail_msg!("not enough parts");
+        bail!("not enough parts");
     }
     let time: i64 = str::from_utf8(parts[0])?
         .parse::<i64>()

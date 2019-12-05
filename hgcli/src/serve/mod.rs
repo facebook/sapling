@@ -30,7 +30,7 @@ use clap::ArgMatches;
 
 use crate::errors::*;
 
-use failure_ext::{bail_msg, err_downcast_ref, format_err, SlogKVError};
+use failure_ext::{bail, err_downcast_ref, format_err, SlogKVError};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -304,7 +304,7 @@ impl<'a> StdioRelay<'a> {
                         match msg.stream() {
                             SshStream::Stdout => Ok(false),
                             SshStream::Stderr => Ok(true),
-                            bad => bail_msg!("Bad stream: {:?}", bad),
+                            bad => bail!("Bad stream: {:?}", bad),
                         }
                     },
                 )

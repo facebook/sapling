@@ -10,7 +10,7 @@ use crate::batch;
 use crate::errors::{self, *};
 use crate::{GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use bytes::{Bytes, BytesMut};
-use failure_ext::bail_msg;
+use failure_ext::bail;
 use hex::FromHex;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use nom::{
@@ -91,7 +91,7 @@ named!(
     map_res!(
         do_parse!(key: take_while!(notcomma) >> (key)),
         |k: &[u8]| if k.is_empty() {
-            bail_msg!("empty input while parsing batch params")
+            bail!("empty input while parsing batch params")
         } else {
             Ok::<_, Error>(Bytes::from(batch::unescape(k)?))
         }
@@ -305,14 +305,14 @@ where
     F: Fn(&'a [u8]) -> IResult<&'a [u8], T>,
 {
     match params.get(key.as_bytes()) {
-        None => bail_msg!("missing param {}", key),
+        None => bail!("missing param {}", key),
         Some(v) => match parser(v.as_ref()) {
             IResult::Done(rest, v) => match match_eof(rest) {
                 IResult::Done(..) => Ok(v),
-                _ => bail_msg!("Unconsumed characters remain after parsing param"),
+                _ => bail!("Unconsumed characters remain after parsing param"),
             },
-            IResult::Incomplete(err) => bail_msg!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail_msg!("param parse failed: {:?}", err),
+            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail!("param parse failed: {:?}", err),
         },
     }
 }
@@ -333,13 +333,13 @@ where
         Some(v) => match parser(v.as_ref()) {
             IResult::Done(unparsed, v) => match match_eof(unparsed) {
                 IResult::Done(..) => Ok(v),
-                _ => bail_msg!(
+                _ => bail!(
                     "Unconsumed characters remain after parsing param: {:?}",
                     unparsed
                 ),
             },
-            IResult::Incomplete(err) => bail_msg!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail_msg!("param parse failed: {:?}", err),
+            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail!("param parse failed: {:?}", err),
         },
     }
 }
@@ -359,13 +359,13 @@ where
         Some(v) => match parser(v.as_ref()) {
             IResult::Done(unparsed, v) => match match_eof(unparsed) {
                 IResult::Done(..) => Ok(Some(v)),
-                _ => bail_msg!(
+                _ => bail!(
                     "Unconsumed characters remain after parsing param: {:?}",
                     unparsed
                 ),
             },
-            IResult::Incomplete(err) => bail_msg!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail_msg!("param parse failed: {:?}", err),
+            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail!("param parse failed: {:?}", err),
         },
     }
 }

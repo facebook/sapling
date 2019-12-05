@@ -19,7 +19,7 @@ use std::slice::Iter;
 use abomonation_derive::Abomonation;
 use asyncmemo::Weight;
 use bytes::Bytes;
-use failure_ext::{bail_err, bail_msg, chain::*, err_msg};
+use failure_ext::{bail, bail_err, chain::*, err_msg};
 use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
@@ -186,7 +186,7 @@ impl RepoPath {
             thrift::RepoPath::RootPath(_) => Self::root(),
             thrift::RepoPath::DirectoryPath(path) => Self::dir(MPath::from_thrift(path)?)?,
             thrift::RepoPath::FilePath(path) => Self::file(MPath::from_thrift(path)?)?,
-            thrift::RepoPath::UnknownField(unknown) => bail_msg!(
+            thrift::RepoPath::UnknownField(unknown) => bail!(
                 "Unknown field encountered when parsing thrift::RepoPath: {}",
                 unknown,
             ),
@@ -500,7 +500,7 @@ impl MPath {
     pub fn take_prefix_components(&self, components: usize) -> Result<Option<MPath>> {
         match components {
             0 => Ok(None),
-            x if x > self.num_components() => bail_msg!(
+            x if x > self.num_components() => bail!(
                 "taking {} components but path only has {}",
                 components,
                 self.num_components()

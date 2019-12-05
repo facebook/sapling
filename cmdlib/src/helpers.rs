@@ -9,7 +9,7 @@
 use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
 
 use cloned::cloned;
-use failure_ext::{bail_msg, err_msg, format_err, Error, Result, ResultExt};
+use failure_ext::{bail, err_msg, format_err, Error, Result, ResultExt};
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -57,21 +57,21 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
     let data_dir = data_dir.as_ref();
 
     if !data_dir.is_dir() {
-        bail_msg!("{:?} does not exist or is not a directory", data_dir);
+        bail!("{:?} does not exist or is not a directory", data_dir);
     }
 
     for subdir in &["blobs"] {
         let subdir = data_dir.join(subdir);
 
         if subdir.exists() && !subdir.is_dir() {
-            bail_msg!("{:?} already exists and is not a directory", subdir);
+            bail!("{:?} already exists and is not a directory", subdir);
         }
 
         if create {
             if subdir.exists() {
                 let content: Vec<_> = subdir.read_dir()?.collect();
                 if !content.is_empty() {
-                    bail_msg!(
+                    bail!(
                         "{:?} already exists and is not empty: {:?}",
                         subdir,
                         content

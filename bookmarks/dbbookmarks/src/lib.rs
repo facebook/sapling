@@ -14,7 +14,7 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::{bail_msg, err_msg, format_err, Error, Result};
+use failure_ext::{bail, err_msg, format_err, Error, Result};
 use futures::{
     future::{self, loop_fn, Loop},
     stream, Future, IntoFuture, Stream,
@@ -733,7 +733,7 @@ impl SqlBookmarksTransactionPayload {
             || self.infinitepush_sets.contains_key(key)
             || self.infinitepush_creates.contains_key(key)
         {
-            bail_msg!("{} bookmark was already used", key);
+            bail!("{} bookmark was already used", key);
         }
         Ok(())
     }

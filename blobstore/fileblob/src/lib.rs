@@ -12,7 +12,7 @@ use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use failure_ext::{bail_msg, Error, Result};
+use failure_ext::{bail, Error, Result};
 use futures::future::{poll_fn, Future};
 use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
@@ -39,7 +39,7 @@ impl Fileblob {
         let base = base.as_ref();
 
         if !base.is_dir() {
-            bail_msg!("Base {:?} doesn't exist or is not directory", base);
+            bail!("Base {:?} doesn't exist or is not directory", base);
         }
 
         Ok(Self {

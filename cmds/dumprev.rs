@@ -7,7 +7,7 @@
  */
 
 use clap::App;
-use failure_ext::{bail_msg, Error, Result, ResultExt};
+use failure_ext::{bail, Error, Result, ResultExt};
 use mercurial_revlog::revlog::Revlog;
 use std::{fs::File, io::Write, str::FromStr};
 
@@ -58,11 +58,11 @@ fn run() -> Result<()> {
             if let Some(dumpfile) = dumpfile {
                 let mut file = match File::create(dumpfile) {
                     Ok(file) => file,
-                    Err(err) => bail_msg!("Failed to create file {}: {:?}", dumpfile, err),
+                    Err(err) => bail!("Failed to create file {}: {:?}", dumpfile, err),
                 };
                 println!("Writing rev {:?} to {}", rev.nodeid(), dumpfile);
                 if let Err(err) = file.write_all(revdata) {
-                    bail_msg!("Failed to write {}: {:?}", dumpfile, err);
+                    bail!("Failed to write {}: {:?}", dumpfile, err);
                 }
             } else {
                 println!(
@@ -72,7 +72,7 @@ fn run() -> Result<()> {
                 );
             }
         }
-        Err(err) => bail_msg!("failed to get chunk {:?}: {}", revidx, err),
+        Err(err) => bail!("failed to get chunk {:?}: {}", revidx, err),
     };
 
     Ok(())

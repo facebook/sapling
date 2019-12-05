@@ -17,7 +17,7 @@ use crate::{
 };
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
-use failure_ext::{bail_msg, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
+use failure_ext::{bail, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::{Entry, Manifest};
@@ -51,13 +51,13 @@ impl ManifestContent {
             }
 
             let (name, rest) = match find(line, &0) {
-                None => bail_msg!("Malformed entry: no \\0"),
+                None => bail!("Malformed entry: no \\0"),
                 Some(nil) => {
                     let (name, rest) = line.split_at(nil);
                     if let Some((_, hash)) = rest.split_first() {
                         (name, hash)
                     } else {
-                        bail_msg!("Malformed entry: no hash");
+                        bail!("Malformed entry: no hash");
                     }
                 }
             };
@@ -126,7 +126,7 @@ pub fn fetch_manifest_envelope_opt(
             };
             let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
             if node_id.into_nodehash() != envelope.node_id() {
-                bail_msg!(
+                bail!(
                     "Manifest ID mismatch (requested: {}, got: {})",
                     node_id,
                     envelope.node_id()
@@ -305,7 +305,7 @@ fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
             b'l' => HgEntryId::File(FileType::Symlink, HgFileNodeId::new(hash)),
             b'x' => HgEntryId::File(FileType::Executable, HgFileNodeId::new(hash)),
             b't' => HgEntryId::Manifest(HgManifestId::new(hash)),
-            unk => bail_msg!("Unknown flag {}", unk),
+            unk => bail!("Unknown flag {}", unk),
         }
     };
 

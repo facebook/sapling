@@ -15,7 +15,7 @@ use crate::{
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
+use failure_ext::{bail, Error, FutureFailureErrorExt, Result};
 use futures::future::{Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
@@ -167,7 +167,7 @@ impl HgBlobChangeset {
                     Some(bytes) => {
                         let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
                         if changesetid != envelope.node_id() {
-                            bail_msg!(
+                            bail!(
                                 "Changeset ID mismatch (requested: {}, got: {})",
                                 changesetid,
                                 envelope.node_id()

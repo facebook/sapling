@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail_msg, ensure_msg};
+use failure_ext::{bail, ensure_msg};
 use futures::{try_ready, Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
@@ -31,14 +31,14 @@ where
         .take_while(|part| match part {
             &Part::CgChunk(Section::Changeset, _) => Ok(true),
             &Part::SectionEnd(Section::Changeset) => Ok(false),
-            bad => bail_msg!("Expected Changeset chunk or end, found: {:?}", bad),
+            bad => bail!("Expected Changeset chunk or end, found: {:?}", bad),
         })
         .return_remainder();
 
     let changesets = changesets
         .and_then(|part| match part {
             Part::CgChunk(Section::Changeset, chunk) => Ok(ChangesetDeltaed { chunk }),
-            bad => bail_msg!("Expected Changeset chunk, found: {:?}", bad),
+            bad => bail!("Expected Changeset chunk, found: {:?}", bad),
         })
         .map_err(|err| {
             err.context("While extracting Changesets from Changegroup")
@@ -58,7 +58,7 @@ where
                     Ok(true)
                 }
                 _ if seen_manifest_end => Ok(false),
-                bad => bail_msg!("Expected Manifest end, found: {:?}", bad),
+                bad => bail!("Expected Manifest end, found: {:?}", bad),
             }
         })
         .map_err(|err| {
@@ -73,12 +73,12 @@ where
                         &Part::CgChunk(Section::Filelog(ref path), _)
                         | &Part::SectionEnd(Section::Filelog(ref path)) => {
                             if seen_path != path {
-                                bail_msg!(
-                                "Mismatched path found {0} ({0:?}) != {1} ({1:?}), for part: {2:?}",
-                                seen_path,
-                                path,
-                                part
-                            );
+                                bail!(
+                                    "Mismatched path found {0} ({0:?}) != {1} ({1:?}), for part: {2:?}",
+                                    seen_path,
+                                    path,
+                                    part
+                                );
                             }
                         }
                         _ => (), // Handled in the next pattern-match
@@ -100,17 +100,17 @@ where
                     Part::End if seen_path.is_none() => Ok(None),
                     bad => {
                         if seen_path.is_some() {
-                            bail_msg!(
+                            bail!(
                                 "Expected Filelog chunk or end, seen_path was {:?}, found: {:?}",
                                 seen_path,
                                 bad
                             )
                         } else {
-                            bail_msg!(
-                            "Expected Filelog chunk or Part::End, seen_path was {:?}, found: {:?}",
-                            seen_path,
-                            bad
-                        )
+                            bail!(
+                                "Expected Filelog chunk or Part::End, seen_path was {:?}, found: {:?}",
+                                seen_path,
+                                bad
+                            )
                         }
                     }
                 }
