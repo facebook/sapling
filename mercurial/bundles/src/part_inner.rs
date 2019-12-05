@@ -14,7 +14,7 @@ use std::io::BufRead;
 use std::str;
 
 use bytes::{Bytes, BytesMut};
-use failure_ext::{bail, ensure_msg};
+use failure_ext::{bail, ensure};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
 use lazy_static::lazy_static;
@@ -173,7 +173,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                 .decode(capabilities::CapabilitiesUnpacker)
                 .collect()
                 .and_then(|caps| {
-                    ensure_msg!(caps.len() == 1, "Unexpected Replycaps payload: {:?}", caps);
+                    ensure!(caps.len() == 1, "Unexpected Replycaps payload: {:?}", caps);
                     Ok(caps.into_iter().next().unwrap())
                 });
             Bundle2Item::Replycaps(header, caps.boxify())

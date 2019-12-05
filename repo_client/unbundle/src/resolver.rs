@@ -20,7 +20,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
-use failure_ext::{ensure_msg, err_msg, format_err, Compat, Error, FutureFailureErrorExt, Result};
+use failure_ext::{ensure, err_msg, format_err, Compat, Error, FutureFailureErrorExt, Result};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures::{Future, IntoFuture, Stream};
@@ -1189,7 +1189,7 @@ impl Bundle2Resolver {
     ) -> BoxFuture<Option<RawBundle2Id>, Error> {
         next_item(bundle2)
             .and_then(|(none, _)| {
-                ensure_msg!(none.is_none(), "Expected end of Bundle2");
+                ensure!(none.is_none(), "Expected end of Bundle2");
                 Ok(())
             })
             .and_then({

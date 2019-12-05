@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use failure_ext::{ensure_msg, Compat};
+use failure_ext::{ensure, Compat};
 use futures::{future::Shared, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -51,7 +51,7 @@ where
     blobs
         .fold(HashMap::new(), move |mut map, item| {
             let (key, value) = item.upload(ctx.clone(), &repo)?;
-            ensure_msg!(
+            ensure!(
                 map.insert(key.clone(), value).is_none() || ubtype == IgnoreDuplicates,
                 "HgBlob {:?} already provided before",
                 key

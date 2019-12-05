@@ -206,7 +206,7 @@ impl Details {
     }
 
     fn parse(data: &[u8]) -> Result<Details> {
-        ensure_msg!(data.len() >= 40, "hash too small: {:?}", data);
+        ensure!(data.len() >= 40, "hash too small: {:?}", data);
 
         let (hash, flags) = data.split_at(40);
         let hash = str::from_utf8(hash)
@@ -214,7 +214,7 @@ impl Details {
             .and_then(|hash| hash.parse::<HgNodeHash>())
             .with_context(|| format!("malformed hash: {:?}", hash))?;
 
-        ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
+        ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
         let flag = if flags.len() == 0 {
             Type::File(FileType::Regular)

@@ -13,7 +13,7 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
-use failure_ext::{bail, ensure_err};
+use failure_ext::{bail, ensure};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 use revisionstore::Metadata;
@@ -196,7 +196,7 @@ impl HistoryEntry {
                     )))
                 }
                 RepoPath::FilePath(ref path) => {
-                    ensure_err!(
+                    ensure!(
                         kind == Kind::File,
                         ErrorKind::InvalidWirePackEntry(format!(
                             "history entry for {} is copied from file {}, but the pack is of \
@@ -204,7 +204,7 @@ impl HistoryEntry {
                             self.node, path, kind
                         ))
                     );
-                    ensure_err!(
+                    ensure!(
                         path.len() <= (u16::max_value() as usize),
                         ErrorKind::InvalidWirePackEntry(format!(
                             "history entry for {} is copied from a path of length {} -- maximum \
@@ -348,7 +348,7 @@ impl DataEntry {
     pub fn verify(&self) -> Result<()> {
         // The only limitation is that the delta base being null means that the revision is a
         // fulltext.
-        ensure_err!(
+        ensure!(
             self.delta_base != NULL_HASH || self.delta.maybe_fulltext().is_some(),
             ErrorKind::InvalidWirePackEntry(format!(
                 "data entry for {} has a null base but is not a fulltext",

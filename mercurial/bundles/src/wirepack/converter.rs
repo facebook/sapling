@@ -10,7 +10,7 @@
 
 use std::mem;
 
-use failure_ext::{bail, ensure_err};
+use failure_ext::{bail, ensure};
 use futures::{try_ready, Async, Poll, Stream};
 
 use mercurial_types::RepoPath;
@@ -155,7 +155,7 @@ impl State {
         let state = mem::replace(self, State::Invalid);
         *self = match state {
             State::History { path, entry_count } => {
-                ensure_err!(
+                ensure!(
                     entry_count > 0,
                     ErrorKind::WirePackEncode(format!(
                         "invalid encode stream: saw history entry for {} after count dropped to 0",
@@ -180,7 +180,7 @@ impl State {
             State::DataMeta {
                 path: expected_path,
             } => {
-                ensure_err!(
+                ensure!(
                     path == expected_path,
                     ErrorKind::WirePackEncode(format!(
                         "invalid encode stream: saw data meta for path '{}', expected path '{}'\
@@ -205,7 +205,7 @@ impl State {
         let state = mem::replace(self, State::Invalid);
         *self = match state {
             State::Data { path, entry_count } => {
-                ensure_err!(
+                ensure!(
                     entry_count > 0,
                     ErrorKind::WirePackEncode(format!(
                         "invalid encode stream: saw history entry for {} after count dropped to 0",

@@ -17,7 +17,7 @@ use crate::{
 };
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
-use failure_ext::{bail, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
+use failure_ext::{bail, ensure, Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::{Entry, Manifest};
@@ -289,14 +289,14 @@ impl HgManifest for BlobManifest {
 }
 
 fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
-    ensure_msg!(data.len() >= 40, "hash too small: {:?}", data);
+    ensure!(data.len() >= 40, "hash too small: {:?}", data);
 
     let (hash, flags) = data.split_at(40);
     let hash = str::from_utf8(hash)
         .map_err(|err| Error::from(err))
         .and_then(|hash| hash.parse::<HgNodeHash>())
         .with_context(|| format!("malformed hash: {:?}", hash))?;
-    ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
+    ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
     let hg_entry_id = if flags.len() == 0 {
         HgEntryId::File(FileType::Regular, HgFileNodeId::new(hash))

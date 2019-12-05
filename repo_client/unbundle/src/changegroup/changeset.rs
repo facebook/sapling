@@ -7,7 +7,7 @@
  */
 
 use bytes::Bytes;
-use failure_ext::ensure_msg;
+use failure_ext::ensure;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
@@ -30,14 +30,14 @@ where
 {
     deltaed
         .and_then(|ChangesetDeltaed { chunk }| {
-            ensure_msg!(
+            ensure!(
                 chunk.base == NULL_HASH,
                 "Changeset chunk base ({:?}) should be equal to root commit ({:?}), \
                  because it is never deltaed",
                 chunk.base,
                 NULL_HASH
             );
-            ensure_msg!(
+            ensure!(
                 chunk.node == chunk.linknode,
                 "Changeset chunk node ({:?}) should be equal to linknode ({:?})",
                 chunk.node,

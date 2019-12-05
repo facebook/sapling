@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, ensure_msg, format_err};
+use failure_ext::{bail, ensure, format_err};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
@@ -216,7 +216,7 @@ pub fn apply(text: &[u8], delta: &Delta) -> Result<Vec<u8>> {
     let mut off = 0;
 
     for frag in &delta.frags {
-        ensure_msg!(
+        ensure!(
             off <= frag.start,
             "Invalid delta, fragment start is less than current offset ({} < {})",
             frag.start,

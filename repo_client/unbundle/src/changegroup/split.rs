@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, ensure_msg};
+use failure_ext::{bail, ensure};
 use futures::{try_ready, Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
@@ -156,10 +156,10 @@ where
         let part = try_ready!(self.cg2s.poll());
         match &part {
             &Some(Part::End) => {
-                ensure_msg!(!self.seen_end, "More than one Part::End noticed");
+                ensure!(!self.seen_end, "More than one Part::End noticed");
                 self.seen_end = true;
             }
-            &None => ensure_msg!(
+            &None => ensure!(
                 self.seen_end,
                 "End of stream reached, but no Part::End noticed"
             ),

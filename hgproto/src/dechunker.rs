@@ -206,7 +206,7 @@ where
 mod tests {
     use super::*;
     use crate::errors::*;
-    use failure_ext::ensure_msg;
+    use failure_ext::ensure;
     use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
     use std::io::Cursor;
 
@@ -287,7 +287,7 @@ mod tests {
         for chunk in &chunks.0 {
             let buf_len = {
                 let buf = d.fill_buf()?;
-                ensure_msg!(
+                ensure!(
                     buf == chunk.as_slice(),
                     "expected {:?} found {:?} in bufread api check",
                     chunk,
@@ -316,13 +316,13 @@ mod tests {
 
         let mut buf = Vec::new();
         let buf_len = d.read_to_end(&mut buf)?;
-        ensure_msg!(
+        ensure!(
             buf_len == concat_chunks.len(),
             "expected read_to_end {:?} bytes, but read {:?}",
             concat_chunks.len(),
             buf_len
         );
-        ensure_msg!(
+        ensure!(
             buf == concat_chunks,
             "expected read_to_end {:?}, but read {:?}",
             concat_chunks,
@@ -333,18 +333,18 @@ mod tests {
 
     fn check_remainder<R: AsyncRead + BufRead>(d: Dechunker<R>, remainder: &[u8]) -> Result<()> {
         let (is_done, d) = d.check_is_done().wait()?;
-        ensure_msg!(is_done, "expected the dechunker to be done");
+        ensure!(is_done, "expected the dechunker to be done");
 
         let mut inner = d.into_inner();
         let mut buf = Vec::new();
         let buf_len = inner.read_to_end(&mut buf)?;
-        ensure_msg!(
+        ensure!(
             buf_len == remainder.len(),
             "expected read_to_end {:?} bytes from inner reader, but read {:?}",
             remainder.len(),
             buf_len
         );
-        ensure_msg!(
+        ensure!(
             buf.as_slice() == remainder,
             "expected read_to_end {:?} from inner reader, but read {:?}",
             remainder,
