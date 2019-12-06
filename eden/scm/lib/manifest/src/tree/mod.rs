@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod cursor;
 mod diff;
 mod iter;
 mod link;
@@ -32,8 +31,7 @@ pub(crate) use self::link::Link;
 pub use self::{diff::Diff, store::TreeStore};
 use crate::{
     tree::{
-        cursor::{Cursor, Step},
-        iter::BfsIter,
+        iter::{BfsIter, Cursor, Step},
         link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
         store::InnerStore,
     },
