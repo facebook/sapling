@@ -152,7 +152,12 @@ impl IdMap {
         }
         let existing_id = self.find_id_by_slice(slice)?;
         if let Some(existing_id) = existing_id {
-            if existing_id != id {
+            // Allow re-assigning Ids from a higher group to a lower group.
+            // For example, when a non-master commit gets merged into the
+            // master branch, the id is re-assigned to master. But, the
+            // ids in the master group will never be re-assigned to
+            // non-master groups.
+            if existing_id != id && existing_id.group_id() <= group {
                 bail!(
                     "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                     id,
@@ -386,6 +391,8 @@ mod tests {
         map.insert(id, b"jkl2").unwrap_err(); // id maps to jkl
         map.insert(id + 1, b"jkl2").unwrap();
         map.insert(id + 2, b"jkl2").unwrap_err(); // jkl2 maps to id + 1
+        map.insert(Id(15), b"jkl2").unwrap(); // reassign jkl2 to master group - ok.
+        map.insert(id + 3, b"abc").unwrap_err(); // reassign abc to non-master group - error.
         assert_eq!(map.next_free_id(GroupId::NON_MASTER).unwrap(), id + 2);
 
         for _ in 0..=1 {
@@ -398,7 +405,7 @@ mod tests {
             assert_eq!(map.find_id_by_slice(b"def").unwrap().unwrap().0, 2);
             assert_eq!(map.find_id_by_slice(b"ghi").unwrap().unwrap().0, 10);
             assert_eq!(map.find_id_by_slice(b"jkl").unwrap().unwrap(), id);
-            assert_eq!(map.find_id_by_slice(b"jkl2").unwrap().unwrap(), id + 1);
+            assert_eq!(map.find_id_by_slice(b"jkl2").unwrap().unwrap().0, 15);
             assert!(map.find_id_by_slice(b"jkl3").unwrap().is_none());
             map.sync().unwrap();
         }
