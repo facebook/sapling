@@ -17,6 +17,7 @@ use futures_ext::{
 use mononoke_types::MPath;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -41,6 +42,12 @@ impl From<Option<MPath>> for PathOrPrefix {
     fn from(path: Option<MPath>) -> Self {
         PathOrPrefix::Path(path)
     }
+}
+
+#[derive(Debug, Eq, Error, PartialEq)]
+enum ErrorKind {
+    #[error("Unexpected None path for the Leaf entry")]
+    UnexpectedNonePathForLeaf,
 }
 
 pub trait ManifestOps<Store>
@@ -197,15 +204,22 @@ where
         store: Store,
     ) -> BoxStream<
         (
-            Option<MPath>,
+            MPath,
             <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId,
         ),
         Error,
     > {
         self.list_all_entries(ctx, store)
-            .filter_map(|(path, entry)| match entry {
-                Entry::Leaf(filenode_id) => Some((path, filenode_id)),
+            .filter_map(|(maybe_path, entry)| match entry {
+                Entry::Leaf(filenode_id) => Some((maybe_path, filenode_id)),
                 _ => None,
+            })
+            .and_then(|(maybe_path, entry)| match maybe_path {
+                Some(path) => Ok((path, entry)),
+                // `None` paths only make sense for Tree-type entries,
+                // which are filtered out above, so in theory this should
+                // be impossible
+                None => Err(ErrorKind::UnexpectedNonePathForLeaf.into()),
             })
             .boxify()
     }

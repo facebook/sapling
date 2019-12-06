@@ -511,7 +511,7 @@ pub fn compute_changed_files(
     match (p1, p2) {
         (None, None) => root
             .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-            .filter_map(|(path, _)| path)
+            .map(|(path, _)| path)
             .collect_to()
             .boxify(),
         (Some(manifest), None) | (None, Some(manifest)) => {

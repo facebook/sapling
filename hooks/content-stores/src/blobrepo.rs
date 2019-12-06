@@ -139,7 +139,6 @@ impl ChangesetStore for BlobRepoChangesetStore {
                             .boxify(),
                         None => mf_id
                             .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-                            .filter_map(|(path, entry)| path.map(|path| (path, entry)))
                             .map(|(path, (ty, filenode))| {
                                 (path, ChangedFileType::Added, Some((filenode, ty)))
                             })

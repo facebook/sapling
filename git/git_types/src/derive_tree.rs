@@ -213,13 +213,6 @@ mod test {
         let mut index = git.index()?;
 
         for (mpath, blob_handle) in leaves.into_iter() {
-            let mpath = match mpath {
-                Some(mpath) => mpath,
-                None => {
-                    continue;
-                }
-            };
-
             let blob = filestore::fetch(
                 &repo.get_blobstore(),
                 ctx.clone(),
