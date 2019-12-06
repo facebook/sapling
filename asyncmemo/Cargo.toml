@@ -13,4 +13,4 @@ lazy_static = "1.0.2"
 linked-hash-map = "0.5.1"
 parking_lot = "0.6.1"
 
-futures-ext = { path = "../futures-ext" }
+futures_ext = { path = "../futures_ext" }
