@@ -7,7 +7,7 @@
 
 mod cursor;
 mod diff;
-mod files;
+mod iter;
 mod link;
 mod store;
 #[cfg(test)]
@@ -33,7 +33,7 @@ pub use self::{diff::Diff, store::TreeStore};
 use crate::{
     tree::{
         cursor::{Cursor, Step},
-        files::Items,
+        iter::Items,
         link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
         store::InnerStore,
     },
