@@ -29,14 +29,17 @@ use thiserror::Error;
 use pathmatcher::Matcher;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
-use self::cursor::{Cursor, Step};
-pub use self::diff::{Diff, DiffEntry, DiffType};
-pub use self::files::Items;
 pub(crate) use self::link::Link;
-use self::link::{Durable, DurableEntry, Ephemeral, Leaf};
-use self::store::InnerStore;
-pub use self::store::TreeStore;
-use crate::{File, FileMetadata, FsNode, Manifest};
+pub use self::{diff::Diff, store::TreeStore};
+use crate::{
+    tree::{
+        cursor::{Cursor, Step},
+        files::Items,
+        link::{Durable, DurableEntry, Ephemeral, Leaf},
+        store::InnerStore,
+    },
+    DiffEntry, File, FileMetadata, FsNode, Manifest,
+};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
@@ -261,10 +264,10 @@ impl Manifest for Tree {
         Ok(hgid.clone())
     }
 
-    fn files<'a, M>(&'a self, matcher: &'a M) -> Box<dyn Iterator<Item = Result<File>> + 'a>
-    where
-        M: Matcher,
-    {
+    fn files<'a, M: Matcher>(
+        &'a self,
+        matcher: &'a M,
+    ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
         let files = Items::new(&self, matcher).filter_map(|result| match result {
             Ok((path, FsNode::File(metadata))) => Some(Ok(File::new(path, metadata))),
             Ok(_) => None,
@@ -278,13 +281,10 @@ impl Manifest for Tree {
     ///
     /// Note: the matcher should be a prefix matcher, other kinds of matchers
     /// could be less effective than expected.
-    fn dirs<'a, M>(
+    fn dirs<'a, M: Matcher>(
         &'a self,
         matcher: &'a M,
-    ) -> Box<dyn Iterator<Item = Result<crate::Directory>> + 'a>
-    where
-        M: Matcher,
-    {
+    ) -> Box<dyn Iterator<Item = Result<crate::Directory>> + 'a> {
         let dirs = Items::new(&self, matcher).filter_map(|result| match result {
             Ok((path, FsNode::Directory(metadata))) => {
                 Some(Ok(crate::Directory::new(path, metadata)))
@@ -293,6 +293,14 @@ impl Manifest for Tree {
             Err(e) => Some(Err(e)),
         });
         Box::new(dirs)
+    }
+
+    fn diff<'a, M: Matcher>(
+        &'a self,
+        other: &'a Self,
+        matcher: &'a M,
+    ) -> Box<dyn Iterator<Item = Result<DiffEntry>> + 'a> {
+        Box::new(Diff::new(self, other, matcher))
     }
 }
 

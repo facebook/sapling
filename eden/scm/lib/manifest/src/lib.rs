@@ -56,17 +56,28 @@ pub trait Manifest {
         Ok(result)
     }
 
-    /// Returns an iterator over all the files in the manifest that satisfy the given Matcher.
-    fn files<'a, M>(&'a self, matcher: &'a M) -> Box<dyn Iterator<Item = Result<File>> + 'a>
-    where
-        M: Matcher;
+    /// Returns an iterator over all the files in the Manifest that satisfy the given Matcher.
+    fn files<'a, M: Matcher>(
+        &'a self,
+        matcher: &'a M,
+    ) -> Box<dyn Iterator<Item = Result<File>> + 'a>;
 
-    /// Returns an iterator over all directories found in the paths of the files in the manifest
+    /// Returns an iterator over all directories found in the paths of the files in the Manifest
     /// that satisfy the given Matcher.
     // TODO: add default implementation
-    fn dirs<'a, M>(&'a self, matcher: &'a M) -> Box<dyn Iterator<Item = Result<Directory>> + 'a>
-    where
-        M: Matcher;
+    fn dirs<'a, M: Matcher>(
+        &'a self,
+        matcher: &'a M,
+    ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a>;
+
+    /// Retuns an iterator of all the differences in files between two Manifest instances of the
+    /// same type.
+    // TODO: add default implementation
+    fn diff<'a, M: Matcher>(
+        &'a self,
+        other: &'a Self,
+        matcher: &'a M,
+    ) -> Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>;
 }
 
 /// FsNode short for file system node.
@@ -163,6 +174,59 @@ impl FileMetadata {
     }
 }
 
+/// Represents a file that is different between two tree manifests.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct DiffEntry {
+    pub path: RepoPathBuf,
+    pub diff_type: DiffType,
+}
+
+impl DiffEntry {
+    pub(crate) fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
+        DiffEntry { path, diff_type }
+    }
+
+    pub(crate) fn left(file: File) -> Self {
+        Self::new(file.path, DiffType::LeftOnly(file.meta))
+    }
+
+    pub(crate) fn right(file: File) -> Self {
+        Self::new(file.path, DiffType::RightOnly(file.meta))
+    }
+
+    pub(crate) fn changed(left: File, right: File) -> Self {
+        debug_assert!(left.path == right.path);
+        Self::new(left.path, DiffType::Changed(left.meta, right.meta))
+    }
+}
+
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum DiffType {
+    LeftOnly(FileMetadata),
+    RightOnly(FileMetadata),
+    Changed(FileMetadata, FileMetadata),
+}
+
+impl DiffType {
+    /// Returns the metadata of the file in the left manifest when it exists.
+    pub fn left(&self) -> Option<FileMetadata> {
+        match self {
+            DiffType::LeftOnly(left_metadata) => Some(*left_metadata),
+            DiffType::RightOnly(_) => None,
+            DiffType::Changed(left_metadata, _) => Some(*left_metadata),
+        }
+    }
+
+    /// Returns the metadata of the file in the right manifest when it exists.
+    pub fn right(&self) -> Option<FileMetadata> {
+        match self {
+            DiffType::LeftOnly(_) => None,
+            DiffType::RightOnly(right_metadata) => Some(*right_metadata),
+            DiffType::Changed(_, right_metadata) => Some(*right_metadata),
+        }
+    }
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for FileType {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
@@ -185,4 +249,4 @@ impl quickcheck::Arbitrary for FileMetadata {
 }
 
 pub mod tree;
-pub use crate::tree::{compat_subtree_diff, prefetch, Diff, DiffEntry, DiffType, Tree, TreeStore};
+pub use crate::tree::{compat_subtree_diff, prefetch, Diff, Tree, TreeStore};

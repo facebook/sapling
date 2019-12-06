@@ -10,65 +10,12 @@ use std::{cmp::Ordering, collections::VecDeque, mem};
 use anyhow::Result;
 
 use pathmatcher::{DirectoryMatch, Matcher};
-use types::{RepoPath, RepoPathBuf};
+use types::RepoPath;
 
 use crate::{
     tree::{store::InnerStore, Directory, Tree},
-    File, FileMetadata,
+    DiffEntry, File,
 };
-
-/// Represents a file that is different between two tree manifests.
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct DiffEntry {
-    pub path: RepoPathBuf,
-    pub diff_type: DiffType,
-}
-
-impl DiffEntry {
-    pub(crate) fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
-        DiffEntry { path, diff_type }
-    }
-
-    pub(crate) fn left(file: File) -> Self {
-        Self::new(file.path, DiffType::LeftOnly(file.meta))
-    }
-
-    pub(crate) fn right(file: File) -> Self {
-        Self::new(file.path, DiffType::RightOnly(file.meta))
-    }
-
-    pub(crate) fn changed(left: File, right: File) -> Self {
-        debug_assert!(left.path == right.path);
-        Self::new(left.path, DiffType::Changed(left.meta, right.meta))
-    }
-}
-
-#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub enum DiffType {
-    LeftOnly(FileMetadata),
-    RightOnly(FileMetadata),
-    Changed(FileMetadata, FileMetadata),
-}
-
-impl DiffType {
-    /// Returns the metadata of the file in the left manifest when it exists.
-    pub fn left(&self) -> Option<FileMetadata> {
-        match self {
-            DiffType::LeftOnly(left_metadata) => Some(*left_metadata),
-            DiffType::RightOnly(_) => None,
-            DiffType::Changed(left_metadata, _) => Some(*left_metadata),
-        }
-    }
-
-    /// Returns the metadata of the file in the right manifest when it exists.
-    pub fn right(&self) -> Option<FileMetadata> {
-        match self {
-            DiffType::LeftOnly(_) => None,
-            DiffType::RightOnly(right_metadata) => Some(*right_metadata),
-            DiffType::Changed(_, right_metadata) => Some(*right_metadata),
-        }
-    }
-}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -445,8 +392,8 @@ mod tests {
     use types::testutil::*;
 
     use crate::{
-        tree::{store::TestStore, testutil::*, DiffType, Link},
-        FileMetadata, FileType, Manifest,
+        tree::{store::TestStore, testutil::*, Link},
+        DiffType, FileMetadata, FileType, Manifest,
     };
 
     #[test]
