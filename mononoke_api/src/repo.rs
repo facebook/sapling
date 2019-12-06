@@ -15,7 +15,7 @@ use context::CoreContext;
 use failure_ext::Error;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
-use fsnodes::RootFsnodeMapping;
+use fsnodes::{derive_fsnodes, RootFsnodeMapping};
 
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
@@ -132,7 +132,11 @@ impl Repo {
             WarmBookmarksCache::new(
                 ctx.clone(),
                 blob_repo.clone(),
-                vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
+                vec![
+                    Box::new(&warm_hg_changeset),
+                    Box::new(&derive_unodes),
+                    Box::new(&derive_fsnodes),
+                ],
             )
             .compat()
             .await?,
