@@ -31,7 +31,7 @@ pub(crate) use self::link::Link;
 pub use self::{diff::Diff, store::TreeStore};
 use crate::{
     tree::{
-        iter::{BfsIter, Cursor, Step},
+        iter::{BfsIter, DfsCursor, Step},
         link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
         store::InnerStore,
     },
@@ -90,8 +90,8 @@ impl Tree {
         }
     }
 
-    fn root_cursor<'a>(&'a self) -> Cursor<'a> {
-        Cursor::new(&self.store, RepoPathBuf::new(), &self.root)
+    fn root_cursor<'a>(&'a self) -> DfsCursor<'a> {
+        DfsCursor::new(&self.store, RepoPathBuf::new(), &self.root)
     }
 }
 
@@ -374,7 +374,7 @@ impl Tree {
             store: &'a InnerStore,
             path: RepoPathBuf,
             converted_nodes: Vec<(RepoPathBuf, HgId, Bytes, HgId, HgId)>,
-            parent_trees: Vec<Cursor<'a>>,
+            parent_trees: Vec<DfsCursor<'a>>,
         };
         impl<'a> Executor<'a> {
             fn new(store: &'a InnerStore, parent_trees: &[&'a Tree]) -> Result<Executor<'a>> {
@@ -1174,7 +1174,7 @@ mod tests {
 
     #[test]
     fn test_cursor_skip() {
-        fn step<'a>(cursor: &mut Cursor<'a>) {
+        fn step<'a>(cursor: &mut DfsCursor<'a>) {
             match cursor.step() {
                 Step::Success => (),
                 Step::End => panic!("reached the end too soon"),

@@ -93,7 +93,7 @@ impl<'a> Iterator for BfsIter<'a> {
 /// Because this structure intends to back iterators, it is designed so that `step()` is called on
 /// every invocation of `next()`. This should simplify iterator implementations what may want to
 /// return the root of the subtree that is being iterated.
-pub struct Cursor<'a> {
+pub struct DfsCursor<'a> {
     state: State,
     store: &'a InnerStore,
     path: RepoPathBuf,
@@ -121,10 +121,10 @@ enum State {
     Done,
 }
 
-impl<'a> Cursor<'a> {
+impl<'a> DfsCursor<'a> {
     /// Default constructor for Cursor.
     pub fn new(store: &'a InnerStore, path: RepoPathBuf, link: &'a Link) -> Self {
-        Cursor {
+        DfsCursor {
             state: State::Init,
             store,
             path,
@@ -172,7 +172,7 @@ impl<'a> Cursor<'a> {
     }
 }
 
-impl<'a> Cursor<'a> {
+impl<'a> DfsCursor<'a> {
     /// Advances the cursor towards a new [`Link`]. Visiting is done in pre-order.
     /// Errors are an interesting topic. At the time of this writing errors only appear when
     /// computing [`DurableEntry`] (which cache their failures). To protect against potential
