@@ -114,6 +114,8 @@ fn main(fb: FacebookInit) {
             Some(ConfigSource::configerator(fb).expect("can't set up configerator API"))
         };
 
+        info!(root_log, "Creating repo listeners");
+
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
             fb,
             config.common,

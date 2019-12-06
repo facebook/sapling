@@ -237,13 +237,10 @@ pub fn repo_handlers(
             config.enabled
         })
         .map(|(reponame, config)| {
-            info!(
-                root_log,
-                "Start warming for repo {}, type {:?}", reponame, config.storage_config.blobstore
-            );
             let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            info!(logger, "Opening blobrepo");
 
             let ready_handle = ready.create_handle(reponame.clone());
 
@@ -295,6 +292,7 @@ pub fn repo_handlers(
                 };
                 scuba.add("repo", reponame.clone());
 
+                info!(logger, "Creating HookManager");
                 let mut hook_manager = HookManager::new(
                     ctx.clone(),
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
@@ -304,7 +302,7 @@ pub fn repo_handlers(
                 );
 
                 // TODO: Don't require full config in load_hooks so we can avoid a clone here.
-                info!(root_log, "Loading hooks");
+                info!(logger, "Loading hooks");
                 try_boxfuture!(load_hooks(
                     fb,
                     &mut hook_manager,
@@ -385,6 +383,7 @@ pub fn repo_handlers(
                                 blobrepo.get_blobstore().boxed(),
                             );
 
+                            info!(logger, "Warming up cache");
                             let initial_warmup = cache_warmup(
                                 ctx.clone(),
                                 blobrepo.clone(),
@@ -412,10 +411,8 @@ pub fn repo_handlers(
                                         .and_then(|()| skip_index.join(support_bundle2_listkeys)),
                                 )
                                 .map({
-                                    cloned!(root_log);
+                                    cloned!(logger);
                                     move |(skip_index, support_bundle2_listkeys)| {
-                                        info!(root_log, "Repo warmup for {} complete", reponame);
-
                                         // initialize phases hint from the skip index
                                         let phases_hint: Arc<dyn Phases> =
                                             if let MetadataDBConfig::Mysql { .. } = dbconfig.clone()
@@ -466,6 +463,7 @@ pub fn repo_handlers(
                                             ))
                                         });
 
+                                        info!(logger, "Repository is ready");
                                         (
                                             ctx,
                                             reponame,
