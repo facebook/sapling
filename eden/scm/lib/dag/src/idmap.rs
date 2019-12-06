@@ -10,7 +10,7 @@
 //! See [`IdMap`] for the main structure.
 
 use crate::id::{GroupId, Id};
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
@@ -395,6 +395,26 @@ impl<'a> Deref for SyncableIdMap<'a> {
 impl<'a> DerefMut for SyncableIdMap<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.map
+    }
+}
+
+/// Minimal APIs for converting between Id and slice.
+pub trait IdMapLike {
+    fn id(&self, slice: &[u8]) -> Result<Id>;
+    fn slice(&self, id: Id) -> Result<Box<[u8]>>;
+}
+
+impl IdMapLike for IdMap {
+    fn id(&self, slice: &[u8]) -> Result<Id> {
+        self.find_id_by_slice(slice)?
+            .ok_or_else(|| format_err!("{:?} not found", slice))
+    }
+    fn slice(&self, id: Id) -> Result<Box<[u8]>> {
+        Ok(self
+            .find_slice_by_id(id)?
+            .ok_or_else(|| format_err!("{} not found", id))?
+            .to_vec()
+            .into_boxed_slice())
     }
 }
 
