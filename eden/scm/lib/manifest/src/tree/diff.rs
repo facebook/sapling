@@ -13,8 +13,8 @@ use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};
 
 use crate::{
-    file::{File, FileMetadata},
     tree::{store::InnerStore, Directory, Tree},
+    File, FileMetadata,
 };
 
 /// Represents a file that is different between two tree manifests.
