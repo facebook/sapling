@@ -77,6 +77,7 @@ pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
 
 impl Dag {
     const INDEX_LEVEL_HEAD: usize = 0;
+    const INDEX_PARENT: usize = 1;
     const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
     /// Open [`Dag`] at the given directory. Create it on demand.
@@ -89,6 +90,28 @@ impl Dag {
                 vec![log::IndexOutput::Reference(
                     Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
                 )]
+            })
+            .index("parent", |data| {
+                // parent -> child for flat segments
+                let seg = Segment(data);
+                let mut result = Vec::new();
+                if seg.level().ok() == Some(0) {
+                    if let Ok(parents) = seg.parents() {
+                        for id in parents {
+                            let mut bytes = Vec::with_capacity(8);
+                            bytes.write_vlq(id.0).expect("write to Vec should not fail");
+                            // Attempt to use IndexOutput::Reference instead of
+                            // IndexOutput::Owned to reduce index size.
+                            match data.windows(bytes.len()).position(|w| w == &bytes[..]) {
+                                Some(pos) => result.push(log::IndexOutput::Reference(
+                                    pos as u64..(pos + bytes.len()) as u64,
+                                )),
+                                None => panic!("bug: {:?} should contain {:?}", &data, &bytes),
+                            }
+                        }
+                    }
+                }
+                result
             })
             .open(path)?;
         let max_level = Self::max_level_from_log(&log)?;
@@ -707,6 +730,77 @@ impl Dag {
         Ok(id)
     }
 
+    /// Convert an `id` to `x~n` form with the given constraint.
+    ///
+    /// Return `None` if the conversion can not be done with the constraints.
+    pub fn to_first_ancestor_nth(
+        &self,
+        id: Id,
+        constraint: FirstAncestorConstraint,
+    ) -> Result<Option<(Id, u64)>> {
+        match constraint {
+            FirstAncestorConstraint::None => Ok(Some((id, 0))),
+            FirstAncestorConstraint::KnownUniversally { heads } => {
+                self.to_first_ancestor_nth_known_universally(id, heads)
+            }
+        }
+    }
+
+    /// See `FirstAncestorConstraint::KnownUniversally`.
+    ///
+    /// Return `None` if `id` is not part of `ancestors(heads)`.
+    fn to_first_ancestor_nth_known_universally(
+        &self,
+        mut id: Id,
+        heads: SpanSet,
+    ) -> Result<Option<(Id, u64)>> {
+        let ancestors = self.ancestors(heads.clone())?;
+        if !ancestors.contains(id) {
+            return Ok(None);
+        }
+
+        let mut n = 0;
+        let result = 'outer: loop {
+            let seg = self
+                .find_flat_segment_including_id(id)?
+                .ok_or_else(|| format_err!("{} is not covered by segments", id))?;
+            let head = seg.head()?;
+            // Can we use an `id` from `heads` as `x`?
+            let intersected = heads.intersection(&(id..=head).into());
+            if !intersected.is_empty() {
+                let head = intersected.min().unwrap();
+                n += head.0 - id.0;
+                break 'outer (head, n);
+            }
+            // Can we use `head` in `seg` as `x`?
+            let mut next_id = None;
+            let mut key = Vec::with_capacity(8);
+            key.write_vlq(head.0).expect("write to Vec should not fail");
+            for seg_bytes in self.log.lookup(Self::INDEX_PARENT, &key)? {
+                let child_seg = Segment(seg_bytes?);
+                if child_seg.parents()?.len() > 1 {
+                    // `child_seg.span().low` is a merge, so `head` is a parent of a merge.
+                    // Therefore `head` can be used as `x`.
+                    n += head.0 - id.0;
+                    break 'outer (head, n);
+                }
+                let child_low = child_seg.span()?.low;
+                if ancestors.contains(child_low) {
+                    next_id = Some(child_low);
+                }
+            }
+            match next_id {
+                // This should not happen if indexes and segments are legit.
+                None => bail!("internal error: cannot convert {} to x~n form", id),
+                Some(next_id) => {
+                    n += head.0 - id.0 + 1;
+                    id = next_id;
+                }
+            }
+        };
+        Ok(Some(result))
+    }
+
     /// Calculate heads of the given set.
     pub fn heads(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
@@ -1087,6 +1181,23 @@ impl Dag {
         visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
         Ok(ctx.result)
     }
+}
+
+/// There are many `x~n`s that all resolves to a single commit.
+/// Constraint about `x~n`.
+pub enum FirstAncestorConstraint {
+    /// No constraints.
+    None,
+
+    /// `x` and its slice is expected to be known both locally and remotely.
+    ///
+    /// Practically, this means `x` is either:
+    /// - referred explicitly by `heads`.
+    /// - a parent of a merge (multi-parent id).
+    ///   (at clone time, client gets a sparse idmap including them)
+    ///
+    /// This also enforces `x` to be part of `ancestors(heads)`.
+    KnownUniversally { heads: SpanSet },
 }
 
 impl SyncableDag {

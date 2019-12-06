@@ -8,6 +8,7 @@
 use crate::id::{GroupId, Id};
 use crate::idmap::IdMap;
 use crate::segment::Dag;
+use crate::segment::FirstAncestorConstraint;
 use crate::spanset::SpanSet;
 use anyhow::Result;
 use tempfile::tempdir;
@@ -338,6 +339,12 @@ Lv2: R0-11[]"#
     let parent_ids = |id| -> String { format!("{:?}", dag.parent_ids(Id(id)).unwrap()) };
     let first_ancestor_nth =
         |id, n| -> String { format!("{:?}", dag.first_ancestor_nth(Id(id), n).unwrap()) };
+    let to_first_ancestor_nth = |id| -> String {
+        let c = FirstAncestorConstraint::KnownUniversally {
+            heads: Id(11).into(),
+        };
+        format!("{:?}", dag.to_first_ancestor_nth(Id(id), c).unwrap())
+    };
 
     assert_eq!(parents(vec![]), "");
 
@@ -377,6 +384,19 @@ Lv2: R0-11[]"#
     assert_eq!(first_ancestor_nth(11, 7), "0");
     assert!(dag.first_ancestor_nth(Id(0), 1).is_err());
     assert!(dag.first_ancestor_nth(Id(11), 8).is_err());
+
+    assert_eq!(to_first_ancestor_nth(0), "Some((1, 1))");
+    assert_eq!(to_first_ancestor_nth(1), "Some((1, 0))");
+    assert_eq!(to_first_ancestor_nth(2), "Some((3, 1))");
+    assert_eq!(to_first_ancestor_nth(3), "Some((3, 0))");
+    assert_eq!(to_first_ancestor_nth(4), "Some((7, 3))");
+    assert_eq!(to_first_ancestor_nth(5), "Some((7, 2))");
+    assert_eq!(to_first_ancestor_nth(6), "Some((7, 1))");
+    assert_eq!(to_first_ancestor_nth(7), "Some((7, 0))");
+    assert_eq!(to_first_ancestor_nth(8), "Some((9, 1))");
+    assert_eq!(to_first_ancestor_nth(9), "Some((9, 0))");
+    assert_eq!(to_first_ancestor_nth(10), "Some((11, 1))");
+    assert_eq!(to_first_ancestor_nth(11), "Some((11, 0))");
 }
 
 #[test]
