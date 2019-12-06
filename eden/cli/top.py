@@ -11,7 +11,7 @@ import datetime
 import os
 import socket
 import time
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from facebook.eden.ttypes import AccessCounts
 
@@ -156,16 +156,18 @@ class Top:
         extra_space = self.width - len(TITLE + hostname + date)
 
         # left: title
-        stdscr.addnstr(0, 0, TITLE, self.width)
+        self._write(stdscr, 0, 0, TITLE, self.width)
         if extra_space >= 0:
             # center: date
-            stdscr.addnstr(0, len(TITLE) + extra_space // 2, date, self.width)
+            self._write(stdscr, 0, len(TITLE) + extra_space // 2, date, self.width)
             # right: hostname
-            stdscr.addnstr(0, self.width - len(hostname), hostname, self.width)
+            self._write(stdscr, 0, self.width - len(hostname), hostname, self.width)
 
     def render_column_titles(self, stdscr):
         LINE = 2
-        stdscr.addnstr(LINE, 0, " " * self.width, self.width, self.curses.A_REVERSE)
+        self._write(
+            stdscr, LINE, 0, " " * self.width, self.width, self.curses.A_REVERSE
+        )
         self.render_row(stdscr, LINE, COLUMN_TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
@@ -206,14 +208,38 @@ class Top:
             if i == len(COLUMN_SPACING) - 1:
                 space = max(space, remaining_space)
 
-            text = f"{str:{align}{space}}"[:space]
+            text = f"{str:{align}{space}}"
 
             color = 0
             if i == self.selected_column:
                 color = self.curses.color_pair(COLOR_SELECTED)
 
-            stdscr.addnstr(y, x, text, space, color | style)
+            self._write(stdscr, y, x, text, space, color | style)
             x += space + 1
+
+    def _write(
+        self,
+        window: Any,
+        y: int,
+        x: int,
+        text: str,
+        max_width: int,
+        attr: Optional[int] = 0,
+    ) -> None:
+        try:
+            window.addnstr(y, x, text, max_width, attr)
+        except Exception as ex:
+            # When attempting to write to the very last terminal cell curses will
+            # successfully display the data but will return an error since the logical
+            # cursor cannot be advanced to the next cell.
+            #
+            # We just ignore the error to handle this case.
+            # If you do want to look at errors during development you can enable the
+            # following code, but note that the error messages from the curses module
+            # usually are not very informative.
+            if False:
+                with open("/tmp/eden_top.log", "a") as f:
+                    f.write(f"error at ({y}, {x}): {ex}\n")
 
     def get_keypress(self, stdscr):
         key = stdscr.getch()
