@@ -131,6 +131,21 @@ impl IdMap {
         }
     }
 
+    /// Similar to `find_slice_by_id`, but returns None if group > `max_group`.
+    pub fn find_id_by_slice_with_max_group(
+        &self,
+        slice: &[u8],
+        max_group: GroupId,
+    ) -> Result<Option<Id>> {
+        Ok(self.find_id_by_slice(slice)?.and_then(|id| {
+            if id.group_id() <= max_group {
+                Some(id)
+            } else {
+                None
+            }
+        }))
+    }
+
     /// Insert a new entry mapping from a slice to an id.
     ///
     /// Errors if the new entry conflicts with existing entries.
@@ -283,11 +298,15 @@ impl IdMap {
         while let Some(todo) = todo_stack.pop() {
             match todo {
                 Visit(head) => {
-                    if let None = self.find_id_by_slice(&head)? {
+                    // If the id was not assigned, or was assigned to a higher group,
+                    // (re-)assign it to this group.
+                    if let None = self.find_id_by_slice_with_max_group(&head, group)? {
                         todo_stack.push(Todo::Assign(head.clone()));
+                        // If the parent was not assigned, or was assigned to a higher group,
+                        // (re-)assign the parent to this group.
                         for unassigned_parent in parents_by_name(&head)?
                             .into_iter()
-                            .filter(|p| match self.find_id_by_slice(p) {
+                            .filter(|p| match self.find_id_by_slice_with_max_group(p, group) {
                                 Ok(Some(_)) => false,
                                 _ => true,
                             })
@@ -299,7 +318,7 @@ impl IdMap {
                     }
                 }
                 Assign(head) => {
-                    if let None = self.find_id_by_slice(&head)? {
+                    if let None = self.find_id_by_slice_with_max_group(&head, group)? {
                         let id = self.next_free_id(group)?;
                         self.insert(id, &head)?;
                     }
@@ -331,6 +350,14 @@ impl IdMap {
             let mut result = Vec::with_capacity(parent_names.len());
             for parent_name in parent_names {
                 if let Some(parent_id) = self.find_id_by_slice(&parent_name)? {
+                    ensure!(
+                        parent_id < id,
+                        "parent {} {:?} should <= {} {:?}",
+                        parent_id,
+                        &parent_name,
+                        id,
+                        &name
+                    );
                     result.push(parent_id);
                 } else {
                     bail!("logic error: ancestor ids must be available");
