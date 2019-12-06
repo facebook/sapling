@@ -214,7 +214,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                     // Start with a fake state - maximum generation number and no entries
                     // for it (see drain below)
                     current_generation: Generation::max_gen(),
-                    pending_changesets: SelectAll::new(),
+                    pending_changesets: SelectAll::default(),
                     exclude_ancestors_future: ok(NodeFrontier::from_iter(exclude_generations))
                         .boxify(),
                     current_exclude_generation,

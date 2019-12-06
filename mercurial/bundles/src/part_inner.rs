@@ -16,7 +16,7 @@ use std::str;
 use bytes::{Bytes, BytesMut};
 use failure_ext::{bail, ensure};
 use futures::{future, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
+use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;
 use maplit::hashset;
 use slog::{o, warn, Logger};
@@ -129,7 +129,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
     stream: OuterStream<R>,
 ) -> (Bundle2Item, BoxFuture<OuterStream<R>, Error>) {
     let wrapped_stream = stream
-        .take_while_wrapper(|frame| future::ok(frame.is_payload()))
+        .take_while(|frame| future::ok(frame.is_payload()))
         .map(OuterFrame::get_payload as fn(OuterFrame) -> Bytes);
     let (wrapped_stream, remainder) = wrapped_stream.return_remainder();
 
