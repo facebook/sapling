@@ -172,7 +172,7 @@ class Top:
 
     def render_rows(self, stdscr):
         START_LINE = 3
-        line_numbers = range(START_LINE, self.height - 1)
+        line_numbers = range(START_LINE, self.height)
 
         aggregated_processes = {}
         for process in self.processes.values():
