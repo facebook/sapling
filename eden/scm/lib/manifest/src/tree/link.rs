@@ -10,6 +10,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use anyhow::{bail, format_err, Context, Result};
 use once_cell::sync::OnceCell;
 
+use pathmatcher::{DirectoryMatch, Matcher};
 use types::{HgId, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::tree::{store, store::InnerStore};
@@ -92,6 +93,15 @@ impl Link {
             _ => None,
         }
     }
+
+    pub fn matches(&self, matcher: &impl Matcher, path: &RepoPath) -> bool {
+        match self {
+            Link::Leaf(_) => matcher.matches_file(path),
+            Link::Durable(_) | Link::Ephemeral(_) => {
+                matcher.matches_directory(path) != DirectoryMatch::Nothing
+            }
+        }
+    }
 }
 
 impl DurableEntry {
@@ -132,6 +142,13 @@ impl DurableEntry {
             Ok(links)
         });
         result.as_ref().map_err(|e| format_err!("{:?}", e))
+    }
+
+    pub fn get_links(&self) -> Option<Result<&BTreeMap<PathComponentBuf, Link>>> {
+        self.links
+            .get()
+            .as_ref()
+            .map(|result| result.as_ref().map_err(|e| format_err!("{:?}", e)))
     }
 }
 

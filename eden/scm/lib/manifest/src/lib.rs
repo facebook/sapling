@@ -14,6 +14,7 @@
 
 use anyhow::Result;
 
+use pathmatcher::Matcher;
 use types::{HgId, RepoPath, RepoPathBuf};
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
@@ -54,6 +55,18 @@ pub trait Manifest {
         });
         Ok(result)
     }
+
+    /// Returns an iterator over all the files in the manifest that satisfy the given Matcher.
+    fn files<'a, M>(&'a self, matcher: &'a M) -> Box<dyn Iterator<Item = Result<File>> + 'a>
+    where
+        M: Matcher;
+
+    /// Returns an iterator over all directories found in the paths of the files in the manifest
+    /// that satisfy the given Matcher.
+    // TODO: add default implementation
+    fn dirs<'a, M>(&'a self, matcher: &'a M) -> Box<dyn Iterator<Item = Result<Directory>> + 'a>
+    where
+        M: Matcher;
 }
 
 /// FsNode short for file system node.
@@ -67,7 +80,7 @@ pub enum FsNode {
     File(FileMetadata),
 }
 
-/// A file entry in a tree manifest.
+/// A file entry in a manifest.
 ///
 /// Consists of the full path to the file along with the associated file metadata.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -85,6 +98,28 @@ impl File {
 impl From<(RepoPathBuf, FileMetadata)> for File {
     fn from((path, meta): (RepoPathBuf, FileMetadata)) -> Self {
         Self { path, meta }
+    }
+}
+
+/// A directory entry in a manifest.
+///
+/// Consists of the full path to the directory. Directories may or may not be assigned
+/// identifiers. When an identifier is available it is also returned.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Directory {
+    pub path: RepoPathBuf,
+    pub hgid: Option<HgId>,
+}
+
+impl Directory {
+    pub fn new(path: RepoPathBuf, hgid: Option<HgId>) -> Self {
+        Self { path, hgid }
+    }
+}
+
+impl From<(RepoPathBuf, Option<HgId>)> for Directory {
+    fn from((path, hgid): (RepoPathBuf, Option<HgId>)) -> Self {
+        Self { path, hgid }
     }
 }
 

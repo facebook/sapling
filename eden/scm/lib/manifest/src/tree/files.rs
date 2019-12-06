@@ -5,125 +5,85 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::VecDeque, mem};
+use std::collections::VecDeque;
 
 use anyhow::Result;
 
-use pathmatcher::{DirectoryMatch, Matcher};
-use types::{HgId, RepoPathBuf};
+use pathmatcher::Matcher;
+use types::{Key, RepoPath, RepoPathBuf};
 
 use crate::{
-    tree::{store::InnerStore, Directory, Tree},
-    File,
+    tree::{
+        link::{DurableEntry, Link},
+        store::InnerStore,
+        Tree,
+    },
+    FsNode,
 };
 
-pub struct Items<'a, T> {
-    output: VecDeque<T>,
-    current: VecDeque<Directory<'a>>,
-    next: VecDeque<Directory<'a>>,
+pub struct Items<'a> {
+    queue: VecDeque<(RepoPathBuf, &'a Link)>,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
 }
 
-// This is a subset of Directory<'a> that hides the internal "link" field.
-/// Directory information.
-pub struct DirInfo {
-    pub path: RepoPathBuf,
-    pub hgid: Option<HgId>,
-}
-
-pub type Files<'a> = Items<'a, File>;
-pub type Dirs<'a> = Items<'a, DirInfo>;
-
-impl<'a, T: ItemOutput<'a>> Items<'a, T> {
+impl<'a> Items<'a> {
     pub fn new(tree: &'a Tree, matcher: &'a dyn Matcher) -> Self {
-        let root = Directory::from_root(&tree.root).expect("manifest root is not a directory");
         Self {
-            output: VecDeque::new(),
-            current: vec![root].into(),
-            next: VecDeque::new(),
+            queue: vec![(RepoPathBuf::new(), &tree.root)].into(),
             store: &tree.store,
             matcher,
         }
     }
 
-    fn process_next_dir(&mut self) -> Result<bool> {
-        // If we've finished processing all directories in the current layer of the tree,
-        // proceed to the next layer, prefetching all of the tree nodes in that layer
-        // prior to traversing the corresponding directories.
-        if self.current.is_empty() {
-            self.prefetch()?;
-            mem::swap(&mut self.current, &mut self.next);
-        }
-
-        let (files, dirs) = match self.current.pop_front() {
-            Some(dir) => dir.list(&self.store)?,
-            None => return Ok(false),
-        };
-
-        // Use the matcher to determine which files to output and which directories to visit.
-        let matcher = self.matcher;
-        let files = files.into_iter().filter(|f| matcher.matches_file(&f.path));
-        let dirs: Vec<_> = dirs
-            .into_iter()
-            .filter(|d| matcher.matches_directory(&d.path) != DirectoryMatch::Nothing)
-            .collect();
-
-        T::extend_output(self, files, &dirs);
-        self.next.extend(dirs);
-        Ok(true)
-    }
-
-    /// Prefetch tree nodes for all directories in the next layer of the traversal.
-    fn prefetch(&self) -> Result<()> {
-        let keys = self.next.iter().filter_map(|d| d.key()).collect::<Vec<_>>();
-        self.store.prefetch(keys)
-    }
-}
-
-impl<'a, T: ItemOutput<'a>> Iterator for Items<'a, T> {
-    type Item = Result<T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.output.is_empty() {
-            match self.process_next_dir() {
-                Ok(true) => continue,
-                Ok(false) => break,
-                Err(e) => return Some(Err(e)),
+    fn prefetch(&self, extra: (&RepoPath, &DurableEntry)) -> Result<()> {
+        let mut keys = vec![Key::new(extra.0.to_owned(), extra.1.hgid)];
+        let mut entries = vec![extra];
+        for (path, link) in self.queue.iter() {
+            if let Link::Durable(durable_entry) = link {
+                keys.push(Key::new(path.clone(), durable_entry.hgid));
+                entries.push((path, durable_entry));
             }
         }
-        self.output.pop_front().map(Ok)
+        self.store.prefetch(keys)?;
+        for (path, entry) in entries {
+            entry.materialize_links(self.store, path)?;
+        }
+        Ok(())
     }
 }
 
-pub trait ItemOutput<'a>: Sized {
-    fn extend_output(
-        items: &mut Items<'a, Self>,
-        files: impl IntoIterator<Item = File>,
-        dirs: &[Directory<'a>],
-    );
-}
+impl<'a> Iterator for Items<'a> {
+    type Item = Result<(RepoPathBuf, FsNode)>;
 
-impl<'a> ItemOutput<'a> for File {
-    fn extend_output(
-        items: &mut Items<'a, Self>,
-        files: impl IntoIterator<Item = File>,
-        _dirs: &[Directory<'a>],
-    ) {
-        items.output.extend(files);
-    }
-}
-
-impl<'a> ItemOutput<'a> for DirInfo {
-    fn extend_output(
-        items: &mut Items<'a, Self>,
-        _files: impl IntoIterator<Item = File>,
-        dirs: &[Directory<'a>],
-    ) {
-        items.output.extend(dirs.iter().map(|d| DirInfo {
-            path: d.path.clone(),
-            hgid: d.hgid.clone(),
-        }));
+    fn next(&mut self) -> Option<Self::Item> {
+        let (path, children, hgid) = match self.queue.pop_front() {
+            None => return None,
+            Some((path, link)) => match link {
+                Link::Leaf(file_metadata) => return Some(Ok((path, FsNode::File(*file_metadata)))),
+                Link::Ephemeral(children) => (path, children, None),
+                Link::Durable(entry) => loop {
+                    match entry.get_links() {
+                        None => match self.prefetch((&path, &entry)) {
+                            Ok(_) => (),
+                            Err(e) => return Some(Err(e)),
+                        },
+                        Some(children_result) => match children_result {
+                            Ok(children) => break (path, children, Some(entry.hgid)),
+                            Err(e) => return Some(Err(e)),
+                        },
+                    };
+                },
+            },
+        };
+        for (component, link) in children.iter() {
+            let mut child_path = path.clone();
+            child_path.push(component.as_ref());
+            if link.matches(&self.matcher, &child_path) {
+                self.queue.push_back((child_path, &link));
+            }
+        }
+        Some(Ok((path, FsNode::Directory(hgid))))
     }
 }
 
@@ -142,7 +102,7 @@ mod tests {
     fn test_items_empty() {
         let tree = Tree::ephemeral(Arc::new(TestStore::new()));
         assert!(tree.files(&AlwaysMatcher::new()).next().is_none());
-        assert!(tree.dirs(&AlwaysMatcher::new()).next().is_none());
+        assert_eq!(dirs(&tree, &AlwaysMatcher::new()), ["Ephemeral ''"]);
     }
 
     #[test]
@@ -169,11 +129,12 @@ mod tests {
         assert_eq!(
             dirs(&tree, &AlwaysMatcher::new()),
             [
-                "Ephemeral a1",
-                "Ephemeral a2",
-                "Ephemeral a1/b1",
-                "Ephemeral a2/b2",
-                "Ephemeral a1/b1/c1"
+                "Ephemeral ''",
+                "Ephemeral 'a1'",
+                "Ephemeral 'a2'",
+                "Ephemeral 'a1/b1'",
+                "Ephemeral 'a2/b2'",
+                "Ephemeral 'a1/b1/c1'"
             ]
         );
     }
@@ -205,11 +166,12 @@ mod tests {
         assert_eq!(
             dirs(&tree, &AlwaysMatcher::new()),
             [
-                "Durable   a1",
-                "Durable   a2",
-                "Durable   a1/b1",
-                "Durable   a2/b2",
-                "Durable   a1/b1/c1"
+                "Durable   ''",
+                "Durable   'a1'",
+                "Durable   'a2'",
+                "Durable   'a1/b1'",
+                "Durable   'a2/b2'",
+                "Durable   'a1/b1/c1'"
             ]
         );
     }
@@ -256,20 +218,26 @@ mod tests {
         // A prefix matcher works as expected.
         assert_eq!(
             dirs(&tree, &TreeMatcher::from_rules(["a1/**"].iter()).unwrap()),
-            ["Ephemeral a1", "Ephemeral a1/b1", "Ephemeral a1/b1/c1"]
+            [
+                "Ephemeral ''",
+                "Ephemeral 'a1'",
+                "Ephemeral 'a1/b1'",
+                "Ephemeral 'a1/b1/c1'"
+            ]
         );
 
         // A suffix matcher is not going to be effective.
         assert_eq!(
             dirs(&tree, &TreeMatcher::from_rules(["**/c2"].iter()).unwrap()),
             [
-                "Ephemeral a1",
-                "Ephemeral a2",
-                "Ephemeral a3",
-                "Ephemeral a1/b1",
-                "Ephemeral a2/b2",
-                "Ephemeral a3/b2",
-                "Ephemeral a1/b1/c1"
+                "Ephemeral ''",
+                "Ephemeral 'a1'",
+                "Ephemeral 'a2'",
+                "Ephemeral 'a3'",
+                "Ephemeral 'a1/b1'",
+                "Ephemeral 'a2/b2'",
+                "Ephemeral 'a3/b2'",
+                "Ephemeral 'a1/b1/c1'"
             ]
         );
     }
@@ -292,7 +260,7 @@ mod tests {
             .map(|t| {
                 let t = t.unwrap();
                 format!(
-                    "{:9} {}",
+                    "{:9} '{}'",
                     if t.hgid.is_some() {
                         "Durable"
                     } else {
@@ -303,5 +271,4 @@ mod tests {
             })
             .collect::<Vec<_>>()
     }
-
 }
