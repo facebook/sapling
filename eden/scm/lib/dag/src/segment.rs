@@ -574,13 +574,18 @@ impl Dag {
                 // If `id` is in `result`, then `ancestors(id)` are all in `result`.
                 continue;
             }
-            for level in (0..=self.max_level).rev() {
-                let seg = match level {
-                    0 => self.find_flat_segment_including_id(id)?,
-                    _ => self.find_segment_by_head_and_level(id, level)?,
-                };
+            let flat_seg = self.find_flat_segment_including_id(id)?;
+            if let Some(ref s) = flat_seg {
+                if s.only_head()? {
+                    // Fast path.
+                    result.push_span((Id(0)..=id).into());
+                    break 'outer;
+                }
+            }
+            for level in (1..=self.max_level).rev() {
+                let seg = self.find_segment_by_head_and_level(id, level)?;
                 if let Some(seg) = seg {
-                    let span = (seg.span()?.low..=id).into();
+                    let span = seg.span()?.into();
                     result.push_span(span);
                     for parent in seg.parents()? {
                         to_visit.push(parent);
@@ -588,7 +593,17 @@ impl Dag {
                     continue 'outer;
                 }
             }
-            bail!("logic error: flat segments are expected to cover everything but they are not");
+            if let Some(seg) = flat_seg {
+                let span = (seg.span()?.low..=id).into();
+                result.push_span(span);
+                for parent in seg.parents()? {
+                    to_visit.push(parent);
+                }
+            } else {
+                bail!(
+                    "logic error: flat segments are expected to cover everything but they are not"
+                );
+            }
         }
 
         Ok(result)
