@@ -1781,9 +1781,8 @@ def debugmanifestdirs(ui, repo, rev):
     idtopath = {}
     for ctx in repo.set("%ld", revs):
         tree = ctx.manifest()
-        idtopath[ctx.manifestnode()] = "/"
         for path, hgid in tree.walkdirs(matcher):
-            idtopath[hgid] = path
+            idtopath[hgid] = path or "/"
     for hgid, path in sorted(idtopath.items()):
         ui.write(_("%s %s\n") % (hex(hgid), path))
 
