@@ -288,6 +288,22 @@ globals()["."] = source
 
 
 def hg(*args, **kwargs):
+    (status, buf) = _hg(*args, **kwargs)
+    if status:
+        if not buf.endswith("\n") and buf:
+            buf += "\n"
+        buf += "[%s]" % status
+    return buf
+
+
+def hgexcept(*args, **kwargs):
+    (status, buf) = _hg(*args, **kwargs)
+    if status:
+        raise RuntimeError("Exit code: {}. Output: {}".format(status, buf))
+    return buf
+
+
+def _hg(*args, **kwargs):
     stdin = kwargs.get("stdin") or ""
     encoding.setfromenviron()
     cwdbefore = os.getcwd()
@@ -299,11 +315,7 @@ def hg(*args, **kwargs):
         # Revert side effect of --cwd
         os.chdir(cwdbefore)
     buf = fout.getvalue().rstrip()
-    if status:
-        if not buf.endswith("\n") and buf:
-            buf += "\n"
-        buf += "[%s]" % status
-    return buf
+    return (status, buf)
 
 
 # utilities in tinit.sh
