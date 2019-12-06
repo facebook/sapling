@@ -11,7 +11,6 @@
 #![allow(deprecated)]
 
 use clap::{App, Arg, SubCommand};
-use failure_ext as failure;
 use fbinit::FacebookInit;
 
 mod serve;
@@ -84,7 +83,7 @@ fn main(fb: FacebookInit) {
                 result
             })
     } else {
-        Err(failure::err_msg("unexpected or missing subcommand"))
+        Err(Error::msg("unexpected or missing subcommand"))
     };
 
     if let Err(err) = res {

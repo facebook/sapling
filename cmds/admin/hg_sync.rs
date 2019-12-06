@@ -12,7 +12,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::{err_msg, Error, FutureFailureErrorExt};
+use failure_ext::{Error, FutureFailureErrorExt};
 use fbinit::FacebookInit;
 use futures::future::{self, ok};
 use futures::prelude::*;
@@ -54,11 +54,11 @@ pub fn subcommand_process_hg_sync(
             sub_m.is_present("dry-run"),
         ) {
             (Some(..), true, ..) => {
-                future::err(err_msg("cannot pass both --set and --skip-blobimport"))
+                future::err(Error::msg("cannot pass both --set and --skip-blobimport"))
                     .from_err()
                     .boxify()
             }
-            (.., false, true) => future::err(err_msg(
+            (.., false, true) => future::err(Error::msg(
                 "--dry-run is meaningless without --skip-blobimport",
             ))
             .from_err()
@@ -118,7 +118,7 @@ pub fn subcommand_process_hg_sync(
                                 }
                                 (true, None) => {
                                     // We'd like to skip, but we didn't find the current counter!
-                                    future::err(err_msg("cannot proceed without a counter"))
+                                    future::err(Error::msg("cannot proceed without a counter"))
                                         .boxify()
                                 }
                                 (true, Some(counter)) => bookmarks
@@ -160,11 +160,11 @@ pub fn subcommand_process_hg_sync(
                                                         future::ok(())
                                                     }
                                                     false => {
-                                                        future::err(err_msg("update conflicted"))
+                                                        future::err(Error::msg("update conflicted"))
                                                     }
                                                 })
                                                 .boxify(),
-                                            (None, ..) => future::err(err_msg(
+                                            (None, ..) => future::err(Error::msg(
                                                 "no valid counter position to skip ahead to",
                                             ))
                                             .boxify(),
@@ -310,16 +310,16 @@ pub fn subcommand_process_hg_sync(
             args::init_cachelib(fb, &matches);
             let repo_fut = args::open_repo(fb, &logger, &matches);
             let id = args::get_u64_opt(sub_m, "id");
-            let id = try_boxfuture!(id.ok_or(err_msg("--id is not specified")));
+            let id = try_boxfuture!(id.ok_or(Error::msg("--id is not specified")));
             if id == 0 {
-                return future::err(err_msg("--id has to be greater than 0"))
+                return future::err(Error::msg("--id has to be greater than 0"))
                     .from_err()
                     .boxify();
             }
 
             let output_file = try_boxfuture!(sub_m
                 .value_of("output-file")
-                .ok_or(err_msg("--output-file is not specified"))
+                .ok_or(Error::msg("--output-file is not specified"))
                 .map(std::path::PathBuf::from));
 
             bookmarks
@@ -337,16 +337,16 @@ pub fn subcommand_process_hg_sync(
                         .map_err(|(err, _)| err)
                         .and_then(move |maybe_log_entry| {
                             let log_entry = try_boxfuture!(
-                                maybe_log_entry.ok_or(err_msg("no log entries found"))
+                                maybe_log_entry.ok_or(Error::msg("no log entries found"))
                             );
                             if log_entry.id != id as i64 {
-                                return future::err(err_msg("no entry with specified id found"))
+                                return future::err(Error::msg("no entry with specified id found"))
                                     .boxify();
                             }
                             let bundle_replay_data = try_boxfuture!(log_entry
                                 .reason
                                 .get_bundle_replay_data()
-                                .ok_or(err_msg("no bundle found")));
+                                .ok_or(Error::msg("no bundle found")));
                             let bundle_handle = bundle_replay_data.bundle_handle.clone();
 
                             repo_fut

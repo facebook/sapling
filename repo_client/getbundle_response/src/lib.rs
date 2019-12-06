@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
-use failure_ext::err_msg;
+use failure_ext::bail;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
 use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};
@@ -38,7 +38,7 @@ pub fn create_getbundle_response(
     phases_hint: Option<Arc<dyn Phases>>,
 ) -> Result<Vec<PartEncodeBuilder>> {
     if common.is_empty() {
-        return Err(err_msg("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead"));
+        bail!("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead");
     }
 
     let changesets_buffer_size = 1000; // TODO(stash): make it configurable

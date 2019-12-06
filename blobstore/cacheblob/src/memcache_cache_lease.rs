@@ -8,7 +8,7 @@
 
 use std::time::Duration;
 
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{future::Either, Future, IntoFuture};
@@ -108,7 +108,7 @@ impl MemcacheOps {
     ) -> Result<Self, Error> {
         let hostname = FbWhoAmI::new()?
             .get_name()
-            .ok_or(err_msg("No hostname in fbwhoami"))?
+            .ok_or(Error::msg("No hostname in fbwhoami"))?
             .to_string();
 
         let blob_key = format!(

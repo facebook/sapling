@@ -8,7 +8,7 @@
 
 #![deny(warnings)]
 
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use futures::future::{err, ok};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -184,7 +184,7 @@ impl RepoReadWriteFetcher {
             Some(status) => status
                 .set_state(&self.repo_name, &state, &reason)
                 .left_future(),
-            None => err(err_msg("db name is not specified")).right_future(),
+            None => err(Error::msg("db name is not specified")).right_future(),
         }
     }
 

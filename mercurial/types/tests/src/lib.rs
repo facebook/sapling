@@ -10,7 +10,7 @@
 #![feature(never_type)]
 
 use bytes::Bytes;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use mercurial_types::{
     blobs::{filenode_lookup::FileNodeIdPointer, File, LFSContent, META_MARKER, META_SZ},
     nodehash::{HgChangesetId, HgNodeHash},
@@ -401,15 +401,15 @@ fn test_hashes_are_unique() -> Result<(), Error> {
             for p2 in [Some(THREES_FNID), Some(FOURS_FNID), None].iter() {
                 let path1 = RepoPath::file("path")?
                     .into_mpath()
-                    .ok_or(err_msg("path1"))?;
+                    .ok_or(Error::msg("path1"))?;
 
                 let path2 = RepoPath::file("path/2")?
                     .into_mpath()
-                    .ok_or(err_msg("path2"))?;
+                    .ok_or(Error::msg("path2"))?;
 
                 let path3 = RepoPath::file("path2")?
                     .into_mpath()
-                    .ok_or(err_msg("path3"))?;
+                    .ok_or(Error::msg("path3"))?;
 
                 for copy_path in [path1, path2, path3].iter() {
                     for copy_parent in [ONES_FNID, TWOS_FNID, THREES_FNID].iter() {

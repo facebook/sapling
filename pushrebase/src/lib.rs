@@ -1326,7 +1326,7 @@ mod tests {
 
     use super::*;
     use cmdlib::helpers::create_runtime;
-    use failure_ext::err_msg;
+    use failure_ext::format_err;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
@@ -2293,16 +2293,16 @@ mod tests {
     ) -> impl Future<Item = usize, Error = Error> {
         let ancestor = repo
             .get_bonsai_from_hg(ctx.clone(), ancestor)
-            .and_then(|val| val.ok_or(err_msg("ancestor not found")));
+            .and_then(|val| val.ok_or(Error::msg("ancestor not found")));
 
         let descendant = repo
             .get_bookmark(ctx.clone(), &descendant)
-            .and_then(|val| val.ok_or(err_msg("bookmark not found")));
+            .and_then(|val| val.ok_or(Error::msg("bookmark not found")));
         let descendant = descendant.and_then({
             cloned!(ctx, repo);
             move |descendant| {
                 repo.get_bonsai_from_hg(ctx.clone(), descendant)
-                    .and_then(|bonsai| bonsai.ok_or(err_msg("bonsai not found")))
+                    .and_then(|bonsai| bonsai.ok_or(Error::msg("bonsai not found")))
             }
         });
 
@@ -2365,7 +2365,7 @@ mod tests {
                         hashset![hg_cs],
                         None,
                     )
-                    .map_err(|_| err_msg("error while pushrebasing")),
+                    .map_err(|_| Error::msg("error while pushrebasing")),
                 );
                 futs.push(fut);
             }
@@ -2483,7 +2483,7 @@ mod tests {
                         hashset![hg_cs],
                         None,
                     )
-                    .map_err(|err| err_msg(format!("error while pushrebasing {:?}", err))),
+                    .map_err(|err| format_err!("error while pushrebasing {:?}", err)),
                 );
                 futs.push(fut);
             }

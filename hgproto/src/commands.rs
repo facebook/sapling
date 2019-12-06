@@ -17,7 +17,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use bytes::{Buf, Bytes, BytesMut};
-use failure_ext::{err_msg, Error, FutureFailureErrorExt, Result};
+use failure_ext::{bail, Error, FutureFailureErrorExt, Result};
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
@@ -340,11 +340,11 @@ impl Decoder for GetfilesArgDecoder {
             Ok(Some(None))
         } else {
             if buf.len() < HASH_SIZE {
-                Err(err_msg("Expected node hash"))
+                bail!("Expected node hash")
             } else {
                 let nodehashbytes = buf.split_to(HASH_SIZE);
                 if buf.is_empty() {
-                    Err(err_msg("Expected non-empty file"))
+                    bail!("Expected non-empty file")
                 } else {
                     let nodehashstr = String::from_utf8(nodehashbytes.to_vec())?;
                     let nodehash = HgNodeHash::from_str(&nodehashstr)?;
@@ -383,7 +383,7 @@ where
                 .and_then(|(maybe_item, instream)| match maybe_item {
                     None => {
                         // None here means we hit EOF, but that shouldn't happen
-                        Err(Err((err_msg("unexpected EOF"), instream)))
+                        Err(Err((Error::msg("unexpected EOF"), instream)))
                             .into_future()
                             .boxify()
                     }
@@ -410,10 +410,12 @@ where
     let try_send_instream =
         |wrapped_send: &mut Option<oneshot::Sender<_>>, instream: BytesStream<S>| -> Result<()> {
             let send = mem::replace(wrapped_send, None);
-            let send = send.ok_or(err_msg("internal error: tried to send input stream twice"))?;
+            let send = send.ok_or(Error::msg(
+                "internal error: tried to send input stream twice",
+            ))?;
             match send.send(instream) {
                 Ok(_) => Ok(()), // Finished
-                Err(_) => Err(err_msg("internal error while sending input stream back")),
+                Err(_) => bail!("internal error while sending input stream back"),
             }
         };
 

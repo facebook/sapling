@@ -10,7 +10,7 @@
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
 use mononoke_types::{
@@ -142,7 +142,7 @@ impl GenManifest {
         }
 
         match parents.into_iter().next() {
-            None => future::err(err_msg("empty changes iterator")).left_future(),
+            None => future::err(Error::msg("empty changes iterator")).left_future(),
             Some(csid) => store_changes
                 .for_each(|_| future::ok(()))
                 .and_then(move |_| save_bonsai_changesets(changesets, ctx, repo))

@@ -16,7 +16,7 @@ use std::time::Duration;
 use clap::{value_t, Arg};
 use cloned::cloned;
 use cmdlib::args;
-use failure_ext::{err_msg, Error, ResultExt};
+use failure_ext::{Error, ResultExt};
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
@@ -250,7 +250,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     runtime
         .shutdown_on_idle()
         .wait()
-        .map_err(|_| err_msg("Failed to shutdown runtime!"))?;
+        .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
 
     info!(logger, "Exiting...");
     Ok(())

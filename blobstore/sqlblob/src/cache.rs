@@ -10,7 +10,7 @@ use std::mem::transmute;
 use std::sync::Arc;
 
 use cloned::cloned;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{bail, Error, Result};
 use fbthrift::compact_protocol;
 use futures::prelude::*;
 
@@ -109,9 +109,7 @@ impl CacheTranslator for DataCacheTranslator {
         match compact_protocol::deserialize(bytes.into_bytes()) {
             Ok(DataCacheEntry::in_chunk(InChunk::num_of_chunks(num_of_chunks))) => {
                 match i32_to_non_zero_usize(num_of_chunks) {
-                    None => Err(err_msg(
-                        "DataCacheEntry::in_chunk contains an invalid num of chunks",
-                    )),
+                    None => bail!("DataCacheEntry::in_chunk contains an invalid num of chunks"),
                     Some(num_of_chunks) => Ok(DataEntry::InChunk(num_of_chunks)),
                 }
             }
@@ -123,7 +121,7 @@ impl CacheTranslator for DataCacheTranslator {
             Err(_)
             | Ok(DataCacheEntry::UnknownField(_))
             | Ok(DataCacheEntry::in_chunk(InChunk::UnknownField(_))) => {
-                Err(err_msg("Failed to deserialize DataCacheEntry"))
+                bail!("Failed to deserialize DataCacheEntry")
             }
         }
     }

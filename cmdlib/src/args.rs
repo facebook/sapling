@@ -10,7 +10,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{bail, format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -353,8 +353,8 @@ fn get_repo_id_and_name_from_values<'a>(
     let configs = read_configs(matches)?;
 
     match (repo_name, repo_id) {
-        (Some(_), Some(_)) => Err(err_msg("both repo-name and repo-id parameters set")),
-        (None, None) => Err(err_msg("neither repo-name nor repo-id parameter set")),
+        (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
+        (None, None) => bail!("neither repo-name nor repo-id parameter set"),
         (None, Some(repo_id)) => {
             let repo_id = RepositoryId::from_str(repo_id)?;
             let mut repo_config: Vec<_> = configs
@@ -363,12 +363,12 @@ fn get_repo_id_and_name_from_values<'a>(
                 .filter(|(_, repo_config)| repo_config.repoid == repo_id)
                 .collect();
             if repo_config.is_empty() {
-                Err(err_msg(format!("unknown config for repo-id {:?}", repo_id)))
+                Err(format_err!("unknown config for repo-id {:?}", repo_id))
             } else if repo_config.len() > 1 {
-                Err(err_msg(format!(
+                Err(format_err!(
                     "multiple configs defined for repo-id {:?}",
                     repo_id
-                )))
+                ))
             } else {
                 let (repo_name, repo_config) = repo_config.pop().unwrap();
                 Ok((repo_config.repoid, repo_name))
@@ -381,12 +381,12 @@ fn get_repo_id_and_name_from_values<'a>(
                 .filter(|(name, _)| name == repo_name)
                 .collect();
             if repo_config.is_empty() {
-                Err(err_msg(format!("unknown repo-name {:?}", repo_name)))
+                Err(format_err!("unknown repo-name {:?}", repo_name))
             } else if repo_config.len() > 1 {
-                Err(err_msg(format!(
+                Err(format_err!(
                     "multiple configs defined for repo-name {:?}",
                     repo_name
-                )))
+                ))
             } else {
                 let (repo_name, repo_config) = repo_config.pop().unwrap();
                 Ok((repo_config.repoid, repo_name))
@@ -677,14 +677,14 @@ pub fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let config_path = matches
         .value_of("mononoke-config-path")
-        .ok_or(err_msg("mononoke-config-path must be specified"))?;
+        .ok_or(Error::msg("mononoke-config-path must be specified"))?;
     RepoConfigs::read_configs(config_path)
 }
 
 pub fn read_common_config<'a>(matches: &ArgMatches<'a>) -> Result<CommonConfig> {
     let config_path = matches
         .value_of("mononoke-config-path")
-        .ok_or(err_msg("mononoke-config-path must be specified"))?;
+        .ok_or(Error::msg("mononoke-config-path must be specified"))?;
 
     let config_path = Path::new(config_path);
     let common_dir = config_path.join("common");
@@ -703,7 +703,7 @@ pub fn read_storage_configs<'a>(
 ) -> Result<HashMap<String, StorageConfig>> {
     let config_path = matches
         .value_of("mononoke-config-path")
-        .ok_or(err_msg("mononoke-config-path must be specified"))?;
+        .ok_or(Error::msg("mononoke-config-path must be specified"))?;
     RepoConfigs::read_storage_configs(config_path)
 }
 
@@ -719,7 +719,7 @@ pub fn get_config_by_repoid<'a>(
     let configs = read_configs(matches)?;
     configs
         .get_repo_config(repo_id)
-        .ok_or_else(|| err_msg(format!("unknown repoid {:?}", repo_id)))
+        .ok_or_else(|| format_err!("unknown repoid {:?}", repo_id))
         .map(|(name, config)| (name.clone(), config.clone()))
 }
 

@@ -14,7 +14,7 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::{bail, err_msg, format_err, Error, Result};
+use failure_ext::{bail, format_err, Error, Result};
 use futures::{
     future::{self, loop_fn, Loop},
     stream, Future, IntoFuture, Stream,
@@ -453,7 +453,7 @@ impl Bookmarks for SqlBookmarks {
                             None => "",
                         };
                         let msg = format!("Failed to query further bookmark log entries{}", extra);
-                        future::err(err_msg(msg))
+                        future::err(Error::msg(msg))
                     }
                 }
             })
@@ -623,7 +623,7 @@ impl SqlBookmarks {
                 // Because of that we have to always do force set.
                 try_boxfuture!(book_txn.force_set(&bookmark, to_cs_id, reason));
             }
-            (None, None) => return future::err(err_msg("unsupported bookmark move")).boxify(),
+            (None, None) => return future::err(Error::msg("unsupported bookmark move")).boxify(),
         };
 
         book_txn.update_transaction(sql_txn)
@@ -1273,7 +1273,7 @@ fn get_bundle_replay_data(
             Ok(Some(replay_data))
         }
         (None, None) => Ok(None),
-        _ => Err(err_msg("inconsistent replay data")),
+        _ => bail!("inconsistent replay data"),
     }
 }
 
@@ -1296,7 +1296,7 @@ mod test {
 
         let fn_to_retry = move |attempt| {
             if attempt < 3 {
-                future::err(BookmarkTransactionError::RetryableError(err_msg(
+                future::err(BookmarkTransactionError::RetryableError(Error::msg(
                     "fails on initial attempts",
                 )))
             } else {

@@ -23,7 +23,7 @@ use blobrepo_factory;
 use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{bail, Error};
 use fixtures::linear;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
@@ -570,7 +570,7 @@ fn sync_remap_failure(fb: FacebookInit) {
     let fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
-        mover: Arc::new(move |_path: &MPath| Err(err_msg("This always fails"))),
+        mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
         bookmark_renamer: Arc::new(identity_renamer),
     };
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
@@ -586,7 +586,7 @@ fn sync_remap_failure(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(
             move |path: &MPath| match path.basename().to_bytes().as_ref() {
-                b"1" => Err(err_msg("This only fails if the file is named '1'")),
+                b"1" => bail!("This only fails if the file is named '1'"),
                 _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
             },
         ),

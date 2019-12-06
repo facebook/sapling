@@ -16,7 +16,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;
@@ -66,7 +66,7 @@ impl<T> Tickable<T> {
         queue.push_back(send);
         recv.map_err(Error::from).and_then(|error| match error {
             None => Ok(()),
-            Some(error) => Err(err_msg(error)),
+            Some(error) => bail!(error),
         })
     }
 }

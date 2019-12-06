@@ -25,7 +25,7 @@ use apiserver_thrift::MononokeRevision::UnknownField;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::{generate_session_id, CoreContext, SessionContainer};
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
@@ -164,7 +164,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                         .concat2()
                         .map(|bytes| bytes.to_vec())
                         .left_future(),
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     )))
                     .into_future()
@@ -196,7 +196,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::GetChangeset { changeset } => {
                         Ok(MononokeChangeset::from(changeset))
                     }
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -232,7 +232,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::GetBranches { branches } => {
                         Ok(MononokeBranches { branches })
                     }
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -275,7 +275,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                             .map(|commit| MononokeChangeset::from(commit))
                             .collect(),
                     }),
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -320,7 +320,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::GetLastCommitOnPath { commit } => {
                         Ok(MononokeChangeset::from(commit))
                     }
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -360,7 +360,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::ListDirectory { files } => Ok(MononokeDirectory {
                         files: files.into_iter().map(|f| f.into()).collect(),
                     }),
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -404,7 +404,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                             entries: files.into_iter().map(|f| f.into()).collect(),
                         })
                     }
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -439,7 +439,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                 params,
                 |resp: MononokeRepoResponse| match resp {
                     MononokeRepoResponse::IsAncestor { answer } => Ok(answer),
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },
@@ -466,7 +466,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                         .map(|bytes| bytes.to_vec())
                         .map(|content| MononokeBlob { content })
                         .left_future(),
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     )))
                     .into_future()
@@ -497,7 +497,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::GetTree { files } => Ok(MononokeDirectory {
                         files: files.into_iter().map(|f| f.into()).collect(),
                     }),
-                    _ => Err(ErrorKind::InternalError(err_msg(
+                    _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
                     ))),
                 },

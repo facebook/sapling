@@ -13,7 +13,7 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
-use failure_ext::{bail, err_msg};
+use failure_ext::{bail, format_err, Error};
 use slog::Logger;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
@@ -289,7 +289,7 @@ impl CgUnpacker {
             CgVersion::Cg3Version => {
                 let bits = buf.drain_u16();
                 let flags = RevFlags::from_bits(bits)
-                    .ok_or(err_msg(format!("unknown revlog flags: {}", bits)))?;
+                    .ok_or(format_err!("unknown revlog flags: {}", bits))?;
                 Some(flags)
             }
         };

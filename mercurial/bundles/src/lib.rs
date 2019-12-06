@@ -34,7 +34,7 @@ pub use crate::errors::*;
 mod utils;
 
 use bytes::Bytes;
-use failure_ext::err_msg;
+use failure_ext::bail;
 use futures::sync::{mpsc, oneshot};
 use futures::{Future, Stream};
 use futures_ext::SinkToAsyncWrite;
@@ -151,8 +151,6 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
         .chain(result_receiver.into_stream().map_err(|_err| ()))
         .then(|entry| match entry {
             Ok(res) => res,
-            Err(()) => Err(err_msg(
-                "error while receiving gettreepack response from the channel",
-            )),
+            Err(()) => bail!("error while receiving gettreepack response from the channel"),
         })
 }

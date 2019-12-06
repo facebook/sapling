@@ -100,7 +100,7 @@ fn prepare_obsmarker_chunk(
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure_ext::err_msg;
+    use failure_ext::Error;
     use futures::{stream, Async, Poll};
     use futures_ext::StreamExt;
     use mercurial_types_mocks::nodehash;
@@ -270,7 +270,7 @@ mod test {
         if let Ok(Async::Ready(Some(chunk))) = wrapped {
             return Ok(chunk);
         }
-        Err(err_msg("no chunk"))
+        Err(Error::msg("no chunk"))
     }
 
     fn extract_vec(wrapped: Poll<Option<Chunk>, Error>) -> Result<Vec<u8>> {

@@ -12,7 +12,7 @@ use crate::{
 };
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
@@ -172,7 +172,7 @@ fn derive_test_manifest(
                 }
             },
             move |leaf_info| match leaf_info.leaf {
-                None => future::err(err_msg("leaf only conflict")).left_future(),
+                None => future::err(Error::msg("leaf only conflict")).left_future(),
                 Some(leaf) => leaf
                     .store(ctx.clone(), &blobstore)
                     .map(|id| ((), id))

@@ -15,7 +15,7 @@ use clap::{App, Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime, monitoring};
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::future::{loop_fn, Loop};
@@ -494,7 +494,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             } else {
                 let blobstore = Arc::new(repo.get_blobstore());
                 repo.get_bookmark(ctx.clone(), &bookmark)
-                    .and_then(move |changeset| changeset.ok_or(err_msg("cannot load bookmark")))
+                    .and_then(move |changeset| changeset.ok_or(Error::msg("cannot load bookmark")))
                     .and_then(move |changeset| {
                         loop_fn::<_, (), _, _>(
                             (Pass::FirstPass(changeset), RepoStatistics::default()),
@@ -609,7 +609,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                     move |(cur_changeset, statistics)| {
                                         repo.get_bookmark(ctx.clone(), &bookmark)
                                             .and_then(move |new_changeset| {
-                                                new_changeset.ok_or(err_msg("cannot load bookmark"))
+                                                new_changeset
+                                                    .ok_or(Error::msg("cannot load bookmark"))
                                             })
                                             .and_then(move |new_changeset| {
                                                 future::ok(Loop::Continue((

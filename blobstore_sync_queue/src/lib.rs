@@ -10,7 +10,7 @@
 
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::sync::{mpsc, oneshot};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
@@ -215,7 +215,7 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
                                     let s = format!("failed to insert {}", err);
                                     for sender in senders {
                                         // Ignoring the error, because receiver might have gone
-                                        let _ = sender.send(Err(err_msg(s.clone())));
+                                        let _ = sender.send(Err(Error::msg(s.clone())));
                                     }
                                 }
                             }

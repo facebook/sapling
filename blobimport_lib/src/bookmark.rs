@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use ascii::AsciiString;
 use cloned::cloned;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::{prelude::*, stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, Logger};
@@ -100,9 +100,9 @@ pub fn upload_bookmarks(
                             move |(key, cs_id, exists)| {
                                 if exists {
                                     blobrepo.get_bonsai_from_hg(ctx, cs_id)
-                                        .and_then(move |bcs_id| bcs_id.ok_or(err_msg(
-                                            format!("failed to resolve hg to bonsai: {}", cs_id),
-                                        )))
+                                        .and_then(move |bcs_id| bcs_id.ok_or(
+                                            format_err!("failed to resolve hg to bonsai: {}", cs_id),
+                                        ))
                                         .map(move |bcs_id| Some((key, bcs_id)))
                                         .left_future()
                                 } else {

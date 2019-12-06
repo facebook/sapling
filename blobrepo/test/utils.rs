@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 use ascii::AsAsciiStr;
 use bytes::Bytes;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::executor::spawn;
 use futures::future::Future;
@@ -264,6 +264,6 @@ where
 }
 
 pub fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
-    let bad_mpath = err_msg("RepoPath did not convert to MPath");
+    let bad_mpath = Error::msg("RepoPath did not convert to MPath");
     path.into_mpath().ok_or(bad_mpath)
 }

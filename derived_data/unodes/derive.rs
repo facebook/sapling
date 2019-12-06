@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use futures::{
     future,
     sync::{mpsc, oneshot},
@@ -101,7 +101,7 @@ pub(crate) fn derive_unode_manifest(
         });
 
         tokio::spawn(f);
-        let blobstore_put_stream = receiver.map_err(|()| err_msg("receiver failed"));
+        let blobstore_put_stream = receiver.map_err(|()| Error::msg("receiver failed"));
 
         blobstore_put_stream
             .buffered(1024)
@@ -156,7 +156,7 @@ fn create_unode_manifest(
         .unbounded_send(f)
         .into_future()
         .map(move |()| ((), mf_unode_id))
-        .map_err(|err| err_msg(format!("failed to send manifest future {}", err)))
+        .map_err(|err| format_err!("failed to send manifest future {}", err))
 }
 
 fn create_unode_file(
@@ -191,7 +191,7 @@ fn create_unode_file(
             .unbounded_send(f)
             .into_future()
             .map(move |()| file_unode_id)
-            .map_err(|err| err_msg(format!("failed to send manifest future {}", err)))
+            .map_err(|err| format_err!("failed to send manifest future {}", err))
             .boxify()
     }
 

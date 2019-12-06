@@ -8,7 +8,7 @@
 
 use changesets::Changesets;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
@@ -60,9 +60,7 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
     ) -> BoxFuture<Generation, Error> {
         self.changesets
             .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .and_then(move |maybe_cs| {
-                maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id)))
-            })
+            .and_then(move |maybe_cs| maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id)))
             .map(|cs| Generation::new(cs.gen))
             .boxify()
     }
@@ -74,9 +72,7 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
         self.changesets
             .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .and_then(move |maybe_cs| {
-                maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id)))
-            })
+            .and_then(move |maybe_cs| maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id)))
             .map(|cs| cs.parents)
             .boxify()
     }

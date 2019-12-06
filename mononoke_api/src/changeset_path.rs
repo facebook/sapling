@@ -12,7 +12,7 @@ use std::pin::Pin;
 use blame::fetch_blame;
 use bytes::Bytes;
 use cloned::cloned;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use filestore::FetchKey;
 use futures::Future as FutureLegacy;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
@@ -239,7 +239,7 @@ pub async fn unified_diff(
             Some(path) => {
                 if let Some(file_type) = path.file_type().await? {
                     let file = path.file().await?.ok_or_else(|| {
-                        MononokeError::from(err_msg("assertion error: file should exist"))
+                        MononokeError::from(Error::msg("assertion error: file should exist"))
                     })?;
                     let contents = file.content().await.compat().try_concat().await?;
                     let file_type = match file_type {

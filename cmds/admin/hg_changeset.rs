@@ -11,7 +11,7 @@ use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
@@ -90,8 +90,8 @@ pub fn subcommand_hg_changeset(
                         })
                         .and_then(|(start_cs_opt, stop_cs_opt)| {
                             (
-                                start_cs_opt.ok_or(err_msg("failed to resolve changeset")),
-                                stop_cs_opt.ok_or(err_msg("failed to resovle changeset")),
+                                start_cs_opt.ok_or(Error::msg("failed to resolve changeset")),
+                                stop_cs_opt.ok_or(Error::msg("failed to resovle changeset")),
                             )
                         })
                         .and_then({

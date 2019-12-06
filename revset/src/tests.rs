@@ -10,7 +10,7 @@ use crate::BonsaiNodeStream;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, Generation};
@@ -37,7 +37,7 @@ impl ChangesetFetcher for TestChangesetFetcher {
     ) -> BoxFuture<Generation, Error> {
         self.repo
             .get_generation_number_by_bonsai(ctx, cs_id)
-            .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
+            .and_then(move |genopt| genopt.ok_or_else(|| format_err!("{} not found", cs_id)))
             .boxify()
     }
 

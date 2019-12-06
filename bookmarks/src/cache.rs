@@ -11,7 +11,7 @@ use crate::{
     BookmarkUpdateReason, Bookmarks, Freshness, Transaction,
 };
 use context::CoreContext;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{Error, Result};
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
@@ -153,7 +153,7 @@ impl CachedBookmarks {
         cache
             .current
             .clone()
-            .map_err(|err| err_msg(err)) // unlift shared error
+            .map_err(Error::msg) // unlift shared error
             .map(move |bookmarks| {
                 let result: Vec<_> = bookmarks
                     .range(range)
@@ -856,7 +856,7 @@ mod tests {
         assert_eq!(freshness, Freshness::MostRecent);
         assert_eq!(request, Request::Publishing);
         responder
-            .send(Err(err_msg("request to master failed")))
+            .send(Err(Error::msg("request to master failed")))
             .unwrap();
 
         rt.block_on(res).expect_err("cache did not bubble up error");

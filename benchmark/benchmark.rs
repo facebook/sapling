@@ -17,7 +17,7 @@ use clap::{App, Arg};
 use cmdlib::args;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{err_msg, format_err, Error, Result};
+use failure_ext::{bail, format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -72,7 +72,7 @@ fn run(
 
 fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Result<DeriveFn> {
     match derive_type {
-        None => Err(err_msg("required `type` argument is missing")),
+        None => bail!("required `type` argument is missing"),
         Some(HG_CHANGESET_TYPE) => {
             let derive_hg_changeset = move |csid| {
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), csid)

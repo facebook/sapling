@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use failure_ext::{bail, chain::*, err_msg};
+use failure_ext::{bail, chain::*, Error};
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
@@ -94,7 +94,7 @@ impl BonsaiChangeset {
                 author: tc.author,
                 author_date: DateTime::from_thrift(
                     tc.author_date
-                        .ok_or_else(|| err_msg("missing author date field"))?,
+                        .ok_or_else(|| Error::msg("missing author date field"))?,
                 )?,
                 committer: tc.committer,
                 committer_date: match tc.committer_date {

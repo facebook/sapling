@@ -14,7 +14,7 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::{BonsaiDerived, RegenerateMapping};
-use failure_ext::{err_msg, Error};
+use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
@@ -245,7 +245,7 @@ fn single_verify(
                 for path in unode_paths.difference(&hg_paths) {
                     println!("- {}", path);
                 }
-                Err(err_msg("failed"))
+                bail!("failed")
             }
         })
 }

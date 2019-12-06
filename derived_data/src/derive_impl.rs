@@ -441,7 +441,7 @@ mod test {
     use blobrepo::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
-    use failure_ext::err_msg;
+    use failure_ext::Error;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
@@ -626,7 +626,7 @@ mod test {
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime
             .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_csid))?
-            .ok_or(err_msg("known hg does not have bonsai csid"))?;
+            .ok_or(Error::msg("known hg does not have bonsai csid"))?;
 
         let lease = repo.get_derived_data_lease_ops();
         let lease_key = Arc::new(format!(
@@ -667,7 +667,7 @@ mod test {
         // release lease
         runtime
             .block_on(lease.release_lease(&lease_key, false))
-            .map_err(|_| err_msg("failed to release a lease"))?;
+            .map_err(|_| Error::msg("failed to release a lease"))?;
 
         runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
         let result = match output.with(|output| output.pop()) {
@@ -696,7 +696,7 @@ mod test {
         );
         runtime
             .block_on(lease.release_lease(&lease_key, false))
-            .map_err(|_| err_msg("failed to release a lease"))?;
+            .map_err(|_| Error::msg("failed to release a lease"))?;
 
         Ok(())
     }
@@ -729,7 +729,7 @@ mod test {
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime
             .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_csid))?
-            .ok_or(err_msg("known hg does not have bonsai csid"))?;
+            .ok_or(Error::msg("known hg does not have bonsai csid"))?;
 
         let lease = repo.get_derived_data_lease_ops();
         let lease_key = Arc::new(format!(

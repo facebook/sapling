@@ -11,7 +11,7 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure_ext::{chain::*, err_msg};
+use failure_ext::{chain::*, Error};
 use fbthrift::compact_protocol;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
@@ -64,7 +64,7 @@ impl HgManifestEnvelope {
                     computed_node_id: HgNodeHash::from_thrift(fe.computed_node_id)?,
                     contents: Bytes::from(
                         fe.contents
-                            .ok_or_else(|| err_msg("missing contents field"))?,
+                            .ok_or_else(|| Error::msg("missing contents field"))?,
                     ),
                 },
             })

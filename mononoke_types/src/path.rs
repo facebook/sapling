@@ -19,7 +19,7 @@ use std::slice::Iter;
 use abomonation_derive::Abomonation;
 use asyncmemo::Weight;
 use bytes::Bytes;
-use failure_ext::{bail, chain::*, err_msg};
+use failure_ext::{bail, chain::*};
 use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
@@ -381,7 +381,7 @@ impl MPath {
         let elements = elements?;
 
         if elements.is_empty() {
-            Err(err_msg("Unexpected empty path in thrift::MPath"))
+            bail!("Unexpected empty path in thrift::MPath")
         } else {
             Ok(MPath { elements })
         }
@@ -786,7 +786,7 @@ impl TryFrom<Vec<MPathElement>> for MPath {
 
     fn try_from(elements: Vec<MPathElement>) -> Result<Self> {
         if elements.is_empty() {
-            return Err(err_msg("mpath can not be empty"));
+            bail!("mpath can not be empty");
         }
         Ok(MPath { elements })
     }

@@ -9,7 +9,7 @@
 use crate::fetch_blame;
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::Future;
 use maplit::{btreemap, hashmap};
@@ -240,16 +240,16 @@ fn annotate(
     let mut ranges = blame.ranges().iter();
     let mut range = ranges
         .next()
-        .ok_or_else(|| err_msg("empty blame for non empty content"))?;
+        .ok_or_else(|| Error::msg("empty blame for non empty content"))?;
     for (index, line) in content.lines().enumerate() {
         if index as u32 >= range.offset + range.length {
             range = ranges
                 .next()
-                .ok_or_else(|| err_msg("not enough ranges in a blame"))?;
+                .ok_or_else(|| Error::msg("not enough ranges in a blame"))?;
         }
         let name = names
             .get(&range.csid)
-            .ok_or_else(|| err_msg("unresolved csid"))?;
+            .ok_or_else(|| Error::msg("unresolved csid"))?;
         result.push_str(name);
         result.push_str(&": ");
         result.push_str(line);

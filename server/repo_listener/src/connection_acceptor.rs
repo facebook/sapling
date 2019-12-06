@@ -20,7 +20,7 @@ use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
 use cloned::cloned;
 use configerator::{ConfigLoader, ConfigSource};
-use failure_ext::{err_msg, SlogKVError};
+use failure_ext::{bail, format_err, Error, SlogKVError};
 use fbinit::FacebookInit;
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
@@ -93,11 +93,7 @@ pub fn connection_acceptor(
     };
 
     let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(fb, common_config)
-        .map_err(|err| {
-            let e: Error =
-                err_msg(format!("error while creating security checker: {}", err)).into();
-            e
-        }));
+        .map_err(|err| format_err!("error while creating security checker: {}", err)));
 
     let security_checker = Arc::new(security_checker);
 
@@ -288,9 +284,7 @@ impl ConnectionsSecurityChecker {
                 }
                 WhitelistEntry::Tier(tier) => {
                     if tier_aclchecker.is_some() {
-                        return Err(err_msg(
-                            "invalid config: only one aclchecker tier is allowed",
-                        ));
+                        bail!("invalid config: only one aclchecker tier is allowed");
                     }
                     let tier = Identity::with_tier(&tier);
                     let acl_checker = AclChecker::new(fb, &tier)?;
@@ -452,7 +446,7 @@ impl<T> TakeUntilNotSet<T> {
         Self {
             periodic_checker: tokio_timer::Interval::new_interval(Duration::new(1, 0))
                 .map(|_| ())
-                .map_err(|e| err_msg(format!("{}", e)))
+                .map_err(Error::msg)
                 .boxify(),
             input,
             flag,

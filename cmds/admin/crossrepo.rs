@@ -749,7 +749,6 @@ fn get_large_to_small_commit_sync_repos(
 mod test {
     use super::*;
     use bookmark_renaming::BookmarkRenamer;
-    use failure_ext::err_msg;
     use fixtures::{linear, set_bookmark};
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
@@ -784,7 +783,7 @@ mod test {
             .get_bonsai_bookmark(ctx.clone(), &master)
             .compat()
             .await?;
-        let master_val = maybe_master_val.ok_or(err_msg("master not found"))?;
+        let master_val = maybe_master_val.ok_or(Error::msg("master not found"))?;
 
         // Everything is identical - no diff at all
         {
@@ -954,7 +953,7 @@ mod test {
             .compat()
             .await?;
 
-        let master_val = maybe_master_val.ok_or(err_msg("master not found"))?;
+        let master_val = maybe_master_val.ok_or(Error::msg("master not found"))?;
         let changesets =
             AncestorsNodeStream::new(ctx.clone(), &small_repo.get_changeset_fetcher(), master_val)
                 .collect()

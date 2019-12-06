@@ -8,7 +8,7 @@
 
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
@@ -121,7 +121,7 @@ impl FileContentStore for InMemoryFileContentStore {
     ) -> BoxFuture<Option<FileBytes>, Error> {
         self.id_to_text
             .get(&id)
-            .ok_or(err_msg("file not found"))
+            .ok_or(Error::msg("file not found"))
             .map(|c| match c {
                 InMemoryFileText::Present(ref bytes) => Some(bytes.clone()),
                 InMemoryFileText::Elided(_) => None,
@@ -133,7 +133,7 @@ impl FileContentStore for InMemoryFileContentStore {
     fn get_file_size(&self, _ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
         self.id_to_text
             .get(&id)
-            .ok_or(err_msg("file not found"))
+            .ok_or(Error::msg("file not found"))
             .map(|c| match c {
                 InMemoryFileText::Present(ref bytes) => bytes.size() as u64,
                 InMemoryFileText::Elided(size) => *size,

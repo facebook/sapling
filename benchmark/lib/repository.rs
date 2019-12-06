@@ -19,7 +19,7 @@ use cacheblob::{dummy::DummyLease, new_cachelib_blobstore};
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{Error, Result};
 use fbinit::FacebookInit;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use filestore::FilestoreConfig;
@@ -65,8 +65,8 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         ));
         Arc::new(new_cachelib_blobstore(
             delayed,
-            Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(err_msg("no cache pool"))?),
-            Arc::new(cachelib::get_pool("blobstore-presence").ok_or(err_msg("no cache pool"))?),
+            Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::msg("no cache pool"))?),
+            Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::msg("no cache pool"))?),
         ))
     };
 
@@ -81,7 +81,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
             filenodes,
             cachelib::get_volatile_pool("filenodes")
                 .unwrap()
-                .ok_or(err_msg("no cache pool"))?,
+                .ok_or(Error::msg("no cache pool"))?,
             "filenodes",
             "",
         ))
@@ -98,7 +98,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
             changesets,
             cachelib::get_volatile_pool("changesets")
                 .unwrap()
-                .ok_or(err_msg("no cache pool"))?,
+                .ok_or(Error::msg("no cache pool"))?,
         ))
     };
 
@@ -115,7 +115,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
             mapping,
             cachelib::get_volatile_pool("bonsai_hg_mapping")
                 .unwrap()
-                .ok_or(err_msg("no cache pool"))?,
+                .ok_or(Error::msg("no cache pool"))?,
         ))
     };
 

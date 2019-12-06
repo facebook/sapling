@@ -10,7 +10,7 @@ use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{bail, format_err, Error};
 use fbthrift::compact_protocol;
 use futures::prelude::*;
 use futures_ext::FutureExt;
@@ -154,12 +154,12 @@ impl DataSqlStore {
                 Some((DataType::InChunk, value)) => match compact_protocol::deserialize(value) {
                     Ok(InChunk::num_of_chunks(num_of_chunks)) => {
                         match i32_to_non_zero_usize(num_of_chunks) {
-                            None => Err(err_msg("Encoded number of chunks was invalid")),
+                            None => bail!("Encoded number of chunks was invalid"),
                             Some(num_of_chunks) => Ok(Some(DataEntry::InChunk(num_of_chunks))),
                         }
                     }
                     Err(_) | Ok(InChunk::UnknownField(_)) => {
-                        Err(err_msg("Failed to deserialize InChunk data"))
+                        bail!("Failed to deserialize InChunk data")
                     }
                 },
             })

@@ -13,8 +13,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{
-    err_msg, Compat, Error, FutureFailureErrorExt, FutureFailureExt, ResultExt,
-    StreamFailureErrorExt,
+    bail, Compat, Error, FutureFailureErrorExt, FutureFailureExt, ResultExt, StreamFailureErrorExt,
 };
 use futures::{
     future::{self, SharedItem},
@@ -178,7 +177,7 @@ fn upload_entry(
     let path = match path {
         // XXX this shouldn't be possible -- encode this in the type system
         None => {
-            return future::err(err_msg(
+            return future::err(Error::msg(
                 "internal error: joined root path with root manifest",
             ))
             .boxify();
@@ -208,7 +207,7 @@ fn upload_entry(
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
                     upload_fut
                 }
-                (Type::Tree, true) => Err(err_msg("Inconsistent data: externally stored Tree"))
+                (Type::Tree, true) => Err(Error::msg("Inconsistent data: externally stored Tree"))
                     .into_future()
                     .boxify(),
                 (Type::File(ft), false) => {
@@ -322,7 +321,7 @@ impl UploadChangesets {
                         lfs_content,
                     )
                     .boxify(),
-                    None => Err(err_msg("Cannot blobimport LFS without LFS helper"))
+                    None => Err(Error::msg("Cannot blobimport LFS without LFS helper"))
                         .into_future()
                         .boxify(),
                 }
@@ -403,12 +402,12 @@ impl UploadChangesets {
                     let actual: HashSet<_> = parents_from_revlog.into_iter().collect();
                     let expected: HashSet<_> = parent_order.iter().map(|csid| *csid).collect();
                     if actual != expected {
-                        return Err(err_msg(format!(
+                        bail!(
                             "Changeset {} has unexpected parents: actual {:?}\nexpected {:?}",
                             csid,
                             actual,
                             expected
-                        )));
+                        );
                     }
 
                     info!(ctx.logger(), "fixing parent order for {}: {:?}", csid, parent_order);

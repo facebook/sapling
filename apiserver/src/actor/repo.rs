@@ -20,7 +20,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use fastlog::{prefetch_history, FastlogParent, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use futures::{
@@ -712,9 +712,9 @@ impl MononokeRepo {
                 }
             })
             .and_then(move |maybe_sources: Option<_>| {
-                maybe_sources.ok_or(ErrorKind::InternalError(err_msg(format!(
+                maybe_sources.ok_or(ErrorKind::InternalError(format_err!(
                     "couldn't fetch unode batch"
-                ))))
+                )))
             })
             .and_then({
                 cloned!(ctx);

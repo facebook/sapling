@@ -15,7 +15,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, DisplayChain, Result};
+use failure_ext::{bail, format_err, DisplayChain, Error, Result};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},
@@ -303,12 +303,14 @@ fn subcommmand_hg_manifest_verify(
 ) -> Result<()> {
     let hg_csid = sub_m
         .value_of("hg-changeset-id")
-        .ok_or(err_msg("required parameter `hg-changeset-id` is not set"))
+        .ok_or(Error::msg(
+            "required parameter `hg-changeset-id` is not set",
+        ))
         .and_then(HgChangesetId::from_str);
 
     let count: Result<u64> = sub_m
         .value_of("count")
-        .ok_or(err_msg("required parameter `count` is not set"))
+        .ok_or(Error::msg("required parameter `count` is not set"))
         .and_then(|count_str| Ok(count_str.parse()?));
 
     args::init_cachelib(ctx.fb, &matches);
@@ -323,7 +325,7 @@ fn subcommmand_hg_manifest_verify(
             move |(repo, hg_csid, count)| {
                 repo.get_bonsai_from_hg(ctx, hg_csid)
                     .and_then(move |csid| match csid {
-                        None => Err(err_msg("failed to fetch bonsai changeset")),
+                        None => bail!("failed to fetch bonsai changeset"),
                         Some(csid) => Ok((repo, csid, count)),
                     })
             }

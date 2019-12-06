@@ -11,7 +11,7 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure_ext::{chain::*, err_msg};
+use failure_ext::{chain::*, Error};
 use fbthrift::compact_protocol;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
@@ -74,13 +74,13 @@ impl HgFileEnvelope {
                     p2: HgNodeHash::from_thrift_opt(fe.p2)?.map(HgFileNodeId::new),
                     content_id: ContentId::from_thrift(
                         fe.content_id
-                            .ok_or_else(|| err_msg("missing content id field"))?,
+                            .ok_or_else(|| Error::msg("missing content id field"))?,
                     )?,
                     content_size: fe.content_size as u64,
                     // metadata will always be stored, even if it's length 0
                     metadata: Bytes::from(
                         fe.metadata
-                            .ok_or_else(|| err_msg("missing metadata field"))?,
+                            .ok_or_else(|| Error::msg("missing metadata field"))?,
                     ),
                 },
             })

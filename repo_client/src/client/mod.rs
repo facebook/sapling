@@ -16,7 +16,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use configerator::ConfigLoader;
 use context::{CoreContext, LoggingContainer, Metric, PerfCounterType, SessionContainer};
-use failure_ext::{err_msg, format_err};
+use failure_ext::{format_err, Error};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
@@ -150,14 +150,14 @@ lazy_static! {
 fn process_timeout_error(err: TimeoutError<Error>) -> Error {
     match err.into_inner() {
         Some(err) => err,
-        None => err_msg("timeout"),
+        None => Error::msg("timeout"),
     }
 }
 
 fn process_stream_timeout_error(err: StreamTimeoutError) -> Error {
     match err {
         StreamTimeoutError::Error(err) => err,
-        StreamTimeoutError::Timeout => err_msg("timeout"),
+        StreamTimeoutError::Timeout => Error::msg("timeout"),
     }
 }
 
@@ -1682,7 +1682,7 @@ pub fn gettreepack_entries(
 ) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
     if !params.directories.is_empty() {
         // This param is not used by core hg, don't worry about implementing it now
-        return stream::once(Err(err_msg("directories param is not supported"))).boxify();
+        return stream::once(Err(Error::msg("directories param is not supported"))).boxify();
     }
 
     let GettreepackArgs {

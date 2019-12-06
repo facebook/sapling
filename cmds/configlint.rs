@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 
 use cmdlib::args;
 
-use failure_ext::{err_msg, Result};
+use failure_ext::{bail, Result};
 
 fn main() -> Result<()> {
     let matches = args::MononokeApp::new("Lint Mononoke config files")
@@ -88,7 +88,7 @@ fn main() -> Result<()> {
     }
 
     if bad {
-        Err(err_msg("Anomaly detected"))
+        bail!("Anomaly detected")
     } else {
         Ok(())
     }

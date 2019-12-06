@@ -10,7 +10,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Result};
+use failure_ext::{bail, format_err, Result};
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};
@@ -138,7 +138,7 @@ pub fn execute_command(
                 filestore::get_metadata(&blobstore, ctx.clone(), &key)
                     .and_then(|metadata| match metadata {
                         Some(metadata) => Ok(metadata),
-                        None => Err(err_msg("Content not found!")),
+                        None => bail!("Content not found!"),
                     })
                     .and_then({
                         cloned!(blobstore, ctx);

@@ -12,7 +12,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
@@ -213,7 +213,7 @@ pub fn fetch_file_full_content(
                 .and_then(move |result| match result {
                     None => {
                         let error =
-                            FetchError::Error(err_msg(format!("Missing content: {}", content_id)));
+                            FetchError::Error(format_err!("Missing content: {}", content_id));
                         future::err(error).left_future()
                     }
                     Some((stream, size)) => {

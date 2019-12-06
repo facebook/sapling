@@ -11,7 +11,7 @@ use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use futures::{
     future::{err, join_all, lazy, ok, Future, IntoFuture},
     stream::Stream,
@@ -159,7 +159,7 @@ pub(crate) fn derive_deleted_files_manifest(
         });
 
         tokio::spawn(f);
-        let blobstore_put_stream = receiver.map_err(|()| err_msg("receiver failed"));
+        let blobstore_put_stream = receiver.map_err(|()| Error::msg("receiver failed"));
 
         blobstore_put_stream
             .buffered(1024)
@@ -381,7 +381,7 @@ fn create_manifest(
         .unbounded_send(f)
         .into_future()
         .map(move |()| mf_id)
-        .map_err(|err| err_msg(format!("failed to send manifest future {}", err)))
+        .map_err(|err| format_err!("failed to send manifest future {}", err))
         .boxify()
 }
 

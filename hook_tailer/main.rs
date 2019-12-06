@@ -17,7 +17,7 @@ use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::helpers::create_runtime;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error, Result};
+use failure_ext::{format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::future::{err, ok, result, Future};
 use futures::stream::repeat;
@@ -232,10 +232,11 @@ fn process_hook_results(
         info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
 
         if cs_hooks_stat.rejected > 0 || file_hooks_stat.rejected > 0 {
-            err(err_msg(format!(
+            err(format_err!(
                 "Hook rejections: changeset: {} file: {}",
-                cs_hooks_stat.rejected, file_hooks_stat.rejected
-            )))
+                cs_hooks_stat.rejected,
+                file_hooks_stat.rejected
+            ))
         } else {
             ok(())
         }

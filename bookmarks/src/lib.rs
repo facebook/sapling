@@ -11,7 +11,7 @@
 
 use ascii::{AsciiChar, AsciiString};
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error, Result};
+use failure_ext::{bail, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
@@ -491,9 +491,7 @@ impl BookmarkUpdateReason {
             Pushrebase { .. } => Ok(Pushrebase { bundle_replay_data }),
             Push { .. } => Ok(Push { bundle_replay_data }),
             Blobimport | ManualMove | XRepoSync => match bundle_replay_data {
-                Some(..) => Err(err_msg(
-                    "internal error: bundle replay data can not be specified",
-                )),
+                Some(..) => bail!("internal error: bundle replay data can not be specified"),
                 None => Ok(self),
             },
             TestMove { .. } => Ok(TestMove { bundle_replay_data }),

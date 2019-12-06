@@ -11,7 +11,7 @@
 use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::future::Future;
 use futures::stream;
@@ -67,7 +67,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|f| {
             HgNodeHash::from_str(f)
                 .map(HgFileNodeId::new)
-                .map_err(|e| err_msg(format!("Invalid Sha1: {}", e)))
+                .map_err(|e| format_err!("Invalid Sha1: {}", e))
         })
         .collect();
 

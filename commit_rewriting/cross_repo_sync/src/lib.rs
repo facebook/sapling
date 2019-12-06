@@ -16,7 +16,7 @@ use blobsync::copy_content;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{bail, format_err, Error};
 use futures::Future;
 use futures_preview::{
     compat::Future01CompatExt,
@@ -558,13 +558,13 @@ where
         for p in cs.parents() {
             let maybe_outcome = self.get_commit_sync_outcome(ctx.clone(), p).await?;
             let sync_outcome =
-                maybe_outcome.ok_or(err_msg(format!("Parent commit {} is not synced yet", p)))?;
+                maybe_outcome.ok_or(format_err!("Parent commit {} is not synced yet", p))?;
 
             if sync_outcome != CommitSyncOutcome::Preserved {
-                return Err(err_msg(format!(
+                bail!(
                     "trying to preserve a commit, but parent {} is not preserved",
                     p
-                )));
+                );
             }
         }
 
@@ -635,7 +635,7 @@ where
 
         let maybe_parent_sync_outcome = self.get_commit_sync_outcome(ctx.clone(), p).await?;
         let parent_sync_outcome = maybe_parent_sync_outcome
-            .ok_or(err_msg(format!("Parent commit {} is not synced yet", p)))?;
+            .ok_or(format_err!("Parent commit {} is not synced yet", p))?;
 
         use CommitSyncOutcome::*;
         match parent_sync_outcome {
@@ -715,9 +715,7 @@ where
         cs: BonsaiChangeset,
     ) -> Result<Option<ChangesetId>, Error> {
         if let CommitSyncRepos::SmallToLarge { .. } = self.repos {
-            return Err(err_msg(
-                "syncing merge commits is supported only in large to small direction",
-            ));
+            bail!("syncing merge commits is supported only in large to small direction");
         }
 
         let source_cs_id = cs.get_changeset_id();
@@ -816,7 +814,7 @@ where
                     let parent_cs_id = new_parents
                         .values()
                         .next()
-                        .ok_or(err_msg("logic merge: cannot find merge parent"))?;
+                        .ok_or(Error::msg("logic merge: cannot find merge parent"))?;
                     self.update_wc_equivalence(ctx.clone(), source_cs_id, Some(*parent_cs_id))
                         .await?;
                     Ok(Some(*parent_cs_id))
@@ -960,9 +958,7 @@ where
             }
             None => {
                 if !source_is_large {
-                    return Err(err_msg(
-                        "unexpected wc equivalence update: small repo commit should always remap to large repo",
-                    ));
+                    bail!("unexpected wc equivalence update: small repo commit should always remap to large repo");
                 }
                 EquivalentWorkingCopyEntry {
                     large_repo_id: source_repoid,

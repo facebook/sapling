@@ -20,7 +20,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
-use failure_ext::{ensure, err_msg, format_err, Compat, Error, FutureFailureErrorExt, Result};
+use failure_ext::{bail, ensure, format_err, Compat, Error, FutureFailureErrorExt, Result};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures::{Future, IntoFuture, Stream};
@@ -121,10 +121,10 @@ impl From<BundleResolverError> for Error {
                         ));
                     }
                 }
-                err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
+                format_err!("hooks failed:\n{}", err_msgs.join("\n"))
             }
             PushrebaseConflicts(conflicts) => {
-                err_msg(format!("pushrebase failed Conflicts({:?})", conflicts))
+                format_err!("pushrebase failed Conflicts({:?})", conflicts)
             }
             RateLimitExceeded {
                 limit,
@@ -469,7 +469,7 @@ fn resolve_pushrebase(
         })
         .and_then(|(cg_push, manifests, bundle2)| {
             cg_push
-                .ok_or(err_msg("Empty pushrebase"))
+                .ok_or(Error::msg("Empty pushrebase"))
                 .into_future()
                 .map(move |cg_push| (cg_push, manifests, bundle2))
         })
@@ -484,7 +484,7 @@ fn resolve_pushrebase(
                     };
                     Ok((onto_bookmark, cg_push, manifests, bundle2))
                 }
-                None => Err(err_msg("onto is not specified")),
+                None => bail!("onto is not specified"),
             },
         )
         .and_then({
@@ -498,7 +498,7 @@ fn resolve_pushrebase(
                     for (_, hg_cs) in &changesets {
                         for key in pushrebase::MUTATION_KEYS {
                             if hg_cs.extra.as_ref().contains_key(key.as_bytes()) {
-                                return future::err(err_msg("Forced push blocked because it contains mutation metadata.\n\
+                                return future::err(Error::msg("Forced push blocked because it contains mutation metadata.\n\
                                                         You can remove the metadata from a commit with `hg amend --config mutation.record=false`.\n\
                                                         For more help, please contact the Source Control team at https://fburl.com/27qnuyl2")).left_future();
                             }
@@ -642,8 +642,10 @@ fn resolve_bookmark_only_pushrebase(
                 // this means we filtered some Phase pushkeys out
                 // which is not expected
                 if bookmark_pushes.len() != pushkeys_len {
-                    return err(err_msg("Expected bookmark-only push, phases pushkey found"))
-                        .boxify();
+                    return err(Error::msg(
+                        "Expected bookmark-only push, phases pushkey found",
+                    ))
+                    .boxify();
                 }
 
                 if bookmark_pushes.len() != 1 {
@@ -948,9 +950,9 @@ impl Bundle2Resolver {
         } else {
             fut.and_then(|maybe_cg_push| match maybe_cg_push {
                 (Some(ref cg_push), _) if cg_push.infinitepush_payload.is_some() => {
-                    let m =
-                        "Infinitepush is not enabled on this server. Contact Source Control @ FB.";
-                    Err(err_msg(m))
+                    bail!(
+                        "Infinitepush is not enabled on this server. Contact Source Control @ FB."
+                    );
                 }
                 r => Ok(r),
             })
@@ -1398,7 +1400,7 @@ fn toposort_changesets(
         })
         .collect();
     let sorted_css =
-        sort_topological(&cs_id_to_parents).ok_or(err_msg("cycle in the pushed changesets!"))?;
+        sort_topological(&cs_id_to_parents).ok_or(Error::msg("cycle in the pushed changesets!"))?;
 
     Ok(sorted_css
         .into_iter()
@@ -1473,7 +1475,7 @@ fn infinite_hg_bookmark_push_to_bonsai(
         .into_future()
         .and_then(|(old, new)| match new {
             Some(new) => Ok((old, new)),
-            None => Err(err_msg("Bonsai Changeset not found")),
+            None => bail!("Bonsai Changeset not found"),
         })
         .map(move |(old, new)| InfiniteBookmarkPush {
             name,

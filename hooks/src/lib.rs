@@ -28,7 +28,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
-use failure_ext::{err_msg, Error, FutureFailureErrorExt};
+use failure_ext::{bail, Error, FutureFailureErrorExt};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -93,7 +93,7 @@ impl HookManager {
                     if reviewers_acl_checker.do_wait_updated(10000) {
                         Ok(reviewers_acl_checker)
                     } else {
-                        Err(err_msg("did not update acl checker"))
+                        bail!("did not update acl checker")
                     }
                 })
                 .ok()

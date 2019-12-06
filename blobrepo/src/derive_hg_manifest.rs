@@ -11,7 +11,7 @@ use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
 use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
@@ -175,7 +175,7 @@ fn create_hg_file(
     if let Some(leaf) = leaf {
         return match leaf.get_hash() {
             HgEntryId::Manifest(_) => {
-                future::err(err_msg("changes can not contain tree entry")).left_future()
+                future::err(Error::msg("changes can not contain tree entry")).left_future()
             }
             HgEntryId::File(file_type, filenode_id) => {
                 future::ok(((), (file_type, filenode_id))).left_future()

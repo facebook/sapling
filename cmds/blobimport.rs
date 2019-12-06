@@ -15,7 +15,7 @@ use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime, helpers::upload_and_show_trace};
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error, Result, ResultExt, SlogKVError};
+use failure_ext::{bail, format_err, Error, Result, ResultExt, SlogKVError};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::FutureExt;
@@ -116,7 +116,7 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
             (None, Some(_)) => unreachable!(),
         };
         if let Some(_) = iter.next() {
-            return Err(err_msg("got 3 parents, but mercurial supports at most 2!"));
+            bail!("got 3 parents, but mercurial supports at most 2!");
         }
 
         if res.insert(hg_cs_id, parents).is_some() {
@@ -237,7 +237,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                         // NOTE: We log the error immediatley, then provide another one for main's
                         // Result (which will set our exit code).
                         error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                        err_msg("blobimport exited with a failure")
+                        Error::msg("blobimport exited with a failure")
                     }
                 })
                 .then(move |result| upload_and_show_trace(ctx).then(move |_| result))

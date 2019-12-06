@@ -9,7 +9,7 @@
 use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
 
 use cloned::cloned;
-use failure_ext::{bail, err_msg, format_err, Error, Result, ResultExt};
+use failure_ext::{bail, format_err, Error, Result, ResultExt};
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -129,7 +129,7 @@ pub fn init_cachelib_from_settings(fb: FacebookInit, settings: CachelibSettings)
     // Because `bucket_count` is a power of 2, bucket_count.trailing_zeros() is log2(bucket_count)
     let bucket_count = item_count
         .checked_next_power_of_two()
-        .ok_or_else(|| err_msg("Cache has too many objects to fit a `usize`?!?"))?;
+        .ok_or_else(|| Error::msg("Cache has too many objects to fit a `usize`?!?"))?;
     let buckets_power = min(bucket_count.trailing_zeros() + 1 as u32, 32);
 
     let mut cache_config = cachelib::LruCacheConfig::new(cache_size_bytes)
@@ -148,18 +148,14 @@ pub fn init_cachelib_from_settings(fb: FacebookInit, settings: CachelibSettings)
 
     if settings.use_tupperware_shrinker {
         if settings.max_process_size_gib.is_some() || settings.min_process_size_gib.is_some() {
-            return Err(err_msg(
-                "Can't use both Tupperware shrinker and manually configured shrinker",
-            ));
+            bail!("Can't use both Tupperware shrinker and manually configured shrinker");
         }
         cache_config = cache_config.set_tupperware_shrinker();
     } else {
         match (settings.max_process_size_gib, settings.min_process_size_gib) {
             (None, None) => (),
             (Some(_), None) | (None, Some(_)) => {
-                return Err(err_msg(
-                    "If setting process size limits, must set both max and min",
-                ));
+                bail!("If setting process size limits, must set both max and min");
             }
             (Some(max), Some(min)) => {
                 cache_config = cache_config.set_shrinker(cachelib::ShrinkMonitor {
@@ -245,14 +241,14 @@ pub fn csid_resolve(
             cloned!(repo, ctx);
             move |name| repo.get_bonsai_bookmark(ctx, &name)
         })
-        .and_then(|csid| csid.ok_or(err_msg("invalid bookmark")))
+        .and_then(|csid| csid.ok_or(Error::msg("invalid bookmark")))
         .or_else({
             cloned!(ctx, repo, hash_or_bookmark);
             move |_| {
                 HgChangesetId::from_str(&hash_or_bookmark)
                     .into_future()
                     .and_then(move |hg_csid| repo.get_bonsai_from_hg(ctx, hg_csid))
-                    .and_then(|csid| csid.ok_or(err_msg("invalid hg changeset")))
+                    .and_then(|csid| csid.ok_or(Error::msg("invalid hg changeset")))
             }
         })
         .or_else({
@@ -303,7 +299,7 @@ where
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
             T::with_xdb(db_address, maybe_myrouter_port, readonly_storage.0)
         }
-        MetadataDBConfig::Mysql { .. } => Err(err_msg(
+        MetadataDBConfig::Mysql { .. } => Err(Error::msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",
         ))
         .into_future()

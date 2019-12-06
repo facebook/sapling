@@ -15,7 +15,7 @@ use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use crypto::digest::Digest;
-use failure_ext::{err_msg, Error, FutureFailureExt};
+use failure_ext::{format_err, Error, FutureFailureExt};
 use filestore::{get_metadata, FetchKey};
 use futures::{future, stream, sync::mpsc, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -93,7 +93,7 @@ pub(crate) fn derive_fsnode(
             })
             .join(
                 receiver
-                    .map_err(|()| err_msg("receiver failed"))
+                    .map_err(|()| Error::msg("receiver failed"))
                     .buffered(1024)
                     .for_each(|_| Ok(())),
             )
@@ -322,7 +322,7 @@ fn create_fsnode(
             .unbounded_send(f)
             .into_future()
             .map(move |()| (Some(summary), fsnode_id))
-            .map_err(|err| err_msg(format!("failed to send fsnode future {}", err)))
+            .map_err(|err| format_err!("failed to send fsnode future {}", err))
     })
 }
 

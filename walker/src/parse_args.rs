@@ -14,7 +14,7 @@ use blobrepo_factory::open_blobrepo_given_datasources;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::Redaction;
@@ -206,7 +206,7 @@ pub fn parse_args_common(
     let storage_config = match storage_id {
         Some(storage_id) => args::read_storage_configs(&matches)?
             .remove(storage_id)
-            .ok_or(err_msg(format!("Storage id `{}` not found", storage_id)))?,
+            .ok_or(format_err!("Storage id `{}` not found", storage_id))?,
         None => config.storage_config.clone(),
     };
 

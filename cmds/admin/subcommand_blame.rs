@@ -16,7 +16,7 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{
@@ -324,7 +324,7 @@ fn subcommand_compute_blame(
             }
         })
         .and_then(|result| {
-            Ok(result.ok_or_else(|| err_msg("cycle found"))??)
+            Ok(result.ok_or_else(|| Error::msg("cycle found"))??)
         })
         .and_then(move |(content, blame)| {
             blame_hg_annotate(ctx, repo, content, blame).map(|annotate| println!("{}", annotate))
@@ -352,12 +352,12 @@ fn blame_hg_annotate<C: AsRef<[u8]> + 'static>(
             let mut ranges = blame.ranges().iter();
             let mut range = ranges
                 .next()
-                .ok_or_else(|| err_msg("empty blame for non empty content"))?;
+                .ok_or_else(|| Error::msg("empty blame for non empty content"))?;
             for (index, line) in content.lines().enumerate() {
                 if index as u32 >= range.offset + range.length {
                     range = ranges
                         .next()
-                        .ok_or_else(|| err_msg("not enough ranges in a blame"))?;
+                        .ok_or_else(|| Error::msg("not enough ranges in a blame"))?;
                 }
                 let hg_csid = mapping
                     .get(&range.csid)

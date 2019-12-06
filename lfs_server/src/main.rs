@@ -13,7 +13,7 @@
 use aclchecker::Identity;
 use clap::{Arg, Values};
 use cloned::cloned;
-use failure_ext::{err_msg, Error};
+use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures::{future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
@@ -320,7 +320,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = create_runtime(None)?;
 
     let stats_aggregation = schedule_stats_aggregation()
-        .map_err(|_| err_msg("Failed to create stats aggregation worker"))?
+        .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?
         .discard();
 
     let repos: HashMap<_, _> = runtime
@@ -342,7 +342,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.value_of(ARG_LIVE_CONFIG),
         config_interval,
     )
-    .chain_err(err_msg("Failed to load configuration"))?;
+    .chain_err(Error::msg("Failed to load configuration"))?;
 
     let max_upload_size: Option<u64> = matches
         .value_of(ARG_MAX_UPLOAD_SIZE)
@@ -381,13 +381,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let addr = addr
         .to_socket_addrs()
-        .chain_err(err_msg("Invalid Listener Address"))?
+        .chain_err(Error::msg("Invalid Listener Address"))?
         .next()
-        .ok_or(err_msg("Invalid Socket Address"))?;
+        .ok_or(Error::msg("Invalid Socket Address"))?;
 
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches)?;
 
-    let listener = TcpListener::bind(&addr).chain_err(err_msg("Could not start TCP listener"))?;
+    let listener =
+        TcpListener::bind(&addr).chain_err(Error::msg("Could not start TCP listener"))?;
 
     let run_server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
@@ -441,7 +442,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (None, None, None, None) => {
             bind_server(listener, root, |socket| Ok(socket).into_future()).right_future()
         }
-        _ => return Err(err_msg("TLS flags must be passed together")),
+        _ => bail!("TLS flags must be passed together"),
     };
 
     let (sender, receiver) = oneshot::channel::<()>();
@@ -494,12 +495,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     runtime
         .shutdown_on_idle()
         .wait()
-        .map_err(|_| err_msg("Failed to shutdown runtime!"))?;
+        .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
 
     info!(&logger, "Waiting for configuration poller to exit...");
     poller
         .join()
-        .map_err(|_| err_msg("Failed to shutdown configuration poller!"))?;
+        .map_err(|_| Error::msg("Failed to shutdown configuration poller!"))?;
 
     info!(&logger, "Exiting...");
 
@@ -514,7 +515,7 @@ fn idents_from_values<'a>(matches: Option<Values<'a>>) -> Result<Vec<Identity>, 
 
                 match (parts.next(), parts.next(), parts.next()) {
                     (Some(ty), Some(data), None) => Ok(Identity::new(&ty, &data)),
-                    _ => Err(err_msg("Invalid identity format, expected TYPE:DATA")),
+                    _ => bail!("Invalid identity format, expected TYPE:DATA"),
                 }
             })
             .collect(),

@@ -19,8 +19,8 @@ use crate::part_header::{PartHeaderType, PartId};
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::err_msg;
 use failure_ext::prelude::*;
+use failure_ext::Error;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
@@ -227,7 +227,7 @@ where
                     flags,
                 };
                 if flags.is_some() && cg_version == CgVersion::Cg2Version {
-                    return once(Err(err_msg(
+                    return once(Err(Error::msg(
                         "internal error: unexpected flags in cg2 generation",
                     )))
                     .boxify();

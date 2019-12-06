@@ -9,7 +9,7 @@
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -212,7 +212,7 @@ impl MultiplexedBlobstoreBase {
 fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
     match err.into_inner() {
         Some(err) => err,
-        None => err_msg("blobstore operation timeout"),
+        None => Error::msg("blobstore operation timeout"),
     }
 }
 

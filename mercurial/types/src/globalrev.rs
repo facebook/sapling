@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::err_msg;
+use failure_ext::{bail, Error};
 use mononoke_types::BonsaiChangeset;
 use std::str;
 
@@ -37,7 +37,7 @@ impl Globalrev {
     pub fn parse_svnrev(svnrev: &str) -> Result<u64> {
         let at_pos = svnrev
             .rfind('@')
-            .ok_or(err_msg("Wrong convert_revision value"))?;
+            .ok_or(Error::msg("Wrong convert_revision value"))?;
         let result = svnrev[1 + at_pos..].parse::<u64>()?;
         Ok(result)
     }
@@ -59,7 +59,7 @@ impl Globalrev {
             (Some((_, globalrev)), None) => {
                 let globalrev = str::from_utf8(&globalrev.to_vec())?.parse::<u64>()?;
                 if globalrev < START_COMMIT_GLOBALREV {
-                    Err(err_msg(format!("Bonsai cs {:?} without globalrev", bcs)))
+                    bail!("Bonsai cs {:?} without globalrev", bcs)
                 } else {
                     Ok(Self::new(globalrev))
                 }
@@ -68,7 +68,7 @@ impl Globalrev {
                 let svnrev = Globalrev::parse_svnrev(str::from_utf8(&svnrev.to_vec())?)?;
                 Ok(Self::new(svnrev))
             }
-            (None, None) => Err(err_msg(format!("Bonsai cs {:?} without globalrev", bcs))),
+            (None, None) => bail!("Bonsai cs {:?} without globalrev", bcs),
         }
     }
 }

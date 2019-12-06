@@ -9,7 +9,7 @@
 use if_ as acl_constants;
 
 use aclchecker::{AclChecker, Identity};
-use failure_ext::{err_msg, Error};
+use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures_ext::asynchronize;
 use futures_util::compat::Future01CompatExt;
@@ -42,7 +42,7 @@ impl LfsAclChecker {
                 if acl_checker.do_wait_updated(ACL_CHECKER_TIMEOUT_MS) {
                     Ok(Self::AclChecker(Some(acl_checker)))
                 } else {
-                    Err(err_msg("Failed to update AclChecker"))
+                    bail!("Failed to update AclChecker")
                 }
             })
             .compat()

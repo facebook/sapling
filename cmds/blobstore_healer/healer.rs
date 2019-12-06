@@ -11,7 +11,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, prelude::*};
+use failure_ext::prelude::*;
 use futures::{self, future::join_all, prelude::*};
 use futures_ext::FutureExt;
 use itertools::{Either, Itertools};
@@ -383,7 +383,9 @@ fn fetch_blob(
                 }
             }
             match blob {
-                None => futures::future::err(err_msg("None of the blobstores to fetch responded")),
+                None => {
+                    futures::future::err(Error::msg("None of the blobstores to fetch responded"))
+                }
                 Some(blob_data) => futures::future::ok(FetchData {
                     blob: blob_data,
                     good_sources,
@@ -481,7 +483,7 @@ mod tests {
             let mut inner = self.hash.lock().expect("lock poison");
             let inner_flag = self.fail_puts.lock().expect("lock poison");
             let res = if *inner_flag {
-                Err(err_msg("Put failed for key"))
+                Err(Error::msg("Put failed for key"))
             } else {
                 inner.insert(key, value);
                 Ok(())

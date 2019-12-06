@@ -9,7 +9,7 @@
 use crate::cmdargs::{ADD_PUBLIC_PHASES, FETCH_PHASE, LIST_PUBLIC};
 use clap::ArgMatches;
 use cloned::cloned;
-use failure_ext::{err_msg, Error};
+use failure_ext::{bail, format_err, Error};
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -59,7 +59,7 @@ pub fn subcommand_phases(
             let hash = sub_m
                 .value_of("hash")
                 .map(|s| s.to_string())
-                .ok_or(err_msg("changeset hash is not specified"));
+                .ok_or(Error::msg("changeset hash is not specified"));
 
             subcommand_fetch_phase_impl(fb, repo, phases, hash, ty)
                 .boxed()
@@ -203,9 +203,9 @@ pub async fn subcommand_fetch_phase_impl<'a>(
             .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(&hash)?)
             .compat()
             .await?;
-        maybe_bonsai.ok_or(err_msg(format!("bonsai not found for {}", hash)))?
+        maybe_bonsai.ok_or(format_err!("bonsai not found for {}", hash))?
     } else {
-        return Err(err_msg(format!("unknown hash type: {}", ty)));
+        bail!("unknown hash type: {}", ty);
     };
 
     let public_phases = phases.get_public(ctx, repo, vec![bcs_id]).compat().await?;

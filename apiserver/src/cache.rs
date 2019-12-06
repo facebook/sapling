@@ -7,7 +7,7 @@
  */
 
 use bytes::Bytes;
-use failure_ext::err_msg;
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 
@@ -33,7 +33,7 @@ impl CacheManager {
     pub fn new(fb: FacebookInit) -> Result<Self, ErrorKind> {
         let cachelib = match cachelib::get_volatile_pool("content-sha1") {
             Ok(Some(e)) => Ok(e),
-            _ => Err(ErrorKind::InternalError(err_msg(
+            _ => Err(ErrorKind::InternalError(Error::msg(
                 "Failed to get cachelib cache",
             ))),
         }?;

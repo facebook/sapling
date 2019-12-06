@@ -16,7 +16,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transactio
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::prelude::*;
-use failure_ext::{err_msg, format_err, Error, FutureFailureErrorExt};
+use failure_ext::{format_err, Error, FutureFailureErrorExt};
 use futures::future::{err, ok};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -404,7 +404,7 @@ fn normal_pushrebase(
         pushrebase::PushrebaseError::Conflicts(conflicts) => {
             BundleResolverError::PushrebaseConflicts(conflicts)
         }
-        _ => BundleResolverError::Error(err_msg(format!("pushrebase failed {:?}", err))),
+        _ => BundleResolverError::Error(format_err!("pushrebase failed {:?}", err)),
     })
     .timed({
         let mut scuba_logger = ctx.scuba().clone();
@@ -433,7 +433,7 @@ fn force_pushrebase(
 ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error> {
     let maybe_target_bcs = bookmark_push.new.clone();
     let target_bcs = try_boxfuture!(
-        maybe_target_bcs.ok_or(err_msg("new changeset is required for force pushrebase"))
+        maybe_target_bcs.ok_or(Error::msg("new changeset is required for force pushrebase"))
     );
     let reason = BookmarkUpdateReason::Pushrebase {
         bundle_replay_data: maybe_hg_replay_data
@@ -677,7 +677,7 @@ fn log_commits_to_scribe(
         cloned!(ctx, repo, queue, changeset_id);
         let generation = repo
             .get_generation_number_by_bonsai(ctx.clone(), changeset_id)
-            .and_then(|maybe_gen| maybe_gen.ok_or(err_msg("No generation number found")));
+            .and_then(|maybe_gen| maybe_gen.ok_or(Error::msg("No generation number found")));
         let parents = repo.get_changeset_parents_by_bonsai(ctx, changeset_id);
         let repo_id = repo.get_repoid();
         let queue = queue;

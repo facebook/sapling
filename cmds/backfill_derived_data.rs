@@ -23,7 +23,7 @@ use cmdlib::{args, helpers, helpers::create_runtime, monitoring::start_fb303_and
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
@@ -438,8 +438,8 @@ fn fetch_all_public_changesets(
     changesets
         .get_changesets_ids_bounds(repo_id.clone())
         .and_then(move |(start, stop)| {
-            let start = start.ok_or_else(|| err_msg("changesets table is empty"))?;
-            let stop = stop.ok_or_else(|| err_msg("changesets table is empty"))?;
+            let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
+            let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))?;
             let step = 65536;
             Ok(stream::iter_ok(windows(start, stop, step)))
         })

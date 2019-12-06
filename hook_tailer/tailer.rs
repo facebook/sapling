@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{format_err, Error, Result};
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};
@@ -142,10 +142,10 @@ impl Tailer {
         cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark,);
         repo.get_bonsai_from_hg(ctx, changeset)
             .and_then(move |maybe_bonsai| {
-                maybe_bonsai.ok_or(err_msg(format!(
+                maybe_bonsai.ok_or(format_err!(
                     "changeset does not exist {}",
                     changeset.to_string()
-                )))
+                ))
             })
             .and_then({
                 cloned!(self.ctx);

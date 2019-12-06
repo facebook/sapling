@@ -20,7 +20,7 @@ use cmdlib::{args, helpers::create_runtime, monitoring};
 use configerator::ConfigeratorAPI;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure_ext::{bail, err_msg, format_err, prelude::*};
+use failure_ext::{bail, format_err, prelude::*};
 use fbinit::FacebookInit;
 use futures::{
     future::{join_all, loop_fn, ok, Loop},
@@ -283,22 +283,20 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let storage_id = matches
         .value_of("storage-id")
-        .ok_or(err_msg("Missing storage-id"))?;
+        .ok_or(Error::msg("Missing storage-id"))?;
     let logger = args::init_logging(fb, &matches);
     let myrouter_port =
-        args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
+        args::parse_myrouter_port(&matches).ok_or(Error::msg("Missing --myrouter-port"))?;
     let readonly_storage = args::parse_readonly_storage(&matches);
     let storage_config = args::read_storage_configs(&matches)?
         .remove(storage_id)
-        .ok_or(err_msg(format!("Storage id `{}` not found", storage_id)))?;
+        .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
     let source_blobstore_key = matches.value_of("blobstore-key-like");
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let dry_run = matches.is_present("dry-run");
     let drain_only = matches.is_present("drain-only");
     if drain_only && source_blobstore_key.is_none() {
-        return Err(err_msg(
-            "Missing --blobstore-key-like restriction for --drain-only",
-        ));
+        bail!("Missing --blobstore-key-like restriction for --drain-only");
     }
     info!(logger, "Using storage_config {:#?}", storage_config);
 

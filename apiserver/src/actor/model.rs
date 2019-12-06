@@ -17,7 +17,7 @@ use std::{
 use abomonation_derive::Abomonation;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
-use failure_ext::{err_msg, Error};
+use failure_ext::{format_err, Error};
 use serde_derive::{Deserialize, Serialize};
 
 use apiserver_thrift::types::{
@@ -142,7 +142,7 @@ impl EntryWithSizeAndContentHash {
         let name = try_boxfuture!(entry
             .get_name()
             .map(|name| name.to_bytes())
-            .ok_or_else(|| err_msg("HgEntry has no name!?")));
+            .ok_or_else(|| Error::msg("HgEntry has no name!?")));
         // FIXME: json cannot represent non-UTF8 file names
         let name = try_boxfuture!(String::from_utf8(Vec::from(name.as_ref())));
 
@@ -188,7 +188,7 @@ impl EntryWithSizeAndContentHash {
             cache
                 .get_or_fill(cache_key, future.map(|entry| Some(entry)).from_err())
                 .from_err()
-                .and_then(move |entry| entry.ok_or(err_msg(format!("Entry {} not found", hash))))
+                .and_then(move |entry| entry.ok_or(format_err!("Entry {} not found", hash)))
                 .map(|entry| EntryWithSizeAndContentHash {
                     name,
                     r#type,

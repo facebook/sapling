@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use ascii::AsciiString;
 use cloned::cloned;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::{debug, error, info, Logger};
@@ -144,7 +144,7 @@ impl Blobimport {
                 }
                 info!(logger, "root cause: {:?}", err);
 
-                err_msg(msg)
+                Error::msg(msg)
             }
         });
 

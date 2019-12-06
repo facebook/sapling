@@ -13,7 +13,7 @@ use crate::{
 };
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{bail, format_err, Error};
 use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -219,7 +219,7 @@ impl Blame {
         let mut offset = 0u32;
         for range in ranges.iter() {
             if range.offset != offset {
-                return Err(err_msg("ranges could not form valid Blame object"));
+                bail!("ranges could not form valid Blame object");
             }
             offset += range.length;
         }
@@ -248,7 +248,7 @@ impl Blame {
                     let csid = ChangesetId::from_thrift(csid_t)?;
                     let path = paths
                         .get(path_index.0 as usize)
-                        .ok_or_else(|| err_msg("invalid blame path index"))?
+                        .ok_or_else(|| Error::msg("invalid blame path index"))?
                         .clone();
                     ranges.push(BlameRange {
                         offset,
@@ -427,12 +427,12 @@ impl Blame {
         let mut ranges = self.ranges.iter();
         let mut range = ranges
             .next()
-            .ok_or_else(|| err_msg("empty blame for non empty content"))?;
+            .ok_or_else(|| Error::msg("empty blame for non empty content"))?;
         for (index, line) in content.lines().enumerate() {
             if index as u32 >= range.offset + range.length {
                 range = ranges
                     .next()
-                    .ok_or_else(|| err_msg("not enough ranges in a blame"))?;
+                    .ok_or_else(|| Error::msg("not enough ranges in a blame"))?;
             }
             result.push_str(&range.csid.to_string()[..12]);
             result.push_str(&": ");

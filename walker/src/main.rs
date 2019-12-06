@@ -9,7 +9,7 @@
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
@@ -40,7 +40,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (parse_args::SCRUB_OBJECTS, Some(sub_m)) => {
             scrub::scrub_objects(fb, logger.clone(), &matches, sub_m)
         }
-        _ => Err(err_msg("Invalid Arguments, pass --help for usage."))
+        _ => Err(Error::msg("Invalid Arguments, pass --help for usage."))
             .into_future()
             .boxify(),
     };

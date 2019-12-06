@@ -10,7 +10,7 @@ use std::{sync::Arc, time::Instant};
 
 use clap::Arg;
 use cloned::cloned;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{bail, format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;
@@ -178,26 +178,26 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
 
     let storage_id = matches
         .value_of("storage-id")
-        .ok_or(err_msg("`storage-id` argument required"))?;
+        .ok_or(Error::msg("`storage-id` argument required"))?;
 
     let storage_config = args::read_storage_configs(&matches)?
         .remove(storage_id)
-        .ok_or(err_msg("Unknown `storage-id`"))?;
+        .ok_or(Error::msg("Unknown `storage-id`"))?;
 
     let src_blobstore_id = matches
         .value_of("source-blobstore-id")
-        .ok_or(err_msg("`source-blobstore-id` argument is required"))
+        .ok_or(Error::msg("`source-blobstore-id` argument is required"))
         .and_then(|src| src.parse::<u64>().map_err(Error::from))
         .map(BlobstoreId::new)?;
     let dst_blobstore_id = matches
         .value_of("destination-blobstore-id")
-        .ok_or(err_msg("`destination-blobstore-id` argument is required"))
+        .ok_or(Error::msg(
+            "`destination-blobstore-id` argument is required",
+        ))
         .and_then(|dst| dst.parse::<u64>().map_err(Error::from))
         .map(BlobstoreId::new)?;
     if src_blobstore_id == dst_blobstore_id {
-        return Err(err_msg(
-            "`source-blobstore-id` and `destination-blobstore-id` can not be equal",
-        ));
+        bail!("`source-blobstore-id` and `destination-blobstore-id` can not be equal");
     }
 
     let (blobstores, db_address) = match storage_config {
@@ -221,11 +221,11 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
                 bucket: bucket.clone(),
                 prefix: prefix.clone(),
             }),
-            _ => Err(err_msg("source blobstore must be a manifold")),
+            _ => bail!("source blobstore must be a manifold"),
         })?;
 
     let myrouter_port =
-        args::parse_myrouter_port(&matches).ok_or(err_msg("myrouter-port must be specified"))?;
+        args::parse_myrouter_port(&matches).ok_or(Error::msg("myrouter-port must be specified"))?;
 
     let readonly_storage = args::parse_readonly_storage(&matches);
 
