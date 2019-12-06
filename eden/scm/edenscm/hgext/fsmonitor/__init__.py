@@ -124,6 +124,16 @@ performance might regress in some cases. (default: 200)
 
 If set to true, warn about fresh instance cases that might slow down
 operations.
+
+::
+
+    [fsmonitor]
+    fallback-on-watchman-exception = (boolean)
+
+If set to true then it will fallback on the vanilla algorithms for detecting
+the state of the working copy. Note that no fallback results in transforming
+failures from watchman (or timeouts) in hard failures for the current
+operation. (default = true)
 """
 
 # Platforms Supported
@@ -203,6 +213,7 @@ configitem("fsmonitor", "track-ignore-files", default=True)
 configitem("fsmonitor", "walk_on_invalidate", default=False)
 configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
 configitem("fsmonitor", "warn-fresh-instance", default=False)
+configitem("fsmonitor", "fallback-on-watchman-exception", default=True)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -422,7 +433,10 @@ def _walk(self, match, event):
         # XXX: Legacy scuba logging. Remove this once the source of truth
         # is moved to the Rust Event.
         self._ui.log("fsmonitor_status", fsmonitor_status="exception")
-        raise fsmonitorfallback("exception during run")
+        if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+            raise fsmonitorfallback("exception during run")
+        else:
+            raise ex
     else:
         # We need to propagate the last observed clock up so that we
         # can use it for our next query
@@ -695,8 +709,11 @@ def overridestatus(
     except Exception as ex:
         self._watchmanclient.clearconnection()
         _handleunavailable(self.ui, self._fsmonitorstate, ex)
-        # boo, Watchman failed. bail
-        return orig(node1, node2, match, listignored, listclean, listunknown)
+        # boo, Watchman failed.
+        if self.ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+            return orig(node1, node2, match, listignored, listclean, listunknown)
+        else:
+            raise ex
 
     if updatestate:
         # We need info about unknown files. This may make things slower the
