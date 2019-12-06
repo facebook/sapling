@@ -1359,8 +1359,12 @@ def concludememorynode(
         extrafn(ctx, extra)
     loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
 
-    destphase = max(ctx.phase(), phases.draft)
-    overrides = {("phases", "new-commit"): destphase}
+    if "narrowheads" in repo.storerequirements:
+        # with narrow-heads, phases.new-commit is meaningless
+        overrides = {}
+    else:
+        destphase = max(ctx.phase(), phases.draft)
+        overrides = {("phases", "new-commit"): destphase}
     with repo.ui.configoverride(overrides, "rebase"):
         # Replicates the empty check in ``repo.commit``.
         if wctx.isempty() and not repo.ui.configbool("ui", "allowemptycommit"):
