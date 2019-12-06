@@ -335,6 +335,9 @@ Lv2: R0-11[]"#
 
     let parents =
         |spans| -> String { format_set(dag.parents(SpanSet::from_spans(spans)).unwrap()) };
+    let parent_ids = |id| -> String { format!("{:?}", dag.parent_ids(Id(id)).unwrap()) };
+    let first_ancestor_nth =
+        |id, n| -> String { format!("{:?}", dag.first_ancestor_nth(Id(id), n).unwrap()) };
 
     assert_eq!(parents(vec![]), "");
 
@@ -354,6 +357,26 @@ Lv2: R0-11[]"#
     assert_eq!(parents(vec![0..=0, 2..=2]), "");
     assert_eq!(parents(vec![0..=0, 3..=3, 5..=5, 9..=10]), "2 4 7 8 9");
     assert_eq!(parents(vec![1..=1, 4..=4, 6..=6, 8..=11]), "0 1 3 5..=10");
+
+    assert_eq!(parent_ids(0), "[]");
+    assert_eq!(parent_ids(1), "[0]");
+    assert_eq!(parent_ids(4), "[1, 3]");
+    assert_eq!(parent_ids(10), "[7, 9]");
+    assert_eq!(parent_ids(11), "[10]");
+
+    assert_eq!(first_ancestor_nth(0, 0), "0");
+    assert_eq!(first_ancestor_nth(4, 2), "0");
+    assert_eq!(first_ancestor_nth(10, 2), "6");
+    assert_eq!(first_ancestor_nth(10, 3), "5");
+    assert_eq!(first_ancestor_nth(11, 0), "11");
+    assert_eq!(first_ancestor_nth(11, 1), "10");
+    assert_eq!(first_ancestor_nth(11, 2), "7");
+    assert_eq!(first_ancestor_nth(11, 3), "6");
+    assert_eq!(first_ancestor_nth(11, 4), "5");
+    assert_eq!(first_ancestor_nth(11, 6), "1");
+    assert_eq!(first_ancestor_nth(11, 7), "0");
+    assert!(dag.first_ancestor_nth(Id(0), 1).is_err());
+    assert!(dag.first_ancestor_nth(Id(11), 8).is_err());
 }
 
 #[test]

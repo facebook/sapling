@@ -17,7 +17,7 @@
 use crate::id::{GroupId, Id};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use fs2::FileExt;
@@ -676,6 +676,35 @@ impl Dag {
         } else {
             Ok(vec![id - 1])
         }
+    }
+
+    /// Calculate the n-th first ancestor. If `n` is 0, return `id` unchanged.
+    /// If `n` is 1, return the first parent of `id`.
+    pub fn first_ancestor_nth(&self, mut id: Id, mut n: u64) -> Result<Id> {
+        // PERF: this can have fast paths from high-level segments if high-level
+        // segments have extra information.
+        while n > 0 {
+            let seg = self
+                .find_flat_segment_including_id(id)?
+                .ok_or_else(|| format_err!("id {} is not covered by dag", id))?;
+            // segment: low ... id ... high
+            //          \________/
+            //            delta
+            let low = seg.span()?.low;
+            let delta = id.0 - low.0;
+            let step = delta.min(n);
+            id = id - step;
+            n -= step;
+            if n > 0 {
+                // Follow the first parent.
+                id = *seg
+                    .parents()?
+                    .get(0)
+                    .ok_or_else(|| format_err!("{}~{} cannot be resolved - no parents", &id, n))?;
+                n -= 1;
+            }
+        }
+        Ok(id)
     }
 
     /// Calculate heads of the given set.
