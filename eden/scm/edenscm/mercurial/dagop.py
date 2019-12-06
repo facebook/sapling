@@ -237,7 +237,7 @@ def revdescendants(repo, revs, followfirst, startdepth=None, stopdepth=None):
 
 
 def _reachablerootspure(repo, minroot, roots, heads, includepath, parentrevs=None):
-    """return (heads(::<roots> and ::<heads>))
+    """return (heads(::(<roots> and ::<heads>)))
 
     If includepath is True, return (<roots>::<heads>)."""
     if not roots:
@@ -276,7 +276,7 @@ def _reachablerootspure(repo, minroot, roots, heads, includepath, parentrevs=Non
 
 
 def reachableroots(repo, roots, heads, includepath=False):
-    """return (heads(::<roots> and ::<heads>))
+    """return (heads(::(<roots> and ::<heads>)))
 
     If includepath is True, return (<roots>::<heads>)."""
     if not roots:
