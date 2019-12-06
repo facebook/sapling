@@ -131,6 +131,7 @@ def update(
             util.unlink(vfs.join("updatestate"))
 
     # Invoke the update hook
+    repo.hook("edenfs-update", parent1=deststr, parent2="", error=stats[3])
     repo.hook("update", parent1=deststr, parent2="", error=stats[3])
 
     return stats
