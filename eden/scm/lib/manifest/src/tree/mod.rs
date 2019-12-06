@@ -33,7 +33,7 @@ pub use self::{diff::Diff, store::TreeStore};
 use crate::{
     tree::{
         cursor::{Cursor, Step},
-        iter::Items,
+        iter::BfsIter,
         link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
         store::InnerStore,
     },
@@ -267,7 +267,7 @@ impl Manifest for Tree {
         &'a self,
         matcher: &'a M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
-        let files = Items::new(&self, matcher).filter_map(|result| match result {
+        let files = BfsIter::new(&self, matcher).filter_map(|result| match result {
             Ok((path, FsNode::File(metadata))) => Some(Ok(File::new(path, metadata))),
             Ok(_) => None,
             Err(e) => Some(Err(e)),
@@ -284,7 +284,7 @@ impl Manifest for Tree {
         &'a self,
         matcher: &'a M,
     ) -> Box<dyn Iterator<Item = Result<crate::Directory>> + 'a> {
-        let dirs = Items::new(&self, matcher).filter_map(|result| match result {
+        let dirs = BfsIter::new(&self, matcher).filter_map(|result| match result {
             Ok((path, FsNode::Directory(metadata))) => {
                 Some(Ok(crate::Directory::new(path, metadata)))
             }

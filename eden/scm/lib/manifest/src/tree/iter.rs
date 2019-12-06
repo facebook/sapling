@@ -21,15 +21,15 @@ use crate::{
     FsNode,
 };
 
-pub struct Items<'a> {
+pub struct BfsIter<'a> {
     queue: VecDeque<(RepoPathBuf, &'a Link)>,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
 }
 
-impl<'a> Items<'a> {
+impl<'a> BfsIter<'a> {
     pub fn new(tree: &'a Tree, matcher: &'a dyn Matcher) -> Self {
-        Self {
+        BfsIter {
             queue: vec![(RepoPathBuf::new(), &tree.root)].into(),
             store: &tree.store,
             matcher,
@@ -53,7 +53,7 @@ impl<'a> Items<'a> {
     }
 }
 
-impl<'a> Iterator for Items<'a> {
+impl<'a> Iterator for BfsIter<'a> {
     type Item = Result<(RepoPathBuf, FsNode)>;
 
     fn next(&mut self) -> Option<Self::Item> {
