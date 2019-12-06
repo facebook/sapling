@@ -7,7 +7,7 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Context, Result};
 use once_cell::sync::OnceCell;
 
 use types::{HgId, PathComponentBuf, RepoPath, RepoPathBuf};
@@ -110,10 +110,17 @@ impl DurableEntry {
         // TODO: be smarter around how failures are handled when reading from the store
         // Currently this loses the stacktrace
         let result = self.links.get_or_init(|| {
-            let entry = store.get_entry(path, self.hgid)?;
+            let entry = store
+                .get_entry(path, self.hgid)
+                .with_context(|| format!("failed fetching from store ({}, {})", path, self.hgid))?;
             let mut links = BTreeMap::new();
             for element_result in entry.elements() {
-                let element = element_result?;
+                let element = element_result.with_context(|| {
+                    format!(
+                        "failed to deserialize manifest entry {:?} for ({}, {})",
+                        entry, path, self.hgid
+                    )
+                })?;
                 let link = match element.flag {
                     store::Flag::File(file_type) => {
                         Leaf(FileMetadata::new(element.hgid, file_type))
@@ -124,15 +131,7 @@ impl DurableEntry {
             }
             Ok(links)
         });
-        match result {
-            Ok(links) => Ok(links),
-            Err(error) => Err(format_err!(
-                "failed to read manifest entry ({}, {}): {}",
-                path,
-                self.hgid,
-                error
-            )),
-        }
+        result.as_ref().map_err(|e| format_err!("{:?}", e))
     }
 }
 
