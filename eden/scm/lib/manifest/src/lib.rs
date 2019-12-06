@@ -182,19 +182,19 @@ pub struct DiffEntry {
 }
 
 impl DiffEntry {
-    pub(crate) fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
+    pub fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
         DiffEntry { path, diff_type }
     }
 
-    pub(crate) fn left(file: File) -> Self {
+    pub fn left(file: File) -> Self {
         Self::new(file.path, DiffType::LeftOnly(file.meta))
     }
 
-    pub(crate) fn right(file: File) -> Self {
+    pub fn right(file: File) -> Self {
         Self::new(file.path, DiffType::RightOnly(file.meta))
     }
 
-    pub(crate) fn changed(left: File, right: File) -> Self {
+    pub fn changed(left: File, right: File) -> Self {
         debug_assert!(left.path == right.path);
         Self::new(left.path, DiffType::Changed(left.meta, right.meta))
     }
@@ -247,6 +247,3 @@ impl quickcheck::Arbitrary for FileMetadata {
         FileMetadata::new(hgid, file_type)
     }
 }
-
-pub mod tree;
-pub use crate::tree::{compat_subtree_diff, prefetch, Diff, Tree, TreeStore};

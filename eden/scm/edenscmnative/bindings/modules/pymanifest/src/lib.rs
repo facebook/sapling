@@ -16,7 +16,7 @@ use cpython::*;
 use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
-use manifest::{self, Diff, DiffType, FileMetadata, FileType, FsNode, Manifest};
+use manifest::{DiffType, File, FileMetadata, FileType, FsNode, Manifest};
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonDataStore;
@@ -35,7 +35,7 @@ impl<T> ManifestStore<T> {
     }
 }
 
-impl<T: DataStore + RemoteDataStore> manifest::TreeStore for ManifestStore<T> {
+impl<T: DataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestStore<T> {
     fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
         let key = Key::new(path.to_owned(), node);
         self.underlying
@@ -90,7 +90,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class treemanifest |py| {
-    data underlying: RefCell<manifest::Tree>;
+    data underlying: RefCell<manifest_tree::Tree>;
     data pending_delete: RefCell<HashSet<RepoPathBuf>>;
 
     def __new__(
@@ -101,8 +101,8 @@ py_class!(class treemanifest |py| {
         let store = PythonDataStore::new(store);
         let manifest_store = Arc::new(ManifestStore::new(store));
         let underlying = match node {
-            None => manifest::Tree::ephemeral(manifest_store),
-            Some(value) => manifest::Tree::durable(manifest_store, pybytes_to_node(py, value)?),
+            None => manifest_tree::Tree::ephemeral(manifest_store),
+            Some(value) => manifest_tree::Tree::durable(manifest_store, pybytes_to_node(py, value)?),
         };
         treemanifest::create_instance(py, RefCell::new(underlying), RefCell::new(HashSet::new()))
     }
@@ -196,8 +196,8 @@ py_class!(class treemanifest |py| {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
         let result = match tree.list(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
-            manifest::tree::List::NotFound | manifest::tree::List::File => vec![],
-            manifest::tree::List::Directory(components) =>
+            manifest_tree::List::NotFound | manifest_tree::List::File => vec![],
+            manifest_tree::List::Directory(components) =>
                 components.into_iter().map(|(component, _)|
                     path_to_pybytes(py, component.as_path_component())
                 ).collect()
@@ -279,7 +279,7 @@ py_class!(class treemanifest |py| {
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
 
-        for entry in Diff::new(&this_tree, &other_tree, &matcher) {
+        for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
             let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
             let path = path_to_pybytes(py, &entry.path);
             let diff_left = convert_side_diff(py, entry.diff_type.left());
@@ -302,7 +302,7 @@ py_class!(class treemanifest |py| {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
-        for entry in Diff::new(&this_tree, &other_tree, &matcher) {
+        for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
             let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
             match entry.diff_type {
                 DiffType::LeftOnly(_) => {
@@ -471,7 +471,7 @@ pub fn subdir_diff(
     for pybytes in other_binnodes.iter(py) {
         others.push(pybytes_to_node(py, &pybytes.extract(py)?)?);
     }
-    let diff = manifest::compat_subtree_diff(
+    let diff = manifest_tree::compat_subtree_diff(
         manifest_store,
         &pybytes_to_path(py, path),
         pybytes_to_node(py, binnode)?,
@@ -508,31 +508,31 @@ pub fn prefetch(
     let node = pybytes_to_node(py, node)?;
     let path = pybytes_to_path(py, path);
     let key = Key::new(path, node);
-    manifest::prefetch(store, key, depth).map_pyerr::<exc::RuntimeError>(py)?;
+    manifest_tree::prefetch(store, key, depth).map_pyerr::<exc::RuntimeError>(py)?;
     Ok(py.None())
 }
 
 fn insert(
-    tree: &mut manifest::Tree,
+    tree: &mut manifest_tree::Tree,
     pending_delete: &mut HashSet<RepoPathBuf>,
     path: RepoPathBuf,
     file_metadata: FileMetadata,
 ) -> Result<()> {
     let insert_error = match tree.insert(path, file_metadata) {
         Ok(result) => return Ok(result),
-        Err(error) => match error.downcast::<manifest::tree::InsertError>() {
+        Err(error) => match error.downcast::<manifest_tree::InsertError>() {
             Ok(insert_error) => insert_error,
             Err(err) => return Err(err),
         },
     };
     let path = insert_error.path;
     match insert_error.source {
-        manifest::tree::InsertErrorCause::ParentFileExists(file_path) => {
+        manifest_tree::InsertErrorCause::ParentFileExists(file_path) => {
             tree.remove(&file_path)?;
             pending_delete.insert(file_path);
         }
-        manifest::tree::InsertErrorCause::DirectoryExistsForPath => {
-            let files: Vec<manifest::File> = tree
+        manifest_tree::InsertErrorCause::DirectoryExistsForPath => {
+            let files: Vec<File> = tree
                 .files(&TreeMatcher::from_rules([format!("{}/**", path)].iter())?)
                 .collect::<Result<_>>()?;
             for file in files {
@@ -551,15 +551,15 @@ fn vec_to_iter<T: ToPyObject>(py: Python, items: Vec<T>) -> PyResult<PyObject> {
 
 fn file_metadata_to_py_tuple(
     py: Python,
-    file_metadata: &manifest::FileMetadata,
+    file_metadata: &FileMetadata,
 ) -> PyResult<(PyBytes, String)> {
     let node = PyBytes::new(py, file_metadata.hgid.as_ref());
     let flag = {
         let mut s = String::new();
         match file_metadata.file_type {
-            manifest::FileType::Regular => (),
-            manifest::FileType::Executable => s.push('x'),
-            manifest::FileType::Symlink => s.push('l'),
+            FileType::Regular => (),
+            FileType::Executable => s.push('x'),
+            FileType::Symlink => s.push('l'),
         };
         s
     };

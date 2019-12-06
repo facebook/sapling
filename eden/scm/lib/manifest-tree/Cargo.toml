@@ -1,5 +1,5 @@
 [package]
-name = "manifest"
+name = "manifest-tree"
 version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
@@ -10,12 +10,20 @@ for-tests = ["quickcheck", "rand"]
 
 [dependencies]
 anyhow = "1.0.20"
+bytes = { version = "0.4.11", features = ["serde"] }
+manifest = { path = "../manifest" }
+once_cell = "1.0.2"
 pathmatcher = { path = "../pathmatcher" }
 quickcheck = { version = "0.9", optional = true }
 rand = { version = "0.7", optional = true }
+rust-crypto = "0.2"
+thiserror = "1.0"
+tracing = "0.1"
 types = { path = "../types" }
 
 [dev-dependencies]
+manifest = { path = "../manifest", default-features = false, features = ["for-tests"] }
+parking_lot = "0.9"
 quickcheck = "0.9"
 rand = "0.7"
 types = { path = "../types", default-features = false, features = ["for-tests"] }

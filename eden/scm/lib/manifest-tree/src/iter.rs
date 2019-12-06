@@ -9,16 +9,14 @@ use std::collections::{btree_map, VecDeque};
 
 use anyhow::{Error, Result};
 
+use manifest::FsNode;
 use pathmatcher::Matcher;
 use types::{Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::{
-    tree::{
-        link::{DurableEntry, Link},
-        store::InnerStore,
-        Tree,
-    },
-    FsNode,
+    link::{DurableEntry, Link},
+    store::InnerStore,
+    Tree,
 };
 
 pub struct BfsIter<'a> {
@@ -262,10 +260,11 @@ mod tests {
 
     use std::sync::Arc;
 
+    use manifest::Manifest;
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
-    use crate::tree::{store::TestStore, testutil::*, Manifest};
+    use crate::{store::TestStore, testutil::*};
 
     #[test]
     fn test_items_empty() {

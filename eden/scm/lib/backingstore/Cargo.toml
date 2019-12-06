@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 configparser = { path = "../configparser" }
 manifest = { path = "../manifest" }
+manifest-tree = { path = "../manifest-tree" }
 revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }
 anyhow = "1.0.20"

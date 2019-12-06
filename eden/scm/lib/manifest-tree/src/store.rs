@@ -10,9 +10,8 @@ use std::{str::from_utf8, sync::Arc};
 use anyhow::{format_err, Result};
 use bytes::{Bytes, BytesMut};
 
+use manifest::FileType;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath};
-
-use crate::FileType;
 
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies

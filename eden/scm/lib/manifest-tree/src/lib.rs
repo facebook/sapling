@@ -24,18 +24,16 @@ use crypto::{digest::Digest, sha1::Sha1};
 use once_cell::sync::OnceCell;
 use thiserror::Error;
 
+use manifest::{DiffEntry, Directory, File, FileMetadata, FsNode, Manifest};
 use pathmatcher::Matcher;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 pub(crate) use self::link::Link;
 pub use self::{diff::Diff, store::TreeStore};
 use crate::{
-    tree::{
-        iter::{BfsIter, DfsCursor, Step},
-        link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
-        store::InnerStore,
-    },
-    DiffEntry, File, FileMetadata, FsNode, Manifest,
+    iter::{BfsIter, DfsCursor, Step},
+    link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
+    store::InnerStore,
 };
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
@@ -281,11 +279,9 @@ impl Manifest for Tree {
     fn dirs<'a, M: Matcher>(
         &'a self,
         matcher: &'a M,
-    ) -> Box<dyn Iterator<Item = Result<crate::Directory>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
         let dirs = BfsIter::new(&self, matcher).filter_map(|result| match result {
-            Ok((path, FsNode::Directory(metadata))) => {
-                Some(Ok(crate::Directory::new(path, metadata)))
-            }
+            Ok((path, FsNode::Directory(metadata))) => Some(Ok(Directory::new(path, metadata))),
             Ok(_) => None,
             Err(e) => Some(Err(e)),
         });
@@ -682,10 +678,10 @@ pub fn prefetch(
 mod tests {
     use super::*;
 
+    use manifest::FileType;
     use types::{hgid::NULL_ID, testutil::*};
 
     use self::{store::TestStore, testutil::*};
-    use crate::FileType;
 
     #[test]
     fn test_insert() {

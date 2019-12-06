@@ -10,11 +10,11 @@ use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
 use anyhow::{bail, format_err, Context, Result};
 use once_cell::sync::OnceCell;
 
+use manifest::{File, FileMetadata, FsNode};
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{HgId, Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
-use crate::tree::{store, store::InnerStore};
-use crate::{File, FileMetadata, FsNode};
+use crate::{store, store::InnerStore};
 
 /// `Link` describes the type of nodes that tree manifest operates on.
 #[derive(Clone, Debug)]
@@ -277,7 +277,7 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::tree::testutil::*;
+    use crate::testutil::*;
 
     #[test]
     fn test_file_from_link() {

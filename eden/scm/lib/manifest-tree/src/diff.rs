@@ -9,13 +9,11 @@ use std::{cmp::Ordering, collections::VecDeque, mem};
 
 use anyhow::Result;
 
+use manifest::{DiffEntry, File};
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::RepoPath;
 
-use crate::{
-    tree::{store::InnerStore, DirLink, Tree},
-    DiffEntry, File,
-};
+use crate::{store::InnerStore, DirLink, Tree};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -388,13 +386,11 @@ mod tests {
 
     use std::sync::Arc;
 
+    use manifest::{DiffType, FileMetadata, FileType, Manifest};
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
-    use crate::{
-        tree::{link::DirLink, store::TestStore, testutil::*, Link},
-        DiffType, FileMetadata, FileType, Manifest,
-    };
+    use crate::{link::DirLink, store::TestStore, testutil::*, Link};
 
     #[test]
     fn test_diff_entry_from_file() {

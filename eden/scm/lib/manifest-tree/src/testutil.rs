@@ -9,14 +9,12 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
+use manifest::{File, FileMetadata, Manifest};
 use types::{testutil::*, HgId, RepoPath};
 
 use crate::{
-    tree::{
-        store::{self, TestStore},
-        File, Link, Tree,
-    },
-    FileMetadata, Manifest,
+    store::{self, TestStore},
+    Link, Tree,
 };
 
 pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {

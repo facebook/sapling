@@ -7,7 +7,7 @@
 
 use anyhow::{format_err, Result};
 use bytes::Bytes;
-use manifest::TreeStore;
+use manifest_tree::TreeStore;
 use revisionstore::{ContentStore, DataStore};
 use types::{HgId, Key, RepoPath};
 

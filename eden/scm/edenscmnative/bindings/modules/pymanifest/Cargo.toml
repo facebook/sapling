@@ -11,6 +11,7 @@ cpython-failure = { path = "../../../../lib/cpython-failure" }
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
 encoding = { path = "../../../../lib/encoding" }
 manifest = { path = "../../../../lib/manifest" }
+manifest-tree = { path = "../../../../lib/manifest-tree" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
 pyrevisionstore = { path = "../pyrevisionstore" }
