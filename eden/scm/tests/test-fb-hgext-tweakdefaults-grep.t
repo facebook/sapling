@@ -68,12 +68,12 @@ Test using alternative grep commands
   $ hg grep FooBarB
   [123]
 #endif
-  $ hg grep --config grep.command='grep -i' FooBarB
+  $ hg grep --config grep.command='xargs -0 grep -i' FooBarB --traceback
   grepfile1:foobarbaz
   grepfile2:foobarboo
-  $ hg grep --config grep.command='echo searching' FooBarB subdir1
+  $ hg grep --config grep.command='xargs -0 echo searching' FooBarB subdir1
   searching * -- subdir1/subfile1 (glob)
-  $ hg grep --config grep.command='echo foo ; false' FooBarB subdir2
+  $ hg grep --config grep.command='xargs -0 echo foo ; false' FooBarB subdir2
   foo ; false * -- subdir2/subfile2 (glob)
 
 Test --include flag

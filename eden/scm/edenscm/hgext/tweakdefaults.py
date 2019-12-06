@@ -94,7 +94,7 @@ logopts = [("", "all", None, _("shows all changesets in the repo"))]
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("grep", "command", default="grep")
+configitem("grep", "command", default="xargs -0 grep")
 configitem(globaldata, createmarkersoperation, default=None)
 
 configitem("tweakdefaults", "singlecolonabort", default=False)

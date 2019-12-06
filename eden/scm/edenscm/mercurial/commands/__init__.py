@@ -2656,16 +2656,12 @@ def grep(ui, repo, pattern, *pats, **opts):
     # We don't use a real shell to execute this, which ensures we won't do
     # bad stuff if their command includes redirects, semicolons, or other
     # special characters etc.
-    cmd = (
-        ["xargs", "-0"]
-        + shlex.split(grepcommandstr)
-        + [
-            "--no-messages",
-            "--binary-files=without-match",
-            "--with-filename",
-            "--regexp=" + pattern,
-        ]
-    )
+    cmd = shlex.split(grepcommandstr) + [
+        "--no-messages",
+        "--binary-files=without-match",
+        "--with-filename",
+        "--regexp=" + pattern,
+    ]
 
     biggrepclient = ui.config(
         "grep",
