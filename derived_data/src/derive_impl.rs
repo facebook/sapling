@@ -92,13 +92,19 @@ pub(crate) fn derive_impl<
     .traced(&ctx.trace(), "derive::find_dependencies", None)
     .filter_map(|x| x)
     .collect_to()
-    .map(|v| {
-        stream::iter_ok(
-            sort_topological(&v)
-                .expect("commit graph has cycles!")
-                .into_iter()
-                .rev(),
-        )
+    .map({
+        cloned!(ctx);
+        move |v| {
+            let topo_sorted_commit_graph = sort_topological(&v).expect("commit graph has cycles!");
+            let sz = topo_sorted_commit_graph.len();
+            if sz > 100 {
+                warn!(
+                    ctx.logger(),
+                    "derive_impl is called on a graph of size {}", sz
+                );
+            }
+            stream::iter_ok(topo_sorted_commit_graph.into_iter().rev())
+        }
     })
     .flatten_stream()
     .chunks(100)
