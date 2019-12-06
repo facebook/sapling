@@ -23,6 +23,7 @@ use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use indexmap::set::IndexSet;
+use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
@@ -304,17 +305,32 @@ impl Dag {
         let mut current_low = None;
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
+        let mut head_ids: HashSet<Id> = if group == GroupId::MASTER && low > Id(0) {
+            self.heads(Id(0)..=(low - 1))?.iter().collect()
+        } else {
+            Default::default()
+        };
+        let mut get_flags = |parents: &Vec<Id>, head: Id| {
+            let mut flags = SegmentFlags::empty();
+            if parents.is_empty() {
+                flags |= SegmentFlags::HAS_ROOT
+            }
+            if group == GroupId::MASTER {
+                head_ids = &head_ids - &parents.iter().cloned().collect();
+                if head_ids.is_empty() {
+                    flags |= SegmentFlags::ONLY_HEAD;
+                }
+                head_ids.insert(head);
+            }
+            flags
+        };
         for id in low.to(high) {
             let parents = get_parents(id)?;
             if parents.len() != 1 || parents[0] + 1 != id || current_low.is_none() {
                 // Must start a new segment.
                 if let Some(low) = current_low {
                     debug_assert!(id > Id(0));
-                    let flags = if current_parents.is_empty() {
-                        SegmentFlags::HAS_ROOT
-                    } else {
-                        SegmentFlags::empty()
-                    };
+                    let flags = get_flags(&current_parents, id - 1);
                     self.insert(flags, 0, low, id - 1, &current_parents)?;
                     insert_count += 1;
                 }
@@ -326,11 +342,7 @@ impl Dag {
         // For the last flat segment, only build it if its length satisfies the threshold.
         if let Some(low) = current_low {
             if low + last_threshold <= high {
-                let flags = if current_parents.is_empty() {
-                    SegmentFlags::HAS_ROOT
-                } else {
-                    SegmentFlags::empty()
-                };
+                let flags = get_flags(&current_parents, high);
                 self.insert(flags, 0, low, high, &current_parents)?;
                 insert_count += 1;
             }
@@ -1071,6 +1083,13 @@ bitflags! {
         /// This segment has roots (i.e. there is at least one id in
         /// `low..=high`, `parents(id)` is empty).
         const HAS_ROOT = 0b1;
+
+        /// This segment is the only head in `0..=high`.
+        /// In other words, `heads(0..=high)` is `[high]`.
+        ///
+        /// This flag should not be set if the segment is either a high-level
+        /// segment, or in a non-master group.
+        const ONLY_HEAD = 0b10;
     }
 }
 
@@ -1089,6 +1108,10 @@ impl<'a> Segment<'a> {
 
     pub(crate) fn has_root(&self) -> Result<bool> {
         Ok(self.flags()?.contains(SegmentFlags::HAS_ROOT))
+    }
+
+    pub(crate) fn only_head(&self) -> Result<bool> {
+        Ok(self.flags()?.contains(SegmentFlags::ONLY_HEAD))
     }
 
     pub(crate) fn high(&self) -> Result<Id> {
@@ -1189,6 +1212,9 @@ impl<'a> Debug for Segment<'a> {
         let span = self.span().unwrap();
         if self.has_root().unwrap() {
             write!(f, "R")?;
+        }
+        if self.only_head().unwrap() {
+            write!(f, "H")?;
         }
         let parents = self.parents().unwrap();
         write!(f, "{}-{}{:?}", span.low, span.high, parents,)?;
