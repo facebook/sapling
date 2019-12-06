@@ -34,7 +34,7 @@ use crate::{
     tree::{
         cursor::{Cursor, Step},
         files::Items,
-        link::{Directory, Durable, DurableEntry, Ephemeral, Leaf},
+        link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
         store::InnerStore,
     },
     DiffEntry, File, FileMetadata, FsNode, Manifest,
@@ -652,7 +652,7 @@ pub fn prefetch(
     mut depth: Option<usize>,
 ) -> Result<()> {
     let tree = Tree::durable(store, key.hgid);
-    let mut dirs = vec![Directory::from_link(&tree.root, key.path).unwrap()];
+    let mut dirs = vec![DirLink::from_link(&tree.root, key.path).unwrap()];
 
     while !dirs.is_empty() {
         let keys = dirs.iter().filter_map(|d| d.key()).collect::<Vec<_>>();

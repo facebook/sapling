@@ -175,13 +175,13 @@ impl PartialEq for DurableEntry {
 /// state on disk. If the directory has in-memory modifications that have not
 /// been persisted to disk, it will not have an hgid.
 #[derive(Clone, Debug)]
-pub struct Directory<'a> {
+pub struct DirLink<'a> {
     pub(crate) path: RepoPathBuf,
     pub(crate) hgid: Option<HgId>,
     link: &'a Link,
 }
 
-impl<'a> Directory<'a> {
+impl<'a> DirLink<'a> {
     /// Create a directory record for a `Link`, failing if the link
     /// refers to a file rather than a directory.
     pub(crate) fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
@@ -190,7 +190,7 @@ impl<'a> Directory<'a> {
             Link::Ephemeral(_) => None,
             Link::Durable(entry) => Some(entry.hgid),
         };
-        Some(Self { path, hgid, link })
+        Some(DirLink { path, hgid, link })
     }
 
     /// Same as `from_link`, but set the directory's path to the empty
@@ -210,7 +210,7 @@ impl<'a> Directory<'a> {
     /// not available locally. As such, algorithms that require fast access to
     /// this data should take care to ensure that this content is present
     /// locally before calling this method.
-    pub(crate) fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<Directory<'a>>)> {
+    pub(crate) fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<DirLink<'a>>)> {
         let mut files = Vec::new();
         let mut dirs = Vec::new();
 
@@ -228,7 +228,7 @@ impl<'a> Directory<'a> {
                     files.push(link.to_file(path).expect("leaf node must be a valid file"))
                 }
                 Link::Ephemeral(_) | Link::Durable(_) => dirs.push(
-                    Directory::from_link(link, path).expect("inner node must be a valid directory"),
+                    DirLink::from_link(link, path).expect("inner node must be a valid directory"),
                 ),
             }
         }
@@ -244,15 +244,15 @@ impl<'a> Directory<'a> {
     }
 }
 
-impl Eq for Directory<'_> {}
+impl Eq for DirLink<'_> {}
 
-impl PartialEq for Directory<'_> {
+impl PartialEq for DirLink<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.path == other.path && self.hgid == other.hgid
     }
 }
 
-impl Ord for Directory<'_> {
+impl Ord for DirLink<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.path.cmp(&other.path) {
             Ordering::Equal => self.hgid.cmp(&other.hgid),
@@ -261,7 +261,7 @@ impl Ord for Directory<'_> {
     }
 }
 
-impl PartialOrd for Directory<'_> {
+impl PartialOrd for DirLink<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -306,8 +306,8 @@ mod tests {
         let path = repo_path_buf("test/leaf");
 
         let ephemeral = Link::ephemeral();
-        let dir = Directory::from_link(&ephemeral, path.clone()).unwrap();
-        let expected = Directory {
+        let dir = DirLink::from_link(&ephemeral, path.clone()).unwrap();
+        let expected = DirLink {
             path: path.clone(),
             hgid: None,
             link: &ephemeral,
@@ -316,8 +316,8 @@ mod tests {
 
         let hash = hgid("b");
         let durable = Link::durable(hash);
-        let dir = Directory::from_link(&durable, path.clone()).unwrap();
-        let expected = Directory {
+        let dir = DirLink::from_link(&durable, path.clone()).unwrap();
+        let expected = DirLink {
             path: path.clone(),
             hgid: Some(hash),
             link: &ephemeral,
@@ -326,14 +326,14 @@ mod tests {
 
         // If the Link is actually a file, we should get None.
         let leaf = Link::Leaf(meta.clone());
-        let dir = Directory::from_link(&leaf, path.clone());
+        let dir = DirLink::from_link(&leaf, path.clone());
         assert!(dir.is_none());
     }
 
     #[test]
     fn test_list_directory() -> Result<()> {
         let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
-        let dir = Directory::from_root(&tree.root).unwrap();
+        let dir = DirLink::from_root(&tree.root).unwrap();
         let (files, dirs) = dir.list(&tree.store)?;
 
         let file_names = files.into_iter().map(|f| f.path).collect::<Vec<_>>();

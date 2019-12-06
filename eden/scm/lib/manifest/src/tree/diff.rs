@@ -13,7 +13,7 @@ use pathmatcher::{DirectoryMatch, Matcher};
 use types::RepoPath;
 
 use crate::{
-    tree::{store::InnerStore, Directory, Tree},
+    tree::{store::InnerStore, DirLink, Tree},
     DiffEntry, File,
 };
 
@@ -30,8 +30,8 @@ enum Side {
 /// path) whose content is different on either side of the diff.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum DiffItem<'a> {
-    Single(Directory<'a>, Side),
-    Changed(Directory<'a>, Directory<'a>),
+    Single(DirLink<'a>, Side),
+    Changed(DirLink<'a>, DirLink<'a>),
 }
 
 impl<'a> DiffItem<'a> {
@@ -61,11 +61,11 @@ impl<'a> DiffItem<'a> {
         }
     }
 
-    fn left(dir: Directory<'a>) -> Self {
+    fn left(dir: DirLink<'a>) -> Self {
         DiffItem::Single(dir, Side::Left)
     }
 
-    fn right(dir: Directory<'a>) -> Self {
+    fn right(dir: DirLink<'a>) -> Self {
         DiffItem::Single(dir, Side::Right)
     }
 }
@@ -90,8 +90,8 @@ pub struct Diff<'a> {
 
 impl<'a> Diff<'a> {
     pub fn new(left: &'a Tree, right: &'a Tree, matcher: &'a dyn Matcher) -> Self {
-        let lroot = Directory::from_root(&left.root).expect("tree root is not a directory");
-        let rroot = Directory::from_root(&right.root).expect("tree root is not a directory");
+        let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
+        let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
         let mut current = VecDeque::new();
 
         // Don't even attempt to perform a diff if these trees are the same.
@@ -200,7 +200,7 @@ impl<'a> Iterator for Diff<'a> {
 /// Returns diff entries of all of the files in this directory, and
 /// adds any subdirectories to the next layer to be processed.
 fn diff_single<'a>(
-    dir: Directory<'a>,
+    dir: DirLink<'a>,
     next: &mut VecDeque<DiffItem<'a>>,
     side: Side,
     store: &'a InnerStore,
@@ -232,8 +232,8 @@ fn diff_single<'a>(
 /// diff. Returns diff entries for any changed files, and adds any changed
 /// directories to the next layer to be processed.
 fn diff<'a>(
-    left: Directory<'a>,
-    right: Directory<'a>,
+    left: DirLink<'a>,
+    right: DirLink<'a>,
     next: &mut VecDeque<DiffItem<'a>>,
     lstore: &'a InnerStore,
     rstore: &'a InnerStore,
@@ -307,8 +307,8 @@ fn diff_files<'a>(
 
 /// Given two sorted directory lists, return diff items for non-matching directories.
 fn diff_dirs<'a>(
-    ldirs: Vec<Directory<'a>>,
-    rdirs: Vec<Directory<'a>>,
+    ldirs: Vec<DirLink<'a>>,
+    rdirs: Vec<DirLink<'a>>,
     matcher: &'a dyn Matcher,
 ) -> Vec<DiffItem<'a>> {
     let mut output = Vec::new();
@@ -392,7 +392,7 @@ mod tests {
     use types::testutil::*;
 
     use crate::{
-        tree::{link::Directory, store::TestStore, testutil::*, Link},
+        tree::{link::DirLink, store::TestStore, testutil::*, Link},
         DiffType, FileMetadata, FileType, Manifest,
     };
 
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn test_diff_single() {
         let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
-        let dir = Directory::from_root(&tree.root).unwrap();
+        let dir = DirLink::from_root(&tree.root).unwrap();
         let mut next = VecDeque::new();
 
         let matcher = AlwaysMatcher::new();
@@ -454,11 +454,11 @@ mod tests {
         let dummy = Link::ephemeral();
         let expected_next = VecDeque::from(vec![
             DiffItem::Single(
-                Directory::from_link(&dummy, repo_path_buf("b")).unwrap(),
+                DirLink::from_link(&dummy, repo_path_buf("b")).unwrap(),
                 Side::Left,
             ),
             DiffItem::Single(
-                Directory::from_link(&dummy, repo_path_buf("d")).unwrap(),
+                DirLink::from_link(&dummy, repo_path_buf("d")).unwrap(),
                 Side::Left,
             ),
         ]);
