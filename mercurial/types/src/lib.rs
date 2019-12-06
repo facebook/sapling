@@ -62,7 +62,6 @@ pub mod fsencode;
 pub mod globalrev;
 pub mod hash;
 pub mod manifest;
-pub mod manifest_utils;
 mod node;
 pub mod nodehash;
 pub mod phase;
