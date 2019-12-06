@@ -16,8 +16,6 @@ use anyhow::Result;
 
 use types::{HgId, RepoPath, RepoPathBuf};
 
-use crate::tree::Link;
-
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.
 ///
@@ -81,15 +79,6 @@ pub struct File {
 impl File {
     pub fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
         Self { path, meta }
-    }
-
-    /// Create a file record for a `Link`, failing if the link
-    /// refers to a directory rather than a file.
-    pub fn from_link(link: &Link, path: RepoPathBuf) -> Option<Self> {
-        match link {
-            Link::Leaf(meta) => Some(Self::new(path, *meta)),
-            _ => None,
-        }
     }
 }
 

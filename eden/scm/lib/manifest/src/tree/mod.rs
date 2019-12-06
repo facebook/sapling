@@ -715,7 +715,7 @@ impl<'a> Directory<'a> {
             path.push(name.as_ref());
             match link {
                 Link::Leaf(_) => {
-                    files.push(File::from_link(link, path).expect("leaf node must be a valid file"))
+                    files.push(link.to_file(path).expect("leaf node must be a valid file"))
                 }
                 Link::Ephemeral(_) | Link::Durable(_) => dirs.push(
                     Directory::from_link(link, path).expect("inner node must be a valid directory"),
@@ -1573,7 +1573,7 @@ mod tests {
         let path = repo_path_buf("test/leaf");
 
         let leaf = Link::Leaf(meta.clone());
-        let file = File::from_link(&leaf, path.clone()).unwrap();
+        let file = leaf.to_file(path.clone()).unwrap();
 
         let expected = File {
             path: path.clone(),
@@ -1583,11 +1583,11 @@ mod tests {
 
         // Attempting to use a directory link should fail.
         let ephemeral = Link::ephemeral();
-        let _file = File::from_link(&ephemeral, path.clone());
+        let _file = ephemeral.to_file(path.clone());
 
         // Durable link should result in a directory.
         let durable = Link::durable(hgid("a"));
-        let file = File::from_link(&durable, path.clone());
+        let file = durable.to_file(path.clone());
         assert!(file.is_none());
     }
 

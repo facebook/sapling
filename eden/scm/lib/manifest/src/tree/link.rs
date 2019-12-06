@@ -10,10 +10,10 @@ use std::{collections::BTreeMap, sync::Arc};
 use anyhow::{bail, format_err, Result};
 use once_cell::sync::OnceCell;
 
-use types::{HgId, PathComponentBuf, RepoPath};
+use types::{HgId, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::tree::{store, store::InnerStore};
-use crate::{FileMetadata, FsNode};
+use crate::{File, FileMetadata, FsNode};
 
 /// `Link` describes the type of nodes that tree manifest operates on.
 #[derive(Clone, Debug)]
@@ -81,6 +81,15 @@ impl Link {
             &Link::Leaf(metadata) => FsNode::File(metadata),
             Link::Ephemeral(_) => FsNode::Directory(None),
             Link::Durable(durable) => FsNode::Directory(Some(durable.hgid)),
+        }
+    }
+
+    /// Create a file record for a `Link`, failing if the link
+    /// refers to a directory rather than a file.
+    pub fn to_file(&self, path: RepoPathBuf) -> Option<File> {
+        match self {
+            Leaf(metadata) => Some(File::new(path, *metadata)),
+            _ => None,
         }
     }
 }
