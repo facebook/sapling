@@ -133,7 +133,7 @@ impl Manifest for Tree {
                 ))?,
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
-                    let links = entry.get_links(&self.store, parent)?;
+                    let links = entry.materialize_links(&self.store, parent)?;
                     links.get(component)
                 }
             };
@@ -486,7 +486,7 @@ impl Tree {
             None => return Ok(List::NotFound),
             Some(Leaf(_)) => return Ok(List::File),
             Some(Ephemeral(content)) => content,
-            Some(Durable(entry)) => entry.get_links(&self.store, path)?,
+            Some(Durable(entry)) => entry.materialize_links(&self.store, path)?,
         };
 
         let directory = directory
@@ -504,7 +504,7 @@ impl Tree {
                 Leaf(_) => return Ok(None),
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
-                    let links = entry.get_links(&self.store, parent)?;
+                    let links = entry.materialize_links(&self.store, parent)?;
                     links.get(component)
                 }
             };
@@ -707,7 +707,7 @@ impl<'a> Directory<'a> {
         let links = match &self.link {
             &Link::Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
             &Link::Ephemeral(ref links) => links,
-            &Link::Durable(entry) => entry.get_links(store, &self.path)?,
+            &Link::Durable(entry) => entry.materialize_links(store, &self.path)?,
         };
 
         for (name, link) in links {

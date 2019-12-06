@@ -130,7 +130,7 @@ impl<'a> Cursor<'a> {
                             self.state = State::Next;
                         }
                         Link::Durable(durable_entry) => {
-                            match durable_entry.get_links(&*self.store, &self.path) {
+                            match durable_entry.materialize_links(&*self.store, &self.path) {
                                 Err(err) => {
                                     self.state = State::Done;
                                     return Step::Err(err);
