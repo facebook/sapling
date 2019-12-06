@@ -270,6 +270,9 @@ impl Dag {
     {
         let mut count = 0;
         count += self.build_flat_segments(high, get_parents, 0)?;
+        if self.next_free_id(0)? <= high {
+            bail!("internal error: flat segments are not built as expected");
+        }
         count += self.build_all_high_level_segments(false)?;
         Ok(count)
     }
@@ -300,7 +303,7 @@ impl Dag {
         let mut insert_count = 0;
         for id in low.to(high) {
             let parents = get_parents(id)?;
-            if parents.len() != 1 || parents[0] + 1 != id {
+            if parents.len() != 1 || parents[0] + 1 != id || current_low.is_none() {
                 // Must start a new segment.
                 if let Some(low) = current_low {
                     debug_assert!(id > Id(0));
