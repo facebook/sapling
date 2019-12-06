@@ -392,7 +392,7 @@ mod tests {
     use types::testutil::*;
 
     use crate::{
-        tree::{store::TestStore, testutil::*, Link},
+        tree::{link::Directory, store::TestStore, testutil::*, Link},
         DiffType, FileMetadata, FileType, Manifest,
     };
 
@@ -453,8 +453,14 @@ mod tests {
 
         let dummy = Link::ephemeral();
         let expected_next = VecDeque::from(vec![
-            DiffItem::Single(make_dir("b", None, &dummy), Side::Left),
-            DiffItem::Single(make_dir("d", None, &dummy), Side::Left),
+            DiffItem::Single(
+                Directory::from_link(&dummy, repo_path_buf("b")).unwrap(),
+                Side::Left,
+            ),
+            DiffItem::Single(
+                Directory::from_link(&dummy, repo_path_buf("d")).unwrap(),
+                Side::Left,
+            ),
         ]);
 
         assert_eq!(next, expected_next);

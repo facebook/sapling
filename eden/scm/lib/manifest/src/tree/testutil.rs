@@ -14,7 +14,7 @@ use types::{testutil::*, HgId, RepoPath};
 use crate::{
     tree::{
         store::{self, TestStore},
-        Directory, File, Link, Tree,
+        File, Link, Tree,
     },
     FileMetadata, Manifest,
 };
@@ -43,14 +43,6 @@ pub(crate) fn make_file(path: &str, hex: &str) -> File {
     File {
         path: repo_path_buf(path),
         meta: make_meta(hex),
-    }
-}
-
-pub(crate) fn make_dir<'a>(path: &str, hex: Option<&str>, link: &'a Link) -> Directory<'a> {
-    Directory {
-        path: repo_path_buf(path),
-        hgid: hex.map(hgid),
-        link,
     }
 }
 
