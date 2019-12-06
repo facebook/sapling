@@ -957,7 +957,7 @@ impl Dag {
 
     /// Calculate the descendants of the given set.
     ///
-    /// Logically equvilent to `range(set, all())`.
+    /// Logically equivalent to `range(set, all())`.
     pub fn descendants(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         // The algorithm is a manually "inlined" version of `range` where `ancestors`
         // is known to be `all()`.

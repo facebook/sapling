@@ -93,14 +93,21 @@ impl IdMap {
         lock_file.lock_exclusive()?;
 
         // Reload. So we get latest data.
-        self.log.sync()?;
-        // Invalidate the next free id cache.
-        self.cached_next_free_ids = Default::default();
+        self.reload()?;
 
         Ok(SyncableIdMap {
             map: self,
             lock_file,
         })
+    }
+
+    /// Reload from the filesystem. Discard pending changes.
+    pub fn reload(&mut self) -> Result<()> {
+        self.log.clear_dirty()?;
+        self.log.sync()?;
+        // Invalidate the next free id cache.
+        self.cached_next_free_ids = Default::default();
+        Ok(())
     }
 
     /// Find slice by a specified integer id.
