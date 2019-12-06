@@ -423,3 +423,28 @@ Test non-fast-forward force pushrebase
   remote:     "Forced push blocked because it contains mutation metadata.\nYou can remove the metadata from a commit with `hg amend --config mutation.record=false`.\nFor more help, please contact the Source Control team at https://fburl.com/27qnuyl2"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+Check that we can replace a file with a directory
+  $ cd "$TESTTMP/repo2"
+  $ hgmn up default/newbook -q
+  $ hg rm A -q
+  $ mkdir A
+  $ echo hello > A/hello
+  $ hgmn add A/hello -q
+  $ hgmn ci -qm "replace a file with a dir"
+  $ hgmn push --to newbook
+  pushing rev 4e5fec14573f to destination ssh://user@dummy/repo bookmark newbook
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  updating bookmark newbook
+
+  $ ls A
+  hello
+  $ log -r "30"
+  @  replace a file with a dir [public;rev=30;4e5fec14573f] default/newbook
+  |
+  ~
+

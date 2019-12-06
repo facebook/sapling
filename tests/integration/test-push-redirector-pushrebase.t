@@ -238,3 +238,27 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   ls: cannot access smallrepofolder/filetomove: No such file or directory
   [2]
   $ verify_wc master_bookmark
+
+Pushrebase, which replaces a file with a directory
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg rm subdir
+  $ mkdir subdir
+  $ createfile subdir/greatfile && hg ci -qm "Replace a file with a directory"
+  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  updating bookmark master_bookmark
+  $ log -r master_bookmark
+  @  Replace a file with a directory [public;rev=14;4d2fda63b03e] default/master_bookmark
+  |
+  ~
+-- this should also be present in a large repo, once we pull
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ ls smallrepofolder/subdir
+  greatfile
+  $ log -r master_bookmark
+  @  Replace a file with a directory [public;rev=15;81b97bd0337e] default/master_bookmark
+  |
+  ~
+  $ verify_wc master_bookmark
