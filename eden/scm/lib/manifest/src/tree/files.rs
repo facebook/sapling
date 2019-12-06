@@ -120,9 +120,9 @@ mod tests {
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
-                (repo_path_buf("a1/b2"), make_meta("20")).into(),
-                (repo_path_buf("a2/b2/c2"), make_meta("30")).into(),
-                (repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),
+                make_file("a1/b2", "20"),
+                make_file("a2/b2/c2", "30"),
+                make_file("a1/b1/c1/d1", "10"),
             )
         );
 
@@ -157,9 +157,9 @@ mod tests {
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
-                (repo_path_buf("a1/b2"), make_meta("20")).into(),
-                (repo_path_buf("a2/b2/c2"), make_meta("30")).into(),
-                (repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),
+                make_file("a1/b2", "20"),
+                make_file("a2/b2/c2", "30"),
+                make_file("a1/b1/c1/d1", "10"),
             )
         );
 
@@ -194,25 +194,19 @@ mod tests {
             tree.files(&TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
-            vec!(
-                (repo_path_buf("a2/b2/c2"), make_meta("30")).into(),
-                (repo_path_buf("a2/b2/c3"), make_meta("40")).into()
-            )
+            vec!(make_file("a2/b2/c2", "30"), make_file("a2/b2/c3", "40"))
         );
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["a1/*/c1/**"].iter()).unwrap())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
-            vec!((repo_path_buf("a1/b1/c1/d1"), make_meta("10")).into(),)
+            vec!(make_file("a1/b1/c1/d1", "10"),)
         );
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["**/c3"].iter()).unwrap())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
-            vec!(
-                (repo_path_buf("a2/b2/c3"), make_meta("40").into()).into(),
-                (repo_path_buf("a3/b2/c3"), make_meta("50").into()).into()
-            )
+            vec!(make_file("a2/b2/c3", "40"), make_file("a3/b2/c3", "50"))
         );
 
         // A prefix matcher works as expected.

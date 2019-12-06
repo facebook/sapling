@@ -95,12 +95,6 @@ impl File {
     }
 }
 
-impl From<(RepoPathBuf, FileMetadata)> for File {
-    fn from((path, meta): (RepoPathBuf, FileMetadata)) -> Self {
-        Self { path, meta }
-    }
-}
-
 /// A directory entry in a manifest.
 ///
 /// Consists of the full path to the directory. Directories may or may not be assigned
@@ -113,12 +107,6 @@ pub struct Directory {
 
 impl Directory {
     pub fn new(path: RepoPathBuf, hgid: Option<HgId>) -> Self {
-        Self { path, hgid }
-    }
-}
-
-impl From<(RepoPathBuf, Option<HgId>)> for Directory {
-    fn from((path, hgid): (RepoPathBuf, Option<HgId>)) -> Self {
         Self { path, hgid }
     }
 }
