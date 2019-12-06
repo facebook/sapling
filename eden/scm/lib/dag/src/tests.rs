@@ -161,6 +161,92 @@ Lv3: R0-21[]"#
 }
 
 #[test]
+fn test_segment_groups() {
+    let dag = r#"
+A---B---C---D---E---F---G--------H---I
+     \               \          /
+      h--i--j--k      l--m--n--o
+                \            \
+                 -------------p---q"#;
+
+    // This test involves many things. Lower-case commits are non-master commits.
+    // - D after B: Test incremental build of a master commit with a master parent.
+    // - i after D: Test non-master with master parent.
+    // - k after i: Test non-master with non-master parent.
+    // - q after G: Test non-master with both master and non-master ancestors.
+    // - I after q: Test overwriting non-master Ids with master Ids (!).
+    let built = build_segments(dag, "B D i k G q I", 3);
+    assert_eq!(
+        built.ascii.join("\n"),
+        r#"
+0---1---C---D---E---F---G--------H---I
+     \               \          /
+      h--i--j--k      l--m--n--o
+                \            \
+                 -------------p---q
+Lv0: R0-1[]
+
+0---1---2---3---E---F---G--------H---I
+     \               \          /
+      h--i--j--k      l--m--n--o
+                \            \
+                 -------------p---q
+Lv0: R0-1[] 2-3[1]
+Lv1: R0-3[]
+
+0---1---2---3---E---F---G--------H---I
+     \               \          /
+      N0-N1-j--k      l--m--n--o
+                \            \
+                 -------------p---q
+Lv0: R0-1[] 2-3[1] N0-N1[1]
+Lv1: R0-3[] N0-N1[1]
+
+0---1---2---3---E---F---G--------H---I
+     \               \          /
+      N0-N1-N2-N3     l--m--n--o
+                \            \
+                 -------------p---q
+Lv0: R0-1[] 2-3[1] N0-N1[1] N2-N3[N1]
+Lv1: R0-3[] N0-N1[1] N2-N3[N1]
+
+0---1---2---3---4---5---6--------H---I
+     \               \          /
+      N0-N1-N2-N3     l--m--n--o
+                \            \
+                 -------------p---q
+Lv0: R0-1[] 2-3[1] 4-6[3] N0-N1[1] N2-N3[N1]
+Lv1: R0-3[] 4-6[3] N0-N1[1] N2-N3[N1]
+Lv2: R0-6[] N0-N3[1]
+
+0---1---2---3---4---5---6--------H---I
+     \               \          /
+      N0-N1-N2-N3     N4-N5-N6-o
+                \            \
+                 -------------N7--N8
+Lv0: R0-1[] 2-3[1] 4-6[3] N0-N1[1] N2-N3[N1] N4-N6[5] N7-N8[N3, N6]
+Lv1: R0-3[] 4-6[3] N0-N1[1] N2-N3[N1] N4-N8[5, N3]
+Lv2: R0-6[] N0-N3[1] N4-N8[5, N3]
+
+0---1---2---3---4---5---6--------11--12
+     \               \          /
+      N0-N1-N2-N3     7--8--9--10
+                \            \
+                 -------------N7--N8
+Lv0: R0-1[] 2-3[1] 4-6[3] 7-10[5] 11-12[6, 10] N0-N1[1] N2-N3[N1] N4-N6[5] N7-N8[N3, N6]
+Lv1: R0-3[] 4-6[3] 7-12[5, 6] N0-N1[1] N2-N3[N1] N4-N8[5, N3]
+Lv2: R0-6[] 7-12[5, 6] N0-N3[1] N4-N8[5, N3]
+Lv3: R0-12[] N0-N8[1, 5]"#
+    );
+
+    // 'm' has 2 ids: 8 (master) and 5 (non-master).
+    assert_eq!(built.id_map.find_id_by_slice(b"m").unwrap().unwrap(), Id(8));
+    assert_eq!(built.id_map.find_slice_by_id(Id(8)).unwrap().unwrap(), b"m");
+    let id = GroupId::NON_MASTER.min_id() + 5;
+    assert_eq!(built.id_map.find_slice_by_id(id).unwrap().unwrap(), b"m");
+}
+
+#[test]
 fn test_segment_ancestors_example1() {
     // DAG from segmented-changelog.pdf
     let ascii_dag = r#"
@@ -509,18 +595,19 @@ impl IdMap {
     /// Replace names in an ASCII DAG using the ids assigned.
     fn replace(&self, text: &str) -> String {
         let mut result = text.to_string();
-        for id in 0..self.next_free_id(GroupId::MASTER).unwrap().0 {
-            let id = Id(id);
-            if let Ok(Some(name)) = self.find_slice_by_id(id) {
-                let name = String::from_utf8(name.to_vec()).unwrap();
-                let id_str = format!("{:01$}", id, name.len());
-                if name.len() + 1 == id_str.len() {
-                    // Try to replace while maintaining width
-                    result = result
-                        .replace(&format!("{}-", name), &id_str)
-                        .replace(&format!("{} ", name), &id_str);
+        for &group in GroupId::ALL.iter() {
+            for id in group.min_id().to(self.next_free_id(group).unwrap()) {
+                if let Ok(Some(name)) = self.find_slice_by_id(id) {
+                    let name = String::from_utf8(name.to_vec()).unwrap();
+                    let id_str = format!("{:01$}", id, name.len());
+                    if name.len() + 1 == id_str.len() {
+                        // Try to replace while maintaining width
+                        result = result
+                            .replace(&format!("{}-", name), &id_str)
+                            .replace(&format!("{} ", name), &id_str);
+                    }
+                    result = result.replace(&format!("{}", name), &id_str);
                 }
-                result = result.replace(&format!("{}", name), &id_str);
             }
         }
         result
@@ -560,10 +647,14 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
     let ascii = heads
         .split(' ')
         .map(|head| {
+            // Assign to non-master if the name starts with a lowercase character.
+            let group = if head.chars().nth(0).unwrap().is_lowercase() {
+                GroupId::NON_MASTER
+            } else {
+                GroupId::MASTER
+            };
             let head = head.as_bytes();
-            id_map
-                .assign_head(head, &parents_by_name, GroupId::MASTER)
-                .unwrap();
+            id_map.assign_head(head, &parents_by_name, group).unwrap();
             let head_id = id_map.find_id_by_slice(head).unwrap().unwrap();
             let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
             dag.set_new_segment_size(segment_size);

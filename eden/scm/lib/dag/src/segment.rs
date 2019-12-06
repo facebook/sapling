@@ -14,7 +14,7 @@
 //! have in-memory-only changes. [`SyncableDag`] is the only way to update
 //! the filesystem state, and does not support queires.
 
-use crate::id::Id;
+use crate::id::{GroupId, Id};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use anyhow::{bail, ensure, Result};
@@ -164,15 +164,17 @@ impl Dag {
     /// Return the next unused id for segments of the specified level.
     ///
     /// Useful for building segments incrementally.
-    pub fn next_free_id(&self, level: Level) -> Result<Id> {
-        let prefix = [level];
+    pub fn next_free_id(&self, level: Level, group: GroupId) -> Result<Id> {
+        let lower_bound = group.min_id().to_prefixed_bytearray(level);
+        let upper_bound = group.max_id().to_prefixed_bytearray(level);
+        let range = &lower_bound[..]..=&upper_bound[..];
         match self
             .log
-            .lookup_prefix(Self::INDEX_LEVEL_HEAD, &prefix)?
+            .lookup_range(Self::INDEX_LEVEL_HEAD, range)?
             .rev()
             .nth(0)
         {
-            None => Ok(Id(0)),
+            None => Ok(group.min_id()),
             Some(result) => {
                 let (key, mut values) = result?;
                 // PERF: The "next id" information can be also extracted from
@@ -270,7 +272,7 @@ impl Dag {
     {
         let mut count = 0;
         count += self.build_flat_segments(high, get_parents, 0)?;
-        if self.next_free_id(0)? <= high {
+        if self.next_free_id(0, high.group_id())? <= high {
             bail!("internal error: flat segments are not built as expected");
         }
         count += self.build_all_high_level_segments(false)?;
@@ -297,7 +299,8 @@ impl Dag {
     where
         F: Fn(Id) -> Result<Vec<Id>>,
     {
-        let low = self.next_free_id(0)?;
+        let group = high.group_id();
+        let low = self.next_free_id(0, group)?;
         let mut current_low = None;
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
@@ -336,14 +339,14 @@ impl Dag {
         Ok(insert_count)
     }
 
-    /// Find segments that covers `id..` range at the given level.
+    /// Find segments that covers `id..` range at the given level, within a same group.
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         let lower_bound = Self::serialize_head_level_lookup_key(id, level);
-        let upper_bound = [level + 1];
+        let upper_bound = Self::serialize_head_level_lookup_key(id.group_id().max_id(), level);
         let mut result = Vec::new();
         for entry in self
             .log
-            .lookup_range(Self::INDEX_LEVEL_HEAD, (&lower_bound[..])..&upper_bound)?
+            .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound)?
         {
             let (_, values) = entry?;
             for value in values {
@@ -393,95 +396,104 @@ impl Dag {
         ensure!(level > 0, "build_high_level_segments requires level > 0");
         let size = self.new_seg_size;
 
-        // `get_parents` is on the previous level of segments.
-        let get_parents = |head: Id| -> Result<Vec<Id>> {
-            if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
-                seg.parents()
-            } else {
-                bail!("programming error: get_parents called with wrong head");
-            }
-        };
+        let mut insert_count = 0;
+        for &group in GroupId::ALL.iter() {
+            // `get_parents` is on the previous level of segments.
+            let get_parents = |head: Id| -> Result<Vec<Id>> {
+                if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
+                    seg.parents()
+                } else {
+                    bail!("programming error: get_parents called with wrong head");
+                }
+            };
 
-        let new_segments = {
-            let low = self.next_free_id(level)?;
+            let new_segments = {
+                let low = self.next_free_id(level, group)?;
 
-            // Find all segments on the previous level that haven't been built.
-            let segments: Vec<_> = self.next_segments(low, level - 1)?;
+                // Find all segments on the previous level that haven't been built.
+                let segments: Vec<_> = self.next_segments(low, level - 1)?;
 
-            // Sanity check: They should be sorted and connected.
-            for i in 1..segments.len() {
-                assert_eq!(segments[i - 1].high()? + 1, segments[i].span()?.low);
-            }
-
-            // Build the graph from the first head. `low_idx` is the
-            // index of `segments`.
-            let find_segment = |low_idx: usize| -> Result<_> {
-                let segment_low = segments[low_idx].span()?.low;
-                let mut heads = BTreeSet::new();
-                let mut parents = IndexSet::new();
-                let mut candidate = None;
-                let mut has_root = false;
-                for i in low_idx..segments.len().min(low_idx + size) {
-                    let head = segments[i].head()?;
-                    if !has_root && segments[i].has_root()? {
-                        has_root = true;
-                    }
-                    heads.insert(head);
-                    let direct_parents = get_parents(head)?;
-                    for p in &direct_parents {
-                        if *p < segment_low {
-                            // No need to remove p from heads, since it cannot be a head.
-                            parents.insert(*p);
-                        } else {
-                            heads.remove(p);
-                        }
-                    }
-                    if heads.len() == 1 {
-                        candidate = Some((i, segment_low, head, parents.len(), has_root));
+                // Sanity check: They should be sorted and connected.
+                for i in 1..segments.len() {
+                    if segments[i - 1].high()? + 1 != segments[i].span()?.low {
+                        bail!(
+                            "level {} segments {:?} are not sorted or connected!",
+                            level,
+                            &segments[i - 1..=i]
+                        );
                     }
                 }
-                // There must be at least one valid high-level segment,
-                // because `segments[low_idx]` is such a high-level segment.
-                let (new_idx, low, high, parent_count, has_root) = candidate.unwrap();
-                let parents = parents.into_iter().take(parent_count).collect::<Vec<Id>>();
-                Ok((new_idx, low, high, parents, has_root))
+
+                // Build the graph from the first head. `low_idx` is the
+                // index of `segments`.
+                let find_segment = |low_idx: usize| -> Result<_> {
+                    let segment_low = segments[low_idx].span()?.low;
+                    let mut heads = BTreeSet::new();
+                    let mut parents = IndexSet::new();
+                    let mut candidate = None;
+                    let mut has_root = false;
+                    for i in low_idx..segments.len().min(low_idx + size) {
+                        let head = segments[i].head()?;
+                        if !has_root && segments[i].has_root()? {
+                            has_root = true;
+                        }
+                        heads.insert(head);
+                        let direct_parents = get_parents(head)?;
+                        for p in &direct_parents {
+                            if *p < segment_low {
+                                // No need to remove p from heads, since it cannot be a head.
+                                parents.insert(*p);
+                            } else {
+                                heads.remove(p);
+                            }
+                        }
+                        if heads.len() == 1 {
+                            candidate = Some((i, segment_low, head, parents.len(), has_root));
+                        }
+                    }
+                    // There must be at least one valid high-level segment,
+                    // because `segments[low_idx]` is such a high-level segment.
+                    let (new_idx, low, high, parent_count, has_root) = candidate.unwrap();
+                    let parents = parents.into_iter().take(parent_count).collect::<Vec<Id>>();
+                    Ok((new_idx, low, high, parents, has_root))
+                };
+
+                let mut idx = 0;
+                let mut new_segments = Vec::new();
+                while idx < segments.len() {
+                    let segment_info = find_segment(idx)?;
+                    idx = segment_info.0 + 1;
+                    new_segments.push(segment_info);
+                }
+
+                // Drop the last segment. It could be incomplete.
+                if drop_last {
+                    new_segments.pop();
+                }
+
+                // No point to introduce new levels if it has the same segment count
+                // as the loweer level.
+                if segments.len() == new_segments.len() && self.max_level < level {
+                    return Ok(0);
+                }
+
+                new_segments
             };
 
-            let mut idx = 0;
-            let mut new_segments = Vec::new();
-            while idx < segments.len() {
-                let segment_info = find_segment(idx)?;
-                idx = segment_info.0 + 1;
-                new_segments.push(segment_info);
+            insert_count += new_segments.len();
+
+            for (_, low, high, parents, has_root) in new_segments {
+                let flags = if has_root {
+                    SegmentFlags::HAS_ROOT
+                } else {
+                    SegmentFlags::empty()
+                };
+                self.insert(flags, level, low, high, &parents)?;
             }
 
-            // Drop the last segment. It could be incomplete.
-            if drop_last {
-                new_segments.pop();
+            if level > self.max_level && insert_count > 0 {
+                self.max_level = level;
             }
-
-            // No point to introduce new levels if it has the same segment count
-            // as the loweer level.
-            if segments.len() == new_segments.len() && self.max_level < level {
-                return Ok(0);
-            }
-
-            new_segments
-        };
-
-        let insert_count = new_segments.len();
-
-        for (_, low, high, parents, has_root) in new_segments {
-            let flags = if has_root {
-                SegmentFlags::HAS_ROOT
-            } else {
-                SegmentFlags::empty()
-            };
-            self.insert(flags, level, low, high, &parents)?;
-        }
-
-        if level > self.max_level && insert_count > 0 {
-            self.max_level = level;
         }
 
         Ok(insert_count)
@@ -522,10 +534,14 @@ impl Dag {
 impl Dag {
     /// Return a [`SpanSet`] that covers all ids stored in this [`Dag`].
     pub fn all(&self) -> Result<SpanSet> {
-        match self.next_free_id(0)? {
-            Id(0) => Ok(SpanSet::empty()),
-            n => Ok(SpanSet::from(Id(0)..=(n - 1))),
+        let mut result = SpanSet::empty();
+        for &group in GroupId::ALL.iter().rev() {
+            let next = self.next_free_id(0, group)?;
+            if next > group.min_id() {
+                result.push(group.min_id()..=(next - 1));
+            }
         }
+        Ok(result)
     }
 
     /// Calculate all ancestors reachable from any id from the given set.
@@ -1151,7 +1167,6 @@ impl Debug for Dag {
         segments.sort_by_key(|s| (s.level().unwrap(), s.head().unwrap()));
 
         for segment in segments {
-            let span = segment.span().unwrap();
             let level = segment.level().unwrap();
             if level != last_level {
                 if !first {
@@ -1163,17 +1178,20 @@ impl Debug for Dag {
             } else {
                 write!(f, " ")?;
             }
-            if segment.has_root().unwrap() {
-                write!(f, "R")?;
-            }
-            let parents = segment
-                .parents()
-                .unwrap()
-                .into_iter()
-                .map(|i| i.0)
-                .collect::<Vec<_>>();
-            write!(f, "{}-{}{:?}", span.low, span.high, parents,)?;
+            write!(f, "{:?}", segment)?;
         }
+        Ok(())
+    }
+}
+
+impl<'a> Debug for Segment<'a> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let span = self.span().unwrap();
+        if self.has_root().unwrap() {
+            write!(f, "R")?;
+        }
+        let parents = self.parents().unwrap();
+        write!(f, "{}-{}{:?}", span.low, span.high, parents,)?;
         Ok(())
     }
 }
@@ -1263,25 +1281,25 @@ mod tests {
     fn test_segment_basic_lookups() {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap().0, 0);
-        assert_eq!(dag.next_free_id(1).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 0);
 
         let flags = SegmentFlags::empty();
 
         dag.insert(flags, 0, Id(0), Id(50), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap().0, 51);
+        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 51);
         dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
             .unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap().0, 101);
+        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 101);
         dag.insert(flags, 0, Id(101), Id(150), &vec![Id(100)])
             .unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap().0, 151);
-        assert_eq!(dag.next_free_id(1).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 151);
+        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 0);
         dag.insert(flags, 1, Id(0), Id(100), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(1).unwrap().0, 101);
+        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 101);
         dag.insert(flags, 1, Id(101), Id(150), &vec![Id(100)])
             .unwrap();
-        assert_eq!(dag.next_free_id(1).unwrap().0, 151);
+        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 151);
 
         // Helper functions to make the below lines shorter.
         let low_by_head = |head, level| match dag.find_segment_by_head_and_level(Id(head), level) {
@@ -1329,7 +1347,7 @@ mod tests {
     fn test_sync_reload() {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 0);
 
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
         syncable
