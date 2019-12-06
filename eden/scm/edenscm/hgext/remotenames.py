@@ -98,6 +98,10 @@ configitem("remotenames", "transitionbookmarks", default=[])
 configitem("remotenames", "transitionmessage", default=None)
 configitem("remotenames", "upstream", default=[])
 
+# Perform a pull of remotenames for "push" command. This is racy and does not
+# always update remote bookmarks! The config option exists for testing purpose.
+configitem("remotenames", "racy-pull-on-push", default=True)
+
 namespacepredicate = registrar.namespacepredicate()
 templatekeyword = registrar.templatekeyword()
 revsetpredicate = registrar.revsetpredicate()
@@ -138,7 +142,13 @@ def expush(orig, repo, remote, *args, **kwargs):
             remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
         else:
             remotebookmarks = remote.listkeys("bookmarks")
-        pullremotenames(repo, remote, remotebookmarks)
+
+        # ATTENTION: This might get commits that are unknown to the local repo!
+        # The correct approach is to get the remote names within "orig". But
+        # that requires some complicated server-side changes.
+        # internal config: remotenames.racy-pull-on-push
+        if repo.ui.configbool("remotenames", "racy-pull-on-push"):
+            pullremotenames(repo, remote, remotebookmarks)
 
         return res
 
@@ -2072,15 +2082,25 @@ def precachedistance(repo):
 @command("debugremotebookmark")
 def debugremotebookmark(ui, repo, name, rev):
     """Change a remote bookmark under the 'debugremote' namespace."""
-    data = {}  # {'remote': {'master': '<commit hash>'}}
+    node = scmutil.revsingle(repo, rev).node()
+    setremotebookmark(repo, "debugremote/%s" % name, node)
+
+
+def setremotebookmark(repo, fullname, newnode):
+    """Update a single remote bookmark"""
     with repo.wlock(), repo.lock(), repo.transaction("debugremotebookmark"):
+        data = {}  # {'remote': {'master': '<commit hash>'}}
         for hexnode, _nametype, remote, rname in readremotenames(repo):
             data.setdefault(remote, {})[rname] = hexnode
-
-        hexnode = scmutil.revsingle(repo, rev).hex()
-        data.setdefault("debugremote", {})[name] = hexnode
-
+        remote, name = fullname.split("/", 1)
+        data.setdefault(remote, {})[name] = hex(newnode)
         saveremotenames(repo, data)
+
+
+def hoist2fullname(repo, hoistname):
+    """Convert a hoisted name (ex. 'master') to full name (ex. 'remote/master')"""
+    fullname = "%s/%s" % (repo.ui.config("remotenames", "hoist"), hoistname)
+    return fullname
 
 
 #########

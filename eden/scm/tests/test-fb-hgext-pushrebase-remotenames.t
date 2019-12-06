@@ -81,7 +81,8 @@ Test that pushing to a remotename gets rebased
   o  0 "initial" default/master
   
 
-  $ hg push --to master
+ (disable remotenames.racy-pull-on-push so we can check pushrebase's fallback behavior on updating remotenames)
+  $ hg push --to master --config remotenames.racy-pull-on-push=0
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark master
   searching for changes
   remote: pushing 1 changeset:
@@ -92,6 +93,7 @@ Test that pushing to a remotename gets rebased
   adding file changes
   added 2 changesets with 1 changes to 2 files
   updating bookmark master
+  moving remote bookmark 'default/master' to 98d6f1036c3b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'

@@ -462,6 +462,41 @@ def _push(orig, ui, repo, *args, **opts):
         result = orig(ui, repo, *args, **opts)
 
         if onto and tracker.replacementsreceived:
+            # move remote bookmark
+            #
+            # Note: 'remotenames' also uses 'listkeys' to update remote
+            # bookmarks after push. However, that's racy and does not always
+            # succeed.
+            try:
+                rmarks = repo.names["remotebookmarks"]
+            except KeyError:
+                # remotenames is not enabled.
+                pass
+            else:
+                from .. import remotenames
+
+                # convert to full name (ex. 'master' -> 'remote/master')
+                fullname = remotenames.hoist2fullname(repo, onto)
+                nodes = rmarks.namemap(repo, fullname)
+                if nodes:
+                    rebasednodes = list(tracker.mapping.values())
+                    # The server does not tell us the explicit new location of
+                    # the 'onto' remote boookmark, but we can infer that from
+                    # the rebased commits.
+                    newnode = next(repo.nodes("max(%ln)", rebasednodes), None)
+                    # remotenames might have moved the bookmark already. If
+                    # newnode is already in nodes, there is no need to update
+                    # it again.
+                    if newnode is not None and newnode not in nodes:
+                        if not ui.quiet:
+                            # When we do update it in this code path, print
+                            # a message. This is used in tests.
+                            ui.write_err(
+                                _("moving remote bookmark %r to %s\n")
+                                % (fullname, short(newnode))
+                            )
+                        remotenames.setremotebookmark(repo, fullname, newnode)
+
             # move working copy parent
             if wnode in tracker.mapping:
                 hg.update(repo, tracker.mapping[wnode])
