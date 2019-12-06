@@ -95,7 +95,7 @@ impl<'a> Diff<'a> {
         let mut current = VecDeque::new();
 
         // Don't even attempt to perform a diff if these trees are the same.
-        if lroot.hgid != rroot.hgid || lroot.hgid.is_none() {
+        if lroot.hgid() != rroot.hgid() || lroot.hgid().is_none() {
             current.push_back(DiffItem::Changed(lroot, rroot));
         }
 
@@ -345,7 +345,7 @@ fn diff_dirs<'a>(
                     // The exception is if both hashes are None (indicating the trees
                     // have not yet been persisted), in which case we must manually compare
                     // all of the entries since we can't tell if they are the same.
-                    if l.hgid != r.hgid || l.hgid.is_none() {
+                    if l.hgid() != r.hgid() || l.hgid().is_none() {
                         add_to_output(DiffItem::Changed(l, r));
                     }
                     ldir = ldirs.next();

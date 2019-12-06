@@ -177,7 +177,6 @@ impl PartialEq for DurableEntry {
 #[derive(Clone, Debug)]
 pub struct DirLink<'a> {
     pub path: RepoPathBuf,
-    pub hgid: Option<HgId>,
     pub link: &'a Link,
 }
 
@@ -185,18 +184,23 @@ impl<'a> DirLink<'a> {
     /// Create a directory record for a `Link`, failing if the link
     /// refers to a file rather than a directory.
     pub fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
-        let hgid = match link {
-            Link::Leaf(_) => return None,
-            Link::Ephemeral(_) => None,
-            Link::Durable(entry) => Some(entry.hgid),
-        };
-        Some(DirLink { path, hgid, link })
+        if let Link::Leaf(_) = link {
+            return None;
+        }
+        Some(DirLink { path, link })
     }
 
     /// Same as `from_link`, but set the directory's path to the empty
     /// path, making this method only useful for the root of the tree.
     pub fn from_root(link: &'a Link) -> Option<Self> {
         Self::from_link(link, RepoPathBuf::new())
+    }
+
+    pub fn hgid(&self) -> Option<HgId> {
+        match self.link {
+            Link::Leaf(_) | Link::Ephemeral(_) => None,
+            Link::Durable(entry) => Some(entry.hgid),
+        }
     }
 
     /// List the contents of this directory.
@@ -240,7 +244,7 @@ impl<'a> DirLink<'a> {
     /// by the Eden API to fetch data from the server, making this representation useful
     /// for interacting with Mercurial's data fetching code.
     pub fn key(&self) -> Option<Key> {
-        Some(Key::new(self.path.clone(), self.hgid.clone()?))
+        Some(Key::new(self.path.clone(), self.hgid().clone()?))
     }
 }
 
@@ -248,14 +252,14 @@ impl Eq for DirLink<'_> {}
 
 impl PartialEq for DirLink<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.path == other.path && self.hgid == other.hgid
+        self.path == other.path && self.hgid() == other.hgid()
     }
 }
 
 impl Ord for DirLink<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.path.cmp(&other.path) {
-            Ordering::Equal => self.hgid.cmp(&other.hgid),
+            Ordering::Equal => self.hgid().cmp(&other.hgid()),
             ord => ord,
         }
     }
@@ -309,7 +313,6 @@ mod tests {
         let dir = DirLink::from_link(&ephemeral, path.clone()).unwrap();
         let expected = DirLink {
             path: path.clone(),
-            hgid: None,
             link: &ephemeral,
         };
         assert_eq!(dir, expected);
@@ -319,8 +322,7 @@ mod tests {
         let dir = DirLink::from_link(&durable, path.clone()).unwrap();
         let expected = DirLink {
             path: path.clone(),
-            hgid: Some(hash),
-            link: &ephemeral,
+            link: &durable,
         };
         assert_eq!(dir, expected);
 
