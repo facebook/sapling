@@ -176,15 +176,15 @@ impl PartialEq for DurableEntry {
 /// been persisted to disk, it will not have an hgid.
 #[derive(Clone, Debug)]
 pub struct DirLink<'a> {
-    pub(crate) path: RepoPathBuf,
-    pub(crate) hgid: Option<HgId>,
-    link: &'a Link,
+    pub path: RepoPathBuf,
+    pub hgid: Option<HgId>,
+    pub link: &'a Link,
 }
 
 impl<'a> DirLink<'a> {
     /// Create a directory record for a `Link`, failing if the link
     /// refers to a file rather than a directory.
-    pub(crate) fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
+    pub fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
         let hgid = match link {
             Link::Leaf(_) => return None,
             Link::Ephemeral(_) => None,
@@ -195,7 +195,7 @@ impl<'a> DirLink<'a> {
 
     /// Same as `from_link`, but set the directory's path to the empty
     /// path, making this method only useful for the root of the tree.
-    pub(crate) fn from_root(link: &'a Link) -> Option<Self> {
+    pub fn from_root(link: &'a Link) -> Option<Self> {
         Self::from_link(link, RepoPathBuf::new())
     }
 
@@ -210,7 +210,7 @@ impl<'a> DirLink<'a> {
     /// not available locally. As such, algorithms that require fast access to
     /// this data should take care to ensure that this content is present
     /// locally before calling this method.
-    pub(crate) fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<DirLink<'a>>)> {
+    pub fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<DirLink<'a>>)> {
         let mut files = Vec::new();
         let mut dirs = Vec::new();
 
@@ -239,7 +239,7 @@ impl<'a> DirLink<'a> {
     /// Create a `Key` (path/hgid pair) corresponding to this directory. Keys are used
     /// by the Eden API to fetch data from the server, making this representation useful
     /// for interacting with Mercurial's data fetching code.
-    pub(crate) fn key(&self) -> Option<Key> {
+    pub fn key(&self) -> Option<Key> {
         Some(Key::new(self.path.clone(), self.hgid.clone()?))
     }
 }
