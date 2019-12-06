@@ -742,7 +742,7 @@ fn test_compute_changed_files_one_parent(fb: FacebookInit) {
             ctx.clone(),
             repo.clone(),
             cs.manifestid(),
-            Some(&parent_cs.manifestid()),
+            Some(parent_cs.manifestid()),
             None,
         ))
         .unwrap();

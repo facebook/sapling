@@ -19,13 +19,12 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use manifest::{bonsai_diff, BonsaiDiffFileChange};
+use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
-    manifest_utils::{changed_entry_stream, ChangedEntry},
     Changeset, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, Type,
 };
-use mononoke_types::DateTime;
+use mononoke_types::{DateTime, FileType};
 use slog::{debug, Logger};
 use std::{collections::HashSet, fmt, sync::Arc};
 
@@ -75,22 +74,11 @@ impl BonsaiMFVerifyDifference {
     pub fn changes(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = ChangedEntry, Error = Error> + Send {
+    ) -> impl Stream<Item = Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error = Error> + Send
+    {
         let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
         let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);
-        let original_mf = self.repo.get_manifest_by_nodeid(ctx.clone(), lookup_mf_id);
-        let roundtrip_mf = self
-            .repo
-            .get_manifest_by_nodeid(ctx.clone(), roundtrip_mf_id);
-        original_mf
-            .join(roundtrip_mf)
-            .map({
-                cloned!(ctx);
-                move |(original_mf, roundtrip_mf)| {
-                    changed_entry_stream(ctx, &roundtrip_mf, &original_mf, None)
-                }
-            })
-            .flatten_stream()
+        lookup_mf_id.diff(ctx.clone(), self.repo.get_blobstore(), roundtrip_mf_id)
     }
 
     /// Whether there are any changes beyond the root manifest ID being different.
@@ -106,7 +94,16 @@ impl BonsaiMFVerifyDifference {
         ctx: CoreContext,
     ) -> impl Future<Item = bool, Error = Error> + Send {
         self.changes(ctx)
-            .filter(|item| !item.status.is_tree())
+            .filter(|diff| {
+                let entry = match diff {
+                    Diff::Added(_, entry) | Diff::Removed(_, entry) => entry,
+                    Diff::Changed(_, _, entry) => entry,
+                };
+                match entry {
+                    Entry::Leaf(_) => true,
+                    Entry::Tree(_) => false,
+                }
+            })
             .not_empty()
     }
 

@@ -14,7 +14,7 @@ use cloned::cloned;
 use failure_ext::{
     format_err, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
 };
-use futures::future::{self, ok, Future, Shared, SharedError, SharedItem};
+use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
@@ -24,19 +24,18 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::Timeseries;
 use tracing::{trace_args, Traced};
 
-use ::manifest::{find_intersection_of_diffs, Entry};
+use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
 use blobstore::Blobstore;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent},
     manifest,
-    manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus},
     nodehash::{HgFileNodeId, HgManifestId},
-    Changeset, HgChangesetId, HgEntry, HgManifest, HgNodeHash, HgNodeKey, HgParents, MPath,
-    RepoPath, NULL_HASH,
+    Changeset, HgChangesetId, HgEntry, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath,
+    NULL_HASH,
 };
-use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
+use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType, RepositoryId};
 use stats::define_stats;
 
 use crate::errors::*;
@@ -468,21 +467,20 @@ fn compute_copy_from_info(
 
 fn compute_changed_files_pair(
     ctx: CoreContext,
-    to: &Box<dyn HgManifest + Sync>,
-    from: &Box<dyn HgManifest + Sync>,
+    to: HgManifestId,
+    from: HgManifestId,
+    repo: BlobRepo,
 ) -> BoxFuture<HashSet<MPath>, Error> {
-    changed_entry_stream(ctx, to, from, None)
-        .filter_map(|change| match change.status {
-            EntryStatus::Deleted(entry)
-            | EntryStatus::Added(entry)
-            | EntryStatus::Modified {
-                to_entry: entry, ..
-            } => {
-                if entry.get_type() == manifest::Type::Tree {
-                    None
-                } else {
-                    MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
-                }
+    from.diff(ctx.clone(), repo.get_blobstore(), to)
+        .filter_map(|diff| {
+            let (path, entry) = match diff {
+                Diff::Added(path, entry) | Diff::Removed(path, entry) => (path, entry),
+                Diff::Changed(path, .., entry) => (path, entry),
+            };
+
+            match entry {
+                Entry::Tree(_) => None,
+                Entry::Leaf(_) => path,
             }
         })
         .fold(HashSet::new(), |mut set, path| {
@@ -506,56 +504,32 @@ fn compute_changed_files_pair(
 pub fn compute_changed_files(
     ctx: CoreContext,
     repo: BlobRepo,
-    root_mf_id: HgManifestId,
-    p1_mf_id: Option<&HgManifestId>,
-    p2_mf_id: Option<&HgManifestId>,
+    root: HgManifestId,
+    p1: Option<HgManifestId>,
+    p2: Option<HgManifestId>,
 ) -> BoxFuture<Vec<MPath>, Error> {
-    let root_mf = repo.get_manifest_by_nodeid(ctx.clone(), root_mf_id);
-
-    let p1_mf = match p1_mf_id {
-        Some(p1_mf_id) => repo
-            .get_manifest_by_nodeid(ctx.clone(), *p1_mf_id)
-            .map(Some)
-            .boxify(),
-        None => ok(None).boxify(),
-    };
-
-    let p2_mf = match p2_mf_id {
-        Some(p2_mf_id) => repo
-            .get_manifest_by_nodeid(ctx.clone(), *p2_mf_id)
-            .map(Some)
-            .boxify(),
-        None => ok(None).boxify(),
-    };
-
-    root_mf
-        .join3(p1_mf, p2_mf)
-        .and_then(move |(root_mf, p1_mf, p2_mf)| {
-            compute_changed_files_impl(ctx, &root_mf, p1_mf.as_ref(), p2_mf.as_ref())
-        })
-        .boxify()
-}
-
-fn compute_changed_files_impl(
-    ctx: CoreContext,
-    root: &Box<dyn HgManifest + Sync>,
-    p1: Option<&Box<dyn HgManifest + Sync>>,
-    p2: Option<&Box<dyn HgManifest + Sync>>,
-) -> BoxFuture<Vec<MPath>, Error> {
-    let empty = manifest::HgEmptyManifest {}.boxed();
     match (p1, p2) {
-        (None, None) => compute_changed_files_pair(ctx, &root, &empty),
+        (None, None) => root
+            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .filter_map(|(path, _)| path)
+            .collect_to()
+            .boxify(),
         (Some(manifest), None) | (None, Some(manifest)) => {
-            compute_changed_files_pair(ctx, &root, &manifest)
+            compute_changed_files_pair(ctx, root, manifest, repo)
         }
         (Some(p1), Some(p2)) => {
-            let f1 = compute_changed_files_pair(ctx.clone(), &root, &p1)
-                .join(compute_changed_files_pair(ctx.clone(), &root, &p2))
+            let f1 = compute_changed_files_pair(ctx.clone(), root, p1, repo.clone())
+                .join(compute_changed_files_pair(
+                    ctx.clone(),
+                    root,
+                    p2,
+                    repo.clone(),
+                ))
                 .map(|(left, right)| left.intersection(&right).cloned().collect::<Vec<_>>());
 
             // Mercurial always includes removed files, we need to match this behaviour
-            let f2 = compute_removed_files(ctx.clone(), &root, Some(&p1));
-            let f3 = compute_removed_files(ctx.clone(), &root, Some(&p2));
+            let f2 = compute_removed_files(ctx.clone(), root, Some(p1), repo.clone());
+            let f3 = compute_removed_files(ctx.clone(), root, Some(p2), repo);
 
             f1.join3(f2, f3)
                 .map(|(ch1, ch2, ch3)| {
@@ -578,33 +552,34 @@ fn compute_changed_files_impl(
 
 fn compute_removed_files(
     ctx: CoreContext,
-    child: &Box<dyn HgManifest + Sync>,
-    parent: Option<&Box<dyn HgManifest + Sync>>,
+    child: HgManifestId,
+    parent: Option<HgManifestId>,
+    repo: BlobRepo,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
-    compute_files_with_status(ctx, child, parent, move |change| match change.status {
-        EntryStatus::Deleted(entry) => {
-            if entry.get_type() == manifest::Type::Tree {
-                None
-            } else {
-                MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
-            }
-        }
+    compute_files_with_status(ctx, child, parent, repo, move |diff| match diff {
+        Diff::Removed(path, entry) => match entry {
+            Entry::Leaf(_) => path,
+            Entry::Tree(_) => None,
+        },
         _ => None,
     })
 }
 
 fn compute_files_with_status(
     ctx: CoreContext,
-    child: &Box<dyn HgManifest + Sync>,
-    parent: Option<&Box<dyn HgManifest + Sync>>,
-    filter_map: impl Fn(ChangedEntry) -> Option<MPath>,
+    child: HgManifestId,
+    parent: Option<HgManifestId>,
+    repo: BlobRepo,
+    filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<MPath>,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     let s = match parent {
-        Some(parent) => changed_entry_stream(ctx, child, parent, None).boxify(),
-        None => {
-            let empty = manifest::HgEmptyManifest {};
-            changed_entry_stream(ctx, child, &empty, None).boxify()
-        }
+        Some(parent) => parent
+            .diff(ctx.clone(), repo.get_blobstore(), child)
+            .boxify(),
+        None => child
+            .list_all_entries(ctx.clone(), repo.get_blobstore())
+            .map(|(path, entry)| Diff::Added(path, entry))
+            .boxify(),
     };
 
     s.filter_map(filter_map).collect()
@@ -620,80 +595,64 @@ pub fn check_case_conflicts(
     child_root_mf: HgManifestId,
     parent_root_mf: Option<HgManifestId>,
 ) -> impl Future<Item = (), Error = Error> {
-    let child_mf_fut = repo.get_manifest_by_nodeid(ctx.clone(), child_root_mf.clone());
-
-    let parent_mf_fut = parent_root_mf.map({
-        cloned!(ctx, repo);
-        move |m| repo.get_manifest_by_nodeid(ctx.clone(), m)
-    });
-
-    child_mf_fut
-        .join(parent_mf_fut)
-        .and_then({
-            cloned!(ctx);
-            move |(child_mf, parent_mf)| {
-                compute_files_with_status(ctx, &child_mf, parent_mf.as_ref(), |change| match change
-                    .status
-                {
-                    EntryStatus::Added(entry) => {
-                        if entry.get_type() == manifest::Type::Tree {
-                            None
-                        } else {
-                            MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
-                        }
-                    }
-                    _ => None,
-                })
-            }
-        })
-        .and_then(
-            |added_files| match mononoke_types::check_case_conflicts(added_files.clone()) {
-                Some(path) => Err(ErrorKind::CaseConflict(path).into()),
-                None => Ok(added_files),
-            },
-        )
-        .and_then({
-            cloned!(ctx);
-            move |added_files| match parent_root_mf {
-                Some(parent_root_mf) => {
-                    let mut case_conflict_checks = stream::FuturesUnordered::new();
-                    for f in added_files {
-                        case_conflict_checks.push(
-                            repo.check_case_conflict_in_manifest(
-                                ctx.clone(),
-                                parent_root_mf,
-                                child_root_mf,
-                                f.clone(),
-                            )
-                            .map(move |add_conflict| (add_conflict, f)),
-                        );
-                    }
-
-                    case_conflict_checks
-                        .collect()
-                        .and_then(|results| {
-                            let maybe_conflict =
-                                results.into_iter().find(|(add_conflict, _f)| *add_conflict);
-                            match maybe_conflict {
-                                Some((_, path)) => Err(ErrorKind::CaseConflict(path).into()),
-                                None => Ok(()),
-                            }
-                        })
-                        .left_future()
+    compute_files_with_status(
+        ctx.clone(),
+        child_root_mf,
+        parent_root_mf,
+        repo.clone(),
+        |diff| match diff {
+            Diff::Added(path, _entry) => path,
+            _ => None,
+        },
+    )
+    .and_then(
+        |added_files| match mononoke_types::check_case_conflicts(added_files.clone()) {
+            Some(path) => Err(ErrorKind::CaseConflict(path).into()),
+            None => Ok(added_files),
+        },
+    )
+    .and_then({
+        cloned!(ctx);
+        move |added_files| match parent_root_mf {
+            Some(parent_root_mf) => {
+                let mut case_conflict_checks = stream::FuturesUnordered::new();
+                for f in added_files {
+                    case_conflict_checks.push(
+                        repo.check_case_conflict_in_manifest(
+                            ctx.clone(),
+                            parent_root_mf,
+                            child_root_mf,
+                            f.clone(),
+                        )
+                        .map(move |add_conflict| (add_conflict, f)),
+                    );
                 }
-                None => Ok(()).into_future().right_future(),
+
+                case_conflict_checks
+                    .collect()
+                    .and_then(|results| {
+                        let maybe_conflict =
+                            results.into_iter().find(|(add_conflict, _f)| *add_conflict);
+                        match maybe_conflict {
+                            Some((_, path)) => Err(ErrorKind::CaseConflict(path).into()),
+                            None => Ok(()),
+                        }
+                    })
+                    .left_future()
             }
-        })
-        .traced(
-            ctx.trace(),
-            "check_case_conflicts",
-            trace_args! {
-                "child_manifest_id" => child_root_mf.to_string(),
-                "parent_manifest_id" => parent_root_mf
-                    .map(|id| id.to_string())
-                    .unwrap_or_else(|| "null".to_string()),
-            },
-        )
+            None => Ok(()).into_future().right_future(),
+        }
+    })
+    .traced(
+        ctx.trace(),
+        "check_case_conflicts",
+        trace_args! {
+            "child_manifest_id" => child_root_mf.to_string(),
+            "parent_manifest_id" => parent_root_mf
+                .map(|id| id.to_string())
+                .unwrap_or_else(|| "null".to_string()),
+        },
+    )
 }
 
 fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {

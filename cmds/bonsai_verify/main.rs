@@ -203,7 +203,7 @@ fn subcommand_round_trip(
                                     .map(move |changed_entry| {
                                         info!(
                                             logger,
-                                            "Change: {}",
+                                            "Change: {:?}",
                                             changed_entry,
                                         );
                                     })

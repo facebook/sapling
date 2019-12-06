@@ -1554,7 +1554,7 @@ impl BlobRepo {
             .and_then({
                 cloned!(ctx, repo);
                 move |(manifest_id, incomplete_filenodes)| {
-                compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1.as_ref(), mf_p2.as_ref())
+                compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1, mf_p2)
                     .map(move |files| {
                         (manifest_id, incomplete_filenodes, hg_parents, files)
                     })
@@ -2007,8 +2007,8 @@ impl CreateChangeset {
                                 ctx.clone(),
                                 repo.clone(),
                                 root_mf_id,
-                                parent_manifest_hashes.get(0),
-                                parent_manifest_hashes.get(1),
+                                parent_manifest_hashes.get(0).cloned(),
+                                parent_manifest_hashes.get(1).cloned(),
                             )
                         };
 
