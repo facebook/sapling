@@ -60,7 +60,10 @@ if(USE_CARGO_VENDOR AND NOT TARGET rust_vendored_crates)
   add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/_rust_crates/vendor/.url"
     COMMAND "${Python3_EXECUTABLE}" "${RUST_VENDORED_CRATES_SCRIPT}" download
-    DEPENDS "${RUST_VENDORED_CRATES_SCRIPT}"
+    DEPENDS
+      "${RUST_VENDORED_CRATES_SCRIPT}"
+      "${CMAKE_SOURCE_DIR}/tools/lfs/lfs.py"
+      "${CMAKE_SOURCE_DIR}/tools/lfs/.lfs-pointers"
     COMMENT "Fetching rust vendored crates..."
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/_rust_crates"
   )
