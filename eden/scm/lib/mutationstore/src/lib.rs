@@ -29,12 +29,17 @@
 
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use indexedlog::log::{IndexDef, IndexOutput, Log};
+use indexedlog::{
+    log::{self as ilog, IndexDef, IndexOutput, Log},
+    DefaultOpenOptions,
+};
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 use thiserror::Error;
 use types::node::{Node, ReadNodeExt, WriteNodeExt};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
+
+pub use indexedlog::Repair;
 
 #[derive(Debug, Error)]
 #[error("Invalid Mutation Entry Origin: {0}")]
@@ -185,8 +190,8 @@ const INDEX_PRED: usize = 0;
 const INDEX_SUCC: usize = 1;
 const INDEX_SPLIT: usize = 2;
 
-impl MutationStore {
-    pub fn open(path: impl AsRef<Path>) -> Result<MutationStore> {
+impl DefaultOpenOptions<ilog::OpenOptions> for MutationStore {
+    fn default_open_options() -> ilog::OpenOptions {
         const NODE_LEN: usize = Node::len();
         const SUCC_START: usize = 1usize;
         const PRED_COUNT_START: usize = SUCC_START + NODE_LEN;
@@ -223,19 +228,22 @@ impl MutationStore {
                 .map(|i: usize| IndexOutput::Reference(i as u64..i as u64 + NODE_LEN as u64))
                 .collect()
         };
+
         // Allow some lag to make the indexing more efficient.  Set to 10KB, which is roughly
         // 100 records.
         let lag_threshold = 10000;
-        Ok(MutationStore {
-            log: Log::open(
-                path.as_ref(),
-                vec![
-                    IndexDef::new("pred", pred_index).lag_threshold(lag_threshold),
-                    IndexDef::new("succ", succ_index).lag_threshold(lag_threshold),
-                    IndexDef::new("split", split_index).lag_threshold(lag_threshold),
-                ],
-            )?,
-        })
+        ilog::OpenOptions::new().create(true).index_defs(vec![
+            IndexDef::new("pred", pred_index).lag_threshold(lag_threshold),
+            IndexDef::new("succ", succ_index).lag_threshold(lag_threshold),
+            IndexDef::new("split", split_index).lag_threshold(lag_threshold),
+        ])
+    }
+}
+
+impl MutationStore {
+    pub fn open(path: impl AsRef<Path>) -> Result<MutationStore> {
+        let log = Self::default_open_options().open(path.as_ref())?;
+        Ok(MutationStore { log })
     }
 
     pub fn add(&mut self, entry: &MutationEntry) -> Result<()> {
