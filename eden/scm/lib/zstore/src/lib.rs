@@ -12,3 +12,4 @@ mod zstore;
 
 pub use crate::zstore::{sha1, Id20, Zstore};
 pub use errors::{Error, Result};
+pub use indexedlog::Repair;

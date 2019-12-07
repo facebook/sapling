@@ -11,7 +11,7 @@
 
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use indexedlog::log as ilog;
+use indexedlog::{log as ilog, DefaultOpenOptions};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -35,13 +35,9 @@ pub struct Zstore {
     pub delta_opts: DeltaOptions,
 }
 
-impl Zstore {
-    const ID20_INDEX: usize = 0;
-
-    /// Load or create [Zstore] at the given directory.
-    pub fn open(dir: impl AsRef<Path>) -> crate::Result<Zstore> {
-        let dir = dir.as_ref();
-        let log = ilog::OpenOptions::new()
+impl DefaultOpenOptions<ilog::OpenOptions> for Zstore {
+    fn default_open_options() -> ilog::OpenOptions {
+        ilog::OpenOptions::new()
             .index("id", |_| -> Vec<_> {
                 // The offset of `start` should match mincode serialization layout
                 // of `Delta`.
@@ -61,7 +57,16 @@ impl Zstore {
                 }
                 Ok(ilog::FlushFilterOutput::Keep)
             }))
-            .open(dir)?;
+    }
+}
+
+impl Zstore {
+    const ID20_INDEX: usize = 0;
+
+    /// Load or create [Zstore] at the given directory.
+    pub fn open(dir: impl AsRef<Path>) -> crate::Result<Zstore> {
+        let dir = dir.as_ref();
+        let log = Self::default_open_options().open(dir)?;
         Ok(Self {
             dir: dir.to_path_buf(),
             log,
