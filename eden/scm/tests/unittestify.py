@@ -91,7 +91,10 @@ def gettestmethod(name, port):
                 args + [name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
             )
             out, err = p.communicate("")
+            message = err + out
             returncode = p.returncode
+            if "Lost connection to MySQL server" in message:
+                raise unittest.SkipTest("MySQL is unavailable")
             if returncode == 80:
                 if not reportskips:
                     return
@@ -103,7 +106,7 @@ def gettestmethod(name, port):
                     reason = "skipped by run-tests.py"
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(err + out)
+                raise self.failureException(message)
 
     return runsingletest
 
