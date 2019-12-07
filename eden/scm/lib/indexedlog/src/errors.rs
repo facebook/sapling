@@ -149,6 +149,20 @@ impl Error {
     }
 }
 
+/// Create an Error from a message.
+impl From<&str> for Error {
+    fn from(s: &str) -> Self {
+        Self::blank().message(s)
+    }
+}
+
+/// Create an Error from a message and another error.
+impl<E: std::error::Error + Send + Sync + 'static> From<(&str, E)> for Error {
+    fn from(s: (&str, E)) -> Self {
+        Self::blank().message(s.0).source(s.1)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut lines = Vec::new();
