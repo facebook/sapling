@@ -9,6 +9,7 @@
 use std::{convert::TryFrom, convert::TryInto, mem::size_of, sync::Arc};
 
 use crate::errors::ErrorKind;
+use anyhow::Error;
 use apiserver_thrift::server::MononokeAPIService;
 use apiserver_thrift::services::mononoke_apiservice::{
     GetBlobExn, GetBranchesExn, GetChangesetExn, GetFileHistoryExn, GetLastCommitOnPathExn,
@@ -25,7 +26,6 @@ use apiserver_thrift::MononokeRevision::UnknownField;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::{generate_session_id, CoreContext, SessionContainer};
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;

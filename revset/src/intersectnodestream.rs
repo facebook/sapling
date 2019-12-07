@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::stream::Stream;
@@ -18,7 +19,6 @@ use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 
-use crate::errors::*;
 use crate::setcommon::*;
 use crate::BonsaiNodeStream;
 
@@ -168,6 +168,7 @@ impl Stream for IntersectNodeStream {
 mod test {
     use super::*;
     use crate::async_unit;
+    use crate::errors::ErrorKind;
     use crate::fixtures::linear;
     use crate::fixtures::unshared_merge_even;
     use crate::fixtures::unshared_merge_uneven;

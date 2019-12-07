@@ -13,10 +13,10 @@ use crate::state::WalkState;
 use crate::tail::walk_exact_tail;
 use crate::walk::StepStats;
 
+use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{
     future::{self},

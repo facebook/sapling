@@ -8,9 +8,9 @@
 
 #![deny(warnings)]
 
+use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use failure_ext::prelude::*;
 use metaconfig_types::CommitSyncConfig;
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;

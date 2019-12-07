@@ -20,10 +20,11 @@ use std::{
     time::Duration,
 };
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
+use anyhow::{format_err, Error, Result};
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use failure_ext::{format_err, prelude::*};
+use failure_ext::chain::ChainExt;
 use itertools::Itertools;
 use metaconfig_thrift::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitSyncConfig,

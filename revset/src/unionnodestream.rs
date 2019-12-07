@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::stream::Stream;
 use futures::Async;
 use futures::Poll;

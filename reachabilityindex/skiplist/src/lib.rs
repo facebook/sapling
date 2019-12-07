@@ -9,12 +9,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use anyhow::{Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::{Error, Result};
 use futures::future::{join_all, loop_fn, ok, Future, Loop};
 use futures::IntoFuture;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

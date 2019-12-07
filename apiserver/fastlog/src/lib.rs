@@ -23,13 +23,13 @@
 ///
 /// RootFastlog is a derived data which derives FastlogBatch for each unode
 /// that was created or modified in this commit.
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure_ext::Error;
 use futures::{future, stream::FuturesUnordered, Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use manifest::{find_intersection_of_diffs, Entry};

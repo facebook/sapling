@@ -9,7 +9,7 @@
 use if_ as acl_constants;
 
 use aclchecker::{AclChecker, Identity};
-use failure_ext::{bail, Error};
+use anyhow::{bail, Error};
 use fbinit::FacebookInit;
 use futures_ext::asynchronize;
 use futures_util::compat::Future01CompatExt;

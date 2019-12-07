@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use futures::Future;
 use futures_preview::{
     channel::mpsc::channel, compat::Future01CompatExt, compat::Stream01CompatExt, future::ready,

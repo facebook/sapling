@@ -8,12 +8,12 @@
 
 #![deny(warnings)]
 
+use anyhow::Result;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::Result;
 use fbinit::FacebookInit;
 use futures::future::Future;
 use mononoke_types::ChangesetId;

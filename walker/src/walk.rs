@@ -7,12 +7,12 @@
  */
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::{
     future::{self},
     Future,

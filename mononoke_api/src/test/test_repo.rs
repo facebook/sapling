@@ -10,9 +10,9 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str::FromStr;
 
+use anyhow::Error;
 use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::Stream;

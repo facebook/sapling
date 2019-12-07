@@ -9,12 +9,12 @@
 use crate::blobstore;
 use crate::graph::{Node, NodeType};
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo_given_datasources;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::Redaction;

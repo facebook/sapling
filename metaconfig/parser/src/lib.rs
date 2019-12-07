@@ -14,5 +14,5 @@
 pub mod errors;
 pub mod repoconfig;
 
-pub use crate::errors::{Error, ErrorKind};
+pub use crate::errors::ErrorKind;
 pub use crate::repoconfig::RepoConfigs;

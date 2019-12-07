@@ -7,8 +7,8 @@
  */
 
 #[deny(warnings)]
+use anyhow::{format_err, Error};
 use derived_data::BonsaiDerived;
-use failure_ext::{format_err, Error};
 use futures::Future;
 use futures::{
     future::IntoFuture,

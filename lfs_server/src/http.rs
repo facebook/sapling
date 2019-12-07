@@ -10,8 +10,8 @@ use std::convert::TryInto;
 use std::error::Error as StdError;
 use std::str::FromStr;
 
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use futures::{try_ready, Async, Poll, Stream};
 use futures_ext::StreamExt;
 use gotham::state::State;

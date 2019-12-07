@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::stream::Stream;
@@ -14,7 +15,6 @@ use mononoke_types::{ChangesetId, Generation};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::errors::*;
 use crate::setcommon::*;
 use crate::BonsaiNodeStream;
 
@@ -118,6 +118,7 @@ impl Stream for SetDifferenceNodeStream {
 mod test {
     use super::*;
     use crate::async_unit;
+    use crate::errors::ErrorKind;
     use crate::fixtures::linear;
     use crate::fixtures::merge_even;
     use crate::fixtures::merge_uneven;

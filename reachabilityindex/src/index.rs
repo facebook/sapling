@@ -11,7 +11,7 @@ use std::default::Default;
 use std::iter::{Extend, FromIterator};
 use std::sync::Arc;
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures_ext::BoxFuture;
 
 use changeset_fetcher::ChangesetFetcher;

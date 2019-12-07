@@ -18,12 +18,12 @@ use maplit::btreemap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::{bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
 use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use failure_ext::{bail, Error};
 use fixtures::linear;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{

@@ -11,8 +11,8 @@ use std::fmt::{Arguments, Write};
 use std::sync::{Arc, Mutex};
 
 use aclchecker::Identity;
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use futures::Future as Future01;
 use futures_channel::oneshot;
 use futures_preview::Future;

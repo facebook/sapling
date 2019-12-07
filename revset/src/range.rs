@@ -12,9 +12,9 @@ use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
-use failure_ext::prelude::*;
-
+use anyhow::Error;
 use cloned::cloned;
+use failure_ext::chain::ChainExt;
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, Poll};

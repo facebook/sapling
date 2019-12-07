@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
-use failure_ext::{format_err, Error};
 use filenodes::FilenodeInfo;
 use futures_ext::BoxStream;
 use mercurial_types::{

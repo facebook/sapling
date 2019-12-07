@@ -12,7 +12,7 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::sync::Arc;
 
-use failure_ext::Error;
+use anyhow::Error;
 use thiserror::Error;
 
 use source_control::services::source_control_service as service;

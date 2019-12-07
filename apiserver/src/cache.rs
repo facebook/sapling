@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 

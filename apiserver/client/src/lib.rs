@@ -8,6 +8,7 @@
 
 use std::sync::Arc;
 
+use anyhow::{Error, Result};
 use futures_ext::{BoxFuture, FutureExt};
 
 use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
@@ -29,11 +30,7 @@ pub struct MononokeAPIClient {
 }
 
 impl MononokeAPIClient {
-    pub fn new_with_tier_repo(
-        fb: FacebookInit,
-        tier: &str,
-        repo: &str,
-    ) -> Result<Self, failure_ext::Error> {
+    pub fn new_with_tier_repo(fb: FacebookInit, tier: &str, repo: &str) -> Result<Self> {
         let inner =
             SRChannelBuilder::from_service_name(fb, tier)?.build_client(make_MononokeAPIService)?;
 
@@ -48,7 +45,7 @@ impl MononokeAPIClient {
         revision: String,
         path: String,
         bookmark: bool,
-    ) -> BoxFuture<Vec<u8>, failure_ext::Error> {
+    ) -> BoxFuture<Vec<u8>, Error> {
         let rev = if bookmark {
             MononokeRevision::bookmark(revision)
         } else {
@@ -65,10 +62,7 @@ impl MononokeAPIClient {
             .boxify()
     }
 
-    pub fn get_changeset(
-        &self,
-        revision: String,
-    ) -> BoxFuture<MononokeChangeset, failure_ext::Error> {
+    pub fn get_changeset(&self, revision: String) -> BoxFuture<MononokeChangeset, Error> {
         self.inner
             .get_changeset(&MononokeGetChangesetParams {
                 repo: self.repo.clone(),
@@ -78,7 +72,7 @@ impl MononokeAPIClient {
             .boxify()
     }
 
-    pub fn get_branches(&self) -> BoxFuture<MononokeBranches, failure_ext::Error> {
+    pub fn get_branches(&self) -> BoxFuture<MononokeBranches, Error> {
         self.inner
             .get_branches(&MononokeGetBranchesParams {
                 repo: self.repo.clone(),
@@ -93,7 +87,7 @@ impl MononokeAPIClient {
         path: String,
         limit: i32,
         skip: i32,
-    ) -> BoxFuture<MononokeFileHistory, failure_ext::Error> {
+    ) -> BoxFuture<MononokeFileHistory, Error> {
         self.inner
             .get_file_history(&MononokeGetFileHistoryParams {
                 repo: self.repo.clone(),
@@ -110,7 +104,7 @@ impl MononokeAPIClient {
         &self,
         revision: String,
         path: String,
-    ) -> BoxFuture<MononokeChangeset, failure_ext::Error> {
+    ) -> BoxFuture<MononokeChangeset, Error> {
         self.inner
             .get_last_commit_on_path(&MononokeGetLastCommitOnPathParams {
                 repo: self.repo.clone(),
@@ -125,7 +119,7 @@ impl MononokeAPIClient {
         &self,
         revision: String,
         path: String,
-    ) -> BoxFuture<MononokeDirectory, failure_ext::Error> {
+    ) -> BoxFuture<MononokeDirectory, Error> {
         self.inner
             .list_directory(&MononokeListDirectoryParams {
                 repo: self.repo.clone(),
@@ -140,7 +134,7 @@ impl MononokeAPIClient {
         &self,
         revision: String,
         path: String,
-    ) -> BoxFuture<MononokeDirectoryUnodes, failure_ext::Error> {
+    ) -> BoxFuture<MononokeDirectoryUnodes, Error> {
         self.inner
             .list_directory_unodes(&MononokeListDirectoryUnodesParams {
                 repo: self.repo.clone(),
@@ -151,11 +145,7 @@ impl MononokeAPIClient {
             .boxify()
     }
 
-    pub fn is_ancestor(
-        &self,
-        ancestor: String,
-        descendant: String,
-    ) -> BoxFuture<bool, failure_ext::Error> {
+    pub fn is_ancestor(&self, ancestor: String, descendant: String) -> BoxFuture<bool, Error> {
         self.inner
             .is_ancestor(&MononokeIsAncestorParams {
                 repo: self.repo.clone(),
@@ -166,7 +156,7 @@ impl MononokeAPIClient {
             .boxify()
     }
 
-    pub fn get_blob(&self, hash: String) -> BoxFuture<MononokeBlob, failure_ext::Error> {
+    pub fn get_blob(&self, hash: String) -> BoxFuture<MononokeBlob, Error> {
         self.inner
             .get_blob(&MononokeGetBlobParams {
                 repo: self.repo.clone(),
@@ -176,7 +166,7 @@ impl MononokeAPIClient {
             .boxify()
     }
 
-    pub fn get_tree(&self, hash: String) -> BoxFuture<MononokeDirectory, failure_ext::Error> {
+    pub fn get_tree(&self, hash: String) -> BoxFuture<MononokeDirectory, Error> {
         self.inner
             .get_tree(&MononokeGetTreeParams {
                 repo: self.repo.clone(),

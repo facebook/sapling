@@ -10,14 +10,13 @@
 
 use std::thread::{self, JoinHandle};
 
+use anyhow::{Error, Result};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
 use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
 
 use ready_state::ReadyState;
-
-use crate::errors::*;
 
 struct MononokeService {
     ready: ReadyState,

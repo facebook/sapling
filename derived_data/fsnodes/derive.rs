@@ -9,13 +9,14 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
+use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use crypto::digest::Digest;
-use failure_ext::{format_err, Error, FutureFailureExt};
+use failure_ext::FutureFailureExt;
 use filestore::{get_metadata, FetchKey};
 use futures::{future, stream, sync::mpsc, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};

@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+#[cfg(test)]
+use anyhow::bail;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-#[cfg(test)]
-use failure_ext::bail;
 use futures::future::Future;
 use futures::stream::Stream;
 use futures_ext::{BoxStream, StreamExt};
@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;
-use failure_ext::Error;
+use anyhow::Error;
 
 use futures::{Async, Poll};
 

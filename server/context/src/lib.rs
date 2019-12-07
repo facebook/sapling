@@ -8,7 +8,7 @@
 
 #![feature(never_type, atomic_min_max)]
 
-use failure_ext::Error;
+use anyhow::Error;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use limits::types::{MononokeThrottleLimit, RateLimits};

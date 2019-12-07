@@ -10,9 +10,10 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use anyhow::Error;
 use configerator::ConfigLoader;
 use context::{generate_session_id, SessionId};
-use failure_ext::{prelude::*, SlogKVError};
+use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use futures::{Future, Sink, Stream};

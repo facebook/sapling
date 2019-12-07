@@ -8,7 +8,6 @@
 
 //! Definition of errors used in this crate by the error_chain crate
 
-pub use failure_ext::{Error, Result};
 use mononoke_types::RepositoryId;
 use thiserror::Error;
 

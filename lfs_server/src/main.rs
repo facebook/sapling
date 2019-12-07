@@ -11,9 +11,9 @@
 #![deny(warnings)]
 
 use aclchecker::Identity;
+use anyhow::{bail, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
-use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures::{future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;

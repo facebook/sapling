@@ -14,13 +14,13 @@ pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping};
 #[cfg(test)]
 mod tests;
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{format_err, Error};
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::ManifestOps;

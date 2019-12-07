@@ -7,9 +7,9 @@
  */
 
 use crate::fetch_blame;
+use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::Future;
 use maplit::{btreemap, hashmap};

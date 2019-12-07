@@ -9,10 +9,10 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use anyhow::Error;
 use blame::fetch_blame;
 use bytes::Bytes;
 use cloned::cloned;
-use failure_ext::Error;
 use filestore::FetchKey;
 use futures::Future as FutureLegacy;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};

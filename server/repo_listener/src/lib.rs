@@ -18,6 +18,7 @@ mod errors;
 mod repo_handlers;
 mod request_handler;
 
+use anyhow::Error;
 use blobrepo_factory::{Caching, ReadOnlyStorage};
 use configerator::ConfigSource;
 use fbinit::FacebookInit;
@@ -31,7 +32,6 @@ use std::sync::atomic::AtomicBool;
 use metaconfig_types::{CommonConfig, RepoConfig};
 
 use crate::connection_acceptor::connection_acceptor;
-use crate::errors::*;
 use crate::repo_handlers::repo_handlers;
 
 pub fn create_repo_listeners(

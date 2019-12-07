@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::{
     future,
     sync::{mpsc, oneshot},
@@ -293,11 +293,11 @@ fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &Fi
 mod tests {
     use super::*;
     use crate::mapping::get_file_changes;
+    use anyhow::Result;
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use blobstore::Storable;
     use bytes::Bytes;
-    use failure_ext::Result;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::Stream;

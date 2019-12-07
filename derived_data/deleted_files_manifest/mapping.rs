@@ -7,12 +7,12 @@
  */
 
 use crate::derive::{derive_deleted_files_manifest, get_changes};
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure_ext::{Error, Result};
 use futures::{
     stream::{self, FuturesUnordered},
     Future, Stream,

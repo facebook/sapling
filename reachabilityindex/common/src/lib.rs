@@ -11,9 +11,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::future::{join_all, Future};
 use futures::stream::{iter_ok, Stream};
 use futures_ext::FutureExt;

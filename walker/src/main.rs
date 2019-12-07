@@ -9,7 +9,7 @@
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
-use failure_ext::Error;
+use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;

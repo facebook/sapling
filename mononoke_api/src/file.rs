@@ -9,10 +9,10 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use anyhow::format_err;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::format_err;
 use filestore::{fetch, fetch_range, get_metadata, FetchKey};
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;

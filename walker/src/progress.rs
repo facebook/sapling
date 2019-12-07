@@ -7,9 +7,9 @@
  */
 
 use crate::graph::{Node, NodeType};
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{
     future::{self},
     Future, Stream,

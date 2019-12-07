@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use cloned::cloned;
 use configerator::{ConfigLoader, ConfigSource};
 use configerator_cached::CachedConfigHandler;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
 use slog::{info, warn, Logger};

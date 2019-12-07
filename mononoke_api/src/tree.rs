@@ -9,9 +9,9 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use anyhow::Error;
 use blobstore::{Loadable, LoadableError};
 use cloned::cloned;
-use failure_ext::Error;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
 use mononoke_types::fsnode::Fsnode;

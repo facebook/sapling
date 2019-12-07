@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{format_err, Error};
 use futures::{
     future::{err, join_all, lazy, ok, Future, IntoFuture},
     stream::Stream,

@@ -8,9 +8,9 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use failure_ext::Error;
 use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId};

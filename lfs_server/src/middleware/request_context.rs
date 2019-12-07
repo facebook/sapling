@@ -8,9 +8,9 @@
 
 use std::fmt;
 
+use anyhow::Error;
 use context::{CoreContext, PerfCounters, SessionContainer};
 use dns_lookup::lookup_addr;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{asynchronize, FutureExt};

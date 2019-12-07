@@ -10,10 +10,10 @@ use crate::graph::{Node, NodeData};
 use crate::parse_args::RepoWalkParams;
 use crate::walk::{walk_exact, NodeChecker, StepStats};
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{
     stream::{repeat, Stream},
     Future,

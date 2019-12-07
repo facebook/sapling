@@ -12,10 +12,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_factory::{Caching, ReadOnlyStorage};
 use cloned::cloned;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeMapping;
 use futures_preview::future;

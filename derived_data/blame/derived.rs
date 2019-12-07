@@ -6,13 +6,13 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use failure_ext::{format_err, Error};
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};

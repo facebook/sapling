@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::executor::spawn;
 use futures::future::Future;

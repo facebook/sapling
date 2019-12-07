@@ -11,10 +11,10 @@ use crate::progress::{do_count, progress_stream};
 use crate::state::WalkState;
 use crate::tail::walk_exact_tail;
 
+use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;

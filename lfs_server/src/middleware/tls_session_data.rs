@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::Error;
+use anyhow::Error;
 use gotham::state::{FromState, State};
 use hex;
 use std::fs::{File, OpenOptions};

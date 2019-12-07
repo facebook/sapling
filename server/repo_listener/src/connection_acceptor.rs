@@ -17,10 +17,11 @@ use std::time::Duration;
 
 use crate::acl::VALID_ACL_MEMBER_TYPES;
 use aclchecker::{AclChecker, Identity};
+use anyhow::{bail, format_err, Error, Result};
 use bytes::Bytes;
 use cloned::cloned;
 use configerator::{ConfigLoader, ConfigSource};
-use failure_ext::{bail, format_err, Error, SlogKVError};
+use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
@@ -41,7 +42,7 @@ use x509::identity;
 
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::request_handler;
 

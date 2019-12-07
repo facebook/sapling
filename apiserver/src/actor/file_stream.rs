@@ -22,8 +22,8 @@
 // endpoint for something that doesn't exist. If you get a 404, you succeeded, congratulations! If
 // the connection is closed, or you get a 500, try again :(
 
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use futures::{
     stream::{iter_ok, once},
     Future, Stream,

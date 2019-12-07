@@ -13,6 +13,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use anyhow::{format_err, Error};
 use blobrepo::{file_history::get_file_history, BlobRepo};
 use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
@@ -20,7 +21,6 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{format_err, Error};
 use fastlog::{prefetch_history, FastlogParent, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use futures::{

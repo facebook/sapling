@@ -7,10 +7,10 @@
  */
 
 use crate::{BonsaiDerived, BonsaiDerivedMapping};
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{
     future::{self, Loop},
     stream, Future, IntoFuture, Stream,
@@ -438,10 +438,10 @@ where
 mod test {
     use super::*;
 
+    use anyhow::Error;
     use blobrepo::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
-    use failure_ext::Error;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,

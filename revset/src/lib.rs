@@ -8,6 +8,7 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use futures_ext::BoxStream;
 use mononoke_types::ChangesetId;
 
@@ -23,9 +24,9 @@ mod setdifferencenodestream;
 pub use crate::setdifferencenodestream::SetDifferenceNodeStream;
 
 pub mod errors;
-pub use crate::errors::{Error, ErrorKind};
+pub use crate::errors::ErrorKind;
 
-pub type BonsaiNodeStream = BoxStream<ChangesetId, errors::Error>;
+pub type BonsaiNodeStream = BoxStream<ChangesetId, Error>;
 
 mod validation;
 pub use crate::validation::ValidateNodeStream;

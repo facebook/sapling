@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures::{future, Future};
 use futures_ext::FutureExt;
 use thiserror::Error;

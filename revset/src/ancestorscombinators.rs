@@ -29,8 +29,9 @@ use std::collections::{BTreeMap, HashSet};
 use std::iter::{self, FromIterator};
 use std::sync::Arc;
 
+use anyhow::Error;
 use cloned::cloned;
-use failure_ext::prelude::*;
+use failure_ext::chain::ChainExt;
 use futures::future::{ok, Future};
 use futures::stream::{self, iter_ok, Stream};
 use futures::{try_ready, Async, IntoFuture, Poll};

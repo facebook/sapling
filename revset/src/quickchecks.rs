@@ -27,11 +27,11 @@ mod test {
     use crate::unionnodestream::UnionNodeStream;
     use crate::validation::ValidateNodeStream;
     use crate::BonsaiNodeStream;
+    use anyhow::Error;
     use blobrepo::BlobRepo;
     use changeset_fetcher::ChangesetFetcher;
     use cloned::cloned;
     use context::CoreContext;
-    use failure_ext::Error;
     use fbinit::FacebookInit;
     use futures::executor::spawn;
     use futures::{

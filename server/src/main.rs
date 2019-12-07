@@ -11,6 +11,7 @@
 
 mod monitoring;
 
+use anyhow::Result;
 use clap::{App, ArgMatches};
 use configerator::ConfigSource;
 use failure_ext::SlogKVError;
@@ -21,11 +22,6 @@ use slog::{crit, info, Logger};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::runtime::Runtime;
-
-mod errors {
-    pub use failure_ext::{Error, Result};
-}
-use crate::errors::*;
 
 static TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);
 

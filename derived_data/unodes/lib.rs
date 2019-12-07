@@ -8,11 +8,11 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::Error;
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::ManifestOps;

@@ -7,10 +7,10 @@
  */
 
 use crate::{ErrorKind, FastlogParent};
+use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::Entry;

@@ -8,10 +8,10 @@
 
 use std::collections::HashMap;
 
+use anyhow::Error;
 use blobrepo_factory::{Caching, ReadOnlyStorage};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{
     future::{join_all, lazy},

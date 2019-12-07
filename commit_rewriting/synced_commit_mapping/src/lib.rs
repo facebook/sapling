@@ -13,9 +13,9 @@ use std::sync::Arc;
 use sql::Connection;
 pub use sql_ext::SqlConstructors;
 
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, RepositoryId};

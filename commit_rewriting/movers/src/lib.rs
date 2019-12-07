@@ -8,7 +8,8 @@
 
 #![deny(warnings)]
 
-use failure_ext::{prelude::*, Error};
+use anyhow::{Error, Result};
+use failure_ext::chain::ChainExt;
 use itertools::Itertools;
 use mercurial_types::{MPath, MPathElement};
 use metaconfig_types::{

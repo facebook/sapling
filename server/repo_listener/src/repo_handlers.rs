@@ -9,8 +9,9 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use anyhow::Error;
 use cloned::cloned;
-use failure_ext::prelude::*;
+use failure_ext::chain::ChainExt;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, o, Logger};
