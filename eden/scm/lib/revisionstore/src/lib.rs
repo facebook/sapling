@@ -58,5 +58,7 @@ pub use crate::remotestore::RemoteStore;
 pub use crate::repack::ToKeys;
 pub use crate::uniondatastore::UnionDataStore;
 
+pub use indexedlog::Repair as IndexedlogRepair;
+
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;

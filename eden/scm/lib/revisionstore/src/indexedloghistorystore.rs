@@ -18,6 +18,7 @@ use crypto::{digest::Digest, sha1::Sha1};
 use indexedlog::{
     log::IndexOutput,
     rotate::{OpenOptions, RotateLog},
+    DefaultOpenOptions,
 };
 use types::{
     hgid::{ReadHgIdExt, WriteHgIdExt},
@@ -192,15 +193,9 @@ impl IndexedLogHistoryStore {
             inner: Arc::new(RwLock::new(IndexedLogHistoryStoreInner { log })),
         })
     }
+}
 
-    /// Attempt to repair data at the given path.
-    /// Return human-readable repair logs.
-    pub fn repair(path: impl AsRef<Path>) -> Result<String> {
-        let path = path.as_ref();
-        let open_options = Self::default_open_options();
-        Ok(open_options.repair(path)?)
-    }
-
+impl DefaultOpenOptions<OpenOptions> for IndexedLogHistoryStore {
     /// Default configuration: 4 x 0.5GB.
     fn default_open_options() -> OpenOptions {
         OpenOptions::new()

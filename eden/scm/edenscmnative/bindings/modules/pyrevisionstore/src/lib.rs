@@ -26,8 +26,8 @@ use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
     DataStore, Delta, HistoryPack, HistoryPackStore, HistoryPackVersion, HistoryStore,
-    IndexedLogDataStore, IndexedLogHistoryStore, LocalStore, Metadata, MetadataStore,
-    MetadataStoreBuilder, MutableDataPack, MutableDeltaStore, MutableHistoryPack,
+    IndexedLogDataStore, IndexedLogHistoryStore, IndexedlogRepair, LocalStore, Metadata,
+    MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableDeltaStore, MutableHistoryPack,
     MutableHistoryStore, RemoteDataStore, RemoteHistoryStore, RemoteStore,
 };
 use types::{Key, NodeInfo};

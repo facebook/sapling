@@ -19,6 +19,7 @@ use parking_lot::RwLock;
 use indexedlog::{
     log::IndexOutput,
     rotate::{OpenOptions, RotateLog},
+    DefaultOpenOptions,
 };
 use lz4_pyframe::{compress, decompress};
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
@@ -161,15 +162,9 @@ impl IndexedLogDataStore {
             inner: Arc::new(RwLock::new(IndexedLogDataStoreInner { log })),
         })
     }
+}
 
-    /// Attempt to repair data at the given path.
-    /// Return human-readable repair logs.
-    pub fn repair(path: impl AsRef<Path>) -> Result<String> {
-        let path = path.as_ref();
-        let open_options = Self::default_open_options();
-        Ok(open_options.repair(path)?)
-    }
-
+impl DefaultOpenOptions<OpenOptions> for IndexedLogDataStore {
     /// Default configuration: 4 x 2.5GB.
     fn default_open_options() -> OpenOptions {
         OpenOptions::new()
