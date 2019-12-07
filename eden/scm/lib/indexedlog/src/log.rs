@@ -1819,6 +1819,10 @@ impl OpenOptions {
         let dir = dir.as_ref();
         let mut message = String::new();
         let result: crate::Result<_> = (|| {
+            if !dir.exists() {
+                return Ok(format!("{:?} does not exist. Nothing to repair.\n", dir));
+            }
+
             let lock = ScopedDirLock::new(dir)?;
 
             let primary_path = dir.join(PRIMARY_FILE);
