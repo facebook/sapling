@@ -13,8 +13,8 @@ use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 use std::str;
 
+use anyhow::{bail, ensure, Error, Result};
 use bytes::{Bytes, BytesMut};
-use failure_ext::{bail, ensure};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;
@@ -25,7 +25,7 @@ use tokio_io::AsyncRead;
 
 use crate::capabilities;
 use crate::changegroup;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::infinitepush;
 use crate::part_header::{PartHeader, PartHeaderType};
 use crate::part_outer::{OuterFrame, OuterStream};

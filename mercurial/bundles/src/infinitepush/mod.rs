@@ -8,12 +8,11 @@
 
 // Codecs related to infinitepush also known as Commit Cloud.
 
+use anyhow::{Error, Result};
 use bytes::{Bytes, BytesMut};
 use tokio_io::codec::Decoder;
 
 use crate::utils::BytesExt;
-
-use crate::errors::*;
 
 #[derive(Debug)]
 pub struct InfinitepushBookmarksUnpacker {

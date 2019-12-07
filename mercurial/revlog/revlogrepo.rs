@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
+use anyhow::{format_err, Context, Error, Result};
 use futures::future;
 use futures::stream;
 use futures::{Async, IntoFuture, Poll, Stream};
@@ -26,7 +27,7 @@ use mercurial_types::{
     HgNodeHash, MPath, MPathElement, RepoPath,
 };
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 pub use crate::manifest::RevlogManifest;
 use crate::revlog::{Revlog, RevlogIter};
 

@@ -8,9 +8,9 @@
 
 use std::{path::PathBuf, sync::Arc};
 
+use anyhow::Error;
 use cloned::cloned;
-use failure_ext::prelude::*;
-use failure_ext::Error;
+use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, IntoFuture},

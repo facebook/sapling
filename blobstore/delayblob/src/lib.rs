@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use crate::future::lazy;
-use failure_ext::Error;
+use anyhow::Error;
 use futures_ext::{BoxFuture, FutureExt};
 use tokio::prelude::*;
 use tokio::timer::Delay;

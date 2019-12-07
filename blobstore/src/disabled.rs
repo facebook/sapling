@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::future::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 

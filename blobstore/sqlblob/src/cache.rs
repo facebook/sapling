@@ -9,8 +9,8 @@
 use std::mem::transmute;
 use std::sync::Arc;
 
+use anyhow::{bail, Error, Result};
 use cloned::cloned;
-use failure_ext::{bail, Error, Result};
 use fbthrift::compact_protocol;
 use futures::prelude::*;
 

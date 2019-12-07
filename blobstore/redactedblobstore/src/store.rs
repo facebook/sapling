@@ -7,7 +7,7 @@
  */
 
 #![deny(warnings)]
-use failure_ext::Error;
+use anyhow::Error;
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::Timestamp;

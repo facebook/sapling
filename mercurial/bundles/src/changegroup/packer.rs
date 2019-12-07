@@ -10,12 +10,12 @@ use std::convert::From;
 
 use futures::{try_ready, Async, Poll, Stream};
 
+use anyhow::{Error, Result};
 use byteorder::ByteOrder;
 use bytes::{BigEndian, BufMut};
 
 use crate::chunk::Chunk;
 use crate::delta;
-use crate::errors::*;
 
 use super::{CgDeltaChunk, Part, Section};
 

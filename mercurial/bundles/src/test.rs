@@ -13,6 +13,7 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::iter::Iterator;
 use std::str::FromStr;
 
+use anyhow::{Error, Result};
 use assert_matches::assert_matches;
 use futures::stream;
 use futures::stream::Stream;
@@ -32,7 +33,7 @@ use slog::{o, Discard, Logger};
 use crate::bundle2::{Bundle2Stream, StreamEvent};
 use crate::bundle2_encode::Bundle2EncodeBuilder;
 use crate::changegroup;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::{PartHeaderBuilder, PartHeaderType};
 use crate::types::StreamHeader;

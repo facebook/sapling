@@ -10,16 +10,16 @@ use std::fmt::{self, Debug, Display};
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
+use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use crypto::{digest::Digest, sha1};
-use failure_ext::bail;
 use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::thrift;
 
 pub const NULL: Sha1 = Sha1([0; 20]);

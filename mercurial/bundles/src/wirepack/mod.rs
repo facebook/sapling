@@ -11,15 +11,15 @@
 use std::fmt;
 use std::io::Cursor;
 
+use anyhow::{bail, ensure, Context, Result};
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
-use failure_ext::{bail, ensure};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 use revisionstore::Metadata;
 
 use crate::delta;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
 pub mod converter;

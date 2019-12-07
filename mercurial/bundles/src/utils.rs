@@ -11,14 +11,14 @@
 use std::ops::Deref;
 use std::str;
 
+use anyhow::{bail, Context, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
-use failure_ext::bail;
 
 use async_compression::{CompressorType, DecompressorType};
 use mercurial_types::{HgNodeHash, MPath};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 
 pub trait SplitTo {
     fn split_to(&mut self, at: usize) -> Self;

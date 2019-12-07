@@ -7,8 +7,8 @@
  */
 
 use crate::{Entry, Manifest, PathTree, StoreLoadable};
+use anyhow::{format_err, Error};
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{bounded_traversal::bounded_traversal, FutureExt};
 use mononoke_types::{MPath, MPathElement};

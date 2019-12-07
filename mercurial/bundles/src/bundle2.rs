@@ -12,6 +12,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::io::{BufRead, Chain, Cursor, Read};
 use std::mem;
 
+use anyhow::Error;
 use bytes::BytesMut;
 use futures::{Async, Poll, Stream};
 
@@ -21,7 +22,7 @@ use slog::Logger;
 use tokio_codec::{Framed, FramedParts};
 use tokio_io::AsyncRead;
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::part_inner::inner_stream;
 use crate::part_outer::{outer_stream, OuterFrame, OuterStream};
 use crate::stream_start::StartDecoder;
@@ -33,7 +34,7 @@ pub enum StreamEvent<I, S> {
 }
 
 impl<I, S> StreamEvent<I, S> {
-    pub fn into_next(self) -> ::std::result::Result<I, Self> {
+    pub fn into_next(self) -> Result<I, Self> {
         if let StreamEvent::Next(v) = self {
             Ok(v)
         } else {

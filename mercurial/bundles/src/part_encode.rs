@@ -11,12 +11,12 @@
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
+use anyhow::{Error, Result};
 use bytes::Bytes;
 use futures::{Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
 use crate::chunk::Chunk;
-use crate::errors::*;
 use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType, PartId};
 
 /// Represents a stream of chunks produced by the individual part handler.

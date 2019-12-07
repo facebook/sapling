@@ -8,10 +8,10 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::future::ok;

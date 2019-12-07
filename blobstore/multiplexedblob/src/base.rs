@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::Error;
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;

@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{bail, ensure, format_err, prelude::*, Error, Result, ResultExt};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

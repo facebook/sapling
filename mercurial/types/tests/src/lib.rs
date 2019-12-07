@@ -9,8 +9,8 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use mercurial_types::{
     blobs::{filenode_lookup::FileNodeIdPointer, File, LFSContent, META_MARKER, META_SZ},
     nodehash::{HgChangesetId, HgNodeHash},

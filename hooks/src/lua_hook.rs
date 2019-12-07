@@ -16,9 +16,9 @@ use super::{
     HookChangesetParents, HookContext, HookExecution, HookFile, HookRejectionInfo,
 };
 use aclchecker::Identity;
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::future::{ok, result};
 use futures::{future, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

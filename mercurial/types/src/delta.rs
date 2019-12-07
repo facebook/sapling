@@ -6,13 +6,13 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, ensure, format_err};
+use anyhow::{bail, ensure, format_err, Context, Result};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
 use rand_distr::{Distribution, LogNormal};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 
 use super::delta_apply::{mpatch_fold, wrap_deltas};
 

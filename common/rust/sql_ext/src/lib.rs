@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use cloned::cloned;
-use failure_ext::{Error, Result};
 use futures::{
     future::{loop_fn, ok, Loop},
     Future,

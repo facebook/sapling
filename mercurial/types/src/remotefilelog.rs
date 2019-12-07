@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{Error, Result};
+use anyhow::{Error, Result};
 use mononoke_types::MPath;
 use std::{convert::TryFrom, io::Write};
 use types::{Parents, RepoPathBuf as ClientRepoPathBuf, WireHistoryEntry};

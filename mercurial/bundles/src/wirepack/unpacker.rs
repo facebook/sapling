@@ -11,15 +11,15 @@
 use std::cmp;
 use std::mem;
 
+use anyhow::{bail, Context, Error, Result};
 use bytes::BytesMut;
-use failure_ext::bail;
 use slog::{trace, Logger};
 use tokio_codec::Decoder;
 
 use mercurial_types::RepoPath;
 
 use super::{DataEntry, DataEntryVersion, HistoryEntry, Kind, Part, WIREPACK_END};
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
 #[derive(Debug)]

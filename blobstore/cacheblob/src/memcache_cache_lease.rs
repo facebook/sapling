@@ -8,7 +8,7 @@
 
 use std::time::Duration;
 
-use failure_ext::Error;
+use anyhow::Error;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{future::Either, Future, IntoFuture};

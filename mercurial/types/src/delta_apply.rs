@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
+use anyhow::Result;
 use bytes::Bytes;
 use heapsize_derive::HeapSizeOf;
 use std::cmp;
 
 use crate::delta::{Delta, Fragment};
-use crate::errors::*;
 
 /*
 * Algorithm is taken from fbcode/scm/hg/mercurial/mpatch.c

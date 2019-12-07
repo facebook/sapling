@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Diff, Entry, ManifestOps};

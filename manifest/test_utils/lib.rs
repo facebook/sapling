@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, FutureExt};
 use manifest::{Entry, Manifest};

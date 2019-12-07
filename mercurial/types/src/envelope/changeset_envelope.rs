@@ -10,8 +10,9 @@
 
 use std::fmt;
 
+use anyhow::{Context, Error, Result};
 use bytes::Bytes;
-use failure_ext::{chain::*, Error};
+use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 

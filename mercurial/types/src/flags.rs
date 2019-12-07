@@ -6,7 +6,8 @@
  * directory of this source tree.
  */
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
+use anyhow::Result;
 use bitflags::bitflags;
 use std::fmt;
 

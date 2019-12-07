@@ -12,8 +12,8 @@
 #![deny(warnings)]
 
 use super::{Hook, HookChangeset, HookContext, HookExecution};
+use anyhow::Error;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::future::ok;
 use futures_ext::{BoxFuture, FutureExt};
 

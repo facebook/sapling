@@ -10,11 +10,11 @@
 
 use bytes::{BufMut, BytesMut};
 
+use anyhow::{bail, Context, Result};
 use bufsize::SizeCounter;
-use failure_ext::bail;
 use mercurial_types::delta::{Delta, Fragment};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
 const DELTA_HEADER_LEN: usize = 12;

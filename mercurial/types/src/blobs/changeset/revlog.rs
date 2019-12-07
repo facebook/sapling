@@ -10,8 +10,8 @@ use crate::{
     HgBlob, HgBlobNode, HgChangesetEnvelope, HgChangesetId, HgManifestId, HgNodeHash, HgParents,
     MPath, NULL_HASH,
 };
+use anyhow::{bail, Context, Error, Result};
 use bytes::Bytes;
-use failure_ext::{bail, Error, Result, ResultExt};
 use mononoke_types::DateTime;
 use std::{
     collections::BTreeMap,

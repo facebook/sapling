@@ -11,8 +11,9 @@ use std::fs;
 use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
+use anyhow::{bail, Error, Result};
 use ascii::AsciiStr;
-use failure_ext::{bail, chain::*, Error, Result};
+use failure_ext::chain::ChainExt;
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};

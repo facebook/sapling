@@ -13,11 +13,11 @@ mod store;
 
 use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use crate::store::{ChunkSqlStore, DataSqlStore};
+use anyhow::{format_err, Error, Result};
 use blobstore::{Blobstore, CountedBlobstore};
 use cacheblob::{dummy::DummyCache, CacheOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::future::join_all;
 use futures::prelude::*;

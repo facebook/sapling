@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{bail, Error, Result};
 use bytes::{BufMut, Bytes, BytesMut};
-use failure_ext::bail;
 use tokio_codec::{Decoder, Encoder};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
 /// A bundle2 chunk.

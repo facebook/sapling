@@ -7,11 +7,11 @@
  */
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
+use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::BlobstoreId;

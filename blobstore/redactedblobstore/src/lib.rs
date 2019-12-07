@@ -8,9 +8,9 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{BlobstoreBytes, Timestamp};

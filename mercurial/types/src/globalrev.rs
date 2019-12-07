@@ -6,11 +6,9 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, Error};
+use anyhow::{bail, Error, Result};
 use mononoke_types::BonsaiChangeset;
 use std::str;
-
-use crate::errors::*;
 
 // Globalrev of first commit when globalrevs were introduced in Mercurial.
 // To get globalrev from commit we want to check whether there exists "global_rev" key in bcs extras

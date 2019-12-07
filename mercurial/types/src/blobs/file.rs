@@ -18,11 +18,12 @@ use crate::{
     FileBytes, FileType, HgBlob, HgBlobNode, HgFileEnvelope, HgFileNodeId, HgManifestId,
     HgNodeHash, HgParents, MPath, MPathElement,
 };
+use anyhow::{bail, Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt};
+use failure_ext::{FutureFailureErrorExt, StreamFailureErrorExt};
 use filestore::{self, FetchKey};
 use futures::{
     future::{lazy, Future},

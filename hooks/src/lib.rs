@@ -23,12 +23,13 @@ mod phabricator_message_parser;
 pub mod rust_hook;
 
 use aclchecker::{AclChecker, Identity};
+use anyhow::{bail, Error};
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
-use failure_ext::{bail, Error, FutureFailureErrorExt};
+use failure_ext::FutureFailureErrorExt;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;

@@ -21,10 +21,10 @@
 // streaming file contents).
 
 use crate::HgFileNodeId;
+use anyhow::Error;
 use ascii::AsciiString;
 use blobstore::Blobstore;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::Future;
 use mononoke_types::{BlobstoreBytes, ContentId, MPath};
 

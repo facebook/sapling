@@ -9,8 +9,7 @@
 use std::fmt;
 use std::iter;
 
-use failure_ext::Error;
-
+use anyhow::Error;
 use context::CoreContext;
 use futures_ext::{BoxFuture, BoxStream};
 use mononoke_types::{FileType, MPathElement};

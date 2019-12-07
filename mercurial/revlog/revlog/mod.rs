@@ -11,12 +11,11 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io;
 use std::path::Path;
-use std::result;
 use std::sync::Arc;
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
+use anyhow::{bail, format_err, Context, Result};
 use bytes::Bytes;
-use failure_ext::bail;
 use memmap::Mmap;
 use nom::IResult;
 
@@ -61,9 +60,9 @@ impl AsRef<[u8]> for Datafile {
     }
 }
 
-fn map_io<T, F, R, E>(v: Option<T>, f: &mut F) -> result::Result<Option<R>, E>
+fn map_io<T, F, R, E>(v: Option<T>, f: &mut F) -> Result<Option<R>, E>
 where
-    F: FnMut(T) -> result::Result<R, E>,
+    F: FnMut(T) -> Result<R, E>,
 {
     match v {
         None => Ok(None),

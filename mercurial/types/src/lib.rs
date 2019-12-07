@@ -79,7 +79,7 @@ pub use envelope::{
     HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,
     HgManifestEnvelope, HgManifestEnvelopeMut,
 };
-pub use errors::{Error, ErrorKind};
+pub use errors::ErrorKind;
 pub use flags::{parse_rev_flags, RevFlags};
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend

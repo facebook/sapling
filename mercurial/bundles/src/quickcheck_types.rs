@@ -12,10 +12,10 @@
 use std::convert::From;
 use std::iter;
 #[cfg(test)]
-use std::result;
-#[cfg(test)]
 use std::vec::IntoIter;
 
+#[cfg(test)]
+use anyhow::{Error, Result};
 use bytes::Bytes;
 #[cfg(test)]
 use futures::stream;
@@ -25,8 +25,6 @@ use rand::Rng;
 use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
 
 use crate::changegroup;
-#[cfg(test)]
-use crate::errors::*;
 
 #[derive(Clone, Debug)]
 pub struct QCBytes(Bytes);
@@ -94,9 +92,7 @@ impl CgPartSequence {
     /// This returns a clone of everything because streams can't really return
     /// references at the moment.
     #[cfg(test)]
-    pub fn to_stream(
-        &self,
-    ) -> stream::IterOk<IntoIter<result::Result<changegroup::Part, Error>>, Error> {
+    pub fn to_stream(&self) -> stream::IterOk<IntoIter<Result<changegroup::Part>>, Error> {
         let part_results: Vec<_> = self.as_iter().cloned().map(|x| Ok(x)).collect();
         stream::iter_ok(part_results.into_iter())
     }

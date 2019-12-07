@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 

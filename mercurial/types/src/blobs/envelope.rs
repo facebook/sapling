@@ -8,7 +8,7 @@
 
 use super::file::File;
 use crate::{HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath};
-use failure_ext::Result;
+use anyhow::Result;
 
 pub trait HgBlobEnvelope {
     fn get_parents(&self) -> HgParents;

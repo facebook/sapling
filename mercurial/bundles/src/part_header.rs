@@ -10,13 +10,13 @@
 
 use std::collections::HashMap;
 
+use anyhow::{bail, Context, Result};
 use bytes::{BufMut, Bytes};
-use failure_ext::bail;
 use quickcheck::{Arbitrary, Gen};
 use rand::seq::SliceRandom;
 
 use crate::chunk::Chunk;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
 pub type PartId = u32;

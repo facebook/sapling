@@ -12,7 +12,7 @@ use bytes::Bytes;
 use std::fmt;
 use std::sync::Arc;
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use thiserror::Error;

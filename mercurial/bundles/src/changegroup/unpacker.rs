@@ -12,8 +12,8 @@
 use std::cmp;
 use std::mem;
 
+use anyhow::{bail, format_err, Context, Error, Result};
 use bytes::BytesMut;
-use failure_ext::{bail, format_err, Error};
 use slog::Logger;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
@@ -21,7 +21,7 @@ use tokio_io::codec::Decoder;
 use mercurial_types::{MPath, RevFlags};
 
 use crate::delta;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
 use super::{CgDeltaChunk, Part, Section};

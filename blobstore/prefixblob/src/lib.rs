@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::Error;
+use anyhow::Error;
 use inlinable_string::InlinableString;
 
 use futures_ext::BoxFuture;

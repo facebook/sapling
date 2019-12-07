@@ -9,7 +9,7 @@
 use std::ops::Deref;
 use std::sync::Arc;
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use stats::{define_stats_struct, Timeseries};

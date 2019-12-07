@@ -15,9 +15,10 @@ use crate::{
     FileType, HgBlob, HgEntry, HgEntryId, HgFileNodeId, HgManifest, HgManifestEnvelope,
     HgManifestId, MPathElement, Type,
 };
+use anyhow::{bail, ensure, Context, Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
-use failure_ext::{bail, ensure, Error, FutureFailureErrorExt, Result, ResultExt};
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::{Entry, Manifest};

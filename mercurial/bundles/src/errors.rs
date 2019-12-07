@@ -8,7 +8,6 @@
 
 use crate::part_header::{PartHeader, PartHeaderType};
 
-pub use failure_ext::{Error, Result, ResultExt};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

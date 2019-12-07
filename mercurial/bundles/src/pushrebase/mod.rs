@@ -8,11 +8,10 @@
 
 // Pushrebase codecs
 
+use anyhow::{Error, Result};
 use bytes::BytesMut;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use tokio_codec::Decoder;
-
-use crate::errors::*;
 
 #[derive(Debug)]
 pub struct CommonHeadsUnpacker {}

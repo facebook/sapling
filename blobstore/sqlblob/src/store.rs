@@ -10,7 +10,7 @@ use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
-use failure_ext::{bail, format_err, Error};
+use anyhow::{bail, format_err, Error};
 use fbthrift::compact_protocol;
 use futures::prelude::*;
 use futures_ext::FutureExt;

@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{Future, Stream};
 use futures_ext::bounded_traversal::bounded_traversal_stream;
 use futures_preview::compat::Future01CompatExt;
@@ -336,7 +336,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure_ext::format_err;
+    use anyhow::format_err;
     use fbinit::{self, FacebookInit};
     use futures::IntoFuture;
     use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};

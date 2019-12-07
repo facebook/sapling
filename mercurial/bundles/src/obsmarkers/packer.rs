@@ -11,7 +11,7 @@
 
 use super::MetadataEntry;
 use crate::chunk::Chunk;
-use crate::errors::*;
+use anyhow::{Error, Result};
 use byteorder::ByteOrder;
 use bytes::{BigEndian, BufMut};
 use futures::stream::iter_result;
@@ -100,7 +100,7 @@ fn prepare_obsmarker_chunk(
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure_ext::Error;
+    use anyhow::Error;
     use futures::{stream, Async, Poll};
     use futures_ext::StreamExt;
     use mercurial_types_mocks::nodehash;

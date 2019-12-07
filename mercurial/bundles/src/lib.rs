@@ -30,11 +30,11 @@ mod types;
 pub mod wirepack;
 
 mod errors;
-pub use crate::errors::*;
+pub use crate::errors::ErrorKind;
 mod utils;
 
+use anyhow::{bail, Error, Result};
 use bytes::Bytes;
-use failure_ext::bail;
 use futures::sync::{mpsc, oneshot};
 use futures::{Future, Stream};
 use futures_ext::SinkToAsyncWrite;

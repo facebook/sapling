@@ -12,10 +12,11 @@ use crate::{
     Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents,
     MPath,
 };
+use anyhow::{bail, Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::{bail, Error, FutureFailureErrorExt, Result};
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;

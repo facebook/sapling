@@ -12,11 +12,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::{MultiplexedBlobstore, ScrubBlobstore};
+use anyhow::{bail, Error};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;

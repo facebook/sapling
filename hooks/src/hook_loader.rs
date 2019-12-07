@@ -17,7 +17,7 @@ use crate::facebook::rust_hooks::restrict_users::RestrictUsersHook;
 use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use crate::lua_hook::LuaHook;
 use crate::{Hook, HookChangeset, HookManager};
-use failure_ext::Error;
+use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;

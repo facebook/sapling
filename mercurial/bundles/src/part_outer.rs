@@ -13,6 +13,7 @@
 use std::io::BufRead;
 use std::mem;
 
+use anyhow::{Error, Result};
 use async_compression::Decompressor;
 use bytes::{Bytes, BytesMut};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
@@ -20,7 +21,7 @@ use slog::{debug, o, Logger};
 use tokio_codec::{Decoder, Framed, FramedParts};
 use tokio_io::AsyncRead;
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::part_header::{self, PartHeader, PartHeaderType, PartId};
 use crate::part_inner::validate_header;
 use crate::types::StreamHeader;

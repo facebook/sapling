@@ -12,7 +12,7 @@ use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use failure_ext::{bail, Error, Result};
+use anyhow::{bail, Error, Result};
 use futures::future::{poll_fn, Future};
 use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};

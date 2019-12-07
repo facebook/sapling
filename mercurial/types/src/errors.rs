@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{Error, ResultExt};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -22,5 +21,3 @@ pub enum ErrorKind {
     #[error("imposssible to parse unknown rev flags")]
     UnknownRevFlags,
 }
-
-pub type Result<T> = ::std::result::Result<T, Error>;

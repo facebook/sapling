@@ -10,9 +10,9 @@ use crate::{
     derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps, PathOrPrefix,
     PathTree, TreeInfo,
 };
+use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};

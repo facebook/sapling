@@ -10,9 +10,7 @@
 
 use std::path::Path;
 
-use failure_ext as failure;
-
-use crate::failure::Error;
+use anyhow::Error;
 use futures::{Async, Future, Poll};
 use futures_ext::{BoxFuture, FutureExt};
 

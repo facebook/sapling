@@ -11,12 +11,13 @@ use std::io::{self, Write};
 use std::str;
 use std::vec;
 
+use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use futures::future::{self, Future, IntoFuture};
 use futures::stream::{self, Stream};
 use futures::{Async, Poll};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use mercurial_types::manifest::Type;
 use mercurial_types::{
     blobs::file, FileType, HgBlob, HgBlobNode, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash,

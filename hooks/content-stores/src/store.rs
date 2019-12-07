@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use context::CoreContext;
-use failure_ext::Error;
 use futures_ext::BoxFuture;
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::FileType;

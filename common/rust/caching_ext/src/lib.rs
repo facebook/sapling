@@ -17,10 +17,10 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 
+use anyhow::Error;
 use bytes::Bytes;
 use cachelib::Abomonation;
 use cloned::cloned;
-use failure_ext::prelude::*;
 use futures::{
     future::{join_all, ok},
     prelude::*,
@@ -44,7 +44,7 @@ pub enum McErrorKind {
     Deserialization,
 }
 
-pub type McResult<T> = ::std::result::Result<T, McErrorKind>;
+pub type McResult<T> = Result<T, McErrorKind>;
 
 struct CachelibKey(String);
 struct MemcacheKey(String);
@@ -55,7 +55,7 @@ pub struct GetOrFillMultipleFromCacheLayers<Key, T> {
     pub cachelib: CachelibHandler<T>,
     pub keygen: KeyGen,
     pub memcache: MemcacheHandler,
-    pub deserialize: Arc<dyn Fn(IOBuf) -> ::std::result::Result<T, ()> + Send + Sync + 'static>,
+    pub deserialize: Arc<dyn Fn(IOBuf) -> Result<T, ()> + Send + Sync + 'static>,
     pub serialize: Arc<dyn Fn(&T) -> Bytes + Send + Sync + 'static>,
     pub report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
     pub get_from_db:
@@ -92,7 +92,7 @@ where
             self.deserialize.clone(),
             self.report_mc_result.clone(),
         )
-        .then(move |result: ::std::result::Result<_, !>| {
+        .then(move |result: Result<_, !>| {
             let (fetched_from_memcache, left_to_fetch) = match result {
                 Ok(result) => result,
                 Err(never) => never,
@@ -149,7 +149,7 @@ fn get_multiple_from_memcache<Key, T>(
     keys: Vec<(Key, CachelibKey)>,
     keygen: &KeyGen,
     memcache: &MemcacheHandler,
-    deserialize: Arc<dyn Fn(IOBuf) -> ::std::result::Result<T, ()> + Send + Sync + 'static>,
+    deserialize: Arc<dyn Fn(IOBuf) -> Result<T, ()> + Send + Sync + 'static>,
     report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
 ) -> impl Future<
     Item = (
@@ -169,9 +169,7 @@ where
                 .get(memcache_key.0.clone())
                 .map_err(|()| McErrorKind::MemcacheInternal)
                 .and_then(|maybe_serialized| maybe_serialized.ok_or(McErrorKind::Missing))
-                .then(move |result| -> ::std::result::Result<_, !> {
-                    Ok((key, result, cache_key, memcache_key))
-                })
+                .then(move |result| -> Result<_, !> { Ok((key, result, cache_key, memcache_key)) })
         })
         .collect();
 
@@ -245,7 +243,7 @@ mod test {
         db_data_fetches: Arc<AtomicUsize>,
         db_data: HashMap<String, u8>,
     ) -> GetOrFillMultipleFromCacheLayers<String, u8> {
-        let deserialize = |_buf: IOBuf| -> ::std::result::Result<u8, ()> { Ok(0) };
+        let deserialize = |_buf: IOBuf| -> Result<u8, ()> { Ok(0) };
 
         let serialize = |byte: &u8| -> Bytes { Bytes::from(vec![byte.clone()]) };
         let get_from_db = move |keys: HashSet<String>| -> BoxFuture<HashMap<String, u8>, Error> {

@@ -9,10 +9,10 @@
 #![deny(warnings)]
 
 use super::HgFileNodeId;
+use anyhow::Error;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::Future;
 use std::sync::Arc;
 

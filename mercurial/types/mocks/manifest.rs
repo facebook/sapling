@@ -10,8 +10,8 @@ use std::collections::btree_map::Entry as BTreeEntry;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use anyhow::{bail, Context, Error, Result};
 use bytes::Bytes;
-use failure_ext::{bail, Error, ResultExt};
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
@@ -23,7 +23,7 @@ use mercurial_types::{
     FileBytes, FileType, HgBlob, HgEntry, HgManifest, MPath, MPathElement, RepoPath, Type,
 };
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 
 pub type ContentFactory = Arc<dyn (Fn() -> Content) + Send + Sync>;
 

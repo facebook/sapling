@@ -11,8 +11,8 @@ use std::hash::Hash;
 use std::sync::atomic::Ordering;
 
 use crate::mock_store::MockStore;
+use anyhow::Result;
 use cachelib::{get_cached, set_cached, Abomonation, VolatileLruCachePool};
-use failure_ext::prelude::*;
 
 use crate::CachelibKey;
 

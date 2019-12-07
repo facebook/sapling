@@ -10,6 +10,7 @@ use std::collections::{HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
+use anyhow::Error;
 use futures::future::Future;
 use futures::stream::{empty, iter_ok, once, Stream};
 use futures_ext::{BoxStream, StreamExt};
@@ -18,8 +19,6 @@ use mercurial_types::{MPath, MPathElement, Type};
 
 use super::revlog::EntryContent;
 use super::{RevlogEntry, RevlogManifest};
-
-use crate::errors::*;
 
 // Note that:
 // * this isn't "left" and "right" because an explicit direction makes the API clearer

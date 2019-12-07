@@ -12,12 +12,12 @@ use crate::{
     calculate_hg_node_id_stream, FileBytes, HgBlobNode, HgFileEnvelopeMut, HgFileNodeId,
     HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Type,
 };
+use anyhow::{bail, Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
-use failure_ext::{bail, FutureFailureErrorExt, Result};
+use failure_ext::FutureFailureErrorExt;
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};

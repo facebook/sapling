@@ -10,14 +10,14 @@
 
 use std::mem;
 
-use failure_ext::{bail, ensure};
+use anyhow::{bail, ensure, Error, Result};
 use futures::{try_ready, Async, Poll, Stream};
 
 use mercurial_types::RepoPath;
 
 use super::{DataEntry, HistoryEntry, Part};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 
 pub trait WirePackPartProcessor {
     type Data;

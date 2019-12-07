@@ -9,6 +9,7 @@
 //! A hash of a node (changeset, manifest or file).
 
 use abomonation_derive::Abomonation;
+use anyhow::Result;
 use ascii::{AsciiStr, AsciiString};
 use heapsize_derive::HeapSizeOf;
 use manifest::Entry;
@@ -23,7 +24,6 @@ use std::{
 /// Node hash type from Mercurial's Rust code (essentially equivalent to [HgNodeHash]).
 use types::Node as HgTypesNode;
 
-use crate::errors::*;
 use crate::hash::{self, Sha1};
 use crate::manifest::Type;
 use crate::thrift;

@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, MPath};
