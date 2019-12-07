@@ -9,7 +9,10 @@ use std::ops::Range;
 use std::path::Path;
 
 use anyhow::Result;
-use indexedlog::log::{self, IndexOutput, Log};
+use indexedlog::{
+    log::{self, IndexOutput, Log},
+    DefaultOpenOptions,
+};
 use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;
@@ -32,17 +35,21 @@ pub struct NodeMap {
     log: Log,
 }
 
-impl NodeMap {
-    pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
-        // Update the index every 100KB, i.e. every 256 entries
+impl DefaultOpenOptions<log::OpenOptions> for NodeMap {
+    fn default_open_options() -> log::OpenOptions {
         let first_index = |_data: &[u8]| vec![IndexOutput::Reference(0..20)];
         let second_index = |_data: &[u8]| vec![IndexOutput::Reference(20..40)];
+        log::OpenOptions::new()
+            .create(true)
+            .index("first", first_index)
+            .index("second", second_index)
+    }
+}
+
+impl NodeMap {
+    pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
         Ok(NodeMap {
-            log: log::OpenOptions::new()
-                .create(true)
-                .index("first", first_index)
-                .index("second", second_index)
-                .open(dir)?,
+            log: Self::default_open_options().open(dir)?,
         })
     }
 

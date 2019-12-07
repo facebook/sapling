@@ -12,3 +12,4 @@ pub mod nodeset;
 
 pub use crate::nodemap::NodeMap;
 pub use crate::nodeset::NodeSet;
+pub use indexedlog::Repair;
