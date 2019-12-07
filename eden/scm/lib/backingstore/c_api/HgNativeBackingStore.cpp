@@ -7,7 +7,6 @@
 
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
 
-#include <folly/Optional.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/io/IOBuf.h>
@@ -17,6 +16,21 @@
 
 namespace facebook {
 namespace eden {
+namespace {
+/**
+ * Convert a `RustCBytes` into `folly::IOBuf` without copying the underlying
+ * data.
+ */
+std::unique_ptr<folly::IOBuf> bytesToIOBuf(RustCBytes* bytes) {
+  return folly::IOBuf::takeOwnership(
+      reinterpret_cast<void*>(bytes->ptr),
+      bytes->len,
+      [](void* /* buf */, void* userData) {
+        rust_cbytes_free(reinterpret_cast<RustCBytes*>(userData));
+      },
+      reinterpret_cast<void*>(bytes));
+}
+} // namespace
 
 HgNativeBackingStore::HgNativeBackingStore(folly::StringPiece repository) {
   RustCFallible<RustBackingStore> store(
@@ -30,7 +44,7 @@ HgNativeBackingStore::HgNativeBackingStore(folly::StringPiece repository) {
   store_ = store.unwrap();
 }
 
-folly::Optional<folly::IOBuf> HgNativeBackingStore::getBlob(
+std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
     folly::ByteRange name,
     folly::ByteRange node) {
   RustCFallible<RustCBytes> result(
@@ -42,13 +56,10 @@ folly::Optional<folly::IOBuf> HgNativeBackingStore::getBlob(
     XLOG(DBG5) << "Error while getting blob name=" << name.data()
                << " node=" << folly::hexlify(node)
                << " from backingstore: " << result.getError();
-    return folly::none;
+    return nullptr;
   }
-  auto buffer = result.get();
-  auto iobuf =
-      folly::IOBuf{folly::IOBuf::COPY_BUFFER, buffer->ptr, buffer->len};
 
-  return iobuf;
+  return bytesToIOBuf(result.unwrap().release());
 }
 
 std::shared_ptr<RustTree> HgNativeBackingStore::getTree(folly::ByteRange node) {

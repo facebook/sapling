@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<85582de8715286965cfc5e5472a8dab0>>
+ * @generated SignedSource<<d4d2d4d612a8215f35cd4ef138904bab>>
  *
  */
 
@@ -89,7 +89,7 @@ template<typename T>
 struct RustVec;
 
 struct RustCBytes {
-  const uint8_t *ptr;
+  uint8_t *ptr;
   size_t len;
   RustVec<uint8_t> *vec;
 folly::ByteRange asByteRange() const {
@@ -112,7 +112,7 @@ struct RustTreeEntry {
 struct RustTree {
   const RustTreeEntry *entries;
   /// This makes sure `entries` above is pointing to a valid memory.
-  RustVec<RustTreeEntry> *_entries;
+  RustVec<RustTreeEntry> *entries_ptr;
   uintptr_t length;
   RustCBytes hash;
 };

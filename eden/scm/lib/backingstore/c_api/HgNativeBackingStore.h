@@ -13,8 +13,6 @@
 
 namespace folly {
 class IOBuf;
-template <typename T>
-class Optional;
 } // namespace folly
 
 namespace facebook {
@@ -24,7 +22,7 @@ class HgNativeBackingStore {
  public:
   explicit HgNativeBackingStore(folly::StringPiece repository);
 
-  folly::Optional<folly::IOBuf> getBlob(
+  std::unique_ptr<folly::IOBuf> getBlob(
       folly::ByteRange name,
       folly::ByteRange node);
 

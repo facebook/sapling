@@ -13,15 +13,15 @@ use libc::size_t;
 
 #[repr(C)]
 pub struct CBytes {
-    ptr: *const u8,
+    ptr: *mut u8,
     len: size_t,
     vec: *mut Vec<u8>,
 }
 
 impl CBytes {
     pub fn from_vec(vec: Vec<u8>) -> Self {
-        let vec = Box::new(vec);
-        let ptr = vec.as_ptr();
+        let mut vec = Box::new(vec);
+        let ptr = vec.as_mut_ptr();
 
         Self {
             ptr,
