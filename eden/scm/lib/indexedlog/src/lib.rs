@@ -25,7 +25,9 @@ mod errors;
 pub mod index;
 pub mod lock;
 pub mod log;
+mod repair;
 pub mod rotate;
 pub mod utils;
 
 pub use errors::{Error, Result};
+pub use repair::{DefaultOpenOptions, Repair};

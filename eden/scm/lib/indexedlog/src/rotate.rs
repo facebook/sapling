@@ -10,6 +10,7 @@
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
+use crate::repair::OpenOptionsRepair;
 use crate::utils;
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -282,6 +283,12 @@ impl OpenOptions {
             Ok(message)
         })()
         .context(|| format!("in rotate::OpenOptions::repair({:?})", dir))
+    }
+}
+
+impl OpenOptionsRepair for OpenOptions {
+    fn open_options_repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
+        OpenOptions::repair(self, dir.as_ref())
     }
 }
 
@@ -784,9 +791,8 @@ fn guess_latest(mut ids: Vec<u8>) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
-
     use log::IndexOutput;
+    use tempfile::tempdir;
 
     #[test]
     fn test_open() {

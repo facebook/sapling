@@ -37,6 +37,7 @@ use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
+use crate::repair::OpenOptionsRepair;
 use crate::utils::{self, atomic_write, mmap_empty, mmap_len, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use memmap::Mmap;
@@ -2002,7 +2003,15 @@ impl OpenOptions {
 
         result.context(|| format!("in log::OpenOptions::repair({:?})", dir))
     }
+}
 
+impl OpenOptionsRepair for OpenOptions {
+    fn open_options_repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
+        OpenOptions::repair(self, dir.as_ref())
+    }
+}
+
+impl OpenOptions {
     /// Attempt to change a [`Log`] at the given directory so it becomes
     /// empty and hopefully recovers from some corrupted state.
     ///
