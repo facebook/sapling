@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
@@ -20,8 +21,7 @@ use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::prelude::*;
-use failure_ext::{Error, Result};
+use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use filenodes::CachingFilenodes;
 use filestore::FilestoreConfig;

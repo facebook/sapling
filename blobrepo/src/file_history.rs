@@ -9,9 +9,9 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::repo::BlobRepo;
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use filenodes::FilenodeInfo;
 use futures::{future::ok, stream, Future, Stream};
 use futures_ext::{BoxStream, FutureExt, StreamExt};

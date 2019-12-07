@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use bytes::Bytes;
 use clap::Arg;
 use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use lfs_import_lib::lfs_upload;

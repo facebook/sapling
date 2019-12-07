@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{Error, Result, ResultExt};
 use thiserror::Error;
 
 use mercurial_types::HgChangesetId;

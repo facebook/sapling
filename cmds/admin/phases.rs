@@ -7,9 +7,9 @@
  */
 
 use crate::cmdargs::{ADD_PUBLIC_PHASES, FETCH_PHASE, LIST_PUBLIC};
+use anyhow::{bail, format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
-use failure_ext::{bail, format_err, Error};
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

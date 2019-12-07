@@ -8,6 +8,7 @@
 
 #![deny(warnings)]
 
+use anyhow::{format_err, Error};
 use blame::{fetch_file_full_content, BlameRoot, BlameRootMapping};
 use blobrepo::{BlobRepo, DangerousOverride};
 use blobstore::{Blobstore, Loadable};
@@ -23,7 +24,6 @@ use cmdlib::{args, helpers, helpers::create_runtime, monitoring::start_fb303_and
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
-use failure_ext::{format_err, Error};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};

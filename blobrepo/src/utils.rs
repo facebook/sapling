@@ -9,8 +9,8 @@
 use std::mem;
 use std::sync::{Arc, Mutex};
 
+use anyhow::Error;
 use cloned::cloned;
-use failure_ext::Error;
 use futures::future::Future;
 use futures::stream;
 use futures_ext::{BoxStream, StreamExt};

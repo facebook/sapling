@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::{
     upload_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
@@ -16,7 +17,6 @@ use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::future::{Future, IntoFuture};
 use futures::stream;

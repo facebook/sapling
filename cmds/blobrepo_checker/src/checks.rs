@@ -7,10 +7,10 @@
  */
 
 use crate::errors::ErrorKind;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use mercurial_types::HgChangesetId;

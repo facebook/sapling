@@ -11,12 +11,12 @@ use crate::{
     PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
+use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::prelude::*;
-use failure_ext::{format_err, Error, FutureFailureErrorExt};
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, ok};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

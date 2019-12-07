@@ -6,16 +6,14 @@
  * directory of this source tree.
  */
 
+use anyhow::{ensure, Error};
 use bytes::Bytes;
-use failure_ext::ensure;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{delta, HgBlob, HgBlobNode, HgChangesetId, NULL_HASH};
-
-use crate::errors::*;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ChangesetDeltaed {

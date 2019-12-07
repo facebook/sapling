@@ -8,9 +8,9 @@
 
 use std::collections::BTreeMap;
 
+use anyhow::Error;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::executor::spawn;
 use futures::future::Future;

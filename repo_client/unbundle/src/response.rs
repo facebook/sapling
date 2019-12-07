@@ -7,13 +7,12 @@
  */
 
 use crate::CommonHeads;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
-use failure_ext::Error;
 use failure_ext::FutureFailureErrorExt;
-pub use failure_ext::{prelude::*, Fail};
 use futures::{Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;

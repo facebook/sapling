@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
-use failure_ext::Error;
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::HookManager;

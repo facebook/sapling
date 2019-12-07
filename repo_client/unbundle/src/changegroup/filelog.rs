@@ -9,10 +9,11 @@
 use std::collections::HashMap;
 use std::mem;
 
+use anyhow::{bail, Context, Error, Result};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail, Compat, FutureFailureErrorExt};
+use failure_ext::{Compat, FutureFailureErrorExt};
 use futures::future::Shared;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -31,7 +32,6 @@ use mercurial_types::{
 };
 use remotefilelog::create_raw_filenode_blob;
 
-use crate::errors::*;
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
 

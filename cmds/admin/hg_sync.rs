@@ -6,13 +6,14 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use bookmarks::{BookmarkUpdateReason, Bookmarks, Freshness};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::{Error, FutureFailureErrorExt};
+use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::future::{self, ok};
 use futures::prelude::*;

@@ -11,6 +11,7 @@ use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_chang
 use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
 use crate::repo_commit::*;
+use anyhow::{format_err, Context, Error};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
@@ -24,7 +25,7 @@ use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, prelude::*, Compat, Error, FutureFailureErrorExt, FutureFailureExt};
+use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt};
 use filenodes::{FilenodeInfo, Filenodes};
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Future, Loop};

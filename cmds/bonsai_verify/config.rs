@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{Context, Result};
 use clap::ArgMatches;
-use failure_ext::{Result, ResultExt};
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 use serde_derive::Deserialize;

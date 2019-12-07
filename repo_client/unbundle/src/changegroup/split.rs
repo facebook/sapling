@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, ensure};
+use anyhow::{bail, ensure, Error};
 use futures::{try_ready, Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
@@ -14,7 +14,6 @@ use mercurial_bundles::changegroup::{Part, Section};
 
 use crate::changegroup::changeset::ChangesetDeltaed;
 use crate::changegroup::filelog::FilelogDeltaed;
-use crate::errors::*;
 
 pub fn split_changegroup<S>(
     cg2s: S,

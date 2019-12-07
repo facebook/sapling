@@ -10,8 +10,8 @@
 
 use std::vec::Vec;
 
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::{queries, Connection};

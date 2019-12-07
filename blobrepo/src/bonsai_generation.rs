@@ -8,8 +8,9 @@
 
 use std::collections::BTreeMap;
 
+use anyhow::{Context, Error, Result};
 use cloned::cloned;
-use failure_ext::prelude::*;
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::{try_boxfuture, FutureExt};

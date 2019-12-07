@@ -7,10 +7,10 @@
  */
 
 use crate::{BundleResolverError, PostResolveAction, PostResolvePush, PostResolvePushRebase};
+use anyhow::format_err;
 use cloned::cloned;
 use context::CoreContext;
 use crypto::{digest::Digest, sha2::Sha256};
-use failure_ext::format_err;
 use futures::{future::join_all, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use limits::types::{RateLimit, RateLimitStatus};

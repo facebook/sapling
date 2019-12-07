@@ -14,10 +14,10 @@ use std::sync::{
     Arc,
 };
 
+use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
 use clap::{App, Arg};
 use cloned::cloned;
-use failure_ext::{format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};

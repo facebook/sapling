@@ -8,6 +8,7 @@
 
 #![deny(warnings)]
 
+use anyhow::{bail, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobimport_lib;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
@@ -15,7 +16,7 @@ use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime, helpers::upload_and_show_trace};
 use context::CoreContext;
-use failure_ext::{bail, format_err, Error, Result, ResultExt, SlogKVError};
+use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::FutureExt;

@@ -9,8 +9,8 @@
 use std::fmt::Debug;
 use std::mem;
 
+use anyhow::{Error, Result};
 use bytes::Bytes;
-use failure_ext::{Error, Result};
 use futures::{Poll, Stream};
 use thiserror::Error;
 

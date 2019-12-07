@@ -10,12 +10,13 @@
 
 mod config;
 
+use anyhow::{bail, format_err, Error, Result};
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
-use failure_ext::{bail, format_err, DisplayChain, Error, Result};
+use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},

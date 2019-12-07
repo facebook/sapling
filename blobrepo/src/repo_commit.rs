@@ -10,10 +10,9 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
+use anyhow::{format_err, Error, Result};
 use cloned::cloned;
-use failure_ext::{
-    format_err, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
-};
+use failure_ext::{chain::ChainExt, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;

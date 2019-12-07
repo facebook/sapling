@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::HgChangesetId;

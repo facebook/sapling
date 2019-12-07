@@ -21,12 +21,12 @@ use crate::{
     BundleResolverError, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedBonsais,
 };
+use anyhow::{format_err, Error};
 use backsyncer::backsync_all_latest;
 use backsyncer::TargetRepoDbs;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
-use failure_ext::{format_err, Error};
 use futures::Future;
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use futures_preview::compat::Future01CompatExt;

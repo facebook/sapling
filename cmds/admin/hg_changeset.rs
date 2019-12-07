@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};

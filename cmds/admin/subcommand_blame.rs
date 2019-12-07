@@ -7,6 +7,7 @@
  */
 
 use crate::error::SubcommandError;
+use anyhow::{format_err, Error};
 use blame::{fetch_blame, fetch_file_full_content};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
@@ -16,7 +17,6 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{

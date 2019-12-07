@@ -6,12 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{bail, Result};
 use itertools::Itertools;
 use std::collections::BTreeMap;
 
 use cmdlib::args;
-
-use failure_ext::{bail, Result};
 
 fn main() -> Result<()> {
     let matches = args::MononokeApp::new("Lint Mononoke config files")

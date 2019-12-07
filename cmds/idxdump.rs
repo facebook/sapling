@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{bail, Result};
 use clap::App;
-use failure_ext::{bail, Result};
 use mercurial_revlog::revlog::{RevIdx, Revlog};
 use std::str::FromStr;
 

@@ -9,10 +9,10 @@
 //! This dummy crate contains dummy implementation of traits that are being used only in the
 //! --dry-run mode to test the healer
 
+use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
-use failure_ext::Error;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{BlobstoreBytes, DateTime};

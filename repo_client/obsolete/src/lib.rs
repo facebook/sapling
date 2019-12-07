@@ -8,9 +8,9 @@
 
 #![deny(warnings)]
 
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use futures::{stream, Future, Stream};
 use mercurial_bundles::obsmarkers::MetadataEntry;
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};

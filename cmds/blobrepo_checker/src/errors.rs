@@ -7,7 +7,7 @@
  */
 
 use crate::checks::FileInformation;
-use failure_ext::Error;
+use anyhow::Error;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
 use thiserror::Error;

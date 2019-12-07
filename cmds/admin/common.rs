@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::future::{self, Future};
 use futures_ext::FutureExt;
 use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath};

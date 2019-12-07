@@ -8,7 +8,7 @@
 
 #![deny(warnings)]
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures::future::{err, ok};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};

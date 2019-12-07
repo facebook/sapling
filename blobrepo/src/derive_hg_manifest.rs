@@ -8,10 +8,10 @@
 
 use crate::errors::ErrorKind;
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
+use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
 use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};

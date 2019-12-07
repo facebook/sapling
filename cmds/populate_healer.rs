@@ -8,9 +8,9 @@
 
 use std::{sync::Arc, time::Instant};
 
+use anyhow::{bail, format_err, Error};
 use clap::Arg;
 use cloned::cloned;
-use failure_ext::{bail, format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;

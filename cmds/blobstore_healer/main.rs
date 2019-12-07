@@ -12,6 +12,7 @@
 mod dummy;
 mod healer;
 
+use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
@@ -20,7 +21,7 @@ use cmdlib::{args, helpers::create_runtime, monitoring};
 use configerator::ConfigeratorAPI;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure_ext::{bail, format_err, prelude::*};
+use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use futures::{
     future::{join_all, loop_fn, ok, Loop},

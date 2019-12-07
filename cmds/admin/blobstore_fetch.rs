@@ -10,8 +10,8 @@ use std::convert::TryInto;
 use std::fmt;
 use std::sync::Arc;
 
+use anyhow::{format_err, Error, Result};
 use clap::ArgMatches;
-use failure_ext::{format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

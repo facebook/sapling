@@ -6,12 +6,13 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::prelude::*;
+use failure_ext::chain::ChainExt;
 use futures::{self, future::join_all, prelude::*};
 use futures_ext::FutureExt;
 use itertools::{Either, Itertools};

@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{bail, format_err, Result};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::{bail, format_err, Result};
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};

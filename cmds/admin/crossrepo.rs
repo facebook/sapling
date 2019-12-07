@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::{future::IntoFuture, stream, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};

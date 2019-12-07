@@ -7,6 +7,7 @@
  */
 
 use crate::error::SubcommandError;
+use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -14,7 +15,6 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::{BonsaiDerived, RegenerateMapping};
-use failure_ext::{bail, Error};
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};

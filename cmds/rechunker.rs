@@ -8,10 +8,10 @@
 
 #![deny(warnings)]
 
+use anyhow::{format_err, Error};
 use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::future::Future;
 use futures::stream;

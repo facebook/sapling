@@ -9,11 +9,11 @@
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use futures::future::{join_all, Future};

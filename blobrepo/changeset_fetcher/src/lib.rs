@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error};
 use changesets::Changesets;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, Generation, RepositoryId};

@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use failure_ext::Error;
+use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

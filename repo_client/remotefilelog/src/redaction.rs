@@ -7,8 +7,8 @@
  */
 
 #![deny(warnings)]
+use anyhow::Error;
 use bytes::Bytes;
-use failure_ext::Error;
 use futures::{Async, Future, Poll};
 use mercurial_types::FileBytes;
 

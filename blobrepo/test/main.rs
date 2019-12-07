@@ -11,12 +11,12 @@
 mod tracing_blobstore;
 mod utils;
 
+use anyhow::Error;
 use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
 use blobrepo::{compute_changed_files, BlobRepo, UploadEntries};
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::{Future, Stream};

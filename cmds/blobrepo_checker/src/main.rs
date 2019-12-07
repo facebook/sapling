@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{future, stream::futures_unordered, sync::mpsc, Future, Stream};
 use std::fmt::Debug;

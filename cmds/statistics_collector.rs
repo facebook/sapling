@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bookmarks::BookmarkName;
@@ -15,7 +16,6 @@ use clap::{App, Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime, monitoring};
 use context::CoreContext;
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::future::{loop_fn, Loop};

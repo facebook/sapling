@@ -6,9 +6,9 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
-use failure_ext::Error;
 use futures_ext::BoxFuture;
 use mononoke_types::BlobstoreBytes;
 use std::sync::{Arc, Mutex};

@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
+use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
-use failure_ext::bail;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
 use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};

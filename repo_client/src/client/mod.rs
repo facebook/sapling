@@ -6,17 +6,17 @@
  * directory of this source tree.
  */
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 
 use unbundle::{run_hooks, run_post_resolve_action, PushRedirector};
 
+use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use configerator::ConfigLoader;
 use context::{CoreContext, LoggingContainer, Metric, PerfCounterType, SessionContainer};
-use failure_ext::{format_err, Error};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};

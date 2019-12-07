@@ -12,9 +12,10 @@ use cmdlib::{args, helpers};
 
 use crate::cmdargs::{REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
 use crate::common::get_file_nodes;
+use anyhow::{format_err, Error};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error, FutureFailureErrorExt};
+use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::future::{self, join_all, Future};
 use futures::stream::Stream;

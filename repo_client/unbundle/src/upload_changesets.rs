@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
-use crate::errors::*;
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
+use anyhow::{bail, Error, Result};
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
 use context::CoreContext;
-use failure_ext::{bail, Compat, StreamFailureErrorExt};
+use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::future::{self, ok, Shared};
 use futures::Future;
 use futures::{stream, Stream};

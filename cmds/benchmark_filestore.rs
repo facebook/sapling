@@ -7,6 +7,7 @@
  */
 
 #[deny(warnings)]
+use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
@@ -14,7 +15,6 @@ use clap::{App, Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{stream::iter_ok, Future, IntoFuture, Stream};
