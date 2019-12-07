@@ -50,6 +50,7 @@ _ignoreextensions = {
     "hgk",
     "inotify",
     "interhg",
+    "morecolors",
     "mq",
     "perftweaks",
     "obsshelve",

@@ -340,7 +340,6 @@ Test extension help:
                      will be used
        lz4revlog     store revlog deltas using lz4 compression
        memcommit     make commits without a working copy
-       morecolors    make more output colorful
        morestatus    make status give a bit more context
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C

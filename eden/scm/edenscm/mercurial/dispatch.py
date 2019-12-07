@@ -280,7 +280,6 @@ def _preimportmodules():
         "logginghelper",
         "lz4revlog",
         "mergedriver",
-        "morecolors",
         "morestatus",
         "patchrmdir",
         "phabdiff",

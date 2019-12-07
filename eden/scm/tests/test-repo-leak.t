@@ -138,7 +138,6 @@ Somehow problematic: With many extensions
   > lz4revlog=
   > mergedriver =
   > mergedriver=
-  > morecolors=
   > morestatus=
   > myparent=
   > patchrmdir=
