@@ -232,10 +232,19 @@ fn find_last_root_id(log: &ilog::Log) -> Result<Id20> {
 }
 
 fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
+    if id == EMPTY_ROOT_ID.clone() {
+        return Ok(EMPTY_ROOT.clone());
+    }
     let root = match blobs.get(id)? {
         Some(bytes) => mincode::deserialize(&bytes)?,
-        None => EMPTY_ROOT.clone(),
+        None => {
+            return Err(crate::Error(format!(
+                "Root ID {} is not found",
+                id.to_hex()
+            )))
+        }
     };
+
     Ok(root)
 }
 
