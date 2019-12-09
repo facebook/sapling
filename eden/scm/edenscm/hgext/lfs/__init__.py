@@ -375,7 +375,8 @@ def gc(repo):
         # non-narrow-heads: use unfiltered repo to get all drafts.
         draftrevs = repo.unfiltered().revs("draft()")
 
-    draftoids = {p.oid() for p in wrapper.extractpointers(repo, draftrevs)}
+    # Pass unfiltered repo in case we got unfiltered draft commits above
+    draftoids = {p.oid() for p in wrapper.extractpointers(repo.unfiltered(), draftrevs)}
     oids = alloids - draftoids
     if not oids:
         return
