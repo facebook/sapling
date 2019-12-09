@@ -2,7 +2,7 @@
 
 setup configuration
 
-  $ setup_common_config "blob:files"
+  $ setup_common_config "blob_files"
   $ cd $TESTTMP
 
 Setup repo and blobimport it

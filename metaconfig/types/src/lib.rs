@@ -12,7 +12,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Error, Result};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -27,7 +27,10 @@ use std::{
 
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use metaconfig_thrift::{RawFilestoreParams, RawSourceControlServiceMonitoring};
+use metaconfig_thrift::{
+    RawBlobstoreConfig, RawDbConfig, RawFilestoreParams, RawShardedFilenodesParams,
+    RawSourceControlServiceMonitoring, RawStorageConfig,
+};
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use scuba::ScubaValue;
@@ -492,6 +495,45 @@ pub struct StorageConfig {
     pub dbconfig: MetadataDBConfig,
 }
 
+impl TryFrom<RawStorageConfig> for StorageConfig {
+    type Error = Error;
+
+    fn try_from(raw: RawStorageConfig) -> Result<Self, Error> {
+        let config = StorageConfig {
+            dbconfig: match raw.db {
+                RawDbConfig::local(def) => MetadataDBConfig::LocalDB {
+                    path: PathBuf::from(def.local_db_path),
+                },
+                RawDbConfig::remote(def) => match def.sharded_filenodes {
+                    None => MetadataDBConfig::Mysql {
+                        db_address: def.db_address,
+                        sharded_filenodes: None,
+                    },
+                    Some(RawShardedFilenodesParams {
+                        shard_map,
+                        shard_num,
+                    }) => {
+                        let shard_num: Result<_> = NonZeroUsize::new(shard_num.try_into()?)
+                            .ok_or_else(|| anyhow!("filenodes shard_num must be > 0"));
+                        MetadataDBConfig::Mysql {
+                            db_address: def.db_address,
+                            sharded_filenodes: Some(ShardedFilenodesParams {
+                                shard_map,
+                                shard_num: shard_num?,
+                            }),
+                        }
+                    }
+                },
+                RawDbConfig::UnknownField(_) => {
+                    return Err(anyhow!("unsupported storage configuration"));
+                }
+            },
+            blobstore: TryFrom::try_from(&raw.blobstore_type)?,
+        };
+        Ok(config)
+    }
+}
+
 /// Configuration for a blobstore
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BlobConfig {
@@ -598,6 +640,60 @@ impl BlobConfig {
 impl Default for BlobConfig {
     fn default() -> Self {
         BlobConfig::Disabled
+    }
+}
+
+impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
+    type Error = Error;
+
+    fn try_from(raw: &RawBlobstoreConfig) -> Result<Self, Error> {
+        let res = match raw {
+            RawBlobstoreConfig::disabled(_) => BlobConfig::Disabled,
+            RawBlobstoreConfig::blob_files(def) => BlobConfig::Files {
+                path: PathBuf::from(def.path.clone()),
+            },
+            RawBlobstoreConfig::blob_rocks(def) => BlobConfig::Rocks {
+                path: PathBuf::from(def.path.clone()),
+            },
+            RawBlobstoreConfig::blob_sqlite(def) => BlobConfig::Sqlite {
+                path: PathBuf::from(def.path.clone()),
+            },
+            RawBlobstoreConfig::manifold(def) => BlobConfig::Manifold {
+                bucket: def.manifold_bucket.clone(),
+                prefix: def.manifold_prefix.clone(),
+            },
+            RawBlobstoreConfig::mysql(def) => BlobConfig::Mysql {
+                shard_map: def.mysql_shardmap.clone(),
+                shard_num: NonZeroUsize::new(def.mysql_shard_num.try_into()?).ok_or(anyhow!(
+                    "mysql shard num must be specified and an interger larger than 0"
+                ))?,
+            },
+            RawBlobstoreConfig::multiplexed(def) => BlobConfig::Multiplexed {
+                scuba_table: def.scuba_table.clone(),
+                blobstores: def
+                    .components
+                    .iter()
+                    .map(|comp| {
+                        Ok((
+                            BlobstoreId(comp.blobstore_id.try_into()?),
+                            BlobConfig::try_from(&comp.blobstore_type)?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            },
+            RawBlobstoreConfig::manifold_with_ttl(def) => {
+                let ttl = Duration::from_secs(def.ttl_secs.try_into()?);
+                BlobConfig::ManifoldWithTtl {
+                    bucket: def.manifold_bucket.clone(),
+                    prefix: def.manifold_prefix.clone(),
+                    ttl,
+                }
+            }
+            RawBlobstoreConfig::UnknownField(_) => {
+                return Err(anyhow!("unsupported blobstore configuration"));
+            }
+        };
+        Ok(res)
     }
 }
 

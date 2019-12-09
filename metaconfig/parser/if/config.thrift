@@ -6,6 +6,69 @@
  * directory of this source tree.
  */
 
+struct RawBlobstoreDisabled {}
+struct RawBlobstoreFilePath {
+    1: string path,
+}
+struct RawBlobstoreManifold {
+    1: string manifold_bucket,
+    2: string manifold_prefix,
+}
+struct RawBlobstoreMysql {
+    1: string mysql_shardmap,
+    2: i32 mysql_shard_num,
+}
+struct RawBlobstoreMultiplexed {
+    1: optional string scuba_table,
+    2: list<RawBlobstoreIdConfig> components,
+}
+struct RawBlobstoreManifoldWithTtl {
+    1: string manifold_bucket,
+    2: string manifold_prefix,
+    3: i64 ttl_secs,
+}
+
+// Configuration for a single blobstore. These are intended to be defined in a
+// separate blobstore.toml config file, and then referenced by name from a
+// per-server config. Names are only necessary for blobstores which are going
+// to be used by a server. The id field identifies the blobstore as part of a
+// multiplex, and need not be defined otherwise. However, once it has been set
+// for a blobstore, it must remain unchanged.
+union RawBlobstoreConfig {
+    1: RawBlobstoreDisabled disabled,
+    2: RawBlobstoreFilePath blob_files,
+    3: RawBlobstoreFilePath blob_rocks,
+    4: RawBlobstoreFilePath blob_sqlite,
+    5: RawBlobstoreManifold manifold,
+    6: RawBlobstoreMysql mysql,
+    7: RawBlobstoreMultiplexed multiplexed,
+    8: RawBlobstoreManifoldWithTtl manifold_with_ttl,
+}
+
+struct RawBlobstoreIdConfig {
+    1: i64 blobstore_id,
+    2: RawBlobstoreConfig blobstore_type,
+}
+
+struct RawDbLocal {
+    1: string local_db_path,
+}
+
+struct RawDbRemote {
+    1: string db_address,
+    2: optional RawShardedFilenodesParams sharded_filenodes,
+}
+
+union RawDbConfig {
+    1: RawDbLocal local,
+    2: RawDbRemote remote,
+}
+
+struct RawStorageConfig {
+    1: RawDbConfig db,
+    2: RawBlobstoreConfig blobstore_type,
+}
+
 struct RawPushParams {
     1: optional bool pure_push_allowed,
 }

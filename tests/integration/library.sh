@@ -9,14 +9,14 @@
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
   function db_config() {
-    echo "db.db_address=\"$DB_SHARD_NAME\""
+    echo "[storage.blobstore.db.remote]"
+    echo "db_address=\"$DB_SHARD_NAME\""
   }
   MONONOKE_DEFAULT_START_TIMEOUT=60
 else
   function db_config() {
-    local reponame
-    reponame="$1"
-    echo "db.local_db_path=\"$TESTTMP/monsql\""
+    echo "[storage.blobstore.db.local]"
+    echo "local_db_path=\"$TESTTMP/monsql\""
   }
   MONONOKE_DEFAULT_START_TIMEOUT=15
 fi
@@ -398,7 +398,7 @@ function get_bonsai_globalrev_mapping {
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
   mkdir -p mononoke-config
-  REPOTYPE="blob:rocks"
+  REPOTYPE="blob_rocks"
   if [[ $# -gt 0 ]]; then
     REPOTYPE="$1"
   fi
@@ -514,25 +514,19 @@ fi
 
 if [[ -v MULTIPLEXED ]]; then
 cat >> "repos/$reponame/server.toml" <<CONFIG
-[storage.blobstore]
 $(db_config "$reponame")
-blobstore_type="multiplexed"
 
-    [[storage.blobstore.components]]
-    blobstore_id=0
-    blobstore_type="blob:files"
-    path = "$TESTTMP/$reponame/0"
-
-    [[storage.blobstore.components]]
-    blobstore_id=1
-    blobstore_type="blob:files"
-    path = "$TESTTMP/$reponame/1"
+[storage.blobstore.blobstore_type.multiplexed]
+components = [
+  { blobstore_id = 0, blobstore_type = { blob_files = { path = "$TESTTMP/$reponame/0" } } },
+  { blobstore_id = 1, blobstore_type = { blob_files = {path  = "$TESTTMP/$reponame/1" } } },
+]
 CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
-[storage.blobstore]
 $(db_config "$reponame")
-blobstore_type = "$REPOTYPE"
+
+[storage.blobstore.blobstore_type.$REPOTYPE]
 path = "$TESTTMP/$reponame"
 
 CONFIG

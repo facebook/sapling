@@ -10,7 +10,7 @@ Setup configuration
   > usercache=$TESTTMP/lfs-cache
   > EOF
 
-  $ LFS_THRESHOLD="20" setup_common_config blob:files
+  $ LFS_THRESHOLD="20" setup_common_config blob_files
   $ REPOID=2 setup_mononoke_repo_config lfs_other
   $ cd "$TESTTMP"
 

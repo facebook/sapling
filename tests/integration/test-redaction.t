@@ -2,7 +2,7 @@
 
 setup configuration
 
-  $ REPOTYPE="blob:files"
+  $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
 
   $ cd $TESTTMP
@@ -168,7 +168,7 @@ Censore the blacklisted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a
 Restart mononoke
   $ kill $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
-  $ setup_common_config blob:files
+  $ setup_common_config blob_files
   $ mononoke
   $ wait_for_mononoke
 

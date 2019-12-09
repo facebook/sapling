@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config "blob:files"
+  $ setup_common_config "blob_files"
   $ cd $TESTTMP
 
 setup common configuration
@@ -57,7 +57,7 @@ Restart mononoke with enabled bundle2 preservation
   $ kill $MONONOKE_PID
   $ rm -rf $TESTTMP/mononoke-config
   $ export ENABLE_PRESERVE_BUNDLE2=1
-  $ setup_common_config "blob:files"
+  $ setup_common_config "blob_files"
   $ mononoke
   $ wait_for_mononoke
 

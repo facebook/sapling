@@ -10,7 +10,7 @@ setup configuration
   > usercache=$TESTTMP/lfs-cache
   > EOF
 
-  $ LFS_THRESHOLD="20" setup_common_config blob:files
+  $ LFS_THRESHOLD="20" setup_common_config blob_files
   $ cd $TESTTMP
 
 setup repo

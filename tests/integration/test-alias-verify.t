@@ -3,7 +3,7 @@
 
 # setup config repo
 
-  $ REPOTYPE="blob:files"
+  $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ cd $TESTTMP
 

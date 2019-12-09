@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Setup configuration
-  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config blob:files
+  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config blob_files
   $ cd "$TESTTMP"
 
 Setup repo

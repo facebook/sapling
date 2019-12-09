@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ REPOTYPE="blob:files"
+  $ REPOTYPE="blob_files"
   $ REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=small-mon-1 setup_common_config $REPOTYPE
   $ REPOID=2 REPONAME=small-mon-2 setup_common_config $REPOTYPE

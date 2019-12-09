@@ -2,7 +2,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Setup config
-  $ REPOTYPE="blob:files"
+  $ REPOTYPE="blob_files"
   $ export LFS_THRESHOLD="1000"
   $ setup_common_config $REPOTYPE
   $ cd $TESTTMP

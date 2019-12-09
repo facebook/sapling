@@ -2,7 +2,7 @@
 
 Setup
 
-  $ setup_common_config "blob:files"
+  $ setup_common_config "blob_files"
   $ cat >> repos/repo/server.toml << EOF
   > [[bookmarks]]
   > regex=".*"

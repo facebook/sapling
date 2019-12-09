@@ -1,6 +1,7 @@
 storage_config = "files"
 
-[storage.files]
-db.local_db_path = "/tmp/foo"
-blobstore_type = "blob:files"
+[storage.files.db.local]
+local_db_path = "/tmp/foo"
+
+[storage.files.blobstore_type.blob_files]
 path = "/tmp/foo"

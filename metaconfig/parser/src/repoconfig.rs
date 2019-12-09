@@ -14,7 +14,6 @@ use std::{
     collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     fs,
-    num::NonZeroUsize,
     path::{Path, PathBuf},
     str,
     time::Duration,
@@ -30,14 +29,13 @@ use metaconfig_thrift::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitSyncConfig,
     RawCommitSyncSmallRepoConfig, RawCommonConfig, RawFilestoreParams, RawHookConfig,
     RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams,
-    RawShardedFilenodesParams, RawSourceControlServiceMonitoring, RawWireprotoLoggingConfig,
+    RawSourceControlServiceMonitoring, RawStorageConfig, RawWireprotoLoggingConfig,
 };
 use metaconfig_types::{
-    BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
-    CacheWarmupParams, CommitSyncConfig, CommitSyncDirection, CommonConfig,
-    DefaultSmallToLargeCommitSyncPathAction, HookBypass, HookConfig, HookManagerParams, HookParams,
-    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig, PushParams,
-    PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, ShardedFilenodesParams,
+    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
+    CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, HookBypass,
+    HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams,
+    LfsParams, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
     SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
@@ -903,185 +901,17 @@ struct RawRepoConfig {
     source_control_service_monitoring: Option<RawSourceControlServiceMonitoring>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-//#[serde(deny_unknown_fields)] -- incompatible with flatten
-struct RawStorageConfig {
-    #[serde(rename = "db")]
-    dbconfig: RawDbConfig,
-    #[serde(flatten)]
-    blobstore: RawBlobstoreConfig,
-}
-
-impl TryFrom<RawStorageConfig> for StorageConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawStorageConfig) -> Result<StorageConfig> {
-        let config = StorageConfig {
-            dbconfig: match raw.dbconfig {
-                RawDbConfig::Local { local_db_path } => MetadataDBConfig::LocalDB {
-                    path: local_db_path,
-                },
-                RawDbConfig::Remote {
-                    db_address,
-                    sharded_filenodes: None,
-                } => MetadataDBConfig::Mysql {
-                    db_address,
-                    sharded_filenodes: None,
-                },
-                RawDbConfig::Remote {
-                    db_address,
-                    sharded_filenodes:
-                        Some(RawShardedFilenodesParams {
-                            shard_map,
-                            shard_num,
-                        }),
-                } => {
-                    let shard_num: Result<_> =
-                        NonZeroUsize::new(shard_num.try_into()?).ok_or_else(|| {
-                            ErrorKind::InvalidConfig("filenodes shard_num must be > 0".into())
-                                .into()
-                        });
-                    MetadataDBConfig::Mysql {
-                        db_address,
-                        sharded_filenodes: Some(ShardedFilenodesParams {
-                            shard_map,
-                            shard_num: shard_num?,
-                        }),
-                    }
-                }
-            },
-            blobstore: TryFrom::try_from(&raw.blobstore)?,
-        };
-        Ok(config)
-    }
-}
-
-/// Configuration for a single blobstore. These are intended to be defined in a
-/// separate blobstore.toml config file, and then referenced by name from a per-server
-/// config. Names are only necessary for blobstores which are going to be used by a server.
-/// The id field identifies the blobstore as part of a multiplex, and need not be defined
-/// otherwise. However, once it has been set for a blobstore, it must remain unchanged.
-#[derive(Debug, Deserialize, Clone)]
-#[serde(tag = "blobstore_type")]
-#[serde(deny_unknown_fields)]
-enum RawBlobstoreConfig {
-    #[serde(rename = "disabled")]
-    Disabled {}, // make this an empty struct so that deny_known_fields will complain
-    #[serde(rename = "blob:files")]
-    Files { path: PathBuf },
-    #[serde(rename = "blob:rocks")]
-    BlobRocks { path: PathBuf },
-    #[serde(rename = "blob:sqlite")]
-    BlobSqlite { path: PathBuf },
-    #[serde(rename = "manifold")]
-    Manifold {
-        manifold_bucket: String,
-        #[serde(default)]
-        manifold_prefix: String,
-    },
-    #[serde(rename = "mysql")]
-    Mysql {
-        mysql_shardmap: String,
-        mysql_shard_num: i32,
-    },
-    #[serde(rename = "multiplexed")]
-    Multiplexed {
-        scuba_table: Option<String>,
-        components: Vec<RawBlobstoreIdConfig>,
-    },
-    #[serde(rename = "manifold_with_ttl")]
-    ManifoldWithTtl {
-        manifold_bucket: String,
-        #[serde(default)]
-        manifold_prefix: String,
-        ttl_secs: u64,
-    },
-}
-
-impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
-    type Error = Error;
-
-    fn try_from(raw: &RawBlobstoreConfig) -> Result<BlobConfig> {
-        let res = match raw {
-            RawBlobstoreConfig::Disabled {} => BlobConfig::Disabled,
-            RawBlobstoreConfig::Files { path } => BlobConfig::Files { path: path.clone() },
-            RawBlobstoreConfig::BlobRocks { path } => BlobConfig::Rocks { path: path.clone() },
-            RawBlobstoreConfig::BlobSqlite { path } => BlobConfig::Sqlite { path: path.clone() },
-            RawBlobstoreConfig::Manifold {
-                manifold_bucket,
-                manifold_prefix,
-            } => BlobConfig::Manifold {
-                bucket: manifold_bucket.clone(),
-                prefix: manifold_prefix.clone(),
-            },
-            RawBlobstoreConfig::Mysql {
-                mysql_shardmap,
-                mysql_shard_num,
-            } => BlobConfig::Mysql {
-                shard_map: mysql_shardmap.clone(),
-                shard_num: NonZeroUsize::new((*mysql_shard_num).try_into()?).ok_or(
-                    ErrorKind::InvalidConfig(
-                        "mysql shard num must be specified and an interger larger than 0".into(),
-                    ),
-                )?,
-            },
-            RawBlobstoreConfig::Multiplexed {
-                scuba_table,
-                components,
-            } => BlobConfig::Multiplexed {
-                scuba_table: scuba_table.clone(),
-                blobstores: components
-                    .iter()
-                    .map(|comp| Ok((comp.id, BlobConfig::try_from(&comp.blobstore)?)))
-                    .collect::<Result<Vec<_>>>()?,
-            },
-            RawBlobstoreConfig::ManifoldWithTtl {
-                manifold_bucket,
-                manifold_prefix,
-                ttl_secs,
-            } => {
-                let ttl = Duration::from_secs(*ttl_secs);
-                BlobConfig::ManifoldWithTtl {
-                    bucket: manifold_bucket.clone(),
-                    prefix: manifold_prefix.clone(),
-                    ttl,
-                }
-            }
-        };
-        Ok(res)
-    }
-}
-
-#[derive(Debug, Deserialize, Clone)]
-// #[serde(deny_unknown_fields)] -- incompatible with flatten
-struct RawBlobstoreIdConfig {
-    #[serde(rename = "blobstore_id")]
-    id: BlobstoreId,
-    #[serde(flatten)]
-    blobstore: RawBlobstoreConfig,
-}
-
-/// Configuration for metadata db
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-#[serde(deny_unknown_fields)]
-enum RawDbConfig {
-    /// Specify base directory for a number of local DBs
-    Local { local_db_path: PathBuf },
-    /// Remote DB connection string where we use separate tables
-    Remote {
-        db_address: String,
-        sharded_filenodes: Option<RawShardedFilenodesParams>,
-    },
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use maplit::{btreemap, hashmap};
-    use metaconfig_types::{FilestoreParams, SourceControlServiceMonitoring};
+    use metaconfig_types::{
+        BlobConfig, BlobstoreId, FilestoreParams, MetadataDBConfig, ShardedFilenodesParams,
+        SourceControlServiceMonitoring,
+    };
     use pretty_assertions::assert_eq;
     use std::fs::{create_dir_all, write};
+    use std::num::NonZeroUsize;
     use tempdir::TempDir;
 
     fn write_files(
@@ -1200,8 +1030,11 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
-        assert!(commit_sync_config.is_err());
+        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("is a prefix of MPath"));
     }
 
     #[test]
@@ -1269,8 +1102,11 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
-        assert!(commit_sync_config.is_err());
+        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("is a prefix of MPath"));
     }
 
     #[test]
@@ -1305,8 +1141,11 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
-        assert!(commit_sync_config.is_err());
+        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("is a prefix of MPath"));
 
         // Paths, identical between large-to-smalls, but
         // overlapping with small-to-large, should fail
@@ -1349,8 +1188,11 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
-        assert!(commit_sync_config.is_err());
+        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("is a prefix of MPath"));
     }
 
     #[test]
@@ -1385,8 +1227,11 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
-        assert!(commit_sync_config.is_err());
+        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("One bookmark prefix starts with another, which is prohibited"));
     }
 
     #[test]
@@ -1397,9 +1242,10 @@ mod test {
             scuba_table_hooks="scm_hooks"
             storage_config="files"
 
-            [storage.files]
-            db.local_db_path = "/tmp/www"
-            blobstore_type = "blob:files"
+            [storage.files.db.local]
+            local_db_path = "/tmp/www"
+
+            [storage.files.blobstore_type.blob_files]
             path = "/tmp/www"
         "#;
         let common_content = r#"
@@ -1421,8 +1267,11 @@ mod test {
         };
 
         let tmp_dir = write_files(&paths);
-        let repo_config_res = RepoConfigs::read_configs(tmp_dir.path());
-        assert!(repo_config_res.is_err());
+        let res = RepoConfigs::read_configs(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("DuplicatedRepoId"));
     }
 
     #[test]
@@ -1452,22 +1301,16 @@ mod test {
             [hook_manager_params]
             disable_acl_checker=false
 
-            [storage.main]
-            db.db_address="db_address"
-            db.sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
+            [storage.main.db.remote]
+            db_address="db_address"
+            sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
 
-            blobstore_type="multiplexed"
+            [storage.main.blobstore_type.multiplexed]
             scuba_table = "blobstore_scuba_table"
-
-                [[storage.main.components]]
-                blobstore_id=0
-                blobstore_type="manifold"
-                manifold_bucket="bucket"
-
-                [[storage.main.components]]
-                blobstore_id=1
-                blobstore_type="blob:files"
-                path="/tmp/foo"
+            components = [
+                { blobstore_id = 0, blobstore_type = { manifold = { manifold_bucket = "bucket" } } },
+                { blobstore_id = 1, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+            ]
 
             [[bookmarks]]
             name="master"
@@ -1536,9 +1379,10 @@ mod test {
             scuba_table_hooks="scm_hooks"
             storage_config="files"
 
-            [storage.files]
-            db.local_db_path = "/tmp/www"
-            blobstore_type = "blob:files"
+            [storage.files.db.local]
+            local_db_path = "/tmp/www"
+
+            [storage.files.blobstore_type.blob_files]
             path = "/tmp/www"
         "#;
         let common_content = r#"
@@ -1809,9 +1653,10 @@ mod test {
             repoid=0
             storage_config = "rocks"
 
-            [storage.rocks]
-            db.local_db_path = "/tmp/fbsource"
-            blobstore_type = "blob:files"
+            [storage.rocks.db.local]
+            local_db_path = "/tmp/fbsource"
+
+            [storage.rocks.blobstore_type.blob_files]
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1846,9 +1691,10 @@ mod test {
             repoid=0
             storage_config = "rocks"
 
-            [storage.rocks]
-            db.local_db_path = "/tmp/fbsource"
-            blobstore_type = "blob:files"
+            [storage.rocks.db.local]
+            local_db_path = "/tmp/fbsource"
+
+            [storage.rocks.blobstore_type.blob_files]
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1884,10 +1730,11 @@ mod test {
                 repoid = 0
                 storage_config = "storage"
 
-                [storage.storage]
-                blobstore_type = "blob:rocks"
+                [storage.storage.db.local]
+                local_db_path = "/tmp/fbsource"
+
+                [storage.storage.blobstore_type.blob_rocks]
                 path = "/tmp/fbsource"
-                db.local_db_path = "/tmp/fbsource"
             "#;
 
             let paths = btreemap! {
@@ -1943,20 +1790,15 @@ mod test {
     #[test]
     fn test_common_storage() {
         const STORAGE: &str = r#"
-        [multiplex_store]
-        db.db_address = "some_db"
-        db.sharded_filenodes = { shard_map="some-shards", shard_num=123 }
+        [multiplex_store.db.remote]
+        db_address = "some_db"
+        sharded_filenodes = { shard_map="some-shards", shard_num=123 }
 
-        blobstore_type = "multiplexed"
-          [[multiplex_store.components]]
-          blobstore_id = 1
-          blobstore_type = "blob:files"
-          path = "/tmp/foo"
+        [multiplex_store.blobstore_type.multiplexed]
+        components = [
+            { blobstore_id = 1, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+        ]
 
-        [manifold_store]
-        db.db_address = "some_db"
-        blobstore_type = "manifold"
-        manifold_bucket = "bucketybucket"
         "#;
 
         const REPO: &str = r#"
@@ -1964,10 +1806,11 @@ mod test {
         storage_config = "multiplex_store"
 
         # Not overriding common store
-        [storage.some_other_store]
-        db.db_address = "other_db"
-        blobstore_type = "disabled"
+        [storage.some_other_store.db.remote]
+        db_address = "other_db"
 
+        [storage.some_other_store.blobstore_type]
+        disabled = {}
         "#;
 
         let paths = btreemap! {
@@ -2015,17 +1858,18 @@ mod test {
     #[test]
     fn test_common_blobstores_local_override() {
         const STORAGE: &str = r#"
-        [multiplex_store]
-        db.db_address = "some_db"
-        blobstore_type = "multiplexed"
-          [[multiplex_store.components]]
-          blobstore_type = "blob:files"
-          blobstore_id = 1
-          path = "/tmp/foo"
+        [multiplex_store.db.remote]
+        db_address = "some_db"
 
-        [manifold_store]
-        db.db_address = "other_db"
-        blobstore_type = "manifold"
+        [multiplex_store.blobstore_type.multiplexed]
+        components = [
+            { blobstore_id = 1, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+        ]
+
+        [manifold_store.db.remote]
+        db_address = "other_db"
+
+        [manifold_store.blobstore_type.manifold]
         manifold_bucket = "bucketybucket"
         "#;
 
@@ -2034,9 +1878,11 @@ mod test {
         storage_config = "multiplex_store"
 
         # Override common store
-        [storage.multiplex_store]
-        db.db_address = "other_other_db"
-        blobstore_type = "disabled"
+        [storage.multiplex_store.db.remote]
+        db_address = "other_other_db"
+
+        [storage.multiplex_store.blobstore_type]
+        disabled = {}
         "#;
 
         let paths = btreemap! {
@@ -2072,52 +1918,5 @@ mod test {
             "Got: {:#?}\nWant: {:#?}",
             &res.repos, expected
         )
-    }
-
-    #[test]
-    fn test_stray_fields() {
-        const REPO: &str = r#"
-        repoid = 123
-        storage_config = "randomstore"
-
-        [storage.randomstore]
-        db.db_address = "other_other_db"
-        blobstore_type = "blob:files"
-        path = "/tmp/foo"
-
-        # Should be above
-        readonly = true
-        "#;
-
-        let paths = btreemap! {
-            "repos/test/server.toml" => REPO,
-        };
-
-        let tmp_dir = write_files(&paths);
-        let err = RepoConfigs::read_configs(tmp_dir.path()).expect_err("read configs succeeded");
-        println!("err = {:#?}", err);
-    }
-
-    #[test]
-    fn test_stray_fields_disabled() {
-        const REPO: &str = r#"
-        repoid = 123
-        storage_config = "disabled"
-
-        [storage.disabled]
-        db.db_address = "other_other_db"
-        blobstore_type = "disabled"
-
-        # Should be above
-        readonly = true
-        "#;
-
-        let paths = btreemap! {
-            "repos/test/server.toml" => REPO,
-        };
-
-        let tmp_dir = write_files(&paths);
-        let err = RepoConfigs::read_configs(tmp_dir.path()).expect_err("read configs succeeded");
-        println!("err = {:#?}", err);
     }
 }

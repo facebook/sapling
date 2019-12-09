@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ REPOTYPE="blob:files"
+  $ REPOTYPE="blob_files"
   $ REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
   $ setup_commitsyncmap

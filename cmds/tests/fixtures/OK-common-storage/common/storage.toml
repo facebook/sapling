@@ -1,4 +1,5 @@
-[simple]
-db.local_db_path = "/tmp/foo"
-blobstore_type = "blob:files"
-path = "/tmp/blobstore"
+[simple.db.local]
+local_db_path = "/tmp/foo"
+
+[simple.blobstore_type.blob_files]
+path = "/tmp/foo"

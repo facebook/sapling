@@ -3,7 +3,7 @@
 setup configuration
   $ export PUSHREBASE_REWRITE_DATES=1
 
-  $ BLOB_TYPE="blob:files" default_setup
+  $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   |

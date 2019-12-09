@@ -1,8 +1,8 @@
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
 
-Setup repo config (we use blob:files to share across Mononoke and API Server):
-  $ LFS_THRESHOLD="1000" setup_common_config "blob:files"
+Setup repo config (we use blob_files to share across Mononoke and API Server):
+  $ LFS_THRESHOLD="1000" setup_common_config "blob_files"
   $ cd $TESTTMP
 
 Setup hg repo, create a commit there. No LFS blobs yet.

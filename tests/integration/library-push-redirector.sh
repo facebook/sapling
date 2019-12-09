@@ -18,7 +18,7 @@ function verify_wc() {
 }
 
 function init_large_small_repo() {
-  REPOTYPE="blob:files"
+  REPOTYPE="blob_files"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=1 REPONAME=small-mon setup_common_config "$REPOTYPE"
 cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF

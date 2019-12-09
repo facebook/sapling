@@ -1,7 +1,8 @@
 repoid = 456
 storage_config = "simple"
 
-[storage.simple]
-db.db_address = "somedb"
-blobstore_type = "blob:files"
+[storage.simple.db.remote]
+db_address = "somedb"
+
+[storage.simple.blobstore_type.blob_files]
 path = "/tmp/blobstore"

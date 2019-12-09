@@ -23,7 +23,7 @@
 
 Set up the base repo, and a fake source repo
   $ setup_mononoke_config
-  $ REPOID=65535 REPONAME=megarepo setup_common_config "blob:files"
+  $ REPOID=65535 REPONAME=megarepo setup_common_config "blob_files"
   $ cd $TESTTMP
 
 Do the import, cross-check that the mapping is preserved

@@ -2,7 +2,7 @@
 
 setup configuration
 
-  $ REPOTYPE="blob:files"
+  $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
 
   $ cd $TESTTMP
@@ -69,7 +69,7 @@ Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d6
 Restart mononoke
   $ kill $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
-  $ setup_common_config blob:files
+  $ setup_common_config blob_files
   $ mononoke
   $ wait_for_mononoke
 
@@ -108,7 +108,7 @@ Restart mononoke and disable redaction verification
   $ kill $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
   $ export REDACTION_DISABLED=1
-  $ setup_common_config blob:files
+  $ setup_common_config blob_files
   $ mononoke
   $ wait_for_mononoke
 

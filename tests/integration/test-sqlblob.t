@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_mononoke_config "blob:sqlite"
+  $ setup_mononoke_config "blob_sqlite"
   $ REPOID=1 REPONAME=disabled_repo ENABLED=false setup_mononoke_config
   $ cd $TESTTMP
 
