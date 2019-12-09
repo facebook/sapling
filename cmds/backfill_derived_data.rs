@@ -331,6 +331,13 @@ trait DerivedUtils: Send + Sync + 'static {
         csid: ChangesetId,
     ) -> BoxFuture<String, Error>;
 
+    fn derive_batch(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csids: Vec<ChangesetId>,
+    ) -> BoxFuture<(), Error>;
+
     /// Find pending changeset (changesets for which data have not been derived)
     fn pending(
         &self,
@@ -369,8 +376,63 @@ where
         repo: BlobRepo,
         csid: ChangesetId,
     ) -> BoxFuture<String, Error> {
-        <M::Value as BonsaiDerived>::derive(ctx, repo, self.mapping.clone(), csid)
+        <M::Value as BonsaiDerived>::derive(ctx.clone(), repo, self.mapping.clone(), csid)
             .map(|result| format!("{:?}", result))
+            .boxify()
+    }
+
+    fn derive_batch(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csids: Vec<ChangesetId>,
+    ) -> BoxFuture<(), Error> {
+        let orig_mapping = self.mapping.clone();
+        // With InMemoryMapping we can ensure that mapping entries are written only after
+        // all corresponding blobs were successfully saved
+        let in_memory_mapping = InMemoryMapping::new(self.mapping.clone());
+
+        // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
+        // `::persist` is later used to bulk write all pending data.
+        let mut memblobstore = None;
+        let repo = repo
+            .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>)
+            .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+                let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
+                memblobstore = Some(blobstore.clone());
+                blobstore
+            });
+        let memblobstore = memblobstore.expect("memblobstore should have been updated");
+
+        stream::iter_ok(csids)
+            .for_each({
+                cloned!(ctx, in_memory_mapping, repo);
+                move |csid| {
+                    // create new context so each derivation would have its own trace
+                    let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+
+                    <M::Value as BonsaiDerived>::derive(
+                        ctx.clone(),
+                        repo.clone(),
+                        in_memory_mapping.clone(),
+                        csid,
+                    )
+                    .map(|_| ())
+                }
+            })
+            .and_then({
+                cloned!(ctx, memblobstore);
+                move |_| memblobstore.persist(ctx)
+            })
+            .and_then(move |_| {
+                let buffer = in_memory_mapping.into_buffer();
+                let buffer = buffer.lock().unwrap();
+                let mut futs = vec![];
+                for (cs_id, value) in buffer.iter() {
+                    futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
+                }
+                stream::futures_unordered(futs).for_each(|_| Ok(()))
+            })
             .boxify()
     }
 
@@ -395,6 +457,65 @@ where
 
     fn name(&self) -> &'static str {
         M::Value::NAME
+    }
+}
+
+#[derive(Clone)]
+struct InMemoryMapping<M: BonsaiDerivedMapping + Clone> {
+    mapping: M,
+    buffer: Arc<Mutex<HashMap<ChangesetId, M::Value>>>,
+}
+
+impl<M> InMemoryMapping<M>
+where
+    M: BonsaiDerivedMapping + Clone,
+    <M as BonsaiDerivedMapping>::Value: Clone,
+{
+    fn new(mapping: M) -> Self {
+        Self {
+            mapping,
+            buffer: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    fn into_buffer(self) -> Arc<Mutex<HashMap<ChangesetId, M::Value>>> {
+        self.buffer
+    }
+}
+
+impl<M> BonsaiDerivedMapping for InMemoryMapping<M>
+where
+    M: BonsaiDerivedMapping + Clone,
+    <M as BonsaiDerivedMapping>::Value: Clone,
+{
+    type Value = M::Value;
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        mut csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+        let buffer = self.buffer.lock().unwrap();
+        let mut ans = HashMap::new();
+        csids.retain(|cs_id| {
+            if let Some(v) = buffer.get(cs_id) {
+                ans.insert(*cs_id, v.clone());
+                false
+            } else {
+                true
+            }
+        });
+
+        self.mapping
+            .get(ctx, csids)
+            .map(move |fetched| ans.into_iter().chain(fetched.into_iter()).collect())
+            .boxify()
+    }
+
+    fn put(&self, _ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+        let mut buffer = self.buffer.lock().unwrap();
+        buffer.insert(csid, id);
+        future::ok(()).boxify()
     }
 }
 
@@ -491,18 +612,6 @@ fn subcommand_backfill<P: AsRef<Path>>(
     regenerate: bool,
     prefetched_commits_path: P,
 ) -> BoxFuture<(), Error> {
-    // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
-    // `::preserve` is later used to bulk write all pending data.
-    let mut memblobstore = None;
-    let repo = repo
-        .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>)
-        .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-            let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
-            memblobstore = Some(blobstore.clone());
-            blobstore
-        });
-    let memblobstore = memblobstore.expect("memblobstore should have been updated");
-
     let derived_utils = try_boxfuture!(derived_data_utils(
         ctx.clone(),
         repo.clone(),
@@ -559,22 +668,8 @@ fn subcommand_backfill<P: AsRef<Path>>(
                 })
                 .for_each(move |chunk| {
                     let chunk_size = chunk.len();
-                    stream::iter_ok(chunk)
-                        .for_each({
-                            cloned!(ctx, repo, derived_utils);
-                            move |csid| {
-                                // create new context so each derivation would have its own trace
-                                let ctx =
-                                    CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-                                derived_utils
-                                    .derive(ctx.clone(), repo.clone(), csid)
-                                    .map(|_| ())
-                            }
-                        })
-                        .and_then({
-                            cloned!(ctx, memblobstore);
-                            move |()| memblobstore.persist(ctx)
-                        })
+                    derived_utils
+                        .derive_batch(ctx.clone(), repo.clone(), chunk)
                         .timed({
                             cloned!(ctx, generated_count, total_duration);
                             move |stats, _| {
@@ -931,4 +1026,138 @@ fn prefetch_content(
                         .for_each(|_| Ok(()))
                 })
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use blobstore::BlobstoreBytes;
+    use fixtures::linear;
+    use mercurial_types::HgChangesetId;
+    use std::str::FromStr;
+    use tokio::runtime::Runtime;
+
+    #[fbinit::test]
+    fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
+        let mut runtime = Runtime::new()?;
+
+        let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
+        let maybe_bcs_id = runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
+        let bcs_id = maybe_bcs_id.unwrap();
+
+        let derived_utils =
+            derived_data_utils(ctx.clone(), repo.clone(), RootUnodeManifestId::NAME)?;
+        runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]))?;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_backfill_data_batch(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
+        let mut runtime = Runtime::new()?;
+
+        let mut batch = vec![];
+        let hg_cs_ids = vec![
+            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+            "3c15267ebf11807f3d772eb891272b911ec68759",
+            "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            "79a13814c5ce7330173ec04d279bf95ab3f652fb",
+        ];
+        for hg_cs_id in &hg_cs_ids {
+            let hg_cs_id = HgChangesetId::from_str(hg_cs_id)?;
+            let maybe_bcs_id = runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
+            batch.push(maybe_bcs_id.unwrap());
+        }
+
+        let derived_utils =
+            derived_data_utils(ctx.clone(), repo.clone(), RootUnodeManifestId::NAME)?;
+        let pending =
+            runtime.block_on(derived_utils.pending(ctx.clone(), repo.clone(), batch.clone()))?;
+        assert_eq!(pending.len(), hg_cs_ids.len());
+        runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), batch.clone()))?;
+        let pending = runtime.block_on(derived_utils.pending(ctx.clone(), repo, batch))?;
+        assert_eq!(pending.len(), 0);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_backfill_data_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+        // The test exercises that derived data mapping entries are written only after
+        // all other blobstore writes were successful i.e. mapping entry shouldn't exist
+        // if any of the corresponding blobs weren't successfully saved
+
+        let ctx = CoreContext::test_mock(fb);
+        let origrepo = linear::getrepo(fb);
+        let mut runtime = Runtime::new()?;
+
+        let repo = origrepo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+            Arc::new(FailingBlobstore::new("manifest".to_string(), blobstore))
+        });
+
+        let first_hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+        let maybe_bcs_id =
+            runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), first_hg_cs_id))?;
+        let bcs_id = maybe_bcs_id.unwrap();
+
+        let derived_utils =
+            derived_data_utils(ctx.clone(), repo.clone(), RootUnodeManifestId::NAME)?;
+        let res =
+            runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]));
+        // Deriving should fail because blobstore writes fail
+        assert!(res.is_err());
+
+        // Make sure that since deriving for first_hg_cs_id failed it didn't
+        // write any mapping entries. And because it didn't deriving the parent changeset
+        // is now safe
+        let repo = origrepo;
+        let second_hg_cs_id = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f")?;
+        let maybe_bcs_id =
+            runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), second_hg_cs_id))?;
+        let bcs_id = maybe_bcs_id.unwrap();
+        runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]))?;
+
+        Ok(())
+    }
+
+    #[derive(Debug)]
+    struct FailingBlobstore {
+        bad_key_substring: String,
+        inner: Arc<dyn Blobstore>,
+    }
+
+    impl FailingBlobstore {
+        fn new(bad_key_substring: String, inner: Arc<dyn Blobstore>) -> Self {
+            Self {
+                bad_key_substring,
+                inner,
+            }
+        }
+    }
+
+    impl Blobstore for FailingBlobstore {
+        fn put(
+            &self,
+            ctx: CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> BoxFuture<(), Error> {
+            if key.find(&self.bad_key_substring).is_some() {
+                tokio_timer::sleep(Duration::new(1, 0))
+                    .from_err()
+                    .and_then(|_| future::err(format_err!("failed")))
+                    .boxify()
+            } else {
+                self.inner.put(ctx, key, value).boxify()
+            }
+        }
+
+        fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+            self.inner.get(ctx, key)
+        }
+    }
 }
