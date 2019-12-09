@@ -651,6 +651,14 @@ Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
   return inodeMap_->getRootInode()->getChildRecursive(path);
 }
 
+folly::Future<std::string> EdenMount::loadFileContentsFromPath(
+    RelativePathPiece path,
+    CacheHint cacheHint) const {
+  return getInode(path).thenValue([this, cacheHint](InodePtr fileInodePtr) {
+    return loadFileContents(fileInodePtr, cacheHint);
+  });
+}
+
 folly::Future<std::string> EdenMount::loadFileContents(
     InodePtr fileInodePtr,
     CacheHint cacheHint) const {

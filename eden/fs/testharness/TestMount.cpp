@@ -527,5 +527,11 @@ std::shared_ptr<const Tree> TestMount::getRootTree() const {
   return edenMount_->getRootTree();
 }
 
+std::string TestMount::loadFileContentsFromPath(std::string path) {
+  return edenMount_
+      ->loadFileContentsFromPath(RelativePathPiece{folly::StringPiece{path}})
+      .get(std::chrono::milliseconds(1));
+};
+
 } // namespace eden
 } // namespace facebook

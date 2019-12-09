@@ -215,6 +215,28 @@ TEST(EdenMount, loadFileContentsInvalidInodePtr) {
   EXPECT_THROW_ERRNO(loadFileContents(pSelfLoop), ELOOP);
 }
 
+TEST(EdenMount, loadFileContentsFromPath) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile(".gitignore", "test\n gitignore\n contents\n");
+
+  TestMount testMount{builder};
+
+  const std::string contents{testMount.loadFileContentsFromPath(".gitignore")};
+
+  EXPECT_EQ(contents, "test\n gitignore\n contents\n");
+}
+
+TEST(EdenMount, loadFileContentsFromPathInvalidInodePtr) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile(".gitignore", "test\n gitignore\n contents\n");
+
+  TestMount testMount{builder};
+
+  EXPECT_THROW_ERRNO(testMount.loadFileContentsFromPath("src"), EISDIR);
+}
+
 TEST(EdenMount, resolveSymlink) {
   FakeTreeBuilder builder;
   builder.mkdir("src");

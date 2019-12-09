@@ -384,6 +384,15 @@ class EdenMount {
   folly::Future<InodePtr> getInode(RelativePathPiece path) const;
 
   /**
+   * Resolves symlinks and loads file contents from the Inode at the given path.
+   * This loads the entire file contents into memory, so this can be expensive
+   * for large files.
+   */
+  folly::Future<std::string> loadFileContentsFromPath(
+      RelativePathPiece path,
+      CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
+
+  /**
    * Resolves symlinks and loads file contents. This loads the entire file
    * contents into memory, so this can be expensive for large files.
    *

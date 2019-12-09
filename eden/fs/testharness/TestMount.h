@@ -266,6 +266,13 @@ class TestMount {
   /** Convenience method for getting the Tree for the root of the mount. */
   std::shared_ptr<const Tree> getRootTree() const;
 
+  /*
+   * Resolves symlinks and loads file contents from the Inode at the given path.
+   * This loads the entire file contents into memory, so this can be expensive
+   * for large files.
+   */
+  std::string loadFileContentsFromPath(std::string path);
+
   std::shared_ptr<EdenMount>& getEdenMount() & noexcept {
     return edenMount_;
   }
