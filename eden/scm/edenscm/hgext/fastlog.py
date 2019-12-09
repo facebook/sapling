@@ -485,8 +485,9 @@ class FastLogThread(Thread):
                 self.stop()
                 return
 
-            for hash in results:
+            for commit in results:
                 try:
+                    hash = commit["hash"]
                     if len(hash) != 40:
                         raise ValueError("Received invalid hash %s" % hash)
                     rev = revfn(node.bin(hash))
