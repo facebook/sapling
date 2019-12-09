@@ -11,16 +11,17 @@
 
 use serde_derive::Deserialize;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     convert::{TryFrom, TryInto},
     fs,
     path::{Path, PathBuf},
     str,
+    str::FromStr,
     time::Duration,
 };
 
 use crate::errors::ErrorKind;
-use anyhow::{format_err, Error, Result};
+use anyhow::{anyhow, format_err, Error, Result};
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use failure_ext::chain::ChainExt;
@@ -40,7 +41,6 @@ use metaconfig_types::{
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
-use std::str::FromStr;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
@@ -118,7 +118,7 @@ impl RepoConfigs {
                 }
 
                 let content = fs::read(path)?;
-                let raw_config = toml::from_slice::<RawCommonConfig>(&content)?;
+                let raw_config = Self::read_toml::<RawCommonConfig>(&content)?;
                 let mut tiers_num = 0;
                 let whitelisted_entries: Result<Vec<_>> = raw_config
                     .whitelist_entry
@@ -389,7 +389,7 @@ impl RepoConfigs {
             commit_sync_config_path.display(),
         ))?;
         Ok(
-            toml::from_slice::<HashMap<String, RawCommitSyncConfig>>(&content).chain_err(
+            Self::read_toml::<HashMap<String, RawCommitSyncConfig>>(&content).chain_err(
                 format_err!("While reading {}", commit_sync_config_path.display()),
             )?,
         )
@@ -427,7 +427,7 @@ impl RepoConfigs {
                     "While opening {}",
                     storage_config_path.display()
                 ))?;
-                toml::from_slice::<HashMap<String, RawStorageConfig>>(&content).chain_err(
+                Self::read_toml::<HashMap<String, RawStorageConfig>>(&content).chain_err(
                     format_err!("while reading {}", storage_config_path.display()),
                 )?
             }
@@ -461,7 +461,7 @@ impl RepoConfigs {
             .into());
         }
 
-        let raw_config = toml::from_slice::<RawRepoConfig>(&fs::read(&config_file)?)?;
+        let raw_config = Self::read_toml::<RawRepoConfig>(&fs::read(&config_file)?)?;
 
         let hooks = raw_config.hooks.clone();
 
@@ -829,6 +829,30 @@ impl RepoConfigs {
         self.repos
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == repo_id)
+    }
+
+    /// Helper to read toml files which throws an error upon encountering
+    /// unknown keys
+    fn read_toml<'de, T>(bytes: &'de [u8]) -> Result<T, Error>
+    where
+        T: serde::de::Deserialize<'de>,
+    {
+        match str::from_utf8(bytes) {
+            Ok(s) => {
+                let mut unused = BTreeSet::new();
+                let de = &mut toml::de::Deserializer::new(s);
+                let t: T = serde_ignored::deserialize(de, |path| {
+                    unused.insert(path.to_string());
+                })?;
+
+                if unused.len() > 0 {
+                    Err(anyhow!("unknown keys in config parsing: `{:?}`", unused))?;
+                }
+
+                Ok(t)
+            }
+            Err(e) => Err(anyhow!("error parsing toml: {}", e)),
+        }
     }
 }
 
@@ -1918,5 +1942,34 @@ mod test {
             "Got: {:#?}\nWant: {:#?}",
             &res.repos, expected
         )
+    }
+
+    #[test]
+    fn test_stray_fields() {
+        const REPO: &str = r#"
+        repoid = 123
+        storage_config = "randomstore"
+
+        [storage.randomstore.db.remote]
+        db_address = "other_other_db"
+
+        [storage.randomstore.blobstore.blob_files]
+        path = "/tmp/foo"
+
+        # Should be above
+        readonly = true
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => "",
+            "repos/test/server.toml" => REPO,
+        };
+
+        let tmp_dir = write_files(&paths);
+        let res = RepoConfigs::read_configs(tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("unknown keys in config parsing"));
     }
 }
