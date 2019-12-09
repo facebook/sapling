@@ -49,6 +49,15 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     // accurately, at least for non-chg cases.
     log_start(args.clone(), now);
 
+    // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
+    // to access the data is via the blackbox interface.
+    let trace_output_path = std::env::var("EDENSCM_TRACE_OUTPUT").ok();
+    if trace_output_path.is_some() {
+        // Unset environment variable so processes forked by this command
+        // wouldn't rewrite the trace.
+        std::env::remove_var("EDENSCM_TRACE_OUTPUT");
+    }
+
     let cwd = match current_dir(io) {
         Err(e) => {
             let _ = io.write_err(format!("abort: cannot get current directory: {}\n", e));
@@ -101,7 +110,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
     span.record("exitcode", &exit_code);
 
-    let _ = maybe_write_trace(io, &tracing_data);
+    let _ = maybe_write_trace(io, &tracing_data, trace_output_path);
 
     log_end(exit_code as u8, now, tracing_data);
 
@@ -163,11 +172,10 @@ fn setup_tracing() -> (Level, Arc<Mutex<TracingData>>) {
 fn maybe_write_trace(
     io: &mut clidispatch::io::IO,
     tracing_data: &Arc<Mutex<TracingData>>,
+    path: Option<String>,
 ) -> Result<()> {
-    // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
-    // to access the data is via the blackbox interface.
     // Write ASCII or TraceEvent JSON (or gzipped JSON) to the specified path.
-    if let Ok(path) = std::env::var("EDENSCM_TRACE_OUTPUT") {
+    if let Some(path) = path {
         // A hardcoded minimal duration (in microseconds).
         let data = tracing_data.lock();
         match write_trace(io, &path, &data) {
