@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . helpers-usechg.sh
 
 #require git

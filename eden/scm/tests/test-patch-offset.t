@@ -1,3 +1,5 @@
+#chg-compatible
+
 
   $ cat > writepatterns.py <<EOF
   > import sys

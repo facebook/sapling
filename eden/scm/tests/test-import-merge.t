@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ tipparents() {
   > hg parents --template "{rev}:{node|short} {desc|firstline}\n" -r tip

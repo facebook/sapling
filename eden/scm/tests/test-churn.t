@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "churn=" >> $HGRCPATH
 

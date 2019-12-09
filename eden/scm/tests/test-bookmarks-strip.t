@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init
 
   $ echo qqq>qqq.txt

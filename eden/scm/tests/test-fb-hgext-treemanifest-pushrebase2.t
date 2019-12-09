@@ -1,3 +1,5 @@
+#chg-compatible
+
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache ui.ssh="python $TESTDIR/dummyssh"

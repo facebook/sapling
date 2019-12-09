@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable obsstore
 
 File node could be reused during commit --amend

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ enable amend rebase histedit fbhistedit remotenames
   $ setconfig experimental.evolution=

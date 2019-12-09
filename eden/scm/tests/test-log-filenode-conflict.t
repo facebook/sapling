@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 Test log FILE history handling with renames / file node collisions.
 

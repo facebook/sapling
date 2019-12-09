@@ -1,3 +1,5 @@
+#chg-compatible
+
 Set up test environment.
   $ enable amend obsstore rebase
   $ showgraph() {

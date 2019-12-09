@@ -1,3 +1,5 @@
+#chg-compatible
+
 Using 'hgext.' prefix triggers the warning.
 
   $ hg init --config extensions.hgext.rebase=

@@ -1,3 +1,5 @@
+#chg-compatible
+
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
 1) Make the repo

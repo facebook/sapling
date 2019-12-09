@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #testcases vfscachestore simplecachestore
   $ setconfig treemanifest.flatcompat=False
 

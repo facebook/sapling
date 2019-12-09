@@ -1,3 +1,5 @@
+#chg-compatible
+
 Revert interactive tests
 1 add and commit file f
 2 add commit file folder1/g

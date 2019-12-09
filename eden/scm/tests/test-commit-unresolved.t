@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ addcommit () {
   >     echo $1 > $1
   >     hg add $1

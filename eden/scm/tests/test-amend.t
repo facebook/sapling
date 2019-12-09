@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #testcases obsstore-off obsstore-on
 
   $ cat << EOF >> $HGRCPATH

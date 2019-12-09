@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test new conflict switching:
 
   $ newrepo

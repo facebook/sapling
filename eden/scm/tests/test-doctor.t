@@ -1,3 +1,5 @@
+#chg-compatible
+
 (This test needs to re-run the hg process. Therefore hard to use single-process Python test)
 
 Test indexedlogdatapack

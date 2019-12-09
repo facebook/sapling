@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require symlink
 
   $ origdir=`pwd`

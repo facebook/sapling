@@ -1,3 +1,5 @@
+#chg-compatible
+
 Interesting corner cases.
 
 command name matches global flag values

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . helpers-usechg.sh
 
 Tests for change/delete conflicts, including:

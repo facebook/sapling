@@ -1,3 +1,5 @@
+#chg-compatible
+
 
   $ cat > unix2mac.py <<EOF
   > import sys

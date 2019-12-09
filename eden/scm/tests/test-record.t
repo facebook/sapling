@@ -1,3 +1,5 @@
+#chg-compatible
+
 Set up a repo
 
   $ cat <<EOF >> $HGRCPATH

@@ -1,3 +1,5 @@
+#chg-compatible
+
 Tests for the journal extension; records bookmark locations.
 
   $ cat >> testmocks.py << EOF

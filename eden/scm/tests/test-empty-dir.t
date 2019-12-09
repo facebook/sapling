@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init
 
   $ echo 123 > a

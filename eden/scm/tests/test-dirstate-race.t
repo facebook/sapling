@@ -1,3 +1,5 @@
+#chg-compatible
+
 Race detector will complain about this test.
 
   $ setconfig fsmonitor.detectrace=0

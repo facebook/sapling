@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init empty-repo
   $ cd empty-repo
 

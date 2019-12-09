@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require gpg
 
 Test the GPG extension

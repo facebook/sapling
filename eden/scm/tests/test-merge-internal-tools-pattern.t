@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . helpers-usechg.sh
 
 Make sure that the internal merge tools (internal:fail, internal:local,

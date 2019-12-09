@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 # Create server
   $ hg init server

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ newrepo
   $ drawdag << 'EOS'

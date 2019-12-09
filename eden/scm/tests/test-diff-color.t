@@ -1,3 +1,5 @@
+#chg-compatible
+
 Setup
 
   $ cat <<EOF >> $HGRCPATH

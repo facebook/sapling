@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat > showhint.py << EOF
   > from edenscm.mercurial import (
   >     cmdutil,

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ newrepo
   $ setconfig diff.git=1 diff.nobinary=1
 

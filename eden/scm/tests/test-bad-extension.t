@@ -1,3 +1,5 @@
+#chg-compatible
+
 ensure that failing ui.atexit handlers report sensibly
 
   $ cat > $TESTTMP/bailatexit.py <<EOF

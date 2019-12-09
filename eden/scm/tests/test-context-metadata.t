@@ -1,3 +1,5 @@
+#chg-compatible
+
 Tests about metadataonlyctx
 
   $ hg init

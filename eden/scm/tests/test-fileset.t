@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ fileset() {
   >   hg debugfileset "$@"
   > }

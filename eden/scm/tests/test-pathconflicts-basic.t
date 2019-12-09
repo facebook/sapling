@@ -1,3 +1,5 @@
+#chg-compatible
+
 Turn on treestate
 
 

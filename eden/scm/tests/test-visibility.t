@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=
   $ setconfig visibility.enabled=true

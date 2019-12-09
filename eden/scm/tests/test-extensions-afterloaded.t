@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test the extensions.afterloaded() function
 
   $ cat > foo.py <<EOF

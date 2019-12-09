@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . helpers-usechg.sh
 
   $ cat >> $HGRCPATH <<EOF

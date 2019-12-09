@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test temp file used with an editor has the expected suffix.
 
   $ hg init

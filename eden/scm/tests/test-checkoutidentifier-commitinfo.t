@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend absorb rebase
   $ setconfig extensions.extralog=$TESTDIR/extralog.py
   $ setconfig extralog.events=commit_info extralog.keywords=true

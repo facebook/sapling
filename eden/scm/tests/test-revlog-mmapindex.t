@@ -1,3 +1,5 @@
+#chg-compatible
+
 create verbosemmap.py
   $ cat << EOF > verbosemmap.py
   > # extension to make util.mmapread verbose

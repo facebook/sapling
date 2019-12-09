@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init
   $ cat << EOF > a
   > Small Mathematical Series.

@@ -1,3 +1,5 @@
+#chg-compatible
+
 This runs with TZ="GMT"
 
   $ hg init

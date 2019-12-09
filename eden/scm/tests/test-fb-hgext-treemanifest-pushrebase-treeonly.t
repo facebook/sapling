@@ -1,3 +1,5 @@
+#chg-compatible
+
 Push treeonly commits from a treeonly shallow repo to a treeonly server
 
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache ui.ssh="python $TESTDIR/dummyssh"

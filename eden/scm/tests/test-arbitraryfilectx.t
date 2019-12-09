@@ -1,3 +1,5 @@
+#chg-compatible
+
 Setup:
   $ cat > eval.py <<EOF
   > from __future__ import absolute_import

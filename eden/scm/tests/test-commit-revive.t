@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend obsstore
 
 "import" can revive a commit

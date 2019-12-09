@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init
 
   $ $PYTHON -c 'open("a", "wb").write(b"confuse str.splitlines\nembedded\rnewline\n")'

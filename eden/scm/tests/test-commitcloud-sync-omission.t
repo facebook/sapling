@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require jq
   $ setconfig extensions.treemanifest=!
   $ enable smartlog

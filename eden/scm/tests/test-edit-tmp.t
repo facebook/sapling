@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ newrepo
   $ setconfig ui.allowemptycommit=1
   $ enable amend

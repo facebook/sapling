@@ -1,3 +1,5 @@
+#chg-compatible
+
 # Initial setup
   $ setconfig extensions.rebase=
   $ setconfig extensions.snapshot=

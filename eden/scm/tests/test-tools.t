@@ -1,3 +1,5 @@
+#chg-compatible
+
 Tests of the file helper tool
 
   $ f -h

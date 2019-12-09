@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend commitcloud infinitepush remotenames
   $ setconfig extensions.treemanifest=!
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""

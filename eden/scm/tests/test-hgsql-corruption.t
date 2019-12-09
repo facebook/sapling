@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . "$TESTDIR/hgsql/library.sh"
   $ setconfig extensions.treemanifest=!
 

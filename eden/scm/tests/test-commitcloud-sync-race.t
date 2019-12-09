@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable commitcloud infinitepush amend rebase remotenames
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig commitcloud.hostname=testhost

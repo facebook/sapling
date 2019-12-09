@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ $TESTDIR/seq.py 1 10 > file
   $ cat file
   1

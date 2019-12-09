@@ -1,3 +1,5 @@
+#chg-compatible
+
 Fsmonitor makes the size numbers less predicatable.
 
 #require no-fsmonitor

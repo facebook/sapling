@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ newrepo
   $ touch base
   $ hg commit -Am A

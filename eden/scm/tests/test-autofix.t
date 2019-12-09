@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require parso
 
   $ cat > a.py << EOF

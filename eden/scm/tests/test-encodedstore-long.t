@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ setconfig format.usefncache=0
   $ newrepo

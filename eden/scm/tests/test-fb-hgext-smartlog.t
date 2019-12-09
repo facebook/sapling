@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

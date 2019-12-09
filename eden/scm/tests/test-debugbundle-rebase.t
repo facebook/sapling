@@ -1,3 +1,5 @@
+#chg-compatible
+
 Terse output:
 
   $ hg debugbundle "$TESTDIR/bundles/bx2rebase.hg"

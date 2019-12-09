@@ -1,3 +1,5 @@
+#chg-compatible
+
 # Initial setup
   $ setconfig extensions.amend=
   $ setconfig extensions.rebase=

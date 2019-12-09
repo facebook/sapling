@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require clang-format test-repo
 
   $ . "$TESTDIR/helpers-testrepo.sh"

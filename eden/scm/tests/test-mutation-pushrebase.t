@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ enable pushrebase amend remotenames
   $ setconfig experimental.evolution=

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . "$TESTDIR/hgsql/library.sh"
 
 Start up translation service.

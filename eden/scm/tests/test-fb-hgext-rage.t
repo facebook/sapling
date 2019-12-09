@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > blackbox=

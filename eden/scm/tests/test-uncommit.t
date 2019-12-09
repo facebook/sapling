@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test uncommit - set up the config
 
   $ cat >> $HGRCPATH <<EOF

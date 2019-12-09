@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 test stripping of filelogs where the linkrev doesn't always increase
 

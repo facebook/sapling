@@ -1,3 +1,5 @@
+#chg-compatible
+
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]

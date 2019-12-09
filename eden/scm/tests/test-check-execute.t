@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require test-repo execbit hg10
 
   $ . "$TESTDIR/helpers-testrepo.sh"

@@ -1,3 +1,5 @@
+#chg-compatible
+
 Set up repository
 
   $ hg init repo

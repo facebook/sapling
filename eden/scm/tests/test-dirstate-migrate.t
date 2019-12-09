@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ for src in 0 1 2; do
   >   for dst in 0 1 2; do
   >     [ $src = $dst ] && continue

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > purge =

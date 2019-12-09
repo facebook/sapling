@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable obsstore
   $ cat >> $HGRCPATH << EOF
   > [morestatus]

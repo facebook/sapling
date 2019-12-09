@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init a
   $ hg clone a b
   updating to branch default

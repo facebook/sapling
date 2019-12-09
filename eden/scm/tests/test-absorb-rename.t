@@ -1,3 +1,5 @@
+#chg-compatible
+
 TODO: enable obsstore
   $ cat >> $HGRCPATH << EOF
   > [diff]

@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #testcases treestate-on treestate-off
 
 #if treestate-on

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable infinitepush commitcloud
   $ enable amend
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""

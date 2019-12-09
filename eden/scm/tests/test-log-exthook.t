@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test hg log changeset printer external hook
 -------------------------------------------
 

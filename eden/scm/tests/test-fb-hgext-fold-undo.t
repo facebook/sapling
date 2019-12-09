@@ -1,3 +1,5 @@
+#chg-compatible
+
 Set up test environment.
 This test confirms cacheinvalidation in hg fold.
   $ cat >> $HGRCPATH << EOF

@@ -1,3 +1,5 @@
+#chg-compatible
+
 Create an ondisk bundlestore
   $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"

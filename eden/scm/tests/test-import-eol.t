@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat > makepatch.py <<EOF
   > f = file('eol.diff', 'wb')
   > w = f.write

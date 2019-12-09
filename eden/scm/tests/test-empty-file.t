@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init a
   $ cd a
   $ touch empty1

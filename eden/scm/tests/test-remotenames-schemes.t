@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable schemes remotenames
 
   $ newrepo a

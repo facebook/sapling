@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ cat >> $HGRCPATH <<EOF

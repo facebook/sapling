@@ -1,3 +1,5 @@
+#chg-compatible
+
 #if no-windows no-osx
 
   $ mkdir -p xdgconf/hg

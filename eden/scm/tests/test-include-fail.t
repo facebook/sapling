@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require execbit
 
   $ cat >> $HGRCPATH <<EOF

@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test applying context diffs
 
   $ cat > writepatterns.py <<EOF

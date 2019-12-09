@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require killdaemons
 
 = Test the known() protocol function =

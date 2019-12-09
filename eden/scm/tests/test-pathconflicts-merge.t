@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #require symlink
 #testcases treestate-on treestate-off
 

@@ -1,3 +1,5 @@
+#chg-compatible
+
 # reproduce issue2264, issue2516
 
 create test repo

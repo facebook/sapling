@@ -1,3 +1,5 @@
+#chg-compatible
+
 Tests of 'hg status --rev <rev>' to make sure status between <rev> and '.' get
 combined correctly with the dirstate status.
 

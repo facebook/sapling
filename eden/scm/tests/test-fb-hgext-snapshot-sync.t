@@ -1,3 +1,5 @@
+#chg-compatible
+
 # Initial setup
   $ enable amend commitcloud infinitepush rebase snapshot
   $ setconfig extensions.treemanifest=!

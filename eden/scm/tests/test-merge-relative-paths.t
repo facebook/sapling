@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test that checks that relative paths are used in merge
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with the test

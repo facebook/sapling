@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat > correct.py <<EOF
   > def toto(arg1, arg2):
   >     del arg2

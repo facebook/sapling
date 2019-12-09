@@ -1,3 +1,5 @@
+#chg-compatible
+
 TODO: Make this test work with obsstore
   $ setconfig extensions.treemanifest=!
   $ setconfig experimental.evolution=

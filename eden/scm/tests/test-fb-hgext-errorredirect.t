@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat > $TESTTMP/crash.py << EOF
   > from edenscm.mercurial import registrar
   > cmdtable = {}

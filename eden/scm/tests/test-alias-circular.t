@@ -1,3 +1,5 @@
+#chg-compatible
+
 Alias can override builtin commands.
 
   $ newrepo

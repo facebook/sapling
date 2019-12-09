@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require test-repo
 
   $ . "$TESTDIR/helpers-testrepo.sh"

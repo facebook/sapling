@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 Test file dedicated to testing the divergent troubles from obsolete changeset.
 

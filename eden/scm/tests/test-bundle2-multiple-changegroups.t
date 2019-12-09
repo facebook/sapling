@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 Create an extension to test bundle2 with multiple changegroups
 

@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test logging of "M" entries
 
   $ newrepo

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init rep; cd rep
 
   $ touch empty-file

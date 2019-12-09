@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #testcases withpytz withoutpytz
 #if withpytz
   $ hg debugshell -c "import pytz; pytz.__name__" || exit 80

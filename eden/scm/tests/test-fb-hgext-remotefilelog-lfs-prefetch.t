@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ LFSPATH=$TESTTMP/lfs
   $ export LFSPATH

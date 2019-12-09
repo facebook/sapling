@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require no-icasefs
 
 Test sparse profiles in combination with case-collisions outside of the

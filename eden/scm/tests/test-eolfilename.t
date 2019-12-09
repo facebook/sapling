@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require no-fsmonitor
 
 #require eol-in-paths

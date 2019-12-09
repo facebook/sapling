@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require serve killdaemons
 
   $ hg clone http://localhost:$HGPORT/ copy

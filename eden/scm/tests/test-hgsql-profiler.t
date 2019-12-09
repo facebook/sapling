@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . "$TESTDIR/hgsql/library.sh"
 
 # Populate the db with an initial commit

@@ -1,3 +1,5 @@
+#chg-compatible
+
 UTILS:
   $ reset() {
   >   cd ..

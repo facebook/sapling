@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test encode/decode filters
 
   $ hg init

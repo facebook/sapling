@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init t
   $ cd t
   $ echo import > port

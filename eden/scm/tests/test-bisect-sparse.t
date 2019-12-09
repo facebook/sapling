@@ -1,3 +1,5 @@
+#chg-compatible
+
 #  Linear tree case
 #
 #  9 <- known bad - - -

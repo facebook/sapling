@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 (this file is backported from core hg tests/test-annotate.t)
 

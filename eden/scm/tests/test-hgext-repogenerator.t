@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ newrepo
   $ setconfig repogenerator.filenamedircount=2
   $ setconfig repogenerator.filenameleaflength=1

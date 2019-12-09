@@ -1,3 +1,5 @@
+#chg-compatible
+
 Inital setup
 
   $ setconfig extensions.treemanifest=!

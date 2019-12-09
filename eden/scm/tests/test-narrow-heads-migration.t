@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test migration between narrow-heads and non-narrow-heads
 
   $ enable remotenames amend

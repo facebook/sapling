@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #testcases case-innodb case-rocksdb
   $ setconfig extensions.treemanifest=!
 

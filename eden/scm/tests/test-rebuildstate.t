@@ -1,3 +1,5 @@
+#chg-compatible
+
 
   $ cat > adddrop.py <<EOF
   > from edenscm.mercurial import registrar

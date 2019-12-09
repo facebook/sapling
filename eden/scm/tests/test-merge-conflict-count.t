@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend rebase
   $ setconfig merge.printcandidatecommmits=True
 

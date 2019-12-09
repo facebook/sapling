@@ -1,3 +1,5 @@
+#chg-compatible
+
 #if no-windows no-osx
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

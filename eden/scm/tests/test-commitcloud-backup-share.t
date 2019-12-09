@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable share
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

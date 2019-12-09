@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . "$TESTDIR/copytrace.sh"
   $ cat >> $HGRCPATH << EOF
   > [extensions]

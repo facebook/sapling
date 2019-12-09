@@ -1,3 +1,5 @@
+#chg-compatible
+
 This test tries to exercise the ssh functionality with a dummy script
 
 (enable general delta early)

@@ -1,3 +1,5 @@
+#chg-compatible
+
 Initialize scm prompt
   $ . $TESTDIR/../contrib/scm-prompt.sh
 

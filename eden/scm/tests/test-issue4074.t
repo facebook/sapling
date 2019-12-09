@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require no-pure
 
 A script to generate nasty diff worst-case scenarios:

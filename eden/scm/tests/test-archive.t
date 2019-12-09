@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require serve
 
   $ hg init test

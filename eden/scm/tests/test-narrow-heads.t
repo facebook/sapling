@@ -1,3 +1,5 @@
+#chg-compatible
+
 'narrow-heads' requires remotenames and visibility
 
   $ enable remotenames amend

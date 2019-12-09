@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat >> $HGRCPATH <<EOF
   > [defaults]
   > fold=--date "0 0"

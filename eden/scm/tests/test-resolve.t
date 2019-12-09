@@ -1,3 +1,5 @@
+#chg-compatible
+
 test that a commit clears the merge state.
 
   $ hg init repo

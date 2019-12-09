@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test alignment of multibyte characters
 
   $ HGENCODING=utf-8

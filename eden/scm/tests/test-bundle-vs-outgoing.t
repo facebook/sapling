@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 this structure seems to tickle a bug in bundle's search for
 changesets, so first we have to recreate it

@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require execbit
 
 b51a8138292a introduced a regression where we would mention in the

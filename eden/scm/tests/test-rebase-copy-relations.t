@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable rebase obsstore
   $ setconfig experimental.evolution.allowdivergence=1
 

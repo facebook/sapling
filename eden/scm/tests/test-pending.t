@@ -1,3 +1,5 @@
+#chg-compatible
+
 Verify that pending changesets are seen by pretxn* hooks but not by other
 processes that access the destination repo while the hooks are running.
 

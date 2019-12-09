@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat >> $TESTTMP/testcommands.py << EOF
   > from edenscm.mercurial import registrar
   > cmdtable = {}

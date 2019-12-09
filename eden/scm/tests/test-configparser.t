@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat >> a.rc << EOF
   > [a]
   > x=1

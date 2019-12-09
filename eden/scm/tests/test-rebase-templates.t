@@ -1,3 +1,5 @@
+#chg-compatible
+
 Testing templating for rebase command
 
 Setup

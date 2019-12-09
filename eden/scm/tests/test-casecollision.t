@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #require no-icasefs
 #testcases treestate-on treestate-off
 

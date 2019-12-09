@@ -1,3 +1,5 @@
+#chg-compatible
+
 
   $ cat > engine.py << EOF
   > 

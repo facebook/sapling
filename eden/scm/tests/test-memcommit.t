@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
 #testcases hgsql.true hgsql.false
 
   $ setconfig extensions.treemanifest=!

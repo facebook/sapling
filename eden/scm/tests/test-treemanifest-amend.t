@@ -1,3 +1,5 @@
+#chg-compatible
+
 Crash in histpack code path where the amend destination already exists
 
   $ enable undo treemanifest remotefilelog

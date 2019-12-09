@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ remove() {
   >     hg rm $@
   >     echo "exit code: $?"

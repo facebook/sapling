@@ -1,3 +1,7 @@
+#chg-compatible
+
+#chg-compatible
+
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/hgsql/library.sh"
 

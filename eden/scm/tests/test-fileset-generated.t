@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init
 
 Set up history and working copy

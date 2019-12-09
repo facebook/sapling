@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ enable infinitepush remotenames
   $ setconfig infinitepush.branchpattern="re:scratch/.+"

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ cat << '__EOF__' >> $HGRCPATH
   > [ui]
   > interface=editor

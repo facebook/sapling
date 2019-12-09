@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test catnotate
 
   $ enable catnotate

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
   $ setconfig discovery.fastdiscovery=True
   $ . $TESTDIR/library.sh

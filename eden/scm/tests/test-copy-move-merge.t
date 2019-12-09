@@ -1,3 +1,5 @@
+#chg-compatible
+
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
 Test for the full copytracing algorithm

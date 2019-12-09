@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend rebase remotenames
   $ setconfig experimental.evolution=
   $ setconfig experimental.narrow-heads=true

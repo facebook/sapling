@@ -1,3 +1,5 @@
+#chg-compatible
+
 test sparse
 
   $ enable sparse purge rebase

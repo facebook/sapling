@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init repo
   $ cd repo
   $ i=0; while [ "$i" -lt 213 ]; do echo a >> a; i=`expr $i + 1`; done

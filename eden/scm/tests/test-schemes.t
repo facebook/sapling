@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require serve
 
   $ cat <<EOF >> $HGRCPATH

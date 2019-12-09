@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require execbit
 
   $ hg init

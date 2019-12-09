@@ -1,3 +1,5 @@
+#chg-compatible
+
 commit date test
 
   $ hg init test

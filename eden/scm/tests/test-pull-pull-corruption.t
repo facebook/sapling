@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 Corrupt an hg repo with two pulls.
 create one repo with a long history

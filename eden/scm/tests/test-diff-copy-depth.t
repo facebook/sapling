@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ for i in aaa zzz; do
   >     hg init t
   >     cd t

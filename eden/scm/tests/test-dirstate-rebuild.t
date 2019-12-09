@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ shorttraceback
   $ newrepo
   $ drawdag << 'EOS'

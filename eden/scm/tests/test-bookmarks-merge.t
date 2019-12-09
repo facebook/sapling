@@ -1,3 +1,5 @@
+#chg-compatible
+
 # init
 
   $ hg init

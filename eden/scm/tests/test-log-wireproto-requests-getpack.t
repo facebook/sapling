@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/helpers-wireprotologging.sh"
 

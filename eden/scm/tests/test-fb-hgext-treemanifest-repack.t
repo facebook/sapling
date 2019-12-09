@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend
   $ . "$TESTDIR/library.sh"
 

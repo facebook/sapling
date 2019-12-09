@@ -1,3 +1,5 @@
+#chg-compatible
+
 This file tests the behavior of run-tests.py itself.
 
 Avoid interference from actual test env:

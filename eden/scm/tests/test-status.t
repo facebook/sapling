@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ hg init repo1
   $ cd repo1
   $ mkdir a b a/1 b/1 b/2

@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require symlink
 
   $ enable amend smartlog

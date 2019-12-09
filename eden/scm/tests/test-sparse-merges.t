@@ -1,3 +1,5 @@
+#chg-compatible
+
 test merging things outside of the sparse checkout
 
   $ hg init myrepo

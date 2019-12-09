@@ -1,3 +1,5 @@
+#chg-compatible
+
 Dummy extension simulating long running command
   $ cat > sleepext.py <<EOF
   > import time

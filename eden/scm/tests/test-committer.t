@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ unset HGUSER
   $ EMAIL="My Name <myname@example.com>"
   $ export EMAIL

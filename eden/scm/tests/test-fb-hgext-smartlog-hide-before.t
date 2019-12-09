@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ newrepo
   $ enable smartlog
   $ setconfig ui.allowemptycommit=1 phases.publish=False smartlog.master=master

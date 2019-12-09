@@ -1,3 +1,5 @@
+#chg-compatible
+
 test parents command
 
   $ hg init repo

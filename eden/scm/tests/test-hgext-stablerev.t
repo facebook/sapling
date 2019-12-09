@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ newrepo
   $ enable stablerev
   $ hg debugdrawdag <<'EOS'

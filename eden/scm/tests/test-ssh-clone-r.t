@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ setconfig extensions.treemanifest=!
 This test tries to exercise the ssh functionality with a dummy script
 

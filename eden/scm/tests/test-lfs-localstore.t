@@ -1,3 +1,5 @@
+#chg-compatible
+
 Test the lfs.localstore config option
 
   $ enable lfs

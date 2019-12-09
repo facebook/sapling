@@ -1,3 +1,5 @@
+#chg-compatible
+
 #require serve
 
 #if no-outer-repo

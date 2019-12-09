@@ -1,3 +1,5 @@
+#chg-compatible
+
 #if osx
 #else
 Test disabling the case conflict check (only fails on case sensitive systems)

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ unset SCM_SAMPLING_FILEPATH
   $ LOGDIR=$TESTTMP/logs
   $ mkdir $LOGDIR

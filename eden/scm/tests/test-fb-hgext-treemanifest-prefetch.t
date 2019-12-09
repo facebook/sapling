@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ CACHEDIR=`pwd`/hgcache
 
   $ . "$TESTDIR/library.sh"

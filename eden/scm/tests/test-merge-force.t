@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ . helpers-usechg.sh
 
 Set up a base, local, and remote changeset, as well as the working copy state.

@@ -1,3 +1,5 @@
+#chg-compatible
+
   $ enable amend directaccess obsstore
   $ newrepo
   $ drawdag <<'EOS'
