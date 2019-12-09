@@ -24,16 +24,23 @@ use cmdlib::{args, helpers, helpers::create_runtime, monitoring::start_fb303_and
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
-use fastlog::{RootFastlog, RootFastlogMapping};
+use fastlog::{fetch_parent_root_unodes, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::{compat::Future01CompatExt, future::try_join3, stream::FuturesUnordered};
 use futures_stats::Timed;
+use futures_util::{
+    future::{ready, FutureExt as NewFutureExt},
+    try_future::TryFutureExt,
+    try_join,
+    try_stream::TryStreamExt,
+};
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
-use mononoke_types::{ChangesetId, FileUnodeId, MPath, MononokeId, RepositoryId};
+use mononoke_types::{ChangesetId, FileUnodeId, MPath, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
 use stats::{define_stats_struct, Timeseries};
@@ -95,6 +102,7 @@ const UNREDACTED_TYPES: &[&str] = &[
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.
 const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::NAME];
+const PREFETCH_UNODE_TYPES: &[&str] = &[RootFastlog::NAME];
 
 fn open_repo_maybe_unredacted<'a>(
     fb: FacebookInit,
@@ -495,11 +503,10 @@ fn subcommand_backfill<P: AsRef<Path>>(
         });
     let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
-    let prefetch_content_on = PREFETCH_CONTENT_TYPES.contains(&derived_data_type.as_ref());
     let derived_utils = try_boxfuture!(derived_data_utils(
         ctx.clone(),
         repo.clone(),
-        derived_data_type,
+        derived_data_type.clone(),
     ));
 
     info!(
@@ -533,41 +540,21 @@ fn subcommand_backfill<P: AsRef<Path>>(
             stream::iter_ok(changesets)
                 .chunks(CHUNK_SIZE)
                 .and_then({
-                    let blobstore = repo.get_blobstore();
                     cloned!(ctx, repo, derived_utils);
-                    move |chunk| {
-                        let changesets_prefetch = stream::iter_ok(chunk.clone())
-                            .map({
-                                cloned!(ctx, blobstore);
-                                move |csid| blobstore.get(ctx.clone(), csid.blobstore_key())
-                            })
-                            .buffered(CHUNK_SIZE)
-                            .for_each(|_| Ok(()));
-
-                        (
-                            changesets_prefetch,
-                            derived_utils.pending(ctx.clone(), repo.clone(), chunk.clone()),
-                        )
-                            .into_future()
-                            .map(move |(_, chunk)| chunk)
-                    }
+                    move |chunk| derived_utils.pending(ctx.clone(), repo.clone(), chunk.clone())
                 })
                 .and_then({
-                    cloned!(ctx, repo);
+                    cloned!(ctx, derived_data_type, repo);
                     move |chunk| {
-                        if prefetch_content_on {
-                            stream::iter_ok(chunk.clone())
-                                .map({
-                                    cloned!(ctx, repo);
-                                    move |csid| prefetch_content(ctx.clone(), repo.clone(), csid)
-                                })
-                                .buffered(CHUNK_SIZE)
-                                .for_each(|_| Ok(()))
-                                .map(move |_| chunk)
-                                .left_future()
-                        } else {
-                            future::ok(chunk).right_future()
-                        }
+                        warmup(
+                            ctx.clone(),
+                            repo.clone(),
+                            derived_data_type.clone(),
+                            chunk.clone(),
+                        )
+                        .boxed()
+                        .compat()
+                        .map(move |()| chunk)
                     }
                 })
                 .for_each(move |chunk| {
@@ -617,6 +604,108 @@ fn subcommand_backfill<P: AsRef<Path>>(
                 })
         })
         .boxify()
+}
+
+async fn warmup(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    derived_data_type: String,
+    chunk: Vec<ChangesetId>,
+) -> Result<(), Error> {
+    // Warmup bonsai changesets unconditionally because
+    // most likely all derived data needs it. And they are cheap to warm up anyway
+
+    let bcs_warmup = {
+        cloned!(ctx, chunk, repo);
+        async move {
+            stream::iter_ok(chunk.clone())
+                .map({
+                    cloned!(ctx, repo);
+                    move |cs_id| repo.get_bonsai_changeset(ctx.clone(), cs_id)
+                })
+                .buffer_unordered(100)
+                .for_each(|_| Ok(()))
+                .compat()
+                .await
+        }
+    };
+
+    let content_warmup = async {
+        if PREFETCH_CONTENT_TYPES.contains(&derived_data_type.as_ref()) {
+            content_warmup(ctx.clone(), repo.clone(), chunk.clone()).await?
+        }
+        Ok(())
+    };
+
+    let unode_warmup = async {
+        if PREFETCH_UNODE_TYPES.contains(&derived_data_type.as_ref()) {
+            unode_warmup(ctx.clone(), repo.clone(), &chunk).await?
+        }
+        Ok(())
+    };
+
+    try_join3(bcs_warmup, content_warmup, unode_warmup).await?;
+
+    Ok(())
+}
+
+async fn content_warmup(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    chunk: Vec<ChangesetId>,
+) -> Result<(), Error> {
+    stream::iter_ok(chunk)
+        .map({
+            cloned!(ctx, repo);
+            move |csid| prefetch_content(ctx.clone(), repo.clone(), csid)
+        })
+        .buffered(CHUNK_SIZE)
+        .for_each(|_| Ok(()))
+        .compat()
+        .await
+}
+
+async fn unode_warmup(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    chunk: &Vec<ChangesetId>,
+) -> Result<(), Error> {
+    let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+    let mut futs = FuturesUnordered::new();
+    for cs_id in chunk {
+        cloned!(ctx, repo, unode_mapping);
+        let f = async move {
+            let bcs = repo
+                .get_bonsai_changeset(ctx.clone(), *cs_id)
+                .compat()
+                .await?;
+
+            let root_mf_id = RootUnodeManifestId::derive(
+                ctx.clone(),
+                repo.clone(),
+                unode_mapping.clone(),
+                bcs.get_changeset_id(),
+            );
+
+            let parent_unodes =
+                fetch_parent_root_unodes(ctx.clone(), repo.clone(), bcs, unode_mapping.clone());
+            let (root_mf_id, parent_unodes) =
+                try_join!(root_mf_id.compat(), parent_unodes.compat())?;
+            let unode_mf_id = root_mf_id.manifest_unode_id().clone();
+            find_intersection_of_diffs(
+                ctx.clone(),
+                Arc::new(repo.get_blobstore()),
+                unode_mf_id,
+                parent_unodes,
+            )
+            .for_each(|_| Ok(()))
+            .compat()
+            .await
+        };
+        futs.push(f);
+    }
+
+    futs.try_for_each(|_| ready(Ok(()))).await
 }
 
 fn subcommand_tail(

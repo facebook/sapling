@@ -150,7 +150,7 @@ impl BonsaiDerived for RootFastlog {
     }
 }
 
-fn fetch_parent_root_unodes(
+pub fn fetch_parent_root_unodes(
     ctx: CoreContext,
     repo: BlobRepo,
     bonsai: BonsaiChangeset,
