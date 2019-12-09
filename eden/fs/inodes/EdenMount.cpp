@@ -651,19 +651,47 @@ Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
   return inodeMap_->getRootInode()->getChildRecursive(path);
 }
 
-folly::Future<InodePtr> EdenMount::resolveSymlink(InodePtr pInode) const {
+folly::Future<std::string> EdenMount::loadFileContents(
+    InodePtr fileInodePtr,
+    CacheHint cacheHint) const {
+  const auto fileInode = fileInodePtr.asFileOrNull();
+  if (!fileInode) {
+    XLOG(WARNING) << "loadFile() invoked with a non-file inode: "
+                  << fileInodePtr->getLogPath();
+    return makeFuture<std::string>(InodeError(EISDIR, fileInodePtr));
+  }
+
+  if (dtype_t::Symlink == fileInodePtr->getType()) {
+    return resolveSymlink(fileInodePtr, cacheHint)
+        .thenValue(
+            [this, cacheHint](
+                InodePtr pResolved) mutable -> folly::Future<std::string> {
+              // Note: infinite recursion is not a concern because
+              // resolveSymlink() can not return a symlink
+              return loadFileContents(pResolved, cacheHint);
+            });
+  }
+
+  return fileInode->readAll(cacheHint);
+}
+
+folly::Future<InodePtr> EdenMount::resolveSymlink(
+    InodePtr pInode,
+    CacheHint cacheHint) const {
   auto pathOptional = pInode->getPath();
   if (!pathOptional) {
     return makeFuture<InodePtr>(InodeError(ENOENT, pInode));
   }
   XLOG(DBG7) << "pathOptional.value() = " << pathOptional.value();
-  return resolveSymlinkImpl(pInode, std::move(pathOptional.value()), 0);
+  return resolveSymlinkImpl(
+      pInode, std::move(pathOptional.value()), 0, cacheHint);
 }
 
 folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
     InodePtr pInode,
     RelativePath&& path,
-    size_t depth) const {
+    size_t depth,
+    CacheHint cacheHint) const {
   if (++depth > kMaxSymlinkChainDepth) { // max chain length exceeded
     return makeFuture<InodePtr>(InodeError(ELOOP, pInode));
   }
@@ -679,9 +707,9 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         << "all symlink inodes must be FileInodes: " << pInode->getLogPath();
   }
 
-  return fileInode->readlink(CacheHint::LikelyNeededAgain)
-      .thenValue([this, pInode, path = std::move(path), depth](
-                     std::string&& pointsTo) mutable {
+  return fileInode->readlink(cacheHint).thenValue(
+      [this, pInode, path = std::move(path), depth, cacheHint](
+          std::string&& pointsTo) mutable {
         // normalized path to symlink target
         auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
         if (joinedExpected.hasError()) {
@@ -696,10 +724,13 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         auto f =
             getInode(joinedExpected.value()); // get inode for symlink target
         return std::move(f).thenValue(
-            [this, joinedPath = std::move(joinedExpected.value()), depth](
-                InodePtr target) mutable {
+            [this,
+             joinedPath = std::move(joinedExpected.value()),
+             depth,
+             cacheHint](InodePtr target) mutable {
               // follow the symlink chain recursively
-              return resolveSymlinkImpl(target, std::move(joinedPath), depth);
+              return resolveSymlinkImpl(
+                  target, std::move(joinedPath), depth, cacheHint);
             });
       });
 }

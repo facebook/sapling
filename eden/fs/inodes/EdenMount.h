@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/journal/Journal.h"
@@ -383,6 +384,17 @@ class EdenMount {
   folly::Future<InodePtr> getInode(RelativePathPiece path) const;
 
   /**
+   * Resolves symlinks and loads file contents. This loads the entire file
+   * contents into memory, so this can be expensive for large files.
+   *
+   * TODO: add maxSize parameter to cause the command to fail if the file is
+   * over a certain size.
+   */
+  folly::Future<std::string> loadFileContents(
+      InodePtr fileInodePtr,
+      CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
+
+  /**
    * Chases (to bounded depth) and returns the final non-symlink in the
    * (possibly 0-length) chain of symlinks rooted at pInode.  Specifically:
    * If pInode is a file or directory, it is immediately returned.
@@ -396,7 +408,9 @@ class EdenMount {
    * 6) a symlink points to a non-existing entity => error (ENOENT)
    * NOTE: a loop in the chain is handled by max depth length logic.
    */
-  folly::Future<InodePtr> resolveSymlink(InodePtr pInode) const;
+  folly::Future<InodePtr> resolveSymlink(
+      InodePtr pInode,
+      CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
 
   /**
    * Check out the specified commit.
@@ -608,8 +622,11 @@ class EdenMount {
   /**
    * Recursive method used for resolveSymlink() implementation
    */
-  folly::Future<InodePtr>
-  resolveSymlinkImpl(InodePtr pInode, RelativePath&& path, size_t depth) const;
+  folly::Future<InodePtr> resolveSymlinkImpl(
+      InodePtr pInode,
+      RelativePath&& path,
+      size_t depth,
+      CacheHint cacheHint) const;
 
   /**
    * Attempt to transition from expected -> newState.

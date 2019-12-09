@@ -1903,53 +1903,8 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
-  const auto fileInode = gitignoreInode.asFileOrNull();
-  if (!fileInode) {
-    // Ignore .gitignore directories.
-    // We should have caught this already in diff(), though, so it's unexpected
-    // if we reach here with a TreeInode.
-    XLOG(WARNING) << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
-                  << gitignoreInode->getLogPath();
-    return computeDiff(
-        contents_.wlock(),
-        context,
-        currentPath,
-        std::move(tree),
-        make_unique<GitIgnoreStack>(parentIgnore),
-        isIgnored);
-  }
-
-  if (dtype_t::Symlink == gitignoreInode->getType()) {
-    return getMount()
-        ->resolveSymlink(gitignoreInode)
-        .thenError([](const folly::exception_wrapper& ex) {
-          XLOG(WARN) << "error resolving gitignore symlink: "
-                     << folly::exceptionStr(ex);
-          return InodePtr{};
-        })
-        .thenValue([self = inodePtrFromThis(),
-                    context,
-                    currentPath = currentPath.copy(),
-                    tree,
-                    parentIgnore,
-                    isIgnored](InodePtr pResolved) mutable {
-          if (!pResolved) {
-            return self->computeDiff(
-                self->contents_.wlock(),
-                context,
-                currentPath,
-                std::move(tree),
-                make_unique<GitIgnoreStack>(parentIgnore),
-                isIgnored);
-          }
-          // Note: infinite recursion is not a concern because resolveSymlink()
-          // can not return a symlink
-          return self->loadGitIgnoreThenDiff(
-              pResolved, context, currentPath, tree, parentIgnore, isIgnored);
-        });
-  }
-
-  return fileInode->readAll(CacheHint::LikelyNeededAgain)
+  return getMount()
+      ->loadFileContents(gitignoreInode)
       .thenError([](const folly::exception_wrapper& ex) {
         XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
         return std::string{};

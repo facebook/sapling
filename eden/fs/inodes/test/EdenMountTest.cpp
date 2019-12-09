@@ -140,6 +140,81 @@ TEST(EdenMount, initFailure) {
       "commit 0{39}1 not found");
 }
 
+TEST(EdenMount, loadFileContents) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile(".gitignore", "test\n gitignore\n contents\n");
+
+  TestMount testMount{builder};
+  const auto& edenMount = testMount.getEdenMount();
+
+  const auto getInode = [edenMount](std::string path) {
+    return edenMount->getInode(RelativePathPiece{folly::StringPiece{path}})
+        .get();
+  };
+
+  const auto loadFileContents = [edenMount](const InodePtr& pInode) {
+    return edenMount->loadFileContents(pInode).get(1s);
+  };
+
+  const InodePtr filePtr{getInode(".gitignore")};
+
+  const std::string contents{loadFileContents(filePtr)};
+
+  EXPECT_EQ(contents, "test\n gitignore\n contents\n");
+}
+
+TEST(EdenMount, loadFileContentsInvalidInodePtr) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/test.c", "testy tests");
+  builder.setSymlink("a", "b");
+  builder.setSymlink("b", "src/c");
+  builder.setSymlink("src/c", "test.c");
+  builder.setSymlink("d", "/tmp");
+  builder.setSymlink("badlink", "link/to/nowhere");
+  builder.setSymlink("link_outside_mount", "../outside_mount");
+  builder.setSymlink("loop1", "src/loop2");
+  builder.setSymlink("src/loop2", "../loop1");
+  builder.setSymlink("src/selfloop", "../src/selfloop");
+  builder.setSymlink("src/link_to_dir", "../src");
+
+  TestMount testMount{builder};
+  const auto& edenMount = testMount.getEdenMount();
+
+  const auto getInode = [edenMount](std::string path) {
+    return edenMount->getInode(RelativePathPiece{folly::StringPiece{path}})
+        .get();
+  };
+
+  const auto loadFileContents = [edenMount](const InodePtr& pInode) {
+    return edenMount->loadFileContents(pInode).get(1s);
+  };
+
+  const InodePtr pDir{getInode("src")};
+  EXPECT_EQ(dtype_t::Dir, pDir->getType());
+  const InodePtr pLinkToDir{getInode("src/link_to_dir")};
+  EXPECT_EQ(dtype_t::Symlink, pLinkToDir->getType());
+  const InodePtr pSymlinkD{getInode("d")};
+  EXPECT_EQ(dtype_t::Symlink, pSymlinkD->getType());
+  const InodePtr pSymlinkLoop{getInode("loop1")};
+  EXPECT_EQ(dtype_t::Symlink, pSymlinkLoop->getType());
+  const InodePtr pSymlinkBadlink{getInode("badlink")};
+  EXPECT_EQ(dtype_t::Symlink, pSymlinkBadlink->getType());
+  const InodePtr pSymlinkOutsideMount{getInode("link_outside_mount")};
+  EXPECT_EQ(dtype_t::Symlink, pSymlinkOutsideMount->getType());
+  const InodePtr pSelfLoop{getInode("src/selfloop")};
+  EXPECT_EQ(dtype_t::Symlink, pSelfLoop->getType());
+
+  EXPECT_THROW_ERRNO(loadFileContents(pDir), EISDIR);
+  EXPECT_THROW_ERRNO(loadFileContents(pLinkToDir), EISDIR);
+  EXPECT_THROW_ERRNO(loadFileContents(pSymlinkD), EPERM);
+  EXPECT_THROW_ERRNO(loadFileContents(pSymlinkLoop), ELOOP);
+  EXPECT_THROW_ERRNO(loadFileContents(pSymlinkBadlink), ENOENT);
+  EXPECT_THROW_ERRNO(loadFileContents(pSymlinkOutsideMount), EXDEV);
+  EXPECT_THROW_ERRNO(loadFileContents(pSelfLoop), ELOOP);
+}
+
 TEST(EdenMount, resolveSymlink) {
   FakeTreeBuilder builder;
   builder.mkdir("src");
