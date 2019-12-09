@@ -1245,7 +1245,7 @@ mod test {
             [storage.files.db.local]
             local_db_path = "/tmp/www"
 
-            [storage.files.blobstore_type.blob_files]
+            [storage.files.blobstore.blob_files]
             path = "/tmp/www"
         "#;
         let common_content = r#"
@@ -1305,11 +1305,11 @@ mod test {
             db_address="db_address"
             sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
 
-            [storage.main.blobstore_type.multiplexed]
+            [storage.main.blobstore.multiplexed]
             scuba_table = "blobstore_scuba_table"
             components = [
-                { blobstore_id = 0, blobstore_type = { manifold = { manifold_bucket = "bucket" } } },
-                { blobstore_id = 1, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+                { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
+                { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
             ]
 
             [[bookmarks]]
@@ -1382,7 +1382,7 @@ mod test {
             [storage.files.db.local]
             local_db_path = "/tmp/www"
 
-            [storage.files.blobstore_type.blob_files]
+            [storage.files.blobstore.blob_files]
             path = "/tmp/www"
         "#;
         let common_content = r#"
@@ -1656,7 +1656,7 @@ mod test {
             [storage.rocks.db.local]
             local_db_path = "/tmp/fbsource"
 
-            [storage.rocks.blobstore_type.blob_files]
+            [storage.rocks.blobstore.blob_files]
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1694,7 +1694,7 @@ mod test {
             [storage.rocks.db.local]
             local_db_path = "/tmp/fbsource"
 
-            [storage.rocks.blobstore_type.blob_files]
+            [storage.rocks.blobstore.blob_files]
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1733,7 +1733,7 @@ mod test {
                 [storage.storage.db.local]
                 local_db_path = "/tmp/fbsource"
 
-                [storage.storage.blobstore_type.blob_rocks]
+                [storage.storage.blobstore.blob_rocks]
                 path = "/tmp/fbsource"
             "#;
 
@@ -1794,9 +1794,9 @@ mod test {
         db_address = "some_db"
         sharded_filenodes = { shard_map="some-shards", shard_num=123 }
 
-        [multiplex_store.blobstore_type.multiplexed]
+        [multiplex_store.blobstore.multiplexed]
         components = [
-            { blobstore_id = 1, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
 
         "#;
@@ -1809,7 +1809,7 @@ mod test {
         [storage.some_other_store.db.remote]
         db_address = "other_db"
 
-        [storage.some_other_store.blobstore_type]
+        [storage.some_other_store.blobstore]
         disabled = {}
         "#;
 
@@ -1861,15 +1861,15 @@ mod test {
         [multiplex_store.db.remote]
         db_address = "some_db"
 
-        [multiplex_store.blobstore_type.multiplexed]
+        [multiplex_store.blobstore.multiplexed]
         components = [
-            { blobstore_id = 1, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
 
         [manifold_store.db.remote]
         db_address = "other_db"
 
-        [manifold_store.blobstore_type.manifold]
+        [manifold_store.blobstore.manifold]
         manifold_bucket = "bucketybucket"
         "#;
 
@@ -1881,7 +1881,7 @@ mod test {
         [storage.multiplex_store.db.remote]
         db_address = "other_other_db"
 
-        [storage.multiplex_store.blobstore_type]
+        [storage.multiplex_store.blobstore]
         disabled = {}
         "#;
 

@@ -516,17 +516,17 @@ if [[ -v MULTIPLEXED ]]; then
 cat >> "repos/$reponame/server.toml" <<CONFIG
 $(db_config "$reponame")
 
-[storage.blobstore.blobstore_type.multiplexed]
+[storage.blobstore.blobstore.multiplexed]
 components = [
-  { blobstore_id = 0, blobstore_type = { blob_files = { path = "$TESTTMP/$reponame/0" } } },
-  { blobstore_id = 1, blobstore_type = { blob_files = {path  = "$TESTTMP/$reponame/1" } } },
+  { blobstore_id = 0, blobstore = { blob_files = { path = "$TESTTMP/$reponame/0" } } },
+  { blobstore_id = 1, blobstore = { blob_files = {path  = "$TESTTMP/$reponame/1" } } },
 ]
 CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
 $(db_config "$reponame")
 
-[storage.blobstore.blobstore_type.$REPOTYPE]
+[storage.blobstore.blobstore.$REPOTYPE]
 path = "$TESTTMP/$reponame"
 
 CONFIG

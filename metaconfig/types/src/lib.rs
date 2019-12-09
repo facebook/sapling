@@ -528,7 +528,7 @@ impl TryFrom<RawStorageConfig> for StorageConfig {
                     return Err(anyhow!("unsupported storage configuration"));
                 }
             },
-            blobstore: TryFrom::try_from(&raw.blobstore_type)?,
+            blobstore: TryFrom::try_from(&raw.blobstore)?,
         };
         Ok(config)
     }
@@ -676,7 +676,7 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
                     .map(|comp| {
                         Ok((
                             BlobstoreId(comp.blobstore_id.try_into()?),
-                            BlobConfig::try_from(&comp.blobstore_type)?,
+                            BlobConfig::try_from(&comp.blobstore)?,
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?,

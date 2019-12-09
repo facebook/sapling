@@ -4,5 +4,5 @@ storage_config = "simple"
 [storage.simple.db.local]
 local_db_path = "/tmp/foo"
 
-[storage.simple.blobstore_type.manifold]
+[storage.simple.blobstore.manifold]
 manifold_bucket = "bucket"

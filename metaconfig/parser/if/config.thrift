@@ -47,7 +47,7 @@ union RawBlobstoreConfig {
 
 struct RawBlobstoreIdConfig {
     1: i64 blobstore_id,
-    2: RawBlobstoreConfig blobstore_type,
+    2: RawBlobstoreConfig blobstore,
 }
 
 struct RawDbLocal {
@@ -66,7 +66,7 @@ union RawDbConfig {
 
 struct RawStorageConfig {
     1: RawDbConfig db,
-    2: RawBlobstoreConfig blobstore_type,
+    2: RawBlobstoreConfig blobstore,
 }
 
 struct RawPushParams {

@@ -4,10 +4,10 @@ storage_config = "multiplex"
 [storage.multiplex.db.remote]
 db_address="xdb.mononoke_production"
 
-[storage.multiplex.blobstore_type.multiplexed]
+[storage.multiplex.blobstore.multiplexed]
 components = [
-  { blobstore_id = 1, blobstore_type = { manifold = { manifold_bucket = "mononoke_prod" } } },
-  { blobstore_id = 2, blobstore_type = { manifold = { manifold_bucket = "mononoke_prod_replica" } } },
-  { blobstore_id = 3, blobstore_type = { mysql = { mysql_shardmap = "mononoke_replica", mysql_shard_num=123 } } },
-  { blobstore_id = 4, blobstore_type = { blob_files = { path = "/tmp/foo" } } },
+  { blobstore_id = 1, blobstore = { manifold = { manifold_bucket = "mononoke_prod" } } },
+  { blobstore_id = 2, blobstore = { manifold = { manifold_bucket = "mononoke_prod_replica" } } },
+  { blobstore_id = 3, blobstore = { mysql = { mysql_shardmap = "mononoke_replica", mysql_shard_num=123 } } },
+  { blobstore_id = 4, blobstore = { blob_files = { path = "/tmp/foo" } } },
 ]

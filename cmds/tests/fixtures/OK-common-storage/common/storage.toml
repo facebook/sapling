@@ -1,5 +1,5 @@
 [simple.db.local]
 local_db_path = "/tmp/foo"
 
-[simple.blobstore_type.blob_files]
+[simple.blobstore.blob_files]
 path = "/tmp/foo"
