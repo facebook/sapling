@@ -169,8 +169,9 @@ struct RawCommitSyncConfig {
 }
 
  struct RawWireprotoLoggingConfig {
-     1: string scribe_category;
-     2: string storage_config;
+     1: optional string scribe_category,
+     2: optional string storage_config,
+     3: optional i64 remote_arg_size_threshold,
  }
 
 // Raw configuration for health monitoring of the

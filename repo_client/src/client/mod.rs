@@ -239,7 +239,7 @@ pub struct RepoClient {
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     support_bundle2_listkeys: bool,
-    wireproto_logging: Option<Arc<WireprotoLogging>>,
+    wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector: Option<PushRedirector>,
     pushredirect_config: Option<ConfigLoader>,
 }
@@ -306,7 +306,7 @@ impl RepoClient {
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
-        wireproto_logging: Option<Arc<WireprotoLogging>>,
+        wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector: Option<PushRedirector>,
         pushredirect_config: Option<ConfigLoader>,
     ) -> Self {
@@ -638,7 +638,7 @@ impl RepoClient {
                             encoded_params.len() as i64,
                         );
 
-                        command_logger.finalize_command(&stats, Some(&json! {encoded_params}));
+                        command_logger.finalize_command(ctx, &stats, Some(&json! {encoded_params}));
 
                         Ok(())
                     }
@@ -1074,7 +1074,7 @@ impl HgCommands for RepoClient {
         .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            command_logger.finalize_command(&stats, Some(&value));
+            command_logger.finalize_command(ctx, &stats, Some(&value));
             Ok(())
         })
         .boxify();
@@ -1393,7 +1393,7 @@ impl HgCommands for RepoClient {
                     }
                     STATS::gettreepack_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    command_logger.finalize_command(&stats, Some(&args));
+                    command_logger.finalize_command(ctx, &stats, Some(&args));
                     Ok(())
                 }
             });
@@ -1499,7 +1499,7 @@ impl HgCommands for RepoClient {
                         ctx.perf_counters()
                             .add_to_counter(PerfCounterType::GetfilesNumFiles, stats.count as i64);
 
-                        command_logger.finalize_command(&stats, Some(&json! {encoded_params}));
+                        command_logger.finalize_command(ctx, &stats, Some(&json! {encoded_params}));
 
                         Ok(())
                     }
@@ -1624,7 +1624,7 @@ impl HgCommands for RepoClient {
             .map_err(process_stream_timeout_error)
             .timed({
                 move |stats, _| {
-                    command_logger.finalize_command(&stats, None);
+                    command_logger.finalize_command(ctx, &stats, None);
                     Ok(())
                 }
             })

@@ -9,7 +9,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
 use futures::{future, Future, IntoFuture};
@@ -18,13 +18,16 @@ use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
 use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
+use blobstore_factory::make_blobstore_no_sql;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
-use metaconfig_types::{CommitSyncConfig, MetadataDBConfig, RepoConfig, StorageConfig};
+use metaconfig_types::{
+    CommitSyncConfig, MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLoggingConfig,
+};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
@@ -51,7 +54,7 @@ use crate::errors::ErrorKind;
 struct IncompleteRepoHandler {
     logger: Logger,
     scuba: ScubaSampleBuilder,
-    wireproto_logging: Option<Arc<WireprotoLogging>>,
+    wireproto_logging: Arc<WireprotoLogging>,
     repo: MononokeRepo,
     hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
@@ -102,7 +105,7 @@ struct PushRedirectorArgs {
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
-    pub wireproto_logging: Option<Arc<WireprotoLogging>>,
+    pub wireproto_logging: Arc<WireprotoLogging>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
@@ -406,14 +409,25 @@ pub fn repo_handlers(
                                 )
                                 .map(|val| val.unwrap_or(1) != 0);
 
+                            let wireproto_logging_fut = create_wireproto_logging(
+                                fb,
+                                reponame.clone(),
+                                readonly_storage,
+                                wireproto_logging,
+                            )
+                            .map(Arc::new);
+
                             ready_handle
-                                .wait_for(
-                                    initial_warmup
-                                        .and_then(|()| skip_index.join(support_bundle2_listkeys)),
-                                )
+                                .wait_for(initial_warmup.and_then(|()| {
+                                    skip_index
+                                        .join3(support_bundle2_listkeys, wireproto_logging_fut)
+                                }))
                                 .map({
-                                    cloned!(logger);
-                                    move |(skip_index, support_bundle2_listkeys)| {
+                                    move |(
+                                        skip_index,
+                                        support_bundle2_listkeys,
+                                        wireproto_logging,
+                                    )| {
                                         // initialize phases hint from the skip index
                                         let phases_hint: Arc<dyn Phases> =
                                             if let MetadataDBConfig::Mysql { .. } = dbconfig.clone()
@@ -455,14 +469,6 @@ pub fn repo_handlers(
                                                     maybe_myrouter_port: myrouter_port,
                                                 }
                                             });
-
-                                        let wireproto_logging = wireproto_logging.map(|config| {
-                                            Arc::new(WireprotoLogging::new(
-                                                fb,
-                                                reponame.clone(),
-                                                config,
-                                            ))
-                                        });
 
                                         info!(logger, "Repository is ready");
                                         (
@@ -543,4 +549,36 @@ fn build_repo_handlers(
         )
     })
     .map(|v| v.into_iter().collect())
+}
+
+fn create_wireproto_logging(
+    fb: FacebookInit,
+    reponame: String,
+    readonly_storage: ReadOnlyStorage,
+    wireproto_logging_config: WireprotoLoggingConfig,
+) -> impl Future<Item = WireprotoLogging, Error = Error> {
+    let WireprotoLoggingConfig {
+        storage_config_and_threshold,
+        scribe_category,
+    } = wireproto_logging_config;
+    let blobstore_fut = match storage_config_and_threshold {
+        Some((storage_config, threshold)) => {
+            if readonly_storage.0 {
+                return future::err(format_err!(
+                    "failed to create blobstore for wireproto logging because storage is readonly",
+                ))
+                .right_future();
+            }
+            make_blobstore_no_sql(fb, &storage_config.blobstore, readonly_storage)
+                .map(move |blobstore| Some((blobstore, threshold)))
+                .left_future()
+        }
+        None => future::ok(None).right_future(),
+    };
+
+    blobstore_fut
+        .map(move |blobstore_and_threshold| {
+            WireprotoLogging::new(fb, reponame, scribe_category, blobstore_and_threshold)
+        })
+        .left_future()
 }

@@ -44,6 +44,7 @@ use regex::Regex;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
+const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
 
 /// Configuration of a metaconfig repository
 #[derive(Debug, Eq, PartialEq)]
@@ -586,22 +587,42 @@ impl RepoConfigs {
         let scuba_table = this.scuba_table;
         let scuba_table_hooks = this.scuba_table_hooks;
 
-        let wireproto_logging = this
-            .wireproto_logging
-            .map(|raw| -> Result<WireprotoLoggingConfig> {
+        let wireproto_logging = match this.wireproto_logging {
+            Some(wireproto_logging) => {
                 let RawWireprotoLoggingConfig {
                     scribe_category,
-                    storage_config,
-                } = raw;
+                    storage_config: wireproto_storage_config,
+                    remote_arg_size_threshold,
+                } = wireproto_logging;
 
-                let storage_config = get_storage(&storage_config)?;
+                let storage_config_and_threshold = match (
+                    wireproto_storage_config,
+                    remote_arg_size_threshold,
+                ) {
+                    (Some(storage_config), Some(threshold)) => {
+                        Some((storage_config, threshold as u64))
+                    }
+                    (None, Some(_threshold)) => {
+                        return Err(
+                            format_err!("Invalid configuration: wireproto threshold is specified, but storage config is not")
+                        );
+                    }
+                    (Some(storage_config), None) => {
+                        Some((storage_config, DEFAULT_ARG_SIZE_THRESHOLD))
+                    }
+                    (None, None) => None,
+                };
 
-                Ok(WireprotoLoggingConfig {
-                    scribe_category,
-                    storage_config,
-                })
-            })
-            .transpose()?;
+                let storage_config_and_threshold = storage_config_and_threshold
+                    .map(|(storage_config, threshold)| {
+                        get_storage(&storage_config).map(|config| (config, threshold))
+                    })
+                    .transpose()?;
+
+                WireprotoLoggingConfig::new(scribe_category, storage_config_and_threshold)
+            }
+            None => Default::default(),
+        };
 
         let cache_warmup = match this.cache_warmup {
             Some(raw) => Some(CacheWarmupParams {
@@ -1557,10 +1578,13 @@ mod test {
                 lfs: LfsParams {
                     threshold: Some(1000),
                 },
-                wireproto_logging: Some(WireprotoLoggingConfig {
-                    scribe_category: "category".to_string(),
-                    storage_config: main_storage_config,
-                }),
+                wireproto_logging: WireprotoLoggingConfig {
+                    scribe_category: Some("category".to_string()),
+                    storage_config_and_threshold: Some((
+                        main_storage_config,
+                        DEFAULT_ARG_SIZE_THRESHOLD,
+                    )),
+                },
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
@@ -1614,7 +1638,7 @@ mod test {
                 push: Default::default(),
                 pushrebase: Default::default(),
                 lfs: Default::default(),
-                wireproto_logging: None,
+                wireproto_logging: Default::default(),
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,

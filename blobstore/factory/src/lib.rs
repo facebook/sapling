@@ -8,7 +8,7 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
@@ -238,12 +238,37 @@ pub fn make_sql_factory(
     }
 }
 
+/// Constructs a blobstore, returns an error if blobstore type requires a mysql
+pub fn make_blobstore_no_sql(
+    fb: FacebookInit,
+    blobconfig: &BlobConfig,
+    readonly_storage: ReadOnlyStorage,
+) -> BoxFuture<Arc<dyn Blobstore>, Error> {
+    make_blobstore_impl(fb, blobconfig, None, None, readonly_storage)
+}
+
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
 pub fn make_blobstore(
     fb: FacebookInit,
     blobconfig: &BlobConfig,
     sql_factory: &SqlFactory,
+    myrouter_port: Option<u16>,
+    readonly_storage: ReadOnlyStorage,
+) -> BoxFuture<Arc<dyn Blobstore>, Error> {
+    make_blobstore_impl(
+        fb,
+        blobconfig,
+        Some(sql_factory),
+        myrouter_port,
+        readonly_storage,
+    )
+}
+
+fn make_blobstore_impl(
+    fb: FacebookInit,
+    blobconfig: &BlobConfig,
+    sql_factory: Option<&SqlFactory>,
     myrouter_port: Option<u16>,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
@@ -313,6 +338,15 @@ pub fn make_blobstore(
             scuba_table,
             blobstores,
         } => {
+            let sql_factory = match sql_factory {
+                Some(sql_factory) => sql_factory,
+                None => {
+                    let err = format_err!(
+                        "sql factory is not specified, but multiplexed blobstore requires it",
+                    );
+                    return future::err(err).boxify();
+                }
+            };
             let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
             let components: Vec<_> = blobstores
                 .iter()
@@ -349,6 +383,15 @@ pub fn make_blobstore(
             scuba_table,
             blobstores,
         } => {
+            let sql_factory = match sql_factory {
+                Some(sql_factory) => sql_factory,
+                None => {
+                    let err = format_err!(
+                        "sql factory is not specified, but scrub blobstore requires it"
+                    );
+                    return future::err(err).boxify();
+                }
+            };
             let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
             let components: Vec<_> = blobstores
                 .iter()

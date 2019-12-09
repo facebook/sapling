@@ -472,6 +472,7 @@ function setup_mononoke_repo_config {
   mkdir -p "repos/$reponame"
   mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame"
+  mkdir -p "$TESTTMP/traffic-replay-blobstore"
   mkdir -p "$TESTTMP/$reponame/blobs"
   cat > "repos/$reponame/server.toml" <<CONFIG
 repoid=$REPOID
@@ -531,6 +532,20 @@ path = "$TESTTMP/$reponame"
 
 CONFIG
 fi
+
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[wireproto_logging]
+storage_config="traffic_replay_blobstore"
+remote_arg_size_threshold=0
+
+[storage.traffic_replay_blobstore.db.local]
+local_db_path="$TESTTMP/monsql"
+
+[storage.traffic_replay_blobstore.blobstore.blob_files]
+path = "$TESTTMP/traffic-replay-blobstore"
+
+CONFIG
+
 
 if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -1080,6 +1095,22 @@ function mkcommit() {
    echo "$1" > "$1"
    hg add "$1"
    hg ci -m "$1"
+}
+
+function call_with_certs() {
+  REPLAY_CA_PEM="$TEST_CERTDIR/root-ca.crt" \
+  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
+  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
+  GLOG_minloglevel=5 "$@"
+}
+
+function traffic_replay() {
+  call_with_certs "$TRAFFIC_REPLAY" \
+    --loglevel warn \
+    --testrun \
+    --hgcli "$MONONOKE_HGCLI" \
+    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
+    --mononoke-server-common-name localhost < "$1"
 }
 
 function enable_replay_verification_hook {

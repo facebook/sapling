@@ -6,33 +6,52 @@
  * directory of this source tree.
  */
 
+use blobstore::{Blobstore, BlobstoreBytes};
+use chrono::Utc;
 use context::{CoreContext, SessionId};
 use fbinit::FacebookInit;
+use futures::{future, Future};
+use futures_ext::FutureExt;
 use futures_stats::{FutureStats, StreamStats};
-use metaconfig_types::WireprotoLoggingConfig;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use scribe::ScribeClient;
 use scuba_ext::{
     ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue,
 };
+use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use time_ext::DurationExt;
 
+define_stats! {
+    prefix = "mononoke.repo_client.logging";
+
+    wireproto_blobstore_success: timeseries(RATE, SUM),
+    wireproto_blobstore_failure: timeseries(RATE, SUM),
+    wireproto_scribe_success: timeseries(RATE, SUM),
+    wireproto_scribe_failure: timeseries(RATE, SUM),
+    wireproto_serialization_failure: timeseries(RATE, SUM),
+}
+
 pub struct WireprotoLogging {
     reponame: String,
-    scribe_client: ScribeClientImplementation,
-    config: WireprotoLoggingConfig,
+    scribe_args: Option<(ScribeClientImplementation, String)>,
+    blobstore_and_threshold: Option<(Arc<dyn Blobstore>, u64)>,
 }
 
 impl WireprotoLogging {
-    pub fn new(fb: FacebookInit, reponame: String, config: WireprotoLoggingConfig) -> Self {
-        let scribe_client = ScribeClientImplementation::new(fb);
-
+    pub fn new(
+        fb: FacebookInit,
+        reponame: String,
+        scribe_category: Option<String>,
+        blobstore_and_threshold: Option<(Arc<dyn Blobstore>, u64)>,
+    ) -> Self {
+        let scribe_args = scribe_category.map(|cat| (ScribeClientImplementation::new(fb), cat));
         Self {
             reponame,
-            scribe_client,
-            config,
+            scribe_args,
+            blobstore_and_threshold,
         }
     }
 }
@@ -81,15 +100,11 @@ pub struct CommandLogger {
     command: String,
     /// This scribe category main purpose is to tail the prod requests and replay them on the
     /// shadow tier.
-    wireproto: Option<Arc<WireprotoLogging>>,
+    wireproto: Arc<WireprotoLogging>,
 }
 
 impl CommandLogger {
-    pub fn new(
-        ctx: CoreContext,
-        command: String,
-        wireproto: Option<Arc<WireprotoLogging>>,
-    ) -> Self {
+    pub fn new(ctx: CoreContext, command: String, wireproto: Arc<WireprotoLogging>) -> Self {
         let inner = ScubaOnlyCommandLogger::new(ctx);
 
         Self {
@@ -107,6 +122,7 @@ impl CommandLogger {
 
     pub fn finalize_command<'a>(
         self,
+        ctx: CoreContext,
         stats: impl Into<CommandStats<'a>>,
         args: Option<&serde_json::Value>,
     ) {
@@ -121,9 +137,7 @@ impl CommandLogger {
 
         inner.log_command_processed(stats);
 
-        if let Some(wireproto) = wireproto {
-            do_wireproto_logging(wireproto, command, session_id, stats, args);
-        }
+        do_wireproto_logging(ctx, wireproto, command, session_id, stats, args);
     }
 
     pub fn add_scuba_extra(&mut self, k: impl Into<String>, v: impl Into<ScubaValue>) {
@@ -174,6 +188,7 @@ impl ScubaOnlyCommandLogger {
 }
 
 fn do_wireproto_logging<'a>(
+    ctx: CoreContext,
     wireproto: Arc<WireprotoLogging>,
     command: String,
     session_id: SessionId,
@@ -187,21 +202,72 @@ fn do_wireproto_logging<'a>(
     // Use a ScubaSampleBuilder to build a sample to send in Scribe. Reach into the other Scuba
     // sample to grab a few datapoints from there as well.
     let mut builder = ScubaSampleBuilder::with_discard();
-    let sample_json = builder
+    builder
         .add_common_server_data()
-        .add("args", args)
         .add("command", command)
         .add("duration", stats.completion_time().as_micros_unchecked())
         .add("source_control_server_type", "mononoke")
         .add("mononoke_session_uuid", session_id.into_string())
-        .add("reponame", wireproto.reponame.clone())
-        .get_sample()
-        .to_json();
+        .add("reponame", wireproto.reponame.clone());
 
-    // We can't really do anything with the errors, so we ignore them.
-    if let Ok(sample_json) = sample_json {
-        let _ = wireproto
-            .scribe_client
-            .offer(&wireproto.config.scribe_category, &sample_json.to_string());
-    }
+    let f = future::lazy(move || {
+        let prepare_fut = match wireproto.blobstore_and_threshold {
+            Some((ref blobstore, ref remote_arg_size_threshold)) => {
+                if args.len() as u64 > *remote_arg_size_threshold {
+                    // Key is generated randomly. Another option would be to
+                    // take a hash of arguments, but I don't want to spend cpu cycles on
+                    // computing hashes. Random string should be good enough.
+
+                    let key = format!(
+                        "wireproto_replay.{}.{}",
+                        Utc::now().to_rfc3339(),
+                        generate_random_string(16),
+                    );
+
+                    blobstore
+                        .put(ctx.clone(), key.clone(), BlobstoreBytes::from_bytes(args))
+                        .map(move |()| {
+                            STATS::wireproto_blobstore_success.add_value(1);
+                            builder.add("remote_args", key);
+                            builder
+                        })
+                        .inspect_err(|_| {
+                            STATS::wireproto_blobstore_failure.add_value(1);
+                        })
+                        .left_future()
+                } else {
+                    builder.add("args", args);
+                    future::ok(builder).right_future()
+                }
+            }
+            None => {
+                builder.add("args", args);
+                future::ok(builder).right_future()
+            }
+        };
+
+        prepare_fut
+            .map(move |builder| {
+                let sample = builder.get_sample();
+                // We can't really do anything with the errors, so let's just log them
+                if let Some((ref scribe_client, ref scribe_category)) = wireproto.scribe_args {
+                    if let Ok(sample_json) = sample.to_json() {
+                        let res = scribe_client.offer(scribe_category, &sample_json.to_string());
+                        if res.is_ok() {
+                            STATS::wireproto_scribe_success.add_value(1);
+                        } else {
+                            STATS::wireproto_scribe_failure.add_value(1);
+                        }
+                    } else {
+                        STATS::wireproto_serialization_failure.add_value(1);
+                    }
+                }
+            })
+            .or_else(|_| Ok(()))
+    });
+    tokio::spawn(f);
+}
+
+fn generate_random_string(len: usize) -> String {
+    thread_rng().sample_iter(&Alphanumeric).take(len).collect()
 }

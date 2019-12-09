@@ -101,7 +101,7 @@ pub struct RepoConfig {
     pub lfs: LfsParams,
     /// Configuration for logging all wireproto requests with full arguments.
     /// Used for replay on shadow tier.
-    pub wireproto_logging: Option<WireprotoLoggingConfig>,
+    pub wireproto_logging: WireprotoLoggingConfig,
     /// What percent of read request verifies that returned content matches the hash
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
@@ -879,10 +879,36 @@ pub struct CommitSyncConfig {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct WireprotoLoggingConfig {
     /// Scribe category to log to
-    pub scribe_category: String,
+    pub scribe_category: Option<String>,
     /// Storage config to store wireproto arguments. The arguments can be quite big,
     /// so storing separately would make sense.
-    pub storage_config: StorageConfig,
+    /// Second parameter is threshold. If wireproto arguments are bigger than this threshold
+    /// then they will be stored in remote storage defined by first parameter. Note that if
+    /// `storage_config_and_threshold` is not specified then wireproto wireproto arguments will
+    /// be inlined
+    pub storage_config_and_threshold: Option<(StorageConfig, u64)>,
+}
+
+impl WireprotoLoggingConfig {
+    /// Create WireprotoLoggingConfig with correct default values
+    pub fn new(
+        scribe_category: Option<String>,
+        storage_config_and_threshold: Option<(StorageConfig, u64)>,
+    ) -> Self {
+        Self {
+            scribe_category,
+            storage_config_and_threshold,
+        }
+    }
+}
+
+impl Default for WireprotoLoggingConfig {
+    fn default() -> Self {
+        Self {
+            scribe_category: None,
+            storage_config_and_threshold: None,
+        }
+    }
 }
 
 /// Configuration for health monitoring of the source-control-as-a-service
