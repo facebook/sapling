@@ -1167,31 +1167,15 @@ CONFIG
 
 }
 
-# We only have one testing shard available, which is patterned off of the
-# Mononoke DB. However, we don't have this particular table in there (since
-# we're connecting to commit cloud for it). Note that we have to silence output
-# from the db tool: it's a bit chatty in unpredictable ways.
 function create_replaybookmarks_table() {
   if [[ -n "$DB_SHARD_NAME" ]]; then
-    db -w "$DB_SHARD_NAME" 2>/dev/null  <<EOF
-    CREATE TABLE replaybookmarksqueue (
-  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  reponame varbinary(255) NOT NULL,
-  bookmark varbinary(512) NOT NULL,
-  node varbinary(64) NOT NULL,
-  bookmark_hash varbinary(64) NOT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  synced TINYINT(1) NOT NULL DEFAULT 0,
-  backfill TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (id),
-  KEY sync_queue (synced, reponame, bookmark_hash)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-EOF
-else
-  # We don't actually create any DB here, replaybookmarks will create it for it
-  # when it opens a SQLite DB in this directory.
-  mkdir "$TESTTMP/replaybookmarksqueue"
-fi
+    # We don't need to do anything: the MySQL setup creates this for us.
+    true
+  else
+    # We don't actually create any DB here, replaybookmarks will create it for it
+    # when it opens a SQLite DB in this directory.
+    mkdir "$TESTTMP/replaybookmarksqueue"
+  fi
 }
 
 function insert_replaybookmarks_entry() {

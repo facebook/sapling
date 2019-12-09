@@ -20,6 +20,8 @@ from typing import Any, Dict, List, NamedTuple, Set
 
 import click
 from common.db.tests import DbDef
+from configerator.client import ConfigeratorClient
+from configerator.structs.mysql.table_schema.ttypes import DatabaseSchemas, TableSchema
 from libfb.py.log import set_simple_logging
 from mononoke.tests.integration.lib_buck import find_buck_out
 
@@ -101,19 +103,33 @@ class TestFlags(NamedTuple):
 
 
 @contextlib.contextmanager
-def ephemeral_db_helper():
+def ephemeral_db_helper(mysql_schemas):
     with DbDef.TestDatabaseManager(
         prefix="mononoke_tests",
         oncall_shortname="source_control",
         force_ephemeral=True,
-        source_shard="xdb.mononoke_production",
         ttl_minutes=15,  # Some Mononoke tests last this long
     ) as test_db_manager:
+        client = ConfigeratorClient()
+
+        configs = []
+        for schema_path in mysql_schemas:
+            root = client.get_config_contents_as_thrift(
+                "{}/.sql_schema_domains".format(schema_path), DatabaseSchemas
+            )
+            for table in root.tables.keys():
+                configs.append("{}/{}.sql_table_schema".format(schema_path, table))
+
+        conn = test_db_manager.get_connection()
+        for table_path in configs:
+            table = client.get_config_contents_as_thrift(table_path, TableSchema)
+            conn.query(table.sql)
+
         yield {"DB_SHARD_NAME": test_db_manager.get_shard_name()}
 
 
 @contextlib.contextmanager
-def no_db_helper():
+def no_db_helper(*args, **kwargs):
     yield {}
 
 
@@ -337,6 +353,12 @@ def run_tests(
     is_flag=True,
     help="Use Ephemeral DB to run tests with MySQL",
 )
+@click.option(
+    "mysql_schemas",
+    "--mysql-schema",
+    multiple=True,
+    help="Import schema into Ephemeral DB (Configerator path)",
+)
 @click.argument("manifest", type=click.Path())
 @click.argument("tests", nargs=-1, type=click.Path())
 @click.pass_context
@@ -352,6 +374,7 @@ def run(
     simple_test_selector,
     keep_tmpdir,
     mysql,
+    mysql_schemas,
 ):
     set_simple_logging(logging.INFO)
 
@@ -404,7 +427,7 @@ def run(
                 param_hint="simple_test_selector",
             )
 
-    with db_helper() as test_env:
+    with db_helper(mysql_schemas) as test_env:
         run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
 
 
