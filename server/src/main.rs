@@ -21,7 +21,6 @@ use metaconfig_parser::RepoConfigs;
 use slog::{crit, info, Logger};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::runtime::Runtime;
 
 static TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);
 
@@ -74,7 +73,7 @@ fn main(fb: FacebookInit) {
         let stats_aggregation = stats::schedule_stats_aggregation()
             .expect("failed to create stats aggregation scheduler");
 
-        let mut runtime = Runtime::new()?;
+        let mut runtime = cmdlib::helpers::create_runtime(None)?;
 
         let config = get_config(&matches)?;
         let cert = matches.value_of("cert").unwrap().to_string();
