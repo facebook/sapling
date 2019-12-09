@@ -1175,9 +1175,9 @@ class cachedlocalrepo(object):
             prefix = getattr(self._repo, attr)
             p = os.path.join(prefix, fname)
             try:
-                st = os.stat(p)
+                st = util.stat(p)
             except OSError:
-                st = os.stat(prefix)
+                st = util.stat(prefix)
             state.append((st.st_mtime, st.st_size))
             maxmtime = max(maxmtime, st.st_mtime)
 

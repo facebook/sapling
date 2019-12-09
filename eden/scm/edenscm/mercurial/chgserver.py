@@ -369,7 +369,7 @@ class chgunixservicehandler(object):
         # check later
         tempaddress = _tempaddress(self._realaddress)
         util.bindunixsocket(sock, tempaddress)
-        self._socketstat = os.stat(tempaddress)
+        self._socketstat = util.stat(tempaddress)
         sock.listen(socket.SOMAXCONN)
         # rename will replace the old socket file if exists atomically. the
         # old server will detect ownership change and exit.
@@ -384,7 +384,7 @@ class chgunixservicehandler(object):
 
     def _issocketowner(self):
         try:
-            stat = os.stat(self._realaddress)
+            stat = util.stat(self._realaddress)
             return (
                 stat.st_ino == self._socketstat.st_ino
                 and stat.st_mtime == self._socketstat.st_mtime

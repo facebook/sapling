@@ -71,7 +71,7 @@ def _getfsnow(vfs):
     """Get "now" timestamp on filesystem"""
     tmpfd, tmpname = vfs.mkstemp()
     try:
-        return os.fstat(tmpfd).st_mtime
+        return util.fstat(tmpfd).st_mtime
     finally:
         os.close(tmpfd)
         vfs.unlink(tmpname)
@@ -493,7 +493,7 @@ class dirstate(object):
 
     def normal(self, f):
         """Mark a file normal and clean."""
-        s = os.lstat(self._join(f))
+        s = util.lstat(self._join(f))
         mtime = s.st_mtime
         self._addpath(f, "n", s.st_mode, s.st_size & _rangemask, mtime & _rangemask)
         if not self._istreestate:

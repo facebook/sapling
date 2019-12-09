@@ -131,7 +131,7 @@ class basepackstore(object):
                     # (the index file and the pack file), we can yield once we see
                     # it twice.
                     if ext == self.INDEXSUFFIX or ext == self.PACKSUFFIX:
-                        st = os.lstat(filename)
+                        st = util.lstat(filename)
                         if statmod.S_ISDIR(st.st_mode):
                             continue
 

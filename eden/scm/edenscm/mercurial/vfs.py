@@ -159,7 +159,7 @@ class abstractvfs(object):
         return os.path.lexists(self.join(path))
 
     def lstat(self, path=None):
-        return os.lstat(self.join(path))
+        return util.lstat(self.join(path))
 
     def listdir(self, path=None):
         return os.listdir(self.join(path))
@@ -248,7 +248,7 @@ class abstractvfs(object):
         return util.setflags(self.join(path), l, x)
 
     def stat(self, path=None):
-        return os.stat(self.join(path))
+        return util.stat(self.join(path))
 
     def unlink(self, path=None):
         return util.unlink(self.join(path))

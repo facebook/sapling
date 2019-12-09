@@ -29,17 +29,6 @@ parsers = policy.importmod("parsers")
 propertycache = util.propertycache
 
 
-class statobject(object):
-    """ this is a stat-like object to represent information from eden."""
-
-    __slots__ = ("st_mode", "st_size", "st_mtime")
-
-    def __init__(self, mode=None, size=None, mtime=None):
-        self.st_mode = mode
-        self.st_size = size
-        self.st_mtime = mtime
-
-
 class eden_dirstate(dirstate.dirstate):
     def __init__(self, repo, ui, root):
         self.eden_client = thrift.EdenThriftClient(repo)

@@ -209,7 +209,7 @@ def _cleanupoldpacks(ui, packpath, limit):
     with progress.spinner(ui, _("cleaning old packs")):
 
         def _mtime(f):
-            stat = os.lstat(f)
+            stat = util.lstat(f)
             return stat.st_mtime
 
         def _listpackfiles(path):
@@ -234,7 +234,7 @@ def _cleanupoldpacks(ui, packpath, limit):
 
         while cachesize > limit:
             f = files.pop()
-            stat = os.lstat(f)
+            stat = util.lstat(f)
 
             # Dont't remove files that are newer than 10 minutes. This will
             # avoid a race condition where mercurial downloads files from the

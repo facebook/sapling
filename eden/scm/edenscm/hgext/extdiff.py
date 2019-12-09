@@ -139,7 +139,7 @@ def snapshot(ui, repo, files, node, tmproot):
             if node is None:
                 dest = os.path.join(base, wfn)
 
-                fnsandstat.append((dest, repo.wjoin(fn), os.lstat(dest)))
+                fnsandstat.append((dest, repo.wjoin(fn), util.lstat(dest)))
     return dirname, fnsandstat
 
 
@@ -293,7 +293,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
         ui.system(cmdline, cwd=tmproot, blockedtag="extdiff")
 
         for copy_fn, working_fn, st in fnsandstat:
-            cpstat = os.lstat(copy_fn)
+            cpstat = util.lstat(copy_fn)
             # Some tools copy the file and attributes, so mtime may not detect
             # all changes.  A size check will detect more cases, but not all.
             # The only certain way to detect every case is to diff all files,

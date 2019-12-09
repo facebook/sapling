@@ -209,7 +209,7 @@ class physicalfilesystem(object):
         join = self.opener.join
         walker = workingcopy.walker(join(""), match)
         for fn in walker:
-            st = os.lstat(join(fn))
+            st = util.lstat(join(fn))
             yield fn, st
 
     @util.timefunction("fswalk", 0, "ui")

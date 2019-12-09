@@ -41,6 +41,8 @@ def _mode_to_kind(mode):
 
 
 def listdir(path, stat=False, skip=None):
+    from .. import util
+
     """listdir(path, stat=False) -> list_of_tuples
 
     Return a sorted list containing information about the entries
@@ -61,7 +63,7 @@ def listdir(path, stat=False, skip=None):
     names = os.listdir(path)
     names.sort()
     for fn in names:
-        st = os.lstat(prefix + fn)
+        st = util.lstat(prefix + fn)
         if fn == skip and statmod.S_ISDIR(st.st_mode):
             return []
         if stat:

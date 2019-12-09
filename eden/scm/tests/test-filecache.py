@@ -180,7 +180,7 @@ def antiambiguity():
         fp.write("FOO")
         fp.close()
 
-        oldstat = os.stat(filename)
+        oldstat = util.stat(filename)
         if oldstat.st_ctime != oldstat.st_mtime:
             # subsequent changing never causes ambiguity
             continue

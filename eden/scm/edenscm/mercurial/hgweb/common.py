@@ -135,9 +135,9 @@ def get_stat(spath, fn):
     """stat fn if it exists, spath otherwise"""
     cl_path = os.path.join(spath, fn)
     if os.path.exists(cl_path):
-        return os.stat(cl_path)
+        return util.stat(cl_path)
     else:
-        return os.stat(spath)
+        return util.stat(spath)
 
 
 def get_mtime(spath):

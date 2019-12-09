@@ -41,7 +41,7 @@ import re as remod
 import shutil
 import signal
 import socket
-import stat
+import stat as statmod
 import string
 import subprocess
 import sys
@@ -186,12 +186,6 @@ except AttributeError:
 # Python compatibility
 
 _notset = object()
-
-# disable Python's problematic floating point timestamps (issue4836)
-# (Python hypocritically says you shouldn't change this behavior in
-# libraries, and sure enough Mercurial is not a library.)
-# pyre-fixme[16]: Module `os` has no attribute `stat_float_times`.
-os.stat_float_times(False)
 
 
 def safehasattr(thing, attr):
@@ -1561,14 +1555,6 @@ def _reloadenv():
 _reloadenv()
 
 
-def fstat(fp):
-    """stat file object that may not have fileno method."""
-    try:
-        return os.fstat(fp.fileno())
-    except AttributeError:
-        return os.stat(fp.name)
-
-
 # File system features
 
 
@@ -1849,17 +1835,17 @@ class filestat(object):
     @classmethod
     def frompath(cls, path):
         try:
-            stat = os.stat(path)
+            st = stat(path)
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
-            stat = None
-        return cls(stat)
+            st = None
+        return cls(st)
 
     @classmethod
     def fromfp(cls, fp):
-        stat = os.fstat(fp.fileno())
-        return cls(stat)
+        st = fstat(fp.fileno())
+        return cls(st)
 
     __hash__ = object.__hash__
 
@@ -2858,7 +2844,7 @@ if pyplatform.python_implementation() == "CPython" and sys.version_info < (3, 0)
     def iterfile(fp):
         fastpath = True
         if type(fp) is file:  # noqa
-            fastpath = stat.S_ISREG(os.fstat(fp.fileno()).st_mode)
+            fastpath = statmod.S_ISREG(os.fstat(fp.fileno()).st_mode)
         if fastpath:
             return fp
         else:
@@ -4661,3 +4647,56 @@ def smarttraceback(frame=None):
             item += "  # %s\n" % localarg
         result += item
     return result
+
+
+class wrapped_stat_result(object):
+    """Mercurial assumes that st_[amc]time is an integer, but both Python2 and
+    Python3 are returning a float value. This class overrides these attributes
+    with their integer counterpart.
+    """
+
+    def __init__(self, stat):
+        self._stat = stat
+
+    @property
+    def st_mtime(self):
+        return self._stat[statmod.ST_MTIME]
+
+    @property
+    def st_ctime(self):
+        return self._stat[statmod.ST_CTIME]
+
+    @property
+    def st_atime(self):
+        return self._stat[statmod.ST_ATIME]
+
+    def __getattr__(self, name):
+        return getattr(self._stat, name)
+
+
+def _fixup_time(st):
+    st.st_mtime = st[statmod.ST_MTIME]
+    st.st_ctime = st[statmod.ST_CTIME]
+
+
+def stat(path):
+    res = os.stat(path)
+    return wrapped_stat_result(res)
+
+
+def lstat(path):
+    res = os.lstat(path)
+    return wrapped_stat_result(res)
+
+
+def fstat(fp):
+    """stat file object that may not have fileno method."""
+    try:
+        res = os.fstat(fp)
+    except TypeError:
+        try:
+            res = os.fstat(fp.fileno())
+        except AttributeError:
+            res = os.stat(fp.name)
+
+    return wrapped_stat_result(res)

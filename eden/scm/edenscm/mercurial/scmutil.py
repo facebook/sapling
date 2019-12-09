@@ -407,7 +407,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 
         def adddir(dirlst, dirname):
             match = False
-            dirstat = os.stat(dirname)
+            dirstat = util.stat(dirname)
             for lstdirstat in dirlst:
                 if samestat(dirstat, lstdirstat):
                     match = True

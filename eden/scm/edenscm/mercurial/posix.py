@@ -988,11 +988,13 @@ def hidewindow():
 
 class cachestat(object):
     def __init__(self, path):
+        from . import util
+
         if path is None:
             self.stat = None
         else:
             try:
-                self.stat = os.stat(path)
+                self.stat = util.stat(path)
             except OSError as ex:
                 if ex.errno == errno.ENOENT:
                     self.stat = None
