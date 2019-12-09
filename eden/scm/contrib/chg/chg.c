@@ -339,7 +339,9 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
     int needreconnect = 0;
 #ifdef HAVE_VERSIONHASH
     unsigned long long versionhash = hgc_versionhash(hgc);
-    if (versionhash != HGVERSIONHASH) {
+    // Skip version check if there is an explicit socket path set,
+    // which is used in tests.
+    if (versionhash != HGVERSIONHASH && !getenv("CHGSOCKNAME")) {
       debugmsg(
           "version mismatch (client %llu, server %llu)",
           HGVERSIONHASH,

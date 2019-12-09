@@ -480,9 +480,7 @@ def getparser():
     )
 
     hgconf = parser.add_argument_group("Mercurial Configuration")
-    hgconf.add_argument(
-        "--chg", action="store_true", help="install and use chg wrapper in place of hg"
-    )
+    hgconf.add_argument("--chg", action="store_true", help="use chg to run tests")
     hgconf.add_argument(
         "--watchman", action="store_true", help="shortcut for --with-watchman=watchman"
     )
@@ -503,8 +501,7 @@ def getparser():
         "-l",
         "--local",
         action="store_true",
-        help="shortcut for --with-hg=<testdir>/../hg, "
-        "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set",
+        help="shortcut for --with-hg=<testdir>/../hg",
     )
     hgconf.add_argument(
         "-b",
@@ -525,9 +522,6 @@ def getparser():
         "--py3k-warnings",
         action="store_true",
         help="enable Py3k warnings on Python 2.7+",
-    )
-    hgconf.add_argument(
-        "--with-chg", metavar="CHG", help="use specified chg wrapper in place of hg"
     )
     hgconf.add_argument(
         "--with-hg",
@@ -622,8 +616,6 @@ def parseargs(args, parser):
         testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
         reporootdir = os.path.dirname(testdir)
         pathandattrs = [(b"hg", "with_hg")]
-        if options.chg:
-            pathandattrs.append((b"contrib/chg/chg", "with_chg"))
         for relpath, attr in pathandattrs:
             if getattr(options, attr, None):
                 continue
@@ -634,21 +626,8 @@ def parseargs(args, parser):
                 )
             setattr(options, attr, binpath)
 
-    if (options.chg or options.with_chg) and os.name == "nt":
+    if options.chg and os.name == "nt":
         parser.error("chg does not work on %s" % os.name)
-    if options.with_chg:
-        options.chg = False  # no installation to temporary location
-        options.with_chg = canonpath(_bytespath(options.with_chg))
-        if not (
-            os.path.isfile(options.with_chg) and os.access(options.with_chg, os.X_OK)
-        ):
-            parser.error("--with-chg must specify a chg executable")
-    if options.chg and options.with_hg:
-        # chg shares installation location with hg
-        parser.error(
-            "--chg does not work when --with-hg is specified "
-            "(use --with-chg instead)"
-        )
     if options.watchman and options.with_watchman:
         parser.error(
             "--watchman does not work when --with-watchman is specified "
@@ -1454,7 +1433,9 @@ class Test(unittest.TestCase):
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["HOME"] = self._testtmp
-        if not self._usechg:
+        if self._usechg:
+            env["CHGDISABLE"] = "0"
+        else:
             env["CHGDISABLE"] = "1"
         # This number should match portneeded in _getport
         for port in xrange(3):
@@ -3320,17 +3301,6 @@ class TestRunner(object):
             self._tmpbindir = self._bindir
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
-        # set CHGHG, then replace "hg" command by "chg"
-        chgbindir = self._bindir
-        if self.options.chg or self.options.with_chg:
-            osenvironb[b"CHGHG"] = os.path.join(self._bindir, self._hgcommand)
-        else:
-            osenvironb.pop(b"CHGHG", None)  # drop flag for hghave
-        if self.options.chg:
-            self._hgcommand = b"chg"
-        elif self.options.with_chg:
-            chgbindir = os.path.dirname(os.path.realpath(self.options.with_chg))
-            self._hgcommand = os.path.basename(self.options.with_chg)
         if self.options.with_watchman or self.options.watchman:
             self._watchman = self.options.with_watchman or "watchman"
             osenvironb[b"HGFSMONITOR_TESTS"] = b"1"
@@ -3359,8 +3329,6 @@ class TestRunner(object):
             realfile = os.path.realpath(fileb)
             realdir = os.path.abspath(os.path.dirname(realfile))
             path.insert(2, realdir)
-        if chgbindir != self._bindir:
-            path.insert(1, chgbindir)
         if self._testdir != runtestdir:
             path = [self._testdir] + path
         if self._tmpbindir != self._bindir:
@@ -3533,9 +3501,6 @@ class TestRunner(object):
                     self._checkhglib("Testing")
                 else:
                     self._usecorrectpython()
-                if self.options.chg:
-                    assert self._installdir
-                    self._installchg()
 
                 self._usecorrecthg()
 
@@ -3614,7 +3579,7 @@ class TestRunner(object):
             py3kwarnings=self.options.py3k_warnings,
             shell=self.options.shell,
             hgcommand=self._hgcommand,
-            usechg=bool(self.options.with_chg or self.options.chg),
+            usechg=self.options.chg,
             useipv6=useipv6,
             watchman=self._watchman,
             options=self.options,
@@ -3843,33 +3808,6 @@ class TestRunner(object):
             pipe.close()
 
         return self._hgpath
-
-    def _installchg(self):
-        """Install chg into the test environment"""
-        vlog("# Performing temporary installation of CHG")
-        assert os.path.dirname(self._bindir) == self._installdir
-        assert self._hgroot, "must be called after _installhg()"
-        cmd = b'"%(make)s" clean install PREFIX="%(prefix)s"' % {
-            b"make": "make",  # TODO: switch by option or environment?
-            b"prefix": self._installdir,
-        }
-        cwd = os.path.join(self._hgroot, b"contrib", b"chg")
-        vlog("# Running", cmd)
-        proc = subprocess.Popen(
-            cmd,
-            shell=True,
-            cwd=cwd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        out, _err = proc.communicate()
-        if proc.returncode != 0:
-            if PYTHON3:
-                sys.stdout.buffer.write(out)
-            else:
-                sys.stdout.write(out)
-            sys.exit(1)
 
     def _outputcoverage(self):
         """Produce code coverage output."""
