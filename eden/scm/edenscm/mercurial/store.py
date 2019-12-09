@@ -588,13 +588,21 @@ class metavfs(object):
         vfs = self.vfs
         metalog = bindings.metalog.metalog(vfs.join("metalog"))
 
-        # Migrate data from vfs to metalog
-        keys = set(metalog.keys())
-        for name in self.metapaths:
-            if name not in keys:
-                data = vfs.tryread(name)
-                if data is not None:
-                    metalog[name] = data
+        # Keys that are previously tracked in metalog.
+        tracked = set((metalog.get("tracked") or "").split())
+        # Keys that should be tracked (specified by config).
+        desired = set(self.metapaths)
+
+        # Migrate up (from svfs plain files to metalog).
+        for name in desired.difference(tracked):
+            data = vfs.tryread(name)
+            if data is not None:
+                metalog[name] = data
+
+        # Migrating down is a no-op, since we double-write to svfs too.
+
+        metalog["tracked"] = "\n".join(sorted(desired))
+
         try:
             # XXX: This is racy.
             metalog.commit("migrate from vfs", int(util.timer()))
