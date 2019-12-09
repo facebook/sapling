@@ -35,8 +35,6 @@
 #      ./run-tests.py -j2 -c --local test-s*  # unsupported (and broken)
 #  9) parallel, custom tmp dir:
 #      ./run-tests.py -j2 --tmpdir /tmp/myhgtests
-#  10) parallel, pure, tests that call run-tests:
-#      ./run-tests.py --pure `grep -l run-tests.py *.t`
 #
 # (You could use any subset of the tests: test-s* happens to match
 # enough that it's worth doing parallel runs, few enough that it
@@ -523,11 +521,6 @@ def getparser():
         help="prefer IPv6 to IPv4 for network related tests",
     )
     hgconf.add_argument(
-        "--pure",
-        action="store_true",
-        help="use pure Python code instead of C extensions",
-    )
-    hgconf.add_argument(
         "-3",
         "--py3k-warnings",
         action="store_true",
@@ -616,10 +609,6 @@ def getparser():
 def parseargs(args, parser):
     """Parse arguments with our OptionParser and validate results."""
     options = parser.parse_args(args)
-
-    # jython is always pure
-    if "java" in sys.platform or "__pypy__" in sys.modules:
-        options.pure = True
 
     if options.with_hg:
         options.with_hg = canonpath(_bytespath(options.with_hg))
@@ -3393,10 +3382,6 @@ class TestRunner(object):
             pypath.append(oldpypath)
         osenvironb[IMPL_PATH] = sepb.join(pypath)
 
-        if self.options.pure:
-            os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
-            os.environ["HGMODULEPOLICY"] = "py"
-
         if self.options.allow_slow_tests:
             os.environ["HGTEST_SLOW"] = "slow"
         elif "HGTEST_SLOW" in os.environ:
@@ -3718,10 +3703,6 @@ class TestRunner(object):
         compiler = ""
         if self.options.compiler:
             compiler = "--compiler " + self.options.compiler
-        if self.options.pure:
-            pure = b"--pure"
-        else:
-            pure = b""
 
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
@@ -3741,14 +3722,13 @@ class TestRunner(object):
             # when they happen.
             nohome = b""
         cmd = (
-            b"%(exe)s setup.py %(pure)s clean --all"
+            b"%(exe)s setup.py clean --all"
             b' build %(compiler)s --build-base="%(base)s"'
             b' install --force --prefix="%(prefix)s"'
             b' --install-lib="%(libdir)s"'
             b' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
             % {
                 b"exe": exe,
-                b"pure": pure,
                 b"compiler": compiler,
                 b"base": os.path.join(self._hgtmp, b"build"),
                 b"prefix": self._installdir,

@@ -738,16 +738,6 @@ def has_py3pygments():
     return False
 
 
-@check("pure", "running with pure Python code")
-def has_pure():
-    return any(
-        [
-            os.environ.get("HGMODULEPOLICY") == "py",
-            os.environ.get("HGTEST_RUN_TESTS_PURE") == "--pure",
-        ]
-    )
-
-
 @check("slow", "allow slow tests (use --allow-slow-tests)")
 def has_slow():
     return os.environ.get("HGTEST_SLOW") == "slow"

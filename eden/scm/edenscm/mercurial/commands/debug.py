@@ -1467,24 +1467,22 @@ def debuginstall(ui, **opts):
     )
 
     # compiled modules
-    fm.write("hgmodulepolicy", _("checking module policy (%s)\n"), policy.policy)
     fm.write(
         "hgmodules",
         _("checking installed modules (%s)...\n"),
         os.path.dirname(os.path.dirname(pycompat.fsencode(__file__))),
     )
 
-    if policy.policy in ("c", "allow"):
-        err = None
-        try:
-            # pyre-fixme[21]: Could not find `edenscmnative`.
-            from edenscmnative import base85, bdiff, mpatch, osutil
+    err = None
+    try:
+        # pyre-fixme[21]: Could not find `edenscmnative`.
+        from edenscmnative import base85, bdiff, mpatch, osutil
 
-            dir(bdiff), dir(mpatch), dir(base85), dir(osutil)  # quiet pyflakes
-        except Exception as inst:
-            err = util.forcebytestr(inst)
-            problems += 1
-        fm.condwrite(err, "extensionserror", " %s\n", err)
+        dir(bdiff), dir(mpatch), dir(base85), dir(osutil)  # quiet pyflakes
+    except Exception as inst:
+        err = util.forcebytestr(inst)
+        problems += 1
+    fm.condwrite(err, "extensionserror", " %s\n", err)
 
     compengines = util.compengines._engines.values()
     fm.write(
