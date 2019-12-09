@@ -17,6 +17,7 @@ import unittest
 
 
 try:
+    # Used by :run_tests binary target
     import libfb.py.pathutils as pathutils
 
     hgpath = pathutils.get_build_rule_output_path(
@@ -24,9 +25,18 @@ try:
     )
     pythonbinpath = pathutils.get_build_rule_output_path("//eden/scm:hgpython")
     watchman = pathutils.get_build_rule_output_path("//watchman:watchman")
+    # XXX: the above function might return "watchman.par" which does not exist.
+    # Fix it by stripping ".par".
+    if not os.path.exists(watchman):
+        alternative = watchman[:-4]  # strip ".par"
+        if os.path.exists(alternative):
+            watchman = alternative
+        else:
+            watchman = None
     mononoke_server = pathutils.get_build_rule_output_path("//scm/mononoke:mononoke")
     mononoke_hgcli = pathutils.get_build_rule_output_path("//scm/mononoke/hgcli:hgcli")
 except ImportError:
+    # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")
     pythonbinpath = os.environ.get("HGTEST_PYTHON", "python2")
     watchman = os.environ.get("HGTEST_WATCHMAN")
