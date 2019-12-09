@@ -14,3 +14,4 @@ mod metalog;
 
 pub use crate::metalog::{resolver, CommitOptions, Id20, MetaLog};
 pub use errors::{Error, Result};
+pub use indexedlog::Repair;
