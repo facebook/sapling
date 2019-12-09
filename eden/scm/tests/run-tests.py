@@ -1029,6 +1029,13 @@ class Test(unittest.TestCase):
 
         self._refout = self.readrefout()
 
+        # Force enable chg if the test has '#chg-compatible' in its header.
+        # Force disable chg if the test has '#chg-incompatible' in its header.
+        if not usechg and self._refout and "#chg-compatible\n" in self._refout[:10]:
+            self._usechg = True
+        elif usechg and self._refout and "#chg-incompatible\n" in self._refout[:10]:
+            self._usechg = False
+
     def readrefout(self):
         """read reference output"""
         # If we're not in --debug mode and reference output file exists,
@@ -1222,6 +1229,7 @@ class Test(unittest.TestCase):
         self._createhgrc(env["HGRCPATH"].rsplit(os.pathsep, 1)[-1])
 
         vlog("# Test", self.name)
+        vlog("# chg in use: %s" % self._usechg)
 
         ret, out = self._run(env)
         self._finished = True
@@ -1870,6 +1878,8 @@ class TTest(Test):
                     if not haveresult:
                         script = [b'echo "%s"\nexit 80\n' % message]
                         break
+                after.setdefault(pos, []).append(l)
+            elif l.startswith(b"#chg-"):
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b"#if"):
                 lsplit = l.split()
