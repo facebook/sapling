@@ -22,11 +22,14 @@ DiffContext::DiffContext(
     bool listIgnored,
     const ObjectStore* os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores,
+    std::function<folly::Future<std::string>(RelativePathPiece)>
+        loadFileContentsFromPath,
     ResponseChannelRequest* request)
     : callback{cb},
       store{os},
       listIgnored{listIgnored},
       topLevelIgnores_(std::move(topLevelIgnores)),
+      loadFileContentsFromPath_{loadFileContentsFromPath},
       request_{request} {}
 
 DiffContext::DiffContext(DiffCallback* cb, const ObjectStore* os)
@@ -34,12 +37,18 @@ DiffContext::DiffContext(DiffCallback* cb, const ObjectStore* os)
       store{os},
       listIgnored{true},
       topLevelIgnores_{std::unique_ptr<TopLevelIgnores>()},
-      request_{nullptr} {}
+      loadFileContentsFromPath_{nullptr},
+      request_{nullptr} {};
 
 DiffContext::~DiffContext() = default;
 
 const GitIgnoreStack* DiffContext::getToplevelIgnore() const {
   return topLevelIgnores_->getStack();
+}
+
+const std::function<folly::Future<std::string>(RelativePathPiece)>&
+DiffContext::getLoadFileContentsFromPath() const {
+  return loadFileContentsFromPath_;
 }
 
 bool DiffContext::isCancelled() const {

@@ -914,11 +914,19 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
     bool listIgnored,
     ResponseChannelRequest* request) const {
+  // We hold a reference to the root inode to ensure that
+  // the EdenMount cannot be destroyed while the DiffContext
+  // is still using it.
+  auto loadContents = [this,
+                       rootInode = getRootInode()](RelativePathPiece path) {
+    return loadFileContentsFromPath(path, CacheHint::LikelyNeededAgain);
+  };
   return make_unique<DiffContext>(
       callback,
       listIgnored,
       getObjectStore(),
       serverState_->getTopLevelIgnores(),
+      std::move(loadContents),
       request);
 }
 

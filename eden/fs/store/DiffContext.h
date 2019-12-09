@@ -8,6 +8,14 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/futures/Future.h>
+
+#include "eden/fs/utils/PathFuncs.h"
+
+namespace folly {
+template <typename T>
+class Future;
+} // namespace folly
 
 namespace apache {
 namespace thrift {
@@ -23,6 +31,7 @@ class GitIgnoreStack;
 class ObjectStore;
 class UserInfo;
 class TopLevelIgnores;
+class EdenMount;
 
 /**
  * A helper class to store parameters for a TreeInode::diff() operation.
@@ -40,6 +49,8 @@ class DiffContext {
       bool listIgnored,
       const ObjectStore* os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
+      std::function<folly::Future<std::string>(RelativePathPiece)>
+          loadFileContentsFromPath,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
   DiffContext(DiffCallback* cb, const ObjectStore* os);
 
@@ -61,9 +72,13 @@ class DiffContext {
 
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
+  const std::function<folly::Future<std::string>(RelativePathPiece)>&
+  getLoadFileContentsFromPath() const;
 
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
+  const std::function<folly::Future<std::string>(RelativePathPiece)>
+      loadFileContentsFromPath_;
   apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
 };
 } // namespace eden

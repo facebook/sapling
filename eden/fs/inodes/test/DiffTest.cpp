@@ -80,12 +80,17 @@ class DiffTest {
       folly::StringPiece systemWideIgnoreFileContents = "",
       folly::StringPiece userIgnoreFileContents = "") {
     ScmStatusDiffCallback callback;
+    auto loadFileContentsFromPath = [this](RelativePathPiece path) {
+      return mount_.getEdenMount()->EdenMount::loadFileContentsFromPath(
+          path, CacheHint::LikelyNeededAgain);
+    };
     DiffContext diffContext{
         &callback,
         listIgnored,
         mount_.getEdenMount()->getObjectStore(),
         std::make_unique<TopLevelIgnores>(
-            systemWideIgnoreFileContents, userIgnoreFileContents)};
+            systemWideIgnoreFileContents, userIgnoreFileContents),
+        std::move(loadFileContentsFromPath)};
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
     auto diffFuture = mount_.getEdenMount()->diff(&diffContext, commitHash);
     EXPECT_FUTURE_RESULT(diffFuture);
