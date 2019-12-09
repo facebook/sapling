@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use ::metalog::{CommitOptions, Id20, MetaLog};
+use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
 use cpython::*;
 use cpython_ext::Bytes;
 use cpython_failure::ResultPyErrExt;
@@ -105,5 +105,10 @@ py_class!(class metalog |py| {
     def __delitem__(&self, key: String) -> PyResult<()> {
         self.remove(py, &key)?;
         Ok(())
+    }
+
+    @staticmethod
+    def repair(path: &str) -> PyResult<PyUnicode> {
+        MetaLog::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 });

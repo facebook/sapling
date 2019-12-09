@@ -15,7 +15,7 @@ use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use thiserror::Error;
 
-use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore};
+use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore, Repair};
 use encoding::local_bytes_to_path;
 use types::node::Node;
 use vlqencoding::{VLQDecode, VLQEncode};
@@ -250,5 +250,10 @@ py_class!(class mutationstore |py| {
             pyssets.push(pysset);
         }
         Ok(pyssets)
+    }
+
+    @staticmethod
+    def repair(path: &str) -> PyResult<PyUnicode> {
+        MutationStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 });

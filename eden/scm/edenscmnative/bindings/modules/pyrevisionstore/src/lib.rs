@@ -19,7 +19,7 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{Bytes, PyErr};
+use cpython_ext::PyErr;
 use cpython_failure::ResultPyErrExt;
 use pyconfigparser::config;
 use revisionstore::{
@@ -410,9 +410,9 @@ py_class!(class indexedlogdatastore |py| {
     }
 
     @staticmethod
-    def repair(path: &PyBytes) -> PyResult<Bytes> {
+    def repair(path: &PyBytes) -> PyResult<PyUnicode> {
         let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
-        IndexedLogDataStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| Bytes::from(s))
+        IndexedLogDataStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
@@ -463,9 +463,9 @@ py_class!(class indexedloghistorystore |py| {
     }
 
     @staticmethod
-    def repair(path: &PyBytes) -> PyResult<Bytes> {
+    def repair(path: &PyBytes) -> PyResult<PyUnicode> {
         let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
-        IndexedLogHistoryStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| Bytes::from(s))
+        IndexedLogHistoryStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {

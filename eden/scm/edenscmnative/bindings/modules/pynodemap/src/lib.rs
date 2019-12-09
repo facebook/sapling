@@ -11,7 +11,7 @@ use std::cell::RefCell;
 
 use cpython::*;
 
-use ::nodemap::{NodeMap, NodeSet};
+use ::nodemap::{NodeMap, NodeSet, Repair};
 use cpython_ext::Bytes;
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
@@ -86,6 +86,11 @@ py_class!(class nodemap |py| {
             .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
         Ok(keys)
     }
+
+    @staticmethod
+    def repair(path: &str) -> PyResult<PyUnicode> {
+        NodeMap::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+    }
 });
 
 py_class!(class nodeset |py| {
@@ -122,5 +127,10 @@ py_class!(class nodeset |py| {
             .collect::<Result<Vec<Bytes>, _>>()
             .map_pyerr::<exc::IOError>(py)?;
         Ok(nodes)
+    }
+
+    @staticmethod
+    def repair(path: &str) -> PyResult<PyUnicode> {
+        NodeSet::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 });

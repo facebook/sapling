@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use ::zstore::{Id20, Zstore};
+use ::zstore::{Id20, Repair, Zstore};
 use cpython::*;
 use cpython_ext::Bytes;
 use cpython_failure::ResultPyErrExt;
@@ -65,5 +65,10 @@ py_class!(class zstore |py| {
 
     def __contains__(&self, id: Bytes) -> PyResult<bool> {
         self.contains(py, id)
+    }
+
+    @staticmethod
+    def repair(path: &str) -> PyResult<PyUnicode> {
+        Zstore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 });
