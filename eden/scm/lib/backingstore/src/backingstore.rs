@@ -5,15 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::raw;
 use crate::treecontentstore::TreeContentStore;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use manifest::Manifest;
+use edenapi::{EdenApi, EdenApiCurlClient};
+use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
-use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
-use std::convert::TryFrom;
+use revisionstore::{ContentStore, ContentStoreBuilder, DataStore, EdenApiRemoteStore};
 use std::path::Path;
 use std::sync::Arc;
 use types::{Key, Node, RepoPath};
@@ -24,7 +23,7 @@ pub struct BackingStore {
 }
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(repository: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(repository: P, use_edenapi: bool) -> Result<Self> {
         let hg = repository.as_ref().join(".hg");
         let mut config = ConfigSet::new();
         config.load_system();
@@ -32,10 +31,24 @@ impl BackingStore {
         config.load_hgrc(hg.join("hgrc"), "repository");
 
         let store_path = hg.join("store");
-        let blobstore = ContentStore::new(&store_path, &config)?;
-        let treestore = ContentStoreBuilder::new(&store_path, &config)
-            .suffix(Path::new("manifests"))
-            .build()?;
+        let blobstore = ContentStoreBuilder::new(&store_path, &config);
+        let treestore =
+            ContentStoreBuilder::new(&store_path, &config).suffix(Path::new("manifests"));
+
+        let (blobstore, treestore) = if use_edenapi {
+            let edenapi_config = edenapi::Config::from_hg_config(&config)?;
+            let edenapi = Box::new(EdenApiCurlClient::new(edenapi_config)?);
+            let edenapi: Arc<Box<(dyn EdenApi)>> = Arc::new(edenapi);
+            let fileremotestore = Box::new(EdenApiRemoteStore::filestore(edenapi.clone()));
+            let treeremotestore = Box::new(EdenApiRemoteStore::treestore(edenapi));
+
+            (
+                blobstore.remotestore(fileremotestore).build()?,
+                treestore.remotestore(treeremotestore).build()?,
+            )
+        } else {
+            (blobstore.build()?, treestore.build()?)
+        };
 
         Ok(Self {
             blobstore,
@@ -63,12 +76,11 @@ impl BackingStore {
             .map(|blob| blob.map(discard_metadata_header))
     }
 
-    pub fn get_tree(&self, node: &[u8]) -> Result<raw::Tree> {
+    pub fn get_tree(&self, node: &[u8]) -> Result<List> {
         let node = Node::from_slice(node)?;
         let manifest = TreeManifest::durable(self.treestore.clone(), node);
-        let list = manifest.list(RepoPath::empty())?;
 
-        raw::Tree::try_from(list)
+        manifest.list(RepoPath::empty())
     }
 }
 

@@ -49,6 +49,8 @@ HgNativeBackingStore::HgNativeBackingStore(
 std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
     folly::ByteRange name,
     folly::ByteRange node) {
+  XLOG(DBG7) << "Importing blob name=" << name.data()
+             << " node=" << folly::hexlify(node) << " from hgcache";
   RustCFallible<RustCBytes> result(
       rust_backingstore_get_blob(
           store_.get(), name.data(), name.size(), node.data(), node.size()),
@@ -65,13 +67,15 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
 }
 
 std::shared_ptr<RustTree> HgNativeBackingStore::getTree(folly::ByteRange node) {
+  XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
+             << " from hgcache";
+
   RustCFallible<RustTree> manifest(
       rust_backingstore_get_tree(store_.get(), node.data(), node.size()),
       rust_tree_free);
 
   if (manifest.isError()) {
-    XLOG(DBG5) << "Error while getting tree "
-               << " node=" << folly::hexlify(node)
+    XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
                << " from backingstore: " << manifest.getError();
     return nullptr;
   }

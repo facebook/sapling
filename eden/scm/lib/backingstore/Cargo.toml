@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 configparser = { path = "../configparser" }
+edenapi = { path = "../edenapi" }
 manifest = { path = "../manifest" }
 manifest-tree = { path = "../manifest-tree" }
 revisionstore = { path = "../revisionstore" }
@@ -13,6 +14,7 @@ types = { path = "../types" }
 anyhow = "1.0.20"
 bytes = "0.4.12"
 libc = "0.2.62"
+env_logger = "0.7"
 
 [lib]
 crate-type = ["staticlib", "lib"]

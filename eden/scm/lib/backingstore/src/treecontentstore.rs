@@ -26,7 +26,7 @@ impl TreeStore for TreeContentStore {
         let key = Key::new(path.to_owned(), hgid);
 
         self.inner.get(&key).and_then(|opt| {
-            opt.ok_or_else(|| format_err!("hgid: {:?} path: {:?} is not found.", path, hgid))
+            opt.ok_or_else(|| format_err!("hgid: {:?} path: {:?} is not found.", hgid, path))
                 .map(Into::into)
         })
     }

@@ -13,6 +13,7 @@
 mod backingstore;
 mod cbytes;
 mod cfallible;
+mod init;
 mod tests;
 mod tree;
 
