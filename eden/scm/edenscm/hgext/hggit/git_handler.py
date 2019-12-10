@@ -1150,7 +1150,7 @@ class GitHandler(object):
                     exportable[rev] = all_exportable[rev]
             return self.get_changed_refs(refs, exportable, force)
 
-        def genpack(have, want):
+        def genpack(have, want, progress=None, ofs_delta=True):
             commits = []
             for mo in self.git.object_store.find_missing_objects(have, want):
                 (sha, name) = mo
@@ -1166,7 +1166,15 @@ class GitHandler(object):
                 for commit in commits:
                     self.ui.debug("%s\n" % commit)
                 self.ui.status(_("adding objects\n"))
-            return self.git.object_store.generate_pack_contents(have, want)
+            genpack = getattr(self.git.object_store, "generate_pack_data", None)
+            if genpack is not None:
+                # dulwich >= 0.19 has generate_pack_data
+                return genpack(
+                    have, want, progress=None, ofs_delta=True
+                )
+            else:
+                # dulwich < 0.19 has generate_pack_contents
+                return self.git.object_store.generate_pack_contents(have, want)
 
         def callback(remote_info):
             # dulwich (perhaps git?) wraps remote output at a fixed width but
