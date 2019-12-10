@@ -82,6 +82,12 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
   return makeFuture(make_shared<Tree>(iter->second));
 }
 
+folly::Future<std::shared_ptr<const Tree>> FakeObjectStore::getTreeForManifest(
+    const Hash& commitID,
+    const Hash& /* manifestID */) const {
+  return getTreeForCommit(commitID);
+}
+
 Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
   // Might be nice in the future to differentiate between blob and metadata
   // accesses, since the latter can be cheaper.

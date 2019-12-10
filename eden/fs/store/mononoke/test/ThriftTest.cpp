@@ -251,6 +251,25 @@ TEST_F(MononokeThriftTest, getTreeForCommit) {
   EXPECT_EQ(first.getName(), "file");
 }
 
+TEST_F(MononokeThriftTest, getTreeForManifest) {
+  const std::string blob = "hello";
+  const std::string changesetHash = "8888888888888888888888888888888888888888";
+  const std::string manifest = "ffffffffffffffffffffffffffffffffffffffff";
+  const std::vector<MononokeFile> files = {
+      makeFile("file", "ffffffffffffffffffffffffffffffffffffffff"),
+  };
+
+  handler->setGetTreeExpectation(manifest, files);
+  handler->setGetChangesetExpectation(changesetHash, manifest);
+
+  auto result = store.getTreeForManifest(Hash(changesetHash), Hash(manifest))
+                    .get(kTimeout);
+  auto entries = result->getTreeEntries();
+
+  auto first = entries.at(0);
+  EXPECT_EQ(first.getName(), "file");
+}
+
 TEST_F(MononokeThriftTest, getChangesetNotFound) {
   const std::string changesetHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const std::string manifest = "ffffffffffffffffffffffffffffffffffffffff";

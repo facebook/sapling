@@ -40,6 +40,9 @@ class BackingStore {
   virtual folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) = 0;
   virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) = 0;
+  virtual folly::Future<std::unique_ptr<Tree>> getTreeForManifest(
+      const Hash& commitID,
+      const Hash& manifestID) = 0;
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const {
     return folly::unit;

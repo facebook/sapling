@@ -151,6 +151,13 @@ MononokeThriftBackingStore::getTreeForCommit(const Hash& commitID) {
       });
 }
 
+folly::Future<std::unique_ptr<Tree>>
+MononokeThriftBackingStore::getTreeForManifest(
+    const Hash& /* commitID */,
+    const Hash& manifestID) {
+  return getTree(manifestID);
+}
+
 template <typename Func>
 std::invoke_result_t<Func, MononokeAPIServiceAsyncClient*>
 MononokeThriftBackingStore::withClient(Func&& func) {

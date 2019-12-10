@@ -78,6 +78,9 @@ class HgBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
+  folly::Future<std::unique_ptr<Tree>> getTreeForManifest(
+      const Hash& commitID,
+      const Hash& manifestID) override;
   FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
@@ -155,6 +158,10 @@ class HgBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Blob>> getBlobFromHgImporter(const Hash& id);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
+
+  folly::Future<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
+      const Hash& commitID,
+      const Hash& rootTreeHash);
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.
   folly::Future<std::unique_ptr<Tree>> importTreeForCommit(Hash commitID);

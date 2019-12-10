@@ -37,6 +37,9 @@ class FakeObjectStore : public IObjectStore {
       const Hash& id) const override;
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID) const override;
+  folly::Future<std::shared_ptr<const Tree>> getTreeForManifest(
+      const Hash& commitID,
+      const Hash& manifestID) const override;
   folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
   folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;

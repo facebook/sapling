@@ -112,6 +112,29 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
       });
 }
 
+Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
+    const Hash& commitID,
+    const Hash& manifestID) const {
+  XLOG(DBG3) << "getTreeForManifest(" << commitID << ", " << manifestID << ")";
+
+  recordBackingStoreImport();
+  return backingStore_->getTreeForManifest(commitID, manifestID)
+      .thenValue([commitID, manifestID](std::shared_ptr<const Tree> tree) {
+        if (!tree) {
+          throw std::domain_error(folly::to<string>(
+              "unable to import commit ",
+              commitID.toString(),
+              " with manifest node ",
+              manifestID.toString()));
+        }
+
+        // For now we assume that the BackingStore will insert the Tree into the
+        // LocalStore on its own, so we don't have to update the LocalStore
+        // ourselves here.
+        return tree;
+      });
+}
+
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
     const std::vector<Hash>& ids) const {
   // In theory we could/should ask the localStore_ to filter the list

@@ -42,7 +42,9 @@ class FakeBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
-
+  folly::Future<std::unique_ptr<Tree>> getTreeForManifest(
+      const Hash& commitID,
+      const Hash& manifestID) override;
   /**
    * Add a Blob to the backing store
    *

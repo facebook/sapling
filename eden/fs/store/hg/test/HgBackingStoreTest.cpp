@@ -26,6 +26,7 @@ struct TestRepo {
   AbsolutePath testPath{testDir.path().string()};
   HgRepo repo{testPath + "repo"_pc};
   Hash commit1;
+  Hash manifest1;
 
   TestRepo() {
     repo.hgInit();
@@ -37,6 +38,7 @@ struct TestRepo {
     repo.writeFile("src/hello.txt", "world\n");
     repo.hg("add");
     commit1 = repo.commit("Initial commit");
+    manifest1 = repo.getManifestForCommit(commit1);
   }
 };
 
@@ -73,4 +75,10 @@ TEST_F(
   ASSERT_THAT(
       tree1->getEntryNames(),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
+}
+
+TEST_F(HgBackingStoreTest, getTreeForManifest) {
+  auto tree1 = objectStore->getTreeForCommit(commit1).get(0ms);
+  auto tree2 = objectStore->getTreeForManifest(commit1, manifest1).get(0ms);
+  EXPECT_EQ(tree1->getHash(), tree2->getHash());
 }

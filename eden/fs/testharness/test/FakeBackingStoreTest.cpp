@@ -263,6 +263,69 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
       "tree .* for commit .* not found");
 }
 
+TEST_F(FakeBackingStoreTest, getTreeForManifest) {
+  // Set up one commit with a root tree
+  auto dir1Hash = makeTestHash("abc");
+  auto* dir1 = store_->putTree(dir1Hash, {{"foo", store_->putBlob("foo\n")}});
+  auto hash1 = makeTestHash("1");
+  auto* commit1 = store_->putCommit(hash1, dir1);
+  // Set up a second commit, but don't actually add the tree object for this one
+  auto hash2 = makeTestHash("2");
+  auto hash3 = makeTestHash("3");
+  store_->putCommit(hash2, hash3);
+
+  auto future1 = store_->getTreeForManifest(hash1, dir1Hash);
+  // Since we are not looking up the commit hash, but since the tree exists, we
+  // are waiting on the tree to be triggered
+  EXPECT_FALSE(future1.isReady());
+
+  auto future2 = store_->getTreeForManifest(hash2, hash3);
+  // Since we are not looking up the commit hash, and since the tree does not
+  // exist, we are not waiting on the tree to be triggered to resolve this.
+  EXPECT_TRUE(future2.isReady());
+  // This should cause future2 to fail since the tree does not actually exist.
+  EXPECT_THROW_RE(
+      std::move(future2).get(),
+      std::domain_error,
+      "tree .* for commit .* not found");
+
+  // Trigger the tree, the first future should be ready.
+  dir1->trigger();
+  ASSERT_TRUE(future1.isReady());
+  EXPECT_EQ(dir1Hash, std::move(future1).get()->getHash());
+
+  // Get another future for commit1
+  auto future3 = store_->getTreeForManifest(hash1, dir1Hash);
+  EXPECT_FALSE(future3.isReady());
+  // Triggering the directory now should have an effect since we are not waiting
+  // to look up the manifest id using the commit hash and are only waiting on
+  // the directory
+  dir1->trigger();
+  EXPECT_TRUE(future3.isReady());
+  EXPECT_EQ(dir1Hash, std::move(future3).get()->getHash());
+
+  // Try triggering errors
+  auto future4 = store_->getTreeForManifest(hash1, dir1Hash);
+  EXPECT_FALSE(future4.isReady());
+  commit1->triggerError(std::runtime_error("bad luck"));
+  EXPECT_FALSE(future4.isReady());
+  dir1->trigger();
+  EXPECT_TRUE(future4.isReady());
+  // Since getTreeForManifest does not depend on the commit to get the tree, and
+  // since the tree is already in the store, an error being triggered with the
+  // commit will not cause getTreeForManifest to fail
+  EXPECT_EQ(dir1Hash, std::move(future4).get()->getHash());
+
+  auto future5 = store_->getTreeForManifest(hash1, dir1Hash);
+  EXPECT_FALSE(future5.isReady());
+  commit1->trigger();
+  EXPECT_FALSE(future5.isReady());
+  dir1->triggerError(std::runtime_error("PC Load Letter"));
+  ASSERT_TRUE(future5.isReady());
+  EXPECT_THROW_RE(
+      std::move(future5).get(), std::runtime_error, "PC Load Letter");
+}
+
 TEST_F(FakeBackingStoreTest, maybePutBlob) {
   auto foo1 = store_->maybePutBlob("foo\n");
   EXPECT_TRUE(foo1.second);

@@ -284,3 +284,46 @@ TEST_F(MononokeHttpBackingStoreTest, testGetTreeForCommit) {
   Tree expected_tree(std::move(expected_entries), treehash);
   EXPECT_TRUE(expected_tree == *tree);
 }
+
+TEST_F(MononokeHttpBackingStoreTest, testGetTreeForManifest) {
+  auto server = createServer();
+  auto blobs = getBlobs();
+  auto commithash = this->commithash;
+  auto manifesthash = this->treehash;
+
+  ScopedEventBaseThread evbThread;
+  MononokeHttpBackingStore store(
+      getServerAddress(server.get()),
+      "repo",
+      std::chrono::milliseconds(300),
+      evbThread.getEventBase(),
+      nullptr);
+  auto tree = store.getTreeForManifest(commithash, manifesthash).get();
+  auto tree_entries = tree->getTreeEntries();
+
+  std::vector<TreeEntry> expected_entries{
+      TreeEntry(
+          Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
+          "a",
+          TreeEntryType::REGULAR_FILE),
+      TreeEntry(
+          Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
+          "b",
+          TreeEntryType::REGULAR_FILE),
+      TreeEntry(
+          Hash("3333333333333333333333333333333333333333"),
+          "dir",
+          TreeEntryType::TREE),
+      TreeEntry(
+          Hash("4444444444444444444444444444444444444444"),
+          "exec",
+          TreeEntryType::EXECUTABLE_FILE),
+      TreeEntry(
+          Hash("5555555555555555555555555555555555555555"),
+          "link",
+          TreeEntryType::SYMLINK),
+  };
+
+  Tree expected_tree(std::move(expected_entries), treehash);
+  EXPECT_TRUE(expected_tree == *tree);
+}

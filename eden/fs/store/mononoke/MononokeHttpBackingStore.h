@@ -55,6 +55,9 @@ class MononokeHttpBackingStore : public BackingStore {
   virtual folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
+  folly::Future<std::unique_ptr<Tree>> getTreeForManifest(
+      const Hash& commitID,
+      const Hash& manifestID) override;
 
  private:
   // Forbidden copy constructor and assignment operator

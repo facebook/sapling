@@ -209,6 +209,13 @@ folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTreeForCommit(
       });
 }
 
+folly::Future<std::unique_ptr<Tree>>
+MononokeHttpBackingStore::getTreeForManifest(
+    const Hash& /* commitID */,
+    const Hash& manifestID) {
+  return getTree(manifestID);
+}
+
 folly::Future<SocketAddressWithHostname>
 MononokeHttpBackingStore::getAddress() {
   return folly::via(executor_, [this] {

@@ -102,6 +102,7 @@ class HgRepo {
   void appendToHgrc(const std::vector<std::string>& lines);
 
   Hash commit(folly::StringPiece message);
+  Hash getManifestForCommit(Hash commit);
 
   void mkdir(RelativePathPiece path, mode_t permissions = 0755);
   void mkdir(folly::StringPiece path, mode_t permissions = 0755) {

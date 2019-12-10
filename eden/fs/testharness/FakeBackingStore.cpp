@@ -83,24 +83,32 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
   return storedTreeHash->getFuture().thenValue(
       [this, commitID](const std::unique_ptr<Hash>& hash) {
         // Check in the LocalStore for the tree first.
-        return localStore_->getTree(*hash).thenValue(
-            [this, commitID, hash = *hash](std::unique_ptr<Tree> localValue) {
-              if (localValue) {
-                return makeFuture(std::move(localValue));
-              }
-
-              // Next look up the tree in our BackingStore data
-              auto data = data_.rlock();
-              auto treeIter = data->trees.find(hash);
-              if (treeIter == data->trees.end()) {
-                return makeFuture<unique_ptr<Tree>>(std::domain_error(
-                    "tree " + hash.toString() + " for commit " +
-                    commitID.toString() + " not found"));
-              }
-
-              return treeIter->second->getFuture();
-            });
+        return getTreeForManifest(commitID, *hash);
       });
+}
+
+folly::Future<std::unique_ptr<Tree>> FakeBackingStore::getTreeForManifest(
+    const Hash& commitID,
+    const Hash& manifestID) {
+  // Check in the LocalStore for the tree first.
+  return localStore_->getTree(manifestID)
+      .thenValue(
+          [this, commitID, manifestID](std::unique_ptr<Tree> localValue) {
+            if (localValue) {
+              return makeFuture(std::move(localValue));
+            }
+
+            // Next look up the tree in our BackingStore data
+            auto data = data_.rlock();
+            auto treeIter = data->trees.find(manifestID);
+            if (treeIter == data->trees.end()) {
+              return makeFuture<unique_ptr<Tree>>(std::domain_error(
+                  "tree " + manifestID.toString() + " for commit " +
+                  commitID.toString() + " not found"));
+            }
+
+            return treeIter->second->getFuture();
+          });
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {

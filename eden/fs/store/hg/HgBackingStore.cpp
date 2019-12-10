@@ -784,24 +784,39 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
             auto rootTreeHash = Hash{result.bytes()};
             XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
                        << " for mercurial commit " << commitID.toString();
+            return getTreeForRootTreeImpl(commitID, rootTreeHash);
+          });
+}
 
-            return localStore_->getTree(rootTreeHash)
-                .thenValue(
-                    [this, rootTreeHash, commitID](std::unique_ptr<Tree> tree)
-                        -> folly::Future<unique_ptr<Tree>> {
-                      if (tree) {
-                        return std::move(tree);
-                      }
+folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForManifest(
+    const Hash& commitID,
+    const Hash& manifestID) {
+  // Construct the edenTreeID to pass to localStore lookup
+  auto rootTreeHash =
+      HgProxyHash::prepareToStore(RelativePathPiece{}, manifestID).first;
+  return getTreeForRootTreeImpl(commitID, rootTreeHash).via(serverThreadPool_);
+}
 
-                      // No corresponding tree for this commit ID! Must
-                      // re-import. This could happen if RocksDB is corrupted
-                      // in some way or deleting entries races with
-                      // population.
-                      XLOG(WARN) << "No corresponding tree " << rootTreeHash
-                                 << " for commit " << commitID
-                                 << "; will import again";
-                      return importTreeForCommit(commitID);
-                    });
+folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
+    const Hash& commitID,
+    const Hash& rootTreeHash) {
+  return localStore_->getTree(rootTreeHash)
+      .thenValue(
+          [this, rootTreeHash, commitID](
+              std::unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
+            if (tree) {
+              return std::move(tree);
+            }
+
+            // No corresponding tree for this commit ID! Must
+            // re-import. This could happen if RocksDB is corrupted
+            // in some way or deleting entries races with
+            // population.
+            return importTreeForCommit(commitID).thenValue(
+                [rootTreeHash](std::unique_ptr<Tree> tree) {
+                  DCHECK_EQ(rootTreeHash, tree->getHash());
+                  return tree;
+                });
           });
 }
 

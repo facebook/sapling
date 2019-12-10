@@ -162,6 +162,11 @@ Hash HgRepo::commit(StringPiece message) {
   return Hash{folly::rtrimWhitespace(output)};
 }
 
+Hash HgRepo::getManifestForCommit(Hash commit) {
+  auto output = hg("log", "-r", commit.toString(), "-T{manifest}\\n");
+  return Hash{folly::rtrimWhitespace(output)};
+}
+
 void HgRepo::mkdir(RelativePathPiece path, mode_t permissions) {
   auto fullPath = path_ + path;
   auto rc = ::mkdir(fullPath.value().c_str(), permissions);
