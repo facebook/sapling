@@ -8,7 +8,9 @@
 
 use crate::graph::{FileContentData, Node, NodeData};
 use crate::parse_args::parse_args_common;
-use crate::progress::{do_count, progress_stream};
+use crate::progress::{
+    progress_stream, report_state, ProgressStateCountByType, ProgressStateMutex,
+};
 use crate::state::WalkState;
 use crate::tail::walk_exact_tail;
 use crate::walk::StepStats;
@@ -24,6 +26,7 @@ use futures::{
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;
+use std::time::Duration;
 
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream>(
@@ -60,14 +63,20 @@ pub fn scrub_objects(
 ) -> BoxFuture<(), Error> {
     let (blobrepo, walk_params) = try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        walk_params.include_types.clone(),
+        100,
+        Duration::from_secs(1),
+    ));
 
     let make_sink = {
-        cloned!(ctx);
+        cloned!(ctx, walk_params.quiet);
         move |walk_output| {
-            cloned!(ctx);
+            cloned!(ctx, progress_state);
             let loading = loading_stream(walk_output);
-            let show_progress = progress_stream(ctx.clone(), 100, loading);
-            let one_fut = do_count(ctx, show_progress);
+            let show_progress =
+                progress_stream(ctx.clone(), quiet, progress_state.clone(), loading);
+            let one_fut = report_state(ctx, progress_state.clone(), show_progress);
             one_fut
         }
     };

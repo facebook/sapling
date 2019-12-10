@@ -107,6 +107,14 @@ function megarepo_tool_multirepo {
     "$@"
 }
 
+function mononoke_walker {
+  GLOG_minloglevel=5 "$MONONOKE_WALKER" \
+    "${CACHING_ARGS[@]}" \
+    --repo-id $REPOID \
+    --mononoke-config-path mononoke-config  \
+    "$@"
+}
+
 function mononoke_x_repo_sync_once() {
   source_repo_id=$1
   target_repo_id=$2

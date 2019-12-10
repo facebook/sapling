@@ -8,6 +8,7 @@
 
 use crate::blobstore;
 use crate::graph::{Node, NodeType};
+use crate::progress::sort_by_string;
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
@@ -27,6 +28,7 @@ pub struct RepoWalkParams {
     pub walk_roots: Vec<Node>,
     pub include_types: HashSet<NodeType>,
     pub tail_secs: Option<u64>,
+    pub quiet: bool,
 }
 
 // Sub commands
@@ -34,6 +36,7 @@ pub const COUNT_OBJECTS: &'static str = "count-objects";
 pub const SCRUB_OBJECTS: &'static str = "scrub-objects";
 
 // Subcommand args
+const QUIET_ARG: &'static str = "quiet";
 const ENABLE_REDACTION_ARG: &'static str = "enable-redaction";
 const SCHEDULED_MAX_ARG: &'static str = "scheduled-max";
 const TAIL_INTERVAL_ARG: &'static str = "tail-interval";
@@ -88,6 +91,14 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
 // Add the args the "start from repo" walk types need
 fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
     return subcmd
+        .arg(
+            Arg::with_name(QUIET_ARG)
+                .long(QUIET_ARG)
+                .short("q")
+                .takes_value(false)
+                .required(false)
+                .help("Log a lot less"),
+        )
         .arg(
             Arg::with_name(ENABLE_REDACTION_ARG)
                 .long(ENABLE_REDACTION_ARG)
@@ -157,8 +168,8 @@ pub fn parse_args_common(
     sub_m: &ArgMatches<'_>,
 ) -> Result<(BoxFuture<BlobRepo, Error>, RepoWalkParams), Error> {
     let (_, config) = args::get_config(&matches)?;
+    let quiet = sub_m.is_present(QUIET_ARG);
     let common_config = cmdlib::args::read_common_config(&matches)?;
-
     let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
@@ -198,15 +209,24 @@ pub fn parse_args_common(
 
     info!(logger, "Walking roots {:?} ", walk_roots);
 
-    info!(logger, "Walking types {:?}", include_types);
+    info!(
+        logger,
+        "Walking node types {:?}",
+        sort_by_string(&include_types)
+    );
 
     let myrouter_port = args::parse_myrouter_port(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let storage_config = match storage_id {
-        Some(storage_id) => args::read_storage_configs(&matches)?
-            .remove(storage_id)
-            .ok_or(format_err!("Storage id `{}` not found", storage_id))?,
+        Some(storage_id) => {
+            let mut configs = args::read_storage_configs(&matches)?;
+            configs.remove(storage_id).ok_or(format_err!(
+                "Storage id `{}` not found in {:?}",
+                storage_id,
+                configs.keys()
+            ))?
+        }
         None => config.storage_config.clone(),
     };
 
@@ -241,6 +261,7 @@ pub fn parse_args_common(
             walk_roots,
             include_types,
             tail_secs,
+            quiet,
         },
     ))
 }

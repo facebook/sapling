@@ -50,7 +50,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     monitoring::start_fb303_and_stats_agg(fb, &mut runtime, app_name, &logger, &matches)?;
     let res = runtime.block_on(future);
 
-    info!(&logger, "Waiting for in-flight requests to finish...");
     runtime.shutdown_on_idle();
 
     info!(&logger, "Exiting...");

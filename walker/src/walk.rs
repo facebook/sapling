@@ -304,7 +304,7 @@ pub struct StepStats {
     pub visited_of_type: usize,
 }
 
-impl Add for StepStats {
+impl Add<StepStats> for StepStats {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self {
