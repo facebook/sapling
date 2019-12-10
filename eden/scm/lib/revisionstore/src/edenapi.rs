@@ -19,15 +19,33 @@ use crate::{
     remotestore::RemoteStore,
 };
 
+#[derive(Clone)]
+enum EdenApiRemoteStoreKind {
+    File,
+    Tree,
+}
+
 /// Small shim around `EdenApi` that implements the `RemoteDataStore` and `DataStore` trait. All
 /// the `DataStore` methods will always fetch data from the network.
 #[derive(Clone)]
-pub struct EdenApiRemoteStore(Arc<Box<dyn EdenApi>>);
+pub struct EdenApiRemoteStore {
+    edenapi: Arc<Box<dyn EdenApi>>,
+    kind: EdenApiRemoteStoreKind,
+}
 
-#[cfg(test)]
 impl EdenApiRemoteStore {
-    pub fn new(edenapi: Box<dyn EdenApi>) -> Self {
-        Self(Arc::new(edenapi))
+    pub fn filestore(edenapi: Arc<Box<dyn EdenApi>>) -> Self {
+        Self {
+            edenapi,
+            kind: EdenApiRemoteStoreKind::File,
+        }
+    }
+
+    pub fn treestore(edenapi: Arc<Box<dyn EdenApi>>) -> Self {
+        Self {
+            edenapi,
+            kind: EdenApiRemoteStoreKind::Tree,
+        }
     }
 }
 
@@ -58,7 +76,11 @@ struct EdenApiRemoteDataStore {
 
 impl RemoteDataStore for EdenApiRemoteDataStore {
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        let (entries, _) = self.inner.edenapi.0.get_files(keys, None)?;
+        let edenapi = &self.inner.edenapi;
+        let (entries, _) = match edenapi.kind {
+            EdenApiRemoteStoreKind::File => edenapi.edenapi.get_files(keys, None)?,
+            EdenApiRemoteStoreKind::Tree => edenapi.edenapi.get_trees(keys, None)?,
+        };
         for entry in entries {
             let key = entry.0.clone();
             let data = entry.1;
@@ -133,7 +155,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), d.data.clone());
 
-        let edenapi = EdenApiRemoteStore::new(fake_edenapi(map));
+        let edenapi = EdenApiRemoteStore::filestore(Arc::new(fake_edenapi(map)));
 
         let remotestore = edenapi.datastore(Box::new(store.clone()));
         assert_eq!(remotestore.get_delta(&k)?.unwrap(), d);
@@ -148,7 +170,7 @@ mod tests {
         let store = IndexedLogDataStore::new(&tmp)?;
 
         let map = HashMap::new();
-        let edenapi = EdenApiRemoteStore::new(fake_edenapi(map));
+        let edenapi = EdenApiRemoteStore::filestore(Arc::new(fake_edenapi(map)));
 
         let remotestore = edenapi.datastore(Box::new(store.clone()));
 
