@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "FsChannel.h"
+#include "PrjfsChannel.h"
 #include "folly/portability/Windows.h"
 
 #include <folly/logging/xlog.h>
@@ -21,12 +21,12 @@ using folly::sformat;
 namespace facebook {
 namespace eden {
 
-FsChannel::FsChannel(const AbsolutePath& mountPath, EdenMount* mount)
+PrjfsChannel::PrjfsChannel(EdenMount* mount)
     : mount_{mount},
       mountId_{Guid::generate()},
-      winPath_{edenToWinPath(mountPath.value())} {
+      winPath_{edenToWinPath(mount->getPath().value())} {
   XLOG(INFO) << sformat(
-      "Creating FsChannel, mount ({}), MountPath ({})",
+      "Creating PrjfsChannel, mount ({}), MountPath ({})",
       mount,
       mount->getPath());
 
@@ -38,7 +38,8 @@ FsChannel::FsChannel(const AbsolutePath& mountPath, EdenMount* mount)
     DWORD error = GetLastError();
     if (error != ERROR_ALREADY_EXISTS) {
       throw makeWin32ErrorExplicit(
-          error, sformat("Failed to create the mount point ({})", mountPath));
+          error,
+          sformat("Failed to create the mount point ({})", mount->getPath()));
     }
   } else {
     XLOG(INFO) << sformat(
@@ -54,17 +55,18 @@ FsChannel::FsChannel(const AbsolutePath& mountPath, EdenMount* mount)
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
     throw makeHResultErrorExplicit(
-        result, sformat("Failed to setup the mount point({})", mountPath));
+        result,
+        sformat("Failed to setup the mount point({})", mount->getPath()));
   }
 }
 
-FsChannel::~FsChannel() {
+PrjfsChannel::~PrjfsChannel() {
   if (isRunning_) {
     stop();
   }
 }
 
-void FsChannel::start() {
+void PrjfsChannel::start() {
   auto callbacks = PRJ_CALLBACKS();
   auto options = PRJ_STARTVIRTUALIZING_OPTIONS();
   callbacks.StartDirectoryEnumerationCallback = startEnumeration;
@@ -96,7 +98,7 @@ void FsChannel::start() {
 
   auto dispatcher = mount_->getDispatcher();
   XLOG(INFO) << sformat(
-      "Starting FsChannel Path ({}) Dispatcher (0x{:x})",
+      "Starting PrjfsChannel Path ({}) Dispatcher (0x{:x})",
       mount_->getPath(),
       uintptr_t(dispatcher));
   DCHECK(dispatcher->isValidDispatcher());
@@ -111,8 +113,8 @@ void FsChannel::start() {
   isRunning_ = true;
 }
 
-void FsChannel::stop() {
-  XLOG(INFO) << sformat("Stopping FsChannel ({})", mount_->getPath());
+void PrjfsChannel::stop() {
+  XLOG(INFO) << sformat("Stopping PrjfsChannel ({})", mount_->getPath());
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
   isRunning_ = false;
@@ -122,7 +124,7 @@ void FsChannel::stop() {
 // TODO: We need to add an extra layer to absorb all the exceptions generated in
 // Eden from leaking into FS. This would come in soon.
 
-EdenDispatcher* FsChannel::getDispatcher(
+EdenDispatcher* PrjfsChannel::getDispatcher(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   DCHECK(callbackData);
   auto dispatcher = static_cast<EdenDispatcher*>(callbackData->InstanceContext);
@@ -131,21 +133,21 @@ EdenDispatcher* FsChannel::getDispatcher(
   return dispatcher;
 }
 
-HRESULT FsChannel::startEnumeration(
+HRESULT PrjfsChannel::startEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   return getDispatcher(callbackData)
       ->startEnumeration(*callbackData, *enumerationId);
 }
 
-HRESULT FsChannel::endEnumeration(
+HRESULT PrjfsChannel::endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   getDispatcher(callbackData)->endEnumeration(*enumerationId);
   return S_OK;
 }
 
-HRESULT FsChannel::getEnumerationData(
+HRESULT PrjfsChannel::getEnumerationData(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId,
     PCWSTR searchExpression,
@@ -158,12 +160,12 @@ HRESULT FsChannel::getEnumerationData(
           dirEntryBufferHandle);
 }
 
-HRESULT FsChannel::getPlaceholderInfo(
+HRESULT PrjfsChannel::getPlaceholderInfo(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   return getDispatcher(callbackData)->getFileInfo(*callbackData);
 }
 
-HRESULT FsChannel::getFileData(
+HRESULT PrjfsChannel::getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) noexcept {
@@ -171,7 +173,7 @@ HRESULT FsChannel::getFileData(
       ->getFileData(*callbackData, byteOffset, length);
 }
 
-HRESULT FsChannel::notification(
+HRESULT PrjfsChannel::notification(
     const PRJ_CALLBACK_DATA* callbackData,
     BOOLEAN isDirectory,
     PRJ_NOTIFICATION notificationType,

@@ -66,7 +66,6 @@ EdenMount::EdenMount(
       objectStore_{std::move(objectStore)},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       dispatcher_{*this},
-      fsChannel_{config_->getMountPath(), this},
       journal_{std::move(journal)},
       mountGeneration_{generateLuid()} {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
@@ -160,7 +159,7 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
 }
 
 void EdenMount::start() {
-  fsChannel_.start();
+  fsChannel_->start();
   createRepoConfig(
       getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
   if (!getCurrentState()) {
@@ -171,7 +170,7 @@ void EdenMount::start() {
 }
 
 void EdenMount::stop() {
-  fsChannel_.stop();
+  fsChannel_->stop();
 }
 
 void EdenMount::destroy() {

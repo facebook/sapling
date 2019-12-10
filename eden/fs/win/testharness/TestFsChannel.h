@@ -6,19 +6,20 @@
  */
 
 #pragma once
+#include "eden/fs/win/mount/FsChannel.h"
 
 namespace facebook {
 namespace eden {
 
-class FsChannel {
+class TestFsChannel : public FsChannel {
  public:
-  FsChannel(const FsChannel&) = delete;
-  FsChannel& operator=(const FsChannel&) = delete;
+  TestFsChannel(const TestFsChannel&) = delete;
+  TestFsChannel& operator=(const TestFsChannel&) = delete;
 
-  FsChannel(){};
-  virtual ~FsChannel() = default;
-  virtual void start() = 0;
-  virtual void stop() = 0;
+  TestFsChannel(){};
+  virtual ~TestFsChannel() = default;
+  virtual void start() override {}
+  virtual void stop() override {}
 };
 
 } // namespace eden

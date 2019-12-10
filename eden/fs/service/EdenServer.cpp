@@ -49,6 +49,7 @@
 
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
+#include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual
 #include "eden/fs/win/utils/FileUtils.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
@@ -952,6 +953,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       std::move(objectStore),
       serverState_,
       std::move(journal));
+  edenMount->initialize(std::make_unique<PrjfsChannel>(edenMount.get()));
   addToMountPoints(edenMount);
   edenMount->start();
   return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));

@@ -120,6 +120,10 @@ class EdenMount {
    */
   void destroy();
 
+  void initialize(std::unique_ptr<FsChannel>&& fsChannel) {
+    fsChannel_ = std::move(fsChannel);
+  }
+
   folly::Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
   shutdown(bool doTakeover, bool allowFuseNotStarted = false);
 
@@ -422,7 +426,7 @@ class EdenMount {
   /**
    * This is the channel between ProjectedFS and rest of Eden.
    */
-  FsChannel fsChannel_;
+  std::unique_ptr<FsChannel> fsChannel_;
 
   /**
    * A mutex around all name-changing operations in this mount point.
