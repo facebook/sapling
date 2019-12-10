@@ -72,7 +72,7 @@ class testatomictempfile(unittest.TestCase):
         # "filesystem time"
         for i in xrange(5):
             atomicwrite(False)
-            oldstat = os.stat(self._filename)
+            oldstat = util.stat(self._filename)
             if oldstat.st_ctime != oldstat.st_mtime:
                 # subsequent changing never causes ambiguity
                 continue
@@ -83,7 +83,7 @@ class testatomictempfile(unittest.TestCase):
             # whether st_mtime is advanced multiple times as expected
             for j in xrange(repetition):
                 atomicwrite(True)
-            newstat = os.stat(self._filename)
+            newstat = util.stat(self._filename)
             if oldstat.st_ctime != newstat.st_ctime:
                 # timestamp ambiguity was naturally avoided while repetition
                 continue
