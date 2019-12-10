@@ -1051,7 +1051,6 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
     unique_ptr<string> mountPoint,
     unique_ptr<string> oldHash,
     unique_ptr<string> newHash) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
       *mountPoint,
@@ -1062,9 +1061,6 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
   auto mount = server_->getMount(*mountPoint);
   return helper.wrapFuture(
       diffCommitsForStatus(mount->getObjectStore(), id1, id2));
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::debugGetScmTree(

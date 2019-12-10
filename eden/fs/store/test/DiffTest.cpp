@@ -154,6 +154,8 @@ TEST_F(DiffTest, directoryOrdering) {
           Pair("src/foo/zzz.txt", ScmFileStatus::REMOVED)));
 }
 
+#ifndef _WIN32
+// Not running this test on Windows because of the broken symlink support
 TEST_F(DiffTest, modeChange) {
   FakeTreeBuilder builder;
 
@@ -179,6 +181,7 @@ TEST_F(DiffTest, modeChange) {
       result2->entries,
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 }
+#endif // !_WIN32
 
 TEST_F(DiffTest, newDirectory) {
   FakeTreeBuilder builder;

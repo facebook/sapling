@@ -13,7 +13,6 @@ if (WIN32)
   list(
     REMOVE_ITEM STORE_SRCS
       ${CMAKE_CURRENT_SOURCE_DIR}/BlobAccess.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/Diff.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/RocksDbLocalStore.cpp
   )
 endif()
@@ -49,5 +48,6 @@ endif()
 
 if (NOT WIN32)
   add_subdirectory(mononoke)
-  add_subdirectory(test)
 endif()
+
+add_subdirectory(test)
