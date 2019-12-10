@@ -941,7 +941,6 @@ void EdenServiceHandler::getManifestEntry(
     ManifestEntry& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePath) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, *relativePath);
   auto mount = server_->getMount(*mountPoint);
   auto filename = RelativePathPiece{*relativePath};
@@ -953,16 +952,12 @@ void EdenServiceHandler::getManifestEntry(
     error.set_key(*relativePath);
     throw error;
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 // TODO(mbolin): Make this a method of ObjectStore and make it Future-based.
 std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
     const EdenMount* mount,
     const RelativePathPiece filename) {
-#ifndef _WIN32
   auto tree = mount->getRootTree();
   auto parentDirectory = filename.dirname();
   auto objectStore = mount->getObjectStore();
@@ -983,9 +978,6 @@ std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
   }
 
   return std::nullopt;
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::async_tm_getScmStatusV2(
@@ -1033,7 +1025,6 @@ void EdenServiceHandler::async_tm_getScmStatus(
     unique_ptr<string> mountPoint,
     bool listIgnored,
     unique_ptr<string> commitHash) {
-#ifndef _WIN32
   auto* request = callback->getRequest();
   folly::makeFutureWith([&, func = __func__] {
     auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
@@ -1057,9 +1048,6 @@ void EdenServiceHandler::async_tm_getScmStatus(
         apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>::
             completeInThread(std::move(cb), std::move(result));
       });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 Future<unique_ptr<ScmStatus>>

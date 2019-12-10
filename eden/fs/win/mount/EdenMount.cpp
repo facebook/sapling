@@ -7,16 +7,20 @@
 
 #include "eden/fs/win/mount/EdenMount.h"
 
+#include <thrift/lib/cpp2/async/ResponseChannel.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/win/mount/CurrentState.h"
+#include "eden/fs/win/mount/GenerateStatus.h"
 #include "eden/fs/win/mount/RepoConfig.h"
 
 #include <folly/logging/xlog.h>
@@ -91,6 +95,68 @@ std::shared_ptr<const Tree> EdenMount::getRootTree() const {
   // TODO: We should convert callers of this API to use the Future-based
   // version.
   return getRootTreeFuture().get();
+}
+
+folly::Future<folly::Unit> EdenMount::diff(
+    DiffCallback* callback,
+    Hash commitHash,
+    bool listIgnored,
+    bool enforceCurrentParent,
+    apache::thrift::ResponseChannelRequest* request) const {
+  if (enforceCurrentParent) {
+    auto parentInfo = parentInfo_.rlock(std::chrono::milliseconds{500});
+
+    if (!parentInfo) {
+      // We failed to get the lock, which generally means a checkout is in
+      // progress.
+      return folly::makeFuture<folly::Unit>(newEdenError(
+          EdenErrorType::CHECKOUT_IN_PROGRESS,
+          "cannot compute status while a checkout is currently in progress"));
+    }
+
+    if (parentInfo->parents.parent1() != commitHash) {
+      return folly::makeFuture<folly::Unit>(newEdenError(
+          EdenErrorType::OUT_OF_DATE_PARENT,
+          "error computing status: requested parent commit is out-of-date: requested ",
+          commitHash,
+          ", but current parent commit is ",
+          parentInfo->parents.parent1(),
+          ".\nTry running `eden doctor` to remediate"));
+    }
+
+    // TODO: Should we perhaps hold the parentInfo read-lock for the duration of
+    // the status operation?  This would block new checkout operations from
+    // starting until we have finished computing this status call.
+  }
+
+  return objectStore_->getTreeForCommit(commitHash)
+      .thenValue(
+          [this, callback, request](std::shared_ptr<const Tree>&& rootTree) {
+            GenerateStatus generator(
+                getObjectStore(),
+                getCurrentState(),
+                std::move(edenToWinPath(getPath().value())),
+                callback,
+                request);
+            return generator.compute(rootTree).ensure(
+                [generator = std::move(generator)]() {});
+          });
+}
+
+folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
+    Hash commitHash,
+    bool listIgnored,
+    bool enforceCurrentParent,
+    apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) {
+  auto callback = std::make_unique<ScmStatusDiffCallback>();
+  auto callbackPtr = callback.get();
+  return this
+      ->diff(
+          callbackPtr, commitHash, listIgnored, enforceCurrentParent, request)
+      .thenValue([callback = std::move(callback)](auto&&) {
+        return std::make_unique<ScmStatus>(
+            std::move(callback->extractStatus()));
+      });
 }
 
 void EdenMount::start() {

@@ -204,13 +204,31 @@ class EdenMount {
    * @param listIgnored Whether or not to inform the callback of ignored files.
    *     When listIgnored is set to false can speed up the diff computation, as
    *     the code does not need to descend into ignored directories at all.
+   * @param request This ResposeChannelRequest is passed from the ServiceHandler
+   *     and is used to check if the request is still active, because if the
+   *     request is no longer active we will cancel this diff operation.
    *
    * @return Returns a folly::Future that will be fulfilled when the diff
    *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit>
-  diff(DiffCallback* callback, Hash commitHash, bool listIgnored = false) const;
+  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
+      DiffCallback* callback,
+      Hash commitHash,
+      bool listIgnored = false,
+      bool enforceCurrentParent = false,
+      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request =
+          nullptr) const;
+
+  /**
+   * Executes diff against commitHash and returns the ScmStatus for the diff
+   * operation.
+   */
+  folly::Future<std::unique_ptr<ScmStatus>> diff(
+      Hash commitHash,
+      bool listIgnored,
+      bool enforceCurrentParent,
+      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
 
   /**
    * Reset the state to point to the specified parent commit(s), without
@@ -375,7 +393,8 @@ class EdenMount {
 
   std::unique_ptr<DiffContext> createDiffContext(
       DiffCallback* callback,
-      bool listIgnored) const;
+      bool listIgnored,
+      apache::thrift::ResponseChannelRequest* request) const;
 
   /**
    * Private destructor.

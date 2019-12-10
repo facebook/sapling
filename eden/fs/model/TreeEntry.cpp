@@ -16,7 +16,6 @@
 namespace facebook {
 namespace eden {
 
-#ifndef _WIN32
 mode_t modeFromTreeEntryType(TreeEntryType ft) {
   switch (ft) {
     case TreeEntryType::TREE:
@@ -26,11 +25,19 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
     case TreeEntryType::EXECUTABLE_FILE:
       return S_IFREG | 0755;
     case TreeEntryType::SYMLINK:
+#ifdef _WIN32
+      // On Windows, we report symlinks as files. The behaviour here is same as
+      // Mercurial.
+      // TODO: would be nice to log some useful context here!
+      return S_IFREG | 0755;
+#else
       return S_IFLNK | 0755;
+#endif
   }
   XLOG(FATAL) << "illegal file type " << static_cast<int>(ft);
 }
 
+#ifndef _WIN32
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   if (S_ISREG(mode)) {
     return mode & S_IXUSR ? TreeEntryType::EXECUTABLE_FILE
