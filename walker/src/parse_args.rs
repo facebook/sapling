@@ -34,6 +34,7 @@ pub struct RepoWalkParams {
 // Sub commands
 pub const COUNT_OBJECTS: &'static str = "count-objects";
 pub const SCRUB_OBJECTS: &'static str = "scrub-objects";
+pub const COMPRESSION_BENEFIT: &'static str = "compression-benefit";
 
 // Subcommand args
 const QUIET_ARG: &'static str = "quiet";
@@ -44,6 +45,8 @@ const EXCLUDE_TYPE_ARG: &'static str = "exclude-type";
 const INCLUDE_TYPE_ARG: &'static str = "include-type";
 const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
+pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
+pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
 
 // Toplevel args - healer and populate healer have this one at top level
 // so keeping it there for consistency
@@ -72,6 +75,24 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let scrub_objects =
         setup_subcommand_args(SubCommand::with_name(SCRUB_OBJECTS).about("scrub objects"));
 
+    let compression_benefit = setup_subcommand_args(
+        SubCommand::with_name(COMPRESSION_BENEFIT).about("estimate compression benefit"),
+    )
+    .arg(
+        Arg::with_name(COMPRESSION_LEVEL_ARG)
+            .long(COMPRESSION_LEVEL_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Zstd compression level to use. 3 is the default"),
+    )
+    .arg(
+        Arg::with_name(SAMPLE_RATE_ARG)
+            .long(SAMPLE_RATE_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("How many files to sample. Pass 1 to try all, 120 to do 1 in 120, etc."),
+    );
+
     let app = app_template.build()
         .version("0.0.0")
         .about("Walks the mononoke commit and/or derived data graphs, with option of performing validations and modifications")
@@ -82,6 +103,7 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .required(false)
                 .help("id of storage group to operate over, e.g. manifold_xdb_multiplex"),
         )
+        .subcommand(compression_benefit)
         .subcommand(count_objects)
         .subcommand(scrub_objects);
     let app = args::add_fb303_args(app);

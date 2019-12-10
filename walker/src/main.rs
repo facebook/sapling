@@ -23,6 +23,7 @@ mod graph;
 mod parse_args;
 mod progress;
 mod scrub;
+mod sizing;
 mod state;
 mod tail;
 mod walk;
@@ -39,6 +40,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
         (parse_args::SCRUB_OBJECTS, Some(sub_m)) => {
             scrub::scrub_objects(fb, logger.clone(), &matches, sub_m)
+        }
+        (parse_args::COMPRESSION_BENEFIT, Some(sub_m)) => {
+            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m)
         }
         _ => Err(Error::msg("Invalid Arguments, pass --help for usage."))
             .into_future()
