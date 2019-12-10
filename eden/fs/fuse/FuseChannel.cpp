@@ -469,6 +469,7 @@ Future<FuseChannel::StopFuture> FuseChannel::initialize() {
 FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   connInfo_ = connInfo;
+  dispatcher_->initConnection(connInfo);
   XLOG(DBG1) << "Takeover using max_write=" << connInfo_->max_write
              << ", max_readahead=" << connInfo_->max_readahead
              << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);

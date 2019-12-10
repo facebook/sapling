@@ -277,6 +277,26 @@ class TakeoverTest(testcase.EdenRepoTest):
             self.assertEqual(self.page1 + self.page2, c2_hello_file.read())
             self.assertEqual("hello world v2", c2_mainc_file.read())
 
+    def test_readdir_after_graceful_restart(self) -> None:
+        # Ensure capability flags (e.g. FUSE_NO_OPENDIR_SUPPORT) survive
+        # graceful restart
+        self.eden.graceful_restart()
+        self.assertEqual(
+            ["test1.py", "test2.py"],
+            sorted(os.listdir(os.path.join(self.mount, "src", "test"))),
+        )
+
+    def test_readdir_before_and_after_graceful_restart(self) -> None:
+        self.assertEqual(
+            ["test1.py", "test2.py"],
+            sorted(os.listdir(os.path.join(self.mount, "src", "test"))),
+        )
+        self.eden.graceful_restart()
+        self.assertEqual(
+            ["test1.py", "test2.py"],
+            sorted(os.listdir(os.path.join(self.mount, "src", "test"))),
+        )
+
 
 @testcase.eden_repo_test
 class TakeoverRocksDBStressTest(testcase.EdenRepoTest):

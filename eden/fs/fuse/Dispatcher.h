@@ -37,7 +37,7 @@ class MountPoint;
 class RequestData;
 
 class Dispatcher {
-  fuse_init_out connInfo_;
+  fuse_init_out connInfo_{};
   EdenStats* stats_{nullptr};
 
  public:
