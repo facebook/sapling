@@ -26,7 +26,7 @@ use futures_ext::{
 };
 use futures_stats::{Timed, TimedStreamTrait};
 use getbundle_response::create_getbundle_response;
-use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
+use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::{HookExecution, HookManager};
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -763,9 +763,9 @@ impl HgCommands for RepoClient {
             }
         }
 
-        impl Stream for ParentStream<BoxFuture<HgBlobChangeset, hgproto::Error>> {
+        impl Stream for ParentStream<BoxFuture<HgBlobChangeset, Error>> {
             type Item = HgChangesetId;
-            type Error = hgproto::Error;
+            type Error = Error;
 
             fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
                 if self.n == self.bottom || self.n.into_nodehash() == NULL_HASH {

@@ -10,8 +10,8 @@
 
 pub use crate::caching::CachingFilenodes;
 use abomonation_derive::Abomonation;
+use anyhow::{Error, Result};
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
 use mononoke_types::{hash, RepoPathCached, RepositoryId};

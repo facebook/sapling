@@ -12,11 +12,11 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, stream, sync, Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;

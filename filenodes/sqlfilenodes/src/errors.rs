@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{Error, Result};
 use mercurial_types::{HgFileNodeId, RepoPath};
 use thiserror::Error;
 

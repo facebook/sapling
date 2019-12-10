@@ -9,12 +9,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use anyhow::{bail, Context, Error};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{
-    bail, Compat, Error, FutureFailureErrorExt, FutureFailureExt, ResultExt, StreamFailureErrorExt,
-};
+use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt, StreamFailureErrorExt};
 use futures::{
     future::{self, SharedItem},
     stream::{self, Stream},

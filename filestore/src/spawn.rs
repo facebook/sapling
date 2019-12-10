@@ -6,10 +6,9 @@
  * directory of this source tree.
  */
 
-use failure_ext::{format_err, Error};
+use anyhow::{format_err, Error};
 use futures::{sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt;
-use std::result::Result;
 
 // Spawn provides a helper to dispatch futures to the Tokio executor yet retain a handle to their
 // results in the form of a Future. We also provide methods to cast SpawnError into an Error for

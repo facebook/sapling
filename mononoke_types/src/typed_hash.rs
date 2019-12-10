@@ -10,10 +10,10 @@ use std::fmt::{self, Display};
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
+use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use failure_ext::bail;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
@@ -25,7 +25,7 @@ use crate::{
     content_chunk::ContentChunk,
     content_metadata::ContentMetadata,
     deleted_files_manifest::DeletedManifest,
-    errors::*,
+    errors::ErrorKind,
     fastlog_batch::FastlogBatch,
     file_contents::FileContents,
     fsnode::Fsnode,
@@ -203,7 +203,7 @@ macro_rules! impl_typed_hash_no_context {
         }
 
         impl serde::Serialize for $typed {
-            fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
             {

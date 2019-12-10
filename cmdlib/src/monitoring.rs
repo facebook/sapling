@@ -10,8 +10,8 @@
 
 use std::thread::{self};
 
+use anyhow::{format_err, Error};
 use clap::ArgMatches;
-use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
 use futures::Future;
 use services::{self, AliveService};

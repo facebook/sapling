@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::FutureExt;
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};

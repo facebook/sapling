@@ -8,15 +8,13 @@
 
 //! Support for converting Mononoke data structures into in-memory blobs.
 
+use anyhow::Result;
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 
-use crate::{
-    errors::*,
-    typed_hash::{
-        ChangesetId, ContentChunkId, ContentId, ContentMetadataId, DeletedManifestId,
-        FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id,
-    },
+use crate::typed_hash::{
+    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, DeletedManifestId, FastlogBatchId,
+    FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id,
 };
 
 /// A serialized blob in memory.

@@ -7,7 +7,7 @@
  */
 
 use super::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
-use crate::errors::Error;
+use anyhow::Error;
 use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
@@ -97,7 +97,7 @@ impl CachingBonsaiHgMapping {
     }
 }
 
-fn memcache_deserialize(buf: IOBuf) -> ::std::result::Result<BonsaiHgMappingEntry, ()> {
+fn memcache_deserialize(buf: IOBuf) -> Result<BonsaiHgMappingEntry, ()> {
     let bytes: Bytes = buf.into();
 
     let thrift_entry = compact_protocol::deserialize(bytes).map_err(|_| ());

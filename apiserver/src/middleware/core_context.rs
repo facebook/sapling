@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-use std::result::Result;
 use std::time::Instant;
 
 use aclchecker::Identity;

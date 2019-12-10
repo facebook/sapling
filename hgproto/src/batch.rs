@@ -11,9 +11,9 @@
 //! Based on the Mercurial wire protocol documentation. See
 //! https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/wireprotocol.txt.
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
+use anyhow::{bail, Result};
 use bytes::Bytes;
-use failure_ext::bail;
 
 /// Unescape a batch-escaped argument key or value.
 pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {

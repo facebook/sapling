@@ -244,5 +244,5 @@ impl SingleResponse {
 }
 
 pub use commands::{HgCommandRes, HgCommands};
-pub use errors::{Error, ErrorKind, Result};
+pub use errors::ErrorKind;
 pub use handler::HgProtoHandler;

@@ -10,13 +10,13 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use bookmarks::{
     Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
-use failure_ext::Error;
 use fbinit::FacebookInit;
 use futures::{Future, Stream};
 use maplit::hashmap;

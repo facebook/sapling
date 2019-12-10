@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future::ok, Future};
@@ -15,10 +16,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use super::{
-    errors::Error, filter_fetched_ids, BonsaiHgMapping, BonsaiHgMappingEntry,
-    BonsaiOrHgChangesetIds,
-};
+use super::{filter_fetched_ids, BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 
 /// A bonsai <-> hg mapping wrapper that reads from the underlying mapping but writes to memory.
 /// It can be used to prevent a piece of code to do writes to the db but at the same time give

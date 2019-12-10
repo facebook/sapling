@@ -17,9 +17,10 @@ use std::mem;
 use std::slice::Iter;
 
 use abomonation_derive::Abomonation;
+use anyhow::{bail, Error, Result};
 use asyncmemo::Weight;
 use bytes::Bytes;
-use failure_ext::{bail, chain::*};
+use failure_ext::chain::ChainExt;
 use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
@@ -28,7 +29,7 @@ use rand::{seq::SliceRandom, Rng};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::bonsai_changeset::BonsaiChangeset;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::hash::{Blake2, Context};
 use crate::thrift;
 

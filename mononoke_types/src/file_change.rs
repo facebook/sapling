@@ -8,13 +8,13 @@
 
 use std::fmt;
 
-use failure_ext::bail;
+use anyhow::{bail, Context, Result};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
 use serde_derive::Serialize;
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::path::MPath;
 use crate::thrift;
 use crate::typed_hash::{ChangesetId, ContentId};

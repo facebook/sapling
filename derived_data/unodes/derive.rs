@@ -367,7 +367,7 @@ mod tests {
 
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
-            let root_unode: ::std::result::Result<_, Error> =
+            let root_unode: Result<_> =
                 runtime.block_on(unode_id.load(ctx.clone(), repo.blobstore()).from_err());
             let root_unode = root_unode.unwrap();
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
@@ -426,7 +426,7 @@ mod tests {
             );
             let unode_id = runtime.block_on(f).unwrap();
 
-            let unode_mf: ::std::result::Result<_, Error> =
+            let unode_mf: Result<_> =
                 runtime.block_on(unode_id.load(ctx.clone(), repo.blobstore()).from_err());
             let unode_mf = unode_mf.unwrap();
 

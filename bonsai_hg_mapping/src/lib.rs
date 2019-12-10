@@ -15,6 +15,7 @@ use sql::Connection;
 pub use sql_ext::SqlConstructors;
 
 use abomonation_derive::Abomonation;
+use anyhow::{Error, Result};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::{future, Future, IntoFuture};
@@ -30,7 +31,7 @@ mod errors;
 mod mem_writes;
 
 pub use crate::caching::CachingBonsaiHgMapping;
-pub use crate::errors::*;
+pub use crate::errors::ErrorKind;
 pub use crate::mem_writes::MemWritesBonsaiHgMapping;
 
 define_stats! {

@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::{format_err, Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::{format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Future},

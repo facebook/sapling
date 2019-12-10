@@ -146,14 +146,14 @@ impl<'de> serde::de::Visitor<'de> for StringVisitor {
         formatter.write_str("40 hex digits")
     }
 
-    fn visit_str<E>(self, value: &str) -> ::std::result::Result<Self::Value, E>
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
         Ok(value.to_string())
     }
 
-    fn visit_string<E>(self, value: String) -> ::std::result::Result<Self::Value, E>
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
@@ -162,7 +162,7 @@ impl<'de> serde::de::Visitor<'de> for StringVisitor {
 }
 
 impl serde::ser::Serialize for HgNodeHash {
-    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -171,7 +171,7 @@ impl serde::ser::Serialize for HgNodeHash {
 }
 
 impl<'de> serde::de::Deserialize<'de> for HgNodeHash {
-    fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
@@ -290,7 +290,7 @@ impl Display for HgChangesetId {
 }
 
 impl serde::ser::Serialize for HgChangesetId {
-    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -299,7 +299,7 @@ impl serde::ser::Serialize for HgChangesetId {
 }
 
 impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
-    fn deserialize<D>(deserializer: D) -> ::std::result::Result<HgChangesetId, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<HgChangesetId, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {

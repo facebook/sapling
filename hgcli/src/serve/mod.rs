@@ -10,6 +10,7 @@ use std::env::var;
 use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
 
+use anyhow::{bail, format_err, Error, Result};
 use bytes::Bytes;
 use context::generate_session_id;
 use fbinit::FacebookInit;
@@ -28,9 +29,7 @@ use tokio::net::TcpStream;
 
 use clap::ArgMatches;
 
-use crate::errors::*;
-
-use failure_ext::{bail, err_downcast_ref, format_err, SlogKVError};
+use failure_ext::{err_downcast_ref, SlogKVError};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};

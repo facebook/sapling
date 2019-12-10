@@ -7,7 +7,6 @@
  */
 
 use crate::path::MPath;
-pub use failure_ext::{Error, ResultExt};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -37,5 +36,3 @@ pub enum ErrorKind {
     #[error("Failed to parse RepositoryId from '{0}'")]
     FailedToParseRepositoryId(String),
 }
-
-pub type Result<T> = ::std::result::Result<T, Error>;

@@ -43,12 +43,13 @@
 ///
 ///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
+use anyhow::{Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, FutureFailureErrorExt, Result};
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -552,7 +553,7 @@ fn fetch_bonsai_changesets(
 // There should only be one head in the pushed set
 fn find_only_head_or_fail(
     commits: &HashSet<BonsaiChangeset>,
-) -> ::std::result::Result<ChangesetId, PushrebaseError> {
+) -> Result<ChangesetId, PushrebaseError> {
     let mut commits_set: HashSet<_> =
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
     for commit in commits {
@@ -575,7 +576,7 @@ struct ChildIndex(usize);
 
 fn find_roots(
     commits: &HashSet<BonsaiChangeset>,
-) -> ::std::result::Result<HashMap<ChangesetId, ChildIndex>, PushrebaseError> {
+) -> Result<HashMap<ChangesetId, ChildIndex>, PushrebaseError> {
     let commits_set: HashSet<_> =
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
     let mut roots = HashMap::new();
@@ -853,10 +854,7 @@ fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPa
 
 /// `left` and `right` are considerered to be conflit free, if none of the element from `left`
 /// is prefix of element from `right`, and vice versa.
-fn intersect_changed_files(
-    left: Vec<MPath>,
-    right: Vec<MPath>,
-) -> ::std::result::Result<(), PushrebaseError> {
+fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), PushrebaseError> {
     let mut left = {
         let mut left = left;
         left.sort_unstable();
@@ -931,7 +929,7 @@ async fn create_rebased_changesets(
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
-) -> ::std::result::Result<(ChangesetId, RebasedChangesets), PushrebaseError> {
+) -> Result<(ChangesetId, RebasedChangesets), PushrebaseError> {
     let rebased_set = find_rebased_set(ctx.clone(), repo.clone(), root, head.clone())
         .compat()
         .await?;
@@ -1325,8 +1323,8 @@ fn create_bookmark_update_reason(
 mod tests {
 
     use super::*;
+    use anyhow::format_err;
     use cmdlib::helpers::create_runtime;
-    use failure_ext::format_err;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
@@ -1357,7 +1355,7 @@ mod tests {
     }
 
     fn make_paths(paths: &[&str]) -> Vec<MPath> {
-        let paths: ::std::result::Result<_, _> = paths.into_iter().map(MPath::new).collect();
+        let paths: Result<_, _> = paths.into_iter().map(MPath::new).collect();
         paths.unwrap()
     }
 
@@ -2389,10 +2387,7 @@ mod tests {
         })
     }
 
-    fn run_future<F, I, E>(
-        runtime: &mut tokio::runtime::Runtime,
-        future: F,
-    ) -> std::result::Result<I, E>
+    fn run_future<F, I, E>(runtime: &mut tokio::runtime::Runtime, future: F) -> Result<I, E>
     where
         F: Future<Item = I, Error = E> + Send + 'static,
         I: Send + 'static,
@@ -3300,7 +3295,7 @@ mod tests {
         Ok(())
     }
 
-    fn should_have_conflicts(res: ::std::result::Result<PushrebaseSuccessResult, PushrebaseError>) {
+    fn should_have_conflicts(res: Result<PushrebaseSuccessResult, PushrebaseError>) {
         match res {
             Err(err) => match err {
                 PushrebaseError::Conflicts(_) => {}

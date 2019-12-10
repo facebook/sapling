@@ -19,7 +19,6 @@ use scuba::{ScubaSampleBuilder, ScubaValue};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-use std::result::Result;
 use std::sync::{Arc, Mutex};
 use time_ext::DurationExt;
 

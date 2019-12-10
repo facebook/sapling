@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use futures::{
     future::{lazy, IntoFuture},
     Future, Stream,

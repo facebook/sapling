@@ -8,10 +8,10 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, ContentId, FsnodeId};

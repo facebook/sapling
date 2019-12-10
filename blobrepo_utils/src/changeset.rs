@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use futures::{
     sync::mpsc::{self, Sender},
     Future, Stream,

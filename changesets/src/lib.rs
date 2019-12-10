@@ -9,6 +9,7 @@
 #![deny(warnings)]
 
 use abomonation_derive::Abomonation;
+use anyhow::{Error, Result};
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
@@ -30,7 +31,7 @@ mod test;
 mod wrappers;
 
 pub use caching::{get_cache_key, CachingChangesets};
-pub use errors::*;
+pub use errors::ErrorKind;
 
 define_stats! {
     prefix = "mononoke.changesets";

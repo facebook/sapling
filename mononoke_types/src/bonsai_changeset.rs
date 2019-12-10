@@ -8,14 +8,15 @@
 
 use std::collections::BTreeMap;
 
-use failure_ext::{bail, chain::*, Error};
+use anyhow::{bail, Context, Error, Result};
+use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
 
 use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
 use crate::datetime::DateTime;
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::file_change::FileChange;
 use crate::path::{self, MPath};
 use crate::thrift;

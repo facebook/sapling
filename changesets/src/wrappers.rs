@@ -10,11 +10,11 @@
 
 use std::sync::Arc;
 
+use anyhow::Error;
 use context::CoreContext;
 use futures_ext::BoxFuture;
 use mononoke_types::{ChangesetId, RepositoryId};
 
-use crate::errors::*;
 use crate::{ChangesetEntry, ChangesetInsert, Changesets};
 
 impl Changesets for Arc<dyn Changesets> {

@@ -6,11 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
     future::{loop_fn, Loop},

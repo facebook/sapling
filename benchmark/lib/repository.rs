@@ -8,6 +8,7 @@
 
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
@@ -19,7 +20,6 @@ use cacheblob::{dummy::DummyLease, new_cachelib_blobstore};
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::{Error, Result};
 use fbinit::FacebookInit;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use filestore::FilestoreConfig;

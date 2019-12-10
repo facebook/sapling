@@ -6,10 +6,11 @@
  * directory of this source tree.
  */
 
-use failure_ext::{bail, chain::*};
+use anyhow::{bail, Result};
+use failure_ext::chain::ChainExt;
 
 use crate::blob::{Blob, BlobstoreValue, FsnodeBlob};
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::file_change::FileType;
 use crate::hash::{Sha1, Sha256};
 use crate::path::MPathElement;

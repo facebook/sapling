@@ -8,15 +8,15 @@
 
 use std::fmt::{self, Display};
 
+use anyhow::{bail, Context, Result};
 use chrono::{
     DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, NaiveDateTime, TimeZone,
 };
-use failure_ext::bail;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::thrift;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, Serialize, PartialEq, PartialOrd)]

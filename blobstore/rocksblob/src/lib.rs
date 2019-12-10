@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use futures::{Async, Future, Poll};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -19,8 +19,6 @@ use rocksdb::{Db, ReadOptions, WriteOptions};
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Debug)]
 pub struct Rocksblob {

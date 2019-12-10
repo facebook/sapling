@@ -59,7 +59,7 @@ impl Decoder for CapabilitiesUnpacker {
                 match kv.next() {
                     None => Vec::new(),
                     Some(values) => {
-                        let res: ::std::result::Result<Vec<_>, _> = values
+                        let res: Result<Vec<_>, _> = values
                             .split(|b| b == &b',')
                             .filter(|v| !v.is_empty())
                             .map(|v| percent_decode(v).decode_utf8().map(Cow::into_owned))

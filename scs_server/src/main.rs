@@ -13,10 +13,10 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+use anyhow::{Context, Error};
 use clap::{value_t, Arg};
 use cloned::cloned;
 use cmdlib::args;
-use failure_ext::{Error, ResultExt};
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;

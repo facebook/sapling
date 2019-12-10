@@ -334,7 +334,7 @@ pub enum HookType {
 impl FromStr for HookType {
     type Err = Error;
 
-    fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
         match string {
             "PerChangeset" => Ok(HookType::PerChangeset),
             "PerAddedOrModifiedFile" => Ok(HookType::PerAddedOrModifiedFile),
@@ -460,7 +460,7 @@ impl From<BlobstoreId> for Value {
 }
 
 impl ConvIr<BlobstoreId> for BlobstoreId {
-    fn new(v: Value) -> std::result::Result<Self, FromValueError> {
+    fn new(v: Value) -> Result<Self, FromValueError> {
         Ok(BlobstoreId(from_value_opt(v)?))
     }
     fn commit(self) -> Self {

@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-pub use failure_ext::{Error, Result};
 use thiserror::Error;
 
 use mononoke_types::ChangesetId;

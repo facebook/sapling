@@ -10,8 +10,8 @@ use crate::{
     Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, Freshness, Transaction,
 };
+use anyhow::{Error, Result};
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};

@@ -8,9 +8,9 @@
 
 #![deny(warnings)]
 
+use anyhow::{format_err, Error};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
 use futures::sync::{mpsc, oneshot};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};

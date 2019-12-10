@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use failure_ext::{format_err, Error, Result};
+use anyhow::{format_err, Error, Result};
 use futures::{
     sync::{mpsc, oneshot},
     Future, IntoFuture, Stream,

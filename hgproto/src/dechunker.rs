@@ -205,8 +205,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::*;
-    use failure_ext::ensure;
+    use anyhow::{ensure, Result};
     use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
     use std::io::Cursor;
 

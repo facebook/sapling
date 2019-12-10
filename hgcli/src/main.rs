@@ -10,15 +10,11 @@
 // TODO: (rain1) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
 
+use anyhow::Error;
 use clap::{App, Arg, SubCommand};
 use fbinit::FacebookInit;
 
 mod serve;
-
-pub mod errors {
-    pub use failure_ext::{Error, Result};
-}
-use crate::errors::Error;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) {

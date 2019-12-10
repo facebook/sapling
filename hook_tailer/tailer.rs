@@ -9,11 +9,11 @@
 #![deny(warnings)]
 
 use super::HookResults;
+use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error, Result};
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};

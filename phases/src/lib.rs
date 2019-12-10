@@ -9,8 +9,9 @@
 mod caching;
 pub use caching::CachingPhases;
 mod errors;
-pub use errors::*;
+pub use errors::ErrorKind;
 
+use anyhow::{Error, Result};
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use cloned::cloned;
@@ -62,7 +63,7 @@ impl fmt::Display for Phase {
 impl TryFrom<iobuf::IOBuf> for Phase {
     type Error = ErrorKind;
 
-    fn try_from(buf: iobuf::IOBuf) -> ::std::result::Result<Self, Self::Error> {
+    fn try_from(buf: iobuf::IOBuf) -> Result<Self, Self::Error> {
         let v: Vec<u8> = buf.into();
         match std::str::from_utf8(&v) {
             Ok("Draft") => Ok(Phase::Draft),
@@ -92,7 +93,7 @@ impl FromValue for Phase {
 }
 
 impl ConvIr<Phase> for Phase {
-    fn new(v: Value) -> ::std::result::Result<Self, FromValueError> {
+    fn new(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
                 .map_err(|err| FromValueError(Value::Bytes(err.into_source())))

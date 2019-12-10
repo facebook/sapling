@@ -7,13 +7,14 @@
  */
 
 use abomonation_derive::Abomonation;
+use anyhow::Error;
 use heapsize_derive::HeapSizeOf;
 use serde_derive::Serialize;
 use std::default::Default;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::errors::{Error, ErrorKind};
+use crate::errors::ErrorKind;
 
 /// Represents a repository. This ID is used throughout storage.
 #[derive(

@@ -10,7 +10,7 @@
 
 #![deny(warnings)]
 
-use failure_ext::Error;
+use anyhow::Error;
 use futures::Future;
 
 use assert_matches::assert_matches;

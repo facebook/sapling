@@ -8,15 +8,16 @@
 
 use std::convert::TryInto;
 
+use anyhow::{bail, Result};
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
-use failure_ext::{bail, chain::*};
+use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::{
     blob::{Blob, BlobstoreValue, ContentMetadataBlob},
-    errors::*,
+    errors::ErrorKind,
     hash, thrift, thrift_field,
     typed_hash::{ContentId, ContentMetadataId},
 };

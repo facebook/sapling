@@ -11,13 +11,13 @@
 
 pub mod tailer;
 
+use anyhow::{format_err, Error, Result};
 use blobrepo_factory::open_blobrepo;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::helpers::create_runtime;
 use context::CoreContext;
-use failure_ext::{format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::future::{err, ok, result, Future};
 use futures::stream::repeat;

@@ -16,7 +16,7 @@ use sql::mysql_async::{
 
 use crate::{Globalrev, HgChangesetId, HgFileNodeId, HgNodeHash};
 
-type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
+type FromValueResult<T> = Result<T, FromValueError>;
 
 impl From<HgFileNodeId> for Value {
     fn from(id: HgFileNodeId) -> Self {

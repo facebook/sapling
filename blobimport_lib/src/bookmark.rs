@@ -9,9 +9,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use cloned::cloned;
-use failure_ext::{format_err, Error};
 use futures::{prelude::*, stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, Logger};

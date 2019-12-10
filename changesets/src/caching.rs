@@ -7,6 +7,7 @@
  */
 
 use super::{ChangesetEntry, ChangesetInsert, Changesets};
+use anyhow::Error;
 use bytes::Bytes;
 #[cfg(test)]
 use caching_ext::MockStoreStats;
@@ -27,8 +28,6 @@ use stats::{define_stats, Timeseries};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::sync::Arc;
-
-use crate::errors::*;
 
 define_stats! {
     prefix = "mononoke.changesets";
@@ -174,7 +173,7 @@ impl Changesets for CachingChangesets {
     }
 }
 
-fn deserialize_changeset_entry(buf: IOBuf) -> ::std::result::Result<ChangesetEntry, ()> {
+fn deserialize_changeset_entry(buf: IOBuf) -> Result<ChangesetEntry, ()> {
     let bytes: Bytes = buf.into();
 
     compact_protocol::deserialize(bytes)

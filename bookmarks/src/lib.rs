@@ -9,9 +9,9 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+use anyhow::{bail, format_err, Error, Result};
 use ascii::{AsciiChar, AsciiString};
 use context::CoreContext;
-use failure_ext::{bail, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
@@ -107,7 +107,7 @@ impl Bookmark {
     }
 }
 
-type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
+type FromValueResult<T> = Result<T, FromValueError>;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct BookmarkName {

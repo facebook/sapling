@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use bytes::Bytes;
-use failure_ext::{Error, Result};
 use futures::{
     future::{lazy, IntoFuture},
     Future, Stream,

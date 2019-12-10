@@ -11,18 +11,18 @@ use std::io::Write;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
+use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use blake2::{
     digest::{Input, VariableOutput},
     VarBlake2b,
 };
-use failure_ext::bail;
 use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::thrift;
 
 // There is no NULL_HASH for Blake2 hashes. Any places that need a null hash should use an

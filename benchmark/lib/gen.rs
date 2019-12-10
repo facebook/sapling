@@ -7,10 +7,10 @@
  */
 
 //! Utilities to generate reasonably looking stack of changesets
+use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
 use mononoke_types::{

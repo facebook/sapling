@@ -11,10 +11,10 @@ use crate as filestore;
 use crate::{errors, Alias, FetchKey, FilestoreConfig, StoreRequest};
 
 use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
+use anyhow::Result;
 use assert_matches::assert_matches;
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::Result;
 use fbinit::FacebookInit;
 use futures::{
     future::Future,

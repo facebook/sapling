@@ -11,13 +11,13 @@
 
 #![deny(warnings)]
 
+use anyhow::{bail, format_err, Error, Result};
 use benchmark_lib::{new_benchmark_repo, GenManifest};
 use blobrepo::BlobRepo;
 use clap::{App, Arg};
 use cmdlib::args;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure_ext::{bail, format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};

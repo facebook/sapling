@@ -7,13 +7,12 @@
  */
 
 use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
-use crate::errors::*;
+use anyhow::{bail, Error};
 use blobrepo::derive_hg_manifest::derive_hg_manifest;
 use blobrepo::internal::IncompleteFilenodes;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::bail;
 use futures::{
     future::{self, Either},
     Future, Stream,

@@ -7,10 +7,10 @@
  */
 
 use crate::batch;
-use crate::errors::{self, *};
+use crate::errors;
 use crate::{GetbundleArgs, GettreepackArgs, Request, SingleRequest};
+use anyhow::{bail, Error, Result};
 use bytes::{Bytes, BytesMut};
-use failure_ext::bail;
 use hex::FromHex;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use nom::{

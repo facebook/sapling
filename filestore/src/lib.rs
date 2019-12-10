@@ -11,8 +11,8 @@
 
 use bytes::Bytes;
 
+use anyhow::Error;
 use cloned::cloned;
-use failure_ext::Error;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 

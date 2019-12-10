@@ -8,9 +8,9 @@
 
 use std::{collections::HashMap, path::Path, sync::Arc};
 
+use anyhow::{bail, format_err, Error, Result};
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
-use failure_ext::{bail, format_err, Error, Result};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};

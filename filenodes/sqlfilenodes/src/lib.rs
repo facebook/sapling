@@ -11,9 +11,10 @@
 
 mod errors;
 
+use anyhow::{Error, Result};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::prelude::*;
+use failure_ext::chain::ChainExt;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};

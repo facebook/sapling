@@ -16,8 +16,9 @@ use std::mem;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
+use anyhow::{bail, Error, Result};
 use bytes::{Buf, Bytes, BytesMut};
-use failure_ext::{bail, Error, FutureFailureErrorExt, Result};
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
@@ -375,7 +376,7 @@ where
     // error is a Result. If this fake error is Ok(...) then no real error happened.
     // Note that fake error also contains input stream that will be send back to the future that
     // waits for it.
-    let entry_stream: BoxStream<_, ::std::result::Result<BytesStream<S>, (_, BytesStream<S>)>> =
+    let entry_stream: BoxStream<_, Result<BytesStream<S>, (_, BytesStream<S>)>> =
         stream::unfold(input, move |input| {
             let fut_decode = input.into_future_decode(create_decoder());
             let fut = fut_decode

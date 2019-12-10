@@ -11,9 +11,9 @@ use crate::{
     typed_hash::{FileUnodeId, MononokeId},
     ChangesetId, MPath,
 };
+use anyhow::{bail, format_err, Error};
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
-use failure_ext::{bail, format_err, Error};
 use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};

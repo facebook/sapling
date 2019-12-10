@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use slog::{info, warn, Logger};
 use std::default::Default;
 use std::path::PathBuf;
-use std::result::Result;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,

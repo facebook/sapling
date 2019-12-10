@@ -8,16 +8,16 @@
 
 use crate::{
     blob::{Blob, BlobstoreValue, FastlogBatchBlob},
-    errors::*,
+    errors::ErrorKind,
     thrift,
     typed_hash::{ChangesetId, FastlogBatchId, FastlogBatchIdContext},
 };
+use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, Storable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
-use failure_ext::Error;
 use fbthrift::compact_protocol;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -142,9 +142,8 @@ impl FastlogBatch {
     }
 
     pub fn from_bytes(serialized: &Bytes) -> Result<FastlogBatch> {
-        let thrift_entry: ::std::result::Result<thrift::FastlogBatch, Error> =
-            compact_protocol::deserialize(serialized)
-                .map_err(|err| ErrorKind::BlobDeserializeError(format!("{}", err)).into());
+        let thrift_entry: Result<thrift::FastlogBatch> = compact_protocol::deserialize(serialized)
+            .map_err(|err| ErrorKind::BlobDeserializeError(format!("{}", err)).into());
         thrift_entry.and_then(Self::from_thrift)
     }
 

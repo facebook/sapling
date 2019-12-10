@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use bytes::{Bytes, BytesMut};
-use failure_ext::{Error, Result};
 use futures::{
     stream::{AndThen, Concat2},
     try_ready, Async, Poll, Stream,

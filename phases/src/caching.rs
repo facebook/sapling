@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
-use crate::errors::*;
 use crate::{Phase, Phases};
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;

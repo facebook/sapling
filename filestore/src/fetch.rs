@@ -8,11 +8,11 @@
 
 use std::cmp::{max, min};
 
+use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{stream, Future, Stream};
 use futures_ext::{BufferedParams, FutureExt, StreamExt};
 use itertools::Either;

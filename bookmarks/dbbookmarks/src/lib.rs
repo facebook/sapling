@@ -8,13 +8,13 @@
 
 #![deny(warnings)]
 
+use anyhow::{bail, format_err, Error, Result};
 use bookmarks::{
     Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness, Transaction,
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use failure_ext::{bail, format_err, Error, Result};
 use futures::{
     future::{self, loop_fn, Loop},
     stream, Future, IntoFuture, Stream,

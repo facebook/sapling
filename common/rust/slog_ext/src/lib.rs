@@ -27,11 +27,7 @@ impl<D: Decorator> Drain for SimpleFormatWithError<D> {
     type Ok = ();
     type Err = io::Error;
 
-    fn log(
-        &self,
-        record: &Record,
-        values: &OwnedKVList,
-    ) -> ::std::result::Result<Self::Ok, Self::Err> {
+    fn log(&self, record: &Record, values: &OwnedKVList) -> Result<Self::Ok, Self::Err> {
         self.decorator.with_record(record, values, |decorator| {
             write!(decorator, "{}\n", record.msg())?;
 

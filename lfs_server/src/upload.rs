@@ -20,7 +20,6 @@ use hyper::{Body, Request};
 use serde::Deserialize;
 use stats::{define_stats, Histogram, Timeseries};
 use std::collections::HashMap;
-use std::result::Result;
 use std::str::FromStr;
 
 use failure_ext::chain::ChainExt;

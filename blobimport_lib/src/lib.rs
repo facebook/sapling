@@ -19,9 +19,9 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::Error;
 use ascii::AsciiString;
 use cloned::cloned;
-use failure_ext::Error;
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::{debug, error, info, Logger};

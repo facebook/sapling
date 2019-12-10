@@ -9,14 +9,15 @@
 use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
+use anyhow::{bail, Result};
 use bytes::Bytes;
-use failure_ext::{bail, chain::*};
+use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use crate::{
     blob::{Blob, BlobstoreValue, ContentChunkBlob},
-    errors::*,
+    errors::ErrorKind,
     file_contents::ContentChunkPointer,
     thrift,
     typed_hash::{ContentChunkId, ContentChunkIdContext},

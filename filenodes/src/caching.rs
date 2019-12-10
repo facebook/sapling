@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::{Error, Result};
 use cachelib::{get_cached_or_fill, VolatileLruCachePool};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Result};
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{future, Future, IntoFuture};
@@ -249,7 +249,7 @@ fn get_single_filenode_from_memcache(
         .map_err(|()| ErrorKind::MemcacheInternal)
         .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
         .and_then(|serialized| {
-            let thrift_entry: ::std::result::Result<thrift::FilenodeInfo, ErrorKind> =
+            let thrift_entry: Result<thrift::FilenodeInfo, ErrorKind> =
                 compact_protocol::deserialize(Vec::from(serialized))
                     .map_err(|_| ErrorKind::Deserialization);
 
@@ -284,9 +284,7 @@ fn get_all_filenodes_from_memcache(
 ) -> impl Future<Item = Vec<FilenodeInfo>, Error = ()> {
     // helper function for deserializing list of thrift FilenodeInfo into rust structure with proper
     // error returned
-    fn deserialize_list(
-        list: Vec<thrift::FilenodeInfo>,
-    ) -> ::std::result::Result<Vec<FilenodeInfo>, ErrorKind> {
+    fn deserialize_list(list: Vec<thrift::FilenodeInfo>) -> Result<Vec<FilenodeInfo>, ErrorKind> {
         let res: Result<Vec<_>> = list.into_iter().map(FilenodeInfo::from_thrift).collect();
         res.map_err(|_| ErrorKind::Deserialization)
     }

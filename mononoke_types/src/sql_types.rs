@@ -16,7 +16,7 @@ use sql::mysql_async::{
     FromValueError, Value,
 };
 
-type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
+type FromValueResult<T> = Result<T, FromValueError>;
 
 impl From<ChangesetId> for Value {
     fn from(id: ChangesetId) -> Self {

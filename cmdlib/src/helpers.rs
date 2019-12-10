@@ -8,8 +8,8 @@
 
 use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
 
+use anyhow::{bail, format_err, Context, Error, Result};
 use cloned::cloned;
-use failure_ext::{bail, format_err, Error, Result, ResultExt};
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};

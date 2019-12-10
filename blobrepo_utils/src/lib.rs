@@ -18,9 +18,9 @@ pub use crate::bonsai::{BonsaiMFVerify, BonsaiMFVerifyDifference, BonsaiMFVerify
 pub use crate::changeset::{visit_changesets, ChangesetVisitor};
 pub use crate::errors::ErrorKind;
 
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::{future::ok, Future};
 use futures_ext::FutureExt;
 use manifest::BonsaiDiffFileChange;

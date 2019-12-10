@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
+use anyhow::Result;
 use bytes::BytesMut;
-use failure_ext::Result;
 use std::convert::TryInto;
 
 use crate::errors::ErrorKind;

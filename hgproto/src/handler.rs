@@ -9,6 +9,7 @@
 use crate::commands::HgCommandHandler;
 use crate::errors::*;
 use crate::{HgCommands, Request, Response};
+use anyhow::Error;
 use bytes::Bytes;
 use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, ok, Either};

@@ -12,9 +12,9 @@ use sql::Connection;
 pub use sql_ext::SqlConstructors;
 use std::collections::HashSet;
 
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::future::Future;
 use futures::{future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 mod errors;
 
-pub use crate::errors::*;
+pub use crate::errors::ErrorKind;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingEntry {

@@ -8,13 +8,14 @@
 
 use std::fmt::{self, Debug};
 
+use anyhow::{bail, Result};
 use bytes::Bytes;
-use failure_ext::{bail, chain::*};
+use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use crate::blob::{Blob, BlobstoreValue, RawBundle2Blob};
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::thrift;
 use crate::typed_hash::{RawBundle2Id, RawBundle2IdContext};
 

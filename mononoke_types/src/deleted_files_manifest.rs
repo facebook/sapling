@@ -6,10 +6,11 @@
  * directory of this source tree.
  */
 
-use failure_ext::chain::*;
+use anyhow::Result;
+use failure_ext::chain::ChainExt;
 
 use crate::blob::{Blob, BlobstoreValue, DeletedManifestBlob};
-use crate::errors::*;
+use crate::errors::ErrorKind;
 use crate::path::MPathElement;
 use crate::thrift;
 use crate::typed_hash::{ChangesetId, DeletedManifestContext, DeletedManifestId};
