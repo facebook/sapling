@@ -8,16 +8,8 @@
 # Library routines and initial setup for Mononoke-related tests.
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
-  function db_config() {
-    echo "[storage.blobstore.db.remote]"
-    echo "db_address=\"$DB_SHARD_NAME\""
-  }
   MONONOKE_DEFAULT_START_TIMEOUT=60
 else
-  function db_config() {
-    echo "[storage.blobstore.db.local]"
-    echo "local_db_path=\"$TESTTMP/monsql\""
-  }
   MONONOKE_DEFAULT_START_TIMEOUT=15
 fi
 
@@ -401,6 +393,12 @@ function setup_mononoke_config {
   REPOTYPE="blob_rocks"
   if [[ $# -gt 0 ]]; then
     REPOTYPE="$1"
+    shift
+  fi
+  local blobstorename=blobstore
+  if [[ $# -gt 0 ]]; then
+    blobstorename="$1"
+    shift
   fi
 
   if [[ ! -e "$TESTTMP/mononoke_hgcli" ]]; then
@@ -423,7 +421,49 @@ identity_type = "USER"
 identity_data = "$ALLOWED_USERNAME"
 CONFIG
 
-  setup_mononoke_repo_config "$REPONAME"
+  echo "# Start new config" > common/storage.toml
+  setup_mononoke_storage_config "$REPOTYPE" "$blobstorename"
+
+  setup_mononoke_repo_config "$REPONAME" "$blobstorename"
+}
+
+function db_config() {
+  local blobstorename="$1"
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    echo "[$blobstorename.db.remote]"
+    echo "db_address=\"$DB_SHARD_NAME\""
+  else
+    echo "[$blobstorename.db.local]"
+    echo "local_db_path=\"$TESTTMP/monsql\""
+  fi
+}
+
+function setup_mononoke_storage_config {
+  local underlyingstorage="$1"
+  local blobstorename="$2"
+  local blobstorepath="$TESTTMP/$blobstorename"
+
+  if [[ -v MULTIPLEXED ]]; then
+    mkdir -p "$blobstorepath/0" "$blobstorepath/1"
+    cat >> common/storage.toml <<CONFIG
+$(db_config "$blobstorename")
+
+[$blobstorename.blobstore.multiplexed]
+components = [
+  { blobstore_id = 0, blobstore = { $underlyingstorage = { path = "$blobstorepath/0" } } },
+  { blobstore_id = 1, blobstore = { $underlyingstorage = { path = "$blobstorepath/1" } } },
+]
+CONFIG
+  else
+    mkdir -p "$blobstorepath"
+    cat >> common/storage.toml <<CONFIG
+$(db_config "$blobstorename")
+
+[$blobstorename.blobstore.$underlyingstorage]
+path = "$blobstorepath"
+
+CONFIG
+  fi
 }
 
 function setup_commitsyncmap {
@@ -469,16 +509,15 @@ EOF
 function setup_mononoke_repo_config {
   cd "$TESTTMP/mononoke-config" || exit
   local reponame="$1"
+  local storageconfig="$2"
   mkdir -p "repos/$reponame"
   mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame"
   mkdir -p "$TESTTMP/traffic-replay-blobstore"
-  mkdir -p "$TESTTMP/$reponame/blobs"
   cat > "repos/$reponame/server.toml" <<CONFIG
 repoid=$REPOID
 enabled=${ENABLED:-true}
 hash_validation_percentage=100
-storage_config = "blobstore"
 CONFIG
 
 if [[ ! -v NO_BOOKMARKS_CACHE ]]; then
@@ -492,6 +531,16 @@ if [[ -v READ_ONLY_REPO ]]; then
 readonly=true
 CONFIG
 fi
+
+# Normally point to common storageconfig, but if none passed, create per-repo
+if [[ -z "$storageconfig" ]]; then
+  storageconfig="blobstore_$reponame"
+  setup_mononoke_storage_config "$REPOTYPE" "$storageconfig"
+fi
+cat >> "repos/$reponame/server.toml" <<CONFIG
+storage_config = "$storageconfig"
+
+CONFIG
 
 if [[ -v FILESTORE ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -510,26 +559,6 @@ fi
 if [[ -v LIST_KEYS_PATTERNS_MAX ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
-CONFIG
-fi
-
-if [[ -v MULTIPLEXED ]]; then
-cat >> "repos/$reponame/server.toml" <<CONFIG
-$(db_config "$reponame")
-
-[storage.blobstore.blobstore.multiplexed]
-components = [
-  { blobstore_id = 0, blobstore = { blob_files = { path = "$TESTTMP/$reponame/0" } } },
-  { blobstore_id = 1, blobstore = { blob_files = {path  = "$TESTTMP/$reponame/1" } } },
-]
-CONFIG
-else
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-$(db_config "$reponame")
-
-[storage.blobstore.blobstore.$REPOTYPE]
-path = "$TESTTMP/$reponame"
-
 CONFIG
 fi
 
@@ -664,18 +693,25 @@ CONFIG
 }
 
 function blobimport {
+  local always_log=
+  if [[ "$1" == "--log" ]]; then
+    always_log=1
+    shift
+  fi
   input="$1"
   output="$2"
   shift 2
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo-id $REPOID \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
-     "$input" "${CACHING_ARGS[@]}" "$@" >> "$TESTTMP/blobimport.out" 2>&1
+     "$input" "${CACHING_ARGS[@]}" "$@" > "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
     # set exit code, otherwise previous cat sets it to 0
     return "$BLOBIMPORT_RC"
+  elif [[ -n "$always_log" ]]; then
+    cat "$TESTTMP/blobimport.out"
   fi
 }
 

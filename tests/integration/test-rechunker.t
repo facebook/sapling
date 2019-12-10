@@ -20,13 +20,13 @@
   $ cd "$TESTTMP"
   $ blobimport repo-hg/.hg repo
 
-  $ FILENODE=$(ls "$TESTTMP/repo/blobs" | grep "hgfilenode" | cut -d "." -f 4)
+  $ FILENODE=$(ls "$TESTTMP/blobstore/blobs" | grep "hgfilenode" | cut -d "." -f 4)
 
 # Check that nothing happens if the filestore is not enabled
   $ mononoke_rechunker "$FILENODE"
   * using repo "repo" repoid RepositoryId(0) (glob)
 
-  $ ls "$TESTTMP/repo/blobs" | grep hgfilenode
+  $ ls "$TESTTMP/blobstore/blobs" | grep hgfilenode
   blob-repo0000.hgfilenode.sha1.92c09d364cd563132d6eb5f1424ff63523d51f73
 
 # Check that the rechunker complains about an unknown filenode
@@ -43,5 +43,5 @@
   $ mononoke_rechunker "$FILENODE"
   * using repo "repo" repoid RepositoryId(0) (glob)
 
-  $ ls "$TESTTMP/repo/blobs" | grep chunk | wc -l
+  $ ls "$TESTTMP/blobstore/blobs" | grep chunk | wc -l
   2

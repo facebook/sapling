@@ -25,7 +25,7 @@
 
   $ blobimport repo-hg-nolfs/.hg repo
 
-  $ ls $TESTTMP/repo/blobs | grep "alias"
+  $ ls $TESTTMP/blobstore/blobs | grep "alias"
   blob-repo0000.alias.gitsha1.45d9e0e9fc8859787c33081dffdf12f41b54fcf3
   blob-repo0000.alias.gitsha1.8e1e71d5ce34c01b6fe83bc5051545f2918c8c2b
   blob-repo0000.alias.gitsha1.9de77c18733ab8009a956c25e28c85fe203a17d7
@@ -41,8 +41,8 @@
   * Alias Verification finished: 0 errors found (glob)
 
 
-  $ rm -rf $TESTTMP/repo/blobs/blob-repo0000.alias.*
-  $ ls $TESTTMP/repo/blobs | grep "alias" | wc -l
+  $ rm -rf $TESTTMP/blobstore/blobs/blob-repo0000.alias.*
+  $ ls $TESTTMP/blobstore/blobs | grep "alias" | wc -l
   0
 
   $ aliasverify verify 2>&1 | grep "Alias Verification"
@@ -54,7 +54,7 @@
   * Missing alias blob: alias Sha256(d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f), content_id ContentId(Blake2(7ee06cac57ab4267c097ebc8ec36e903fb3c25867934fe360e069ea1ab2ed7fd)) (glob)
   * Missing alias blob: alias Sha256(2ba85baaa7922ff4c0dfdbc00fd07bd69dcb1dce745c6a8c676fe8b5642a0d66), content_id ContentId(Blake2(1a3f1094cdae123ec6999b7baf4211ffd94f47970bedd71e13ec07f24a9aba6a)) (glob)
 
-  $ ls $TESTTMP/repo/blobs | grep "alias" | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep "alias" | wc -l
   0
 
   $ aliasverify generate --debug 2>&1 | grep "Missing alias blob"
@@ -62,7 +62,7 @@
   * Missing alias blob: alias Sha256(d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f), content_id ContentId(Blake2(7ee06cac57ab4267c097ebc8ec36e903fb3c25867934fe360e069ea1ab2ed7fd)) (glob)
   * Missing alias blob: alias Sha256(2ba85baaa7922ff4c0dfdbc00fd07bd69dcb1dce745c6a8c676fe8b5642a0d66), content_id ContentId(Blake2(1a3f1094cdae123ec6999b7baf4211ffd94f47970bedd71e13ec07f24a9aba6a)) (glob)
 
-  $ ls $TESTTMP/repo/blobs | grep "alias"
+  $ ls $TESTTMP/blobstore/blobs | grep "alias"
   blob-repo0000.alias.sha256.2ba85baaa7922ff4c0dfdbc00fd07bd69dcb1dce745c6a8c676fe8b5642a0d66
   blob-repo0000.alias.sha256.b9a294f298d0ed2b65ca4488a42b473ff5f75d0b9843cbea84e1b472f9a514d1
   blob-repo0000.alias.sha256.d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f

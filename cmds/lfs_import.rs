@@ -13,6 +13,7 @@ use cmdlib::{args, helpers::create_runtime};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
+use futures_ext::FutureExt;
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 
@@ -21,6 +22,7 @@ const NAME: &str = "lfs_import";
 const ARG_LFS_HELPER: &str = "lfs-helper";
 const ARG_CONCURRENCY: &str = "concurrency";
 const ARG_POINTERS: &str = "pointers";
+const ARG_NO_CREATE: &str = "no-create";
 
 const DEFAULT_CONCURRENCY: usize = 16;
 
@@ -36,6 +38,13 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .long("concurrency")
                 .takes_value(true)
                 .help("The number of OIDs to process in parallel"),
+        )
+        .arg(
+            Arg::with_name(ARG_NO_CREATE)
+                .long(ARG_NO_CREATE)
+                .takes_value(false)
+                .required(false)
+                .help("If provided won't create a new repo"),
         )
         .arg(
             Arg::with_name(ARG_LFS_HELPER)
@@ -56,7 +65,11 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let blobrepo = if matches.is_present(ARG_NO_CREATE) {
+        args::open_repo(fb, &logger, &matches).left_future()
+    } else {
+        args::create_repo(fb, &logger, &matches).right_future()
+    };
     let lfs_helper = matches.value_of(ARG_LFS_HELPER).unwrap().to_string();
 
     let concurrency: usize = matches

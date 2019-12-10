@@ -33,7 +33,7 @@ use slog_logview::LogViewDrain;
 
 use crate::helpers::{
     init_cachelib_from_settings, open_sql_with_config_and_myrouter_port, setup_repo_dir,
-    CachelibSettings,
+    CachelibSettings, CreateStorage,
 };
 use crate::log;
 
@@ -767,7 +767,13 @@ fn open_repo_internal_with_repo_id<'a>(
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     match &config.storage_config.blobstore {
         BlobConfig::Files { path } | BlobConfig::Rocks { path } | BlobConfig::Sqlite { path } => {
-            setup_repo_dir(path, create).expect("Setting up file blobrepo failed");
+            let create = if create {
+                // Many path repos can share one blobstore, so allow store to exist or create it.
+                CreateStorage::ExistingOrCreate
+            } else {
+                CreateStorage::ExistingOnly
+            };
+            try_boxfuture!(setup_repo_dir(path, create));
         }
         _ => {}
     };

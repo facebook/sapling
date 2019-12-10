@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ MULTIPLEXED=1 setup_common_config
+  $ MULTIPLEXED=1 REPOTYPE=blob_files setup_common_config
   $ cd $TESTTMP
 
 setup common configuration

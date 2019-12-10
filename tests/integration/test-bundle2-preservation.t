@@ -50,7 +50,7 @@ Create a new commit in repo2
 
 Do a push, while bundle preservation is disabled
   $ hgmn push -qr . --to master_bookmark
-  $ ls $TESTTMP/repo/blobs | grep rawbundle2
+  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2
   [1]
 
 Restart mononoke with enabled bundle2 preservation
@@ -71,7 +71,7 @@ Do a push, while bundle preservation is enabled
   searching for changes
   updating bookmark master_bookmark
 
-  $ ls $TESTTMP/repo/blobs | grep rawbundle2 | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | wc -l
   1
 
 Do a pushrebase, while preservation is enabled
@@ -84,5 +84,5 @@ Do a pushrebase, while preservation is enabled
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  $ ls $TESTTMP/repo/blobs | grep rawbundle2 | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | wc -l
   2

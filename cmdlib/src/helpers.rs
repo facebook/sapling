@@ -53,13 +53,20 @@ pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error =
         .right_future()
 }
 
-pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CreateStorage {
+    ExistingOnly,
+    ExistingOrCreate,
+}
+
+pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Result<()> {
     let data_dir = data_dir.as_ref();
 
     if !data_dir.is_dir() {
         bail!("{:?} does not exist or is not a directory", data_dir);
     }
 
+    // Validate directory layout
     for subdir in &["blobs"] {
         let subdir = data_dir.join(subdir);
 
@@ -67,20 +74,12 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
             bail!("{:?} already exists and is not a directory", subdir);
         }
 
-        if create {
-            if subdir.exists() {
-                let content: Vec<_> = subdir.read_dir()?.collect();
-                if !content.is_empty() {
-                    bail!(
-                        "{:?} already exists and is not empty: {:?}",
-                        subdir,
-                        content
-                    );
-                }
-            } else {
-                fs::create_dir(&subdir)
-                    .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
+        if !subdir.exists() {
+            if CreateStorage::ExistingOnly == create {
+                bail!("{:?} not found in ExistingOnly mode", subdir,);
             }
+            fs::create_dir(&subdir)
+                .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
         }
     }
     Ok(())

@@ -74,7 +74,7 @@
   updating bookmark master_bookmark
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is not generated
-  $ ls $TESTTMP/repo/blobs | grep "alias" | sort -h
+  $ ls $TESTTMP/blobstore/blobs | grep "alias" | sort -h
   blob-repo0000.alias.gitsha1.23c160a91fd3e722a49a86017e103e83e7965af7
   blob-repo0000.alias.gitsha1.b4785957bc986dc39c629de9fac9df46972c00fc
   blob-repo0000.alias.sha1.8cfc11d4c1bf45aca9412afc5b95cfd1db83e885
@@ -106,7 +106,7 @@
   added 1 changesets with 0 changes to 0 files
   new changesets 0db8825b9792
 
-  $ ls $TESTTMP/repo/blobs | grep "alias.content" | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep "alias.content" | wc -l
   0
 
   $ hgmn update -r master_bookmark -v
@@ -119,7 +119,7 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is generated
-  $ ls $TESTTMP/repo/blobs | grep "alias" | sort -h
+  $ ls $TESTTMP/blobstore/blobs | grep "alias" | sort -h
   blob-repo0000.alias.gitsha1.23c160a91fd3e722a49a86017e103e83e7965af7
   blob-repo0000.alias.gitsha1.b4785957bc986dc39c629de9fac9df46972c00fc
   blob-repo0000.alias.sha1.8cfc11d4c1bf45aca9412afc5b95cfd1db83e885

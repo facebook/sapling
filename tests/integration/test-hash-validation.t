@@ -38,7 +38,7 @@ blobimport them into Mononoke storage and start Mononoke
   $ blobimport repo-hg/.hg repo
 
 Corrupt blobs by replacing one content blob with another
-  $ cd repo/blobs
+  $ cd blobstore/blobs
   $ cp blob-repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d blob-repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
 
 start mononoke
