@@ -399,7 +399,6 @@ void EdenServiceHandler::checkOutRevision(
 void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents) {
-#ifndef _WIN32
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, logHash(parents->parent1));
   ParentCommits edenParents;
@@ -410,9 +409,6 @@ void EdenServiceHandler::resetParentCommits(
   }
   auto edenMount = server_->getMount(*mountPoint);
   edenMount->resetParents(edenParents);
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 void EdenServiceHandler::getSHA1(

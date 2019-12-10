@@ -187,5 +187,22 @@ void EdenMount::destroy() {
   delete this;
 }
 
+void EdenMount::resetParents(const ParentCommits& parents) {
+  // Hold the snapshot lock around the entire operation.
+  auto parentsLock = parentInfo_.wlock();
+  auto oldParents = parentsLock->parents;
+  XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
+             << oldParents << " to " << parents;
+
+  config_->setParentCommits(parents);
+  parentsLock->parents.setParents(parents);
+
+  journal_->recordHashUpdate(oldParents.parent1(), parents.parent1());
+}
+
+void EdenMount::resetParent(const Hash& parent) {
+  resetParents(ParentCommits{parent});
+}
+
 } // namespace eden
 } // namespace facebook
