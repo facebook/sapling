@@ -41,6 +41,8 @@ add_subdirectory(sqlite)
 add_subdirectory(store)
 add_subdirectory(telemetry)
 add_subdirectory(utils)
+add_subdirectory(testharness)
+
 
 # Platform specific code
 if (WIN32)
@@ -49,5 +51,4 @@ else()
   add_subdirectory(fuse)
   add_subdirectory(rocksdb)
   add_subdirectory(takeover)
-  add_subdirectory(testharness)
 endif()

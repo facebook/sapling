@@ -13,8 +13,8 @@ add_executable(
 target_link_libraries(
   eden_win_mount_test
   PRIVATE
-    eden_win
-    ${LIBGMOCK_LIBRARIES}
+    eden_testharness
+    eden_win_testharness
 )
 
 gtest_discover_tests(eden_win_mount_test)
