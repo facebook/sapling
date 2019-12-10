@@ -14,7 +14,7 @@ use types::{testutil::*, HgId, RepoPath};
 
 use crate::{
     store::{self, TestStore},
-    Link, Tree,
+    Link, TreeManifest,
 };
 
 pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
@@ -25,7 +25,7 @@ pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<
     ))
 }
 
-pub(crate) fn get_hgid(tree: &Tree, path: &RepoPath) -> HgId {
+pub(crate) fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
     match tree.get_link(path).unwrap().unwrap() {
         Link::Leaf(file_metadata) => file_metadata.hgid,
         Link::Durable(ref entry) => entry.hgid,
@@ -44,8 +44,10 @@ pub(crate) fn make_file(path: &str, hex: &str) -> File {
     }
 }
 
-pub(crate) fn make_tree<'a>(paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>) -> Tree {
-    let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+pub(crate) fn make_tree<'a>(
+    paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>,
+) -> TreeManifest {
+    let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
     for (path, filenode) in paths {
         tree.insert(repo_path_buf(path), make_meta(filenode))
             .unwrap();

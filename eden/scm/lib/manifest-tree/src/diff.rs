@@ -13,7 +13,7 @@ use manifest::{DiffEntry, File};
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::RepoPath;
 
-use crate::{store::InnerStore, DirLink, Tree};
+use crate::{store::InnerStore, DirLink, TreeManifest};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -87,7 +87,7 @@ pub struct Diff<'a> {
 }
 
 impl<'a> Diff<'a> {
-    pub fn new(left: &'a Tree, right: &'a Tree, matcher: &'a dyn Matcher) -> Self {
+    pub fn new(left: &'a TreeManifest, right: &'a TreeManifest, matcher: &'a dyn Matcher) -> Self {
         let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
         let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
         let mut current = VecDeque::new();
@@ -665,13 +665,13 @@ mod tests {
     #[test]
     fn test_diff_does_not_evaluate_durable_on_hgid_equality() {
         // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
-        let left = Tree::durable(Arc::new(TestStore::new()), hgid("10"));
-        let right = Tree::durable(Arc::new(TestStore::new()), hgid("10"));
+        let left = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
+        let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
         assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
             .next()
             .is_none());
 
-        let right = Tree::durable(Arc::new(TestStore::new()), hgid("20"));
+        let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("20"));
         assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
             .next()
             .unwrap()
@@ -680,12 +680,12 @@ mod tests {
 
     #[test]
     fn test_diff_one_file_one_directory() {
-        let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut left = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         left.insert(repo_path_buf("a1/b1"), make_meta("10"))
             .unwrap();
         left.insert(repo_path_buf("a2"), make_meta("20")).unwrap();
 
-        let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut right = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         right.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
         right
             .insert(repo_path_buf("a2/b2"), make_meta("40"))
@@ -706,7 +706,7 @@ mod tests {
 
     #[test]
     fn test_diff_left_empty() {
-        let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut left = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         let mut right = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")]);
 
         assert_eq!(

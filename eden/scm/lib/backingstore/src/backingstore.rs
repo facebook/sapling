@@ -10,7 +10,7 @@ use crate::treecontentstore::TreeContentStore;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use manifest_tree::Tree;
+use manifest_tree::TreeManifest;
 use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
 use std::convert::TryFrom;
 use std::path::Path;
@@ -64,7 +64,7 @@ impl BackingStore {
 
     pub fn get_tree(&self, node: &[u8]) -> Result<raw::Tree> {
         let node = Node::from_slice(node)?;
-        let manifest = Tree::durable(self.treestore.clone(), node);
+        let manifest = TreeManifest::durable(self.treestore.clone(), node);
         let list = manifest.list(RepoPath::empty())?;
 
         raw::Tree::try_from(list)

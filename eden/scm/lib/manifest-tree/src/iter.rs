@@ -16,7 +16,7 @@ use types::{Key, PathComponentBuf, RepoPath, RepoPathBuf};
 use crate::{
     link::{DurableEntry, Link},
     store::InnerStore,
-    Tree,
+    TreeManifest,
 };
 
 pub struct BfsIter<'a> {
@@ -26,7 +26,7 @@ pub struct BfsIter<'a> {
 }
 
 impl<'a> BfsIter<'a> {
-    pub fn new(tree: &'a Tree, matcher: &'a dyn Matcher) -> Self {
+    pub fn new(tree: &'a TreeManifest, matcher: &'a dyn Matcher) -> Self {
         BfsIter {
             queue: vec![(RepoPathBuf::new(), &tree.root)].into(),
             store: &tree.store,
@@ -268,14 +268,14 @@ mod tests {
 
     #[test]
     fn test_items_empty() {
-        let tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         assert!(tree.files(&AlwaysMatcher::new()).next().is_none());
         assert_eq!(dirs(&tree, &AlwaysMatcher::new()), ["Ephemeral ''"]);
     }
 
     #[test]
     fn test_items_ephemeral() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
         tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn test_items_durable() {
         let store = Arc::new(TestStore::new());
-        let mut tree = Tree::ephemeral(store.clone());
+        let mut tree = TreeManifest::ephemeral(store.clone());
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
         tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
@@ -318,7 +318,7 @@ mod tests {
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
         let hgid = tree.flush().unwrap();
-        let tree = Tree::durable(store.clone(), hgid);
+        let tree = TreeManifest::durable(store.clone(), hgid);
 
         assert_eq!(
             tree.files(&AlwaysMatcher::new())
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn test_items_matcher() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
         tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_files_finish_on_error_when_collecting_to_vec() {
-        let tree = Tree::durable(Arc::new(TestStore::new()), hgid("1"));
+        let tree = TreeManifest::durable(Arc::new(TestStore::new()), hgid("1"));
         let file_results = tree.files(&AlwaysMatcher::new()).collect::<Vec<_>>();
         assert_eq!(file_results.len(), 1);
         assert!(file_results[0].is_err());
@@ -417,7 +417,7 @@ mod tests {
         assert!(files_result.is_err());
     }
 
-    fn dirs(tree: &Tree, matcher: &dyn Matcher) -> Vec<String> {
+    fn dirs(tree: &TreeManifest, matcher: &dyn Matcher) -> Vec<String> {
         tree.dirs(&matcher)
             .map(|t| {
                 let t = t.unwrap();

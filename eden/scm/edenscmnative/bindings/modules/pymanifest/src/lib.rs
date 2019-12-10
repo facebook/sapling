@@ -17,6 +17,7 @@ use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
 use manifest::{DiffType, File, FileMetadata, FileType, FsNode, Manifest};
+use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonDataStore;
@@ -90,7 +91,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class treemanifest |py| {
-    data underlying: RefCell<manifest_tree::Tree>;
+    data underlying: RefCell<TreeManifest>;
     data pending_delete: RefCell<HashSet<RepoPathBuf>>;
 
     def __new__(
@@ -101,8 +102,8 @@ py_class!(class treemanifest |py| {
         let store = PythonDataStore::new(store);
         let manifest_store = Arc::new(ManifestStore::new(store));
         let underlying = match node {
-            None => manifest_tree::Tree::ephemeral(manifest_store),
-            Some(value) => manifest_tree::Tree::durable(manifest_store, pybytes_to_node(py, value)?),
+            None => TreeManifest::ephemeral(manifest_store),
+            Some(value) => TreeManifest::durable(manifest_store, pybytes_to_node(py, value)?),
         };
         treemanifest::create_instance(py, RefCell::new(underlying), RefCell::new(HashSet::new()))
     }
@@ -513,7 +514,7 @@ pub fn prefetch(
 }
 
 fn insert(
-    tree: &mut manifest_tree::Tree,
+    tree: &mut TreeManifest,
     pending_delete: &mut HashSet<RepoPathBuf>,
     path: RepoPathBuf,
     file_metadata: FileMetadata,
