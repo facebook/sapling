@@ -43,13 +43,9 @@ Break the repo in various ways:
   $ echo xx > .hg/store/metalog/roots/meta
   $ rm .hg/store/allheads/meta
 
-Check the repo is broken:
+Check the repo is broken (exit code is non-zero):
 
-  $ hg log -GpT '{desc}\n'
-  abort: "$TESTTMP/shallow/.hg/store/metalog/roots/meta": cannot read
-  in log::OpenOptions::open("$TESTTMP/shallow/.hg/store/metalog/roots")
-  Caused by 1 errors:
-  - failed to fill whole buffer
+  $ hg log -GpT '{desc}\n' &>/dev/null
   [255]
 
 Test that 'hg doctor' can fix them:
