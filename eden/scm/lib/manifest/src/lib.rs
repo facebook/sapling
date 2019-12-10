@@ -27,6 +27,10 @@ use types::{HgId, PathComponentBuf, RepoPath, RepoPathBuf};
 /// Another common failure is passing in a path that the manifest has labeled as a directory. File
 /// paths composed of directory names and file names. Querying for paths that the Manifest has
 /// determined previously to be directories will result in Errors.
+// TODO: Add method for batch modification, takes iterator of added, removed, changed, or
+// maybe (path, Option<FileMetadata>) where None signals removal.
+// TODO: A batch API allows us to move to having all nodes have a computed hash without losing
+// performance. It also allows us to get rid of the flush method.
 pub trait Manifest {
     /// Inspects the manifest for the given path. Returns available metadata.
     /// If the path is pointing to an file then Some(FsNodeMetadata::File) is returned with then
@@ -161,6 +165,7 @@ pub struct FileMetadata {
 /// Technically speaking executable files are regular files. There is no big difference in terms
 /// of the mechanics between the two approaches. The approach using an Executable is more readable
 /// so that is what we have now.
+// TODO: Consider moving Executable to FileMetadata. Consider adding Directory to FileType.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FileType {
     /// Regular files.
