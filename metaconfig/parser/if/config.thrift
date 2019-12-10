@@ -6,6 +6,89 @@
  * directory of this source tree.
  */
 
+
+ // NOTICE:
+ // Don't use 'defaults' for any of these values (e.g. 'bool enabled = true')
+ // because these structs will be deserialized by serde in rust. The following
+ // rules apply upon deserialization:
+ //   1) specified default values are ignored, default values will always be
+ //      the 'Default::default()' value for a given type. For example, even
+ //      if you specify:
+ //          1: bool enabled = true,
+ //
+ //       upon decoding, if the field enabled isn't present, the default value
+ //       will be false.
+ //
+ //   2) not specifying optional won't actually make your field required,
+ //      neither will specifying required make any field required. Upon decoding
+ //      with serde, all values will be Default::default() and no error will be
+ //      given.
+ //
+ //   3) the only way to detect wether a field was specified in the structure
+ //      being deserialized is by making a field optional. This will result in
+ //      a 'None' value for a Option<T> in rust. So the way we can give default
+ //      values other then 'Default::default()' is by making a field optional,
+ //      and then explicitly handle 'None' after deserialization.
+
+struct RawRepoConfig {
+    // Most important - the unique ID of this Repo
+    // Required - don't let the optional comment fool you, see notice above
+    1: optional i32 repoid,
+
+    // Persistent storage - contains location of metadata DB and name of
+    // blobstore we're using. We reference the common storage config by name.
+    // Required - don't let the optional comment fool you, see notice above
+    2: optional string storage_config,
+
+    // Local definitions of storage (override the global defined storage)
+    3: optional map<string, RawStorageConfig> storage,
+
+    // Repo is enabled for use
+    4: optional bool enabled,
+
+    // Repo is read-only (default false)
+    5: optional bool readonly,
+
+    // Define special bookmarks with parameters
+    6: optional list<RawBookmarkConfig> bookmarks,
+    7: optional i64 bookmarks_cache_ttl,
+
+    // Define hook manager
+    8: optional RawHookManagerParams hook_manager_params,
+
+    // Define hook available for use on bookmarks
+    9: optional list<RawHookConfig> hooks,
+
+    // DB we're using for write-locking repos. This is separate from the rest
+    // because it's the same one Mercurial uses, to make it easier to manage
+    // repo locking for both from one tool.
+    10: optional string write_lock_db_address,
+
+    // This enables or disables verification for censored blobstores
+    11: optional bool redaction,
+
+    12: optional i64 generation_cache_size,
+    13: optional string scuba_table,
+    14: optional string scuba_table_hooks,
+    15: optional i64 delay_mean,
+    16: optional i64 delay_stddev,
+    17: optional RawCacheWarmupConfig cache_warmup,
+    18: optional RawPushParams push,
+    19: optional RawPushrebaseParams pushrebase,
+    20: optional RawLfsParams lfs,
+    21: optional RawWireprotoLoggingConfig wireproto_logging,
+    22: optional i64 hash_validation_percentage,
+    23: optional string skiplist_index_blobstore_key,
+    24: optional RawBundle2ReplayParams bundle2_replay_params,
+    25: optional RawInfinitepushParams infinitepush,
+    26: optional i64 list_keys_patterns_max,
+    27: optional RawFilestoreParams filestore,
+    28: optional i64 hook_max_file_size,
+    29: optional string hipster_acl,
+    30: optional RawSourceControlServiceMonitoring
+                   source_control_service_monitoring,
+}
+
 struct RawBlobstoreDisabled {}
 struct RawBlobstoreFilePath {
     1: string path,
@@ -118,6 +201,11 @@ struct RawCacheWarmupConfig {
 
 struct RawBookmarkHook {
     1: string hook_name,
+}
+
+struct RawHookManagerParams {
+    /// Wether to disable the acl checker or not (intended for testing purposes)
+    1: bool disable_acl_checker,
 }
 
 struct RawHookConfig {

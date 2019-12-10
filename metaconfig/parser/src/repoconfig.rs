@@ -9,7 +9,6 @@
 //! Contains structures describing configuration of the entire repo. Those structures are
 //! deserialized from TOML files from metaconfig repo
 
-use serde_derive::Deserialize;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     convert::{TryFrom, TryInto},
@@ -27,10 +26,8 @@ use bookmarks::BookmarkName;
 use failure_ext::chain::ChainExt;
 use itertools::Itertools;
 use metaconfig_thrift::{
-    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitSyncConfig,
-    RawCommitSyncSmallRepoConfig, RawCommonConfig, RawFilestoreParams, RawHookConfig,
-    RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams,
-    RawSourceControlServiceMonitoring, RawStorageConfig, RawWireprotoLoggingConfig,
+    RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
+    RawInfinitepushParams, RawRepoConfig, RawStorageConfig, RawWireprotoLoggingConfig,
 };
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
@@ -464,7 +461,7 @@ impl RepoConfigs {
 
         let raw_config = Self::read_toml::<RawRepoConfig>(&fs::read(&config_file)?)?;
 
-        let hooks = raw_config.hooks.clone();
+        let hooks = raw_config.hooks.clone().unwrap_or_default();
 
         let mut all_hook_params = vec![];
         for raw_hook_config in hooks {
@@ -567,7 +564,7 @@ impl RepoConfigs {
         commit_sync: HashMap<String, CommitSyncConfig>,
         hooks: Vec<HookParams>,
     ) -> Result<RepoConfig> {
-        let storage = this.storage.clone();
+        let storage = this.storage.clone().unwrap_or_default();
         let get_storage = move |name: &str| -> Result<StorageConfig> {
             let raw_storage_config = storage
                 .get(name)
@@ -580,10 +577,16 @@ impl RepoConfigs {
             raw_storage_config.try_into()
         };
 
-        let storage_config = get_storage(&this.storage_config)?;
-        let enabled = this.enabled;
-        let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
-        let repoid = RepositoryId::new(this.repoid);
+        let storage_config = get_storage(
+            &this
+                .storage_config
+                .ok_or_else(|| anyhow!("missing storage_config from configuration"))?,
+        )?;
+        let enabled = this.enabled.unwrap_or(true);
+        let repoid = RepositoryId::new(
+            this.repoid
+                .ok_or_else(|| anyhow!("missing repoid from configuration"))?,
+        );
         let scuba_table = this.scuba_table;
         let scuba_table_hooks = this.scuba_table_hooks;
 
@@ -641,7 +644,7 @@ impl RepoConfigs {
         });
         let bookmarks = {
             let mut bookmark_params = Vec::new();
-            for bookmark in this.bookmarks.iter().cloned() {
+            for bookmark in this.bookmarks.unwrap_or_default().iter().cloned() {
                 let bookmark_or_regex = match (bookmark.regex, bookmark.name) {
                     (None, Some(name)) => {
                         BookmarkOrRegex::Bookmark(BookmarkName::new(name).unwrap())
@@ -685,7 +688,10 @@ impl RepoConfigs {
             }
             bookmark_params
         };
-        let bookmarks_cache_ttl = this.bookmarks_cache_ttl.map(Duration::from_millis);
+        let bookmarks_cache_ttl = this
+            .bookmarks_cache_ttl
+            .map(|ttl| -> Result<_, Error> { Ok(Duration::from_millis(ttl.try_into()?)) })
+            .transpose()?;
 
         let push = this
             .push
@@ -734,15 +740,19 @@ impl RepoConfigs {
             None => LfsParams { threshold: None },
         };
 
-        let hash_validation_percentage = this.hash_validation_percentage.unwrap_or(0);
+        let hash_validation_percentage = this
+            .hash_validation_percentage
+            .map(|v| v.try_into())
+            .transpose()?
+            .unwrap_or(0);
 
-        let readonly = if this.readonly {
+        let readonly = if this.readonly.unwrap_or_default() {
             RepoReadOnly::ReadOnly("Set by config option".to_string())
         } else {
             RepoReadOnly::ReadWrite
         };
 
-        let redaction = if this.redaction {
+        let redaction = if this.redaction.unwrap_or(true) {
             Redaction::Enabled
         } else {
             Redaction::Disabled
@@ -773,12 +783,22 @@ impl RepoConfigs {
             )
             .unwrap_or(InfinitepushParams::default());
 
-        let list_keys_patterns_max = this
+        let generation_cache_size: usize = this
+            .generation_cache_size
+            .map(|v| v.try_into())
+            .transpose()?
+            .unwrap_or(10 * 1024 * 1024);
+
+        let list_keys_patterns_max: u64 = this
             .list_keys_patterns_max
+            .map(|v| v.try_into())
+            .transpose()?
             .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
 
-        let hook_max_file_size = this
+        let hook_max_file_size: u64 = this
             .hook_max_file_size
+            .map(|v| v.try_into())
+            .transpose()?
             .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
 
         let filestore = this.filestore.map(|f| f.try_into()).transpose()?;
@@ -875,75 +895,6 @@ impl RepoConfigs {
             Err(e) => Err(anyhow!("error parsing toml: {}", e)),
         }
     }
-}
-
-fn is_true() -> bool {
-    true
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawRepoConfig {
-    /// Most important - the unique ID of this Repo
-    repoid: i32,
-
-    /// Persistent storage - contains location of metadata DB and name of blobstore we're
-    /// using. We reference the common storage config by name.
-    storage_config: String,
-
-    /// Local definitions of storage (override the global set defined in storage.toml)
-    #[serde(default)]
-    storage: HashMap<String, RawStorageConfig>,
-
-    /// Repo is enabled for use (default true)
-    #[serde(default = "is_true")]
-    enabled: bool,
-
-    /// Repo is read-only (default false)
-    #[serde(default)]
-    readonly: bool,
-
-    /// Define special bookmarks with parameters
-    #[serde(default)]
-    bookmarks: Vec<RawBookmarkConfig>,
-    bookmarks_cache_ttl: Option<u64>,
-
-    /// Define hook manager
-    hook_manager_params: Option<HookManagerParams>,
-
-    /// Define hook available for use on bookmarks
-    #[serde(default)]
-    hooks: Vec<RawHookConfig>,
-
-    /// DB we're using for write-locking repos. This is separate from the rest because
-    /// it's the same one Mercurial uses, to make it easier to manage repo locking for
-    /// both from one tool.
-    write_lock_db_address: Option<String>,
-
-    /// This enables or disables verification for censored blobstores
-    #[serde(default = "is_true")]
-    redaction: bool,
-
-    // TODO: work out what these all are
-    generation_cache_size: Option<usize>,
-    scuba_table: Option<String>,
-    scuba_table_hooks: Option<String>,
-    delay_mean: Option<u64>,
-    delay_stddev: Option<u64>,
-    cache_warmup: Option<RawCacheWarmupConfig>,
-    push: Option<RawPushParams>,
-    pushrebase: Option<RawPushrebaseParams>,
-    lfs: Option<RawLfsParams>,
-    wireproto_logging: Option<RawWireprotoLoggingConfig>,
-    hash_validation_percentage: Option<usize>,
-    skiplist_index_blobstore_key: Option<String>,
-    bundle2_replay_params: Option<RawBundle2ReplayParams>,
-    infinitepush: Option<RawInfinitepushParams>,
-    list_keys_patterns_max: Option<u64>,
-    filestore: Option<RawFilestoreParams>,
-    hook_max_file_size: Option<u64>,
-    hipster_acl: Option<String>,
-    source_control_service_monitoring: Option<RawSourceControlServiceMonitoring>,
 }
 
 #[cfg(test)]
