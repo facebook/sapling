@@ -23,6 +23,7 @@ namespace eden {
 
 PrjfsChannel::PrjfsChannel(EdenMount* mount)
     : mount_{mount},
+      dispatcher_{*mount},
       mountId_{Guid::generate()},
       winPath_{edenToWinPath(mount->getPath().value())} {
   XLOG(INFO) << sformat(
@@ -96,7 +97,7 @@ void PrjfsChannel::start() {
   startOpts.NotificationMappings = notificationMappings;
   startOpts.NotificationMappingsCount = std::size(notificationMappings);
 
-  auto dispatcher = mount_->getDispatcher();
+  auto dispatcher = getDispatcher();
   XLOG(INFO) << sformat(
       "Starting PrjfsChannel Path ({}) Dispatcher (0x{:x})",
       mount_->getPath(),

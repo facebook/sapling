@@ -24,7 +24,6 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/mount/FsChannel.h"
 #include "eden/fs/win/utils/Stub.h" // @manual
 
@@ -147,13 +146,6 @@ class EdenMount {
    */
   const ObjectStore* getObjectStore() const {
     return objectStore_.get();
-  }
-
-  /**
-   * Return the EdenDispatcher used for this mount.
-   */
-  const EdenDispatcher* getDispatcher() const {
-    return &dispatcher_;
   }
 
   Journal& getJournal() {
@@ -418,8 +410,6 @@ class EdenMount {
    */
   std::shared_ptr<ServerState> serverState_;
   std::shared_ptr<ObjectStore> objectStore_;
-
-  EdenDispatcher dispatcher_;
 
   std::unique_ptr<CurrentState> currentState_;
 

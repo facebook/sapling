@@ -65,7 +65,6 @@ EdenMount::EdenMount(
       serverState_{std::move(serverState)},
       objectStore_{std::move(objectStore)},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
-      dispatcher_{*this},
       journal_{std::move(journal)},
       mountGeneration_{generateLuid()} {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
