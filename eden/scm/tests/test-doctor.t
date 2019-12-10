@@ -10,50 +10,74 @@ Test indexedlogdatapack
   $ setconfig remotefilelog.server=true remotefilelog.serverexpiration=-1
 
   $ cd $TESTTMP
+  $ enable remotenames
   $ setconfig remotefilelog.debug=false remotefilelog.indexedlogdatastore=true remotefilelog.fetchpacks=true
+  $ setconfig diff.git=true experimental.narrow-heads=true mutation.record=true mutation.enabled=true mutation.date="0 0" visibility.enabled=1
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   $ cd shallow
 
- (Accessing repo.fileslog creates an empty store)
-  $ hg debugshell -c 'repo.fileslog'
+Make some commits
+
+  $ drawdag << 'EOS'
+  > B C  # amend: B -> C
+  > |/
+  > A
+  > EOS
+
+When everything looks okay:
 
   $ hg doctor
-  attempt to check and fix indexedlogdatastore ...
-    Attempt to repair log "0"
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Latest = 0
+  mutation: looks okay
+  metalog: looks okay
+  allheads: looks okay
+  indexedlogdatastore: looks okay
+
+Break the repo in various ways:
 
   $ echo x > $TESTTMP/hgcache/master/indexedlogdatastore/latest
-  $ hg doctor
-  attempt to check and fix indexedlogdatastore ...
-    Attempt to repair log "0"
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Reset latest to 0
-
-  $ rm $TESTTMP/hgcache/master/indexedlogdatastore/latest
-  $ hg doctor
-  attempt to check and fix indexedlogdatastore ...
-    Attempt to repair log "0"
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Reset latest to 0
-
-  $ echo x > $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  $ hg doctor
-  attempt to check and fix indexedlogdatastore ...
-    Attempt to repair log "0"
-    Fixed header in log
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Latest = 0
-
   $ echo y > $TESTTMP/hgcache/master/indexedlogdatastore/0/index-node.sum
+  $ mkdir -p .hg/store/mutation/
+  $ echo v > .hg/store/mutation/log
+  $ echo xx > .hg/store/metalog/blobs/index-id
+  $ echo xx > .hg/store/metalog/roots/meta
+  $ rm .hg/store/allheads/meta
+
+Check the repo is broken:
+
+  $ hg log -GpT '{desc}\n'
+  abort: "$TESTTMP/shallow/.hg/store/metalog/roots/meta": cannot read
+  in log::OpenOptions::open("$TESTTMP/shallow/.hg/store/metalog/roots")
+  Caused by 1 errors:
+  - failed to fill whole buffer
+  [255]
+
+Test that 'hg doctor' can fix them:
+
   $ hg doctor
-  attempt to check and fix indexedlogdatastore ...
-    Attempt to repair log "0"
-    Verified 0 entries, 12 bytes in log
-    Rebuilt index "node"
-    Latest = 0
+  mutation: repaired
+  metalog: repaired
+  allheads: repaired
+  indexedlogdatastore: repaired
+
+Check the repo is usable again:
+
+  $ hg log -GpT '{desc}\n'
+  o  C
+  |  diff --git a/C b/C
+  |  new file mode 100644
+  |  --- /dev/null
+  |  +++ b/C
+  |  @@ -0,0 +1,1 @@
+  |  +C
+  |  \ No newline at end of file
+  |
+  o  A
+     diff --git a/A b/A
+     new file mode 100644
+     --- /dev/null
+     +++ b/A
+     @@ -0,0 +1,1 @@
+     +A
+     \ No newline at end of file
+  
