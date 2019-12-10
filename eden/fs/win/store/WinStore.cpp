@@ -48,14 +48,14 @@ shared_ptr<const Tree> WinStore::getTree(
   return tree;
 }
 
-shared_ptr<const Tree> WinStore::getTree(const std::wstring& path) const {
+shared_ptr<const Tree> WinStore::getTree(const std::wstring_view path) const {
   std::string edenPath = winToEdenPath(path);
   RelativePathPiece relPath{edenPath};
   return getTree(relPath);
 }
 
 bool WinStore::getAllEntries(
-    const std::wstring& path,
+    const std::wstring_view path,
     vector<FileMetadata>& entryList) const {
   shared_ptr<const Tree> tree = getTree(path);
 
@@ -105,7 +105,7 @@ bool WinStore::getAllEntries(
 }
 
 bool WinStore::getFileMetadata(
-    const std::wstring& path,
+    const std::wstring_view path,
     FileMetadata& fileMetadata) const {
   std::string edenPath = winToEdenPath(path);
   RelativePathPiece relPath{edenPath};
@@ -137,7 +137,8 @@ bool WinStore::getFileMetadata(
   return false;
 }
 
-std::shared_ptr<const Blob> WinStore::getBlob(const std::wstring& path) const {
+std::shared_ptr<const Blob> WinStore::getBlob(
+    const std::wstring_view path) const {
   std::string edenPath = winToEdenPath(path);
   RelativePathPiece relPath(edenPath);
   RelativePathPiece parentPath = relPath.dirname();

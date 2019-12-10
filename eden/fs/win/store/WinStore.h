@@ -74,15 +74,13 @@ class WinStore {
   // sort to get the desired order.
   //
   bool getAllEntries(
-      const std::wstring& path,
+      const std::wstring_view path,
       std::vector<FileMetadata>& entryList) const;
-  bool getFileMetadata(const std::wstring& path, FileMetadata& fileMetadata)
+  bool getFileMetadata(const std::wstring_view path, FileMetadata& fileMetadata)
       const;
-  std::optional<const folly::IOBuf&> getFileContents(
-      const std::wstring& path) const;
 
-  std::shared_ptr<const Tree> getTree(const std::wstring& path) const;
-  std::shared_ptr<const Blob> getBlob(const std::wstring& path) const;
+  std::shared_ptr<const Tree> getTree(const std::wstring_view path) const;
+  std::shared_ptr<const Blob> getBlob(const std::wstring_view path) const;
 
  private:
   std::shared_ptr<const Tree> getTree(const RelativePathPiece& relPath) const;

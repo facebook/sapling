@@ -214,3 +214,43 @@ TEST(StringConvTest, teststdPathToString) {
 
   EXPECT_EQ(multiBytePath, winToEdenPath(widePath));
 }
+
+TEST(StringConvTest, testWintoEdenPathRelativePathCStr) {
+  std::wstring winPath = L"winPath\\PATH1\\path\\File.txt";
+  std::string edenPath = "winPath/PATH1/path/File.txt";
+  EXPECT_EQ(winToEdenPath(winPath.c_str()), edenPath);
+}
+
+TEST(StringConvTest, testEdenToWinPathRelativePathCStr) {
+  std::wstring winPath = L"winPath\\PATH1\\path\\File.txt";
+  std::string edenPath = "winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(edenToWinPath(edenPath.c_str()), winPath);
+}
+
+TEST(StringConvTest, testWintoEdenPathMixedPathCStr) {
+  std::wstring winPath = L"mixed/winPath\\PATH1/path\\File.txt";
+  std::string edenPath = "mixed/winPath/PATH1/path/File.txt";
+  EXPECT_EQ(winToEdenPath(winPath.c_str()), edenPath);
+}
+
+TEST(StringConvTest, testEdenToWinPathMixedPathCStr) {
+  std::wstring winPath = L"winPath\\PATH1\\path\\File.txt";
+  std::string edenPath = "winPath/PATH1\\path/File.txt";
+
+  EXPECT_EQ(edenToWinPath(edenPath.c_str()), winPath);
+}
+
+TEST(StringConvTest, testWintoEdenPathNTPathCStr) {
+  std::wstring winPath = L"\\??\\mixed\\winPath\\PATH1\\path\\File.txt";
+  std::string edenPath = "/??/mixed/winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(winToEdenPath(winPath.c_str()), edenPath);
+}
+
+TEST(StringConvTest, testEdenToWinPathNTPathCStr) {
+  std::wstring winPath = L"\\??\\mixed\\winPath\\PATH1\\path\\File.txt";
+  std::string edenPath = "/??/mixed/winPath/PATH1/path/File.txt";
+
+  EXPECT_EQ(edenToWinPath(edenPath.c_str()), winPath);
+}

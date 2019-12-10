@@ -164,7 +164,7 @@ HRESULT
 EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     PRJ_PLACEHOLDER_INFO placeholderInfo = {};
-    const wstring path{callbackData.FilePathName};
+    const std::wstring_view path{callbackData.FilePathName};
     FileMetadata metadata = {};
 
     if (!winStore_.getFileMetadata(path, metadata)) {

@@ -185,6 +185,13 @@ winToEdenPath(T const& winString) {
   return edenStr;
 }
 
+static std::string winToEdenPath(const wchar_t* FOLLY_NULLABLE wideCString) {
+  if (!wideCString) {
+    return std::string{};
+  }
+  return winToEdenPath(std::wstring_view(wideCString));
+}
+
 template <class T>
 typename std::enable_if<IsStdPath<T>::value, std::string>::type winToEdenPath(
     T const& path) {
@@ -199,6 +206,13 @@ edenToWinPath(T const& edenString) {
   std::replace(winStr.begin(), winStr.end(), L'/', L'\\');
 #endif
   return winStr;
+}
+
+static std::wstring edenToWinPath(const char* FOLLY_NULLABLE multiByteCString) {
+  if (!multiByteCString) {
+    return L"";
+  }
+  return edenToWinPath(std::string_view(multiByteCString));
 }
 
 template <class T>
