@@ -311,6 +311,11 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enableBlobCaching{"experimental:enable-blob-caching",
                                         true,
                                         this};
+
+  /**
+   * Controls whether EdenFS uses EdenApi to import data from remote.
+   */
+  ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};
 };
 } // namespace eden
 } // namespace facebook

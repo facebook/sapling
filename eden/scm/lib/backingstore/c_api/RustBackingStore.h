@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<d4d2d4d612a8215f35cd4ef138904bab>>
+ * @generated SignedSource<<270b20a5b97acc2e6cb1e80df74fa48d>>
  *
  */
 
@@ -132,7 +132,8 @@ RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
                                                        uintptr_t node_len);
 
 RustCFallibleBase rust_backingstore_new(const char *repository,
-                                                          size_t repository_len);
+                                                          size_t repository_len,
+                                                          bool _use_edenapi);
 
 void rust_cbytes_free(RustCBytes *vec);
 

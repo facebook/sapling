@@ -34,6 +34,7 @@ fn backingstore_new(
 pub extern "C" fn rust_backingstore_new(
     repository: *const c_char,
     repository_len: size_t,
+    _use_edenapi: bool,
 ) -> CFallible<BackingStore> {
     backingstore_new(repository, repository_len).into()
 }

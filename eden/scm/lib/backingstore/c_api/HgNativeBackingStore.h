@@ -20,7 +20,7 @@ namespace eden {
 
 class HgNativeBackingStore {
  public:
-  explicit HgNativeBackingStore(folly::StringPiece repository);
+  HgNativeBackingStore(folly::StringPiece repository, bool useEdenApi);
 
   std::unique_ptr<folly::IOBuf> getBlob(
       folly::ByteRange name,

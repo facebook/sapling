@@ -224,7 +224,9 @@ HgBackingStore::HgBackingStore(
       serverThreadPool_(serverThreadPool) {
 #ifdef EDEN_HAVE_RUST_DATAPACK
   try {
-    datapackStore_ = std::make_optional<HgDatapackStore>(repository);
+    auto useEdenApi = config->getEdenConfig()->useEdenApi.getValue();
+    datapackStore_ =
+        std::make_optional<HgDatapackStore>(repository, useEdenApi);
   } catch (const std::runtime_error& ex) {
     XLOG(WARN) << "Rust native store is disabled due to: " << ex.what();
   }

@@ -12,6 +12,8 @@
 #include <gtest/gtest.h>
 #include <memory>
 
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/MemoryLocalStore.h"
@@ -173,10 +175,13 @@ usecunionstore=True
   EXPECT_THAT(
       catOutputs.second, HasSubstr("no remotefilelog server configured"));
 
+  auto config =
+      std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig());
+
   // Build an HgBackingStore for this repository
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
   HgBackingStore store(
-      clientRepo.path(), &localStore, &resultThreadPool, nullptr, stats);
+      clientRepo.path(), &localStore, &resultThreadPool, config, stats);
 
   // Now test running prefetch
   // Build a list of file blob IDs to prefetch.

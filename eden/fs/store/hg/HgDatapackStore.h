@@ -22,8 +22,8 @@ class HgProxyHash;
 
 class HgDatapackStore {
  public:
-  explicit HgDatapackStore(AbsolutePathPiece repository)
-      : store_{repository.stringPiece()} {}
+  HgDatapackStore(AbsolutePathPiece repository, bool useEdenApi)
+      : store_{repository.stringPiece(), useEdenApi} {}
 
   std::unique_ptr<Blob> getBlob(const Hash& id, const HgProxyHash& hgInfo);
 
