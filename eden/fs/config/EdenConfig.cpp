@@ -65,6 +65,16 @@ namespace eden {
 
 const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
+std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
+  return std::make_unique<EdenConfig>(
+      /* userName=*/"testuser",
+      /* userID=*/uid_t{},
+      /* userHomePath=*/AbsolutePath{"/tmp"},
+      /* userConfigPath=*/AbsolutePath{"/tmp"},
+      /* systemConfigDir=*/AbsolutePath{"/tmp"},
+      /* setSystemConfigPath=*/AbsolutePath{"/tmp"});
+}
+
 std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {
   switch (cs) {
     case ConfigSource::Default:

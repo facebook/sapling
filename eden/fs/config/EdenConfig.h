@@ -61,6 +61,11 @@ class EdenConfig : private ConfigSettingManager {
   EdenConfig& operator=(EdenConfig&& source) = delete;
 
   /**
+   * Create an EdenConfig for testing usage>
+   */
+  static std::shared_ptr<EdenConfig> createTestEdenConfig();
+
+  /**
    * Update EdenConfig by loading the system configuration.
    */
   void loadSystemConfig();
