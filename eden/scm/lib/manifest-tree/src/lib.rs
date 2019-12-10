@@ -24,7 +24,7 @@ use crypto::{digest::Digest, sha1::Sha1};
 use once_cell::sync::OnceCell;
 use thiserror::Error;
 
-use manifest::{DiffEntry, Directory, File, FileMetadata, FsNode, Manifest};
+use manifest::{DiffEntry, Directory, File, FileMetadata, FsNodeMetadata, Manifest};
 use pathmatcher::Matcher;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
@@ -94,7 +94,7 @@ impl TreeManifest {
 }
 
 impl Manifest for TreeManifest {
-    fn get(&self, path: &RepoPath) -> Result<Option<FsNode>> {
+    fn get(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>> {
         let result = self.get_link(path)?.map(|link| link.to_fs_node());
         Ok(result)
     }
@@ -264,7 +264,7 @@ impl Manifest for TreeManifest {
         matcher: &'a M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
         let files = BfsIter::new(&self, matcher).filter_map(|result| match result {
-            Ok((path, FsNode::File(metadata))) => Some(Ok(File::new(path, metadata))),
+            Ok((path, FsNodeMetadata::File(metadata))) => Some(Ok(File::new(path, metadata))),
             Ok(_) => None,
             Err(e) => Some(Err(e)),
         });
@@ -281,7 +281,9 @@ impl Manifest for TreeManifest {
         matcher: &'a M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
         let dirs = BfsIter::new(&self, matcher).filter_map(|result| match result {
-            Ok((path, FsNode::Directory(metadata))) => Some(Ok(Directory::new(path, metadata))),
+            Ok((path, FsNodeMetadata::Directory(metadata))) => {
+                Some(Ok(Directory::new(path, metadata)))
+            }
             Ok(_) => None,
             Err(e) => Some(Err(e)),
         });
@@ -539,7 +541,7 @@ impl TreeManifest {
 pub enum List {
     NotFound,
     File,
-    Directory(Vec<(PathComponentBuf, FsNode)>),
+    Directory(Vec<(PathComponentBuf, FsNodeMetadata)>),
 }
 
 /// The purpose of this function is to provide compatible behavior with the C++ implementation
@@ -823,11 +825,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             tree.get(repo_path("foo/bar")).unwrap(),
-            Some(FsNode::Directory(None))
+            Some(FsNodeMetadata::Directory(None))
         );
         assert_eq!(
             tree.get(repo_path("foo")).unwrap(),
-            Some(FsNode::Directory(None))
+            Some(FsNodeMetadata::Directory(None))
         );
     }
 
@@ -865,7 +867,7 @@ mod tests {
         assert_eq!(tree.get(repo_path("a1/b1/c1")).unwrap(), None);
         assert_eq!(
             tree.get(repo_path("a1/b2")).unwrap(),
-            Some(FsNode::File(make_meta("20")))
+            Some(FsNodeMetadata::File(make_meta("20")))
         );
         assert_eq!(
             tree.remove(repo_path("a1/b2")).unwrap(),
@@ -875,7 +877,7 @@ mod tests {
 
         assert_eq!(
             tree.get(repo_path("a2/b2/c2")).unwrap(),
-            Some(FsNode::File(make_meta("30")))
+            Some(FsNodeMetadata::File(make_meta("30")))
         );
         assert_eq!(
             tree.remove(repo_path("a2/b2/c2")).unwrap(),
@@ -885,7 +887,7 @@ mod tests {
 
         assert_eq!(
             tree.get(RepoPath::empty()).unwrap(),
-            Some(FsNode::Directory(None))
+            Some(FsNodeMetadata::Directory(None))
         );
     }
 
@@ -913,7 +915,7 @@ mod tests {
 
         assert_eq!(
             tree.get(RepoPath::empty()).unwrap(),
-            Some(FsNode::Directory(Some(tree_hgid)))
+            Some(FsNodeMetadata::Directory(Some(tree_hgid)))
         );
         assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
         assert_eq!(
@@ -923,7 +925,7 @@ mod tests {
         assert_eq!(tree.get(repo_path("a1/b1")).unwrap(), None);
         assert_eq!(
             tree.get(repo_path("a1/b2")).unwrap(),
-            Some(FsNode::File(make_meta("12")))
+            Some(FsNodeMetadata::File(make_meta("12")))
         );
         assert_eq!(
             tree.remove(repo_path("a1/b2")).unwrap(),
@@ -935,13 +937,13 @@ mod tests {
 
         assert_eq!(
             tree.get(repo_path("a2")).unwrap(),
-            Some(FsNode::File(make_meta("20")))
+            Some(FsNodeMetadata::File(make_meta("20")))
         );
         assert_eq!(tree.remove(repo_path("a2")).unwrap(), Some(make_meta("20")));
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
         assert_eq!(
             tree.get(RepoPath::empty()).unwrap(),
-            Some(FsNode::Directory(None))
+            Some(FsNodeMetadata::Directory(None))
         );
     }
 
@@ -1450,7 +1452,10 @@ mod tests {
         assert_eq!(tree.list(repo_path("a1/b1/c1")).unwrap(), List::File);
         assert_eq!(
             tree.list(repo_path("a1/b1")).unwrap(),
-            List::Directory(vec![(path_component_buf("c1"), FsNode::File(c1_meta))]),
+            List::Directory(vec![(
+                path_component_buf("c1"),
+                FsNodeMetadata::File(c1_meta)
+            )]),
         );
         assert_eq!(
             tree.list(repo_path("a1")).unwrap(),
@@ -1459,19 +1464,22 @@ mod tests {
                     path_component_buf("b1"),
                     tree.get(repo_path("a1/b1")).unwrap().unwrap()
                 ),
-                (path_component_buf("b2"), FsNode::File(b2_meta)),
+                (path_component_buf("b2"), FsNodeMetadata::File(b2_meta)),
             ]),
         );
         assert_eq!(tree.list(repo_path("a2/b3/c2")).unwrap(), List::File);
         assert_eq!(
             tree.list(repo_path("a2/b3")).unwrap(),
-            List::Directory(vec![(path_component_buf("c2"), FsNode::File(c2_meta))]),
+            List::Directory(vec![(
+                path_component_buf("c2"),
+                FsNodeMetadata::File(c2_meta)
+            )]),
         );
         assert_eq!(
             tree.list(repo_path("a2")).unwrap(),
             List::Directory(vec![
-                (path_component_buf("b3"), FsNode::Directory(None)),
-                (path_component_buf("b4"), FsNode::File(b4_meta)),
+                (path_component_buf("b3"), FsNodeMetadata::Directory(None)),
+                (path_component_buf("b4"), FsNodeMetadata::File(b4_meta)),
             ]),
         );
         assert_eq!(
@@ -1481,7 +1489,7 @@ mod tests {
                     path_component_buf("a1"),
                     tree.get(repo_path("a1")).unwrap().unwrap()
                 ),
-                (path_component_buf("a2"), FsNode::Directory(None)),
+                (path_component_buf("a2"), FsNodeMetadata::Directory(None)),
             ]),
         );
     }

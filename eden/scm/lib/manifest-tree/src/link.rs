@@ -10,7 +10,7 @@ use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
 use anyhow::{bail, format_err, Context, Result};
 use once_cell::sync::OnceCell;
 
-use manifest::{File, FileMetadata, FsNode};
+use manifest::{File, FileMetadata, FsNodeMetadata};
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{HgId, Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
@@ -77,11 +77,11 @@ impl Link {
         }
     }
 
-    pub fn to_fs_node(&self) -> FsNode {
+    pub fn to_fs_node(&self) -> FsNodeMetadata {
         match self {
-            &Link::Leaf(metadata) => FsNode::File(metadata),
-            Link::Ephemeral(_) => FsNode::Directory(None),
-            Link::Durable(durable) => FsNode::Directory(Some(durable.hgid)),
+            &Link::Leaf(metadata) => FsNodeMetadata::File(metadata),
+            Link::Ephemeral(_) => FsNodeMetadata::Directory(None),
+            Link::Durable(durable) => FsNodeMetadata::Directory(Some(durable.hgid)),
         }
     }
 

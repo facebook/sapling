@@ -9,7 +9,7 @@ use std::collections::{btree_map, VecDeque};
 
 use anyhow::{Error, Result};
 
-use manifest::FsNode;
+use manifest::FsNodeMetadata;
 use pathmatcher::Matcher;
 use types::{Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
@@ -52,13 +52,15 @@ impl<'a> BfsIter<'a> {
 }
 
 impl<'a> Iterator for BfsIter<'a> {
-    type Item = Result<(RepoPathBuf, FsNode)>;
+    type Item = Result<(RepoPathBuf, FsNodeMetadata)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let (path, children, hgid) = match self.queue.pop_front() {
             None => return None,
             Some((path, link)) => match link {
-                Link::Leaf(file_metadata) => return Some(Ok((path, FsNode::File(*file_metadata)))),
+                Link::Leaf(file_metadata) => {
+                    return Some(Ok((path, FsNodeMetadata::File(*file_metadata))))
+                }
                 Link::Ephemeral(children) => (path, children, None),
                 Link::Durable(entry) => loop {
                     match entry.get_links() {
@@ -81,7 +83,7 @@ impl<'a> Iterator for BfsIter<'a> {
                 self.queue.push_back((child_path, &link));
             }
         }
-        Some(Ok((path, FsNode::Directory(hgid))))
+        Some(Ok((path, FsNodeMetadata::Directory(hgid))))
     }
 }
 

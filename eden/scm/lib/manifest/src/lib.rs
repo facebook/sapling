@@ -29,10 +29,11 @@ use types::{HgId, RepoPath, RepoPathBuf};
 /// determined previously to be directories will result in Errors.
 pub trait Manifest {
     /// Inspects the manifest for the given path.
-    /// If the path is pointing to an file then Some(FsNode::File) is returned with then
+    /// If the path is pointing to an file then Some(FsNodeMetadata::File) is returned with then
     /// file_metadata associated with the file. If the path is poitning to a directory then
-    /// Some(FsNode::Directory) is returned. If the path is not found then None is returned.
-    fn get(&self, path: &RepoPath) -> Result<Option<FsNode>>;
+    /// Some(FsNodeMetadata::Directory) is returned. If the path is not found then None is
+    /// returned.
+    fn get(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>>;
 
     /// Associates a file path with specific file metadata.
     /// A call with a file path that already exists results in an override or the old metadata.
@@ -50,8 +51,8 @@ pub trait Manifest {
     /// Paths that were not set will return None.
     fn get_file(&self, file_path: &RepoPath) -> Result<Option<FileMetadata>> {
         let result = self.get(file_path)?.and_then(|fs_hgid| match fs_hgid {
-            FsNode::File(file_metadata) => Some(file_metadata),
-            FsNode::Directory(_) => None,
+            FsNodeMetadata::File(file_metadata) => Some(file_metadata),
+            FsNodeMetadata::Directory(_) => None,
         });
         Ok(result)
     }
@@ -80,15 +81,32 @@ pub trait Manifest {
     ) -> Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>;
 }
 
-/// FsNode short for file system node.
+/// FsNodeMetadata short for file system node.
 /// The manifest tracks a list of files. However file systems are hierarchical structures
 /// composed of directories and files at the end. For different operations it is useful to have
 /// a representation for file or directory. A good example is listing a directory. This structure
 /// helps us represent that notion.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub enum FsNode {
+pub enum FsNodeMetadata {
     Directory(Option<HgId>),
     File(FileMetadata),
+}
+
+/// A directory entry in a manifest.
+///
+/// Consists of the full path to the directory. Directories may or may not be assigned
+/// identifiers. When an identifier is available it is also returned.
+// TODO: Move hgid to a new DirectoryMetadata struct.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Directory {
+    pub path: RepoPathBuf,
+    pub hgid: Option<HgId>,
+}
+
+impl Directory {
+    pub fn new(path: RepoPathBuf, hgid: Option<HgId>) -> Self {
+        Self { path, hgid }
+    }
 }
 
 /// A file entry in a manifest.
@@ -103,22 +121,6 @@ pub struct File {
 impl File {
     pub fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
         Self { path, meta }
-    }
-}
-
-/// A directory entry in a manifest.
-///
-/// Consists of the full path to the directory. Directories may or may not be assigned
-/// identifiers. When an identifier is available it is also returned.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Directory {
-    pub path: RepoPathBuf,
-    pub hgid: Option<HgId>,
-}
-
-impl Directory {
-    pub fn new(path: RepoPathBuf, hgid: Option<HgId>) -> Self {
-        Self { path, hgid }
     }
 }
 

@@ -11,7 +11,7 @@
 
 use crate::raw::CBytes;
 use anyhow::{format_err, Result};
-use manifest::{FileType, FsNode};
+use manifest::{FileType, FsNodeMetadata};
 use manifest_tree::List;
 use std::convert::TryFrom;
 use types::PathComponentBuf;
@@ -45,10 +45,12 @@ pub struct TreeEntry {
 }
 
 impl TreeEntry {
-    fn try_from_path_node(path: PathComponentBuf, node: FsNode) -> Result<Self> {
+    fn try_from_path_node(path: PathComponentBuf, node: FsNodeMetadata) -> Result<Self> {
         let (ttype, hash) = match node {
-            FsNode::Directory(Some(hgid)) => (TreeEntryType::Tree, hgid.as_ref().to_vec()),
-            FsNode::File(metadata) => (metadata.file_type.into(), metadata.hgid.as_ref().to_vec()),
+            FsNodeMetadata::Directory(Some(hgid)) => (TreeEntryType::Tree, hgid.as_ref().to_vec()),
+            FsNodeMetadata::File(metadata) => {
+                (metadata.file_type.into(), metadata.hgid.as_ref().to_vec())
+            }
             _ => return Err(format_err!("received an ephemeral directory")),
         };
 

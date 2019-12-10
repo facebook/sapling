@@ -16,7 +16,7 @@ use cpython::*;
 use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
-use manifest::{DiffType, File, FileMetadata, FileType, FsNode, Manifest};
+use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
@@ -162,7 +162,7 @@ py_class!(class treemanifest |py| {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
         let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
-            Some(FsNode::Directory(_)) => true,
+            Some(FsNodeMetadata::Directory(_)) => true,
             _ => false
         };
         Ok(result)
