@@ -15,7 +15,7 @@
 use anyhow::Result;
 
 use pathmatcher::Matcher;
-use types::{HgId, RepoPath, RepoPathBuf};
+use types::{HgId, PathComponentBuf, RepoPath, RepoPathBuf};
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.
@@ -28,12 +28,22 @@ use types::{HgId, RepoPath, RepoPathBuf};
 /// paths composed of directory names and file names. Querying for paths that the Manifest has
 /// determined previously to be directories will result in Errors.
 pub trait Manifest {
-    /// Inspects the manifest for the given path.
+    /// Inspects the manifest for the given path. Returns available metadata.
     /// If the path is pointing to an file then Some(FsNodeMetadata::File) is returned with then
     /// file_metadata associated with the file. If the path is poitning to a directory then
     /// Some(FsNodeMetadata::Directory) is returned. If the path is not found then None is
     /// returned.
+    // TODO: add default implementation
     fn get(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>>;
+
+    /// Lists the immediate contents of directory in a manifest (non-recursive).
+    /// Given a path, the manifest will return:
+    /// * List::NotFound when the path is not present in the manifest
+    /// * List::File when the path points to a file
+    /// * List::Directory when the path points to a directory
+    ///    wraps the names of the files and directories in this directory
+    // TODO: add default implementation
+    fn list(&self, path: &RepoPath) -> Result<List>;
 
     /// Associates a file path with specific file metadata.
     /// A call with a file path that already exists results in an override or the old metadata.
@@ -81,6 +91,18 @@ pub trait Manifest {
     ) -> Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>;
 }
 
+/// The result of a list operation. Given a path, the manifest will return:
+/// * List::NotFound when the path is not present in the manifest
+/// * List::File when the path points to a file
+/// * List::Directory when the path points to a directory
+// TODO: add FileMetadata to File and "DirectoryMetadata" to Directory
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum List {
+    NotFound,
+    File,
+    Directory(Vec<(PathComponentBuf, FsNodeMetadata)>),
+}
+
 /// FsNodeMetadata short for file system node.
 /// The manifest tracks a list of files. However file systems are hierarchical structures
 /// composed of directories and files at the end. For different operations it is useful to have
@@ -88,8 +110,8 @@ pub trait Manifest {
 /// helps us represent that notion.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FsNodeMetadata {
-    Directory(Option<HgId>),
     File(FileMetadata),
+    Directory(Option<HgId>),
 }
 
 /// A directory entry in a manifest.

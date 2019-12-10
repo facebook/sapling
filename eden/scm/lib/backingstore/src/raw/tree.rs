@@ -11,8 +11,7 @@
 
 use crate::raw::CBytes;
 use anyhow::{format_err, Result};
-use manifest::{FileType, FsNodeMetadata};
-use manifest_tree::List;
+use manifest::{FileType, FsNodeMetadata, List};
 use std::convert::TryFrom;
 use types::PathComponentBuf;
 

@@ -24,7 +24,7 @@ use crypto::{digest::Digest, sha1::Sha1};
 use once_cell::sync::OnceCell;
 use thiserror::Error;
 
-use manifest::{DiffEntry, Directory, File, FileMetadata, FsNodeMetadata, Manifest};
+use manifest::{DiffEntry, Directory, File, FileMetadata, FsNodeMetadata, List, Manifest};
 use pathmatcher::Matcher;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
@@ -97,6 +97,22 @@ impl Manifest for TreeManifest {
     fn get(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>> {
         let result = self.get_link(path)?.map(|link| link.to_fs_node());
         Ok(result)
+    }
+
+    fn list(&self, path: &RepoPath) -> Result<List> {
+        let directory = match self.get_link(path)? {
+            None => return Ok(List::NotFound),
+            Some(Leaf(_)) => return Ok(List::File),
+            Some(Ephemeral(content)) => content,
+            Some(Durable(entry)) => entry.materialize_links(&self.store, path)?,
+        };
+
+        let directory = directory
+            .into_iter()
+            .map(|(key, value)| (key.to_owned(), value.to_fs_node()))
+            .collect();
+
+        Ok(List::Directory(directory))
     }
 
     fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Result<()> {
@@ -501,22 +517,6 @@ impl TreeManifest {
         Ok(executor.converted_nodes.into_iter())
     }
 
-    pub fn list(&self, path: &RepoPath) -> Result<List> {
-        let directory = match self.get_link(path)? {
-            None => return Ok(List::NotFound),
-            Some(Leaf(_)) => return Ok(List::File),
-            Some(Ephemeral(content)) => content,
-            Some(Durable(entry)) => entry.materialize_links(&self.store, path)?,
-        };
-
-        let directory = directory
-            .into_iter()
-            .map(|(key, value)| (key.to_owned(), value.to_fs_node()))
-            .collect();
-
-        Ok(List::Directory(directory))
-    }
-
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -535,13 +535,6 @@ impl TreeManifest {
         }
         Ok(Some(cursor))
     }
-}
-
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub enum List {
-    NotFound,
-    File,
-    Directory(Vec<(PathComponentBuf, FsNodeMetadata)>),
 }
 
 /// The purpose of this function is to provide compatible behavior with the C++ implementation

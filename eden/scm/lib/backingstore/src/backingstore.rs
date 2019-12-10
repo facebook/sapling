@@ -10,6 +10,7 @@ use crate::treecontentstore::TreeContentStore;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
+use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
 use std::convert::TryFrom;
