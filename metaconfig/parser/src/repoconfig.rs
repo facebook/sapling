@@ -34,7 +34,8 @@ use metaconfig_types::{
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, HookBypass,
     HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams,
     LfsParams, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
-    SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
+    SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig, WhitelistEntry,
+    WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -803,6 +804,13 @@ impl RepoConfigs {
 
         let filestore = this.filestore.map(|f| f.try_into()).transpose()?;
 
+        let source_control_service = this
+            .source_control_service
+            .map(|source_control_service| SourceControlServiceParams {
+                permit_writes: source_control_service.permit_writes,
+            })
+            .unwrap_or(SourceControlServiceParams::default());
+
         let source_control_service_monitoring = this
             .source_control_service_monitoring
             .map(|m| m.try_into())
@@ -858,6 +866,7 @@ impl RepoConfigs {
             commit_sync_config,
             hook_max_file_size,
             hipster_acl: this.hipster_acl,
+            source_control_service,
             source_control_service_monitoring,
         })
     }
@@ -1555,6 +1564,9 @@ mod test {
                 }),
                 commit_sync_config: None,
                 hipster_acl: Some("foo/test".to_string()),
+                source_control_service: SourceControlServiceParams {
+                    permit_writes: false,
+                },
                 source_control_service_monitoring: Some(SourceControlServiceMonitoring {
                     bookmarks_to_report_age: vec![
                         BookmarkName::new("master").unwrap(),
@@ -1601,6 +1613,7 @@ mod test {
                 filestore: None,
                 commit_sync_config: None,
                 hipster_acl: None,
+                source_control_service: SourceControlServiceParams::default(),
                 source_control_service_monitoring: None,
             },
         );

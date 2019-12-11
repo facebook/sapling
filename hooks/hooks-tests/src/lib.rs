@@ -32,7 +32,7 @@ use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
     BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams,
     HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig, RepoReadOnly,
-    StorageConfig,
+    SourceControlServiceParams, StorageConfig,
 };
 use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
@@ -1316,6 +1316,7 @@ fn default_repo_config() -> RepoConfig {
         commit_sync_config: None,
         hook_max_file_size: 456,
         hipster_acl: None,
+        source_control_service: SourceControlServiceParams::default(),
         source_control_service_monitoring: None,
     }
 }

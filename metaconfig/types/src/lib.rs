@@ -124,6 +124,8 @@ pub struct RepoConfig {
     pub hook_max_file_size: u64,
     /// Hipster ACL that controls access to this repo
     pub hipster_acl: Option<String>,
+    /// Configuration for the Source Control Service
+    pub source_control_service: SourceControlServiceParams,
     /// Configuration for Source Control Service monitoring
     pub source_control_service_monitoring: Option<SourceControlServiceMonitoring>,
 }
@@ -911,8 +913,22 @@ impl Default for WireprotoLoggingConfig {
     }
 }
 
-/// Configuration for health monitoring of the source-control-as-a-service
-/// solutions
+/// Source Control Service options
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SourceControlServiceParams {
+    /// whether writes are permitted
+    pub permit_writes: bool,
+}
+
+impl Default for SourceControlServiceParams {
+    fn default() -> Self {
+        SourceControlServiceParams {
+            permit_writes: false,
+        }
+    }
+}
+
+/// Configuration for health monitoring of the Source Control Service
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SourceControlServiceMonitoring {
     /// Bookmarks, for which we want our services to log

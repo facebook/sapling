@@ -85,6 +85,7 @@ struct RawRepoConfig {
     27: optional RawFilestoreParams filestore,
     28: optional i64 hook_max_file_size,
     29: optional string hipster_acl,
+    31: optional RawSourceControlServiceParams source_control_service,
     30: optional RawSourceControlServiceMonitoring
                    source_control_service_monitoring,
 }
@@ -261,6 +262,10 @@ struct RawCommitSyncConfig {
      2: optional string storage_config,
      3: optional i64 remote_arg_size_threshold,
  }
+
+struct RawSourceControlServiceParams {
+    1: bool permit_writes;
+}
 
 // Raw configuration for health monitoring of the
 // source-control-as-a-service solutions
