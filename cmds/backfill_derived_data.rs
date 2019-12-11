@@ -23,6 +23,7 @@ use cloned::cloned;
 use cmdlib::{args, helpers, helpers::create_runtime, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
+use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
 use fastlog::{fetch_parent_root_unodes, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
@@ -81,6 +82,7 @@ const POSSIBLE_TYPES: &[&str] = &[
     MappedHgChangesetId::NAME,
     RootFsnodeId::NAME,
     BlameRoot::NAME,
+    RootDeletedManifestId::NAME,
 ];
 
 /// Derived data types that are permitted to access redacted files. This list
@@ -102,7 +104,7 @@ const UNREDACTED_TYPES: &[&str] = &[
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.
 const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::NAME];
-const PREFETCH_UNODE_TYPES: &[&str] = &[RootFastlog::NAME];
+const PREFETCH_UNODE_TYPES: &[&str] = &[RootFastlog::NAME, RootDeletedManifestId::NAME];
 
 fn open_repo_maybe_unredacted<'a>(
     fb: FacebookInit,
@@ -543,6 +545,10 @@ fn derived_data_utils(
         }
         BlameRoot::NAME => {
             let mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        RootDeletedManifestId::NAME => {
+            let mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),
