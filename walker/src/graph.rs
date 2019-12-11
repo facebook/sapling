@@ -108,6 +108,7 @@ pub enum EdgeType {
     HgLinkNodeToHgBonsaiMapping,
     HgLinkNodeToHgChangeset,
     HgFileNodeToHgParentFileNode,
+    HgFileNodeToHgCopyfromFileNode,
     // Content
     FileContentToFileContentMetadata,
     FileContentMetadataToSha1Alias,
@@ -136,8 +137,9 @@ impl EdgeType {
             EdgeType::HgManifestToChildHgManifest => Some(NodeType::HgManifest),
             EdgeType::HgFileEnvelopeToFileContent => Some(NodeType::HgFileEnvelope),
             EdgeType::HgLinkNodeToHgBonsaiMapping => Some(NodeType::HgFileNode),
-            EdgeType::HgLinkNodeToHgChangeset => Some(NodeType::HgChangeset),
+            EdgeType::HgLinkNodeToHgChangeset => Some(NodeType::HgFileNode),
             EdgeType::HgFileNodeToHgParentFileNode => Some(NodeType::HgFileNode),
+            EdgeType::HgFileNodeToHgCopyfromFileNode => Some(NodeType::HgFileNode),
             // Content
             EdgeType::FileContentToFileContentMetadata => Some(NodeType::FileContent),
             EdgeType::FileContentMetadataToSha1Alias => Some(NodeType::FileContentMetadata),
@@ -167,6 +169,7 @@ impl EdgeType {
             EdgeType::HgLinkNodeToHgBonsaiMapping => NodeType::HgBonsaiMapping,
             EdgeType::HgLinkNodeToHgChangeset => NodeType::HgChangeset,
             EdgeType::HgFileNodeToHgParentFileNode => NodeType::HgFileNode,
+            EdgeType::HgFileNodeToHgCopyfromFileNode => NodeType::HgFileNode,
             // Content
             EdgeType::FileContentToFileContentMetadata => NodeType::FileContentMetadata,
             EdgeType::FileContentMetadataToSha1Alias => NodeType::AliasContentMapping,
@@ -199,6 +202,7 @@ impl FromStr for EdgeType {
             "HgFileEnvelopeToFileContent" => Ok(EdgeType::HgFileEnvelopeToFileContent),
             "HgLinkNodeToHgBonsaiMapping" => Ok(EdgeType::HgLinkNodeToHgBonsaiMapping),
             "HgFileNodeToHgParentFileNode" => Ok(EdgeType::HgFileNodeToHgParentFileNode),
+            "HgFileNodeToHgCopyfromFileNode" => Ok(EdgeType::HgFileNodeToHgCopyfromFileNode),
             // Content
             "FileContentToFileContentMetadata" => Ok(EdgeType::FileContentToFileContentMetadata),
             "FileContentMetadataToSha1Alias" => Ok(EdgeType::FileContentMetadataToSha1Alias),

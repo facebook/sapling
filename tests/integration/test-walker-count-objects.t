@@ -63,7 +63,7 @@ count-objects, shallow, bonsai only.  No parents, expect just one of each node t
 count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step, plus 1 for mapping from bookmark to hg. plus 3 for filenode (same blob as envelope)
   $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I hg 2>&1
   * Walking roots * (glob)
-  * Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgParentFileNode, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
+  * Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
   * Walking node types [BonsaiHgMapping, FileContent, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest] (glob)
   * Final count: (17, 17) (glob)
   * Type:Walked,Checks,Children BonsaiHgMapping:1,1,1 Bookmark:1,1,1 FileContent:3,3,0 HgChangeset:3,3,5 HgFileEnvelope:3,*,3 HgFileNode:3,6,0 HgManifest:3,3,6  (glob)
@@ -72,7 +72,7 @@ count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step
 count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mappings and root.
   $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I deep 2>&1
   * Walking roots * (glob)
-  * Walking edge types [BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiParent, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgBonsaiMappingToBonsaiChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgParentFileNode, HgLinkNodeToHgBonsaiMapping, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
+  * Walking edge types [BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiParent, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgBonsaiMappingToBonsaiChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgLinkNodeToHgBonsaiMapping, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
   * Walking node types [BonsaiChangeset, BonsaiHgMapping, FileContent, FileContentMetadata, HgBonsaiMapping, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest] (glob)
   * Final count: (28, 28) (glob)
   * Type:Walked,Checks,Children BonsaiChangeset:3,3,11 BonsaiHgMapping:3,* Bookmark:1,1,1 FileContent:3,3,0 FileContentMetadata:3,0,0 HgBonsaiMapping:3,3,0 HgChangeset:3,* HgFileEnvelope:3,*,0 HgFileNode:3,6,3 HgManifest:3,3,6  (glob)

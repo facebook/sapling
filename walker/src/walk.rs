@@ -254,31 +254,48 @@ fn hg_file_node_step(
     path: Option<MPath>,
     hg_file_node_id: HgFileNodeId,
 ) -> BoxFuture<StepOutput, Error> {
-    let repo_path = match path {
+    let repo_path = match path.clone() {
         None => RepoPath::RootPath,
         Some(mpath) => RepoPath::FilePath(mpath),
     };
     repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
         .map(move |file_node_opt| match file_node_opt {
             Some(file_node_info) => {
-                // Following linknode increases parallelism of walk as well as validating link node
+                // Validate hg link node
                 let linked_commit = OutgoingEdge::new(
+                    EdgeType::HgLinkNodeToHgChangeset,
+                    Node::HgChangeset(file_node_info.linknode),
+                );
+                // Following linknode bonsai increases parallelism of walk.
+                // Linknodes will point to many commits we can then walk
+                // in parallel
+                let linked_commit_bonsai = OutgoingEdge::new(
                     EdgeType::HgLinkNodeToHgBonsaiMapping,
                     Node::HgBonsaiMapping(file_node_info.linknode),
                 );
-                let mut recurse = vec![linked_commit];
+                let mut recurse = vec![linked_commit, linked_commit_bonsai];
                 file_node_info.p1.map(|parent_file_node_id| {
                     recurse.push(OutgoingEdge::new(
                         EdgeType::HgFileNodeToHgParentFileNode,
-                        Node::HgFileEnvelope(parent_file_node_id),
+                        Node::HgFileNode((path.clone(), parent_file_node_id)),
                     ))
                 });
                 file_node_info.p2.map(|parent_file_node_id| {
                     recurse.push(OutgoingEdge::new(
                         EdgeType::HgFileNodeToHgParentFileNode,
-                        Node::HgFileEnvelope(parent_file_node_id),
+                        Node::HgFileNode((path.clone(), parent_file_node_id)),
                     ))
                 });
+                // Copyfrom is like another parent
+                file_node_info
+                    .clone()
+                    .copyfrom
+                    .map(|(repo_path, file_node_id)| {
+                        recurse.push(OutgoingEdge::new(
+                            EdgeType::HgFileNodeToHgCopyfromFileNode,
+                            Node::HgFileNode((repo_path.into_mpath(), file_node_id)),
+                        ))
+                    });
                 StepOutput(NodeData::HgFileNode(Some(file_node_info)), recurse)
             }
             None => StepOutput(NodeData::HgFileNode(None), vec![]),

@@ -104,6 +104,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgLinkNodeToHgBonsaiMapping,
     EdgeType::HgLinkNodeToHgChangeset,
     EdgeType::HgFileNodeToHgParentFileNode,
+    EdgeType::HgFileNodeToHgCopyfromFileNode,
     // Content
     EdgeType::FileContentToFileContentMetadata,
     EdgeType::FileContentMetadataToSha1Alias,
@@ -148,6 +149,7 @@ const HG_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgFileEnvelopeToFileContent,
     EdgeType::HgLinkNodeToHgChangeset,
     EdgeType::HgFileNodeToHgParentFileNode,
+    EdgeType::HgFileNodeToHgCopyfromFileNode,
 ];
 
 // Types that can result in loading bonsai data
