@@ -81,9 +81,15 @@ impl fmt::Debug for ChangesetPathContext {
 }
 
 impl ChangesetPathContext {
-    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+    fn new_impl(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        fsnode_entry: Option<Entry<FsnodeId, (ContentId, FileType)>>,
+    ) -> Self {
         let path = path.into();
-        let fsnode_id = {
+        let fsnode_id = if let Some(fsnode_entry) = fsnode_entry {
+            async move { Ok(Some(fsnode_entry)) }.boxed()
+        } else {
             cloned!(changeset, path);
             async move {
                 let ctx = changeset.ctx().clone();
@@ -100,8 +106,9 @@ impl ChangesetPathContext {
                     Ok(Some(Entry::Tree(root_fsnode_id.fsnode_id().clone())))
                 }
             }
+                .boxed()
         };
-        let fsnode_id = fsnode_id.boxed().shared();
+        let fsnode_id = fsnode_id.shared();
         let unode_id = {
             cloned!(changeset, path);
             async move {
@@ -129,6 +136,18 @@ impl ChangesetPathContext {
             fsnode_id,
             unode_id,
         }
+    }
+
+    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+        Self::new_impl(changeset, path, None)
+    }
+
+    pub(crate) fn new_with_fsnode_entry(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        fsnode_entry: Entry<FsnodeId, (ContentId, FileType)>,
+    ) -> Self {
+        Self::new_impl(changeset, path, Some(fsnode_entry))
     }
 
     /// The `RepoContext` for this query.
@@ -161,6 +180,14 @@ impl ChangesetPathContext {
     pub async fn exists(&self) -> Result<bool, MononokeError> {
         // The path exists if there is any kind of fsnode.
         Ok(self.fsnode_id().await?.is_some())
+    }
+
+    pub async fn is_file(&self) -> Result<bool, MononokeError> {
+        let is_file = match self.fsnode_id().await? {
+            Some(Entry::Leaf(_)) => true,
+            _ => false,
+        };
+        Ok(is_file)
     }
 
     pub async fn is_dir(&self) -> Result<bool, MononokeError> {

@@ -39,6 +39,7 @@ pub mod file;
 pub mod legacy;
 pub mod path;
 pub mod repo;
+pub mod repo_write;
 pub mod specifiers;
 pub mod tree;
 
@@ -56,6 +57,7 @@ pub use crate::errors::MononokeError;
 pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
 pub use crate::path::MononokePath;
 pub use crate::repo::RepoContext;
+pub use crate::repo_write::{CreateChange, CreateCopyInfo, RepoWriteContext};
 pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
 

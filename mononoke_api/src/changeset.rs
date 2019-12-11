@@ -18,9 +18,8 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future;
 use futures_preview::stream::Stream;
-use futures_util::future::{FutureExt, Shared};
+use futures_util::future::{self, FutureExt, Shared};
 use futures_util::stream::StreamExt;
 use futures_util::try_future::{try_join, try_join_all};
 use futures_util::try_stream::TryStreamExt;
@@ -175,6 +174,34 @@ impl ChangesetContext {
         MononokeError: From<P::Error>,
     {
         Ok(ChangesetPathContext::new(self.clone(), path.try_into()?))
+    }
+
+    pub async fn paths(
+        &self,
+        paths: impl Iterator<Item = MononokePath>,
+    ) -> Result<impl Stream<Item = Result<ChangesetPathContext, MononokeError>>, MononokeError>
+    {
+        Ok(self
+            .root_fsnode_id()
+            .await?
+            .fsnode_id()
+            .find_entries(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_blobstore(),
+                paths.map(|path| path.into_mpath()),
+            )
+            .compat()
+            .map_ok({
+                let changeset = self.clone();
+                move |(mpath, entry)| {
+                    ChangesetPathContext::new_with_fsnode_entry(
+                        changeset.clone(),
+                        MononokePath::new(mpath),
+                        entry,
+                    )
+                }
+            })
+            .map_err(MononokeError::from))
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.

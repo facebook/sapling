@@ -116,6 +116,12 @@ impl FileContext {
         &self.repo
     }
 
+    /// Return the ID of the file.
+    pub async fn id(&self) -> Result<FileId, MononokeError> {
+        let meta = self.metadata().await?;
+        Ok(meta.content_id)
+    }
+
     /// Return the metadata for a file.
     pub async fn metadata(&self) -> Result<FileMetadata, MononokeError> {
         self.metadata.clone().await

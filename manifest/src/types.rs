@@ -174,6 +174,17 @@ where
         });
         node.value = value;
     }
+
+    pub fn get(&self, path: Option<&MPath>) -> Option<&V> {
+        let mut tree = self;
+        for elem in path.into_iter().flatten() {
+            match tree.subentries.get(elem) {
+                Some(subtree) => tree = subtree,
+                None => return None,
+            }
+        }
+        Some(&tree.value)
+    }
 }
 
 impl<V> Default for PathTree<V>

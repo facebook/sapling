@@ -26,6 +26,7 @@ use futures_preview::future::try_join_all;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
     CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
+    SourceControlServiceParams,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
@@ -38,6 +39,7 @@ use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
+use crate::repo_write::RepoWriteContext;
 use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 use crate::tree::{TreeContext, TreeId};
 
@@ -55,6 +57,7 @@ pub(crate) struct Repo {
     pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    pub(crate) service_config: SourceControlServiceParams,
     // Needed to report stats
     pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
 }
@@ -107,6 +110,7 @@ impl Repo {
         let synced_commit_mapping = Arc::new(
             open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage).await?,
         );
+        let service_config = config.source_control_service.clone();
         let monitoring_config = config.source_control_service_monitoring.clone();
 
         let blob_repo = open_blobrepo(
@@ -161,6 +165,7 @@ impl Repo {
             fsnodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
+            service_config,
             monitoring_config,
         })
     }
@@ -184,6 +189,9 @@ impl Repo {
             unodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
+            service_config: SourceControlServiceParams {
+                permit_writes: false,
+            },
             monitoring_config,
         }
     }
@@ -217,6 +225,9 @@ impl Repo {
             fsnodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
+            service_config: SourceControlServiceParams {
+                permit_writes: true,
+            },
             monitoring_config: None,
         })
     }
@@ -612,5 +623,17 @@ impl RepoContext {
         self.report_bookmark_staleness(bookmark, difference);
 
         Ok(())
+    }
+
+    /// Get a write context to make changes to this repository.
+    pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
+        if !self.repo.service_config.permit_writes {
+            return Err(MononokeError::InvalidRequest(String::from(
+                "service writes are not enabled for this repo",
+            )));
+        }
+
+        // TODO(mbthomas): verify user is permitted to write.
+        Ok(RepoWriteContext::new(self))
     }
 }
