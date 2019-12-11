@@ -622,7 +622,9 @@ void EdenServer::openStorageEngine(
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
     localStore_ = make_shared<RocksDbLocalStore>(
-        rocksPath, &serverState_->getFaultInjector());
+        rocksPath,
+        serverState_->getStructuredLogger(),
+        &serverState_->getFaultInjector());
     localStore_->enableBlobCaching.store(
         serverState_->getEdenConfig()->enableBlobCaching.getValue(),
         std::memory_order_relaxed);

@@ -17,6 +17,7 @@ namespace facebook {
 namespace eden {
 
 class FaultInjector;
+class StructuredLogger;
 
 /** An implementation of LocalStore that uses RocksDB for the underlying
  * storage.
@@ -29,6 +30,7 @@ class RocksDbLocalStore : public LocalStore {
    */
   explicit RocksDbLocalStore(
       AbsolutePathPiece pathToRocksDb,
+      std::shared_ptr<StructuredLogger> structuredLogger,
       FaultInjector* FOLLY_NONNULL faultInjector,
       RocksDBOpenMode mode = RocksDBOpenMode::ReadWrite);
   ~RocksDbLocalStore();
@@ -90,15 +92,21 @@ class RocksDbLocalStore : public LocalStore {
     std::chrono::steady_clock::time_point startTime_;
   };
 
+  struct SizeSummary {
+    uint64_t ephemeral = 0;
+    uint64_t persistent = 0;
+  };
+
   /**
    * Publish fb303 counters.
-   * Returns the approximate size of all ephemeral column families.
+   * Returns the approximate sizes of all column families.
    */
-  size_t publishStats();
+  SizeSummary computeStats(bool publish);
 
-  void triggerAutoGC();
-  void autoGCFinished(bool successful);
+  void triggerAutoGC(uint64_t ephemeralSize);
+  void autoGCFinished(bool successful, uint64_t ephemeralSizeBefore);
 
+  std::shared_ptr<StructuredLogger> structuredLogger_;
   const std::string statsPrefix_{"local_store."};
   FaultInjector& faultInjector_;
   mutable UnboundedQueueExecutor ioPool_;

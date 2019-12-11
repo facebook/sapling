@@ -25,6 +25,7 @@
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
@@ -89,8 +90,11 @@ class Command {
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = getLocalStorePath();
     ensureDirectoryExists(rocksPath);
-    auto localStore =
-        make_unique<RocksDbLocalStore>(rocksPath, &faultInjector_, mode);
+    auto localStore = make_unique<RocksDbLocalStore>(
+        rocksPath,
+        std::make_shared<NullStructuredLogger>(),
+        &faultInjector_,
+        mode);
     XLOG(INFO) << "Opened RocksDB store in "
                << (mode == RocksDBOpenMode::ReadOnly ? "read-only"
                                                      : "read-write")

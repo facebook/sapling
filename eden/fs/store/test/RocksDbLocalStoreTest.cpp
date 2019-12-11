@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/test/LocalStoreTest.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 namespace {
 
@@ -15,7 +16,9 @@ using namespace facebook::eden;
 LocalStoreImplResult makeRocksDbLocalStore(FaultInjector* faultInjector) {
   auto tempDir = makeTempDir();
   auto store = std::make_unique<RocksDbLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()}, faultInjector);
+      AbsolutePathPiece{tempDir.path().string()},
+      std::make_shared<NullStructuredLogger>(),
+      faultInjector);
   return {std::move(tempDir), std::move(store)};
 }
 

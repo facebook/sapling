@@ -29,6 +29,7 @@
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
 
 using folly::ByteRange;
@@ -38,6 +39,7 @@ using rocksdb::Slice;
 using rocksdb::SliceParts;
 using rocksdb::WriteOptions;
 using std::string;
+using std::chrono::duration_cast;
 
 namespace {
 using namespace facebook::eden;
@@ -248,14 +250,16 @@ namespace eden {
 
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
+    std::shared_ptr<StructuredLogger> structuredLogger,
     FaultInjector* faultInjector,
     RocksDBOpenMode mode)
-    : faultInjector_(*faultInjector),
+    : structuredLogger_{std::move(structuredLogger)},
+      faultInjector_(*faultInjector),
       ioPool_(12, "RocksLocalStore"),
       dbHandles_(folly::in_place, openDB(pathToRocksDb, mode)) {
   // Publish fb303 stats once when we first open the DB.
   // These will be kept up-to-date later by the periodicManagementTask() call.
-  publishStats();
+  computeStats(/*publish=*/true);
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {
@@ -562,40 +566,45 @@ void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
       config.enableBlobCaching.getValue(), std::memory_order_relaxed);
 
   // Compute and publish the stats
-  auto ephemeralSize = publishStats();
+  auto before = computeStats(/*publish=*/true);
 
   // If the ephemeral size is more than the configured limit,
   // trigger garbage collection.
   auto ephemeralLimit = config.localStoreEphemeralSizeLimit.getValue();
-  if (ephemeralLimit > 0 && ephemeralSize > ephemeralLimit) {
+  if (ephemeralLimit > 0 && before.ephemeral > ephemeralLimit) {
     XLOG(INFO) << "scheduling automatic local store garbage collection: "
-               << "ephemeral data size " << ephemeralSize
+               << "ephemeral data size " << before.ephemeral
                << " exceeds limit of " << ephemeralLimit;
-    triggerAutoGC();
+    triggerAutoGC(before.ephemeral);
   }
 }
 
-size_t RocksDbLocalStore::publishStats() {
-  size_t ephemeralSize = 0;
-  size_t persistentSize = 0;
+RocksDbLocalStore::SizeSummary RocksDbLocalStore::computeStats(bool publish) {
+  SizeSummary result;
   for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
     auto size =
         getApproximateSize(static_cast<LocalStore::KeySpace>(iter.index));
-    fb303::fbData->setCounter(
-        folly::to<string>(statsPrefix_, iter->name, ".size"), size);
+    if (publish) {
+      fb303::fbData->setCounter(
+          folly::to<string>(statsPrefix_, iter->name, ".size"), size);
+    }
     if (iter->persistence == Persistence::Ephemeral) {
-      ephemeralSize += size;
+      result.ephemeral += size;
     } else {
-      persistentSize += size;
+      result.persistent += size;
     }
   }
 
-  fb303::fbData->setCounter(
-      folly::to<string>(statsPrefix_, "ephemeral.total_size"), ephemeralSize);
-  fb303::fbData->setCounter(
-      folly::to<string>(statsPrefix_, "persistent.total_size"), persistentSize);
+  if (publish) {
+    fb303::fbData->setCounter(
+        folly::to<string>(statsPrefix_, "ephemeral.total_size"),
+        result.ephemeral);
+    fb303::fbData->setCounter(
+        folly::to<string>(statsPrefix_, "persistent.total_size"),
+        result.persistent);
+  }
 
-  return ephemeralSize;
+  return result;
 }
 
 // In the future it would perhaps be nicer to move the triggerAutoGC()
@@ -605,7 +614,7 @@ size_t RocksDbLocalStore::publishStats() {
 // code, but the gc operation can take a significant amount of time, and it
 // seems unfortunate to tie up one of the main pool threads for potentially
 // multiple minutes.
-void RocksDbLocalStore::triggerAutoGC() {
+void RocksDbLocalStore::triggerAutoGC(uint64_t ephemeralSize) {
   {
     auto state = autoGCState_.wlock();
     if (state->inProgress_) {
@@ -624,20 +633,24 @@ void RocksDbLocalStore::triggerAutoGC() {
     state->inProgress_ = true;
   }
 
-  ioPool_.add([store = getSharedFromThis()] {
+  ioPool_.add([store = getSharedFromThis(), ephemeralSize] {
     try {
       store->clearCachesAndCompactAll();
     } catch (const std::exception& ex) {
       XLOG(ERR) << "error during automatic local store garbage collection: "
                 << folly::exceptionStr(ex);
-      store->autoGCFinished(/*successful=*/false);
+      store->autoGCFinished(/*successful=*/false, ephemeralSize);
       return;
     }
-    store->autoGCFinished(/*successful=*/true);
+    store->autoGCFinished(/*successful=*/true, ephemeralSize);
   });
 }
 
-void RocksDbLocalStore::autoGCFinished(bool successful) {
+void RocksDbLocalStore::autoGCFinished(
+    bool successful,
+    uint64_t ephemeralSizeBefore) {
+  auto ephemeralSizeAfter = computeStats(/*publish=*/false).ephemeral;
+
   auto state = autoGCState_.wlock();
   state->inProgress_ = false;
 
@@ -645,6 +658,12 @@ void RocksDbLocalStore::autoGCFinished(bool successful) {
   auto duration = endTime - state->startTime_;
   auto durationMS =
       std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+  structuredLogger_->logEvent(RocksDbAutomaticGc{
+      duration_cast<std::chrono::duration<double>>(duration).count(),
+      successful,
+      static_cast<int64_t>(ephemeralSizeBefore),
+      static_cast<int64_t>(ephemeralSizeAfter)});
 
   fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "auto_gc.running"), 0);

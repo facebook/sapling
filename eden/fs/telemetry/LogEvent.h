@@ -89,6 +89,22 @@ struct FuseError {
   }
 };
 
+struct RocksDbAutomaticGc {
+  static constexpr const char* type = "rocksdb_autogc";
+
+  double duration = 0.0;
+  bool success = false;
+  int64_t sizeBefore = 0;
+  int64_t sizeAfter = 0;
+
+  void populate(DynamicEvent& event) const {
+    event.addDouble("duration", duration);
+    event.addBool("success", success);
+    event.addInt("size_before", sizeBefore);
+    event.addInt("size_after", sizeAfter);
+  }
+};
+
 struct ThriftError {
   static constexpr const char* type = "thrift_error";
 
