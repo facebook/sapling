@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-#![deny(warnings)]
+#![allow(warnings)]
 
 pub use crate::bonsai::{bonsai_diff, BonsaiDiffFileChange};
 pub use crate::derive::{derive_manifest, LeafInfo, TreeInfo};

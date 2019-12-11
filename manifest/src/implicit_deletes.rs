@@ -151,6 +151,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::tests::{
+        ctx, dir, element, file, path, BonsaiEntry, ManifestStore, TestFileId, TestManifestIdStr,
+        TestManifestStr,
+    };
     use anyhow::format_err;
     use fbinit::{self, FacebookInit};
     use futures::IntoFuture;
@@ -161,69 +165,6 @@ mod test {
     use std::collections::HashMap;
     use std::fmt::Debug;
     use tokio_preview as tokio;
-
-    type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
-
-    #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-    struct TestManifestId(&'static str);
-
-    #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-    struct TestFileId(&'static str);
-
-    #[derive(Default, Clone, Debug)]
-    struct TestManifest(HashMap<MPathElement, BonsaiEntry<TestManifestId, TestFileId>>);
-
-    #[derive(Default, Debug, Clone)]
-    struct ManifestStore(HashMap<TestManifestId, TestManifest>);
-
-    impl StoreLoadable<ManifestStore> for TestManifestId {
-        type Value = TestManifest;
-
-        fn load(&self, _ctx: CoreContext, store: &ManifestStore) -> BoxFuture<Self::Value, Error> {
-            store
-                .0
-                .get(&self)
-                .cloned()
-                .ok_or(format_err!("manifest not in store {}", self.0))
-                .into_future()
-                .boxify()
-        }
-    }
-
-    impl Manifest for TestManifest {
-        type TreeId = TestManifestId;
-        type LeafId = (FileType, TestFileId);
-
-        fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-            self.0.get(name).cloned()
-        }
-
-        fn list(
-            &self,
-        ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-            Box::new(self.0.clone().into_iter())
-        }
-    }
-
-    fn ctx(fb: FacebookInit) -> CoreContext {
-        CoreContext::test_mock(fb)
-    }
-
-    fn element(s: &str) -> MPathElement {
-        MPathElement::new(s.as_bytes().iter().cloned().collect()).unwrap()
-    }
-
-    fn path(s: &str) -> MPath {
-        MPath::new(s).unwrap()
-    }
-
-    fn file(ty: FileType, name: &'static str) -> BonsaiEntry<TestManifestId, TestFileId> {
-        BonsaiEntry::Leaf((ty, TestFileId(name)))
-    }
-
-    fn dir(name: &'static str) -> BonsaiEntry<TestManifestId, TestFileId> {
-        BonsaiEntry::Tree(TestManifestId(name))
-    }
 
     fn ensure_unordered_eq<T: Debug + Hash + PartialEq + Eq, I: IntoIterator<Item = T>>(
         v1: I,
@@ -243,20 +184,20 @@ mod test {
         //     p4
         //   p5/
         //     p6
-        let root_manifest = TestManifestId("1");
+        let root_manifest = TestManifestIdStr("1");
         let store = ManifestStore(hashmap! {
-            root_manifest => TestManifest(hashmap! {
+            root_manifest => TestManifestStr(hashmap! {
                 element("p1") => dir("2"),
             }),
-            TestManifestId("2") => TestManifest(hashmap! {
+            TestManifestIdStr("2") => TestManifestStr(hashmap! {
                 element("p2") => dir("3"),
                 element("p5") => dir("5"),
             }),
-            TestManifestId("3") => TestManifest(hashmap! {
+            TestManifestIdStr("3") => TestManifestStr(hashmap! {
                 element("p3") => file(FileType::Regular, "3"),
                 element("p4") => file(FileType::Regular, "4"),
             }),
-            TestManifestId("5") => TestManifest(hashmap! {
+            TestManifestIdStr("5") => TestManifestStr(hashmap! {
                 element("p6") => file(FileType::Regular, "6"),
             }),
         });
@@ -305,35 +246,35 @@ mod test {
         //   p9/
         //     p10
         // p11
-        let root_manifest_1 = TestManifestId("1_1");
-        let root_manifest_2 = TestManifestId("1_2");
+        let root_manifest_1 = TestManifestIdStr("1_1");
+        let root_manifest_2 = TestManifestIdStr("1_2");
         let store = ManifestStore(hashmap! {
-            root_manifest_1 => TestManifest(hashmap! {
+            root_manifest_1 => TestManifestStr(hashmap! {
                 element("p1") => dir("2_1"),
                 element("p8") => file(FileType::Regular, "8_1"),
             }),
-            TestManifestId("2_1") => TestManifest(hashmap! {
+            TestManifestIdStr("2_1") => TestManifestStr(hashmap! {
                 element("p2") => dir("3"),
                 element("p5") => dir("5"),
                 element("p7") => file(FileType::Regular, "7_1"),
             }),
-            root_manifest_2 => TestManifest(hashmap! {
+            root_manifest_2 => TestManifestStr(hashmap! {
                 element("p1") => dir("2_2"),
                 element("p11") => file(FileType::Regular, "11_1"),
             }),
-            TestManifestId("2_2") => TestManifest(hashmap! {
+            TestManifestIdStr("2_2") => TestManifestStr(hashmap! {
                 element("p2") => dir("3"),
                 element("p5") => dir("5"),
                 element("p9") => dir("9_2")
             }),
-            TestManifestId("9_2") => TestManifest(hashmap! {
+            TestManifestIdStr("9_2") => TestManifestStr(hashmap! {
                 element("p10") => file(FileType::Executable, "10_2"),
             }),
-            TestManifestId("3") => TestManifest(hashmap! {
+            TestManifestIdStr("3") => TestManifestStr(hashmap! {
                 element("p3") => file(FileType::Regular, "3"),
                 element("p4") => file(FileType::Regular, "4"),
             }),
-            TestManifestId("5") => TestManifest(hashmap! {
+            TestManifestIdStr("5") => TestManifestStr(hashmap! {
                 element("p6") => file(FileType::Regular, "6"),
             }),
         });

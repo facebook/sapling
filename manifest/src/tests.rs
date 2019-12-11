@@ -6,24 +6,24 @@
  * directory of this source tree.
  */
 
-use crate::{
-    derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps, PathOrPrefix,
-    PathTree, TreeInfo,
+pub(crate) use crate::{
+    bonsai::BonsaiEntry, derive_manifest, find_intersection_of_diffs, types::StoreLoadable, Diff,
+    Entry, Manifest, ManifestOps, PathOrPrefix, PathTree, TreeInfo,
 };
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
 use lock_ext::LockExt;
-use maplit::btreemap;
+use maplit::{btreemap, hashset};
 use memblob::LazyMemblob;
-use mononoke_types::{BlobstoreBytes, MPath, MPathElement};
+use mononoke_types::{BlobstoreBytes, FileType, MPath, MPathElement};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
+    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet, HashMap, HashSet},
     hash::{Hash, Hasher},
     iter::FromIterator,
     sync::{Arc, Mutex},
@@ -77,13 +77,13 @@ impl Storable for TestLeaf {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-struct TestManifestId(u64);
+struct TestManifestIdU64(u64);
 
 #[derive(Debug, Serialize, Deserialize)]
-struct TestManifest(BTreeMap<MPathElement, Entry<TestManifestId, TestLeafId>>);
+struct TestManifestU64(BTreeMap<MPathElement, Entry<TestManifestIdU64, TestLeafId>>);
 
-impl Loadable for TestManifestId {
-    type Value = TestManifest;
+impl Loadable for TestManifestIdU64 {
+    type Value = TestManifestU64;
 
     fn load<B: Blobstore + Clone>(
         &self,
@@ -104,8 +104,8 @@ impl Loadable for TestManifestId {
     }
 }
 
-impl Storable for TestManifest {
-    type Key = TestManifestId;
+impl Storable for TestManifestU64 {
+    type Key = TestManifestIdU64;
 
     fn store<B: Blobstore + Clone>(
         self,
@@ -115,7 +115,7 @@ impl Storable for TestManifest {
         let blobstore = blobstore.clone();
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
-        let key = TestManifestId(hasher.finish());
+        let key = TestManifestIdU64(hasher.finish());
         serde_cbor::to_vec(&self)
             .into_future()
             .from_err()
@@ -127,9 +127,9 @@ impl Storable for TestManifest {
     }
 }
 
-impl Manifest for TestManifest {
+impl Manifest for TestManifestU64 {
     type LeafId = TestLeafId;
-    type TreeId = TestManifestId;
+    type TreeId = TestManifestIdU64;
 
     fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
         let iter = self.0.clone().into_iter();
@@ -143,9 +143,9 @@ impl Manifest for TestManifest {
 fn derive_test_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    parents: Vec<TestManifestId>,
+    parents: Vec<TestManifestIdU64>,
     changes: BTreeMap<&str, Option<&str>>,
-) -> impl Future<Item = Option<TestManifestId>, Error = Error> {
+) -> impl Future<Item = Option<TestManifestIdU64>, Error = Error> {
     let changes: Result<Vec<_>, _> = changes
         .iter()
         .map(|(path, change)| {
@@ -166,7 +166,7 @@ fn derive_test_manifest(
                         .into_iter()
                         .map(|(path, (_, id))| (path, id))
                         .collect();
-                    TestManifest(subentries)
+                    TestManifestU64(subentries)
                         .store(ctx.clone(), &blobstore)
                         .map(|id| ((), id))
                 }
@@ -182,7 +182,7 @@ fn derive_test_manifest(
     })
 }
 
-struct Files(TestManifestId);
+struct Files(TestManifestIdU64);
 
 impl Loadable for Files {
     type Value = BTreeMap<MPath, String>;
@@ -198,20 +198,18 @@ impl Loadable for Files {
             256,
             Some((None, Entry::Tree(self.0))),
             move |(path, entry)| {
-                entry
-                    .load(ctx.clone(), &blobstore)
-                    .map(move |content| match content {
-                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                        Entry::Tree(tree) => {
-                            let recurse = tree
-                                .list()
-                                .map(|(name, entry)| {
-                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                                })
-                                .collect();
-                            (None, recurse)
-                        }
-                    })
+                Loadable::load(&entry, ctx.clone(), &blobstore).map(move |content| match content {
+                    Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
+                    Entry::Tree(tree) => {
+                        let recurse = tree
+                            .list()
+                            .map(|(name, entry)| {
+                                (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
+                            })
+                            .collect();
+                        (None, recurse)
+                    }
+                })
             },
         )
         .filter_map(|item| {
@@ -262,7 +260,7 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
         let manifest_id = runtime
             .with(|runtime| {
                 runtime.block_on(derive_test_manifest(
@@ -278,7 +276,9 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
 
     // load all files for specified manifest
     let files = |manifest_id| {
-        runtime.with(|runtime| runtime.block_on(Files(manifest_id).load(ctx.clone(), &blobstore)))
+        runtime.with(|runtime| {
+            runtime.block_on(Loadable::load(&Files(manifest_id), ctx.clone(), &blobstore))
+        })
     };
 
     // clean merge of two directories
@@ -482,7 +482,7 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
         let manifest_id = rt
             .with(|rt| {
                 rt.block_on(derive_test_manifest(
@@ -634,7 +634,7 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
         let manifest_id = runtime
             .with(|runtime| {
                 runtime.block_on(derive_test_manifest(
@@ -791,7 +791,7 @@ fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
         let manifest_id = runtime
             .with(|runtime| {
                 runtime.block_on(derive_test_manifest(
@@ -888,4 +888,65 @@ fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
     );
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub(crate) struct TestManifestIdStr(pub &'static str);
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub(crate) struct TestFileId(pub &'static str);
+
+#[derive(Default, Clone, Debug)]
+pub(crate) struct TestManifestStr(
+    pub HashMap<MPathElement, BonsaiEntry<TestManifestIdStr, TestFileId>>,
+);
+
+#[derive(Default, Debug, Clone)]
+pub(crate) struct ManifestStore(pub HashMap<TestManifestIdStr, TestManifestStr>);
+
+impl StoreLoadable<ManifestStore> for TestManifestIdStr {
+    type Value = TestManifestStr;
+
+    fn load(&self, _ctx: CoreContext, store: &ManifestStore) -> BoxFuture<Self::Value, Error> {
+        store
+            .0
+            .get(&self)
+            .cloned()
+            .ok_or(format_err!("manifest not in store {}", self.0))
+            .into_future()
+            .boxify()
+    }
+}
+
+impl Manifest for TestManifestStr {
+    type TreeId = TestManifestIdStr;
+    type LeafId = (FileType, TestFileId);
+
+    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
+        self.0.get(name).cloned()
+    }
+
+    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+        Box::new(self.0.clone().into_iter())
+    }
+}
+
+pub(crate) fn ctx(fb: FacebookInit) -> CoreContext {
+    CoreContext::test_mock(fb)
+}
+
+pub(crate) fn element(s: &str) -> MPathElement {
+    MPathElement::new(s.as_bytes().iter().cloned().collect()).unwrap()
+}
+
+pub(crate) fn path(s: &str) -> MPath {
+    MPath::new(s).unwrap()
+}
+
+pub(crate) fn file(ty: FileType, name: &'static str) -> BonsaiEntry<TestManifestIdStr, TestFileId> {
+    BonsaiEntry::Leaf((ty, TestFileId(name)))
+}
+
+pub(crate) fn dir(name: &'static str) -> BonsaiEntry<TestManifestIdStr, TestFileId> {
+    BonsaiEntry::Tree(TestManifestIdStr(name))
 }

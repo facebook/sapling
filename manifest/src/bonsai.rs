@@ -26,7 +26,7 @@ use std::hash::Hash;
 use crate::types::StoreLoadable;
 use crate::{Entry, Manifest};
 
-type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
+pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, PartialOrd, Ord)]
 pub enum BonsaiDiffFileChange<FileId> {
@@ -336,6 +336,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::tests::{
+        ctx, dir, element, file, path, ManifestStore, TestFileId, TestManifestIdStr,
+        TestManifestStr,
+    };
     use anyhow::format_err;
     use fbinit::{self, FacebookInit};
     use futures::IntoFuture;
@@ -361,67 +365,6 @@ mod test {
                 files: hashset! {},
             }
         }
-    }
-
-    #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-    struct TestManifestId(&'static str);
-
-    #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-    struct TestFileId(&'static str);
-
-    #[derive(Default, Clone, Debug)]
-    struct TestManifest(HashMap<MPathElement, BonsaiEntry<TestManifestId, TestFileId>>);
-
-    #[derive(Default, Debug)]
-    struct ManifestStore(HashMap<TestManifestId, TestManifest>);
-
-    impl StoreLoadable<ManifestStore> for TestManifestId {
-        type Value = TestManifest;
-
-        fn load(&self, _ctx: CoreContext, store: &ManifestStore) -> BoxFuture<Self::Value, Error> {
-            store
-                .0
-                .get(&self)
-                .cloned()
-                .ok_or(format_err!("manifest not in store {}", self.0))
-                .into_future()
-                .boxify()
-        }
-    }
-
-    impl Manifest for TestManifest {
-        type TreeId = TestManifestId;
-        type LeafId = (FileType, TestFileId);
-
-        fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-            self.0.get(name).cloned()
-        }
-
-        fn list(
-            &self,
-        ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-            Box::new(self.0.clone().into_iter())
-        }
-    }
-
-    fn ctx(fb: FacebookInit) -> CoreContext {
-        CoreContext::test_mock(fb)
-    }
-
-    fn element(s: &str) -> MPathElement {
-        MPathElement::new(s.as_bytes().iter().cloned().collect()).unwrap()
-    }
-
-    fn path(s: &str) -> MPath {
-        MPath::new(s).unwrap()
-    }
-
-    fn file(ty: FileType, name: &'static str) -> BonsaiEntry<TestManifestId, TestFileId> {
-        BonsaiEntry::Leaf((ty, TestFileId(name)))
-    }
-
-    fn dir(name: &'static str) -> BonsaiEntry<TestManifestId, TestFileId> {
-        BonsaiEntry::Tree(TestManifestId(name))
     }
 
     fn changed(
@@ -541,10 +484,10 @@ mod test {
         let root = path("a");
 
         let store = ManifestStore(hashmap! {
-            TestManifestId("1") => TestManifest(hashmap! {
+            TestManifestIdStr("1") => TestManifestStr(hashmap! {
                 element("p1") => file(FileType::Regular, "1"),
             }),
-            TestManifestId("2") => TestManifest(hashmap! {
+            TestManifestIdStr("2") => TestManifestStr(hashmap! {
                 element("p1") => file(FileType::Executable, "2"),
                 element("p2") => dir("2"),
             })
@@ -589,7 +532,7 @@ mod test {
                 ),
                 path("a/p2") => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestId("2") })
+                    CompositeEntry::manifests(hashset! { TestManifestIdStr("2") })
                 ),
             }
         );
@@ -601,7 +544,8 @@ mod test {
     async fn test_unfold_dir_from_files(fb: FacebookInit) -> Result<(), Error> {
         let root = path("a");
 
-        let store = ManifestStore(hashmap! { TestManifestId("1") => TestManifest(hashmap! {}) });
+        let store =
+            ManifestStore(hashmap! { TestManifestIdStr("1") => TestManifestStr(hashmap! {}) });
 
         let node = Some(dir("1"));
         let mut parents = CompositeEntry::empty();
@@ -638,10 +582,10 @@ mod test {
         let root = path("a");
 
         let store = ManifestStore(hashmap! {
-            TestManifestId("1") => TestManifest(hashmap! {
+            TestManifestIdStr("1") => TestManifestStr(hashmap! {
                 element("p1") => dir("2"),
             }),
-            TestManifestId("2") => TestManifest(hashmap! {
+            TestManifestIdStr("2") => TestManifestStr(hashmap! {
                 element("p2") => dir("3"),
             })
         });
@@ -658,7 +602,7 @@ mod test {
             hashmap! {
                 path("a/p1") => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestId("2") })
+                    CompositeEntry::manifests(hashset! { TestManifestIdStr("2") })
                 ),
             }
         );
@@ -673,11 +617,11 @@ mod test {
             hashmap! {
                 path("a/p1") => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestId("2") })
+                    CompositeEntry::manifests(hashset! { TestManifestIdStr("2") })
                 ),
                 path("a/p2") => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestId("3") })
+                    CompositeEntry::manifests(hashset! { TestManifestIdStr("3") })
                 ),
             }
         );
