@@ -17,11 +17,13 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::stream::Stream;
-use futures_ext::StreamExt;
-use futures_preview::compat::Future01CompatExt;
-use futures_preview::future::{FutureExt, Shared};
-use futures_util::{try_future::try_join_all, try_join};
+use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
+use futures_preview::future;
+use futures_preview::stream::Stream;
+use futures_util::future::{FutureExt, Shared};
+use futures_util::stream::StreamExt;
+use futures_util::try_future::{try_join, try_join_all};
+use futures_util::try_stream::TryStreamExt;
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use mercurial_types::Globalrev;
 use mononoke_types::{BonsaiChangeset, MPathElement};
@@ -293,7 +295,7 @@ impl ChangesetContext {
             .collect();
 
         let (self_manifest_root, other_manifest_root) =
-            try_join!(self.root_fsnode_id(), other.root_fsnode_id(),)?;
+            try_join(self.root_fsnode_id(), other.root_fsnode_id()).await?;
         let change_contexts = other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
             .fsnode_id()
             .diff(
@@ -301,53 +303,55 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 self_manifest_root.fsnode_id().clone(),
             )
-            .filter_map(|diff_entry| match diff_entry {
-                ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
-                    if let Some(from_path) = inv_copy_path_map.get(&&path) {
-                        // There's copy information that we can use.
-                        if copied_paths.contains(from_path) {
-                            // If the source still exists in the current commit it was a copy.
-                            Some(ChangesetPathDiffContext::Copied(
-                                ChangesetPathContext::new(self.clone(), path.clone()),
-                                ChangesetPathContext::new(other.clone(), (*from_path).clone()),
-                            ))
+            .compat()
+            .try_filter_map(|diff_entry| {
+                future::ok(match diff_entry {
+                    ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
+                        if let Some(from_path) = inv_copy_path_map.get(&&path) {
+                            // There's copy information that we can use.
+                            if copied_paths.contains(from_path) {
+                                // If the source still exists in the current commit it was a copy.
+                                Some(ChangesetPathDiffContext::Copied(
+                                    ChangesetPathContext::new(self.clone(), path.clone()),
+                                    ChangesetPathContext::new(other.clone(), (*from_path).clone()),
+                                ))
+                            } else {
+                                // If it doesn't it was a move
+                                Some(ChangesetPathDiffContext::Moved(
+                                    ChangesetPathContext::new(self.clone(), path.clone()),
+                                    ChangesetPathContext::new(other.clone(), (*from_path).clone()),
+                                ))
+                            }
                         } else {
-                            // If it doesn't it was a move
-                            Some(ChangesetPathDiffContext::Moved(
-                                ChangesetPathContext::new(self.clone(), path.clone()),
-                                ChangesetPathContext::new(other.clone(), (*from_path).clone()),
+                            Some(ChangesetPathDiffContext::Added(ChangesetPathContext::new(
+                                self.clone(),
+                                path,
+                            )))
+                        }
+                    }
+                    ManifestDiff::Removed(Some(path), ManifestEntry::Leaf(_)) => {
+                        if let Some(_) = copy_path_map.get(&path) {
+                            // The file is was moved (not removed), it will be covered by a "Moved" entry.
+                            None
+                        } else {
+                            Some(ChangesetPathDiffContext::Removed(
+                                ChangesetPathContext::new(other.clone(), path),
                             ))
                         }
-                    } else {
-                        Some(ChangesetPathDiffContext::Added(ChangesetPathContext::new(
-                            self.clone(),
-                            path,
-                        )))
                     }
-                }
-                ManifestDiff::Removed(Some(path), ManifestEntry::Leaf(_)) => {
-                    if let Some(_) = copy_path_map.get(&path) {
-                        // The file is was moved (not removed), it will be covered by a "Moved" entry.
-                        None
-                    } else {
-                        Some(ChangesetPathDiffContext::Removed(
-                            ChangesetPathContext::new(other.clone(), path),
-                        ))
-                    }
-                }
-                ManifestDiff::Changed(
-                    Some(path),
-                    ManifestEntry::Leaf(_a),
-                    ManifestEntry::Leaf(_b),
-                ) => Some(ChangesetPathDiffContext::Changed(
-                    ChangesetPathContext::new(self.clone(), path.clone()),
-                    ChangesetPathContext::new(other.clone(), path),
-                )),
-                // We don't care about diffs not involving leaves
-                _ => None,
+                    ManifestDiff::Changed(
+                        Some(path),
+                        ManifestEntry::Leaf(_a),
+                        ManifestEntry::Leaf(_b),
+                    ) => Some(ChangesetPathDiffContext::Changed(
+                        ChangesetPathContext::new(self.clone(), path.clone()),
+                        ChangesetPathContext::new(other.clone(), path),
+                    )),
+                    // We don't care about diffs not involving leaves
+                    _ => None,
+                })
             })
-            .collect()
-            .compat()
+            .try_collect::<Vec<_>>()
             .await?;
         return Ok(change_contexts);
     }
@@ -356,8 +360,7 @@ impl ChangesetContext {
         &self,
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
-        limit: u64,
-    ) -> Result<impl Stream<Item = MononokePath, Error = MononokeError>, MononokeError> {
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
         let root = self.root_fsnode_id().await?;
         let prefixes = match prefixes {
             Some(prefixes) => prefixes
@@ -373,26 +376,31 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 prefixes,
             )
-            .filter_map(|(path, entry)| match (path, entry) {
-                (Some(mpath), ManifestEntry::Leaf(_)) => Some(mpath),
-                _ => None,
+            .compat()
+            .try_filter_map(|(path, entry)| {
+                async move {
+                    match (path, entry) {
+                        (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
+                        _ => Ok(None),
+                    }
+                }
             });
         let mpaths = match basenames {
             Some(basenames) => {
-                let basenames = basenames
+                let basename_set = basenames
                     .into_iter()
                     .map(|basename| MPathElement::new(basename.into()))
                     .collect::<Result<HashSet<_>, _>>()
                     .map_err(MononokeError::from)?;
                 mpaths
-                    .filter(move |mpath| basenames.contains(mpath.basename()))
+                    .try_filter(move |mpath| future::ready(basename_set.contains(mpath.basename())))
+                    .into_stream()
                     .left_stream()
             }
-            None => mpaths.right_stream(),
+            None => mpaths.into_stream().right_stream(),
         };
         Ok(mpaths
-            .take(limit)
-            .map(|mpath| MononokePath::new(Some(mpath)))
+            .map_ok(|mpath| MononokePath::new(Some(mpath)))
             .map_err(MononokeError::from))
     }
 }

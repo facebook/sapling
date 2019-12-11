@@ -9,8 +9,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 
-use futures::stream::Stream;
-use futures_preview::compat::Future01CompatExt;
 use futures_util::{stream, try_future, try_join, StreamExt, TryStreamExt};
 use mononoke_api::{
     unified_diff, ChangesetContext, ChangesetSpecifier, CopyInfo, MononokeError, MononokePath,
@@ -296,12 +294,12 @@ impl SourceControlServiceImpl {
             None => None,
         };
 
-        let files = changeset
-            .find_files(prefixes, params.basenames, limit)
+        let files: Vec<_> = changeset
+            .find_files(prefixes, params.basenames)
             .await?
-            .map(|path| path.to_string())
-            .collect()
-            .compat()
+            .take(limit)
+            .map_ok(|path| path.to_string())
+            .try_collect()
             .await?;
         Ok(thrift::CommitFindFilesResponse { files })
     }

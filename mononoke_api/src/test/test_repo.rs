@@ -17,7 +17,9 @@ use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
-use futures_preview::future::{FutureExt, TryFutureExt};
+use futures_util::future::FutureExt;
+use futures_util::try_future::TryFutureExt;
+use futures_util::try_stream::TryStreamExt;
 
 use crate::{
     ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,
@@ -249,12 +251,7 @@ fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
                 .expect("changeset exists");
 
             // Find everything
-            let mut files = cs
-                .find_files(None, None, 100)
-                .await?
-                .collect()
-                .compat()
-                .await?;
+            let mut files: Vec<_> = cs.find_files(None, None).await?.try_collect().await?;
             files.sort();
             let expected_files = vec![
                 MononokePath::try_from("1")?,
@@ -270,18 +267,16 @@ fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
             assert_eq!(files, expected_files);
 
             // Prefixes
-            let mut files = cs
+            let mut files: Vec<_> = cs
                 .find_files(
                     Some(vec![
                         MononokePath::try_from("dir1/subdir1/subsubdir1")?,
                         MononokePath::try_from("dir2")?,
                     ]),
                     None,
-                    100,
                 )
                 .await?
-                .collect()
-                .compat()
+                .try_collect()
                 .await?;
             files.sort();
             let expected_files = vec![
@@ -291,11 +286,10 @@ fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
             assert_eq!(files, expected_files);
 
             // Basenames
-            let mut files = cs
-                .find_files(None, Some(vec![String::from("file_1")]), 100)
+            let mut files: Vec<_> = cs
+                .find_files(None, Some(vec![String::from("file_1")]))
                 .await?
-                .collect()
-                .compat()
+                .try_collect()
                 .await?;
             files.sort();
             let expected_files = vec![
@@ -306,18 +300,16 @@ fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
             assert_eq!(files, expected_files);
 
             // Basenames and Prefixes
-            let mut files = cs
+            let mut files: Vec<_> = cs
                 .find_files(
                     Some(vec![
                         MononokePath::try_from("dir1/subdir1/subsubdir2")?,
                         MononokePath::try_from("dir2")?,
                     ]),
                     Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
-                    100,
                 )
                 .await?
-                .collect()
-                .compat()
+                .try_collect()
                 .await?;
             files.sort();
             let expected_files = vec![
