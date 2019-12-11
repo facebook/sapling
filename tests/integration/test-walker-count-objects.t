@@ -48,7 +48,7 @@ count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the ro
   * Walking edge types [BonsaiChangesetToBonsaiParent, BonsaiChangesetToFileContent, BookmarkToBonsaiChangeset, FileContentToFileContentMetadata] (glob)
   * Walking node types [BonsaiChangeset, Bookmark, FileContent, FileContentMetadata] (glob)
   * Final count: (10, 10) (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:3,3,8 Bookmark:1,1,1 FileContent:3,3,0 FileContentMetadata:3,0,0  (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:3,3,8 Bookmark:1,1,1 FileContent:3,3,0 FileContentMetadata:3,0,0 (glob)
   * Exiting... (glob)
 
 count-objects, shallow, bonsai only.  No parents, expect just one of each node type
@@ -57,7 +57,7 @@ count-objects, shallow, bonsai only.  No parents, expect just one of each node t
   * Walking edge types [BonsaiChangesetToFileContent, BookmarkToBonsaiChangeset, FileContentToFileContentMetadata] (glob)
   * Walking node types [BonsaiChangeset, Bookmark, FileContent, FileContentMetadata] (glob)
   * Final count: (4, 4) (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:1,1,2 Bookmark:1,1,1 FileContent:1,1,0 FileContentMetadata:1,0,0  (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:1,1,2 Bookmark:1,1,1 FileContent:1,1,0 FileContentMetadata:1,0,0 (glob)
   * Exiting... (glob)
 
 count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step, plus 1 for mapping from bookmark to hg. plus 3 for filenode (same blob as envelope)
@@ -66,7 +66,7 @@ count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step
   * Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
   * Walking node types [BonsaiHgMapping, Bookmark, FileContent, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest] (glob)
   * Final count: (17, 17) (glob)
-  * Type:Walked,Checks,Children BonsaiHgMapping:1,1,1 Bookmark:1,1,1 FileContent:3,3,0 HgChangeset:3,3,5 HgFileEnvelope:3,*,3 HgFileNode:3,*,0 HgManifest:3,3,6  (glob)
+  * Type:Walked,Checks,Children BonsaiHgMapping:1,1,1 Bookmark:1,1,1 FileContent:3,3,0 HgChangeset:3,3,5 HgFileEnvelope:3,*,3 HgFileNode:3,*,0 HgManifest:3,3,6 (glob)
   * Exiting... (glob)
 
 count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mappings and root.
@@ -75,7 +75,7 @@ count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mapp
   * Walking edge types [BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiParent, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentToFileContentMetadata, HgBonsaiMappingToBonsaiChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgLinkNodeToHgBonsaiMapping, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
   * Walking node types [BonsaiChangeset, BonsaiHgMapping, Bookmark, FileContent, FileContentMetadata, HgBonsaiMapping, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest] (glob)
   * Final count: (28, 28) (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:3,3,11 BonsaiHgMapping:3,* Bookmark:1,1,1 FileContent:3,3,0 FileContentMetadata:3,0,0 HgBonsaiMapping:3,3,0 HgChangeset:3,* HgFileEnvelope:3,*,0 HgFileNode:3,6,3 HgManifest:3,3,6  (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:3,3,11 BonsaiHgMapping:3,* Bookmark:1,1,1 FileContent:3,3,0 FileContentMetadata:3,0,0 HgBonsaiMapping:3,3,0 HgChangeset:3,* HgFileEnvelope:3,*,0 HgFileNode:3,6,3 HgManifest:3,3,6 (glob)
   * Exiting... (glob)
 
 count-objects, default shallow walk across bonsai and hg data
@@ -84,5 +84,5 @@ count-objects, default shallow walk across bonsai and hg data
   * Walking edge types [BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentToFileContentMetadata, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode] (glob)
   * Walking node types [BonsaiChangeset, BonsaiHgMapping, Bookmark, FileContent, FileContentMetadata, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest] (glob)
   * Final count: (17, 17) (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:1,1,3 BonsaiHgMapping:1,1,1 Bookmark:1,1,1 FileContent:3,4,0 FileContentMetadata:3,0,0 HgChangeset:1,1,1 HgFileEnvelope:3,*,4 HgFileNode:3,3,0 HgManifest:1,1,6  (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:1,1,3 BonsaiHgMapping:1,1,1 Bookmark:1,1,1 FileContent:3,4,0 FileContentMetadata:3,0,0 HgChangeset:1,1,1 HgFileEnvelope:3,*,4 HgFileNode:3,3,0 HgManifest:1,1,6 (glob)
   * Exiting... (glob)

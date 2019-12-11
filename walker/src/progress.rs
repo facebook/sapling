@@ -150,17 +150,21 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
         let delta_progress: u64 =
             self.work_stats.total_progress - self.reporting_stats.last_reported;
         let delta_node_count: u64 = new_node_count - self.reporting_stats.last_node_count;
-        let mut detail = String::new();
-        for t in &self.params.types_sorted_by_name {
-            let (seen, new_children, visited_of_type) = self
-                .work_stats
-                .stats_by_type
-                .get(t)
-                .map(|(ps, ss)| (*ps, ss.num_expanded_new, ss.visited_of_type))
-                .unwrap_or((0, 0, 0));
-            let one_msg = format!("{}:{},{},{} ", t, seen, visited_of_type, new_children);
-            detail.push_str(&one_msg);
-        }
+        let detail = &self
+            .params
+            .types_sorted_by_name
+            .iter()
+            .map(|t| {
+                let (seen, new_children, visited_of_type) = self
+                    .work_stats
+                    .stats_by_type
+                    .get(t)
+                    .map(|(ps, ss)| (*ps, ss.num_expanded_new, ss.visited_of_type))
+                    .unwrap_or((0, 0, 0));
+                format!("{}:{},{},{}", t, seen, visited_of_type, new_children)
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
         let mut walked_per_s = 0;
         let mut queued_per_s = 0;
         let mut delta_s = 0;

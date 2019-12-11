@@ -160,7 +160,7 @@ impl ProgressReporterUnprotected for SizingState {
     fn report_progress(self: &mut Self, logger: &Logger, _delta_time: Option<Duration>) {
         info!(
             logger,
-            "Samples={}, Raw,Compressed,%OfRaw; Total: {:?},{:03}% File: {:?},{:03}% ",
+            "Samples={}, Raw,Compressed,%OfRaw; Total: {:?},{:03}% File: {:?},{:03}%",
             self.num_sampled,
             self.total,
             self.total.compression_benefit_pct(),
