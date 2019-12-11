@@ -10,11 +10,13 @@
 
 pub use crate::bonsai::{bonsai_diff, BonsaiDiffFileChange};
 pub use crate::derive::{derive_manifest, LeafInfo, TreeInfo};
+pub use crate::implicit_deletes::get_implicit_deletes;
 pub use crate::ops::{find_intersection_of_diffs, Diff, ManifestOps, PathOrPrefix};
 pub use crate::types::{Entry, Manifest, PathTree, StoreLoadable};
 
 mod bonsai;
 mod derive;
+mod implicit_deletes;
 mod ops;
 mod types;
 
