@@ -407,22 +407,34 @@ pub fn parse_args_common(
         .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
         .collect();
 
+    let root_node_types: Vec<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
+
     // This stops us logging that we're walking unreachable edge/node types
-
-    // Only retain edge types where source type is something we want to load
-    include_edge_types.retain(|e| {
-        e.incoming_type()
-            .as_ref()
-            .map(|t| include_node_types.contains(t))
-            .unwrap_or(true)
-    });
-
-    // Only retain node types we expect to step to after graph entry
-    include_node_types.retain(|t| {
-        include_edge_types
-            .iter()
-            .any(|e| e.incoming_type() == None || &e.outgoing_type() == t)
-    });
+    let mut param_count = &include_edge_types.len() + &include_node_types.len();
+    let mut last_param_count = 0;
+    while param_count != last_param_count {
+        let include_edge_types_stable = include_edge_types.clone();
+        // Only retain edge types that are traversable
+        include_edge_types.retain(|e| {
+            e.incoming_type()
+                .map(|t|
+                    // its an incoming_type we want
+                    include_node_types.contains(&t) &&
+                    // Another existing edge can get us to this node type
+                    (root_node_types.contains(&t) || include_edge_types_stable.iter().any(|o| &o.outgoing_type() == &t)))
+                .unwrap_or(true)
+                // its an outgoing_type we want
+                && include_node_types.contains(&e.outgoing_type())
+        });
+        // Only retain node types we expect to step to after graph entry
+        include_node_types.retain(|t| {
+            include_edge_types.iter().any(|e| {
+                &e.outgoing_type() == t || e.incoming_type().map(|ot| &ot == t).unwrap_or(false)
+            })
+        });
+        last_param_count = param_count;
+        param_count = &include_edge_types.len() + &include_node_types.len();
+    }
 
     info!(logger, "Walking roots {:?} ", walk_roots);
 
