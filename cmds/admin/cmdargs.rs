@@ -36,3 +36,4 @@ pub const REDACTION_LIST: &'static str = "list";
 pub const SKIPLIST: &'static str = "skiplist";
 pub const UNODES: &'static str = "unodes";
 pub const BLAME: &'static str = "blame";
+pub const DELETED_MANIFEST: &'static str = "deleted-manifest";

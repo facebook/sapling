@@ -19,6 +19,7 @@ use mononoke_types::ChangesetId;
 mod derive;
 mod mapping;
 
+pub use derive::{iterate_entries, Status};
 pub use mapping::{RootDeletedManifestId, RootDeletedManifestMapping};
 
 pub fn derive_deleted_manifest(

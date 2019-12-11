@@ -14,13 +14,18 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
     future::{err, join_all, lazy, ok, Future, IntoFuture},
-    stream::Stream,
+    stream::{iter_ok, Stream},
     sync::{mpsc, oneshot},
 };
-use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
+use futures_ext::{
+    bounded_traversal::{bounded_traversal, bounded_traversal_stream},
+    BoxFuture, FutureExt,
+};
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManifest};
-use mononoke_types::{BonsaiChangeset, ChangesetId, DeletedManifestId, MPathElement, MononokeId};
+use mononoke_types::{
+    BonsaiChangeset, ChangesetId, DeletedManifestId, MPath, MPathElement, MononokeId,
+};
 use repo_blobstore::RepoBlobstore;
 use std::{collections::BTreeMap, iter::FromIterator, sync::Arc};
 use thiserror::Error;
@@ -417,6 +422,52 @@ fn do_derive_create(
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Status {
+    Deleted(ChangesetId),
+    Live,
+}
+
+impl From<Option<ChangesetId>> for Status {
+    fn from(linknode: Option<ChangesetId>) -> Self {
+        linknode.map(Status::Deleted).unwrap_or(Status::Live)
+    }
+}
+
+pub fn iterate_entries(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    manifest_id: DeletedManifestId,
+) -> impl Stream<Item = (Option<MPath>, Status, DeletedManifestId), Error = Error> {
+    let blobstore = repo.get_blobstore();
+    bounded_traversal_stream(
+        256,
+        Some((None, manifest_id)),
+        move |(path, manifest_id)| {
+            manifest_id
+                .load(ctx.clone(), &blobstore)
+                .map(move |manifest| {
+                    let entry = (
+                        path.clone(),
+                        Status::from(manifest.linknode().clone()),
+                        manifest_id,
+                    );
+                    let recurse_subentries = manifest
+                        .list()
+                        .map(|(name, mf_id)| {
+                            let full_path = MPath::join_opt_element(path.as_ref(), &name);
+                            (Some(full_path), mf_id.clone())
+                        })
+                        .collect::<Vec<_>>();
+
+                    (vec![entry], recurse_subentries)
+                })
+        },
+    )
+    .map(|entries| iter_ok(entries))
+    .flatten()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,8 +475,6 @@ mod tests {
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use fixtures::{many_files_dirs, store_files};
-    use futures::{stream, Future, Stream};
-    use futures_ext::bounded_traversal::bounded_traversal_stream;
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
     use test_utils::get_bonsai_changeset;
@@ -739,13 +788,13 @@ mod tests {
             .unwrap();
 
         let mut deleted_nodes = runtime
-            .block_on(iterate_all_entries(
-                ctx.clone(),
-                repo.clone(),
-                dfm_id.clone(),
-            ))
+            .block_on(
+                iterate_entries(ctx.clone(), repo.clone(), dfm_id.clone())
+                    .map(|(path, st, ..)| (path, st))
+                    .collect(),
+            )
             .unwrap();
-        deleted_nodes.sort_by_key(|(path, _)| path.clone());
+        deleted_nodes.sort_by_key(|(path, ..)| path.clone());
 
         (bcs_id, dfm_id, deleted_nodes)
     }
@@ -780,50 +829,7 @@ mod tests {
         bcs
     }
 
-    #[derive(Debug, Clone, Eq, PartialEq)]
-    enum Status {
-        Deleted(ChangesetId),
-        Live,
-    }
-
-    impl From<Option<ChangesetId>> for Status {
-        fn from(linknode: Option<ChangesetId>) -> Self {
-            linknode.map(Status::Deleted).unwrap_or(Status::Live)
-        }
-    }
-
     fn path(path_str: &str) -> MPath {
         MPath::new(path_str).unwrap()
-    }
-
-    fn iterate_all_entries(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        manifest_id: DeletedManifestId,
-    ) -> impl Future<Item = Vec<(Option<MPath>, Status)>, Error = Error> {
-        let blobstore = repo.get_blobstore();
-        bounded_traversal_stream(
-            256,
-            Some((None, manifest_id)),
-            move |(path, manifest_id)| {
-                manifest_id
-                    .load(ctx.clone(), &blobstore)
-                    .map(move |manifest| {
-                        let entry = (path.clone(), Status::from(manifest.linknode().clone()));
-                        let recurse_subentries = manifest
-                            .list()
-                            .map(|(name, mf_id)| {
-                                let full_path = MPath::join_opt_element(path.as_ref(), &name);
-                                (Some(full_path), mf_id.clone())
-                            })
-                            .collect::<Vec<_>>();
-
-                        (vec![entry], recurse_subentries)
-                    })
-            },
-        )
-        .map(|entries| stream::iter_ok(entries))
-        .flatten()
-        .collect()
     }
 }
