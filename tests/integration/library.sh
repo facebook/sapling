@@ -1352,7 +1352,15 @@ function gitimport() {
 }
 
 function git() {
-  local date
+  local date name email
   date="01/01/0000 00:00 +0000"
-  GIT_COMMITTER_DATE="$date" GIT_AUTHOR_DATE="$date" command git "$@"
+  name="mononoke"
+  email="mononoke@mononoke"
+  GIT_COMMITTER_DATE="$date" \
+  GIT_COMMITTER_NAME="$name" \
+  GIT_COMMITTER_EMAIL="$email" \
+  GIT_AUTHOR_DATE="$date" \
+  GIT_AUTHOR_NAME="$name" \
+  GIT_AUTHOR_EMAIL="$email" \
+  command git "$@"
 }

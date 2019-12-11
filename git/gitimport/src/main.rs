@@ -190,7 +190,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = runtime.block_on(args::open_repo(fb, &logger, &matches))?;
+    let repo = runtime.block_on(args::create_repo(fb, &logger, &matches))?;
     let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
 
     let derive_trees = matches.is_present(ARG_DERIVE_TREES);

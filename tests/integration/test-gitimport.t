@@ -11,7 +11,7 @@
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -am "Add file1"
-  [master (root-commit) e45fd71] Add file1
+  [master (root-commit) 8ce3eae] Add file1
    1 file changed, 1 insertion(+)
    create mode 100644 file1
 
@@ -19,14 +19,14 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees --hggit-compatibility
   * using repo "repo" repoid RepositoryId(0) (glob)
-  Created e45fd71023e1daf8bcadd9a63086c66180aa8c64 => ChangesetId(Blake2(3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a))
-  Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a)))
+  Created 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e => ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0))
+  Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)))
   1 tree(s) are valid!
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master 3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a
+  $ mononoke_admin bookmarks set master 967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(3e169314bafbb68d9db7e42eeace9c829a11d32be3b6847cb841fefafaf9d31a)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)) (glob)
 
 # Start Mononoke
   $ mononoke
@@ -42,4 +42,4 @@
 # Try out hggit compatibility
   $ hg --config extensions.hggit= git-updatemeta
   $ hg --config extensions.hggit= log -T '{gitnode}'
-  e45fd71023e1daf8bcadd9a63086c66180aa8c64 (no-eol)
+  8ce3eae44760b500bf3f2c3922a95dcd3c908e9e (no-eol)
