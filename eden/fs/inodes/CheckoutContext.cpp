@@ -9,6 +9,7 @@
 
 #include <folly/logging/xlog.h>
 
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -36,8 +37,15 @@ void CheckoutContext::start(RenameLock&& renameLock) {
 Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
   // Only update the parents if it is not a dry run.
   if (!isDryRun()) {
+    auto oldParents = parentsLock_->parents;
     // Update the in-memory snapshot ID
     parentsLock_->parents.setParents(newSnapshot);
+
+    auto config = mount_->getConfig();
+    // Save the new snapshot hash to the config
+    config->setParentCommits(newSnapshot);
+    XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
+               << oldParents << " to " << newSnapshot;
   }
 
   // Release the rename lock.

@@ -13,6 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -563,16 +564,31 @@ void testModifyConflict(
   EXPECT_EQ(path, result.conflicts[0].path);
   EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, result.conflicts[0].type);
 
+  const auto currentParent =
+      testMount.getEdenMount()->getParentCommits().parent1();
+  const auto configParent =
+      testMount.getEdenMount()->getConfig()->getParentCommits().parent1();
+  // Make sure both the mount parent and the config parent information was
+  // updated
+  EXPECT_EQ(currentParent, configParent);
+
   auto postInode = testMount.getFileInode(path);
   switch (checkoutMode) {
     case CheckoutMode::FORCE:
       // Make sure the path is updated as expected
       EXPECT_FILE_INODE(postInode, contents2, perms2);
+      // Make sure the parent information has been updated
+      EXPECT_EQ(currentParent, makeTestHash("b"));
       break;
     case CheckoutMode::DRY_RUN:
+      // make sure the currentParent is still commit1
+      EXPECT_EQ(currentParent, makeTestHash("a"));
+      break;
     case CheckoutMode::NORMAL:
       // Make sure the path has not been changed
       EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+      // Make sure the parent information has been updated
+      EXPECT_EQ(currentParent, makeTestHash("b"));
       break;
   }
 

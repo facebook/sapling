@@ -852,13 +852,6 @@ folly::Future<CheckoutResult> EdenMount::checkout(
               return result;
             }
 
-            // Save the new snapshot hash to the config
-            // TODO: This should probably be done by CheckoutConflict::finish()
-            // while still holding the parents lock.
-            this->config_->setParentCommits(snapshotHash);
-            XLOG(DBG1) << "updated snapshot for " << this->getPath() << " from "
-                       << oldParents << " to " << snapshotHash;
-
             // Write a journal entry
             //
             // Note that we do not call journalDiffCallback->performDiff() a
