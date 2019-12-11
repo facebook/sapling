@@ -25,25 +25,13 @@ from edenscm.mercurial import (
     scmutil,
     visibility,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import hex
 
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 testedwith = "ships-with-fb-hgext"
-
-
-def _isobsstoreenabled(repo):
-    return obsolete.isenabled(repo, obsolete.createmarkersopt)
-
-
-def _isahash(rev):
-    try:
-        binascii.unhexlify(rev)
-        return True
-    except TypeError:
-        return False
 
 
 @command(
@@ -235,18 +223,11 @@ def _deleteunreachable(repo, ctx):
         keepheads += " + remotenames()"
     except KeyError:
         pass
-    hiderevs = repo.revs("::%s - ::(%r)", ctx.rev(), keepheads)
-    if hiderevs:
-        lock = None
-        try:
-            lock = repo.lock()
-            if _isobsstoreenabled(repo):
-                markers = []
-                for rev in hiderevs:
-                    markers.append((repo[rev], ()))
-                obsolete.createmarkers(repo, markers)
-                repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
-            else:
-                repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
-        finally:
-            lockmod.release(lock)
+    hidenodes = list(repo.nodes("(draft() & ::%s) - ::(%r)", ctx.rev(), keepheads))
+    if hidenodes:
+        with repo.lock():
+            scmutil.cleanupnodes(repo, hidenodes, "reset")
+        repo.ui.status(
+            _n("%d changeset hidden\n", "%d changesets hidden\n", len(hidenodes))
+            % len(hidenodes)
+        )
