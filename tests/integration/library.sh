@@ -285,14 +285,14 @@ function write_stub_log_entry {
 
 function wait_for_nonempty_file {
     for _ in $(seq 1 50); do
-        if test -s "$0"; then
-            return
+        if test -s "$1"; then
+            return 0
         fi
 
         sleep 0.1
     done
 
-    echo "File remained empty" >&2
+    echo "File $1 remained empty" >&2
     return 1
 }
 
