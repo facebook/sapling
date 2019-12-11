@@ -306,5 +306,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             file: thrift::FileSpecifier,
             params: thrift::FileContentChunkParams,
         ) -> Result<thrift::FileChunk, service::FileContentChunkExn>;
+
+        async fn repo_create_commit(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoCreateCommitParams,
+        ) -> Result<thrift::RepoCreateCommitResponse, service::RepoCreateCommitExn>;
     }
 }

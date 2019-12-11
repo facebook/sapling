@@ -10,9 +10,13 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display};
 use std::ops::RangeBounds;
 
+use chrono::{DateTime, FixedOffset, TimeZone};
 use faster_hex::hex_string;
 use mercurial_types::Globalrev;
-use mononoke_api::{ChangesetId, ChangesetSpecifier, CopyInfo, FileId, HgChangesetId, TreeId};
+use mononoke_api::{
+    ChangesetId, ChangesetSpecifier, CopyInfo, CreateCopyInfo, FileId, FileType, HgChangesetId,
+    MononokePath, TreeId,
+};
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
 
@@ -98,6 +102,48 @@ impl_from_request_binary_id!(TreeId, "tree id");
 impl_from_request_binary_id!(FileId, "file id");
 impl_from_request_binary_id!(Sha1, "sha-1");
 impl_from_request_binary_id!(Sha256, "sha-256");
+
+impl FromRequest<thrift::RepoCreateCommitParamsFileType> for FileType {
+    fn from_request(
+        file_type: &thrift::RepoCreateCommitParamsFileType,
+    ) -> Result<Self, thrift::RequestError> {
+        match file_type {
+            &thrift::RepoCreateCommitParamsFileType::FILE => Ok(FileType::Regular),
+            &thrift::RepoCreateCommitParamsFileType::EXEC => Ok(FileType::Executable),
+            &thrift::RepoCreateCommitParamsFileType::LINK => Ok(FileType::Symlink),
+            &val => Err(errors::invalid_request(format!(
+                "unsupported file type ({})",
+                val
+            ))),
+        }
+    }
+}
+
+impl FromRequest<thrift::RepoCreateCommitParamsFileCopyInfo> for CreateCopyInfo {
+    fn from_request(
+        copy_info: &thrift::RepoCreateCommitParamsFileCopyInfo,
+    ) -> Result<Self, thrift::RequestError> {
+        let path = MononokePath::try_from(&copy_info.path).map_err(|e| {
+            errors::invalid_request(format!(
+                "invalid copy-from path '{}': {}",
+                copy_info.path, e
+            ))
+        })?;
+        let parent_index = usize::try_from(copy_info.parent_index).map_err(|e| {
+            errors::invalid_request(format!(
+                "invalid copy-from parent index '{}': {}",
+                copy_info.parent_index, e
+            ))
+        })?;
+        Ok(CreateCopyInfo::new(path, parent_index))
+    }
+}
+
+impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
+    fn from_request(date: &thrift::DateTime) -> Result<Self, thrift::RequestError> {
+        Ok(FixedOffset::east(date.tz).timestamp(date.timestamp, 0))
+    }
+}
 
 /// Check that an input value is in range for the request, and convert it to
 /// the internal type.  Returns a invalid request error if the number was out

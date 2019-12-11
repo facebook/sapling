@@ -50,6 +50,7 @@ macro_rules! impl_into_thrift_error {
 
 impl_into_thrift_error!(service::RepoResolveBookmarkExn);
 impl_into_thrift_error!(service::RepoListBookmarksExn);
+impl_into_thrift_error!(service::RepoCreateCommitExn);
 impl_into_thrift_error!(service::CommitFileDiffsExn);
 impl_into_thrift_error!(service::CommitLookupExn);
 impl_into_thrift_error!(service::CommitInfoExn);
