@@ -42,6 +42,10 @@ fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
 }
 
+fn mpath(p: &str) -> MPath {
+    MPath::new(p).unwrap()
+}
+
 fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
 
@@ -61,7 +65,7 @@ fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         committer_date: None,
         message: "Initial commit to get going".to_string(),
         extra: btreemap! {},
-        file_changes: btreemap! {MPath::new("master_file").unwrap() => Some(file_change)},
+        file_changes: btreemap! {mpath("master_file") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -202,7 +206,7 @@ fn sync_parentage(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
     let linear = linear::getrepo(fb);
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -284,7 +288,7 @@ fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         committer_date: None,
         message: "Change master_file".to_string(),
         extra: btreemap! {},
-        file_changes: btreemap! {MPath::new("master_file").unwrap() => Some(file_change)},
+        file_changes: btreemap! {mpath("master_file") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -311,7 +315,7 @@ fn sync_causes_conflict(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
     let linear = linear::getrepo(fb);
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let linear_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -319,7 +323,7 @@ fn sync_causes_conflict(fb: FacebookInit) {
         bookmark_renamer: Arc::new(identity_renamer),
     };
 
-    let master_file_path_in_megarepo = MPath::new("master_file").unwrap();
+    let master_file_path_in_megarepo = mpath("master_file");
     let master_file_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -373,7 +377,7 @@ fn sync_empty_commit(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
     let linear = linear::getrepo(fb);
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let lts_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -382,7 +386,7 @@ fn sync_empty_commit(fb: FacebookInit) {
         }),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let stl_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -461,7 +465,7 @@ fn megarepo_copy_file(
         committer_date: None,
         message: "Change 1".to_string(),
         extra: btreemap! {},
-        file_changes: btreemap! {MPath::new("linear/new_file").unwrap() => Some(file_change)},
+        file_changes: btreemap! {mpath("linear/new_file") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -488,7 +492,7 @@ fn sync_copyinfo(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
     let linear = linear::getrepo(fb);
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let lts_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -497,7 +501,7 @@ fn sync_copyinfo(fb: FacebookInit) {
         }),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let stl_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -556,9 +560,9 @@ fn sync_copyinfo(fb: FacebookInit) {
     let file_changes: Vec<_> = linear_bcs.file_changes().collect();
     assert!(file_changes.len() == 1, "Wrong file change count");
     let (path, copy_info) = file_changes.first().unwrap();
-    assert_eq!(**path, MPath::new("new_file").unwrap());
+    assert_eq!(**path, mpath("new_file"));
     let (copy_source, copy_bcs) = copy_info.unwrap().copy_from().unwrap();
-    assert_eq!(*copy_source, MPath::new("1").unwrap());
+    assert_eq!(*copy_source, mpath("1"));
     assert_eq!(*copy_bcs, linear_master_bcs_id);
 }
 
@@ -577,14 +581,14 @@ fn sync_remap_failure(fb: FacebookInit) {
         mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let stl_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
@@ -655,10 +659,10 @@ fn sync_implicit_deletes(fb: FacebookInit) {
     // or may not be allowed in repo configs. We want commit syncing to work
     // in this case, regardless of whether such config is allowed
     let mover = Arc::new(move |path: &MPath| -> Result<Option<MPath>, Error> {
-        let longer_path = MPath::new("dir1/subdir1/subsubdir1").unwrap();
-        let prefix1: MPath = MPath::new("prefix1").unwrap();
-        let shorter_path = MPath::new("dir1").unwrap();
-        let prefix2: MPath = MPath::new("prefix2").unwrap();
+        let longer_path = mpath("dir1/subdir1/subsubdir1");
+        let prefix1: MPath = mpath("prefix1");
+        let shorter_path = mpath("dir1");
+        let prefix2: MPath = mpath("prefix2");
         if let Some(changed_path) = maybe_replace_prefix(path, &longer_path, &prefix1) {
             return Ok(Some(changed_path));
         }
@@ -733,10 +737,10 @@ fn sync_implicit_deletes(fb: FacebookInit) {
 
     // "dir1" was rewrtitten as "prefix2" and explicitly replaced with file, so the file
     // change should be `Some`
-    assert!(file_changes[&MPath::new("prefix2").unwrap()].is_some());
+    assert!(file_changes[&mpath("prefix2")].is_some());
     // "dir1/subdir1/subsubdir1/file_1" was rewritten as "prefix1/file_1", and became
     // an implicit delete
-    assert!(file_changes[&MPath::new("prefix1/file_1").unwrap()].is_none());
+    assert!(file_changes[&mpath("prefix1/file_1")].is_none());
     // there are no other entries in `file_changes` as other implicit deletes where
     // removed by the minimization process
     assert_eq!(file_changes.len(), 2);
@@ -771,7 +775,7 @@ fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         committer_date: None,
         message: "Change linear/1".to_string(),
         extra: btreemap! {},
-        file_changes: btreemap! {MPath::new("linear/1").unwrap() => Some(file_change)},
+        file_changes: btreemap! {mpath("linear/1") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -799,14 +803,14 @@ fn sync_parent_search(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
     let linear = linear::getrepo(fb);
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-    let linear_path_in_megarepo = MPath::new("linear").unwrap();
+    let linear_path_in_megarepo = mpath("linear");
     let reverse_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
