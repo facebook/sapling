@@ -34,7 +34,6 @@
   @  newcommit [public;rev=3;*] default/master_bookmark (glob)
   |
   ~
-
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
@@ -47,34 +46,46 @@
   |
   ~
   $ verify_wc master_bookmark
+-- do a push to a large repo, then backsync it to a small one
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ echo test > tolarge
+  $ hg add tolarge
+  $ hg ci -m tolarge
+  $ echo 1 > empty && hg add empty && hg ci -m empty
+  $ hg revert -r .^ empty
+  $ hg commit --amend
+  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
+  * syncing bookmark master_bookmark to * (glob)
 
--- Mononoke hg sync job: the commit is now present in the small hg repo server
+-- mononoke hg sync job: the commit is now present in the small hg repo server
   $ cd "$TESTTMP"
-  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 2>&1 | grep "successful sync"
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 --use-existing-bundle-if-available 2>&1 | grep "successful sync"
   * successful sync of entries [4] (glob)
+
+-- mononoke hg sync job: do a second sync, but this time without the bundle
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from bundle_replay_data where bookmark_update_log_id = 6"
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 5 --use-existing-bundle-if-available 2>&1 | grep "successful sync"
+  * successful sync of entries [6] (glob)
   $ cd small-hg-srv
   $ log -r :
+  o  empty [public;rev=3;*] (glob)
+  |
   o  newcommit [public;rev=2;*] (glob)
   |
   @  first post-move commit [public;rev=1;*] (glob)
   |
   o  pre-move commit [public;rev=0;*] (glob)
-  
+  $
 
   $ hg show master_bookmark
-  changeset:   2:* (glob)
+  changeset:   * (glob)
   bookmark:    master_bookmark
   tag:         tip
   user:        test
   date:        * (glob)
-  files:       2
   description:
-  newcommit
+  empty
   
   
-  diff -r * -r * 2 (glob)
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/2* (glob)
-  @@ -0,0 +1,1 @@
-  +2
   

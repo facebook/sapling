@@ -62,7 +62,7 @@ although the second one became non-merge commit
   o  first post-move commit [public;rev=1;11f848659bfc]
   |
   o  pre-move commit [public;rev=0;fc7ae591de0e]
-  
+  $
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ REPONAME=small-mon hgmn show master_bookmark
   changeset:   4:534a740cd266
