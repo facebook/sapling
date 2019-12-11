@@ -165,7 +165,8 @@ Test treemanifest with sparse enabled
   > EOF
   $ hg sparse -I subdir
   $ hg reset '.^'
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/27a577922312-3ad85b1a-backup.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/*-reset.hg (glob)
+  1 changeset hidden
   $ hg status
   M subdir/y
   $ hg up -C .
