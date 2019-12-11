@@ -26,54 +26,59 @@ def uisetup(ui):
     bundle2.capabilities[constants.scratchbranchparttype] = ()
     bundle2.capabilities[constants.scratchbookmarksparttype] = ()
     bundle2.capabilities[constants.scratchmutationparttype] = ()
+    _exchangesetup()
+    _bundlesetup()
 
 
-@exchange.b2partsgenerator(constants.scratchbranchparttype)
-def partgen(pushop, bundler):
-    bookmark = pushop.ui.config("experimental", "server-bundlestore-bookmark")
-    bookmarknode = pushop.ui.config("experimental", "server-bundlestore-bookmarknode")
-    create = pushop.ui.configbool("experimental", "server-bundlestore-create")
-    scratchpush = pushop.ui.configbool("experimental", "infinitepush-scratchpush")
-    if "changesets" in pushop.stepsdone or not scratchpush:
-        return
+def _exchangesetup():
+    @exchange.b2partsgenerator(constants.scratchbranchparttype)
+    def partgen(pushop, bundler):
+        bookmark = pushop.ui.config("experimental", "server-bundlestore-bookmark")
+        bookmarknode = pushop.ui.config(
+            "experimental", "server-bundlestore-bookmarknode"
+        )
+        create = pushop.ui.configbool("experimental", "server-bundlestore-create")
+        scratchpush = pushop.ui.configbool("experimental", "infinitepush-scratchpush")
+        if "changesets" in pushop.stepsdone or not scratchpush:
+            return
 
-    if constants.scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
-        return
+        if constants.scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
+            return
 
-    pushop.stepsdone.add("changesets")
-    pushop.stepsdone.add("treepack")
-    if not bookmark and not pushop.outgoing.missing:
-        pushop.ui.status(_("no changes found\n"))
-        pushop.cgresult = 0
-        return
+        pushop.stepsdone.add("changesets")
+        pushop.stepsdone.add("treepack")
+        if not bookmark and not pushop.outgoing.missing:
+            pushop.ui.status(_("no changes found\n"))
+            pushop.cgresult = 0
+            return
 
-    # This parameter tells the server that the following bundle is an
-    # infinitepush. This let's it switch the part processing to our infinitepush
-    # code path.
-    bundler.addparam("infinitepush", "True")
+        # This parameter tells the server that the following bundle is an
+        # infinitepush. This let's it switch the part processing to our infinitepush
+        # code path.
+        bundler.addparam("infinitepush", "True")
 
-    nonforwardmove = pushop.force or pushop.ui.configbool(
-        "experimental", "non-forward-move"
-    )
-    scratchparts = getscratchbranchparts(
-        pushop.repo,
-        pushop.remote,
-        pushop.outgoing,
-        nonforwardmove,
-        pushop.ui,
-        bookmark,
-        create,
-        bookmarknode,
-    )
+        nonforwardmove = pushop.force or pushop.ui.configbool(
+            "experimental", "non-forward-move"
+        )
+        scratchparts = getscratchbranchparts(
+            pushop.repo,
+            pushop.remote,
+            pushop.outgoing,
+            nonforwardmove,
+            pushop.ui,
+            bookmark,
+            create,
+            bookmarknode,
+        )
 
-    for scratchpart in scratchparts:
-        bundler.addpart(scratchpart)
+        for scratchpart in scratchparts:
+            bundler.addpart(scratchpart)
 
-    def handlereply(op):
-        # server either succeeds or aborts; no code to read
-        pushop.cgresult = 1
+        def handlereply(op):
+            # server either succeeds or aborts; no code to read
+            pushop.cgresult = 1
 
-    return handlereply
+        return handlereply
 
 
 def getscratchbranchparts(
@@ -193,66 +198,64 @@ def _handlelfs(repo, missing):
         return
 
 
-@bundle2.b2streamparamhandler("infinitepush")
-def processinfinitepush(unbundler, param, value):
-    """ process the bundle2 stream level parameter containing whether this push
-    is an infinitepush or not. """
-    if value and unbundler.ui.configbool("infinitepush", "bundle-stream", False):
-        pass
+def _bundlesetup():
+    @bundle2.b2streamparamhandler("infinitepush")
+    def processinfinitepush(unbundler, param, value):
+        """ process the bundle2 stream level parameter containing whether this push
+        is an infinitepush or not. """
+        if value and unbundler.ui.configbool("infinitepush", "bundle-stream", False):
+            pass
 
+    @bundle2.parthandler(
+        constants.scratchbranchparttype, ("bookmark", "create", "force", "cgversion")
+    )
+    def bundle2scratchbranch(op, part):
+        """unbundle a bundle2 part containing a changegroup to store"""
 
-@bundle2.parthandler(
-    constants.scratchbranchparttype, ("bookmark", "create", "force", "cgversion")
-)
-def bundle2scratchbranch(op, part):
-    """unbundle a bundle2 part containing a changegroup to store"""
+        bundler = bundle2.bundle20(op.repo.ui)
+        cgversion = part.params.get("cgversion", "01")
+        cgpart = bundle2.bundlepart("changegroup", data=part.read())
+        cgpart.addparam("version", cgversion)
+        bundler.addpart(cgpart)
+        buf = util.chunkbuffer(bundler.getchunks())
 
-    bundler = bundle2.bundle20(op.repo.ui)
-    cgversion = part.params.get("cgversion", "01")
-    cgpart = bundle2.bundlepart("changegroup", data=part.read())
-    cgpart.addparam("version", cgversion)
-    bundler.addpart(cgpart)
-    buf = util.chunkbuffer(bundler.getchunks())
-
-    fd, bundlefile = tempfile.mkstemp()
-    try:
+        fd, bundlefile = tempfile.mkstemp()
         try:
-            fp = util.fdopen(fd, "wb")
-            fp.write(buf.read())
+            try:
+                fp = util.fdopen(fd, "wb")
+                fp.write(buf.read())
+            finally:
+                fp.close()
+            server.storebundle(op, part.params, bundlefile)
         finally:
-            fp.close()
-        server.storebundle(op, part.params, bundlefile)
-    finally:
-        try:
-            os.unlink(bundlefile)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
+            try:
+                os.unlink(bundlefile)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
-    return 1
+        return 1
 
+    @bundle2.parthandler(constants.scratchbookmarksparttype)
+    def bundle2scratchbookmarks(op, part):
+        """Handler deletes bookmarks first then adds new bookmarks.
+        """
+        index = op.repo.bundlestore.index
+        decodedbookmarks = bookmarks.decodebookmarks(part)
+        toinsert = {}
+        todelete = []
+        for bookmark, node in decodedbookmarks.iteritems():
+            if node:
+                toinsert[bookmark] = node
+            else:
+                todelete.append(bookmark)
+        log = server._getorcreateinfinitepushlogger(op)
+        with server.logservicecall(log, constants.scratchbookmarksparttype), index:
+            if todelete:
+                index.deletebookmarks(todelete)
+            if toinsert:
+                index.addmanybookmarks(toinsert, True)
 
-@bundle2.parthandler(constants.scratchbookmarksparttype)
-def bundle2scratchbookmarks(op, part):
-    """Handler deletes bookmarks first then adds new bookmarks.
-    """
-    index = op.repo.bundlestore.index
-    decodedbookmarks = bookmarks.decodebookmarks(part)
-    toinsert = {}
-    todelete = []
-    for bookmark, node in decodedbookmarks.iteritems():
-        if node:
-            toinsert[bookmark] = node
-        else:
-            todelete.append(bookmark)
-    log = server._getorcreateinfinitepushlogger(op)
-    with server.logservicecall(log, constants.scratchbookmarksparttype), index:
-        if todelete:
-            index.deletebookmarks(todelete)
-        if toinsert:
-            index.addmanybookmarks(toinsert, True)
-
-
-@bundle2.parthandler(constants.scratchmutationparttype)
-def bundle2scratchmutation(op, part):
-    mutation.unbundle(op.repo, part.read())
+    @bundle2.parthandler(constants.scratchmutationparttype)
+    def bundle2scratchmutation(op, part):
+        mutation.unbundle(op.repo, part.read())
