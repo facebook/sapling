@@ -839,7 +839,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2,
+      DBG3,
       params->mountPoint,
       toLogArg(params->globs),
       params->includeDotfiles);
