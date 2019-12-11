@@ -20,7 +20,7 @@ pub enum FetchKey {
     Aliased(Alias),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Alias {
     Sha1(hash::Sha1),
     Sha256(hash::Sha256),

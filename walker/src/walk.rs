@@ -6,47 +6,79 @@
  * directory of this source tree.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType};
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
-use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
+use filestore::Alias;
 use futures::{
     future::{self},
     Future,
 };
 use futures_ext::{
-    bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, BoxStream, FutureExt,
-    StreamExt,
+    bounded_traversal::bounded_traversal_stream, spawn_future, try_boxfuture, BoxFuture, BoxStream,
+    FutureExt, StreamExt,
 };
 use itertools::{Either, Itertools};
 use mercurial_types::{
     Changeset, HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath,
 };
 use mononoke_types::{ChangesetId, ContentId, MPath};
-use std::{cmp, iter::IntoIterator, ops::Add, sync::Arc};
+use std::{cmp, iter::IntoIterator, ops::Add};
 
-pub trait NodeChecker {
-    // This can mutate the internal state.  Returns true if we should visit the node
-    fn record_visit(&self, n: &Node) -> bool;
+// Holds type of edge and destination Node that we want to load in next step(s)
+// Combined with current node, this forms an complegte edge.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct OutgoingEdge {
+    pub label: EdgeType,
+    pub dest: Node,
+}
 
-    // How many times has the checker seen this type
+impl OutgoingEdge {
+    pub fn new(label: EdgeType, dest: Node) -> Self {
+        Self { label, dest }
+    }
+}
+
+pub trait WalkVisitor {
+    // This can mutate the internal state.  Returns true if we should visit the outgoing_edge
+    fn record_outgoing(
+        &self,
+        current: Option<(&Node, &NodeData)>,
+        outgoing_edge: &OutgoingEdge,
+    ) -> bool;
+
+    // How many times has the vistor seen this type
     fn get_visit_count(&self, t: &NodeType) -> usize;
 }
 
-// This exists temporarily, until a step is put into the stream for next iteration
-struct WalkStep(NodeData, Vec<Node>);
+// Data found for this node, plus next steps
+struct StepOutput(NodeData, Vec<OutgoingEdge>);
 
-fn bookmark_step(ctx: CoreContext, repo: &BlobRepo, b: BookmarkName) -> BoxFuture<WalkStep, Error> {
+fn bookmark_step(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    b: BookmarkName,
+) -> BoxFuture<StepOutput, Error> {
     repo.get_bonsai_bookmark(ctx, &b)
         .and_then(move |bcs_opt| match bcs_opt {
             Some(bcs_id) => {
-                let recurse = vec![Node::BonsaiChangeset(bcs_id)];
-                Ok(WalkStep(NodeData::Bookmark(bcs_id), recurse))
+                let recurse = vec![
+                    OutgoingEdge::new(
+                        EdgeType::BookmarkToBonsaiChangeset,
+                        Node::BonsaiChangeset(bcs_id),
+                    ),
+                    OutgoingEdge::new(
+                        EdgeType::BookmarkToBonsaiHgMapping,
+                        Node::BonsaiHgMapping(bcs_id),
+                    ),
+                ];
+                Ok(StepOutput(NodeData::Bookmark(bcs_id), recurse))
             }
-            None => Err(format_err!("Unknown bookmark {}", b)),
+            None => Err(format_err!("Unknown Bookmark {}", b)),
         })
         .boxify()
 }
@@ -55,53 +87,40 @@ fn bonsai_changeset_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     bcs_id: ChangesetId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
-    let bonsai_fut = repo
-        .get_bonsai_changeset(ctx, bcs_id)
-        .map({
-            move |bcs| {
-                let files_to_visit: Vec<Node> = bcs
+    repo.get_bonsai_changeset(ctx, bcs_id)
+        .map(move |bcs| {
+            // Parents deliberately first to resolve dependent reads as early as possible
+            let mut recurse: Vec<OutgoingEdge> = bcs
+                .parents()
+                .map(|parent_id| {
+                    OutgoingEdge::new(
+                        EdgeType::BonsaiChangesetToBonsaiParent,
+                        Node::BonsaiChangeset(parent_id),
+                    )
+                })
+                .collect();
+            // Allow Hg based lookup
+            recurse.push(OutgoingEdge::new(
+                EdgeType::BonsaiChangesetToBonsaiHgMapping,
+                Node::BonsaiHgMapping(bcs_id),
+            ));
+            recurse.append(
+                &mut bcs
                     .file_changes()
                     .filter_map(|(_mpath, fc_opt)| {
                         fc_opt // remove None
                     })
-                    .map(|fc| Node::FileContent(fc.content_id()))
-                    .collect();
-                (bcs, files_to_visit)
-            }
-        })
-        .boxify();
-
-    bonsai_fut
-        .map(move |(bcs, mut children)| {
-            // Parents deliberately first to resolve dependent reads as early as possible
-            children.push(Node::BonsaiParents(bcs_id));
-            // Allow Hg based lookup
-            children.push(Node::HgChangesetFromBonsaiChangeset(bcs_id));
-            WalkStep(NodeData::BonsaiChangeset(bcs), children)
-        })
-        .boxify()
-}
-
-fn bonsai_parents_step(
-    ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    bcs_id: ChangesetId,
-) -> BoxFuture<WalkStep, Error> {
-    changeset_fetcher
-        .get_parents(ctx, bcs_id)
-        .map({
-            move |parents| {
-                let parents_to_visit: Vec<_> = {
-                    parents
-                        .iter()
-                        .cloned()
-                        .map(|p| Node::BonsaiChangeset(p))
-                        .collect()
-                };
-                WalkStep(NodeData::BonsaiParents(parents), parents_to_visit)
-            }
+                    .map(|fc| {
+                        OutgoingEdge::new(
+                            EdgeType::BonsaiChangesetToFileContent,
+                            Node::FileContent(fc.content_id()),
+                        )
+                    })
+                    .collect::<Vec<OutgoingEdge>>(),
+            );
+            StepOutput(NodeData::BonsaiChangeset(bcs), recurse)
         })
         .boxify()
 }
@@ -110,10 +129,10 @@ fn file_content_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     id: ContentId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     let s = repo.get_file_content_by_content_id(ctx, id);
     // We don't force file loading here, content may not be needed
-    future::ok(WalkStep(
+    future::ok(StepOutput(
         NodeData::FileContent(FileContentData::ContentStream(s)),
         vec![],
     ))
@@ -124,48 +143,63 @@ fn file_content_metadata_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     id: ContentId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     repo.get_file_content_metadata(ctx, id)
         .map(|metadata| {
-            let recurse = vec![];
-            // Could potentially recurse on aliases here.
-            WalkStep(NodeData::FileContentMetadata(metadata), recurse)
+            let recurse = vec![
+                OutgoingEdge::new(
+                    EdgeType::FileContentMetadataToSha1Alias,
+                    Node::AliasContentMapping(Alias::Sha1(metadata.sha1)),
+                ),
+                OutgoingEdge::new(
+                    EdgeType::FileContentMetadataToSha256Alias,
+                    Node::AliasContentMapping(Alias::Sha256(metadata.sha256)),
+                ),
+                OutgoingEdge::new(
+                    EdgeType::FileContentMetadataToGitSha1Alias,
+                    Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1)),
+                ),
+            ];
+            StepOutput(NodeData::FileContentMetadata(metadata), recurse)
         })
         .boxify()
 }
 
-fn hg_changeset_from_bonsai_step(
+fn bonsai_to_hg_mapping_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     bcs_id: ChangesetId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
         .map({
             |hg_cs_id| {
-                WalkStep(
-                    NodeData::HgChangesetFromBonsaiChangeset(hg_cs_id),
-                    vec![Node::HgChangeset(hg_cs_id)],
+                StepOutput(
+                    NodeData::BonsaiHgMapping(hg_cs_id),
+                    vec![OutgoingEdge::new(
+                        EdgeType::BonsaiHgMappingToHgChangeset,
+                        Node::HgChangeset(hg_cs_id),
+                    )],
                 )
             }
         })
         .boxify()
 }
 
-fn bonsai_changeset_from_hg_step(
+fn hg_to_bonsai_mapping_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     id: HgChangesetId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     repo.get_bonsai_from_hg(ctx, id)
         .map(move |maybe_bcs_id| match maybe_bcs_id {
             Some(bcs_id) => {
-                let recurse = vec![Node::BonsaiChangeset(bcs_id)];
-                WalkStep(
-                    NodeData::BonsaiChangesetFromHgChangeset(Some(bcs_id)),
-                    recurse,
-                )
+                let recurse = vec![OutgoingEdge::new(
+                    EdgeType::HgBonsaiMappingToBonsaiChangeset,
+                    Node::BonsaiChangeset(bcs_id),
+                )];
+                StepOutput(NodeData::HgBonsaiMapping(Some(bcs_id)), recurse)
             }
-            None => WalkStep(NodeData::BonsaiChangesetFromHgChangeset(None), vec![]),
+            None => StepOutput(NodeData::HgBonsaiMapping(None), vec![]),
         })
         .boxify()
 }
@@ -174,12 +208,22 @@ fn hg_changeset_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     id: HgChangesetId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     repo.get_changeset_by_changesetid(ctx, id)
         .map(|hgchangeset| {
             let manifest_id = hgchangeset.manifestid();
-            let recurse = vec![Node::HgManifest((None, manifest_id))];
-            WalkStep(NodeData::HgChangeset(hgchangeset), recurse)
+            let mut recurse = vec![OutgoingEdge::new(
+                EdgeType::HgChangesetToHgManifest,
+                Node::HgManifest((None, manifest_id)),
+            )];
+            for p in hgchangeset.parents().into_iter() {
+                let step = OutgoingEdge::new(
+                    EdgeType::HgChangesetToHgParent,
+                    Node::HgChangeset(HgChangesetId::new(p)),
+                );
+                recurse.push(step);
+            }
+            StepOutput(NodeData::HgChangeset(hgchangeset), recurse)
         })
         .boxify()
 }
@@ -188,15 +232,17 @@ fn hg_file_envelope_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     hg_file_node_id: HgFileNodeId,
-) -> BoxFuture<WalkStep, Error>
-where
-{
+) -> BoxFuture<StepOutput, Error>
+where {
     repo.get_file_envelope(ctx, hg_file_node_id)
         .map({
             move |envelope| {
                 let file_content_id = envelope.content_id();
-                let fnode = Node::FileContent(file_content_id);
-                WalkStep(NodeData::HgFileEnvelope(envelope), vec![fnode])
+                let fnode = OutgoingEdge::new(
+                    EdgeType::HgFileEnvelopeToFileContent,
+                    Node::FileContent(file_content_id),
+                );
+                StepOutput(NodeData::HgFileEnvelope(envelope), vec![fnode])
             }
         })
         .boxify()
@@ -207,7 +253,7 @@ fn hg_file_node_step(
     repo: &BlobRepo,
     path: Option<MPath>,
     hg_file_node_id: HgFileNodeId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     let repo_path = match path {
         None => RepoPath::RootPath,
         Some(mpath) => RepoPath::FilePath(mpath),
@@ -216,17 +262,26 @@ fn hg_file_node_step(
         .map(move |file_node_opt| match file_node_opt {
             Some(file_node_info) => {
                 // Following linknode increases parallelism of walk as well as validating link node
-                let linked_commit = Node::BonsaiChangesetFromHgChangeset(file_node_info.linknode);
+                let linked_commit = OutgoingEdge::new(
+                    EdgeType::HgLinkNodeToHgBonsaiMapping,
+                    Node::HgBonsaiMapping(file_node_info.linknode),
+                );
                 let mut recurse = vec![linked_commit];
                 file_node_info.p1.map(|parent_file_node_id| {
-                    recurse.push(Node::HgFileEnvelope(parent_file_node_id))
+                    recurse.push(OutgoingEdge::new(
+                        EdgeType::HgFileNodeToHgParentFileNode,
+                        Node::HgFileEnvelope(parent_file_node_id),
+                    ))
                 });
                 file_node_info.p2.map(|parent_file_node_id| {
-                    recurse.push(Node::HgFileEnvelope(parent_file_node_id))
+                    recurse.push(OutgoingEdge::new(
+                        EdgeType::HgFileNodeToHgParentFileNode,
+                        Node::HgFileEnvelope(parent_file_node_id),
+                    ))
                 });
-                WalkStep(NodeData::HgFileNode(Some(file_node_info)), recurse)
+                StepOutput(NodeData::HgFileNode(Some(file_node_info)), recurse)
             }
-            None => WalkStep(NodeData::HgFileNode(None), vec![]),
+            None => StepOutput(NodeData::HgFileNode(None), vec![]),
         })
         .boxify()
 }
@@ -236,7 +291,7 @@ fn hg_manifest_step(
     repo: &BlobRepo,
     path: Option<MPath>,
     hg_manifest_id: HgManifestId,
-) -> BoxFuture<WalkStep, Error> {
+) -> BoxFuture<StepOutput, Error> {
     repo.get_manifest_by_nodeid(ctx, hg_manifest_id)
         .map({
             move |hgmanifest| {
@@ -257,8 +312,14 @@ fn hg_manifest_step(
                     .into_iter()
                     .map(move |(full_path, hg_file_node_id)| {
                         vec![
-                            Node::HgFileEnvelope(hg_file_node_id),
-                            Node::HgFileNode((full_path, hg_file_node_id)),
+                            OutgoingEdge::new(
+                                EdgeType::HgManifestToHgFileEnvelope,
+                                Node::HgFileEnvelope(hg_file_node_id),
+                            ),
+                            OutgoingEdge::new(
+                                EdgeType::HgManifestToHgFileNode,
+                                Node::HgFileNode((full_path, hg_file_node_id)),
+                            ),
                         ]
                     })
                     .flatten()
@@ -267,26 +328,53 @@ fn hg_manifest_step(
                 let mut children_manifests: Vec<_> = manifests
                     .into_iter()
                     .map(move |(full_path, hg_child_manifest_id)| {
-                        Node::HgManifest((full_path, hg_child_manifest_id))
+                        OutgoingEdge::new(
+                            EdgeType::HgManifestToChildHgManifest,
+                            Node::HgManifest((full_path, hg_child_manifest_id)),
+                        )
                     })
                     .collect();
 
                 children.append(&mut children_manifests);
 
-                WalkStep(NodeData::HgManifest(hgmanifest), children)
+                StepOutput(NodeData::HgManifest(hgmanifest), children)
             }
         })
         .boxify()
 }
 
+fn alias_content_mapping_step(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    alias: Alias,
+) -> BoxFuture<StepOutput, Error> {
+    alias
+        .load(ctx, &repo.get_blobstore())
+        .map(|content_id| {
+            let recurse = vec![OutgoingEdge::new(
+                EdgeType::AliasContentMappingToFileContent,
+                Node::FileContent(content_id),
+            )];
+            StepOutput(NodeData::AliasContentMapping(content_id), recurse)
+        })
+        .map_err(Error::from)
+        .boxify()
+}
+
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
-fn expand_checked_nodes(children: &mut Vec<Node>) -> () {
+fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
     let mut extra = vec![];
     for n in children.iter() {
         match n {
-            Node::FileContent(fc_id) => {
-                extra.push(Node::FileContentMetadata(*fc_id));
+            OutgoingEdge {
+                label: _,
+                dest: Node::FileContent(fc_id),
+            } => {
+                extra.push(OutgoingEdge::new(
+                    EdgeType::FileContentToFileContentMetadata,
+                    Node::FileContentMetadata(*fc_id),
+                ));
             }
             _ => (),
         }
@@ -317,30 +405,35 @@ impl Add<StepStats> for StepStats {
 }
 
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
-pub fn walk_exact<FilterItem, NC>(
+pub fn walk_exact<FilterItem, V>(
     ctx: CoreContext,
     repo: BlobRepo,
-    walk_roots: Vec<Node>,
-    node_checker: NC,
+    walk_roots: Vec<OutgoingEdge>,
+    visitor: V,
     filter_item: FilterItem,
     scheduled_max: usize,
 ) -> BoxStream<(Node, Option<(StepStats, NodeData)>), Error>
 where
-    FilterItem: 'static + Send + Clone + Fn(&Node) -> bool,
-    NC: 'static + Clone + NodeChecker + Send,
+    FilterItem: 'static + Send + Clone + Fn(&Node, &NodeData, &OutgoingEdge) -> bool,
+    V: 'static + Clone + WalkVisitor + Send,
 {
-    let changeset_fetcher = repo.get_changeset_fetcher();
+    // record the roots so the stats add up
+    walk_roots.iter().for_each(|e| {
+        visitor.record_outgoing(None, e);
+    });
 
     bounded_traversal_stream(scheduled_max, walk_roots, {
-        // Each step returns the walk result (e.g. number of blobstore items), and next steps
+        // Each step returns the walk result, and next steps
         move |walk_item| {
             cloned!(ctx);
-            let next = match walk_item.clone() {
+            let node = walk_item.dest.clone();
+            let next = match node.clone() {
+                // Bonsai
                 Node::Bookmark(bookmark_name) => bookmark_step(ctx, &repo, bookmark_name),
-                Node::FileContent(content_id) => file_content_step(ctx, &repo, content_id),
-                Node::FileContentMetadata(content_id) => {
-                    file_content_metadata_step(ctx, &repo, content_id)
-                }
+                Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
+                Node::BonsaiHgMapping(bcs_id) => bonsai_to_hg_mapping_step(ctx, &repo, bcs_id),
+                // Hg
+                Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid),
                 Node::HgChangeset(hg_csid) => hg_changeset_step(ctx, &repo, hg_csid),
                 Node::HgFileEnvelope(hg_file_node_id) => {
                     hg_file_envelope_step(ctx, &repo, hg_file_node_id)
@@ -351,34 +444,65 @@ where
                 Node::HgManifest((path, hg_manifest_id)) => {
                     hg_manifest_step(ctx, &repo, path, hg_manifest_id)
                 }
-                Node::HgChangesetFromBonsaiChangeset(bcs_id) => {
-                    hg_changeset_from_bonsai_step(ctx, &repo, bcs_id)
+                // Content
+                Node::FileContent(content_id) => file_content_step(ctx, &repo, content_id),
+                Node::FileContentMetadata(content_id) => {
+                    file_content_metadata_step(ctx, &repo, content_id)
                 }
-                Node::BonsaiChangesetFromHgChangeset(hg_csid) => {
-                    bonsai_changeset_from_hg_step(ctx, &repo, hg_csid)
-                }
-                Node::BonsaiParents(bcs_id) => {
-                    cloned!(changeset_fetcher);
-                    bonsai_parents_step(ctx, changeset_fetcher, bcs_id)
-                }
-                Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
+                Node::AliasContentMapping(alias) => alias_content_mapping_step(ctx, &repo, alias),
             }
-            .map({
-                cloned!(filter_item, node_checker);
-                move |WalkStep(nd, mut children)| {
-                    children.retain(|c| filter_item.clone()(c));
+            .and_then({
+                cloned!(filter_item, visitor);
+                move |StepOutput(node_data, children)| {
+                    // make sure steps are valid.  would be nice if this could be static
+                    let children = children
+                        .into_iter()
+                        .map(|c| {
+                            if c.label.outgoing_type() != c.dest.get_type() {
+                                Err(format_err!(
+                                    "Bad step {:?} to {:?}",
+                                    c.label,
+                                    c.dest.get_type()
+                                ))
+                            } else if c
+                                .label
+                                .incoming_type()
+                                .map(|t| t != node.get_type())
+                                .unwrap_or(false)
+                            {
+                                Err(format_err!(
+                                    "Bad step {:?} from {:?}",
+                                    c.label,
+                                    node.get_type()
+                                ))
+                            } else {
+                                Ok(c)
+                            }
+                        })
+                        .collect::<Result<Vec<OutgoingEdge>, Error>>();
+
+                    let mut children = try_boxfuture!(children);
+
+                    // Filter things we don't want to enter the WalkVisitor at all.
+                    children.retain(|outgoing_edge| {
+                        filter_item.clone()(&node, &node_data, outgoing_edge)
+                    });
                     let num_direct = children.len();
 
-                    // Needs to remove before recurse to avoid seeing re-visited nodes in output stream
-                    children.retain(|c| node_checker.record_visit(c));
+                    // Allow WalkVisitor to record state and decline outgoing nodes if already visited
+                    children.retain(|outgoing_edge| {
+                        visitor.record_outgoing(Some((&node, &node_data)), outgoing_edge)
+                    });
                     let num_direct_new = children.len();
 
                     expand_checked_nodes(&mut children);
-                    // Make sure we don't add in types not wanted
-                    children.retain(|c| filter_item(c));
+                    // Make sure we don't add in types of node and edge not wanted
+                    children.retain(|outgoing_edge| {
+                        filter_item.clone()(&node, &node_data, outgoing_edge)
+                    });
                     let num_expanded_new = children.len();
 
-                    let visited_of_type = node_checker.get_visit_count(&walk_item.get_type());
+                    let visited_of_type = visitor.get_visit_count(&node.get_type());
 
                     let stats = StepStats {
                         num_direct,
@@ -386,7 +510,7 @@ where
                         num_expanded_new,
                         visited_of_type,
                     };
-                    ((walk_item, Some((stats, nd))), children)
+                    future::ok(((node, Some((stats, node_data))), children)).boxify()
                 }
             });
             spawn_future(next)

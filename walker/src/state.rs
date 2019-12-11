@@ -6,8 +6,8 @@
  * directory of this source tree.
  */
 
-use crate::graph::{Node, NodeType};
-use crate::walk::NodeChecker;
+use crate::graph::{Node, NodeData, NodeType};
+use crate::walk::{OutgoingEdge, WalkVisitor};
 use chashmap::CHashMap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPath, MPathHash};
@@ -15,9 +15,13 @@ use std::{hash::Hash, sync::Arc};
 
 #[derive(Debug)]
 struct WalkStateCHashMap {
+    // TODO implement ID interning to u32 or u64 for types in more than one map
+    // e.g. ChangesetId, HgChangesetId, HgFileNodeId
     visited_bcs: CHashMap<ChangesetId, ()>,
+    visited_bcs_mapping: CHashMap<ChangesetId, ()>,
     visited_file: CHashMap<ContentId, ()>,
     visited_hg_cs: CHashMap<HgChangesetId, ()>,
+    visited_hg_cs_mapping: CHashMap<HgChangesetId, ()>,
     visited_hg_file_envelope: CHashMap<HgFileNodeId, ()>,
     visited_hg_filenode: CHashMap<(Option<MPathHash>, HgFileNodeId), ()>,
     visited_hg_manifest: CHashMap<(Option<MPathHash>, HgManifestId), ()>,
@@ -41,8 +45,10 @@ impl WalkStateCHashMap {
     fn new() -> Self {
         Self {
             visited_bcs: CHashMap::new(),
+            visited_bcs_mapping: CHashMap::new(),
             visited_file: CHashMap::new(),
             visited_hg_cs: CHashMap::new(),
+            visited_hg_cs_mapping: CHashMap::new(),
             visited_hg_file_envelope: CHashMap::new(),
             visited_hg_filenode: CHashMap::new(),
             visited_hg_manifest: CHashMap::new(),
@@ -51,19 +57,27 @@ impl WalkStateCHashMap {
     }
 
     /// If the set did not have this value present, true is returned.
-    fn record_visit(&self, n: &Node) -> bool {
-        let k = n.get_type();
+    fn record_outgoing(
+        &self,
+        _current: Option<(&Node, &NodeData)>,
+        outgoing_edge: &OutgoingEdge,
+    ) -> bool {
+        let dest_node: &Node = &outgoing_edge.dest;
+        let k = dest_node.get_type();
         &self.visit_count.upsert(k, || 1, |old| *old += 1);
 
-        match n {
+        match &dest_node {
             Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
-            Node::BonsaiChangesetFromHgChangeset(hg_cs_id) => {
-                self.visited_hg_cs.insert(*hg_cs_id, ()).is_none()
+            // TODO - measure if worth tracking - the mapping is cachelib enabled.
+            Node::BonsaiHgMapping(bcs_id) => self.visited_bcs_mapping.insert(*bcs_id, ()).is_none(),
+            Node::HgBonsaiMapping(hg_cs_id) => {
+                self.visited_hg_cs_mapping.insert(*hg_cs_id, ()).is_none()
             }
-            Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
-            Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
-            Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
+            Node::HgChangeset(hg_cs_id) => self.visited_hg_cs.insert(*hg_cs_id, ()).is_none(),
             Node::HgManifest(k) => record_with_path(&self.visited_hg_manifest, k),
+            Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
+            Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
+            Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
             _ => true,
         }
     }
@@ -86,10 +100,14 @@ impl WalkState {
     }
 }
 
-impl NodeChecker for WalkState {
+impl WalkVisitor for WalkState {
     // This can mutate the internal state.  Returns true if we should visit the node
-    fn record_visit(&self, n: &Node) -> bool {
-        self.inner.record_visit(n)
+    fn record_outgoing(
+        &self,
+        current: Option<(&Node, &NodeData)>,
+        outgoing_edge: &OutgoingEdge,
+    ) -> bool {
+        self.inner.record_outgoing(current, outgoing_edge)
     }
 
     // How many times has the checker seen this type

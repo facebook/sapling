@@ -7,17 +7,19 @@
  */
 
 use crate::blobstore;
-use crate::graph::{Node, NodeType};
+use crate::graph::{EdgeType, Node, NodeType};
 use crate::progress::sort_by_string;
+use crate::walk::OutgoingEdge;
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo_given_datasources;
 use bookmarks::BookmarkName;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
+use lazy_static::lazy_static;
 use metaconfig_types::Redaction;
 use slog::{info, Logger};
 use std::{collections::HashSet, iter::FromIterator, str::FromStr};
@@ -25,10 +27,21 @@ use std::{collections::HashSet, iter::FromIterator, str::FromStr};
 #[derive(Clone)]
 pub struct RepoWalkParams {
     pub scheduled_max: usize,
-    pub walk_roots: Vec<Node>,
-    pub include_types: HashSet<NodeType>,
+    pub walk_roots: Vec<OutgoingEdge>,
+    pub include_node_types: HashSet<NodeType>,
+    pub include_edge_types: HashSet<EdgeType>,
     pub tail_secs: Option<u64>,
     pub quiet: bool,
+}
+
+impl RepoWalkParams {
+    pub fn progress_node_types(&self) -> HashSet<NodeType> {
+        let mut s = self.include_node_types.clone();
+        for e in &self.walk_roots {
+            s.insert(e.dest.get_type());
+        }
+        s
+    }
 }
 
 // Sub commands
@@ -41,23 +54,29 @@ const QUIET_ARG: &'static str = "quiet";
 const ENABLE_REDACTION_ARG: &'static str = "enable-redaction";
 const SCHEDULED_MAX_ARG: &'static str = "scheduled-max";
 const TAIL_INTERVAL_ARG: &'static str = "tail-interval";
-const EXCLUDE_TYPE_ARG: &'static str = "exclude-type";
-const INCLUDE_TYPE_ARG: &'static str = "include-type";
+const EXCLUDE_NODE_TYPE_ARG: &'static str = "exclude-node-type";
+const INCLUDE_NODE_TYPE_ARG: &'static str = "include-node-type";
+const EXCLUDE_EDGE_TYPE_ARG: &'static str = "exclude-edge-type";
+const INCLUDE_EDGE_TYPE_ARG: &'static str = "include-edge-type";
 const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
 
+const SHALLOW_VALUE_ARG: &'static str = "shallow";
+const DEEP_VALUE_ARG: &'static str = "deep";
+const HG_VALUE_ARG: &'static str = "hg";
+const BONSAI_VALUE_ARG: &'static str = "bonsai";
+
 // Toplevel args - healer and populate healer have this one at top level
 // so keeping it there for consistency
 const STORAGE_ID_ARG: &'static str = "storage-id";
 
-const DEFAULT_INCLUDE_TYPES: &[NodeType] = &[
+const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
     NodeType::BonsaiChangeset,
-    NodeType::BonsaiChangesetFromHgChangeset,
-    NodeType::HgChangesetFromBonsaiChangeset,
-    NodeType::BonsaiParents,
+    NodeType::BonsaiHgMapping,
+    NodeType::HgBonsaiMapping,
     NodeType::HgChangeset,
     NodeType::HgManifest,
     NodeType::HgFileEnvelope,
@@ -65,6 +84,97 @@ const DEFAULT_INCLUDE_TYPES: &[NodeType] = &[
     NodeType::FileContent,
     NodeType::FileContentMetadata,
 ];
+
+// Goes as far into history as it can
+const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
+    // Bonsai
+    EdgeType::BookmarkToBonsaiChangeset,
+    EdgeType::BonsaiChangesetToFileContent,
+    EdgeType::BonsaiChangesetToBonsaiParent,
+    EdgeType::BonsaiChangesetToBonsaiHgMapping,
+    EdgeType::BonsaiHgMappingToHgChangeset,
+    // Hg
+    EdgeType::HgBonsaiMappingToBonsaiChangeset,
+    EdgeType::HgChangesetToHgParent,
+    EdgeType::HgChangesetToHgManifest,
+    EdgeType::HgManifestToHgFileEnvelope,
+    EdgeType::HgManifestToHgFileNode,
+    EdgeType::HgManifestToChildHgManifest,
+    EdgeType::HgFileEnvelopeToFileContent,
+    EdgeType::HgLinkNodeToHgBonsaiMapping,
+    EdgeType::HgLinkNodeToHgChangeset,
+    EdgeType::HgFileNodeToHgParentFileNode,
+    // Content
+    EdgeType::FileContentToFileContentMetadata,
+    EdgeType::FileContentMetadataToSha1Alias,
+    EdgeType::FileContentMetadataToSha256Alias,
+    EdgeType::FileContentMetadataToGitSha1Alias,
+    EdgeType::AliasContentMappingToFileContent,
+];
+
+// Does not recurse into history, edges to parents excluded
+const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
+    // Bonsai
+    EdgeType::BookmarkToBonsaiChangeset,
+    EdgeType::BonsaiChangesetToFileContent,
+    EdgeType::BonsaiChangesetToBonsaiHgMapping,
+    EdgeType::BonsaiHgMappingToHgChangeset,
+    // Hg
+    EdgeType::HgBonsaiMappingToBonsaiChangeset,
+    EdgeType::HgChangesetToHgManifest,
+    EdgeType::HgManifestToHgFileEnvelope,
+    EdgeType::HgManifestToHgFileNode,
+    EdgeType::HgManifestToChildHgManifest,
+    EdgeType::HgFileEnvelopeToFileContent,
+    // Content
+    EdgeType::FileContentToFileContentMetadata,
+    EdgeType::FileContentMetadataToSha1Alias,
+    EdgeType::FileContentMetadataToSha256Alias,
+    EdgeType::FileContentMetadataToGitSha1Alias,
+    EdgeType::AliasContentMappingToFileContent,
+];
+
+// Types that can result in loading hg data.  Useful for excludes.
+const HG_EDGE_TYPES: &[EdgeType] = &[
+    // Bonsai to Hg
+    EdgeType::BookmarkToBonsaiHgMapping,
+    EdgeType::BonsaiHgMappingToHgChangeset,
+    // Hg
+    EdgeType::HgChangesetToHgParent,
+    EdgeType::HgChangesetToHgManifest,
+    EdgeType::HgManifestToHgFileEnvelope,
+    EdgeType::HgManifestToHgFileNode,
+    EdgeType::HgManifestToChildHgManifest,
+    EdgeType::HgFileEnvelopeToFileContent,
+    EdgeType::HgLinkNodeToHgChangeset,
+    EdgeType::HgFileNodeToHgParentFileNode,
+];
+
+// Types that can result in loading bonsai data
+const BONSAI_EDGE_TYPES: &[EdgeType] = &[
+    // Bonsai
+    EdgeType::BookmarkToBonsaiChangeset,
+    EdgeType::BonsaiChangesetToFileContent,
+    EdgeType::BonsaiChangesetToBonsaiParent,
+    // Content
+    EdgeType::FileContentToFileContentMetadata,
+    EdgeType::FileContentMetadataToSha1Alias,
+    EdgeType::FileContentMetadataToSha256Alias,
+    EdgeType::FileContentMetadataToGitSha1Alias,
+    EdgeType::AliasContentMappingToFileContent,
+];
+
+lazy_static! {
+    static ref INCLUDE_NODE_TYPE_HELP: String = format!(
+        "Graph node types to include in the walk. Defaults to core Mononoke and Hg types: {:?}",
+        DEFAULT_INCLUDE_NODE_TYPES
+    );
+
+    static ref INCLUDE_EDGE_TYPE_HELP: String = format!(
+        "Graph node types to include in the walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep: {:?}",
+        DEEP_INCLUDE_EDGE_TYPES
+    );
+}
 
 pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app_template = args::MononokeApp::new(app_name);
@@ -144,24 +254,44 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Tail by polling the entry points at interval of TAIL seconds"),
         )
         .arg(
-            Arg::with_name(EXCLUDE_TYPE_ARG)
-                .long(EXCLUDE_TYPE_ARG)
+            Arg::with_name(EXCLUDE_NODE_TYPE_ARG)
+                .long(EXCLUDE_NODE_TYPE_ARG)
                 .short("x")
                 .takes_value(true)
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help("Graph node types to exclude from the walk. These are removed from the include-type list"),
+                .help("Graph node types to exclude from the walk. These are removed from the include-node-type list"),
         )
         .arg(
-            Arg::with_name(INCLUDE_TYPE_ARG)
-                .long(INCLUDE_TYPE_ARG)
-                .short("t")
+            Arg::with_name(INCLUDE_NODE_TYPE_ARG)
+                .long(INCLUDE_NODE_TYPE_ARG)
+                .short("i")
                 .takes_value(true)
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help("Graph node types to include in the walk. Defaults to core Mononoke and Hg types."),
+                .help(&INCLUDE_NODE_TYPE_HELP),
+        )
+        .arg(
+            Arg::with_name(EXCLUDE_EDGE_TYPE_ARG)
+                .long(EXCLUDE_EDGE_TYPE_ARG)
+                .short("X")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Graph edge types to exclude from the walk. These are removed from the include-edge-type list"),
+        )
+        .arg(
+            Arg::with_name(INCLUDE_EDGE_TYPE_ARG)
+                .long(INCLUDE_EDGE_TYPE_ARG)
+                .short("I")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help(&INCLUDE_EDGE_TYPE_HELP),
         )
         .arg(
             Arg::with_name(BOOKMARK_ARG)
@@ -181,6 +311,61 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
         )
         ;
+}
+
+fn parse_node_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<NodeType>, Error> {
+    let mut include_node_types: HashSet<NodeType> = match sub_m.values_of(INCLUDE_NODE_TYPE_ARG) {
+        None => Ok(HashSet::from_iter(
+            DEFAULT_INCLUDE_NODE_TYPES.iter().cloned(),
+        )),
+        Some(values) => values.map(NodeType::from_str).collect(),
+    }?;
+    let exclude_node_types: HashSet<NodeType> = match sub_m.values_of(EXCLUDE_NODE_TYPE_ARG) {
+        None => Ok(HashSet::new()),
+        Some(values) => values.map(NodeType::from_str).collect(),
+    }?;
+    include_node_types.retain(|x| !exclude_node_types.contains(x));
+    Ok(include_node_types)
+}
+
+// parse the pre-defined groups we have for deep, shallow, hg, bonsai etc.
+fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
+    match arg {
+        BONSAI_VALUE_ARG => Ok(HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned())),
+        DEEP_VALUE_ARG => Ok(HashSet::from_iter(DEEP_INCLUDE_EDGE_TYPES.iter().cloned())),
+        HG_VALUE_ARG => Ok(HashSet::from_iter(HG_EDGE_TYPES.iter().cloned())),
+        SHALLOW_VALUE_ARG => Ok(HashSet::from_iter(
+            SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned(),
+        )),
+        _ => EdgeType::from_str(arg).map(|e| {
+            let mut h = HashSet::new();
+            h.insert(e);
+            h
+        }),
+    }
+}
+
+fn parse_edge_values(
+    values: Option<Values>,
+    default: &[EdgeType],
+) -> Result<HashSet<EdgeType>, Error> {
+    match values {
+        None => Ok(HashSet::from_iter(default.iter().cloned())),
+        Some(values) => values
+            .map(parse_edge_value)
+            .collect::<Result<Vec<HashSet<EdgeType>>, Error>>()
+            .map(|m| m.into_iter().flatten().collect::<HashSet<EdgeType>>()),
+    }
+}
+
+fn parse_edge_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<EdgeType>, Error> {
+    let mut include_edge_types = parse_edge_values(
+        sub_m.values_of(INCLUDE_EDGE_TYPE_ARG),
+        DEEP_INCLUDE_EDGE_TYPES,
+    )?;
+    let exclude_edge_types = parse_edge_values(sub_m.values_of(EXCLUDE_EDGE_TYPE_ARG), &vec![])?;
+    include_edge_types.retain(|x| !exclude_edge_types.contains(x));
+    Ok(include_edge_types)
 }
 
 pub fn parse_args_common(
@@ -204,21 +389,9 @@ pub fn parse_args_common(
 
     let caching = cmdlib::args::init_cachelib(fb, &matches);
 
-    // TODO, add some error text showing valid types on parse error
-    let include_types: Result<HashSet<NodeType>, Error> = match sub_m.values_of(INCLUDE_TYPE_ARG) {
-        None => Ok(HashSet::from_iter(DEFAULT_INCLUDE_TYPES.iter().cloned())),
-        Some(values) => values.map(NodeType::from_str).collect(),
-    };
-    let mut include_types = include_types?;
+    let mut include_edge_types = parse_edge_types(sub_m)?;
 
-    let exclude_types: Result<HashSet<NodeType>, Error> = match sub_m.values_of(EXCLUDE_TYPE_ARG) {
-        None => Ok(HashSet::new()),
-        Some(values) => values.map(NodeType::from_str).collect(),
-    };
-    let exclude_types = exclude_types?;
-
-    info!(logger, "Excluding types {:?}", exclude_types);
-    include_types.retain(|x| !exclude_types.contains(x));
+    let mut include_node_types = parse_node_types(sub_m)?;
 
     let bookmarks: Result<Vec<_>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
         None => Err(format_err!("No bookmark passed")),
@@ -227,14 +400,39 @@ pub fn parse_args_common(
     let bookmarks = bookmarks?;
 
     // TODO, add other root types like hg change ids etc.
-    let walk_roots: Vec<_> = bookmarks.into_iter().map(Node::Bookmark).collect();
+    let walk_roots: Vec<_> = bookmarks
+        .into_iter()
+        .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
+        .collect();
+
+    // This stops us logging that we're walking unreachable edge/node types
+
+    // Only retain edge types where source type is something we want to load
+    include_edge_types.retain(|e| {
+        e.incoming_type()
+            .as_ref()
+            .map(|t| include_node_types.contains(t))
+            .unwrap_or(true)
+    });
+
+    // Only retain node types we expect to step to after graph entry
+    include_node_types.retain(|t| {
+        include_edge_types
+            .iter()
+            .any(|e| e.incoming_type() == None || &e.outgoing_type() == t)
+    });
 
     info!(logger, "Walking roots {:?} ", walk_roots);
 
     info!(
         logger,
+        "Walking edge types {:?}",
+        sort_by_string(&include_edge_types)
+    );
+    info!(
+        logger,
         "Walking node types {:?}",
-        sort_by_string(&include_types)
+        sort_by_string(&include_node_types)
     );
 
     let myrouter_port = args::parse_myrouter_port(&matches);
@@ -281,7 +479,8 @@ pub fn parse_args_common(
         RepoWalkParams {
             scheduled_max,
             walk_roots,
-            include_types,
+            include_node_types,
+            include_edge_types,
             tail_secs,
             quiet,
         },

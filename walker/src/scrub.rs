@@ -28,6 +28,9 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;
 use std::time::Duration;
 
+const PROGRESS_SAMPLE_RATE: u64 = 100;
+const PROGRESS_SAMPLE_DURATION_S: u64 = 1;
+
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream>(
     s: InStream,
@@ -64,9 +67,9 @@ pub fn scrub_objects(
     let (blobrepo, walk_params) = try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-        walk_params.include_types.clone(),
-        100,
-        Duration::from_secs(1),
+        walk_params.progress_node_types(),
+        PROGRESS_SAMPLE_RATE,
+        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
     ));
 
     let make_sink = {

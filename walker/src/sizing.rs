@@ -36,6 +36,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+const PROGRESS_SAMPLE_RATE: u64 = 1000;
+const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
+
 #[derive(Clone, Copy, Default, Debug)]
 struct SizingStats {
     raw: usize,
@@ -193,9 +196,9 @@ pub fn compression_benefit(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-        walk_params.clone().include_types,
-        1000,
-        Duration::from_secs(5),
+        walk_params.progress_node_types(),
+        PROGRESS_SAMPLE_RATE,
+        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
     ));
 
     let sizing_state = ProgressStateMutex::new(SizingState::new(1));

@@ -32,8 +32,8 @@ blobimport, succeeding
 
 compression-benefit, not expecting any compression from the tiny test files
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1
-  * Excluding types {} (glob)
   * Walking roots * (glob)
+  * Walking edge types * (glob)
   * Walking node types * (glob)
   * Final count: (*, 3) (glob)
   * Total: SizingStats { raw: 3, compressed: 3 },000% *  (glob)
