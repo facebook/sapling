@@ -18,6 +18,7 @@ snapshotmetadataparttype = "b2x:snapshotmetadata"
 def uisetup(ui):
     if ui.configbool("snapshot", "enable-sync-bundle"):
         bundle2.capabilities[snapshotmetadataparttype] = ()
+    _bundlesetup()
 
 
 def appendsnapshotmetadatabundlepart(repo, revs, parts):
@@ -46,13 +47,14 @@ def getmetadatafromrevs(repo, revs):
     return binaryencode(repo, metadataids)
 
 
-@bundle2.parthandler(snapshotmetadataparttype)
-def handlemetadata(op, inpart):
-    """unpack metadata for snapshots
-    """
-    store = op.repo.svfs.snapshotstore
-    for oid, data in binarydecode(inpart):
-        store.write(oid, data)
+def _bundlesetup():
+    @bundle2.parthandler(snapshotmetadataparttype)
+    def handlemetadata(op, inpart):
+        """unpack metadata for snapshots
+        """
+        store = op.repo.svfs.snapshotstore
+        for oid, data in binarydecode(inpart):
+            store.write(oid, data)
 
 
 def binaryencode(repo, metadataids):
