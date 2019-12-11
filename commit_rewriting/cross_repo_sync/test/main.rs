@@ -8,13 +8,14 @@
 
 //! Tests for the synced commits mapping.
 
-#![deny(warnings)]
+#![allow(warnings)]
 
 use async_unit;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use futures::Future;
 use maplit::btreemap;
+use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -24,13 +25,16 @@ use blobrepo_factory;
 use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use fixtures::linear;
+use fixtures::{linear, many_files_dirs};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
 };
-use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
+use std::convert::TryFrom;
+use synced_commit_mapping::{
+    SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
+};
 
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
 
@@ -624,6 +628,123 @@ fn sync_remap_failure(fb: FacebookInit) {
 #[fbinit::test]
 fn test_sync_remap_failure(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || sync_remap_failure(fb))
+}
+
+fn maybe_replace_prefix(
+    path: &MPath,
+    potential_prefix: &MPath,
+    replacement: &MPath,
+) -> Option<MPath> {
+    if potential_prefix.is_prefix_of(path) {
+        let elements: Vec<_> = path
+            .into_iter()
+            .skip(potential_prefix.num_components())
+            .collect();
+        Some(replacement.join(elements))
+    } else {
+        None
+    }
+}
+
+fn sync_implicit_deletes(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
+    let repo = many_files_dirs::getrepo(fb);
+
+    // Note: this mover relies on non-prefix-free path map, which may
+    // or may not be allowed in repo configs. We want commit syncing to work
+    // in this case, regardless of whether such config is allowed
+    let mover = Arc::new(move |path: &MPath| -> Result<Option<MPath>, Error> {
+        let longer_path = MPath::new("dir1/subdir1/subsubdir1").unwrap();
+        let prefix1: MPath = MPath::new("prefix1").unwrap();
+        let shorter_path = MPath::new("dir1").unwrap();
+        let prefix2: MPath = MPath::new("prefix2").unwrap();
+        if let Some(changed_path) = maybe_replace_prefix(path, &longer_path, &prefix1) {
+            return Ok(Some(changed_path));
+        }
+        if let Some(changed_path) = maybe_replace_prefix(path, &shorter_path, &prefix2) {
+            return Ok(Some(changed_path));
+        }
+        Ok(Some(path.clone()))
+    });
+
+    let commit_sync_repos = CommitSyncRepos::SmallToLarge {
+        small_repo: repo.clone(),
+        large_repo: megarepo.clone(),
+        mover,
+        bookmark_renamer: Arc::new(identity_renamer),
+    };
+
+    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+    let commit_syncer = CommitSyncer::new(mapping.clone(), commit_sync_repos);
+
+    let megarepo_initial_bcs_id = create_initial_commit(ctx.clone(), &megarepo);
+
+    // Insert a fake mapping entry, so that syncs succeed
+    let repo_initial_bcs_id = get_bcs_id(
+        ctx.clone(),
+        &commit_syncer,
+        HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap(),
+    );
+    let entry = SyncedCommitMappingEntry::new(
+        megarepo.get_repoid(),
+        megarepo_initial_bcs_id,
+        repo.get_repoid(),
+        repo_initial_bcs_id,
+    );
+    mapping.add(ctx.clone(), entry).wait();
+
+    // d261bc7900818dea7c86935b3fb17a33b2e3a6b4 from "many_files_dirs" should sync cleanly
+    // on top of master. Among others, it introduces the following files:
+    // - "dir1/subdir1/subsubdir1/file_1"
+    // - "dir1/subdir1/subsubdir2/file_1"
+    // - "dir1/subdir1/subsubdir2/file_2"
+    let repo_base_bcs_id = get_bcs_id(
+        ctx.clone(),
+        &commit_syncer,
+        HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap(),
+    );
+
+    let megarepo_repo_base_bcs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_base_bcs_id)
+        .expect("Unexpectedly failed to rewrite 1")
+        .expect("Unexpectedly rewritten into nothingness");
+
+    // 051946ed218061e925fb120dac02634f9ad40ae2 from "many_files_dirs" replaces the
+    // entire "dir1" directory with a file, which implicitly deletes
+    // "dir1/subdir1/subsubdir1" and "dir1/subdir1/subsubdir2".
+    let repo_implicit_delete_bcs_id = get_bcs_id(
+        ctx.clone(),
+        &commit_syncer,
+        HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap(),
+    );
+    let megarepo_implicit_delete_bcs_id =
+        sync_to_master(ctx.clone(), &commit_syncer, repo_implicit_delete_bcs_id)
+            .expect("Unexpectedly failed to rewrite 2")
+            .expect("Unexpectedly rewritten into nothingness");
+
+    let megarepo_implicit_delete_bcs = megarepo
+        .get_bonsai_changeset(ctx.clone(), megarepo_implicit_delete_bcs_id)
+        .wait()
+        .unwrap();
+    let file_changes: BTreeMap<MPath, _> = megarepo_implicit_delete_bcs
+        .file_changes()
+        .map(|(a, b)| (a.clone(), b.clone()))
+        .collect();
+
+    // "dir1" was rewrtitten as "prefix2" and explicitly replaced with file, so the file
+    // change should be `Some`
+    assert!(file_changes[&MPath::new("prefix2").unwrap()].is_some());
+    // "dir1/subdir1/subsubdir1/file_1" was rewritten as "prefix1/file_1", and became
+    // an implicit delete
+    assert!(file_changes[&MPath::new("prefix1/file_1").unwrap()].is_none());
+    // there are no other entries in `file_changes` as other implicit deletes where
+    // removed by the minimization process
+    assert_eq!(file_changes.len(), 2);
+}
+
+#[fbinit::test]
+fn test_sync_implicit_deletes(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || sync_implicit_deletes(fb))
 }
 
 fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {

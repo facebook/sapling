@@ -16,14 +16,20 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
 use bookmarks::BookmarkName;
+use cloned::cloned;
 use context::CoreContext;
 use futures::Future;
+use futures::Stream as StreamOld;
+use futures_preview::future::try_join_all;
 use futures_preview::{
     compat::Future01CompatExt,
     future::{self, FutureExt, TryFutureExt},
     stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
+use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
+use mercurial_types::changeset::Changeset;
+use mercurial_types::HgManifestId;
 use metaconfig_types::{CommitSyncConfig, PushrebaseParams};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
@@ -57,6 +63,92 @@ async fn identity<T>(res: T) -> Result<T, Error> {
     Ok(res)
 }
 
+/// Get `HgManifestId`s for a set of `ChangesetId`s
+/// This is needed for the purposes of implicit delete detection
+async fn get_manifest_ids<I: IntoIterator<Item = ChangesetId>>(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    bcs_ids: I,
+) -> Result<Vec<HgManifestId>, Error> {
+    try_join_all(bcs_ids.into_iter().map({
+        |bcs_id| {
+            cloned!(ctx, repo);
+            async move {
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                    .and_then({
+                        cloned!(ctx, repo);
+                        move |hg_cs_id| repo.get_changeset_by_changesetid(ctx, hg_cs_id)
+                    })
+                    .map(|hg_blob_changeset| hg_blob_changeset.manifestid())
+                    .compat()
+                    .await
+            }
+        }
+    }))
+    .await
+}
+
+/// Take an iterator of file changes, which may contain implicit deletes
+/// and produce a `BTreeMap` suitable to be used in the `BonsaiChangeset`,
+/// without any implicit deletes.
+fn minimize_file_change_set<FC, I: IntoIterator<Item = (MPath, Option<FC>)>>(
+    file_changes: I,
+) -> BTreeMap<MPath, Option<FC>> {
+    let (adds, removes): (Vec<_>, Vec<_>) =
+        file_changes.into_iter().partition(|(_, fc)| fc.is_some());
+    let adds: HashMap<MPath, Option<FC>> = adds.into_iter().collect();
+
+    let prefix_path_was_added = |removed_path: MPath| {
+        removed_path
+            .into_parent_dir_iter()
+            .any(|parent_dir| adds.contains_key(&parent_dir))
+    };
+
+    let filtered_removes = removes
+        .into_iter()
+        .filter(|(ref mpath, _)| !prefix_path_was_added(mpath.clone()));
+    let mut result: BTreeMap<_, _> = filtered_removes.collect();
+    result.extend(adds.into_iter());
+    result
+}
+
+/// Given a changeset and it's parents, get the list of file
+/// changes, which arise from "implicit deletes" as opposed
+/// to naive `MPath` rewriting in `cs.file_changes`. For
+/// more information about implicit deletes, please see
+/// `manifest/src/implici_deletes.rs`
+async fn get_implicit_delete_file_changes<I: IntoIterator<Item = ChangesetId>>(
+    ctx: CoreContext,
+    cs: BonsaiChangesetMut,
+    parent_changeset_ids: I,
+    mover: Mover,
+    source_repo: BlobRepo,
+) -> Result<Vec<(MPath, Option<FileChange>)>, Error> {
+    let parent_manifest_ids =
+        get_manifest_ids(ctx.clone(), &source_repo, parent_changeset_ids).await?;
+    let file_adds: Vec<_> = cs
+        .file_changes
+        .iter()
+        .filter_map(|(mpath, maybe_file_change)| maybe_file_change.as_ref().map(|_| mpath.clone()))
+        .collect();
+    let store = source_repo.get_blobstore();
+    let implicit_deletes: Vec<MPath> =
+        get_implicit_deletes(ctx, store, file_adds, parent_manifest_ids)
+            .collect()
+            .compat()
+            .await?;
+    let maybe_renamed_implicit_deletes: Result<Vec<Option<MPath>>, _> =
+        implicit_deletes.iter().map(|mpath| mover(mpath)).collect();
+    let maybe_renamed_implicit_deletes: Vec<Option<MPath>> = maybe_renamed_implicit_deletes?;
+    let implicit_delete_file_changes: Vec<_> = maybe_renamed_implicit_deletes
+        .into_iter()
+        .filter_map(|maybe_implicit_delete| maybe_implicit_delete)
+        .map(|implicit_delete_mpath| (implicit_delete_mpath, None))
+        .collect();
+
+    Ok(implicit_delete_file_changes)
+}
+
 /// Create a version of `cs` with `Mover` applied to all changes
 /// The return value can be:
 /// - `Err` if the rewrite failed
@@ -70,12 +162,23 @@ async fn identity<T>(res: T) -> Result<T, Error> {
 ///
 /// Precondition: this function expects all `cs` parents to be present
 /// in `remapped_parents` as keys, and their remapped versions as values.
-pub fn rewrite_commit(
+pub async fn rewrite_commit(
+    ctx: CoreContext,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
+    source_repo: BlobRepo,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     if !cs.file_changes.is_empty() {
+        let implicit_delete_file_changes = get_implicit_delete_file_changes(
+            ctx.clone(),
+            cs.clone(),
+            remapped_parents.keys().cloned(),
+            mover.clone(),
+            source_repo,
+        )
+        .await?;
+
         let path_rewritten_changes: Result<BTreeMap<_, _>, _> = cs
             .file_changes
             .into_iter()
@@ -129,7 +232,9 @@ pub fn rewrite_commit(
             })
             .collect();
 
-        let path_rewritten_changes = path_rewritten_changes?;
+        let mut path_rewritten_changes = path_rewritten_changes?;
+        path_rewritten_changes.extend(implicit_delete_file_changes.into_iter());
+        let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes.into_iter());
         let is_merge = cs.parents.len() >= 2;
 
         // If all parent has < 2 commits then it's not a merge, and it was completely rewritten
@@ -186,6 +291,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     ctx: CoreContext,
     cs: BonsaiChangesetMut,
     commit_syncer: &'a CommitSyncer<M>,
+    source_repo: BlobRepo,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let (_, _, mover) = commit_syncer.get_source_target_mover();
     let mut remapped_parents = HashMap::new();
@@ -209,7 +315,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
         remapped_parents.insert(*commit, remapped_parent);
     }
 
-    rewrite_commit(cs, &remapped_parents, mover)
+    rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
 }
 
 /// The state of a source repo commit in a target repo
@@ -434,8 +540,13 @@ where
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo, _) = self.get_source_target_mover();
 
-        match remap_parents_and_rewrite_commit(ctx.clone(), source_cs.clone().into_mut(), self)
-            .await?
+        match remap_parents_and_rewrite_commit(
+            ctx.clone(),
+            source_cs.clone().into_mut(),
+            self,
+            source_repo.clone(),
+        )
+        .await?
         {
             None => {
                 let mut remapped_parents_outcome = vec![];
@@ -594,7 +705,15 @@ where
         let source_cs_id = cs.get_changeset_id();
         let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
 
-        match rewrite_commit(cs.into_mut(), &HashMap::new(), rewrite_paths)? {
+        match rewrite_commit(
+            ctx.clone(),
+            cs.into_mut(),
+            &HashMap::new(),
+            rewrite_paths,
+            source_repo.clone(),
+        )
+        .await?
+        {
             Some(rewritten) => {
                 let frozen = rewritten.freeze()?;
                 upload_commits(
@@ -649,7 +768,14 @@ where
             RewrittenAs(remapped_p) | EquivalentWorkingCopyAncestor(remapped_p) => {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
-                let maybe_rewritten = rewrite_commit(cs, &remapped_parents, rewrite_paths)?;
+                let maybe_rewritten = rewrite_commit(
+                    ctx.clone(),
+                    cs,
+                    &remapped_parents,
+                    rewrite_paths,
+                    source_repo.clone(),
+                )
+                .await?;
                 match maybe_rewritten {
                     Some(rewritten) => {
                         let frozen = rewritten.freeze()?;
@@ -801,7 +927,15 @@ where
         let cs = self.strip_removed_parents(cs, new_parents.keys().collect())?;
 
         if new_parents.len() >= 1 {
-            match rewrite_commit(cs, &new_parents, rewrite_paths)? {
+            match rewrite_commit(
+                ctx.clone(),
+                cs,
+                &new_parents,
+                rewrite_paths,
+                self.get_source_repo().clone(),
+            )
+            .await?
+            {
                 Some(rewritten) => {
                     let target_cs_id = self
                         .upload_rewritten_and_update_mapping(ctx.clone(), source_cs_id, rewritten)
@@ -1193,4 +1327,46 @@ where
         large_to_small: large_to_small_commit_syncer,
         small_to_large: small_to_large_commit_syncer,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fbinit::FacebookInit;
+    use maplit::btreemap;
+
+    fn path(p: &str) -> MPath {
+        MPath::new(p).unwrap()
+    }
+
+    fn verify_minimized(changes: Vec<(&str, Option<()>)>, expected: BTreeMap<&str, Option<()>>) {
+        let changes: Vec<_> = changes.into_iter().map(|(p, c)| (path(p), c)).collect();
+        let minimized = minimize_file_change_set(changes);
+        let expected: BTreeMap<MPath, Option<()>> =
+            expected.into_iter().map(|(p, c)| (path(p), c)).collect();
+        assert_eq!(expected, minimized);
+    }
+
+    #[fbinit::test]
+    fn test_minimize_file_change_set(_fb: FacebookInit) {
+        verify_minimized(
+            vec![("a", Some(())), ("a", None)],
+            btreemap! { "a" => Some(())},
+        );
+        verify_minimized(vec![("a", Some(()))], btreemap! { "a" => Some(())});
+        verify_minimized(vec![("a", None)], btreemap! { "a" => None});
+        // directories are deleted implicitly, so explicit deletes are
+        // minimized away
+        verify_minimized(
+            vec![("a/b", None), ("a/c", None), ("a", Some(()))],
+            btreemap! { "a" => Some(()) },
+        );
+        // files, replaced with a directy at a longer path are not
+        // deleted implicitly, so they aren't minimized away
+        verify_minimized(
+            vec![("a", None), ("a/b", Some(()))],
+            btreemap! { "a" => None, "a/b" => Some(()) },
+        );
+    }
+
 }
