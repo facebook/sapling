@@ -248,70 +248,70 @@ class _githgmappayload(object):
         return cls._fromdict(d)
 
 
-@exchange.getbundle2partsgenerator("b2x:fb:gitmeta:githgmap")
-def _getbundlegithgmappart(bundler, repo, source, bundlecaps=None, **kwargs):
-    """send missing git to hg map data via bundle2"""
-    if "fb_gitmeta" in bundlecaps:
-        # Do nothing if the config indicates serving the complete git-hg map
-        # file. _getbundlegitmetapart will handle serving the complete file in
-        # this case.
-        if not repo.ui.configbool("gitlookup", "onlymapdelta", False):
-            return
+def _exchangesetup():
+    @exchange.getbundle2partsgenerator("b2x:fb:gitmeta:githgmap")
+    def _getbundlegithgmappart(bundler, repo, source, bundlecaps=None, **kwargs):
+        """send missing git to hg map data via bundle2"""
+        if "fb_gitmeta" in bundlecaps:
+            # Do nothing if the config indicates serving the complete git-hg map
+            # file. _getbundlegitmetapart will handle serving the complete file in
+            # this case.
+            if not repo.ui.configbool("gitlookup", "onlymapdelta", False):
+                return
 
-        mapfile = _getfile(repo, gitmapfile)
-        if not mapfile:
-            return
+            mapfile = _getfile(repo, gitmapfile)
+            if not mapfile:
+                return
 
-        commonheads = kwargs["common"]
+            commonheads = kwargs["common"]
 
-        # If there are missing heads, we will sync everything.
-        if _isheadmissing(repo, commonheads):
-            commonheads = []
+            # If there are missing heads, we will sync everything.
+            if _isheadmissing(repo, commonheads):
+                commonheads = []
 
-        needfullsync = len(commonheads) == 0
+            needfullsync = len(commonheads) == 0
 
-        heads = repo.heads()
-        newheads = set(hex(head) for head in heads)
+            heads = repo.heads()
+            newheads = set(hex(head) for head in heads)
 
-        missingcommits = repo.changelog.findmissing(commonheads, heads)
-        missinghashes = set(hex(commit) for commit in missingcommits)
-        missinghashes.difference_update(
-            set(repo.ui.configlist("gitlookup", "skiphashes", []))
-        )
-        missinglines = _getmissinglines(mapfile, missinghashes)
-
-        payload = _githgmappayload(needfullsync, newheads, missinglines)
-        serializedpayload = payload.tojson()
-        part = bundle2.bundlepart(
-            "b2x:fb:gitmeta:githgmap",
-            [("filename", gitmapfile)],
-            data=serializedpayload,
-        )
-
-        bundler.addpart(part)
-
-
-@exchange.getbundle2partsgenerator("b2x:fb:gitmeta")
-def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
-    """send git metadata via bundle2"""
-    if "fb_gitmeta" in bundlecaps:
-        filestooverwrite = gitmetafiles
-
-        # Exclude the git-hg map file if the config indicates that the server
-        # should only be serving the missing map data. _getbundle2partsgenerator
-        # will serve the missing map data in this case.
-        if repo.ui.configbool("gitlookup", "onlymapdelta", False):
-            filestooverwrite = filestooverwrite - set([gitmapfile])
-
-        for fname in sorted(filestooverwrite):
-            f = _getfile(repo, fname)
-            if not f:
-                continue
-
-            part = bundle2.bundlepart(
-                "b2x:fb:gitmeta", [("filename", fname)], data=f.read()
+            missingcommits = repo.changelog.findmissing(commonheads, heads)
+            missinghashes = set(hex(commit) for commit in missingcommits)
+            missinghashes.difference_update(
+                set(repo.ui.configlist("gitlookup", "skiphashes", []))
             )
+            missinglines = _getmissinglines(mapfile, missinghashes)
+
+            payload = _githgmappayload(needfullsync, newheads, missinglines)
+            serializedpayload = payload.tojson()
+            part = bundle2.bundlepart(
+                "b2x:fb:gitmeta:githgmap",
+                [("filename", gitmapfile)],
+                data=serializedpayload,
+            )
+
             bundler.addpart(part)
+
+    @exchange.getbundle2partsgenerator("b2x:fb:gitmeta")
+    def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
+        """send git metadata via bundle2"""
+        if "fb_gitmeta" in bundlecaps:
+            filestooverwrite = gitmetafiles
+
+            # Exclude the git-hg map file if the config indicates that the server
+            # should only be serving the missing map data. _getbundle2partsgenerator
+            # will serve the missing map data in this case.
+            if repo.ui.configbool("gitlookup", "onlymapdelta", False):
+                filestooverwrite = filestooverwrite - set([gitmapfile])
+
+            for fname in sorted(filestooverwrite):
+                f = _getfile(repo, fname)
+                if not f:
+                    continue
+
+                part = bundle2.bundlepart(
+                    "b2x:fb:gitmeta", [("filename", fname)], data=f.read()
+                )
+                bundler.addpart(part)
 
 
 def _writefile(op, filename, data):
@@ -333,53 +333,55 @@ def _validatepartparams(op, params):
     return True
 
 
-@bundle2.parthandler("b2x:fb:gitmeta:githgmap", ("filename",))
-@bundle2.parthandler("fb:gitmeta:githgmap", ("filename",))
-def bundle2getgithgmap(op, part):
-    params = dict(part.mandatoryparams)
-    if _validatepartparams(op, params):
-        filename = params["filename"]
-        with op.repo.wlock():
-            data = _githgmappayload.fromjson(part.read())
-            missinglines = data.missinglines
+def _bundlesetup():
+    @bundle2.parthandler("b2x:fb:gitmeta:githgmap", ("filename",))
+    @bundle2.parthandler("fb:gitmeta:githgmap", ("filename",))
+    def bundle2getgithgmap(op, part):
+        params = dict(part.mandatoryparams)
+        if _validatepartparams(op, params):
+            filename = params["filename"]
+            with op.repo.wlock():
+                data = _githgmappayload.fromjson(part.read())
+                missinglines = data.missinglines
 
-            # No need to update anything if already in sync.
-            if not missinglines:
-                return
+                # No need to update anything if already in sync.
+                if not missinglines:
+                    return
 
-            if data.needfullsync:
-                newlines = missinglines
-            else:
-                mapfile = _getfile(op.repo, filename)
-                if mapfile:
-                    currentlines = set(mapfile.readlines())
-                    if currentlines & missinglines:
-                        msg = "warning: gitmeta: unexpected lines in .hg/%s\n"
-                        op.repo.ui.warn(_(msg) % filename)
-
-                    currentlines.update(missinglines)
-                    newlines = currentlines
+                if data.needfullsync:
+                    newlines = missinglines
                 else:
-                    raise error.Abort(
-                        _("gitmeta: could not read from .hg/%s") % filename
-                    )
+                    mapfile = _getfile(op.repo, filename)
+                    if mapfile:
+                        currentlines = set(mapfile.readlines())
+                        if currentlines & missinglines:
+                            msg = "warning: gitmeta: unexpected lines in .hg/%s\n"
+                            op.repo.ui.warn(_(msg) % filename)
 
-            _writefile(op, filename, "".join(newlines))
-            _writefile(op, hgheadsfile, "\n".join(data.newheads))
+                        currentlines.update(missinglines)
+                        newlines = currentlines
+                    else:
+                        raise error.Abort(
+                            _("gitmeta: could not read from .hg/%s") % filename
+                        )
 
+                _writefile(op, filename, "".join(newlines))
+                _writefile(op, hgheadsfile, "\n".join(data.newheads))
 
-@bundle2.parthandler("b2x:fb:gitmeta", ("filename",))
-@bundle2.parthandler("fb:gitmeta", ("filename",))
-def bundle2getgitmeta(op, part):
-    """unbundle a bundle2 containing git metadata on the client"""
-    params = dict(part.mandatoryparams)
-    if _validatepartparams(op, params):
-        filename = params["filename"]
-        with op.repo.wlock():
-            data = part.read()
-            _writefile(op, filename, data)
+    @bundle2.parthandler("b2x:fb:gitmeta", ("filename",))
+    @bundle2.parthandler("fb:gitmeta", ("filename",))
+    def bundle2getgitmeta(op, part):
+        """unbundle a bundle2 containing git metadata on the client"""
+        params = dict(part.mandatoryparams)
+        if _validatepartparams(op, params):
+            filename = params["filename"]
+            with op.repo.wlock():
+                data = part.read()
+                _writefile(op, filename, data)
 
 
 def extsetup(ui):
     wrapwireprotocommand("lookup", remotelookup)
     extensions.wrapfunction(localrepo.localrepository, "lookup", locallookup)
+    _exchangesetup()
+    _bundlesetup()
