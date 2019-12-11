@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -36,6 +37,17 @@ pub struct FileContext {
     repo: RepoContext,
     fetch_key: FetchKey,
     metadata: Shared<Pin<Box<dyn Future<Output = Result<FileMetadata, MononokeError>> + Send>>>,
+}
+
+impl fmt::Debug for FileContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "FileContext(repo={:?} fetch_key={:?})",
+            self.repo().name(),
+            self.fetch_key
+        )
+    }
 }
 
 /// Context for accessing a file in a repository.

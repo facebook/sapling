@@ -8,6 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -44,6 +45,17 @@ pub struct ChangesetContext {
         Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
     root_unode_manifest_id:
         Shared<Pin<Box<dyn Future<Output = Result<RootUnodeManifestId, MononokeError>> + Send>>>,
+}
+
+impl fmt::Debug for ChangesetContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ChangesetContext(repo={:?} id={:?})",
+            self.repo().name(),
+            self.id()
+        )
+    }
 }
 
 /// A context object representing a query to a particular commit in a repo.

@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -33,6 +34,17 @@ pub struct TreeContext {
     repo: RepoContext,
     id: TreeId,
     fsnode: Shared<Pin<Box<dyn Future<Output = Result<Fsnode, MononokeError>> + Send>>>,
+}
+
+impl fmt::Debug for TreeContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "TreeContext(repo={:?} id={:?})",
+            self.repo().name(),
+            self.id()
+        )
+    }
 }
 
 impl TreeContext {
@@ -77,6 +89,11 @@ impl TreeContext {
             Err(LoadableError::Missing(_)) => Ok(None),
             Err(e) => Err(MononokeError::from(Error::from(e))),
         }
+    }
+
+    /// The `RepoContext` for this query.
+    pub(crate) fn repo(&self) -> &RepoContext {
+        &self.repo
     }
 
     async fn fsnode(&self) -> Result<Fsnode, MononokeError> {

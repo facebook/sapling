@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -65,6 +66,18 @@ pub struct ChangesetPathContext {
     path: MononokePath,
     fsnode_id: Shared<Pin<Box<dyn Future<Output = FsnodeResult> + Send>>>,
     unode_id: Shared<Pin<Box<dyn Future<Output = UnodeResult> + Send>>>,
+}
+
+impl fmt::Debug for ChangesetPathContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ChangesetPathContext(repo={:?} id={:?} path={:?})",
+            self.repo().name(),
+            self.changeset().id(),
+            self.path()
+        )
+    }
 }
 
 impl ChangesetPathContext {

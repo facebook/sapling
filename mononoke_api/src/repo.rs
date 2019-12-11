@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -46,6 +47,7 @@ const MISSING_FROM_CACHE_INFIX: &'static str = "missing_from_cache";
 const MISSING_FROM_REPO_INFIX: &'static str = "missing_from_repo";
 
 pub(crate) struct Repo {
+    pub(crate) name: String,
     pub(crate) blob_repo: BlobRepo,
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
     pub(crate) fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
@@ -61,6 +63,12 @@ pub(crate) struct Repo {
 pub struct RepoContext {
     ctx: CoreContext,
     repo: Arc<Repo>,
+}
+
+impl fmt::Debug for RepoContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "RepoContext(repo={:?})", self.name())
+    }
 }
 
 pub async fn open_synced_commit_mapping(
@@ -85,6 +93,7 @@ impl Repo {
     pub(crate) async fn new(
         fb: FacebookInit,
         logger: Logger,
+        name: String,
         config: RepoConfig,
         common_config: CommonConfig,
         myrouter_port: Option<u16>,
@@ -145,6 +154,7 @@ impl Repo {
         );
 
         Ok(Self {
+            name,
             blob_repo,
             skiplist_index,
             unodes_derived_mapping,
@@ -157,6 +167,7 @@ impl Repo {
 
     /// Temporary function to create directly from parts.
     pub(crate) fn new_from_parts(
+        name: String,
         blob_repo: BlobRepo,
         skiplist_index: Arc<SkiplistIndex>,
         fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
@@ -166,6 +177,7 @@ impl Repo {
         monitoring_config: Option<SourceControlServiceMonitoring>,
     ) -> Self {
         Self {
+            name,
             blob_repo,
             skiplist_index,
             fsnodes_derived_mapping,
@@ -198,6 +210,7 @@ impl Repo {
             .await?,
         );
         Ok(Self {
+            name: String::from("test"),
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
             unodes_derived_mapping,
@@ -218,6 +231,11 @@ impl RepoContext {
     /// The context for this query.
     pub(crate) fn ctx(&self) -> &CoreContext {
         &self.ctx
+    }
+
+    /// The name of the underlying repo.
+    pub(crate) fn name(&self) -> &str {
+        &self.repo.name
     }
 
     /// The underlying `BlobRepo`.

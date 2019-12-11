@@ -90,6 +90,7 @@ impl Mononoke {
                         let repo = Repo::new(
                             fb,
                             logger.new(o!("repo" => name.clone())),
+                            name.clone(),
                             config,
                             common_config,
                             myrouter_port,
@@ -164,8 +165,9 @@ impl Mononoke {
                         let fsnodes_derived_mapping =
                             Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
                         (
-                            name,
+                            name.clone(),
                             Arc::new(Repo::new_from_parts(
+                                name,
                                 blob_repo,
                                 skiplist_index,
                                 fsnodes_derived_mapping,

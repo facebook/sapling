@@ -12,7 +12,7 @@ use crate::changeset_path::ChangesetPathContext;
 ///
 /// A ChangesetPathDiffContext shows the difference between two corresponding
 /// files in the commits.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ChangesetPathDiffContext {
     Added(ChangesetPathContext),
     Removed(ChangesetPathContext),
