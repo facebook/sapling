@@ -31,10 +31,10 @@ blobimport, succeeding
   $ blobimport repo-hg/.hg repo
 
 compression-benefit, not expecting any compression from the tiny test files
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1
-  * Walking roots * (glob)
-  * Walking edge types * (glob)
-  * Walking node types * (glob)
-  * Final count: (*, 3) (glob)
-  * Total: SizingStats { raw: 3, compressed: 3 },000% (glob)
-  * Exiting... (glob)
+  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types * (glob)
+  Walking node types * (glob)
+  Final count: (*, 3) (glob)
+  * Total: SizingStats { raw: 3, compressed: 3 },000% * (glob)
+  Exiting...
