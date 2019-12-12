@@ -49,6 +49,7 @@ import tempfile
 import textwrap
 import time
 import traceback
+import types
 import warnings
 import zlib
 
@@ -4587,7 +4588,88 @@ def describe(describefunc, _describecall=bindings.stackdesc.describecall):
 renderstack = bindings.stackdesc.renderstack
 
 
-def smarttraceback(frame=None):
+class NotRendered(RuntimeError):
+    pass
+
+
+def _render(
+    value,
+    visited=None,
+    level=0,
+    maxlevel=3,
+    maxlen=8,
+    hex=None,
+    basectx=None,
+    abstractsmartset=None,
+):
+    """Similar to repr, but only support some "interesting" types.
+
+    Raise NotRendered if value appears to be not interesting or is not
+    supported by this function.
+    """
+    if hex is None:
+        from .node import hex
+    if basectx is None:
+        from .context import basectx
+    if abstractsmartset is None:
+        from .smartset import abstractsmartset
+
+    if value is None:
+        raise NotRendered(value)
+    if level >= maxlevel:
+        return "...."
+    if visited is None:
+        visited = set()
+    if isinstance(value, (list, dict)):
+        if id(value) in visited:
+            return "..."
+        else:
+            visited.add(id(value))
+    render = functools.partial(
+        _render,
+        visited=visited,
+        level=level + 1,
+        maxlevel=maxlevel,
+        maxlen=maxlen,
+        hex=hex,
+        basectx=basectx,
+        abstractsmartset=abstractsmartset,
+    )
+    if isinstance(value, bytes):
+        if len(value) == 20:
+            # most likely, a binary sha1 hash.
+            result = "bin(%r)" % hex(value)
+        else:
+            result = repr(value)
+    elif isinstance(value, (bool, int, basectx, abstractsmartset)):
+        result = repr(value)
+    elif isinstance(value, list):
+        if len(value) > maxlen:
+            result = "[%s, ...]" % ", ".join(map(render, value[:maxlen]))
+        else:
+            result = "[%s]" % ", ".join(map(render, value))
+    elif isinstance(value, tuple):
+        if len(value) > maxlen:
+            result = "(%s, ...)" % ", ".join(map(render, value[:maxlen]))
+        else:
+            result = "(%s)" % ", ".join(map(render, value))
+    elif isinstance(value, (frozenset, set)):
+        if len(value) > maxlen:
+            result = "{%s, ...}" % ", ".join(map(render, sorted(value)[:maxlen]))
+        else:
+            result = "{%s}" % ", ".join(map(render, sorted(value)))
+    elif isinstance(value, dict):
+        result = "{%s}" % ", ".join(
+            "%s: %s" % (render(k), render(v)) for k, v in value.items() if v is not None
+        )
+    else:
+        raise NotRendered(value)
+    if len(result) > 1024:
+        result = result[:1021] + "..."
+    return result
+
+
+def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
     """Get a friendly traceback as a string.
 
     Based on some methods in the traceback.format_stack.
@@ -4597,22 +4679,40 @@ def smarttraceback(frame=None):
     import linecache
 
     # Get the frame. See traceback.format_stack
-    if frame is None:
+    if frameortb is None:
         try:
             raise ZeroDivisionError
         except ZeroDivisionError:
-            frame = sys.exc_info()[2].tb_frame.f_back
+            frameortb = sys.exc_info()[2].tb_frame.f_back
+
+    frames = []  # [(frame, lineno)]
+    if isinstance(frameortb, types.TracebackType):
+        tb = frameortb
+        nexttb = tb.tb_next
+        while nexttb:
+            # Note: tb_lineno instead of f_lineno should be used.
+            frames.append((tb.tb_frame, tb.tb_lineno))
+            tb = nexttb
+            nexttb = tb.tb_next
+        frames.append((tb.tb_frame, tb.tb_lineno))
+    elif isinstance(frameortb, types.FrameType):
+        frame = frameortb
+        while frame is not None:
+            frames.append((frame, frame.f_lineno))
+            frame = frame.f_back
+    else:
+        raise TypeError("frameortb is not a frame or traceback")
 
     # Similar to traceback.extract_stack
     frameinfos = []
-    while frame is not None:
-        lineno = frame.f_lineno
+    for frame, lineno in reversed(frames):
         co = frame.f_code
         filename = co.co_filename
-        shortfilename = "/".join(filename.rsplit("/", 2)[-2:])
         name = co.co_name
         linecache.checkcache(filename)
         line = linecache.getline(filename, lineno, frame.f_globals)
+        if shortfilename:
+            filename = "/".join(filename.rsplit("/", 3)[-3:])
         localargs = []
         if line:
             line = line.strip()
@@ -4620,33 +4720,39 @@ def smarttraceback(frame=None):
             for argname in sorted(set(remod.findall("[a-z][a-z0-9_]*", line))):
                 # argname is potentially an interesting local variable
                 value = frame.f_locals.get(argname, None)
-                if value is None:
+                try:
+                    reprvalue = _render(value)
+                except NotRendered:
                     continue
-                if isinstance(value, (str, int)) or (
-                    isinstance(value, (list, tuple))
-                    and all(isinstance(i, (str, int)) for i in value)
-                ):
-                    reprvalue = repr(value)
-                    if len(reprvalue) > 1024:
-                        reprvalue = reprvalue[:1021] + "..."
+                else:
                     localargs.append("%s = %s" % (argname, reprvalue))
         else:
             line = None
-        frameinfos.append((shortfilename, lineno, name, line, localargs))
-        frame = frame.f_back
-
-    frameinfos.reverse()
+        frameinfos.append((filename, lineno, name, line, localargs))
 
     # Similar to traceback.format_stack
-    result = ""
+    result = []
     for filename, lineno, name, line, localargs in frameinfos:
-        item = 'File "%s", line %d, in %s\n' % (filename, lineno, name)
+        if skipboring:
+            if name == "check" and filename.endswith("util.py"):
+                # util.check is boring
+                continue
+            if filename.endswith("dispatch.py"):
+                # dispatch and above is boring
+                break
+            if line and ("= orig(" in line or "return orig(" in line):
+                # orig(...) is boring
+                continue
+        item = '  File "%s", line %d, in %s\n' % (filename, lineno, name)
         if line:
-            item += "  %s\n" % line.strip()
+            item += "    %s\n" % line.strip()
         for localarg in localargs:
-            item += "  # %s\n" % localarg
-        result += item
-    return result
+            item += "    # %s\n" % localarg
+        result.append(item)
+
+    result.append("Traceback (most recent call last):\n")
+    result.reverse()
+    return "".join(result)
 
 
 class wrapped_stat_result(object):
