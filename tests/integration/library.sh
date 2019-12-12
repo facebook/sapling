@@ -301,17 +301,24 @@ function strip_glog {
   sed -E -e 's%^[VDIWECF][[:digit:]]{4} [[:digit:]]{2}:?[[:digit:]]{2}:?[[:digit:]]{2}(\.[[:digit:]]+)?\s+(([0-9a-f]+)\s+)?(\[([^]]+)\]\s+)?(\(([^\)]+)\)\s+)?(([a-zA-Z0-9_./-]+):([[:digit:]]+))\]\s+%%'
 }
 
-function wait_for_nonempty_file {
-    for _ in $(seq 1 50); do
-        if test -s "$1"; then
-            return 0
-        fi
+function wait_for_json_record_count {
+  # We ask jq to count records for us, so that we're a little more robust ot
+  # newlines and such.
+  local file count
+  file="$1"
+  count="$2"
 
-        sleep 0.1
-    done
+  for _ in $(seq 1 50); do
+    if [[ "$(jq 'true' < "$file" | wc -l)" -eq "$count" ]] ; then
+      return 0
+    fi
 
-    echo "File $1 remained empty" >&2
-    return 1
+    sleep 0.1
+  done
+
+  echo "File $file did not contain $count records" >&2
+  jq -S . < "$file" >&2
+  return 1
 }
 
 # Wait until a Mononoke server is available for this repo.

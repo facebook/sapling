@@ -20,7 +20,7 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Check for identities from header
-  $ wait_for_nonempty_file "$SCUBA"
+  $ wait_for_json_record_count "$SCUBA" 2
   $ jq -S .normvector.client_identities < "$SCUBA"
   [
     "USER:myusername0",
@@ -40,7 +40,7 @@
   $ sslcurl -fsSL -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
   200
 
-  $ wait_for_nonempty_file "$SCUBA"
+  $ wait_for_json_record_count "$SCUBA" 1
   $ jq -S .normvector.client_identities < "$SCUBA"
   [
     "USER:myusername0",

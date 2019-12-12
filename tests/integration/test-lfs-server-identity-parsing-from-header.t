@@ -19,6 +19,11 @@
   $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
+# Wait until the batch + upload show up in the logs
+  $ wait_for_json_record_count "$SCUBA" 2
+  $ jq -S .normvector.client_identities < "$SCUBA"
+  null
+  null
   $ truncate -s 0 "$SCUBA"
 
 # Make a request with a valid encoded client identity header
@@ -27,9 +32,7 @@
   200
 
 # Check for identities from header
-  $ wait_for_nonempty_file "$SCUBA"
-  $ jq -S .normal.client_ip < "$SCUBA"
-  "$LOCALIP"
+  $ wait_for_json_record_count "$SCUBA" 1
   $ jq -S .normvector.client_identities < "$SCUBA"
   [
     "USER:test",
