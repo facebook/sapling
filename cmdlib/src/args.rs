@@ -6,7 +6,11 @@
  * directory of this source tree.
  */
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    sync::Arc,
+};
 
 use anyhow::{bail, format_err, Error, Result};
 use clap::{App, Arg, ArgGroup, ArgMatches};
@@ -17,7 +21,6 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::TermDecorator;
-use std::collections::HashSet;
 use std::str::FromStr;
 
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
@@ -883,7 +886,40 @@ pub fn get_i64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i64> {
     })
 }
 
-pub fn parse_disabled_hooks(matches: &ArgMatches, logger: &Logger) -> HashSet<String> {
+pub fn parse_disabled_hooks_with_repo_prefix(
+    matches: &ArgMatches,
+    logger: &Logger,
+) -> Result<HashMap<String, HashSet<String>>, Error> {
+    let disabled_hooks = matches
+        .values_of("disabled-hooks")
+        .map(|m| m.collect())
+        .unwrap_or(vec![]);
+
+    let mut res = HashMap::new();
+    for repohook in disabled_hooks {
+        let repohook: Vec<_> = repohook.splitn(2, ":").collect();
+        let repo = repohook.get(0);
+        let hook = repohook.get(1);
+
+        let (repo, hook) =
+            repo.and_then(|repo| hook.map(|hook| (repo, hook)))
+                .ok_or(format_err!(
+                    "invalid format of disabled hook, should be 'REPONAME:HOOKNAME'"
+                ))?;
+        res.entry(repo.to_string())
+            .or_insert(HashSet::new())
+            .insert(hook.to_string());
+    }
+    if res.len() > 0 {
+        warn!(logger, "The following Hooks were disabled: {:?}", res);
+    }
+    Ok(res)
+}
+
+pub fn parse_disabled_hooks_no_repo_prefix(
+    matches: &ArgMatches,
+    logger: &Logger,
+) -> HashSet<String> {
     let disabled_hooks: HashSet<String> = matches
         .values_of("disabled-hooks")
         .map(|m| m.collect())

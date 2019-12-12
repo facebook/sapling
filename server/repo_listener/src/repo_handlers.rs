@@ -215,7 +215,7 @@ pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
     caching: Caching,
-    disabled_hooks: &HashSet<String>,
+    disabled_hooks: &HashMap<String, HashSet<String>>,
     scuba_censored_table: Option<String>,
     readonly_storage: ReadOnlyStorage,
     root_log: &Logger,
@@ -249,7 +249,10 @@ pub fn repo_handlers(
             let ready_handle = ready.create_handle(reponame.clone());
 
             let repoid = config.repoid;
-            let disabled_hooks = disabled_hooks.clone();
+            let disabled_hooks = disabled_hooks
+                .get(&reponame)
+                .cloned()
+                .unwrap_or(HashSet::new());
 
             open_blobrepo(
                 fb,

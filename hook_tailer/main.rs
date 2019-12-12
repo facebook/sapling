@@ -19,7 +19,7 @@ use cloned::cloned;
 use cmdlib::helpers::create_runtime;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::{err, ok, result, Future};
+use futures::future::{err, ok, Future};
 use futures::stream::repeat;
 use futures::Stream;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -83,7 +83,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         excludes.extend(changesets);
     }
 
-    let disabled_hooks = cmdlib::args::parse_disabled_hooks(&matches, &logger);
+    let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
     let caching = cmdlib::args::init_cachelib(fb, &matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
@@ -119,7 +119,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .and_then({
                     cloned!(manifold_client);
                     move |excl| {
-                        result(Tailer::new(
+                        Tailer::new(
                             ctx,
                             blobrepo,
                             config.clone(),
@@ -127,7 +127,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                             manifold_client.clone(),
                             excl.into_iter().map(|(_, cs)| cs).collect(),
                             &disabled_hooks,
-                        ))
+                        )
                     }
                 })
                 .and_then({
