@@ -215,6 +215,13 @@ class HgServer(object):
                 continue
             self._commands[value.__COMMAND_ID__] = value
 
+        # Fetch the configuration for the depth to use when fetching trees.
+        # Setting this to a value larger than 1 causes the CMD_FETCH_TREE code to
+        # pre-fetch more children trees in addition to the specific tree that was
+        # requested.  This helps avoiding multiple round-trips when traversing into a
+        # directory.
+        self._treefetchdepth = self.repo.ui.configint("edenfs", "tree-fetch-depth")
+
     def serve(self):
         # Send a CMD_STARTED response to indicate we have started,
         # and include some information about the repository configuration.
@@ -497,12 +504,12 @@ class HgServer(object):
         if path:
             # We have to call repo._prefetchtrees() directly if we have a path.
             # We cannot compute the set of base nodes in this case.
-            self.repo._prefetchtrees(path, mfnodes, [], [], depth=1)
+            self.repo._prefetchtrees(path, mfnodes, [], [], depth=self._treefetchdepth)
             self.repo.commitpending()
         else:
             # When querying the top-level node use repo.prefetchtrees()
             # It will compute a reasonable set of base nodes to send in the query.
-            self.repo.prefetchtrees(mfnodes, depth=1)
+            self.repo.prefetchtrees(mfnodes, depth=self._treefetchdepth)
             self.repo.commitpending()
 
     def send_chunk(self, request, *data, **kwargs):

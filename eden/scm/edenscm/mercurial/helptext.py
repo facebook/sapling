@@ -965,6 +965,17 @@ The following options apply to all hosts.
     Optional. Bookmarks that should normally be present on client and server.
     Can be used to make fastdiscovery more precise
 
+``edenfs``
+---------
+
+Options that control the behavior of EdenFS.
+
+``tree-fetch-depth``
+    How many layers of children trees to fetch when downloading a directory listing from
+    the servers.  Higher values increase the latency of individual fetch operations, but
+    potentially help save having to send separate fetch requests later to download any
+    child trees that are needed.
+
 ``email``
 ---------
 
