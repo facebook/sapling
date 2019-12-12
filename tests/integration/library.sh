@@ -269,6 +269,18 @@ function mononoke_admin {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
+function mononoke_admin_source_target {
+  local source_repo_id=$1
+  shift
+  local target_repo_id=$1
+  shift
+  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
+    "${CACHING_ARGS[@]}" \
+    --source-repo-id "$source_repo_id" \
+    --target-repo-id "$target_repo_id" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function mononoke_admin_sourcerepo {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${CACHING_ARGS[@]}" \
