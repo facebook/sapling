@@ -1517,11 +1517,7 @@ class localrepository(object):
         unfi = self.unfiltered()
 
         def commitnotransaction(tr):
-            if "manifestlog" in unfi.__dict__:
-                self.manifestlog.commitpending()
-
-            if "fileslog" in unfi.__dict__:
-                self.fileslog.commitpending()
+            unfi.commitpending()
 
         def abortnotransaction(tr):
             if "manifestlog" in unfi.__dict__:

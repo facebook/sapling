@@ -29,4 +29,6 @@ sh % "setconfig 'remotefilelog.commitsperrepack=1'"
 sh % "echo x" > "x"
 sh % "hg commit -Am x" == r"""
     adding x
+    (running background incremental repack)
+    (running background incremental repack)
     (running background incremental repack)"""
