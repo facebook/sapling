@@ -188,6 +188,7 @@ def _hg_runner(
             "--maxdifflines=1000",
             "--with-hg",
             manifest_env["BINARY_HG"],
+            "--chg",
             "--outputdir",
             output_dir,
             *extra_args,
