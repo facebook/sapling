@@ -1292,10 +1292,14 @@ class ui(object):
         if self.tracebackflag or force:
             if exc is None:
                 exc = sys.exc_info()
+            fancy = self.configbool("ui", "fancy-traceback")
             cause = getattr(exc[1], "cause", None)
 
             if cause is not None:
-                causetb = traceback.format_tb(cause[2])
+                if fancy:
+                    causetb = util.smarttraceback(cause[2])
+                else:
+                    causetb = traceback.format_tb(cause[2])
                 exctb = traceback.format_tb(exc[2])
                 exconly = traceback.format_exception_only(cause[0], cause[1])
 
@@ -1307,8 +1311,13 @@ class ui(object):
                     "".join(exconly),
                 )
             else:
-                output = traceback.format_exception(exc[0], exc[1], exc[2])
-                data = r"".join(output)
+                if fancy:
+                    tb = util.smarttraceback(exc[2])
+                    output = traceback.format_exception(exc[0], exc[1], None)
+                    data = tb + r"".join(output)
+                else:
+                    output = traceback.format_exception(exc[0], exc[1], exc[2])
+                    data = r"".join(output)
                 if sys.version_info[0] >= 3:
                     enc = pycompat.sysstr(encoding.encoding)
                     data = data.encode(enc, errors=r"replace")

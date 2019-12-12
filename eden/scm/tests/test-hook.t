@@ -545,7 +545,7 @@ test python hooks
 
 The second egrep is to filter out lines like '    ^', which are slightly
 different between Python 2.6 and Python 2.7.
-  $ hg pull ../a --traceback 2>&1 | egrep -v '^( +File|    [_a-zA-Z*(])' | egrep -v '^( )+(\^)?$'
+  $ hg pull ../a --traceback 2>&1 | egrep -v '^( +File|    [_a-zA-Z*(])' | egrep -v '^  '
   pulling from ../a
   searching for changes
   exception from first failed import attempt:
@@ -702,7 +702,7 @@ make sure --traceback works on hook import failure
   $ echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
   $ echo a >> a
-  $ hg --traceback commit -ma 2>&1 | egrep -v '^( +File|    [a-zA-Z(])'
+  $ hg --traceback commit -ma 2>&1 | egrep -v '^  '
   exception from first failed import attempt:
   Traceback (most recent call last):
   ImportError: No module named somebogusmodule

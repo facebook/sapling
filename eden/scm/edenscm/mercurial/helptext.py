@@ -2395,6 +2395,9 @@ User interface controls.
     Encoding to try if it's not possible to decode the changelog using
     UTF-8. (default: ISO-8859-1)
 
+``fancy-traceback``
+    Render local variables in traceback. (default: True)
+
 ``gitignore``
     Respect ``.gitignore`` in every directory. (default: False)
 
