@@ -27,12 +27,12 @@ use std::{
 
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use metaconfig_thrift::{
+use mononoke_types::{MPath, RepositoryId};
+use regex::Regex;
+use repos::{
     RawBlobstoreConfig, RawDbConfig, RawFilestoreParams, RawShardedFilenodesParams,
     RawSourceControlServiceMonitoring, RawStorageConfig,
 };
-use mononoke_types::{MPath, RepositoryId};
-use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql_async::{

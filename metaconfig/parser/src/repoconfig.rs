@@ -25,10 +25,6 @@ use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use failure_ext::chain::ChainExt;
 use itertools::Itertools;
-use metaconfig_thrift::{
-    RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
-    RawInfinitepushParams, RawRepoConfig, RawStorageConfig, RawWireprotoLoggingConfig,
-};
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, HookBypass,
@@ -39,6 +35,10 @@ use metaconfig_types::{
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
+use repos::{
+    RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
+    RawInfinitepushParams, RawRepoConfig, RawStorageConfig, RawWireprotoLoggingConfig,
+};
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
