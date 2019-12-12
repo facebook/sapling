@@ -34,6 +34,21 @@ impl MononokePath {
     pub fn prefixes(&self) -> MononokePathPrefixes {
         MononokePathPrefixes::new(self)
     }
+
+    /// Whether this path is a path prefix of the given path.
+    /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
+    pub fn is_prefix_of(&self, other: &Self) -> bool {
+        match (self.0.as_ref(), other.0.as_ref()) {
+            (None, _) => true,
+            (_, None) => false,
+            (Some(self_mpath), Some(other_mpath)) => self_mpath.is_prefix_of(other_mpath),
+        }
+    }
+
+    /// Whether self is prefix of other or the other way arround.
+    pub fn is_related_to(&self, other: &Self) -> bool {
+        self.is_prefix_of(other) || other.is_prefix_of(&self)
+    }
 }
 
 // Because of conflicting generic traits, we cannot implement this
@@ -119,5 +134,24 @@ impl Iterator for MononokePathPrefixes {
                 Some(path)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn path_relations() -> Result<(), MononokeError> {
+        let x = MononokePath::try_from("a/b/c")?;
+        let y = MononokePath::try_from("a/b")?;
+        let z = MononokePath::try_from("a/d")?;
+        assert!(y.is_prefix_of(&x));
+        assert!(!z.is_prefix_of(&x));
+        assert!(x.is_prefix_of(&x));
+        assert!(!x.is_prefix_of(&y));
+        assert!(x.is_related_to(&y));
+        assert!(!x.is_related_to(&z));
+        Ok(())
     }
 }
