@@ -59,7 +59,7 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
   new changesets c2e526aacb51
   $ hgmn up master_bookmark
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgmn debugsh -c 'print(m.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
+  $ hgmn debugsh -c 'ui.write("%s\n" % m.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
   c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
   $ cd ../repo2
 
@@ -404,7 +404,7 @@ Test non-fast-forward force pushrebase
   new changesets 7796136324ad:4899f9112d9b
   $ hgmn up newbook
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgmn debugsh -c 'print(m.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
+  $ hgmn debugsh -c 'ui.write("%s\n" % m.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
   4899f9112d9b79c3ecbc343169db37fbe1efdd20
   $ cd ../repo2
 
