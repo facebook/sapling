@@ -80,6 +80,10 @@ diff
   new file mode 100644
   Binary file binary has changed
 
+  $ scsc diff --repo repo --paths-only -B BOOKMARK_B -i "$COMMIT_C"
+  M b
+  A binary
+
   $ scsc diff --repo repo -i "$COMMIT_B" -i "$COMMIT_D"
   diff --git a/b b/copied_b
   copy from b
@@ -94,6 +98,10 @@ diff
    d
    e
   +x
+
+  $ scsc diff --repo repo --paths-only -i "$COMMIT_B" -i "$COMMIT_D"
+  C b -> copied_b
+  R a -> moved_a
 
   $ scsc diff --repo repo -i "$COMMIT_B"
   diff --git a/b b/b
