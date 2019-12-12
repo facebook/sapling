@@ -74,29 +74,16 @@ Remove the directory, then try to replace it with a file (issue754)
   converting...
   5 t1
   progress: converting: 0/6 revisions (0.00%)
-  progress: getting files: a 1/2 files (50.00%)
-  progress: getting files: d/b 2/2 files (100.00%)
-  progress: getting files (end)
   4 t2
   progress: converting: 1/6 revisions (16.67%)
-  progress: getting files: d/b 1/1 files (100.00%)
-  progress: getting files (end)
   3 t3
   progress: converting: 2/6 revisions (33.33%)
-  progress: getting files: d 1/1 files (100.00%)
-  progress: getting files (end)
   2 t4.1
   progress: converting: 3/6 revisions (50.00%)
-  progress: getting files: a 1/1 files (100.00%)
-  progress: getting files (end)
   1 t4.2
   progress: converting: 4/6 revisions (66.67%)
-  progress: getting files: a 1/1 files (100.00%)
-  progress: getting files (end)
   0 Merge branch other
   progress: converting: 5/6 revisions (83.33%)
-  progress: getting files: a 1/1 files (100.00%)
-  progress: getting files (end)
   progress: converting (end)
   updating bookmarks
   $ hg up -q -R git-repo-hg
@@ -187,48 +174,22 @@ full conversion
   converting...
   8 add foo
   progress: converting: 0/9 revisions (0.00%)
-  progress: getting files: foo 1/1 files (100.00%)
-  progress: getting files (end)
   7 change foo
   progress: converting: 1/9 revisions (11.11%)
-  progress: getting files: foo 1/1 files (100.00%)
-  progress: getting files (end)
   6 add quux
   progress: converting: 2/9 revisions (22.22%)
-  progress: getting files: quux 1/1 files (100.00%)
-  progress: getting files (end)
   5 add bar
   progress: converting: 3/9 revisions (33.33%)
-  progress: getting files: bar 1/1 files (100.00%)
-  progress: getting files (end)
   4 add baz
   progress: converting: 4/9 revisions (44.44%)
-  progress: getting files: baz 1/1 files (100.00%)
-  progress: getting files (end)
   3 Octopus merge
   progress: converting: 5/9 revisions (55.56%)
-  progress: getting files: bar 1/8 files (12.50%)
-  progress: getting files: foo 2/8 files (25.00%)
-  progress: getting files: quux 3/8 files (37.50%)
-  progress: getting files: baz 4/8 files (50.00%)
-  progress: getting files: bar 5/8 files (62.50%)
-  progress: getting files: baz 6/8 files (75.00%)
-  progress: getting files: foo 7/8 files (87.50%)
-  progress: getting files: quux 8/8 files (100.00%)
-  progress: getting files (end)
   2 change bar
   progress: converting: 6/9 revisions (66.67%)
-  progress: getting files: bar 1/1 files (100.00%)
-  progress: getting files (end)
   1 change foo
   progress: converting: 7/9 revisions (77.78%)
-  progress: getting files: foo 1/1 files (100.00%)
-  progress: getting files (end)
   0 Discard change to foo
   progress: converting: 8/9 revisions (88.89%)
-  progress: getting files: bar 1/2 files (50.00%)
-  progress: getting files: foo 2/2 files (100.00%)
-  progress: getting files (end)
   progress: converting (end)
   updating bookmarks
   $ hg up -q -R fullrepo

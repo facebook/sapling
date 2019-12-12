@@ -137,14 +137,15 @@ def convertsink(ui, path, type):
 
 
 class progresssource(object):
-    def __init__(self, source, prog):
+    def __init__(self, source, prog=None):
         self.source = source
         self.prog = prog
         self.retrieved = 0
 
     def getfile(self, file, rev):
         self.retrieved += 1
-        self.prog.value = (self.retrieved, file)
+        if self.prog:
+            self.prog.value = (self.retrieved, file)
         return self.source.getfile(file, rev)
 
     def targetfilebelongstosource(self, targetfilename):
@@ -486,22 +487,11 @@ class converter(object):
             parents.extend(self.map[x] for x in commit.optparents if x in self.map)
         if len(pbranches) != 2:
             cleanp2 = set()
-        if len(parents) < 3:
-            sourcelength = len(files)
-        else:
-            # For an octopus merge, we end up traversing the list of
-            # changed files N-1 times. This tweak to the number of
-            # files makes it so the progress bar doesn't overflow
-            # itself.
-            sourcelength = len(files) * (len(parents) - 1)
 
-        with progress.bar(
-            self.ui, _("getting files"), _("files"), sourcelength
-        ) as prog:
-            source = progresssource(self.source, prog)
-            newnode = self.dest.putcommit(
-                files, copies, parents, commit, source, self.map, full, cleanp2
-            )
+        source = progresssource(self.source)
+        newnode = self.dest.putcommit(
+            files, copies, parents, commit, source, self.map, full, cleanp2
+        )
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
 
