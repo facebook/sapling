@@ -44,15 +44,9 @@ const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
 
-/// Configuration of a metaconfig repository
-#[derive(Debug, Eq, PartialEq)]
-pub struct MetaConfig {}
-
 /// Holds configuration all configuration that was read from metaconfig repository's manifest.
 #[derive(Debug, PartialEq)]
 pub struct RepoConfigs {
-    /// Config for the config repository
-    pub metaconfig: MetaConfig,
     /// Configs for all other repositories
     pub repos: HashMap<String, RepoConfig>,
     /// Common configs for all repos
@@ -97,7 +91,6 @@ impl RepoConfigs {
 
         let common = maybe_common_config.unwrap_or(Default::default());
         Ok(Self {
-            metaconfig: MetaConfig {},
             repos: repo_configs,
             common,
         })
