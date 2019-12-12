@@ -13,8 +13,21 @@ import os
 import struct
 import sys
 import time
+import typing
+from typing import IO, Any, Callable, Optional, Tuple, TypeVar
 
-from .. import error, extensions, hg, pycompat, scmutil, txnutil, ui, util
+from .. import (
+    context,
+    error,
+    extensions,
+    hg,
+    localrepo,
+    pycompat,
+    scmutil,
+    txnutil,
+    ui,
+    util,
+)
 from ..i18n import _
 from .cmdtable import command
 
@@ -23,6 +36,7 @@ if pycompat.iswindows:
     from msvcrt import open_osfhandle
 
     def fdopen(handle, mode):
+        # type: (int, str) -> IO[Any]
         os_mode = os.O_WRONLY if mode == "wb" else os.O_RDONLY
         fileno = open_osfhandle(handle, os_mode)
         return util.fdopen(fileno, mode)
@@ -31,10 +45,13 @@ if pycompat.iswindows:
 else:
 
     def fdopen(handle, mode):
+        # type: (int, str) -> IO[Any]
         return util.fdopen(handle, mode)
 
 
 hex = binascii.hexlify
+
+AttributeType = TypeVar("AttributeType")
 
 
 #
@@ -121,6 +138,7 @@ FLAG_MORE_CHUNKS = 0x02
 
 class Request(object):
     def __init__(self, txn_id, command, flags, body):
+        # type: (int, int, int, bytes) -> None
         self.txn_id = txn_id
         self.command = command
         self.flags = flags
@@ -140,17 +158,20 @@ class ResetRepoError(Exception):
     """
 
     def __init__(self, original_error):
+        # type: (Exception) -> None
         super(ResetRepoError, self).__init__(
             "hg repository needs to be re-opened: %s" % (original_error,)
         )
 
 
 def cmd(command_id):
+    # type: (int) -> Callable[[Callable[[Request], None]], Callable[[Request], None]]
     """
     A helper function for identifying command functions
     """
 
     def decorator(func):
+        # type: (Callable[[Request], None]) -> Callable[[Request], None]
         func.__COMMAND_ID__ = command_id
         return func
 
@@ -159,6 +180,7 @@ def cmd(command_id):
 
 class HgUI(ui.ui):
     def __init__(self, src=None):
+        # type: (Optional[ui.ui]) -> None
         super(HgUI, self).__init__(src=src)
         # Always print to stderr, never to stdout.
         # We normally use stdout as the pipe to communicate with the main
@@ -170,14 +192,17 @@ class HgUI(ui.ui):
         self.ferr = sys.stderr
 
     def plain(self, feature=None):
+        # type: (Optional[str]) -> bool
         return True
 
     def interactive(self):
+        # type: () -> bool
         return False
 
 
 class HgServer(object):
     def __init__(self, repo, in_fd=None, out_fd=None):
+        # type: (localrepo.localrepository, Optional[bytes], Optional[bytes]) -> None
         """
         Create an HgServer.
 
@@ -223,6 +248,7 @@ class HgServer(object):
         self._treefetchdepth = self.repo.ui.configint("edenfs", "tree-fetch-depth")
 
     def serve(self):
+        # type: () -> int
         # Send a CMD_STARTED response to indicate we have started,
         # and include some information about the repository configuration.
         options_chunk = self._gen_options()
@@ -237,9 +263,11 @@ class HgServer(object):
         return 0
 
     def _is_mononoke_supported(self, name):
+        # type: (str) -> bool
         return name in ["fbsource", "www"]
 
     def _gen_options(self):
+        # type: () -> bytes
         from edenscm.hgext.remotefilelog import shallowutil, constants
 
         repo_name = getattr(self.repo, "name", None)
@@ -281,12 +309,19 @@ class HgServer(object):
             parts.append(struct.pack(b">I", len(repo_name)))
             parts.append(repo_name)
 
-        return "".join(parts)
+        return b"".join(parts)
 
     def debug(self, msg, *args, **kwargs):
+        # type: (str, Any, Any) -> None
         logging.debug(msg, *args, **kwargs)
 
     def process_request(self):
+        # type: () -> bool
+        """
+        Process a single request.
+        Returns True if the server should continue running, and False if the server
+        should exit.
+        """
         # Read the request header
         header_data = self.in_file.read(HEADER_SIZE)
         if not header_data:
@@ -322,6 +357,7 @@ class HgServer(object):
 
     @cmd(CMD_MANIFEST)
     def cmd_manifest(self, request):
+        # type: (Request) -> None
         """
         Handler for CMD_MANIFEST requests.
 
@@ -358,6 +394,7 @@ class HgServer(object):
 
     @cmd(CMD_OLD_CAT_FILE)
     def cmd_old_cat_file(self, request):
+        # type: (Request) -> None
         """Handler for CMD_OLD_CAT_FILE requests.
 
         This requests the contents for a given file.
@@ -384,6 +421,7 @@ class HgServer(object):
 
     @cmd(CMD_CAT_FILE)
     def cmd_cat_file(self, request):
+        # type: (Request) -> None
         """CMD_CAT_FILE: get the contents of a file.
 
         Request body format:
@@ -414,6 +452,7 @@ class HgServer(object):
 
     @cmd(CMD_GET_FILE_SIZE)
     def cmd_get_file_size(self, request):
+        # type: (Request) -> None
         """CMD_GET_FILE_SIZE: get the size of a file.
 
         Request body format:
@@ -439,6 +478,7 @@ class HgServer(object):
 
     @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
     def cmd_manifest_node_for_commit(self, request):
+        # type: (Request) -> None
         """
         Handler for CMD_MANIFEST_NODE_FOR_COMMIT requests.
 
@@ -469,6 +509,7 @@ class HgServer(object):
 
     @cmd(CMD_FETCH_TREE)
     def cmd_fetch_tree(self, request):
+        # type: (Request) -> None
         if len(request.body) < SHA1_NUM_BYTES:
             raise RuntimeError(
                 "fetch_tree request data too short: len=%d" % len(request.body)
@@ -484,6 +525,7 @@ class HgServer(object):
         self.send_chunk(request, b"")
 
     def fetch_tree(self, path, manifest_node):
+        # type: (bytes, bytes) -> None
         if self.treemanifest is None:
             raise RuntimeError("treemanifest not enabled in this repository")
 
@@ -500,6 +542,7 @@ class HgServer(object):
             raise ResetRepoError(ex)
 
     def _fetch_tree_impl(self, path, manifest_node):
+        # type: (bytes, bytes) -> None
         mfnodes = set([manifest_node])
         if path:
             # We have to call repo._prefetchtrees() directly if we have a path.
@@ -513,6 +556,7 @@ class HgServer(object):
             self.repo.commitpending()
 
     def send_chunk(self, request, *data, **kwargs):
+        # type: (Request, bytes, Any) -> None
         is_last = kwargs.pop("is_last", True)
         if kwargs:
             raise TypeError("unexpected keyword arguments: %r" % (kwargs.keys(),))
@@ -522,13 +566,18 @@ class HgServer(object):
             flags |= FLAG_MORE_CHUNKS
 
         self._send_chunk(
-            request.txn_id, command=CMD_RESPONSE, flags=flags, data_blocks=data
+            request.txn_id,
+            command=CMD_RESPONSE,
+            flags=flags,
+            data_blocks=typing.cast(Tuple[bytes], data),
         )
 
     def send_exception(self, request, exc):
+        # type: (Request, Exception) -> None
         self.send_error(request, type(exc).__name__, str(exc))
 
     def send_error(self, request, error_type, message):
+        # type: (Request, str, str) -> None
         txn_id = 0
         if request is not None:
             txn_id = request.txn_id
@@ -536,9 +585,9 @@ class HgServer(object):
         data = b"".join(
             [
                 struct.pack(b">I", len(error_type)),
-                error_type,
+                error_type.encode("utf-8", errors="surrogateescape"),
                 struct.pack(b">I", len(message)),
-                message,
+                message.encode("utf-8", errors="surrogateescape"),
             ]
         )
         self._send_chunk(
@@ -546,6 +595,7 @@ class HgServer(object):
         )
 
     def _send_chunk(self, txn_id, command, flags, data_blocks):
+        # type: (int, int, int, Tuple[bytes]) -> None
         data_length = sum(len(block) for block in data_blocks)
         header = struct.pack(HEADER_FORMAT, txn_id, command, flags, data_length)
         self.out_file.write(header)
@@ -554,6 +604,7 @@ class HgServer(object):
         self.out_file.flush()
 
     def dump_manifest(self, rev, request):
+        # type: (bytes, Request) -> None
         """
         Send the manifest data.
         """
@@ -599,6 +650,7 @@ class HgServer(object):
         )
 
     def _get_manifest_node_impl(self, rev):
+        # type: (bytes) -> bytes
         ctx = scmutil.revsingle(self.repo, rev)
         node_hash = ctx.manifestnode()
         if not node_hash:
@@ -615,6 +667,7 @@ class HgServer(object):
         return node_hash
 
     def get_manifest_node(self, rev):
+        # type: (bytes) -> bytes
         try:
             return self._get_manifest_node_impl(rev)
         except Exception:
@@ -633,12 +686,16 @@ class HgServer(object):
             return self._get_manifest_node_impl(rev)
 
     def get_file(self, path, rev_hash):
+        # type: (bytes, bytes) -> bytes
         return self.get_file_attribute(path, rev_hash, "data", lambda fctx: fctx.data())
 
     def get_file_size(self, path, rev_hash):
+        # type: (bytes, bytes) -> int
         return self.get_file_attribute(path, rev_hash, "size", lambda fctx: fctx.size())
 
     def get_file_attribute(self, path, rev_hash, attr, attr_of):
+        # type: (bytes, bytes, str, Callable[[context.filectx], AttributeType])
+        #       -> AttributeType
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
         except Exception:
@@ -675,10 +732,12 @@ class HgServer(object):
 
     @cmd(CMD_PREFETCH_FILES)
     def prefetch_files(self, request):
+        # type: (Request) -> None
         self._do_prefetch(request)
-        self.send_chunk(request, "")
+        self.send_chunk(request, b"")
 
     def _do_prefetch(self, request):
+        # type: (Request) -> None
         # Some repos may not have remotefilelog enabled; for example,
         # the watchman integration tests have no remote server and no
         # remotefilelog.
@@ -721,14 +780,17 @@ class HgServer(object):
 
 
 def always_allow_pending(root):
+    # type: (bytes) -> bool
     return True
 
 
 def always_allow_shared_pending(root, sharedroot):
+    # type: (bytes, bytes) -> bool
     return True
 
 
 def _open_repo(orig_ui, repo_path):
+    # type: (ui.ui, bytes) -> localrepo.localrepository
     ui = HgUI.load()
 
     for section, name, value in orig_ui.walkconfig():
@@ -756,40 +818,44 @@ def _open_repo(orig_ui, repo_path):
 
 
 def runedenimporthelper(repo, **opts):
+    # type: (localrepo.localrepository, bytes) -> int
     server = HgServer(repo, in_fd=opts.get("in_fd"), out_fd=opts.get("out_fd"))
 
-    if opts.get("get_manifest_node"):
-        node = server.get_manifest_node(opts.get("get_manifest_node"))
+    get_manifest_node_arg = opts.get("get_manifest_node")
+    if get_manifest_node_arg:
+        node = server.get_manifest_node(get_manifest_node_arg)
         print(hex(node))
         return 0
 
-    if opts.get("manifest"):
-        request = Request(0, CMD_MANIFEST, flags=0, body=opts.get("manifest"))
-        server.dump_manifest(opts.get("manifest"), request)
+    manifest_arg = opts.get("manifest")
+    if manifest_arg:
+        request = Request(0, CMD_MANIFEST, flags=0, body=manifest_arg)
+        server.dump_manifest(manifest_arg, request)
         return 0
 
-    if opts.get("cat_file"):
-        path, file_rev_str = opts.get("cat_file").rsplit(":", -1)
-        path = path.encode(sys.getfilesystemencoding())
+    cat_file_arg = opts.get("cat_file")
+    if cat_file_arg:
+        path, file_rev_str = cat_file_arg.rsplit(b":", -1)
         file_rev = binascii.unhexlify(file_rev_str)
         data = server.get_file(path, file_rev)
-        sys.stdout.write(data)
+        pycompat.stdout.write(data)
         return 0
 
-    if opts.get("get_file_size"):
-        path, id_str = opts.get("get_file_size").rsplit(":", -1)
-        path = path.encode(sys.getfilesystemencoding())
+    get_file_size_arg = opts.get("get_file_size")
+    if get_file_size_arg:
+        path, id_str = get_file_size_arg.rsplit(b":", -1)
         id = binascii.unhexlify(id_str)
         size = server.get_file_size(path, id)
         sys.stdout.write("{}\n".format(size))
         return 0
 
-    if opts.get("fetch_tree"):
-        parts = opts.get("fetch_tree").rsplit(":", -1)
+    fetch_tree_arg = opts.get("fetch_tree")
+    if fetch_tree_arg:
+        parts = fetch_tree_arg.rsplit(b":", -1)
         if len(parts) == 1:
             path = parts[0]
             if path == "":
-                manifest_node = server.get_manifest_node(".")
+                manifest_node = server.get_manifest_node(b".")
             else:
                 # TODO: It would be nice to automatically look up the current
                 # manifest node ID for this path and use that here, assuming
@@ -814,6 +880,7 @@ def runedenimporthelper(repo, **opts):
         return server.serve()
     except KeyboardInterrupt:
         logging.debug("hg_import_helper received interrupt; shutting down")
+        return 0
 
 
 @command(
@@ -881,6 +948,7 @@ def runedenimporthelper(repo, **opts):
     optionalrepo=True,
 )
 def eden_import_helper(ui, repo, *repo_args, **opts):
+    # type: (ui.ui, Optional[localrepo.localrepository], bytes, bytes) -> int
     """Obtain data for edenfs"""
     logging.basicConfig(
         stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(message)s"
@@ -923,6 +991,7 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
 
 @command("debugedenrunpostupdatehook", [])
 def edenrunpostupdatehook(ui, repo):
+    # type: (ui.ui, localrepo.localrepository) -> None
     """Run post-update hooks for edenfs"""
     with repo.wlock():
         # this isn't at the top of the file because there's already a
