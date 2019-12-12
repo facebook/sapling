@@ -25,7 +25,7 @@ use futures_util::try_future::{try_join, try_join_all};
 use futures_util::try_stream::TryStreamExt;
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use mercurial_types::Globalrev;
-use mononoke_types::{BonsaiChangeset, MPathElement};
+use mononoke_types::{BonsaiChangeset, MPath, MPathElement};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
@@ -284,12 +284,25 @@ impl ChangesetContext {
     ///
     /// `self` is considered the "new" changeset (so files missing there are "Removed")
     /// `other` is considered the "old" changeset (so files missing there are "Added")
-    /// include_copies_renames is only available for diffing commits with its parent
+    /// `include_copies_renames` is only available for diffing commits with its parent
+    /// `path_restrictions` if present will narrow down the diff to given paths
     pub async fn diff(
         &self,
         other: ChangesetId,
         include_copies_renames: bool,
+        path_restrictions: Option<Vec<MononokePath>>,
     ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+        // Helper to that checks if a path is within the givien path restrictions
+        fn within_restrictions(
+            path: Option<MPath>,
+            path_restrictions: &Option<Vec<MononokePath>>,
+        ) -> bool {
+            let mononoke_path = MononokePath::new(path);
+            path_restrictions.as_ref().map_or(true, |i| {
+                i.iter()
+                    .any(|path_restriction| mononoke_path.is_related_to(&path_restriction))
+            })
+        }
         let other = ChangesetContext::new(self.repo.clone(), other);
         let bonsai = self.bonsai_changeset().await?;
 
@@ -325,16 +338,29 @@ impl ChangesetContext {
             try_join(self.root_fsnode_id(), other.root_fsnode_id()).await?;
         let change_contexts = other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
             .fsnode_id()
-            .diff(
+            .filtered_diff(
                 self.ctx().clone(),
                 self.repo().blob_repo().get_blobstore(),
                 self_manifest_root.fsnode_id().clone(),
+                Some,
+                {
+                    cloned!(path_restrictions);
+                    move |tree_diff| match tree_diff {
+                        ManifestDiff::Added(path, ..)
+                        | ManifestDiff::Changed(path, ..)
+                        | ManifestDiff::Removed(path, ..) => {
+                            within_restrictions(path.clone(), &path_restrictions)
+                        }
+                    }
+                },
             )
             .compat()
             .try_filter_map(|diff_entry| {
                 future::ok(match diff_entry {
                     ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
-                        if let Some(from_path) = inv_copy_path_map.get(&&path) {
+                        if !within_restrictions(Some(path.clone()), &path_restrictions) {
+                            None
+                        } else if let Some(from_path) = inv_copy_path_map.get(&&path) {
                             // There's copy information that we can use.
                             if copied_paths.contains(from_path) {
                                 // If the source still exists in the current commit it was a copy.
@@ -360,6 +386,8 @@ impl ChangesetContext {
                         if let Some(_) = copy_path_map.get(&path) {
                             // The file is was moved (not removed), it will be covered by a "Moved" entry.
                             None
+                        } else if !within_restrictions(Some(path.clone()), &path_restrictions) {
+                            None
                         } else {
                             Some(ChangesetPathDiffContext::Removed(
                                 ChangesetPathContext::new(other.clone(), path),
@@ -370,10 +398,16 @@ impl ChangesetContext {
                         Some(path),
                         ManifestEntry::Leaf(_a),
                         ManifestEntry::Leaf(_b),
-                    ) => Some(ChangesetPathDiffContext::Changed(
-                        ChangesetPathContext::new(self.clone(), path.clone()),
-                        ChangesetPathContext::new(other.clone(), path),
-                    )),
+                    ) => {
+                        if !within_restrictions(Some(path.clone()), &path_restrictions) {
+                            None
+                        } else {
+                            Some(ChangesetPathDiffContext::Changed(
+                                ChangesetPathContext::new(self.clone(), path.clone()),
+                                ChangesetPathContext::new(other.clone(), path),
+                            ))
+                        }
+                    }
                     // We don't care about diffs not involving leaves
                     _ => None,
                 })

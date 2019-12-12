@@ -7,7 +7,7 @@
  */
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use futures_util::{stream, try_future, try_join, StreamExt, TryStreamExt};
 use mononoke_api::{
@@ -246,8 +246,17 @@ impl SourceControlServiceImpl {
                     ))
                 })?,
         };
+        let paths: Option<Vec<MononokePath>> = match params.paths {
+            None => None,
+            Some(paths) => Some(
+                paths
+                    .iter()
+                    .map(|path| path.try_into())
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+        };
         let diff = base_changeset
-            .diff(other_changeset_id, !params.skip_copies_renames)
+            .diff(other_changeset_id, !params.skip_copies_renames, paths)
             .await?;
         let diff_files = stream::iter(diff)
             .map(|d| d.into_response())

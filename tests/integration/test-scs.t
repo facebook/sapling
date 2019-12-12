@@ -47,6 +47,13 @@ A commit with file move and copy
   $ hg cp b copied_b
   $ commit D
 
+A commit that adds thigs in two different subdirectories
+  $ mkdir dir_a dir_b
+  $ hg move moved_a dir_a/a
+  $ echo x >> dir_a/a
+  $ echo y > dir_b/y
+  $ hg add dir_b/y
+  $ commit E
 
 import testing repo to mononoke
   $ cd ..
@@ -99,9 +106,40 @@ diff
    e
   +x
 
+paths-only mode
+
   $ scsc diff --repo repo --paths-only -i "$COMMIT_B" -i "$COMMIT_D"
   C b -> copied_b
   R a -> moved_a
+
+  $ scsc diff --repo repo --paths-only -i "$COMMIT_D" -i "$COMMIT_E"
+  A dir_b/y
+  R moved_a -> dir_a/a
+
+test filtering paths in diff
+
+  $ scsc diff --repo repo --paths-only -B BOOKMARK_B -i "$COMMIT_C" -p binary
+  A binary
+
+  $ scsc diff --repo repo --paths-only -B BOOKMARK_B -i "$COMMIT_C" -p x/y
+
+  $ scsc diff --repo repo --paths-only -i "$COMMIT_D" -i "$COMMIT_E" --path dir_a/
+  R moved_a -> dir_a/a
+
+  $ scsc diff --repo repo -i "$COMMIT_D" -i "$COMMIT_E" --path dir_a/a
+  diff --git a/moved_a b/dir_a/a
+  rename from moved_a
+  rename to dir_a/a
+  --- a/moved_a
+  +++ b/dir_a/a
+  @@ -4,3 +4,4 @@
+   d
+   e
+   x
+  +x
+
+  $ scsc diff --repo repo --paths-only -i "$COMMIT_D" -i "$COMMIT_E" --path dir_b/
+  A dir_b/y
 
   $ scsc diff --repo repo -i "$COMMIT_B"
   diff --git a/b b/b
