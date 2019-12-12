@@ -54,7 +54,7 @@ def doctor(ui, repo, **opts):
                 ui,
                 "indexedloghistorystore",
                 path,
-                revisionstore.indexedlogdatastore.repair,
+                revisionstore.indexedloghistorystore.repair,
             )
 
 
