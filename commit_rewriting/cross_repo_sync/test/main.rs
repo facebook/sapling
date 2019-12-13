@@ -8,7 +8,7 @@
 
 //! Tests for the synced commits mapping.
 
-#![allow(warnings)]
+#![deny(warnings)]
 
 use async_unit;
 use bytes::Bytes;
@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, format_err, Error};
+use anyhow::{bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
 use blobstore::Storable;
@@ -28,21 +28,16 @@ use context::CoreContext;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 
 use fixtures::{linear, many_files_dirs};
-use futures_util::try_future::TryFutureExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
 };
-use std::collections::HashMap;
-use std::convert::TryFrom;
 use synced_commit_mapping::{
     SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
 
-use cross_repo_sync::{
-    rewrite_commit_compat, upload_commits_compat, CommitSyncRepos, CommitSyncer,
-};
+use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
@@ -655,7 +650,7 @@ fn maybe_replace_prefix(
     }
 }
 
-fn sync_implicit_deletes(fb: FacebookInit) {
+fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
     let repo = many_files_dirs::getrepo(fb);
@@ -701,7 +696,7 @@ fn sync_implicit_deletes(fb: FacebookInit) {
         repo.get_repoid(),
         repo_initial_bcs_id,
     );
-    mapping.add(ctx.clone(), entry).wait();
+    mapping.add(ctx.clone(), entry).wait()?;
 
     // d261bc7900818dea7c86935b3fb17a33b2e3a6b4 from "many_files_dirs" should sync cleanly
     // on top of master. Among others, it introduces the following files:
@@ -714,7 +709,7 @@ fn sync_implicit_deletes(fb: FacebookInit) {
         HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap(),
     );
 
-    let megarepo_repo_base_bcs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_base_bcs_id)
+    sync_to_master(ctx.clone(), &commit_syncer, repo_base_bcs_id)
         .expect("Unexpectedly failed to rewrite 1")
         .expect("Unexpectedly rewritten into nothingness");
 
@@ -749,11 +744,13 @@ fn sync_implicit_deletes(fb: FacebookInit) {
     // there are no other entries in `file_changes` as other implicit deletes where
     // removed by the minimization process
     assert_eq!(file_changes.len(), 2);
+
+    Ok(())
 }
 
 #[fbinit::test]
 fn test_sync_implicit_deletes(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || sync_implicit_deletes(fb))
+    async_unit::tokio_unit_test(move || sync_implicit_deletes(fb).unwrap())
 }
 
 fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
