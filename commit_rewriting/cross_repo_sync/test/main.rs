@@ -19,24 +19,30 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, Error};
+use anyhow::{bail, format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
 use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
+use cross_repo_sync_test_utils::rebase_root_on_master;
+
 use fixtures::{linear, many_files_dirs};
+use futures_util::try_future::TryFutureExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
 };
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use synced_commit_mapping::{
     SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
 
-use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{
+    rewrite_commit_compat, upload_commits_compat, CommitSyncRepos, CommitSyncer,
+};
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
@@ -230,10 +236,11 @@ fn sync_parentage(fb: FacebookInit) {
     let expected_bcs_id =
         ChangesetId::from_str("8966842d2031e69108028d6f0ce5812bca28cae53679d066368a8c1472a5bb9a")
             .ok();
-    let megarepo_base_bcs_id = sync_to_master(ctx.clone(), &config, linear_base_bcs_id).unwrap();
 
+    let megarepo_base_bcs_id =
+        rebase_root_on_master(ctx.clone(), &config, linear_base_bcs_id).unwrap();
     // Confirm that we got the expected conversion
-    assert_eq!(megarepo_base_bcs_id, expected_bcs_id);
+    assert_eq!(Some(megarepo_base_bcs_id), expected_bcs_id);
     check_mapping(ctx.clone(), &config, linear_base_bcs_id, expected_bcs_id);
 
     // Finally, sync another commit
@@ -255,7 +262,7 @@ fn sync_parentage(fb: FacebookInit) {
             .get_changeset_parents_by_bonsai(ctx.clone(), megarepo_second_bcs_id.unwrap())
             .wait()
             .unwrap(),
-        vec![megarepo_base_bcs_id.unwrap()]
+        vec![megarepo_base_bcs_id]
     );
 }
 
@@ -339,14 +346,12 @@ fn sync_causes_conflict(fb: FacebookInit) {
     create_initial_commit(ctx.clone(), &megarepo);
 
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
-    // As this is the first commit from linear, it'll rewrite cleanly - note that it *cannot* have
-    // path conflicts, definitionally, as it will simply overwrite files/dirs in master if needed.
     let linear_base_bcs_id = get_bcs_id(
         ctx.clone(),
         &linear_config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     );
-    sync_to_master(ctx.clone(), &linear_config, linear_base_bcs_id).unwrap();
+    rebase_root_on_master(ctx.clone(), &linear_config, linear_base_bcs_id).unwrap();
 
     // Change master_file
     update_master_file(ctx.clone(), &megarepo);
@@ -408,7 +413,7 @@ fn sync_empty_commit(fb: FacebookInit) {
         &stl_config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     );
-    sync_to_master(ctx.clone(), &stl_config, linear_base_bcs_id).unwrap();
+    rebase_root_on_master(ctx.clone(), &stl_config, linear_base_bcs_id).unwrap();
 
     // Sync an empty commit back to linear
     let megarepo_empty_bcs_id = create_empty_commit(ctx.clone(), &megarepo);
@@ -523,7 +528,7 @@ fn sync_copyinfo(fb: FacebookInit) {
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     );
     let megarepo_linear_base_bcs_id =
-        sync_to_master(ctx.clone(), &stl_config, linear_base_bcs_id).unwrap();
+        rebase_root_on_master(ctx.clone(), &stl_config, linear_base_bcs_id).unwrap();
 
     // Fetch master from linear - the pushrebase in a remap will change copyinfo
     let linear_master_bcs_id = {
@@ -536,7 +541,7 @@ fn sync_copyinfo(fb: FacebookInit) {
     };
 
     let megarepo_copyinfo_commit =
-        megarepo_copy_file(ctx.clone(), &megarepo, megarepo_linear_base_bcs_id.unwrap());
+        megarepo_copy_file(ctx.clone(), &megarepo, megarepo_linear_base_bcs_id);
     let linear_copyinfo_bcs_id =
         sync_to_master(ctx.clone(), &lts_config, megarepo_copyinfo_commit).unwrap();
 
@@ -616,10 +621,10 @@ fn sync_remap_failure(fb: FacebookInit) {
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     );
     let megarepo_linear_base_bcs_id =
-        sync_to_master(ctx.clone(), &stl_config, linear_base_bcs_id).unwrap();
+        rebase_root_on_master(ctx.clone(), &stl_config, linear_base_bcs_id).unwrap();
 
     let megarepo_copyinfo_commit =
-        megarepo_copy_file(ctx.clone(), &megarepo, megarepo_linear_base_bcs_id.unwrap());
+        megarepo_copy_file(ctx.clone(), &megarepo, megarepo_linear_base_bcs_id);
 
     let always_fail = sync_to_master(ctx.clone(), &fail_config, megarepo_copyinfo_commit);
     assert!(always_fail.is_err());
@@ -826,14 +831,12 @@ fn sync_parent_search(fb: FacebookInit) {
     create_initial_commit(ctx.clone(), &megarepo);
 
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
-    // As this is the first commit from linear, it'll rewrite cleanly - note that it *cannot* have
-    // path conflicts, definitionally, as it will simply overwrite files/dirs in master if needed.
     let linear_base_bcs_id = get_bcs_id(
         ctx.clone(),
         &config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     );
-    sync_to_master(ctx.clone(), &config, linear_base_bcs_id).unwrap();
+    rebase_root_on_master(ctx.clone(), &config, linear_base_bcs_id).unwrap();
 
     // Change master_file
     let master_file_cs_id = update_master_file(ctx.clone(), &megarepo);

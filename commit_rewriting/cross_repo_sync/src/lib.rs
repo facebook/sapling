@@ -262,6 +262,18 @@ pub async fn rewrite_commit(
     Ok(Some(cs))
 }
 
+pub fn rewrite_commit_compat(
+    ctx: CoreContext,
+    cs: BonsaiChangesetMut,
+    remapped_parents: HashMap<ChangesetId, ChangesetId>,
+    mover: Mover,
+    source_repo: BlobRepo,
+) -> impl Future<Item = Option<BonsaiChangesetMut>, Error = Error> {
+    async move { rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await }
+        .boxed()
+        .compat()
+}
+
 async fn remap_changeset_id<'a, M: SyncedCommitMapping>(
     ctx: CoreContext,
     cs: ChangesetId,
@@ -581,24 +593,6 @@ where
                 Ok(None)
             }
             Some(rewritten) => {
-                // Special case - commits with no parents (=> beginning of a repo) graft directly
-                // to the bookmark, so that we can start a new sync with a fresh repo
-                // Note that this won't work if the bookmark does not yet exist - don't do that
-                let rewritten = {
-                    let mut rewritten = rewritten;
-                    if rewritten.parents.is_empty() {
-                        target_repo
-                            .get_bonsai_bookmark(ctx.clone(), &bookmark)
-                            .map(|bookmark_cs| {
-                                bookmark_cs
-                                    .map(|bookmark_cs| rewritten.parents = vec![bookmark_cs]);
-                            })
-                            .compat()
-                            .await?
-                    }
-                    rewritten
-                };
-
                 // Sync commit
                 let frozen = rewritten.freeze()?;
                 let rewritten_list = hashset![frozen];
