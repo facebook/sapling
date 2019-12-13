@@ -164,10 +164,12 @@
   > duplicate=$TESTDIR/flagprocessorext.py
   > EOF
   $ hg debugrebuilddirstate 2>&1 | grep 'multiple processors'
+      # msg = "cannot register multiple processors on flag '0x8'."
   Abort: cannot register multiple processors on flag '0x8'.
   *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
   $ hg st 2>&1 | egrep 'cannot register multiple processors|flagprocessorext'
     File "*/tests/flagprocessorext.py", line *, in extsetup (glob)
+      # msg = "cannot register multiple processors on flag '0x8'."
   Abort: cannot register multiple processors on flag '0x8'.
   *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
     File "*/tests/flagprocessorext.py", line *, in b64decode (glob)
