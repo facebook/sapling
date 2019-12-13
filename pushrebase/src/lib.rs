@@ -245,9 +245,9 @@ pub fn do_pushrebase_bonsai(
     maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     let head = find_only_head_or_fail(&pushed).into_future();
-    let roots = find_roots(&pushed).into_future();
+    let roots = find_roots(&pushed);
 
-    head.join(roots).and_then(move |(head, roots)| {
+    head.and_then(move |head| {
         find_closest_root(
             ctx.clone(),
             &repo,
@@ -574,9 +574,7 @@ fn find_only_head_or_fail(
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ChildIndex(usize);
 
-fn find_roots(
-    commits: &HashSet<BonsaiChangeset>,
-) -> Result<HashMap<ChangesetId, ChildIndex>, PushrebaseError> {
+fn find_roots(commits: &HashSet<BonsaiChangeset>) -> HashMap<ChangesetId, ChildIndex> {
     let commits_set: HashSet<_> =
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
     let mut roots = HashMap::new();
@@ -589,7 +587,7 @@ fn find_roots(
             }
         }
     }
-    Ok(roots)
+    roots
 }
 
 fn find_closest_root(
