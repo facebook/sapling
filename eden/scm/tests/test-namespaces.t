@@ -17,7 +17,7 @@ Test namespace registration using registrar
   >     return namespaces.namespace()
   > EOF
 
-  $ hg debugshell -c "print(list(repo.names))"
+  $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
   ['bookmarks', 'tags', 'branches', 'c', 'a']
 
   $ newext << EOF
@@ -30,7 +30,7 @@ Test namespace registration using registrar
   > def d(_repo):
   >     return namespaces.namespace()
   > EOF
-  $ hg debugshell -c "print(list(repo.names))"
+  $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
   ['bookmarks', 'd', 'tags', 'branches', 'c', 'a', 'z']
 
 

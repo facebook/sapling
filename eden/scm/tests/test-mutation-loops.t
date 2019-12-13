@@ -67,5 +67,5 @@ continuously cycles round the commit2 to commit4 loop.
   
 Similarly, check that predecessorsset is also safe.
 
-  $ hg debugsh -c "print([m.node.hex(n) for n in m.mutation.predecessorsset(repo, m.node.bin(\"21c93100b04c543843a7dab4fa0d5bada061b7a0\"))])"
+  $ hg debugsh -c "ui.write(str([m.node.hex(n) for n in m.mutation.predecessorsset(repo, m.node.bin(\"21c93100b04c543843a7dab4fa0d5bada061b7a0\"))]) + '\n')"
   ['e6c779c67aa947c951f334f4f312bd2b21d27e55']
