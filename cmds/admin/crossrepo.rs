@@ -28,7 +28,7 @@ use futures_util::{
     try_join, TryStreamExt,
 };
 use manifest::{Entry, ManifestOps};
-use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
+use mercurial_types::{HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::{ChangesetId, MPath};
 use movers::{get_large_to_small_mover, Mover};

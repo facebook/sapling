@@ -16,7 +16,7 @@ use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
-use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath};
+use mercurial_types::{HgChangesetId, HgManifestId, MPath};
 use revset::RangeNodeStream;
 use serde_derive::Serialize;
 use slog::Logger;

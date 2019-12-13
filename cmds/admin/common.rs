@@ -14,7 +14,7 @@ use cmdlib::helpers;
 use context::CoreContext;
 use futures::future::{self, Future};
 use futures_ext::FutureExt;
-use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath};
+use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};

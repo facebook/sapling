@@ -23,7 +23,7 @@ use futures_ext::{
     bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
 };
 use itertools::{Either, Itertools};
-use mercurial_types::{blobs::HgBlobChangeset, Changeset, HgChangesetId, HgEntryId, MPath};
+use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
 use slog::{info, Logger};

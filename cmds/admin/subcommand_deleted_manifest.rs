@@ -22,7 +22,7 @@ use fbinit::FacebookInit;
 use futures::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::get_implicit_deletes;
-use mercurial_types::{changeset::Changeset, HgManifestId};
+use mercurial_types::HgManifestId;
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{debug, Logger};

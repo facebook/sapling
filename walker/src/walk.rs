@@ -23,9 +23,7 @@ use futures_ext::{
     FutureExt, StreamExt,
 };
 use itertools::{Either, Itertools};
-use mercurial_types::{
-    Changeset, HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath,
-};
+use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::{cmp, iter::IntoIterator, ops::Add};
 

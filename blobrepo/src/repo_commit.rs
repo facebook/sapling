@@ -31,8 +31,7 @@ use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent},
     manifest,
     nodehash::{HgFileNodeId, HgManifestId},
-    Changeset, HgChangesetId, HgEntry, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath,
-    NULL_HASH,
+    HgChangesetId, HgEntry, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType, RepositoryId};
 use stats::define_stats;

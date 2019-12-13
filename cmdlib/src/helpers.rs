@@ -21,7 +21,7 @@ use blobrepo_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use changesets::SqlConstructors;
 use context::CoreContext;
-use mercurial_types::{Changeset, HgChangesetId, HgManifestId};
+use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
 

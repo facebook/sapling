@@ -14,7 +14,7 @@ use context::CoreContext;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use manifest::{Entry, ManifestOps};
-use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, RepoPath};
+use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use metaconfig_types::CacheWarmupParams;
 use revset::AncestorsNodeStream;
 use slog::{debug, info, Logger};

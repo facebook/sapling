@@ -24,7 +24,7 @@ use futures::{
 };
 use futures_ext::FutureExt;
 use lock_ext::LockExt;
-use mercurial_types::{Changeset, HgChangesetId};
+use mercurial_types::HgChangesetId;
 use revset::AncestorsNodeStream;
 use slog::{debug, error, info, warn, Logger};
 use std::{

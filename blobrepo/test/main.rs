@@ -25,8 +25,8 @@ use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_types::{
     blobs::{ContentBlobMeta, File, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash},
-    manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgParents,
-    MPath, MPathElement, RepoPath,
+    manifest, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgParents, MPath,
+    MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;

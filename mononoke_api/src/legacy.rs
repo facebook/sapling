@@ -15,7 +15,7 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use mercurial_types::manifest::Content;
-use mercurial_types::{Changeset, HgChangesetId};
+use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
 
 #[derive(Debug, Error)]

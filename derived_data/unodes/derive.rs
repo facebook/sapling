@@ -302,7 +302,7 @@ mod tests {
     use fixtures::linear;
     use futures::Stream;
     use maplit::btreemap;
-    use mercurial_types::{blobs::BlobManifest, Changeset, HgFileNodeId, HgManifestId};
+    use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};
     use mononoke_types::{
         BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
         RepoPath,

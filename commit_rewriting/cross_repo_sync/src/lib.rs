@@ -28,7 +28,6 @@ use futures_preview::{
 };
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
-use mercurial_types::changeset::Changeset;
 use mercurial_types::HgManifestId;
 use metaconfig_types::{CommitSyncConfig, PushrebaseParams};
 use mononoke_types::{

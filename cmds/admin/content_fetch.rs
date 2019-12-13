@@ -18,7 +18,7 @@ use futures::prelude::*;
 use futures::stream::iter_ok;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::manifest::Content;
-use mercurial_types::{Changeset, HgManifest, MPath, MPathElement};
+use mercurial_types::{HgManifest, MPath, MPathElement};
 use slog::{debug, Logger};
 
 use crate::error::SubcommandError;

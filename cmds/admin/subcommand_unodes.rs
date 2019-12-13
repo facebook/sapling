@@ -19,7 +19,7 @@ use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
-use mercurial_types::Changeset;
+
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::Logger;

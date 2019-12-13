@@ -46,8 +46,8 @@ use mercurial_types::{
         UploadHgFileEntry, UploadHgNodeHash,
     },
     manifest::Content,
-    Changeset, FileBytes, Globalrev, HgChangesetId, HgEntry, HgEntryId, HgFileEnvelope,
-    HgFileNodeId, HgManifest, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
+    FileBytes, Globalrev, HgChangesetId, HgEntry, HgEntryId, HgFileEnvelope, HgFileNodeId,
+    HgManifest, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,

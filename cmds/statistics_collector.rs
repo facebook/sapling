@@ -25,7 +25,7 @@ use futures::stream::Stream;
 use futures_ext::FutureExt;
 use futures_ext::{BoxFuture, BoxStream};
 use manifest::{Diff, Entry, ManifestOps};
-use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
+use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
 use scuba_ext::ScubaSampleBuilder;
 use slog::info;

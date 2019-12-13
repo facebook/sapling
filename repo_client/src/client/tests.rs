@@ -12,7 +12,7 @@ use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures_preview::compat::Future01CompatExt;
 use maplit::hashset;
-use mercurial_types::Changeset;
+
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use std::collections::HashSet;
 use tokio_preview as tokio;

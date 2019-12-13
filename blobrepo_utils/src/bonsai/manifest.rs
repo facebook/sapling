@@ -21,7 +21,7 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
-    Changeset, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, Type,
+    HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, Type,
 };
 use mononoke_types::{DateTime, FileType};
 use slog::{debug, Logger};

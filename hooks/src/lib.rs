@@ -34,7 +34,7 @@ use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
 use hooks_content_stores::{ChangedFileType, ChangesetStore, FileContentStore};
-use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgParents, MPath};
+use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgParents, MPath};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
 use regex::Regex;

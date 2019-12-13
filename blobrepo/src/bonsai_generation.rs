@@ -20,7 +20,7 @@ use context::CoreContext;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEnvelope},
-    Changeset, HgFileEnvelope, HgFileNodeId, HgManifestId, MPath, RepoPath,
+    HgFileEnvelope, HgFileNodeId, HgManifestId, MPath, RepoPath,
 };
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,

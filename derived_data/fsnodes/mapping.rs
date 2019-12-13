@@ -150,7 +150,7 @@ mod test {
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use manifest::Entry;
-    use mercurial_types::{Changeset, HgChangesetId, HgManifestId};
+    use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
     use std::sync::Arc;
     use test_utils::iterate_all_entries;

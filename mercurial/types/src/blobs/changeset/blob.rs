@@ -9,8 +9,7 @@
 use super::revlog::{serialize_extras, Extra, RevlogChangeset};
 use crate::{
     nodehash::{HgChangesetId, HgManifestId, NULL_HASH},
-    Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents,
-    MPath,
+    HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
 };
 use anyhow::{bail, Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -230,6 +229,35 @@ impl HgBlobChangeset {
     pub fn p2(&self) -> Option<HgNodeHash> {
         self.content.p2()
     }
+
+    pub fn manifestid(&self) -> HgManifestId {
+        self.content.manifestid
+    }
+
+    pub fn user(&self) -> &[u8] {
+        &self.content.user
+    }
+
+    pub fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+        self.content.extra.as_ref()
+    }
+
+    pub fn comments(&self) -> &[u8] {
+        &self.content.comments
+    }
+
+    pub fn files(&self) -> &[MPath] {
+        &self.content.files
+    }
+
+    pub fn time(&self) -> &DateTime {
+        &self.content.time
+    }
+
+    pub fn parents(&self) -> HgParents {
+        // XXX Change this to return p1 and p2 directly.
+        HgParents::new(self.content.p1(), self.content.p2())
+    }
 }
 
 impl Loadable for HgChangesetId {
@@ -247,36 +275,5 @@ impl Loadable for HgChangesetId {
                 value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
             })
             .boxify()
-    }
-}
-
-impl Changeset for HgBlobChangeset {
-    fn manifestid(&self) -> HgManifestId {
-        self.content.manifestid
-    }
-
-    fn user(&self) -> &[u8] {
-        &self.content.user
-    }
-
-    fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
-        self.content.extra.as_ref()
-    }
-
-    fn comments(&self) -> &[u8] {
-        &self.content.comments
-    }
-
-    fn files(&self) -> &[MPath] {
-        &self.content.files
-    }
-
-    fn time(&self) -> &DateTime {
-        &self.content.time
-    }
-
-    fn parents(&self) -> HgParents {
-        // XXX Change this to return p1 and p2 directly.
-        HgParents::new(self.content.p1(), self.content.p2())
     }
 }

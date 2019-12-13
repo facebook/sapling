@@ -60,7 +60,7 @@ use futures_preview::{
 use futures_util::{future::FutureExt as NewFutureExt, try_future::TryFutureExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
-use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, HgManifestId, MPath};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{
     check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,

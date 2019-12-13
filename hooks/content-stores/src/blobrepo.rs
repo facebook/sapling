@@ -13,9 +13,7 @@ use context::CoreContext;
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Diff, Entry, ManifestOps};
-use mercurial_types::{
-    blobs::HgBlobChangeset, Changeset, FileBytes, HgChangesetId, HgFileNodeId, MPath,
-};
+use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::FileType;
 
 use crate::{ChangedFileType, ChangesetStore, FileContentStore};
