@@ -30,5 +30,6 @@ Do the import, cross-check that the mapping is preserved
   $ blobimport repo-hg/.hg repo --source-repo-id 65535
   $ mononoke_admin_sourcerepo --target-repo-id 65535 crossrepo map 59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "megarepo" repoid RepositoryId(65535) (glob)
   * changeset resolved as: ChangesetId(Blake2(59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471)) (glob)
   Hash 59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471 maps to 59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471

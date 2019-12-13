@@ -9,7 +9,7 @@
 use anyhow::{format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::{future::IntoFuture, stream, Future, Stream};
+use futures::{future, future::IntoFuture, stream, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 
 use blobrepo::BlobRepo;
@@ -30,7 +30,7 @@ use futures_util::{
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
-use mononoke_types::{ChangesetId, MPath, RepositoryId};
+use mononoke_types::{ChangesetId, MPath};
 use movers::{get_large_to_small_mover, Mover};
 use slog::{debug, error, info, warn, Logger};
 use std::collections::{HashMap, HashSet};
@@ -56,6 +56,7 @@ pub fn subcommand_crossrepo(
 
     args::init_cachelib(fb, &matches);
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
+    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
@@ -65,22 +66,20 @@ pub fn subcommand_crossrepo(
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
             let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
             source_repo
-                .join(mapping)
+                .join3(target_repo, mapping)
                 .from_err()
-                .and_then(move |(source_repo, mapping)| {
-                    subcommand_map(ctx, source_repo, target_repo_id, mapping, hash)
+                .and_then(move |(source_repo, target_repo, mapping)| {
+                    subcommand_map(ctx, source_repo, target_repo, mapping, hash)
                 })
                 .boxify()
         }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
             let (_, source_repo_config) =
                 try_boxfuture!(args::get_config_by_repoid(matches, source_repo_id));
-            let target_repo_fut =
-                args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
             let hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
 
             source_repo
-                .join3(target_repo_fut, mapping)
+                .join3(target_repo, mapping)
                 .from_err()
                 .and_then(move |(source_repo, target_repo, mapping)| {
                     subcommand_verify_wc(
@@ -99,12 +98,10 @@ pub fn subcommand_crossrepo(
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (_, source_repo_config) =
                 try_boxfuture!(args::get_config_by_repoid(matches, source_repo_id));
-            let target_repo_fut =
-                args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
 
             let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
             source_repo
-                .join3(target_repo_fut, mapping)
+                .join3(target_repo, mapping)
                 .from_err()
                 .and_then(move |(source_repo, target_repo, mapping)| {
                     subcommand_verify_bookmarks(
@@ -127,27 +124,35 @@ pub fn subcommand_crossrepo(
 fn subcommand_map(
     ctx: CoreContext,
     source_repo: BlobRepo,
-    target_repo_id: RepositoryId,
+    target_repo: BlobRepo,
     mapping: SqlSyncedCommitMapping,
     hash: String,
 ) -> BoxFuture<(), SubcommandError> {
     let source_repo_id = source_repo.get_repoid();
+    let target_repo_id = target_repo.get_repoid();
     let source_hash = helpers::csid_resolve(ctx.clone(), source_repo, hash);
     source_hash
         .and_then(move |source_hash| {
             mapping
-                .get(ctx, source_repo_id, source_hash, target_repo_id)
-                .and_then(move |mapped| {
-                    match mapped {
-                        None => println!(
-                            "Hash {} not currently remapped (could be present in target as-is)",
-                            source_hash
-                        ),
-                        Some(target_hash) => {
-                            println!("Hash {} maps to {}", source_hash, target_hash)
-                        }
-                    };
-                    Ok(())
+                .get(ctx.clone(), source_repo_id, source_hash, target_repo_id)
+                .and_then(move |mapped| match mapped {
+                    None => target_repo
+                        .changeset_exists_by_bonsai(ctx, source_hash.clone())
+                        .map(move |exists| {
+                            if exists {
+                                println!(
+                                    "Hash {} not currently remapped (but present in target as-is)",
+                                    source_hash
+                                );
+                            } else {
+                                println!("Hash {} not currently remapped", source_hash);
+                            }
+                        })
+                        .left_future(),
+                    Some(target_hash) => {
+                        println!("Hash {} maps to {}", source_hash, target_hash);
+                        future::ok(()).right_future()
+                    }
                 })
         })
         .from_err()
@@ -755,6 +760,7 @@ mod test {
         CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
         SmallRepoCommitSyncConfig,
     };
+    use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_ext::SqlConstructors;
     use std::sync::Arc;
