@@ -61,14 +61,14 @@ configure an extension so that a push happens right after pulldiscovery
   >     extensions,
   > )
   > def wrappulldiscovery(orig, pullop):
-  >     print '*** starting discovery'
+  >     pullop.repo.ui.write("*** starting discovery\n")
   >     orig(pullop)
-  >     print '*** running push'
+  >     pullop.repo.ui.write("*** running push\n")
   >     pullop.repo.ui.system(
   >         "bash -c 'source \"${TEST_FIXTURES}/library.sh\"; hgmn push -R $TESTTMP/repo-push ssh://user@dummy/repo'",
   >         onerr=lambda str: Exception(str),
   >     )
-  >     print '*** push complete'
+  >     pullop.repo.ui.write("*** push complete\n")
   > def extsetup(ui):
   >     extensions.wrapfunction(exchange, '_pulldiscovery', wrappulldiscovery)
   > EOF
