@@ -175,6 +175,7 @@ def _preimportmodules():
         "dirstate",
         "dirstateguard",
         "discovery",
+        "eden_dirstate",
         "exchange",
         "filelog",
         "filemerge",
@@ -224,6 +225,7 @@ def _preimportmodules():
         "sshpeer",
         "sshserver",
         "sslutil",
+        "statprof",
         "store",
         "streamclone",
         "tags",
@@ -250,6 +252,7 @@ def _preimportmodules():
         "chistedit",
         "clienttelemetry",
         "clindex",
+        "commitcloud",
         "conflictinfo",
         "convert",
         "copytrace",
@@ -281,6 +284,7 @@ def _preimportmodules():
         "lz4revlog",
         "mergedriver",
         "morestatus",
+        "myparent",
         "patchrmdir",
         "phabdiff",
         "phabstatus",
@@ -303,14 +307,18 @@ def _preimportmodules():
         "smartlog",
         "sparse",
         "sshaskpass",
+        "stablerev",
         "stat",
         "traceprof",
         "treemanifest",
         "tweakdefaults",
         "undo",
     ]
-    for name in coremods:
-        __import__("edenscm.mercurial.%s" % name)
+    modnames = ["edenscm.mercurial.%s" % name for name in coremods] + [
+        "edenscm.hgext.fastannotate.support"
+    ]
+    for name in modnames:
+        __import__(name)
     for extname in extmods:
         extensions.preimport(extname)
 
