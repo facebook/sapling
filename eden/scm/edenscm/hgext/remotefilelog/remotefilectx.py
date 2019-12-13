@@ -313,7 +313,7 @@ class remotefilectx(context.filectx):
 
     def _linknodeviafastlog(self, repo, path, srcrev, fnode, cl, mfl, commonlogkwargs):
         start = time.time()
-        reponame = repo.ui.config("fbconduit", "reponame")
+        reponame = repo.ui.config("fbscmquery", "reponame")
         logmsg = ""
         try:
             srchex = repo[srcrev].hex()

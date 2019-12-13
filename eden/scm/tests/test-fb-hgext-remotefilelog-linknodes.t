@@ -258,10 +258,10 @@ Case 1: fastlog service calls fails or times out
   $ echo {} > .arcconfig
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbconduit=
+  > fbscmquery=
   > [fastlog]
   > enabled=True
-  > [fbconduit]
+  > [fbscmquery]
   > reponame = basic
   > host = localhost:$CONDUIT_PORT
   > path = /intern/conduit/

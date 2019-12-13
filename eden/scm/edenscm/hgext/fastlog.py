@@ -8,7 +8,7 @@
 connect to scmquery servers for fast fetching of logs on files and directories.
 
 Configure it by adding the following config options to your .hg/hgrc.
-This relies on fbconduit being setup for the repo; this should already
+This relies on fbscmquery being setup for the repo; this should already
 be configured if supported by your repo.
 
 Config::
@@ -181,7 +181,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
     else:
         startrev = repo["."].rev()
 
-    reponame = repo.ui.config("fbconduit", "reponame")
+    reponame = repo.ui.config("fbscmquery", "reponame")
     if not reponame or not repo.ui.configbool("fastlog", "enabled"):
         repo.ui.debug("fastlog: not used because fastlog is disabled\n")
         return orig(repo, subset, x, name, followfirst)

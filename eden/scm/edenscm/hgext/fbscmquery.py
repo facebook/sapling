@@ -3,8 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# fbconduit.py
-# An extension to query remote servers for extra information via conduit RPC
+# scmquery.py
+# An extension to augement hg with information obtained from SCMQuery
 
 import json
 import re
@@ -57,7 +57,7 @@ def uisetup(ui):
 def mirrornode(ctx, mapping, args):
     """template: find this commit in other repositories"""
 
-    reponame = mapping["repo"].ui.config("fbconduit", "reponame")
+    reponame = mapping["repo"].ui.config("fbscmquery", "reponame")
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return ""
@@ -90,11 +90,11 @@ templatekeyword = registrar.templatekeyword()
 @templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
-    reponame = repo.ui.config("fbconduit", "reponame")
+    reponame = repo.ui.config("fbscmquery", "reponame")
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return ""
-    backingrepos = repo.ui.configlist("fbconduit", "backingrepos", default=[reponame])
+    backingrepos = repo.ui.configlist("fbscmquery", "backingrepos", default=[reponame])
 
     if ctx.mutable():
         # Local commits don't have translations
@@ -129,11 +129,11 @@ def gitnode(repo, subset, x):
     l = revset.getargs(x, 1, 1, _("id requires one argument"))
     n = revset.getstring(l[0], _("id requires a string"))
 
-    reponame = repo.ui.config("fbconduit", "reponame")
+    reponame = repo.ui.config("fbscmquery", "reponame")
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return subset.filter(lambda r: False)
-    backingrepos = repo.ui.configlist("fbconduit", "backingrepos", default=[reponame])
+    backingrepos = repo.ui.configlist("fbscmquery", "backingrepos", default=[reponame])
 
     lasterror = None
     hghash = None
@@ -180,7 +180,7 @@ def _phablookup(repo, phabrev):
         phabhash = phabmatch.group(2)
 
         # The hash may be a git hash
-        if phabrepo in repo.ui.configlist("fbconduit", "gitcallsigns", []):
+        if phabrepo in repo.ui.configlist("fbscmquery", "gitcallsigns", []):
             return gittohg(phabhash)
 
         return [repo[phabhash].node()]
@@ -202,7 +202,7 @@ def _phablookup(repo, phabrev):
 
 
 def _scmquerylookupglobalrev(orig, repo, rev):
-    reponame = repo.ui.config("fbconduit", "reponame")
+    reponame = repo.ui.config("fbscmquery", "reponame")
     if reponame:
         try:
             client = graphql.Client(repo=repo)

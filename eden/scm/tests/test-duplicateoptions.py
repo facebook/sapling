@@ -8,7 +8,7 @@ from edenscm.mercurial import commands, extensions, ui as uimod
 ignore = {
     b"",
     b"factotum",
-    b"fbconduit",
+    b"fbscmquery",
     b"globalrevs",
     b"hgsql",
     b"highlight",

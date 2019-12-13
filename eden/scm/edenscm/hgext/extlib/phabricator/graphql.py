@@ -388,7 +388,7 @@ class Client(object):
             getmirroredrevmap(repo, [gitnode1, gitnode2],"git", "hg")
             # => {gitnode1: hgnode1, gitnode2: hgnode2}
         """
-        reponame = repo.ui.config("fbconduit", "reponame")
+        reponame = repo.ui.config("fbscmquery", "reponame")
         if not reponame:
             return {}
 

@@ -312,8 +312,8 @@ Test extension help:
        extutil       (no help text available)
        fastannotate  yet another annotate implementation that might be faster
        fastlog
-       fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
+       fbscmquery    (no help text available)
        fixcorrupt    (no help text available)
        generic_bisect
                      (no help text available)

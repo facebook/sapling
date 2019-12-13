@@ -55,10 +55,10 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: extensions.remotenames (str)
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.enabled (bool)
-  undocumented: fbconduit.backingrepos (list) [[reponame]]
-  undocumented: fbconduit.gitcallsigns (list)
-  undocumented: fbconduit.reponame (str)
   undocumented: fbhistedit.exec_in_user_shell (str)
+  undocumented: fbscmquery.backingrepos (list) [[reponame]]
+  undocumented: fbscmquery.gitcallsigns (list)
+  undocumented: fbscmquery.reponame (str)
   undocumented: format.usehgsql (bool)
   undocumented: git.public (list)
   undocumented: grep.biggrepcorpus (str)

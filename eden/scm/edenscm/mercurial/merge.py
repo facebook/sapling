@@ -1840,7 +1840,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 prog.value = (z, f)
                 ms.resolve(f, wctx)
                 files.append(f)
-            reponame = repo.ui.config("fbconduit", "reponame")
+            reponame = repo.ui.config("fbscmquery", "reponame")
             command = " ".join(util.shellquote(a) for a in pycompat.sysargv)
             repo.ui.log(
                 "manualmergefiles",

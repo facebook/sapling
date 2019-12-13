@@ -123,7 +123,7 @@ Somehow problematic: With many extensions
   > fastannotate=
   > fastlog=
   > fastpartialmatch=!
-  > fbconduit=
+  > fbscmquery=
   > fbhistedit=
   > githelp=
   > gitlookup=!
@@ -182,7 +182,7 @@ Somehow problematic: With many extensions
   > [treemanifest]
   > treeonly=True
   > 
-  > [fbconduit]
+  > [fbscmquery]
   > host=example.com
   > path=/conduit/
   > reponame=x

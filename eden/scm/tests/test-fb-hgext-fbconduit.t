@@ -25,8 +25,8 @@ Basic functionality.
   $ echo {} > .arcconfig
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbconduit=
-  > [fbconduit]
+  > fbscmquery=
+  > [fbscmquery]
   > reponame = basic
   > host = localhost:$CONDUIT_PORT
   > path = /intern/conduit/
@@ -70,8 +70,8 @@ Test with one backing repos specified.
   $ echo {} > .arcconfig
   $ cd single_backingrepo
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit=" >> .hg/hgrc
-  $ echo "[fbconduit]" >> .hg/hgrc
+  $ echo "fbscmquery=" >> .hg/hgrc
+  $ echo "[fbscmquery]" >> .hg/hgrc
   $ echo "reponame = single" >> .hg/hgrc
   $ echo "backingrepos = single_src" >> .hg/hgrc
   $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
@@ -104,8 +104,8 @@ Test with multiple backing repos specified.
   $ echo {} > .arcconfig
   $ cd backingrepos
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit=" >> .hg/hgrc
-  $ echo "[fbconduit]" >> .hg/hgrc
+  $ echo "fbscmquery=" >> .hg/hgrc
+  $ echo "[fbscmquery]" >> .hg/hgrc
   $ echo "reponame = multiple" >> .hg/hgrc
   $ echo "backingrepos = src_a src_b src_c" >> .hg/hgrc
   $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
@@ -172,8 +172,8 @@ Test with a bad server port, where we get connection refused errors.
   $ echo {} > .arcconfig
   $ cd errortest
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit=" >> .hg/hgrc
-  $ echo "[fbconduit]" >> .hg/hgrc
+  $ echo "fbscmquery=" >> .hg/hgrc
+  $ echo "[fbscmquery]" >> .hg/hgrc
   $ echo "reponame = errortest" >> .hg/hgrc
   $ echo "host = localhost:9" >> .hg/hgrc
   $ echo "path = /intern/conduit/" >> .hg/hgrc
@@ -205,13 +205,13 @@ Make sure that globalrevs work
   $ cd ..
   $ initserver mockwwwrepo mockwwwrepo
   $ cd mockwwwrepo
-  $ enable fbconduit globalrevs pushrebase
+  $ enable fbscmquery globalrevs pushrebase
   $ setconfig \
   > hgsql.enabled=True \
-  > fbconduit.reponame=basic \
-  > fbconduit.host=localhost:$CONDUIT_PORT \
-  > fbconduit.path=/intern/conduit/ \
-  > fbconduit.protocol=http \
+  > fbscmquery.reponame=basic \
+  > fbscmquery.host=localhost:$CONDUIT_PORT \
+  > fbscmquery.path=/intern/conduit/ \
+  > fbscmquery.protocol=http \
   > globalrevs.onlypushrebase=False \
   > globalrevs.startrev=5000 \
   > globalrevs.svnrevinteroperation=True \

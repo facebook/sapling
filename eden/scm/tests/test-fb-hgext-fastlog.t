@@ -2,7 +2,7 @@
   > [extensions]
   > tweakdefaults=
   > fastlog=
-  > [fbconduit]
+  > [fbscmquery]
   > host=our.intern.facebook.com
   > protocol=http
   > reponame=fbsource
