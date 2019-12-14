@@ -599,11 +599,12 @@ def listphases(repo):
     """List phases root for serialization over pushkey"""
     # Use ordered dictionary so behavior is deterministic.
     keys = util.sortdict()
-    value = "%i" % draft
-    cl = repo.unfiltered().changelog
-    for root in repo._phasecache.phaseroots[draft]:
-        if repo._phasecache.phase(repo, cl.rev(root)) <= draft:
-            keys[hex(root)] = value
+    if not repo._phasecache._headbased:
+        value = "%i" % draft
+        cl = repo.unfiltered().changelog
+        for root in repo._phasecache.phaseroots[draft]:
+            if repo._phasecache.phase(repo, cl.rev(root)) <= draft:
+                keys[hex(root)] = value
 
     if repo.publishing():
         # Add an extra data to let remote know we are a publishing
