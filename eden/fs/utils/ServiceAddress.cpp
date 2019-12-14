@@ -64,6 +64,7 @@ std::optional<SocketAddressWithHostname> ServiceAddress::addressFromSMCTier(
       folly::SocketAddress(location.getIpAddress(), location.getPort()),
       location.getHostname());
 #else
+  (void)selector;
   return std::nullopt;
 #endif
 }

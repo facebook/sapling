@@ -455,6 +455,10 @@ class MappedDiskVector {
       folly::throwSystemError("mmap failed on file open");
     }
 
+#ifndef MAP_POPULATE
+    (void)populate;
+#endif
+
     // Throw no exceptions between assigning the fields.
 
     map_ = map;

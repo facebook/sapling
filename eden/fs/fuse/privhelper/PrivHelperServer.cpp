@@ -367,6 +367,8 @@ void PrivHelperServer::bindMount(
     const char* clientPath,
     const char* mountPath) {
 #ifdef __APPLE__
+  (void)clientPath;
+  (void)mountPath;
   throw std::runtime_error("this system does not support bind mounts");
 #else
   const int rc =
