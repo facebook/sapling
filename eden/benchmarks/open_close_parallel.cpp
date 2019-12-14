@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   StatAccumulator combined_open;
   StatAccumulator combined_close;
 
-  auto thread = [&](uint64_t index) {
+  auto thread = [&] {
     StatAccumulator open_accum;
     StatAccumulator close_accum;
     int file_index = 1;
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
   std::vector<std::thread> threads;
   threads.reserve(FLAGS_threads);
   for (uint64_t t = 0; t < FLAGS_threads; ++t) {
-    threads.emplace_back([t, &thread] { thread(t); });
+    threads.emplace_back(thread);
   }
 
   for (auto& thread : threads) {

@@ -49,7 +49,6 @@ InodeMap::UnloadedInode::UnloadedInode(
       numFuseReferences{fuseRefcount} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
-    TreeInode* inode,
     TreeInode* parent,
     PathComponentPiece entryName,
     bool isUnlinked,
@@ -818,7 +817,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
                  << " with FUSE refcount=" << fuseCount << ": "
                  << inode->getLogPath();
       return UnloadedInode(
-          asTree, parent, name, isUnlinked, treeContents.treeHash, fuseCount);
+          parent, name, isUnlinked, treeContents.treeHash, fuseCount);
     }
 
     // If any of this inode's childrens are in unloadedInodes_, then this
@@ -831,7 +830,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
                    << asTree->getLogPath() << ") because its child "
                    << childName << " was remembered";
         return UnloadedInode(
-            asTree, parent, name, isUnlinked, treeContents.treeHash, fuseCount);
+            parent, name, isUnlinked, treeContents.treeHash, fuseCount);
       }
     }
     return std::nullopt;

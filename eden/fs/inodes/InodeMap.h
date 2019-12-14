@@ -402,7 +402,6 @@ class InodeMap {
         std::optional<Hash> hash,
         uint32_t fuseRefcount);
     UnloadedInode(
-        TreeInode* inode,
         TreeInode* parent,
         PathComponentPiece entryName,
         bool isUnlinked,

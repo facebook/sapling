@@ -100,7 +100,7 @@ void DaemonStartupLogger::failAndExitImpl(uint8_t exitCode) {
 }
 
 void DaemonStartupLogger::writeMessageImpl(
-    folly::LogLevel level,
+    folly::LogLevel /*level*/,
     StringPiece message) {
   auto& file = origStderr_;
   if (file) {
