@@ -10,4 +10,4 @@ buck build //eden/scm/lib/xdiff:diff
 REPO_ROOT=$(hg root)
 XDIFF="$REPO_ROOT/fbcode/$(buck targets //eden/scm/lib/xdiff:diff --show-output | cut -d' ' -f2)"
 export XDIFF
-buck run fbsource//xplat/third-party/cram:cram -- "$@"
+buck run fbsource//third-party/cram:cram -- "$@"
