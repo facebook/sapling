@@ -109,6 +109,6 @@ py_class!(class metalog |py| {
 
     @staticmethod
     def repair(path: &str) -> PyResult<PyUnicode> {
-        MetaLog::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        py.allow_threads(|| MetaLog::repair(path)).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
     }
 });
