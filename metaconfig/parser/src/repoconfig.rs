@@ -37,7 +37,8 @@ use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use repos::{
     RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
-    RawInfinitepushParams, RawRepoConfig, RawStorageConfig, RawWireprotoLoggingConfig,
+    RawInfinitepushParams, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
+    RawWireprotoLoggingConfig,
 };
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
@@ -51,14 +52,6 @@ pub struct RepoConfigs {
     pub repos: HashMap<String, RepoConfig>,
     /// Common configs for all repos
     pub common: CommonConfig,
-}
-
-/// TODO(jschuijt): Should be moved to configerator thrift definitions
-struct RawRepoConfigs {
-    commit_sync: HashMap<String, RawCommitSyncConfig>,
-    common: RawCommonConfig,
-    repos: HashMap<String, RawRepoConfig>,
-    storage: HashMap<String, RawStorageConfig>,
 }
 
 impl RepoConfigs {
