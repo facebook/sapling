@@ -168,12 +168,12 @@ const BONSAI_EDGE_TYPES: &[EdgeType] = &[
 
 lazy_static! {
     static ref INCLUDE_NODE_TYPE_HELP: String = format!(
-        "Graph node types to include in the walk. Defaults to core Mononoke and Hg types: {:?}",
+        "Graph node types we want to step to in the walk. Defaults to core Mononoke and Hg types: {:?}",
         DEFAULT_INCLUDE_NODE_TYPES
     );
 
     static ref INCLUDE_EDGE_TYPE_HELP: String = format!(
-        "Graph node types to include in the walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep: {:?}",
+        "Graph edge types to include in the walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep: {:?}",
         DEEP_INCLUDE_EDGE_TYPES
     );
 }
@@ -360,55 +360,23 @@ fn parse_edge_values(
     }
 }
 
-fn parse_edge_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<EdgeType>, Error> {
-    let mut include_edge_types = parse_edge_values(
-        sub_m.values_of(INCLUDE_EDGE_TYPE_ARG),
-        DEEP_INCLUDE_EDGE_TYPES,
-    )?;
-    let exclude_edge_types = parse_edge_values(sub_m.values_of(EXCLUDE_EDGE_TYPE_ARG), &vec![])?;
+fn parse_edge_types(
+    sub_m: &ArgMatches<'_>,
+    include_arg_name: &str,
+    exclude_arg_name: &str,
+    default: &[EdgeType],
+) -> Result<HashSet<EdgeType>, Error> {
+    let mut include_edge_types = parse_edge_values(sub_m.values_of(include_arg_name), default)?;
+    let exclude_edge_types = parse_edge_values(sub_m.values_of(exclude_arg_name), &vec![])?;
     include_edge_types.retain(|x| !exclude_edge_types.contains(x));
     Ok(include_edge_types)
 }
 
-pub fn parse_args_common(
-    fb: FacebookInit,
-    logger: &Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> Result<(BoxFuture<BlobRepo, Error>, RepoWalkParams), Error> {
-    let (_, config) = args::get_config(&matches)?;
-    let quiet = sub_m.is_present(QUIET_ARG);
-    let common_config = cmdlib::args::read_common_config(&matches)?;
-    let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
-    let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
-    let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
-
-    let redaction = if sub_m.is_present(ENABLE_REDACTION_ARG) {
-        config.redaction
-    } else {
-        Redaction::Disabled
-    };
-
-    let caching = cmdlib::args::init_cachelib(fb, &matches);
-
-    let mut include_edge_types = parse_edge_types(sub_m)?;
-
-    let mut include_node_types = parse_node_types(sub_m)?;
-
-    let bookmarks: Result<Vec<_>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
-        None => Err(format_err!("No bookmark passed")),
-        Some(values) => values.map(|bookmark| BookmarkName::new(bookmark)).collect(),
-    };
-    let bookmarks = bookmarks?;
-
-    // TODO, add other root types like hg change ids etc.
-    let walk_roots: Vec<_> = bookmarks
-        .into_iter()
-        .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
-        .collect();
-
-    let root_node_types: Vec<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
-
+fn reachable_graph_elements(
+    mut include_edge_types: HashSet<EdgeType>,
+    mut include_node_types: HashSet<NodeType>,
+    root_node_types: HashSet<NodeType>,
+) -> (HashSet<EdgeType>, HashSet<NodeType>) {
     // This stops us logging that we're walking unreachable edge/node types
     let mut param_count = &include_edge_types.len() + &include_node_types.len();
     let mut last_param_count = 0;
@@ -435,9 +403,57 @@ pub fn parse_args_common(
         last_param_count = param_count;
         param_count = &include_edge_types.len() + &include_node_types.len();
     }
+    (include_edge_types, include_node_types)
+}
+
+pub fn parse_args_common(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> Result<(BoxFuture<BlobRepo, Error>, RepoWalkParams), Error> {
+    let (_, config) = args::get_config(&matches)?;
+    let quiet = sub_m.is_present(QUIET_ARG);
+    let common_config = cmdlib::args::read_common_config(&matches)?;
+    let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
+    let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
+    let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
+
+    let redaction = if sub_m.is_present(ENABLE_REDACTION_ARG) {
+        config.redaction
+    } else {
+        Redaction::Disabled
+    };
+
+    let caching = cmdlib::args::init_cachelib(fb, &matches);
+
+    let include_edge_types = parse_edge_types(
+        sub_m,
+        INCLUDE_EDGE_TYPE_ARG,
+        EXCLUDE_EDGE_TYPE_ARG,
+        DEEP_INCLUDE_EDGE_TYPES,
+    )?;
+
+    let include_node_types = parse_node_types(sub_m)?;
+
+    let bookmarks: Result<Vec<_>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
+        None => Err(format_err!("No bookmark passed")),
+        Some(values) => values.map(|bookmark| BookmarkName::new(bookmark)).collect(),
+    };
+    let bookmarks = bookmarks?;
+
+    // TODO, add other root types like hg change ids etc.
+    let walk_roots: Vec<_> = bookmarks
+        .into_iter()
+        .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
+        .collect();
+
+    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
 
     info!(logger, "Walking roots {:?} ", walk_roots);
 
+    let (include_edge_types, include_node_types) =
+        reachable_graph_elements(include_edge_types, include_node_types, root_node_types);
     info!(
         logger,
         "Walking edge types {:?}",
