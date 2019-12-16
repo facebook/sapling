@@ -48,12 +48,12 @@ fn main(fb: FacebookInit) -> Result<()> {
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
     let matches = setup_app().get_matches();
-    let (repo_name, config) = cmdlib::args::get_config(&matches)?;
+    let (repo_name, config) = cmdlib::args::get_config(fb, &matches)?;
     let logger = setup_logger(&matches, repo_name.to_string());
     info!(logger, "Hook tailer is starting");
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    let common_config = cmdlib::args::read_common_config(&matches)?;
+    let common_config = cmdlib::args::read_common_config(fb, &matches)?;
     let init_revision = matches.value_of("init_revision").map(String::from);
     let continuous = matches.is_present("continuous");
     let limit = cmdlib::args::get_u64(&matches, "limit", 1000);

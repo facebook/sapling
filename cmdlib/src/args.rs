@@ -347,13 +347,14 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
 }
 
 fn get_repo_id_and_name_from_values<'a>(
+    fb: FacebookInit,
     matches: &ArgMatches<'a>,
     option_repo_name: &str,
     option_repo_id: &str,
 ) -> Result<(RepositoryId, String)> {
     let repo_name = matches.value_of(option_repo_name);
     let repo_id = matches.value_of(option_repo_id);
-    let configs = read_configs(matches)?;
+    let configs = read_configs(fb, matches)?;
 
     match (repo_name, repo_id) {
         (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
@@ -398,41 +399,46 @@ fn get_repo_id_and_name_from_values<'a>(
     }
 }
 
-pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
+pub fn get_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(fb, matches, REPO_NAME, REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
-    let (_, repo_name) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
+pub fn get_repo_name<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<String> {
+    let (_, repo_name) = get_repo_id_and_name_from_values(fb, matches, REPO_NAME, REPO_ID)?;
     Ok(repo_name)
 }
 
-pub fn get_source_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+pub fn get_source_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) =
+        get_repo_id_and_name_from_values(fb, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_source_repo_id_opt<'a>(matches: &ArgMatches<'a>) -> Result<Option<RepositoryId>> {
+pub fn get_source_repo_id_opt<'a>(
+    fb: FacebookInit,
+    matches: &ArgMatches<'a>,
+) -> Result<Option<RepositoryId>> {
     if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
         let (repo_id, _) =
-            get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+            get_repo_id_and_name_from_values(fb, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
         Ok(Some(repo_id))
     } else {
         Ok(None)
     }
 }
 
-pub fn get_target_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
+pub fn get_target_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) =
+        get_repo_id_and_name_from_values(fb, matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn open_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
+pub fn open_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
 where
     T: SqlConstructors,
 {
-    let (_, config) = try_boxfuture!(get_config(matches));
+    let (_, config) = try_boxfuture!(get_config(fb, matches));
     let maybe_myrouter_port = parse_myrouter_port(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_myrouter_port(
@@ -442,12 +448,12 @@ where
     )
 }
 
-pub fn open_source_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
+pub fn open_source_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
 where
     T: SqlConstructors,
 {
-    let source_repo_id = try_boxfuture!(get_source_repo_id(matches));
-    let (_, config) = try_boxfuture!(get_config_by_repoid(matches, source_repo_id));
+    let source_repo_id = try_boxfuture!(get_source_repo_id(fb, matches));
+    let (_, config) = try_boxfuture!(get_config_by_repoid(fb, matches, source_repo_id));
     let maybe_myrouter_port = parse_myrouter_port(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_myrouter_port(
@@ -677,41 +683,43 @@ pub fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+pub fn read_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let config_path = matches
         .value_of("mononoke-config-path")
         .ok_or(Error::msg("mononoke-config-path must be specified"))?;
-    RepoConfigs::read_configs(config_path)
+    RepoConfigs::read_configs(fb, config_path)
 }
 
-pub fn read_common_config<'a>(matches: &ArgMatches<'a>) -> Result<CommonConfig> {
+pub fn read_common_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<CommonConfig> {
     let config_path = matches
         .value_of("mononoke-config-path")
         .ok_or(Error::msg("mononoke-config-path must be specified"))?;
 
     let config_path = Path::new(config_path);
-    RepoConfigs::read_common_config(&config_path.to_path_buf())
+    RepoConfigs::read_common_config(fb, &config_path.to_path_buf())
 }
 
 pub fn read_storage_configs<'a>(
+    fb: FacebookInit,
     matches: &ArgMatches<'a>,
 ) -> Result<HashMap<String, StorageConfig>> {
     let config_path = matches
         .value_of("mononoke-config-path")
         .ok_or(Error::msg("mononoke-config-path must be specified"))?;
-    RepoConfigs::read_storage_configs(config_path)
+    RepoConfigs::read_storage_configs(fb, config_path)
 }
 
-pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
-    let repo_id = get_repo_id(matches)?;
-    get_config_by_repoid(matches, repo_id)
+pub fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
+    let repo_id = get_repo_id(fb, matches)?;
+    get_config_by_repoid(fb, matches, repo_id)
 }
 
 pub fn get_config_by_repoid<'a>(
+    fb: FacebookInit,
     matches: &ArgMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<(String, RepoConfig)> {
-    let configs = read_configs(matches)?;
+    let configs = read_configs(fb, matches)?;
     configs
         .get_repo_config(repo_id)
         .ok_or_else(|| format_err!("unknown repoid {:?}", repo_id))
@@ -727,7 +735,7 @@ fn open_repo_internal<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let repo_id = try_boxfuture!(get_repo_id(matches));
+    let repo_id = try_boxfuture!(get_repo_id(fb, matches));
     open_repo_internal_with_repo_id(
         fb,
         logger,
@@ -750,10 +758,10 @@ fn open_repo_internal_with_repo_id<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> BoxFuture<BlobRepo, Error> {
-    let common_config = try_boxfuture!(read_common_config(&matches));
+    let common_config = try_boxfuture!(read_common_config(fb, &matches));
 
     let (reponame, config) = {
-        let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(matches, repo_id));
+        let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(fb, matches, repo_id));
         if let Scrubbing::Enabled = scrub {
             config.storage_config.blobstore.set_scrubbed();
         }

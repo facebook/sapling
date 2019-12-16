@@ -54,9 +54,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     app
 }
 
-fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let cpath = PathBuf::from(matches.value_of("cpath").unwrap());
-    RepoConfigs::read_configs(cpath)
+    RepoConfigs::read_configs(fb, cpath)
 }
 
 #[fbinit::main]
@@ -75,7 +75,7 @@ fn main(fb: FacebookInit) {
 
         let mut runtime = cmdlib::helpers::create_runtime(None)?;
 
-        let config = get_config(&matches)?;
+        let config = get_config(fb, &matches)?;
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();
         let ca_pem = matches.value_of("ca_pem").unwrap().to_string();

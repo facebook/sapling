@@ -61,8 +61,8 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let matches = setup_app().get_matches();
 
-    let repo_id = args::get_repo_id(&matches).unwrap();
-    let fut = args::open_sql::<SqlBookmarks>(&matches).and_then(move |bookmarks| {
+    let repo_id = args::get_repo_id(fb, &matches).unwrap();
+    let fut = args::open_sql::<SqlBookmarks>(fb, &matches).and_then(move |bookmarks| {
         let name = matches.value_of(BOOKMARK).unwrap().to_string();
         let reason = match matches.is_present(BLOBIMPORT) {
             true => BookmarkUpdateReason::Blobimport,

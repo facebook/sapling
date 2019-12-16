@@ -7,12 +7,14 @@
  */
 
 use anyhow::{bail, Result};
+use fbinit::FacebookInit;
 use itertools::Itertools;
 use std::collections::BTreeMap;
 
 use cmdlib::args;
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let matches = args::MononokeApp::new("Lint Mononoke config files")
         .with_advanced_args_hidden()
         .build()
@@ -31,7 +33,7 @@ fn main() -> Result<()> {
 
     // Most of the work is done here - this validates that the files are present,
     // are correctly formed, and have the right fields (not too many, not too few).
-    let configs = match args::read_configs(&matches) {
+    let configs = match args::read_configs(fb, &matches) {
         Err(err) => {
             eprintln!("Error loading configs: {:#?}", err);
             return Err(err);

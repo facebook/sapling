@@ -289,7 +289,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(Error::msg("Missing --myrouter-port"))?;
     let readonly_storage = args::parse_readonly_storage(&matches);
-    let storage_config = args::read_storage_configs(&matches)?
+    let storage_config = args::read_storage_configs(fb, &matches)?
         .remove(storage_id)
         .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
     let source_blobstore_key = matches.value_of("blobstore-key-like");

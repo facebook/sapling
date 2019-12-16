@@ -186,7 +186,7 @@ fn get_ctx_blobrepo_redacted_blobs_cs_id(
     args::init_cachelib(fb, &matches);
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
-    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(&matches)
+    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, &matches)
         .context("While opening SqlRedactedContentStore")
         .from_err();
 

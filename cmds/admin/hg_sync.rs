@@ -36,15 +36,15 @@ pub fn subcommand_process_hg_sync(
     logger: Logger,
 ) -> BoxFuture<(), SubcommandError> {
     let repo_id =
-        try_boxfuture!(args::get_repo_id(&matches).map_err(|e| SubcommandError::Error(e)));
+        try_boxfuture!(args::get_repo_id(fb, &matches).map_err(|e| SubcommandError::Error(e)));
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(&matches)
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, &matches)
         .context("While opening SqlMutableCounters")
         .from_err();
 
-    let bookmarks = args::open_sql::<SqlBookmarks>(&matches)
+    let bookmarks = args::open_sql::<SqlBookmarks>(fb, &matches)
         .context("While opening SqlBookmarks")
         .from_err();
 

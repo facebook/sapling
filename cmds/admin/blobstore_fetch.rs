@@ -97,8 +97,8 @@ pub fn subcommand_blobstore_fetch(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    let repo_id = try_boxfuture!(args::get_repo_id(&matches));
-    let (_, config) = try_boxfuture!(args::get_config(&matches));
+    let repo_id = try_boxfuture!(args::get_repo_id(fb, &matches));
+    let (_, config) = try_boxfuture!(args::get_config(fb, &matches));
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
@@ -113,7 +113,7 @@ pub fn subcommand_blobstore_fetch(
         readonly_storage,
     );
 
-    let common_config = try_boxfuture!(args::read_common_config(&matches));
+    let common_config = try_boxfuture!(args::read_common_config(fb, &matches));
     let scuba_censored_table = common_config.scuba_censored_table;
     let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
@@ -124,7 +124,7 @@ pub fn subcommand_blobstore_fetch(
     let no_prefix = sub_m.is_present("no-prefix");
 
     let maybe_redacted_blobs_fut = match redaction {
-        Redaction::Enabled => args::open_sql::<SqlRedactedContentStore>(&matches)
+        Redaction::Enabled => args::open_sql::<SqlRedactedContentStore>(fb, &matches)
             .and_then(|redacted_blobs| {
                 redacted_blobs
                     .get_all_redacted_blobs()

@@ -45,7 +45,7 @@ pub fn subcommand_phases(
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let repo = args::open_repo(fb, &logger, &matches);
-    let phases = args::open_sql::<SqlPhases>(&matches);
+    let phases = args::open_sql::<SqlPhases>(fb, &matches);
     args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

@@ -23,7 +23,9 @@ use crate::errors::ErrorKind;
 use anyhow::{anyhow, format_err, Error, Result};
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
+use configerator::ConfigeratorAPI;
 use failure_ext::chain::ChainExt;
+use fbinit::FacebookInit;
 use itertools::Itertools;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
@@ -41,6 +43,7 @@ use repos::{
     RawWireprotoLoggingConfig,
 };
 
+const CONFIGERATOR_PREFIX: &'static str = "configerator://";
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
@@ -56,15 +59,16 @@ pub struct RepoConfigs {
 
 impl RepoConfigs {
     /// Read repo configs
-    pub fn read_configs(config_path: impl AsRef<Path>) -> Result<Self> {
+    pub fn read_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<Self> {
         let config_path = config_path.as_ref();
 
-        let raw_config = Self::read_raw_configs(config_path)?;
+        let raw_config = Self::read_raw_configs(fb, config_path)?;
         let mut repo_configs = HashMap::new();
         let mut repoids = HashSet::new();
 
         for (reponame, raw_repo_config) in &raw_config.repos {
             let config = RepoConfigs::process_single_repo_config(
+                fb,
                 raw_repo_config.clone(),
                 reponame.to_owned(),
                 config_path,
@@ -77,7 +81,7 @@ impl RepoConfigs {
             repo_configs.insert(reponame.clone(), config);
         }
 
-        let common = Self::read_common_config(&config_path.to_path_buf())?;
+        let common = Self::read_common_config(fb, &config_path.to_path_buf())?;
         Ok(Self {
             repos: repo_configs,
             common,
@@ -85,8 +89,8 @@ impl RepoConfigs {
     }
 
     /// Read common config, returns default if it doesn't exist
-    pub fn read_common_config(config_path: &PathBuf) -> Result<CommonConfig> {
-        let raw_config = Self::read_raw_configs(config_path.as_path())?.common;
+    pub fn read_common_config(fb: FacebookInit, config_path: &PathBuf) -> Result<CommonConfig> {
+        let raw_config = Self::read_raw_configs(fb, config_path.as_path())?.common;
         let mut tiers_num = 0;
         let whitelisted_entries: Result<Vec<_>> = raw_config
             .whitelist_entry
@@ -265,10 +269,11 @@ impl RepoConfigs {
 
     /// Read commit sync config
     pub fn read_commit_sync_config(
+        fb: FacebookInit,
         config_root_path: impl AsRef<Path>,
     ) -> Result<HashMap<String, CommitSyncConfig>> {
         let config_root_path = config_root_path.as_ref();
-        Self::read_raw_configs(config_root_path)?.commit_sync
+        Self::read_raw_configs(fb, config_root_path)?.commit_sync
             .into_iter()
             .map(|(config_name, v)| {
                 let RawCommitSyncConfig {
@@ -345,11 +350,12 @@ impl RepoConfigs {
 
     /// Read all common storage configurations
     pub fn read_storage_configs(
+        fb: FacebookInit,
         config_root_path: impl AsRef<Path>,
     ) -> Result<HashMap<String, StorageConfig>> {
         let config_root_path = config_root_path.as_ref();
 
-        Self::read_raw_configs(config_root_path)?
+        Self::read_raw_configs(fb, config_root_path)?
             .storage
             .into_iter()
             .map(|(k, v)| {
@@ -361,13 +367,14 @@ impl RepoConfigs {
     }
 
     fn process_single_repo_config(
+        fb: FacebookInit,
         raw_config: RawRepoConfig,
         reponame: String,
         config_root_path: &Path,
     ) -> Result<RepoConfig> {
-        let common_config = Self::read_raw_configs(config_root_path)?;
+        let common_config = Self::read_raw_configs(fb, config_root_path)?;
         let common_storage = common_config.storage;
-        let commit_sync = Self::read_commit_sync_config(config_root_path)?;
+        let commit_sync = Self::read_commit_sync_config(fb, config_root_path)?;
         let hooks = raw_config.hooks.clone().unwrap_or_default();
 
         let mut all_hook_params = vec![];
@@ -789,7 +796,36 @@ impl RepoConfigs {
             .find(|(_, repo_config)| repo_config.repoid == repo_id)
     }
 
-    fn read_raw_configs(config_path: &Path) -> Result<RawRepoConfigs> {
+    fn read_raw_configs(fb: FacebookInit, config_path: &Path) -> Result<RawRepoConfigs> {
+        if config_path.starts_with(CONFIGERATOR_PREFIX) {
+            // this intentionally doesn't use ConfigSource, since we'll be expanding
+            // ConfigeratorAPI to support signed configs, hence we will need to use
+            // the lower API directly
+            let cfgr = ConfigeratorAPI::new(fb)?;
+            let repo_configs = cfgr
+                .get_entity(
+                    &config_path
+                        .strip_prefix(CONFIGERATOR_PREFIX)?
+                        .to_string_lossy(),
+                    Duration::from_secs(30),
+                )?
+                .contents;
+            Ok(serde_json::from_str(&repo_configs)?)
+        } else if config_path.is_dir() {
+            Self::read_raw_configs_toml(config_path)
+        } else if config_path.is_file() {
+            let repo_configs = fs::read(config_path)?;
+            Ok(serde_json::from_slice(&repo_configs)?)
+        } else {
+            Err(ErrorKind::InvalidFileStructure(format!(
+                "{} does not exist",
+                config_path.display()
+            ))
+            .into())
+        }
+    }
+
+    fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
         let commit_sync = Self::read_toml_path::<HashMap<String, RawCommitSyncConfig>>(
             config_path
                 .join("common")
@@ -921,8 +957,8 @@ mod test {
         tmp_dir
     }
 
-    #[test]
-    fn test_commit_sync_config_correct() {
+    #[fbinit::test]
+    fn test_commit_sync_config_correct(fb: FacebookInit) {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -954,7 +990,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path())
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path())
             .expect("failed to read commit sync configs");
 
         let expected = hashmap! {
@@ -987,8 +1023,8 @@ mod test {
         assert_eq!(commit_sync_config, expected);
     }
 
-    #[test]
-    fn test_commit_sync_config_conflicting_path_prefixes_small_to_large() {
+    #[fbinit::test]
+    fn test_commit_sync_config_conflicting_path_prefixes_small_to_large(fb: FacebookInit) {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -1020,15 +1056,15 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("is a prefix of MPath"));
     }
 
-    #[test]
-    fn test_commit_sync_config_conflicting_path_prefixes_large_to_small() {
+    #[fbinit::test]
+    fn test_commit_sync_config_conflicting_path_prefixes_large_to_small(fb: FacebookInit) {
         // Purely identical prefixes, allowed in large-to-small
         let commit_sync_config = r#"
             [mega]
@@ -1059,7 +1095,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
         assert!(commit_sync_config.is_ok());
 
         // Overlapping, but not identical prefixes
@@ -1092,15 +1128,15 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("is a prefix of MPath"));
     }
 
-    #[test]
-    fn test_commit_sync_config_conflicting_path_prefixes_mixed() {
+    #[fbinit::test]
+    fn test_commit_sync_config_conflicting_path_prefixes_mixed(fb: FacebookInit) {
         // Conflicting paths, should fail
         let commit_sync_config = r#"
             [mega]
@@ -1131,7 +1167,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1178,15 +1214,15 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("is a prefix of MPath"));
     }
 
-    #[test]
-    fn test_commit_sync_config_conflicting_bookmark_prefixes() {
+    #[fbinit::test]
+    fn test_commit_sync_config_conflicting_bookmark_prefixes(fb: FacebookInit) {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -1217,15 +1253,15 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("One bookmark prefix starts with another, which is prohibited"));
     }
 
-    #[test]
-    fn test_duplicated_repo_ids() {
+    #[fbinit::test]
+    fn test_duplicated_repo_ids(fb: FacebookInit) {
         let www_content = r#"
             repoid=1
             scuba_table="scuba_table"
@@ -1257,15 +1293,15 @@ mod test {
         };
 
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("DuplicatedRepoId"));
     }
 
-    #[test]
-    fn test_read_manifest() {
+    #[fbinit::test]
+    fn test_read_manifest(fb: FacebookInit) {
         let hook1_content = "this is hook1";
         let hook2_content = "this is hook2";
         let fbsource_content = r#"
@@ -1398,7 +1434,8 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let repoconfig = RepoConfigs::read_configs(tmp_dir.path()).expect("failed to read configs");
+        let repoconfig =
+            RepoConfigs::read_configs(fb, tmp_dir.path()).expect("failed to read configs");
 
         let multiplex = BlobConfig::Multiplexed {
             scuba_table: Some("blobstore_scuba_table".to_string()),
@@ -1642,8 +1679,8 @@ mod test {
         )
     }
 
-    #[test]
-    fn test_broken_bypass_config() {
+    #[fbinit::test]
+    fn test_broken_bypass_config(fb: FacebookInit) {
         // Two bypasses for one hook
         let hook1_content = "this is hook1";
         let content = r#"
@@ -1676,7 +1713,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1713,16 +1750,16 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("InvalidPushvar"));
     }
 
-    #[test]
-    fn test_broken_common_config() {
-        fn check_fails(common: &str, expect: &str) {
+    #[fbinit::test]
+    fn test_broken_common_config(fb: FacebookInit) {
+        fn check_fails(fb: FacebookInit, common: &str, expect: &str) {
             let content = r#"
                 repoid = 0
                 storage_config = "storage"
@@ -1742,7 +1779,7 @@ mod test {
 
             let tmp_dir = write_files(&paths);
 
-            let res = RepoConfigs::read_configs(tmp_dir.path());
+            let res = RepoConfigs::read_configs(fb, tmp_dir.path());
             println!("res = {:?}", res);
             let msg = format!("{:?}", res);
             assert!(res.is_err(), "unexpected success for {}", common);
@@ -1758,13 +1795,13 @@ mod test {
         [[whitelist_entry]]
         identity_type="user"
         "#;
-        check_fails(common, "identity type and data must be specified");
+        check_fails(fb, common, "identity type and data must be specified");
 
         let common = r#"
         [[whitelist_entry]]
         identity_data="user"
         "#;
-        check_fails(common, "identity type and data must be specified");
+        check_fails(fb, common, "identity type and data must be specified");
 
         let common = r#"
         [[whitelist_entry]]
@@ -1772,7 +1809,7 @@ mod test {
         identity_type="user"
         identity_data="user"
         "#;
-        check_fails(common, "tier and identity cannot be both specified");
+        check_fails(fb, common, "tier and identity cannot be both specified");
 
         // Only one tier is allowed
         let common = r#"
@@ -1781,11 +1818,11 @@ mod test {
         [[whitelist_entry]]
         tier="tier2"
         "#;
-        check_fails(common, "only one tier is allowed");
+        check_fails(fb, common, "only one tier is allowed");
     }
 
-    #[test]
-    fn test_common_storage() {
+    #[fbinit::test]
+    fn test_common_storage(fb: FacebookInit) {
         const STORAGE: &str = r#"
         [multiplex_store.db.remote]
         db_address = "some_db"
@@ -1818,7 +1855,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(tmp_dir.path()).expect("read configs failed");
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path()).expect("read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -1852,8 +1889,8 @@ mod test {
         )
     }
 
-    #[test]
-    fn test_common_blobstores_local_override() {
+    #[fbinit::test]
+    fn test_common_blobstores_local_override(fb: FacebookInit) {
         const STORAGE: &str = r#"
         [multiplex_store.db.remote]
         db_address = "some_db"
@@ -1890,7 +1927,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(tmp_dir.path()).expect("read configs failed");
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path()).expect("read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -1917,8 +1954,8 @@ mod test {
         )
     }
 
-    #[test]
-    fn test_stray_fields() {
+    #[fbinit::test]
+    fn test_stray_fields(fb: FacebookInit) {
         const REPO: &str = r#"
         repoid = 123
         storage_config = "randomstore"
@@ -1939,7 +1976,7 @@ mod test {
         };
 
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());

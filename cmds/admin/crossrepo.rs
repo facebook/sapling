@@ -51,8 +51,8 @@ pub fn subcommand_crossrepo(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    let source_repo_id = try_boxfuture!(args::get_source_repo_id(matches));
-    let target_repo_id = try_boxfuture!(args::get_target_repo_id(matches));
+    let source_repo_id = try_boxfuture!(args::get_source_repo_id(fb, matches));
+    let target_repo_id = try_boxfuture!(args::get_target_repo_id(fb, matches));
 
     args::init_cachelib(fb, &matches);
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
@@ -60,7 +60,7 @@ pub fn subcommand_crossrepo(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(&matches);
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches);
 
     match sub_m.subcommand() {
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
@@ -75,7 +75,7 @@ pub fn subcommand_crossrepo(
         }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
             let (_, source_repo_config) =
-                try_boxfuture!(args::get_config_by_repoid(matches, source_repo_id));
+                try_boxfuture!(args::get_config_by_repoid(fb, matches, source_repo_id));
             let hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
 
             source_repo
@@ -97,7 +97,7 @@ pub fn subcommand_crossrepo(
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (_, source_repo_config) =
-                try_boxfuture!(args::get_config_by_repoid(matches, source_repo_id));
+                try_boxfuture!(args::get_config_by_repoid(fb, matches, source_repo_id));
 
             let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
             source_repo

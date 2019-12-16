@@ -109,7 +109,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new().expect("failed to create tokio runtime");
     let exec = runtime.executor();
 
-    let repo_configs = RepoConfigs::read_configs(config_path)?;
+    let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
 
     let mut scuba_builder = if let Some(scuba_dataset) = matches.value_of(ARG_SCUBA_DATASET) {
         ScubaSampleBuilder::new(fb, scuba_dataset)

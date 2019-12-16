@@ -474,7 +474,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         None => String::from("master"),
     };
     let bookmark = BookmarkName::new(bookmark.clone())?;
-    let repo_name = args::get_repo_name(&matches)?;
+    let repo_name = args::get_repo_name(fb, &matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
         ScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
     } else {

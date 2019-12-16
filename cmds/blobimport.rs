@@ -181,9 +181,9 @@ fn main(fb: FacebookInit) -> Result<()> {
     let concurrent_blobs = args::get_usize(&matches, "concurrent-blobs", 100);
     let concurrent_lfs_imports = args::get_usize(&matches, "concurrent-lfs-imports", 10);
 
-    let phases_store = args::open_sql::<SqlPhases>(&matches);
-    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(&matches);
-    let synced_commit_mapping = args::open_sql::<SqlSyncedCommitMapping>(&matches);
+    let phases_store = args::open_sql::<SqlPhases>(fb, &matches);
+    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
+    let synced_commit_mapping = args::open_sql::<SqlSyncedCommitMapping>(fb, &matches);
 
     let blobrepo = if matches.is_present("no-create") {
         args::open_repo_unredacted(fb, &ctx.logger(), &matches).left_future()
@@ -200,7 +200,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let has_globalrev = matches.is_present("has-globalrev");
 
-    let small_repo_id = args::get_source_repo_id_opt(&matches)?;
+    let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
 
     let blobimport = blobrepo
         .join4(phases_store, globalrevs_store, synced_commit_mapping)

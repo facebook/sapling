@@ -341,7 +341,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     args::init_cachelib(fb, &matches);
-    let sqlchangesets = args::open_sql::<SqlChangesets>(&matches);
+    let sqlchangesets = args::open_sql::<SqlChangesets>(fb, &matches);
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
         "verify" => Mode::Verify,
@@ -359,7 +359,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .parse()
         .expect("Minimum Changeset Id should be numeric");
 
-    let repoid = args::get_repo_id(&matches).expect("Need repo id");
+    let repoid = args::get_repo_id(fb, &matches).expect("Need repo id");
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let aliasimport = blobrepo

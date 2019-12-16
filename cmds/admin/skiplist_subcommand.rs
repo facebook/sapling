@@ -46,7 +46,7 @@ pub fn subcommand_skiplist(
 
             args::init_cachelib(fb, &matches);
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            let sql_changesets = args::open_sql::<SqlChangesets>(&matches);
+            let sql_changesets = args::open_sql::<SqlChangesets>(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches);
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {

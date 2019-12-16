@@ -255,8 +255,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let stats = {
                 let repo_name = format!(
                     "{}_{}",
-                    args::get_repo_name(&matches)?,
-                    args::get_repo_id(&matches)?
+                    args::get_repo_name(fb, &matches)?,
+                    args::get_repo_id(fb, &matches)?
                 );
                 move |data_type| DerivedDataStats::new(repo_name.clone(), data_type)
             };
@@ -264,7 +264,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             (
                 args::open_repo(fb, &logger, &matches),
                 args::open_repo_unredacted(fb, &logger, &matches),
-                args::open_sql::<SqlBookmarks>(&matches),
+                args::open_sql::<SqlBookmarks>(fb, &matches),
             )
                 .into_future()
                 .and_then(move |(repo, unredacted_repo, bookmarks)| {
@@ -287,8 +287,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             (
                 args::open_repo(fb, &logger, &matches),
-                args::open_sql::<SqlChangesets>(&matches),
-                args::open_sql::<SqlPhases>(&matches),
+                args::open_sql::<SqlChangesets>(fb, &matches),
+                args::open_sql::<SqlPhases>(fb, &matches),
             )
                 .into_future()
                 .and_then(move |(repo, changesets, phases)| {

@@ -412,9 +412,9 @@ pub fn setup_common(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<(BoxFuture<BlobRepo, Error>, RepoWalkParams), Error> {
-    let (_, config) = args::get_config(&matches)?;
+    let (_, config) = args::get_config(fb, &matches)?;
     let quiet = sub_m.is_present(QUIET_ARG);
-    let common_config = cmdlib::args::read_common_config(&matches)?;
+    let common_config = cmdlib::args::read_common_config(fb, &matches)?;
     let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
@@ -470,7 +470,7 @@ pub fn setup_common(
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let storage_config = match storage_id {
         Some(storage_id) => {
-            let mut configs = args::read_storage_configs(&matches)?;
+            let mut configs = args::read_storage_configs(fb, &matches)?;
             configs.remove(storage_id).ok_or(format_err!(
                 "Storage id `{}` not found in {:?}",
                 storage_id,

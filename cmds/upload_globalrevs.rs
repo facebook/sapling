@@ -78,7 +78,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(&matches);
+    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
 
     let run = args::open_repo(fb, &logger, &matches)
         .join(globalrevs_store)

@@ -519,7 +519,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         schedule_stats_aggregation().expect("failed to create stats aggregation scheduler");
 
     let mut runtime = Runtime::new().expect("tokio runtime for blocking jobs");
-    let repo_configs = RepoConfigs::read_configs(config_path)?;
+    let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
 
     let ssl_acceptor = if let Some(cert) = matches.value_of("ssl-certificate") {
         let cert = cert.to_string();
