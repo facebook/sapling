@@ -874,27 +874,6 @@ impl BlobRepo {
         bonsai_cs_id.load(ctx, &self.blobstore).from_err().boxify()
     }
 
-    // TODO(stash): make it accept ChangesetId
-    pub fn get_generation_number(
-        &self,
-        ctx: CoreContext,
-        cs: HgChangesetId,
-    ) -> impl Future<Item = Option<Generation>, Error = Error> {
-        STATS::get_generation_number.add_value(1);
-        let repo = self.clone();
-        let repoid = self.repoid.clone();
-
-        self.get_bonsai_from_hg(ctx.clone(), cs)
-            .and_then(move |maybebonsai| match maybebonsai {
-                Some(bonsai) => repo
-                    .changesets
-                    .get(ctx, repoid, bonsai)
-                    .map(|res| res.map(|res| Generation::new(res.gen)))
-                    .left_future(),
-                None => Ok(None).into_future().right_future(),
-            })
-    }
-
     // TODO(stash): rename to get_generation_number
     pub fn get_generation_number_by_bonsai(
         &self,
