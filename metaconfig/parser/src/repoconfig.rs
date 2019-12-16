@@ -62,14 +62,21 @@ impl RepoConfigs {
     pub fn read_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<Self> {
         let config_path = config_path.as_ref();
 
-        let raw_config = Self::read_raw_configs(fb, config_path)?;
+        let RawRepoConfigs {
+            commit_sync,
+            common: _,
+            repos,
+            storage,
+        } = Self::read_raw_configs(fb, config_path)?;
+        let commit_sync = Self::parse_commit_sync_config(commit_sync)?;
         let mut repo_configs = HashMap::new();
         let mut repoids = HashSet::new();
 
-        for (reponame, raw_repo_config) in &raw_config.repos {
+        for (reponame, raw_repo_config) in &repos {
             let config = RepoConfigs::process_single_repo_config(
-                fb,
                 raw_repo_config.clone(),
+                &storage,
+                &commit_sync,
                 reponame.to_owned(),
                 config_path,
             )?;
@@ -268,12 +275,10 @@ impl RepoConfigs {
     }
 
     /// Read commit sync config
-    pub fn read_commit_sync_config(
-        fb: FacebookInit,
-        config_root_path: impl AsRef<Path>,
+    fn parse_commit_sync_config(
+        raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
     ) -> Result<HashMap<String, CommitSyncConfig>> {
-        let config_root_path = config_root_path.as_ref();
-        Self::read_raw_configs(fb, config_root_path)?.commit_sync
+        raw_commit_syncs
             .into_iter()
             .map(|(config_name, v)| {
                 let RawCommitSyncConfig {
@@ -367,14 +372,12 @@ impl RepoConfigs {
     }
 
     fn process_single_repo_config(
-        fb: FacebookInit,
         raw_config: RawRepoConfig,
+        storage_config: &HashMap<String, RawStorageConfig>,
+        commit_sync: &HashMap<String, CommitSyncConfig>,
         reponame: String,
         config_root_path: &Path,
     ) -> Result<RepoConfig> {
-        let common_config = Self::read_raw_configs(fb, config_root_path)?;
-        let common_storage = common_config.storage;
-        let commit_sync = Self::read_commit_sync_config(fb, config_root_path)?;
         let hooks = raw_config.hooks.clone().unwrap_or_default();
 
         let mut all_hook_params = vec![];
@@ -426,7 +429,7 @@ impl RepoConfigs {
         }
         Ok(RepoConfigs::convert_conf(
             raw_config,
-            common_storage,
+            storage_config,
             commit_sync,
             all_hook_params,
         )?)
@@ -476,8 +479,8 @@ impl RepoConfigs {
 
     fn convert_conf(
         this: RawRepoConfig,
-        common_storage: HashMap<String, RawStorageConfig>,
-        commit_sync: HashMap<String, CommitSyncConfig>,
+        common_storage: &HashMap<String, RawStorageConfig>,
+        commit_sync: &HashMap<String, CommitSyncConfig>,
         hooks: Vec<HookParams>,
     ) -> Result<RepoConfig> {
         let storage = this.storage.clone().unwrap_or_default();
@@ -990,11 +993,13 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path())
-            .expect("failed to read commit sync configs");
+        let raw_config =
+            RepoConfigs::read_raw_configs(fb, tmp_dir.path()).expect("expect to read configs");
+        let commit_sync = RepoConfigs::parse_commit_sync_config(raw_config.commit_sync)
+            .expect("expected to get a commit sync config");
 
         let expected = hashmap! {
-            "mega".to_string() => CommitSyncConfig {
+            "mega".to_owned() => CommitSyncConfig {
                 large_repo_id: RepositoryId::new(1),
                 common_pushrebase_bookmarks: vec![BookmarkName::new("master").unwrap()],
                 small_repos: hashmap! {
@@ -1020,7 +1025,7 @@ mod test {
             }
         };
 
-        assert_eq!(commit_sync_config, expected);
+        assert_eq!(commit_sync, expected);
     }
 
     #[fbinit::test]
@@ -1056,7 +1061,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1095,7 +1100,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
+        let commit_sync_config = RepoConfigs::read_configs(fb, tmp_dir.path());
         assert!(commit_sync_config.is_ok());
 
         // Overlapping, but not identical prefixes
@@ -1128,7 +1133,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1167,7 +1172,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1214,7 +1219,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1253,7 +1258,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_commit_sync_config(fb, tmp_dir.path());
+        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
