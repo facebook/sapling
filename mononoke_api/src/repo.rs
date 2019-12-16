@@ -27,6 +27,7 @@ use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::try_join_all;
 use futures_preview::StreamExt as NewStreamExt;
+use futures_util::try_join;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
     CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
@@ -673,16 +674,23 @@ impl RepoContext {
         descendant: ChangesetSpecifier,
         limit: u64,
     ) -> Result<Option<ChangesetId>, Error> {
-        let ancestor = self
-            .changeset(ancestor)
-            .await?
-            .ok_or(format_err!("cannot resolve {}", ancestor))?
-            .id();
-        let descendant = self
-            .changeset(descendant)
-            .await?
-            .ok_or(format_err!("cannot resolve {}", descendant))?
-            .id();
+        let ancestor = async {
+            let res: Result<_, Error> = Ok(self
+                .changeset(ancestor)
+                .await?
+                .ok_or(format_err!("cannot resolve {}", ancestor))?
+                .id());
+            res
+        };
+        let descendant = async {
+            let res: Result<_, Error> = Ok(self
+                .changeset(descendant)
+                .await?
+                .ok_or(format_err!("cannot resolve {}", descendant))?
+                .id());
+            res
+        };
+        let (ancestor, descendant) = try_join!(ancestor, descendant)?;
 
         let ctx = self.ctx();
         let repo = self.blob_repo();
