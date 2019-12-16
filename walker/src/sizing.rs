@@ -12,7 +12,7 @@ use crate::progress::{
     progress_stream, report_state, ProgressRecorderUnprotected, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::state::WalkState;
+use crate::state::{WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 
 use anyhow::{format_err, Error};
@@ -228,6 +228,9 @@ pub fn compression_benefit(
         walk_params.include_node_types,
         walk_params.include_edge_types
     );
-    let walk_state = WalkState::new(include_node_types, include_edge_types);
+    let walk_state = WalkState::new(WalkStateCHashMap::new(
+        include_node_types,
+        include_edge_types,
+    ));
     walk_exact_tail(ctx, walk_params, walk_state, blobrepo, make_sink).boxify()
 }

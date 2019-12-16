@@ -34,7 +34,7 @@ impl Add<StepStats> for StepStats {
 }
 
 #[derive(Debug)]
-struct WalkStateCHashMap {
+pub struct WalkStateCHashMap {
     // TODO implement ID interning to u32 or u64 for types in more than one map
     // e.g. ChangesetId, HgChangesetId, HgFileNodeId
     include_node_types: HashSet<NodeType>,
@@ -64,7 +64,10 @@ where
 }
 
 impl WalkStateCHashMap {
-    fn new(include_node_types: HashSet<NodeType>, include_edge_types: HashSet<EdgeType>) -> Self {
+    pub fn new(
+        include_node_types: HashSet<NodeType>,
+        include_edge_types: HashSet<EdgeType>,
+    ) -> Self {
         Self {
             include_node_types,
             include_edge_types,
@@ -111,6 +114,12 @@ impl WalkStateCHashMap {
                 && self.include_edge_types.contains(&outgoing_edge.label))
     }
 
+    fn get_visit_count(&self, t: &NodeType) -> usize {
+        self.visit_count.get(t).map(|v| *v).unwrap_or(0)
+    }
+}
+
+impl WalkVisitor<(Node, Option<(StepStats, NodeData)>)> for WalkStateCHashMap {
     fn visit(
         &self,
         // Option as roots have no source
@@ -145,37 +154,39 @@ impl WalkStateCHashMap {
         });
         ((node, payload), outgoing)
     }
-
-    fn get_visit_count(&self, t: &NodeType) -> usize {
-        self.visit_count.get(t).map(|v| *v).unwrap_or(0)
-    }
 }
 
-#[derive(Clone, Debug)]
-pub struct WalkState {
-    inner: Arc<WalkStateCHashMap>,
+#[derive(Debug)]
+pub struct WalkState<Inner> {
+    inner: Arc<Inner>,
 }
 
-impl WalkState {
-    pub fn new(
-        include_node_types: HashSet<NodeType>,
-        include_edge_types: HashSet<EdgeType>,
-    ) -> Self {
+impl<Inner> WalkState<Inner> {
+    pub fn new(inner: Inner) -> Self {
         Self {
-            inner: Arc::new(WalkStateCHashMap::new(
-                include_node_types,
-                include_edge_types,
-            )),
+            inner: Arc::new(inner),
         }
     }
 }
 
-impl WalkVisitor<(Node, Option<(StepStats, NodeData)>)> for WalkState {
+impl<Inner> Clone for WalkState<Inner> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<Inner, VOut> WalkVisitor<VOut> for WalkState<Inner>
+where
+    Inner: WalkVisitor<VOut>,
+    VOut: Send,
+{
     fn visit(
         &self,
         current: ResolvedNode,
         outgoing_edge: Vec<OutgoingEdge>,
-    ) -> ((Node, Option<(StepStats, NodeData)>), Vec<OutgoingEdge>) {
+    ) -> (VOut, Vec<OutgoingEdge>) {
         self.inner.visit(current, outgoing_edge)
     }
 }
