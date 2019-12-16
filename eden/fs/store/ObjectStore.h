@@ -81,15 +81,6 @@ class ObjectStore : public IObjectStore,
       const Hash& id) const override;
 
   /**
-   * Get metadata about a Blob.
-   *
-   * This returns a Future object that will produce the BlobMetadata when it is
-   * ready.  It may result in a std::domain_error if the specified blob does
-   * not exist, or possibly other exceptions on error.
-   */
-  folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
-
-  /**
    * Returns the size of the contents of the blob with the given ID.
    */
   folly::Future<uint64_t> getBlobSize(const Hash& id) const;
@@ -122,6 +113,15 @@ class ObjectStore : public IObjectStore,
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
+
+  /**
+   * Get metadata about a Blob.
+   *
+   * This returns a Future object that will produce the BlobMetadata when it is
+   * ready.  It may result in a std::domain_error if the specified blob does
+   * not exist, or possibly other exceptions on error.
+   */
+  folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const;
 
   static constexpr size_t kCacheSize = 1000000;
 

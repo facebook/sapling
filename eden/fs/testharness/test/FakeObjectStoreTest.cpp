@@ -53,22 +53,6 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   auto foundTreeForCommit = store.getTreeForCommit(commHash).get();
   ASSERT_NE(nullptr, foundTreeForCommit.get());
   EXPECT_EQ(tree2Hash, foundTreeForCommit->getHash());
-
-  // Test getTreeForManifest().
-  auto foundTreeForCommit2 =
-      store.getTreeForManifest(commHash, tree2Hash).get();
-  ASSERT_NE(nullptr, foundTreeForCommit2.get());
-  EXPECT_EQ(tree2Hash, foundTreeForCommit2->getHash());
-
-  // Test getBlobMetadata() and getSha1ForBlob().
-  auto buf2 = IOBuf();
-  Blob blob2(blobHash, buf2);
-  auto expectedSha1 = Hash::sha1(buf1);
-  auto metadataFuture = store.getBlobMetadata(blob2.getHash());
-  ASSERT_TRUE(metadataFuture.isReady());
-  auto metadata = std::move(metadataFuture).get();
-  EXPECT_EQ(expectedSha1, metadata.sha1);
-  EXPECT_EQ(0, metadata.size);
 }
 
 TEST(FakeObjectStore, getMissingObjectThrows) {
@@ -77,6 +61,4 @@ TEST(FakeObjectStore, getMissingObjectThrows) {
   EXPECT_THROW(store.getTree(hash).get(), std::domain_error);
   EXPECT_THROW(store.getBlob(hash).get(), std::domain_error);
   EXPECT_THROW(store.getTreeForCommit(hash).get(), std::domain_error);
-  EXPECT_THROW(store.getTreeForManifest(hash, hash).get(), std::domain_error);
-  EXPECT_THROW(store.getBlobMetadata(hash).get(), std::domain_error);
 }

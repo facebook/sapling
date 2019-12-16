@@ -28,14 +28,8 @@ void FakeObjectStore::addTree(Tree&& tree) {
 }
 
 void FakeObjectStore::addBlob(Blob&& blob) {
-  // Compute the blob metadata
-  auto sha1 = Hash::sha1(blob.getContents());
-  auto metadata =
-      BlobMetadata{sha1, blob.getContents().computeChainDataLength()};
-
   auto blobHash = blob.getHash();
   blobs_.emplace(blobHash, std::move(blob));
-  blobMetadata_.emplace(std::move(blobHash), metadata);
 }
 
 void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
@@ -86,18 +80,6 @@ folly::Future<std::shared_ptr<const Tree>> FakeObjectStore::getTreeForManifest(
     const Hash& commitID,
     const Hash& /* manifestID */) const {
   return getTreeForCommit(commitID);
-}
-
-Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
-  // Might be nice in the future to differentiate between blob and metadata
-  // accesses, since the latter can be cheaper.
-  ++accessCounts_[id];
-  auto iter = blobMetadata_.find(id);
-  if (iter == blobMetadata_.end()) {
-    return makeFuture<BlobMetadata>(
-        std::domain_error("metadata for blob " + id.toString() + " not found"));
-  }
-  return makeFuture(iter->second);
 }
 
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(

@@ -1145,7 +1145,9 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     auto localStore = store->getLocalStore();
     metadata = localStore->getBlobMetadata(id).get();
   } else {
-    metadata = store->getBlobMetadata(id).get();
+    auto sha1 = store->getBlobSha1(id).get();
+    auto size = store->getBlobSize(id).get();
+    metadata.emplace(sha1, size);
   }
 
   if (!metadata.has_value()) {

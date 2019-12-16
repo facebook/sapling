@@ -118,9 +118,9 @@ FOLLY_NODISCARD folly::Future<bool> GenerateStatus::checkModified(
   Hash fileSha1 = getFileSha1(path.c_str());
 
   return objectStore()
-      ->getBlobMetadata(scmEntry.getHash())
-      .thenValue([fileSha1 = std::move(fileSha1)](BlobMetadata metadata) {
-        return (fileSha1 != metadata.sha1);
+      ->getBlobSha1(scmEntry.getHash())
+      .thenValue([fileSha1 = std::move(fileSha1)](auto sha1) {
+        return (fileSha1 != sha1);
       });
 }
 

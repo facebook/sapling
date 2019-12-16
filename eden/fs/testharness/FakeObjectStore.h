@@ -40,7 +40,6 @@ class FakeObjectStore : public IObjectStore {
   folly::Future<std::shared_ptr<const Tree>> getTreeForManifest(
       const Hash& commitID,
       const Hash& manifestID) const override;
-  folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
   folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
@@ -50,7 +49,6 @@ class FakeObjectStore : public IObjectStore {
   std::unordered_map<Hash, Tree> trees_;
   std::unordered_map<Hash, Blob> blobs_;
   std::unordered_map<Hash, Tree> commits_;
-  std::unordered_map<Hash, BlobMetadata> blobMetadata_;
   mutable std::unordered_map<Hash, size_t> accessCounts_;
 };
 } // namespace eden

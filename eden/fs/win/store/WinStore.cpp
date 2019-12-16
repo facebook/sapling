@@ -64,7 +64,7 @@ bool WinStore::getAllEntries(
   }
 
   const std::vector<TreeEntry>& treeEntries = tree->getTreeEntries();
-  vector<Future<pair<BlobMetadata, size_t>>> futures;
+  vector<Future<pair<uint64_t, size_t>>> futures;
   for (size_t i = 0; i < treeEntries.size(); i++) {
     size_t fileSize = 0;
     if (!treeEntries[i].isTree()) {
@@ -74,9 +74,9 @@ bool WinStore::getAllEntries(
       } else {
         futures.emplace_back(getMount()
                                  .getObjectStore()
-                                 ->getBlobMetadata(treeEntries[i].getHash())
-                                 .thenValue([index = i](BlobMetadata data) {
-                                   return make_pair(data, index);
+                                 ->getBlobSize(treeEntries[i].getHash())
+                                 .thenValue([index = i](auto size) {
+                                   return make_pair(size, index);
                                  }));
         continue;
       }
@@ -98,7 +98,7 @@ bool WinStore::getAllEntries(
         std::move(edenToWinName(
             treeEntries[result->second].getName().value().toStdString())),
         false,
-        result->first.size);
+        result->first);
   }
 
   return true;
@@ -123,11 +123,9 @@ bool WinStore::getFileMetadata(
         if (size.has_value()) {
           fileMetadata.size = size.value();
         } else {
-          BlobMetadata metaData = getMount()
-                                      .getObjectStore()
-                                      ->getBlobMetadata(entry->getHash())
-                                      .get();
-          fileMetadata.size = metaData.size;
+          auto size =
+              getMount().getObjectStore()->getBlobSize(entry->getHash()).get();
+          fileMetadata.size = size;
         }
       }
       return true;
