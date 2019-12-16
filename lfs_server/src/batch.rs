@@ -8,7 +8,7 @@
 
 use anyhow::Error;
 use futures_preview::{compat::Future01CompatExt, compat::Stream01CompatExt, TryStreamExt};
-use futures_util::{pin_mut, select, try_future::try_join_all, try_join, FutureExt};
+use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, StatusCode};

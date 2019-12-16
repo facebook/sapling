@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use futures_util::try_future;
+use futures_util::future;
 use mononoke_api::{ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use source_control::services::source_control_service as service;
@@ -91,7 +91,7 @@ impl SourceControlServiceImpl {
         .await?;
 
         // author and date fields
-        let info: HashMap<_, _> = try_future::try_join_all(csids.into_iter().map(move |csid| {
+        let info: HashMap<_, _> = future::try_join_all(csids.into_iter().map(move |csid| {
             let repo = repo.clone();
             async move {
                 let changeset = repo

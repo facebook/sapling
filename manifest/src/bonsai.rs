@@ -13,8 +13,7 @@ use futures::{Future, Stream};
 use futures_ext::bounded_traversal::bounded_traversal_stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::{
-    future::FutureExt as Futures03FutureExt,
-    try_future::{try_join_all, TryFutureExt},
+    future::{try_join_all, FutureExt as Futures03FutureExt, TryFutureExt},
     try_join,
 };
 use maplit::{hashmap, hashset};

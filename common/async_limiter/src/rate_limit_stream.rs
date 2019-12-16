@@ -6,17 +6,18 @@
  * directory of this source tree.
  */
 
-use futures::{compat::Compat01As03, ready, task::Context, Poll, Stream};
+use futures::{compat::Compat01As03, ready, task::Context, Stream};
 use futures_util::{compat::Future01CompatExt, FutureExt};
 use ratelimit_meter::{algorithms::Algorithm, DirectRateLimiter, NonConformance};
 use std::pin::Pin;
+use std::task::Poll;
 use std::time::Instant;
 
 use crate::TokioFlavor;
 
 enum TokioDelay {
     V01(Compat01As03<tokio::timer::Delay>),
-    V02(tokio_preview::timer::Delay),
+    V02(tokio_preview::time::Delay),
 }
 
 #[must_use = "streams do nothing unless you poll them"]
@@ -78,7 +79,8 @@ where
                             TokioDelay::V01(delay)
                         }
                         TokioFlavor::V02 => {
-                            let delay = tokio_preview::timer::delay(instant);
+                            let instant = tokio_preview::time::Instant::from_std(instant);
+                            let delay = tokio_preview::time::delay_until(instant);
                             TokioDelay::V02(delay)
                         }
                     });

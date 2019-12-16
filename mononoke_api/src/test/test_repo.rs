@@ -17,9 +17,8 @@ use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
-use futures_util::future::FutureExt;
-use futures_util::try_future::TryFutureExt;
-use futures_util::try_stream::TryStreamExt;
+use futures_util::future::{FutureExt, TryFutureExt};
+use futures_util::stream::TryStreamExt;
 
 use crate::{
     ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,

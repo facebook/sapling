@@ -33,10 +33,9 @@ use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
 use futures_preview::{compat::Future01CompatExt, future::try_join3, stream::FuturesUnordered};
 use futures_stats::Timed;
 use futures_util::{
-    future::{ready, FutureExt as NewFutureExt},
-    try_future::TryFutureExt,
+    future::{ready, FutureExt as _, TryFutureExt},
+    stream::TryStreamExt,
     try_join,
-    try_stream::TryStreamExt,
 };
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
@@ -772,7 +771,7 @@ async fn unode_warmup(
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-    let mut futs = FuturesUnordered::new();
+    let futs = FuturesUnordered::new();
     for cs_id in chunk {
         cloned!(ctx, repo, unode_mapping);
         let f = async move {

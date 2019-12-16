@@ -57,7 +57,7 @@ use futures_preview::{
     compat::Future01CompatExt,
     future::{try_join, try_join_all},
 };
-use futures_util::{future::FutureExt as NewFutureExt, try_future::TryFutureExt};
+use futures_util::{future::FutureExt as _, future::TryFutureExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};

@@ -18,7 +18,7 @@ use fbinit::FacebookInit;
 use futures::{future::Either, sync::oneshot, Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::TryFutureExt;
-use futures_util::{compat::Future01CompatExt, try_future::try_join_all, try_join};
+use futures_util::{compat::Future01CompatExt, future::try_join_all, try_join};
 use gotham::{bind_server, bind_server_with_pre_state};
 use scuba::ScubaSampleBuilder;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};

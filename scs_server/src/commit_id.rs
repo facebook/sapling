@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use faster_hex::hex_string;
-use futures_util::{try_future, FutureExt};
+use futures_util::{future, FutureExt};
 use mononoke_api::{ChangesetContext, ChangesetId, MononokeError, RepoContext};
 use source_control as thrift;
 
@@ -53,7 +53,7 @@ pub(crate) async fn map_commit_identity(
         };
         scheme_identities.push(identity.boxed());
     }
-    let scheme_identities = try_future::try_join_all(scheme_identities).await?;
+    let scheme_identities = future::try_join_all(scheme_identities).await?;
     for maybe_identity in scheme_identities {
         if let Some((scheme, id)) = maybe_identity {
             ids.insert(scheme, id);
@@ -121,7 +121,7 @@ pub(crate) async fn map_commit_identities(
         };
         scheme_identities.push(identities.boxed());
     }
-    let scheme_identities = try_future::try_join_all(scheme_identities).await?;
+    let scheme_identities = future::try_join_all(scheme_identities).await?;
     for ids in scheme_identities {
         for (cs_id, commit_identity_scheme, commit_id) in ids {
             result

@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::{TryFrom, TryInto};
 
-use futures_util::{stream, try_future, try_join, StreamExt, TryStreamExt};
+use futures_util::{future, stream, try_join, StreamExt, TryStreamExt};
 use mononoke_api::{
     unified_diff, ChangesetContext, ChangesetSpecifier, CopyInfo, MononokeError, MononokePath,
     RepoContext,
@@ -102,7 +102,7 @@ impl SourceControlServiceImpl {
             .iter()
             .flat_map(|(base_path, other_path, _)| vec![base_path, other_path])
             .filter_map(|x| x.as_ref());
-        let total_input_size: u64 = try_future::try_join_all(flat_paths.map(|path| {
+        let total_input_size: u64 = future::try_join_all(flat_paths.map(|path| {
             async move {
                 let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
                     Ok(file.metadata().await?.total_size)
@@ -120,8 +120,8 @@ impl SourceControlServiceImpl {
             Err(errors::diff_input_too_big(total_input_size))?;
         }
 
-        let path_diffs = try_future::try_join_all(paths.into_iter().map(
-            |(base_path, other_path, copy_info)| {
+        let path_diffs =
+            future::try_join_all(paths.into_iter().map(|(base_path, other_path, copy_info)| {
                 async move {
                     let diff =
                         unified_diff(&other_path, &base_path, copy_info, context_lines).await?;
@@ -133,9 +133,8 @@ impl SourceControlServiceImpl {
                         });
                     r
                 }
-            },
-        ))
-        .await?;
+            }))
+            .await?;
         Ok(thrift::CommitFileDiffsResponse { path_diffs })
     }
 
@@ -284,7 +283,7 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitFindFilesResponse, service::CommitFindFilesExn> {
         let ctx = self.create_ctx(Some(&commit));
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
-        let limit: u64 = check_range_and_convert(
+        let limit: usize = check_range_and_convert(
             "limit",
             params.limit,
             0..=source_control::COMMIT_FIND_FILES_MAX_LIMIT,

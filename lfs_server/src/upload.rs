@@ -206,7 +206,8 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
             received += bytes.len();
             bytes
         })
-        .map_err(|_| ());
+        .map_err(|_| ())
+        .map(Ok);
 
     // Note: this closure simply creates a single future that sends all data then closes the sink.
     // It needs to be a single future because all 3 futures below need to make progress

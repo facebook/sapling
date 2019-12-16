@@ -19,8 +19,7 @@ use futures::stream as old_stream;
 use futures_preview::Stream;
 use futures_util::compat::Future01CompatExt;
 use futures_util::future;
-use futures_util::stream::{FuturesOrdered, FuturesUnordered};
-use futures_util::try_stream::TryStreamExt;
+use futures_util::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
 use manifest::PathTree;
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange, MPath,

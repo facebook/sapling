@@ -13,7 +13,7 @@ use futures::{
     stream::{repeat, Stream},
 };
 use futures_ext::FutureExt as Futures01FutureExt;
-use futures_util::{future::FutureExt, try_future::TryFutureExt};
+use futures_util::future::{FutureExt, TryFutureExt};
 use nonzero_ext::nonzero;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use std::sync::Arc;

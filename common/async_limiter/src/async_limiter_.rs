@@ -11,7 +11,7 @@ use futures::{
     future::{self, Future, FutureExt},
     stream::StreamExt,
 };
-use futures_util::try_future::TryFutureExt;
+use futures_util::future::TryFutureExt;
 use ratelimit_meter::{algorithms::Algorithm, DirectRateLimiter, NonConformance};
 use std::time::Instant;
 

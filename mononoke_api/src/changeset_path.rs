@@ -18,7 +18,7 @@ use filestore::FetchKey;
 use futures::Future as FutureLegacy;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::{FutureExt, Shared};
-use futures_util::{try_join, try_stream::TryStreamExt};
+use futures_util::{stream::TryStreamExt, try_join};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,

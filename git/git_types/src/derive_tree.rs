@@ -172,7 +172,7 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::Alias;
     use futures_util::compat::{Future01CompatExt, Stream01CompatExt};
-    use futures_util::try_stream::TryStreamExt;
+    use futures_util::stream::TryStreamExt;
     use git2::{Oid, Repository};
     use manifest::ManifestOps;
     use std::fs::File;

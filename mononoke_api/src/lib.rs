@@ -118,8 +118,7 @@ impl Mononoke {
         ctx: CoreContext,
         repos: impl IntoIterator<Item = (String, BlobRepo)>,
     ) -> Result<Self, Error> {
-        use futures_util::stream::FuturesOrdered;
-        use futures_util::try_stream::TryStreamExt;
+        use futures_util::stream::{FuturesOrdered, TryStreamExt};
         let repos = repos
             .into_iter()
             .map(move |(name, repo)| {
