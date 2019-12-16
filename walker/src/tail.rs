@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::parse_args::RepoWalkParams;
+use crate::setup::RepoWalkParams;
 use crate::walk::{walk_exact, WalkVisitor};
 
 use anyhow::Error;

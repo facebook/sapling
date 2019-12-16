@@ -20,9 +20,9 @@ use slog::{error, info};
 mod blobstore;
 mod count_objects;
 mod graph;
-mod parse_args;
 mod progress;
 mod scrub;
+mod setup;
 mod sizing;
 mod state;
 mod tail;
@@ -31,17 +31,17 @@ mod walk;
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app_name = "walker";
-    let matches = parse_args::setup_toplevel_app(app_name).get_matches();
+    let matches = setup::setup_toplevel_app(app_name).get_matches();
     let logger = args::init_logging(fb, &matches);
 
     let future = match matches.subcommand() {
-        (parse_args::COUNT_OBJECTS, Some(sub_m)) => {
+        (setup::COUNT_OBJECTS, Some(sub_m)) => {
             count_objects::count_objects(fb, logger.clone(), &matches, sub_m)
         }
-        (parse_args::SCRUB_OBJECTS, Some(sub_m)) => {
+        (setup::SCRUB_OBJECTS, Some(sub_m)) => {
             scrub::scrub_objects(fb, logger.clone(), &matches, sub_m)
         }
-        (parse_args::COMPRESSION_BENEFIT, Some(sub_m)) => {
+        (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
             sizing::compression_benefit(fb, logger.clone(), &matches, sub_m)
         }
         _ => Err(Error::msg("Invalid Arguments, pass --help for usage."))

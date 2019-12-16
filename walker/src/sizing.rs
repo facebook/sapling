@@ -7,11 +7,11 @@
  */
 
 use crate::graph::{FileContentData, Node, NodeData};
-use crate::parse_args::{parse_args_common, COMPRESSION_LEVEL_ARG, SAMPLE_RATE_ARG};
 use crate::progress::{
     progress_stream, report_state, ProgressRecorderUnprotected, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
+use crate::setup::{setup_common, COMPRESSION_LEVEL_ARG, SAMPLE_RATE_ARG};
 use crate::state::{WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 
@@ -192,7 +192,7 @@ pub fn compression_benefit(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let (blobrepo, walk_params) = try_boxfuture!(parse_args_common(fb, &logger, matches, sub_m));
+    let (blobrepo, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(

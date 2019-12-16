@@ -406,7 +406,7 @@ fn reachable_graph_elements(
     (include_edge_types, include_node_types)
 }
 
-pub fn parse_args_common(
+pub fn setup_common(
     fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'_>,
