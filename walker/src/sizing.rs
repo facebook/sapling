@@ -224,6 +224,10 @@ pub fn compression_benefit(
             one_fut
         }
     };
-    let walk_state = WalkState::new();
+    cloned!(
+        walk_params.include_node_types,
+        walk_params.include_edge_types
+    );
+    let walk_state = WalkState::new(include_node_types, include_edge_types);
     walk_exact_tail(ctx, walk_params, walk_state, blobrepo, make_sink).boxify()
 }

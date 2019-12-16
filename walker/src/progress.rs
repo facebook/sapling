@@ -7,7 +7,7 @@
  */
 
 use crate::graph::{Node, NodeType};
-use crate::walk::StepStats;
+use crate::state::StepStats;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;

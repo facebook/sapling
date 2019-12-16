@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType};
+use crate::graph::{EdgeType, FileContentData, Node, NodeData};
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -19,38 +19,44 @@ use futures::{
     Future,
 };
 use futures_ext::{
-    bounded_traversal::bounded_traversal_stream, spawn_future, try_boxfuture, BoxFuture, BoxStream,
-    FutureExt, StreamExt,
+    bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, BoxStream, FutureExt,
+    StreamExt,
 };
 use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
-use std::{cmp, iter::IntoIterator, ops::Add};
+use std::iter::IntoIterator;
 
-// Holds type of edge and destination Node that we want to load in next step(s)
+// Holds type of edge and target Node that we want to load in next step(s)
 // Combined with current node, this forms an complegte edge.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct OutgoingEdge {
     pub label: EdgeType,
-    pub dest: Node,
+    pub target: Node,
 }
 
 impl OutgoingEdge {
-    pub fn new(label: EdgeType, dest: Node) -> Self {
-        Self { label, dest }
+    pub fn new(label: EdgeType, target: Node) -> Self {
+        Self { label, target }
     }
 }
 
-pub trait WalkVisitor {
-    // This can mutate the internal state.  Returns true if we should visit the outgoing_edge
-    fn record_outgoing(
-        &self,
-        current: Option<(&Node, &NodeData)>,
-        outgoing_edge: &OutgoingEdge,
-    ) -> bool;
+pub struct ResolvedNode {
+    pub node: Node,
+    pub data: NodeData,
+    pub via: Option<EdgeType>,
+}
 
-    // How many times has the vistor seen this type
-    fn get_visit_count(&self, t: &NodeType) -> usize;
+impl ResolvedNode {
+    pub fn new(node: Node, data: NodeData, via: Option<EdgeType>) -> Self {
+        Self { node, data, via }
+    }
+}
+
+pub trait WalkVisitor<VOut> {
+    // This can mutate the internal state.  Takes ownership and returns data, plus next step
+    fn visit(&self, source: ResolvedNode, outgoing: Vec<OutgoingEdge>)
+        -> (VOut, Vec<OutgoingEdge>);
 }
 
 // Data found for this node, plus next steps
@@ -378,13 +384,13 @@ fn alias_content_mapping_step(
 
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
-fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
+pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
     let mut extra = vec![];
     for n in children.iter() {
         match n {
             OutgoingEdge {
                 label: _,
-                dest: Node::FileContent(fc_id),
+                target: Node::FileContent(fc_id),
             } => {
                 extra.push(OutgoingEdge::new(
                     EdgeType::FileContentToFileContentMetadata,
@@ -399,50 +405,33 @@ fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug, PartialEq)]
-pub struct StepStats {
-    pub num_direct: usize,
-    pub num_direct_new: usize,
-    pub num_expanded_new: usize,
-    pub visited_of_type: usize,
-}
-
-impl Add<StepStats> for StepStats {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            num_direct: self.num_direct + other.num_direct,
-            num_direct_new: self.num_direct_new + other.num_direct_new,
-            num_expanded_new: self.num_expanded_new + other.num_expanded_new,
-            visited_of_type: cmp::max(self.visited_of_type, other.visited_of_type),
-        }
-    }
-}
-
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
-pub fn walk_exact<FilterItem, V>(
+pub fn walk_exact<V, VOut>(
     ctx: CoreContext,
     repo: BlobRepo,
     walk_roots: Vec<OutgoingEdge>,
     visitor: V,
-    filter_item: FilterItem,
     scheduled_max: usize,
-) -> BoxStream<(Node, Option<(StepStats, NodeData)>), Error>
+) -> BoxStream<VOut, Error>
 where
-    FilterItem: 'static + Send + Clone + Fn(&Node, &NodeData, &OutgoingEdge) -> bool,
-    V: 'static + Clone + WalkVisitor + Send,
+    V: 'static + Clone + WalkVisitor<VOut> + Send,
+    VOut: 'static + Send,
 {
     // record the roots so the stats add up
-    walk_roots.iter().for_each(|e| {
-        visitor.record_outgoing(None, e);
-    });
+    visitor.visit(
+        ResolvedNode::new(Node::Root, NodeData::Root, None),
+        walk_roots.clone(),
+    );
 
     bounded_traversal_stream(scheduled_max, walk_roots, {
         // Each step returns the walk result, and next steps
         move |walk_item| {
             cloned!(ctx);
-            let node = walk_item.dest.clone();
+            let node = walk_item.target.clone();
             let next = match node.clone() {
+                Node::Root => {
+                    future::err(format_err!("Not expecting Roots to be generated")).boxify()
+                }
                 // Bonsai
                 Node::Bookmark(bookmark_name) => bookmark_step(ctx, &repo, bookmark_name),
                 Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
@@ -467,17 +456,17 @@ where
                 Node::AliasContentMapping(alias) => alias_content_mapping_step(ctx, &repo, alias),
             }
             .and_then({
-                cloned!(filter_item, visitor);
+                cloned!(visitor);
                 move |StepOutput(node_data, children)| {
                     // make sure steps are valid.  would be nice if this could be static
                     let children = children
                         .into_iter()
                         .map(|c| {
-                            if c.label.outgoing_type() != c.dest.get_type() {
+                            if c.label.outgoing_type() != c.target.get_type() {
                                 Err(format_err!(
                                     "Bad step {:?} to {:?}",
                                     c.label,
-                                    c.dest.get_type()
+                                    c.target.get_type()
                                 ))
                             } else if c
                                 .label
@@ -496,36 +485,13 @@ where
                         })
                         .collect::<Result<Vec<OutgoingEdge>, Error>>();
 
-                    let mut children = try_boxfuture!(children);
-
-                    // Filter things we don't want to enter the WalkVisitor at all.
-                    children.retain(|outgoing_edge| {
-                        filter_item.clone()(&node, &node_data, outgoing_edge)
-                    });
-                    let num_direct = children.len();
+                    let children = children?;
 
                     // Allow WalkVisitor to record state and decline outgoing nodes if already visited
-                    children.retain(|outgoing_edge| {
-                        visitor.record_outgoing(Some((&node, &node_data)), outgoing_edge)
-                    });
-                    let num_direct_new = children.len();
-
-                    expand_checked_nodes(&mut children);
-                    // Make sure we don't add in types of node and edge not wanted
-                    children.retain(|outgoing_edge| {
-                        filter_item.clone()(&node, &node_data, outgoing_edge)
-                    });
-                    let num_expanded_new = children.len();
-
-                    let visited_of_type = visitor.get_visit_count(&node.get_type());
-
-                    let stats = StepStats {
-                        num_direct,
-                        num_direct_new,
-                        num_expanded_new,
-                        visited_of_type,
-                    };
-                    future::ok(((node, Some((stats, node_data))), children)).boxify()
+                    Ok(visitor.visit(
+                        ResolvedNode::new(node, node_data, Some(walk_item.label)),
+                        children,
+                    ))
                 }
             });
             spawn_future(next)

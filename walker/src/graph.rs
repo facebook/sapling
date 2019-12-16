@@ -21,6 +21,7 @@ use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NodeType {
+    Root,
     // Bonsai
     Bookmark,
     BonsaiChangeset,
@@ -47,6 +48,7 @@ impl FromStr for NodeType {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "Root" => Ok(NodeType::Root),
             // Bonsai
             "Bookmark" => Ok(NodeType::Bookmark),
             "BonsaiChangeset" => Ok(NodeType::BonsaiChangeset),
@@ -69,6 +71,7 @@ impl FromStr for NodeType {
 // Set of keys to look up items by, name is the type of lookup, payload is the key used.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Node {
+    Root,
     // Bonsai
     Bookmark(BookmarkName),
     BonsaiChangeset(ChangesetId),
@@ -229,6 +232,7 @@ pub enum FileContentData {
 /// The data from the walk - this is the "full" form but not necessarily fully loaded.
 /// e.g. file content streams are passed to you to read, they aren't pre-loaded to bytes.
 pub enum NodeData {
+    Root,
     // Bonsai
     Bookmark(ChangesetId),
     BonsaiChangeset(BonsaiChangeset),
@@ -248,6 +252,7 @@ pub enum NodeData {
 impl Node {
     pub fn get_type(&self) -> NodeType {
         match self {
+            Node::Root => NodeType::Root,
             // Bonsai
             Node::Bookmark(_) => NodeType::Bookmark,
             Node::BonsaiChangeset(_) => NodeType::BonsaiChangeset,

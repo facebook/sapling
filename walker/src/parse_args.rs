@@ -38,7 +38,7 @@ impl RepoWalkParams {
     pub fn progress_node_types(&self) -> HashSet<NodeType> {
         let mut s = self.include_node_types.clone();
         for e in &self.walk_roots {
-            s.insert(e.dest.get_type());
+            s.insert(e.target.get_type());
         }
         s
     }

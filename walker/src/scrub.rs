@@ -11,9 +11,9 @@ use crate::parse_args::parse_args_common;
 use crate::progress::{
     progress_stream, report_state, ProgressStateCountByType, ProgressStateMutex,
 };
+use crate::state::StepStats;
 use crate::state::WalkState;
 use crate::tail::walk_exact_tail;
-use crate::walk::StepStats;
 
 use anyhow::Error;
 use clap::ArgMatches;
@@ -83,6 +83,10 @@ pub fn scrub_objects(
             one_fut
         }
     };
-    let walk_state = WalkState::new();
+    cloned!(
+        walk_params.include_node_types,
+        walk_params.include_edge_types
+    );
+    let walk_state = WalkState::new(include_node_types, include_edge_types);
     walk_exact_tail(ctx, walk_params, walk_state, blobrepo, make_sink).boxify()
 }
