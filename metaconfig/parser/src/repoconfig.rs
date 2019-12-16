@@ -53,139 +53,117 @@ pub struct RepoConfigs {
     pub common: CommonConfig,
 }
 
+/// TODO(jschuijt): Should be moved to configerator thrift definitions
+struct RawRepoConfigs {
+    commit_sync: HashMap<String, RawCommitSyncConfig>,
+    common: RawCommonConfig,
+    repos: HashMap<String, RawRepoConfig>,
+    storage: HashMap<String, RawStorageConfig>,
+}
+
 impl RepoConfigs {
     /// Read repo configs
     pub fn read_configs(config_path: impl AsRef<Path>) -> Result<Self> {
         let config_path = config_path.as_ref();
 
-        let repos_dir = config_path.join("repos");
-        if !repos_dir.is_dir() {
-            return Err(ErrorKind::InvalidFileStructure(format!(
-                "expected 'repos' directory under {}",
-                config_path.display()
-            ))
-            .into());
-        }
+        let raw_config = Self::read_raw_configs(config_path)?;
         let mut repo_configs = HashMap::new();
         let mut repoids = HashSet::new();
-        for entry in repos_dir.read_dir()? {
-            let entry = entry?;
-            let dir_path = entry.path();
-            if dir_path.is_dir() {
-                let (name, config) =
-                    RepoConfigs::read_single_repo_config(&dir_path, config_path)
-                        .chain_err(format_err!("while opening config for {:?} repo", dir_path))?;
-                if !repoids.insert(config.repoid) {
-                    return Err(ErrorKind::DuplicatedRepoId(config.repoid).into());
-                }
-                repo_configs.insert(name, config);
+
+        for (reponame, raw_repo_config) in &raw_config.repos {
+            let config = RepoConfigs::process_single_repo_config(
+                raw_repo_config.clone(),
+                reponame.to_owned(),
+                config_path,
+            )?;
+
+            if !repoids.insert(config.repoid) {
+                return Err(ErrorKind::DuplicatedRepoId(config.repoid).into());
             }
+
+            repo_configs.insert(reponame.clone(), config);
         }
 
-        let common_dir = config_path.join("common");
-        let maybe_common_config = if common_dir.is_dir() {
-            Self::read_common_config(&common_dir)?
-        } else {
-            None
-        };
-
-        let common = maybe_common_config.unwrap_or(Default::default());
+        let common = Self::read_common_config(&config_path.to_path_buf())?;
         Ok(Self {
             repos: repo_configs,
             common,
         })
     }
 
-    /// Read common config
-    pub fn read_common_config(common_dir: &PathBuf) -> Result<Option<CommonConfig>> {
-        for entry in common_dir.read_dir()? {
-            let entry = entry?;
-            if entry.file_name() == "common.toml" {
-                let path = entry.path();
-                if !path.is_file() {
+    /// Read common config, returns default if it doesn't exist
+    pub fn read_common_config(config_path: &PathBuf) -> Result<CommonConfig> {
+        let raw_config = Self::read_raw_configs(config_path.as_path())?.common;
+        let mut tiers_num = 0;
+        let whitelisted_entries: Result<Vec<_>> = raw_config
+            .whitelist_entry
+            .unwrap_or(vec![])
+            .into_iter()
+            .map(|whitelist_entry| {
+                let has_tier = whitelist_entry.tier.is_some();
+                let has_identity = {
+                    if whitelist_entry.identity_data.is_none()
+                        ^ whitelist_entry.identity_type.is_none()
+                    {
+                        return Err(ErrorKind::InvalidFileStructure(
+                            "identity type and data must be specified".into(),
+                        )
+                        .into());
+                    }
+
+                    whitelist_entry.identity_type.is_some()
+                };
+
+                if has_tier && has_identity {
                     return Err(ErrorKind::InvalidFileStructure(
-                        "common/common.toml should be a file!".into(),
+                        "tier and identity cannot be both specified".into(),
                     )
                     .into());
                 }
 
-                let content = fs::read(path)?;
-                let raw_config = Self::read_toml::<RawCommonConfig>(&content)?;
-                let mut tiers_num = 0;
-                let whitelisted_entries: Result<Vec<_>> = raw_config
-                    .whitelist_entry
-                    .unwrap_or(vec![])
-                    .into_iter()
-                    .map(|whitelist_entry| {
-                        let has_tier = whitelist_entry.tier.is_some();
-                        let has_identity = {
-                            if whitelist_entry.identity_data.is_none()
-                                ^ whitelist_entry.identity_type.is_none()
-                            {
-                                return Err(ErrorKind::InvalidFileStructure(
-                                    "identity type and data must be specified".into(),
-                                )
-                                .into());
-                            }
-
-                            whitelist_entry.identity_type.is_some()
-                        };
-
-                        if has_tier && has_identity {
-                            return Err(ErrorKind::InvalidFileStructure(
-                                "tier and identity cannot be both specified".into(),
-                            )
-                            .into());
-                        }
-
-                        if !has_tier && !has_identity {
-                            return Err(ErrorKind::InvalidFileStructure(
-                                "tier or identity must be specified".into(),
-                            )
-                            .into());
-                        }
-
-                        if whitelist_entry.tier.is_some() {
-                            tiers_num += 1;
-                            Ok(WhitelistEntry::Tier(whitelist_entry.tier.unwrap()))
-                        } else {
-                            let identity_type = whitelist_entry.identity_type.unwrap();
-
-                            Ok(WhitelistEntry::HardcodedIdentity {
-                                ty: identity_type,
-                                data: whitelist_entry.identity_data.unwrap(),
-                            })
-                        }
-                    })
-                    .collect();
-
-                if tiers_num > 1 {
-                    return Err(
-                        ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into(),
-                    );
+                if !has_tier && !has_identity {
+                    return Err(ErrorKind::InvalidFileStructure(
+                        "tier or identity must be specified".into(),
+                    )
+                    .into());
                 }
 
-                let loadlimiter_category = match raw_config.loadlimiter_category {
-                    Some(category) => {
-                        if category.len() > 0 {
-                            Some(category)
-                        } else {
-                            None
-                        }
-                    }
-                    None => None,
-                };
+                if whitelist_entry.tier.is_some() {
+                    tiers_num += 1;
+                    Ok(WhitelistEntry::Tier(whitelist_entry.tier.unwrap()))
+                } else {
+                    let identity_type = whitelist_entry.identity_type.unwrap();
 
-                let scuba_censored_table = raw_config.scuba_censored_table;
+                    Ok(WhitelistEntry::HardcodedIdentity {
+                        ty: identity_type,
+                        data: whitelist_entry.identity_data.unwrap(),
+                    })
+                }
+            })
+            .collect();
 
-                return Ok(Some(CommonConfig {
-                    security_config: whitelisted_entries?,
-                    loadlimiter_category,
-                    scuba_censored_table,
-                }));
-            }
+        if tiers_num > 1 {
+            return Err(ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into());
         }
-        Ok(None)
+
+        let loadlimiter_category = match raw_config.loadlimiter_category {
+            Some(category) => {
+                if category.len() > 0 {
+                    Some(category)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        };
+
+        let scuba_censored_table = raw_config.scuba_censored_table;
+
+        return Ok(CommonConfig {
+            security_config: whitelisted_entries?,
+            loadlimiter_category,
+            scuba_censored_table,
+        });
     }
 
     /// Verify that two prefixes are not a prefix of each other
@@ -297,7 +275,7 @@ impl RepoConfigs {
         config_root_path: impl AsRef<Path>,
     ) -> Result<HashMap<String, CommitSyncConfig>> {
         let config_root_path = config_root_path.as_ref();
-        Self::read_raw_commit_sync_config(config_root_path)?
+        Self::read_raw_configs(config_root_path)?.commit_sync
             .into_iter()
             .map(|(config_name, v)| {
                 let RawCommitSyncConfig {
@@ -372,28 +350,14 @@ impl RepoConfigs {
             .collect()
     }
 
-    fn read_raw_commit_sync_config(
-        config_root_path: &Path,
-    ) -> Result<HashMap<String, RawCommitSyncConfig>> {
-        let commit_sync_config_path = config_root_path.join("common").join("commitsyncmap.toml");
-        let content = fs::read(&commit_sync_config_path).chain_err(format_err!(
-            "While opening {}",
-            commit_sync_config_path.display(),
-        ))?;
-        Ok(
-            Self::read_toml::<HashMap<String, RawCommitSyncConfig>>(&content).chain_err(
-                format_err!("While reading {}", commit_sync_config_path.display()),
-            )?,
-        )
-    }
-
     /// Read all common storage configurations
     pub fn read_storage_configs(
         config_root_path: impl AsRef<Path>,
     ) -> Result<HashMap<String, StorageConfig>> {
         let config_root_path = config_root_path.as_ref();
 
-        Self::read_raw_storage_configs(config_root_path)?
+        Self::read_raw_configs(config_root_path)?
+            .storage
             .into_iter()
             .map(|(k, v)| {
                 StorageConfig::try_from(v)
@@ -403,58 +367,14 @@ impl RepoConfigs {
             .collect()
     }
 
-    fn read_raw_storage_configs(
+    fn process_single_repo_config(
+        raw_config: RawRepoConfig,
+        reponame: String,
         config_root_path: &Path,
-    ) -> Result<HashMap<String, RawStorageConfig>> {
-        let storage_config_path = config_root_path.join("common").join("storage.toml");
-        let common_storage = if storage_config_path.exists() {
-            if !storage_config_path.is_file() {
-                return Err(ErrorKind::InvalidFileStructure(format!(
-                    "invalid storage config path {:?}",
-                    storage_config_path
-                ))
-                .into());
-            } else {
-                let content = fs::read(&storage_config_path).chain_err(format_err!(
-                    "While opening {}",
-                    storage_config_path.display()
-                ))?;
-                Self::read_toml::<HashMap<String, RawStorageConfig>>(&content).chain_err(
-                    format_err!("while reading {}", storage_config_path.display()),
-                )?
-            }
-        } else {
-            HashMap::new()
-        };
-
-        Ok(common_storage)
-    }
-
-    fn read_single_repo_config(
-        repo_config_path: &Path,
-        config_root_path: &Path,
-    ) -> Result<(String, RepoConfig)> {
-        let common_storage = Self::read_raw_storage_configs(config_root_path)?;
+    ) -> Result<RepoConfig> {
+        let common_config = Self::read_raw_configs(config_root_path)?;
+        let common_storage = common_config.storage;
         let commit_sync = Self::read_commit_sync_config(config_root_path)?;
-        let reponame = repo_config_path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| {
-                ErrorKind::InvalidFileStructure(format!("invalid repo path {:?}", repo_config_path))
-            })?;
-        let reponame = reponame.to_string();
-
-        let config_file = repo_config_path.join("server.toml");
-        if !config_file.is_file() {
-            return Err(ErrorKind::InvalidFileStructure(format!(
-                "expected file server.toml in {}",
-                repo_config_path.to_string_lossy()
-            ))
-            .into());
-        }
-
-        let raw_config = Self::read_toml::<RawRepoConfig>(&fs::read(&config_file)?)?;
-
         let hooks = raw_config.hooks.clone().unwrap_or_default();
 
         let mut all_hook_params = vec![];
@@ -485,7 +405,7 @@ impl RepoConfigs {
                 let is_relative = path.starts_with(relative_prefix);
                 let path_adjusted = if is_relative {
                     let s: String = path.chars().skip(relative_prefix.len()).collect();
-                    repo_config_path.join(s)
+                    config_root_path.join("repos").join(&reponame).join(s)
                 } else {
                     config_root_path.join(path)
                 };
@@ -504,10 +424,12 @@ impl RepoConfigs {
 
             all_hook_params.push(hook_params);
         }
-        Ok((
-            reponame,
-            RepoConfigs::convert_conf(raw_config, common_storage, commit_sync, all_hook_params)?,
-        ))
+        Ok(RepoConfigs::convert_conf(
+            raw_config,
+            common_storage,
+            commit_sync,
+            all_hook_params,
+        )?)
     }
 
     fn get_bypass(raw_hook_config: RawHookConfig) -> Result<Option<HookBypass>> {
@@ -874,11 +796,85 @@ impl RepoConfigs {
             .find(|(_, repo_config)| repo_config.repoid == repo_id)
     }
 
+    fn read_raw_configs(config_path: &Path) -> Result<RawRepoConfigs> {
+        let commit_sync = Self::read_toml_path::<HashMap<String, RawCommitSyncConfig>>(
+            config_path
+                .join("common")
+                .join("commitsyncmap.toml")
+                .as_path(),
+            false,
+        )?;
+        let common = Self::read_toml_path::<RawCommonConfig>(
+            config_path.join("common").join("common.toml").as_path(),
+            true,
+        )?;
+        let storage = Self::read_toml_path::<HashMap<String, RawStorageConfig>>(
+            config_path.join("common").join("storage.toml").as_path(),
+            true,
+        )?;
+
+        let mut repos = HashMap::new();
+        let repos_dir = config_path.join("repos");
+        if !repos_dir.is_dir() {
+            return Err(ErrorKind::InvalidFileStructure(format!(
+                "expected 'repos' directory under {}",
+                config_path.display()
+            ))
+            .into());
+        }
+        for entry in repos_dir.read_dir()? {
+            let repo_config_path = entry?.path();
+            let reponame = repo_config_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .ok_or_else(|| {
+                    ErrorKind::InvalidFileStructure(format!(
+                        "invalid repo path {:?}",
+                        repo_config_path
+                    ))
+                })?
+                .to_string();
+
+            let repo_config = Self::read_toml_path::<RawRepoConfig>(
+                repo_config_path.join("server.toml").as_path(),
+                false,
+            )?;
+            repos.insert(reponame, repo_config);
+        }
+
+        Ok(RawRepoConfigs {
+            commit_sync,
+            common,
+            repos,
+            storage,
+        })
+    }
+
+    fn read_toml_path<T>(path: &Path, defaults: bool) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned + Default,
+    {
+        if !path.is_file() {
+            if defaults && !path.exists() {
+                return Ok(Default::default());
+            }
+
+            return Err(ErrorKind::InvalidFileStructure(format!(
+                "{} should be a file",
+                path.display()
+            ))
+            .into());
+        }
+        let content = fs::read(path)?;
+        let res = Self::read_toml::<T>(&content);
+        res
+    }
+
     /// Helper to read toml files which throws an error upon encountering
     /// unknown keys
-    fn read_toml<'de, T>(bytes: &'de [u8]) -> Result<T, Error>
+    fn read_toml<T>(bytes: &[u8]) -> Result<T, Error>
     where
-        T: serde::de::Deserialize<'de>,
+        T: serde::de::DeserializeOwned,
     {
         match str::from_utf8(bytes) {
             Ok(s) => {
@@ -916,6 +912,9 @@ mod test {
         files: impl IntoIterator<Item = (impl AsRef<Path>, impl AsRef<[u8]>)>,
     ) -> TempDir {
         let tmp_dir = TempDir::new("mononoke_test_config").expect("tmp_dir failed");
+
+        // Always create repos directory
+        create_dir_all(tmp_dir.path().join("repos")).expect("create repos failed");
 
         for (path, content) in files.into_iter() {
             let path = path.as_ref();

@@ -690,15 +690,7 @@ pub fn read_common_config<'a>(matches: &ArgMatches<'a>) -> Result<CommonConfig> 
         .ok_or(Error::msg("mononoke-config-path must be specified"))?;
 
     let config_path = Path::new(config_path);
-    let common_dir = config_path.join("common");
-    let maybe_common_config = if common_dir.is_dir() {
-        RepoConfigs::read_common_config(&common_dir)?
-    } else {
-        None
-    };
-
-    let common_config = maybe_common_config.unwrap_or(Default::default());
-    Ok(common_config)
+    RepoConfigs::read_common_config(&config_path.to_path_buf())
 }
 
 pub fn read_storage_configs<'a>(
