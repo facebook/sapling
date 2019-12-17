@@ -15,7 +15,7 @@ fi
 
 REPOID=0
 REPONAME=repo
-CACHING_ARGS=(--skip-caching)
+COMMON_ARGS=(--skip-caching --mysql-master-only)
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
 function get_free_socket {
@@ -71,7 +71,7 @@ function mononoke {
   --test-instance \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
-   "${CACHING_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
+   "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
@@ -83,7 +83,7 @@ function mononoke_hg_sync {
   shift
 
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
@@ -93,7 +93,7 @@ function mononoke_hg_sync {
 
 function megarepo_tool {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     "$@"
@@ -102,14 +102,14 @@ function megarepo_tool {
 
 function megarepo_tool_multirepo {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --mononoke-config-path mononoke-config  \
     "$@"
 }
 
 function mononoke_walker {
   GLOG_minloglevel=5 "$MONONOKE_WALKER" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     "$@"
@@ -123,7 +123,7 @@ function mononoke_x_repo_sync_once() {
   shift
   shift
   GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --source-tier-config "$TESTTMP/mononoke-config" \
     --target-tier-config "$TESTTMP/mononoke-config" \
     --source-repo-id "$source_repo_id" \
@@ -134,7 +134,7 @@ function mononoke_x_repo_sync_once() {
 
 function mononoke_rechunker {
     GLOG_minloglevel=5 "$MONONOKE_RECHUNKER" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config \
     "$@"
@@ -142,7 +142,7 @@ function mononoke_rechunker {
 
 function mononoke_hg_sync_with_retry {
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --base-retry-delay-ms 1 \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
@@ -154,7 +154,7 @@ function mononoke_hg_sync_with_failure_handler {
   sql_name="${TESTTMP}/hgrepos/repo_lock"
 
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
@@ -195,7 +195,7 @@ function mononoke_bookmarks_filler {
   fi
 
   GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     "$@" "$sql_source" "$sql_name"
@@ -241,7 +241,7 @@ function mononoke_hg_sync_loop {
   shift
 
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config \
@@ -255,7 +255,7 @@ function mononoke_hg_sync_loop_regenerate {
   shift
 
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id 0 \
     --mononoke-config-path mononoke-config \
@@ -264,7 +264,7 @@ function mononoke_hg_sync_loop_regenerate {
 
 function mononoke_admin {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
@@ -275,7 +275,7 @@ function mononoke_admin_source_target {
   local target_repo_id=$1
   shift
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
@@ -283,14 +283,14 @@ function mononoke_admin_source_target {
 
 function mononoke_admin_sourcerepo {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --source-repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 
 }
 function write_stub_log_entry {
   GLOG_minloglevel=5 "$WRITE_STUB_LOG_ENTRY" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
@@ -737,7 +737,7 @@ function blobimport {
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo-id $REPOID \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
-     "$input" "${CACHING_ARGS[@]}" "$@" > "$TESTTMP/blobimport.out" 2>&1
+     "$input" "${COMMON_ARGS[@]}" "$@" > "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
@@ -750,12 +750,12 @@ function blobimport {
 
 function bonsai_verify {
   GLOG_minloglevel=5 "$MONONOKE_BONSAI_VERIFY" --repo-id "$REPOID" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
+    --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
 function lfs_import {
   GLOG_minloglevel=5 "$MONONOKE_LFS_IMPORT" --repo-id "$REPOID" \
-  --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
+  --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
 function setup_no_ssl_apiserver {
@@ -773,7 +773,7 @@ function apiserver {
     --ssl-private-key "$TEST_CERTDIR/localhost.key" \
     --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
     --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    "${CACHING_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
+    "${COMMON_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
   export APISERVER_PID=$!
   echo "$APISERVER_PID" >> "$DAEMON_PIDS"
 }
@@ -782,7 +782,7 @@ function no_ssl_apiserver {
   GLOG_minloglevel=5 "$MONONOKE_APISERVER" "$@" \
    --without-skiplist \
    --mononoke-config-path "$TESTTMP/mononoke-config" \
-   "${CACHING_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
+   "${COMMON_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
@@ -814,7 +814,7 @@ function start_and_wait_for_scs_server {
   GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
     -p "$SCS_PORT" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    "${CACHING_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
+    "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
 
@@ -853,7 +853,7 @@ function lfs_server {
   poll="curl"
 
   opts=(
-    "${CACHING_ARGS[@]}"
+    "${COMMON_ARGS[@]}"
     --mononoke-config-path "$TESTTMP/mononoke-config"
     --listen-host 127.0.0.1
     --listen-port "$port"
@@ -1150,7 +1150,7 @@ function aliasverify() {
   mode=$1
   shift 1
   GLOG_minloglevel=5 "$MONONOKE_ALIAS_VERIFY" --repo-id $REPOID \
-     "${CACHING_ARGS[@]}" \
+     "${COMMON_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
 }
@@ -1370,7 +1370,7 @@ function gitimport() {
   log="$TESTTMP/gitimport.out"
 
   "$MONONOKE_GITIMPORT" \
-    "${CACHING_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"

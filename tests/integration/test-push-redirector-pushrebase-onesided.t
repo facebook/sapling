@@ -44,7 +44,7 @@ Verification function
   $ function verify_wc() {
   >   local large_repo_commit
   >   large_repo_commit="$1"
-  >   "$MONONOKE_ADMIN" "${CACHING_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL1" crossrepo verify-wc $large_repo_commit
+  >   "$MONONOKE_ADMIN" "${COMMON_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL1" crossrepo verify-wc $large_repo_commit
   > }
 
 setup hg server repos
