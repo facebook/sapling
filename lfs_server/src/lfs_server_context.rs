@@ -8,11 +8,15 @@
 
 use std::collections::HashMap;
 use std::fmt::{Arguments, Write};
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
 use aclchecker::Identity;
 use anyhow::Error;
 use bytes::Bytes;
+use configerator_cached::ConfigHandle;
 use futures::Future as Future01;
 use futures_channel::oneshot;
 use futures_preview::Future;
@@ -22,7 +26,6 @@ use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
 use slog::Logger;
-use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::spawn;
 
 use blobrepo::BlobRepo;
@@ -35,7 +38,7 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 
 use crate::acl::LfsAclChecker;
-use crate::config::{ServerConfig, ServerConfigHandle};
+use crate::config::ServerConfig;
 use crate::errors::{ErrorKind, LfsServerContextErrorKind};
 use crate::middleware::{ClientIdentity, LfsMethod, RequestContext};
 
@@ -50,7 +53,7 @@ struct LfsServerContextInner {
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
     max_upload_size: Option<u64>,
-    config_handle: ServerConfigHandle,
+    config_handle: ConfigHandle<ServerConfig>,
 }
 
 #[derive(Clone, StateData)]
@@ -66,7 +69,7 @@ impl LfsServerContext {
         always_wait_for_upstream: bool,
         max_upload_size: Option<u64>,
         will_exit: Arc<AtomicBool>,
-        config_handle: ServerConfigHandle,
+        config_handle: ConfigHandle<ServerConfig>,
     ) -> Result<Self, Error> {
         // TODO: Configure threads?
         let connector = HttpsConnector::new(4)
@@ -122,7 +125,7 @@ impl LfsServerContext {
         }
     }
 
-    pub fn get_config_handle(&self) -> ServerConfigHandle {
+    pub fn get_config_handle(&self) -> ConfigHandle<ServerConfig> {
         self.inner
             .lock()
             .expect("poisoned lock")

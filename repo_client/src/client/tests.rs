@@ -8,6 +8,7 @@
 
 use super::*;
 use blobstore::Loadable;
+use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures_preview::compat::Future01CompatExt;
@@ -73,8 +74,7 @@ fn test_parsing_caps_simple() {
 fn test_pushredirect_config() {
     use unbundle::*;
     // This ends up being exhaustive
-    let json_config = String::from(
-        r#"
+    let json_config = r#"
 {
   "per_repo": {
     "-4": {
@@ -94,8 +94,7 @@ fn test_pushredirect_config() {
         "public_push": false
     }
   }
-}"#,
-    );
+}"#;
 
     let push_action = PostResolveAction::Push(PostResolvePush {
         changegroup_id: None,
@@ -143,29 +142,33 @@ fn test_pushredirect_config() {
             non_fast_forward_policy: NonFastForwardPolicy::Allowed,
         });
 
-    let config_loader = ConfigLoader::default_content(json_config);
+    let config_handler = ConfigHandle::from_json(&json_config).unwrap();
     for action in [&push_action, &pushrebase_action, &bookmark_only_action].iter() {
         assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-4), Some(&config_loader), action).unwrap(),
+            maybe_pushredirect_action(RepositoryId::new(-4), Some(&config_handler), action)
+                .unwrap(),
             false,
         );
         assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-3), Some(&config_loader), action).unwrap(),
+            maybe_pushredirect_action(RepositoryId::new(-3), Some(&config_handler), action)
+                .unwrap(),
             true,
         );
         assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-2), Some(&config_loader), action).unwrap(),
+            maybe_pushredirect_action(RepositoryId::new(-2), Some(&config_handler), action)
+                .unwrap(),
             true,
         );
         assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-1), Some(&config_loader), action).unwrap(),
+            maybe_pushredirect_action(RepositoryId::new(-1), Some(&config_handler), action)
+                .unwrap(),
             false,
         );
     }
     assert_eq!(
         maybe_pushredirect_action(
             RepositoryId::new(-4),
-            Some(&config_loader),
+            Some(&config_handler),
             &infinitepush_action
         )
         .unwrap(),
@@ -174,7 +177,7 @@ fn test_pushredirect_config() {
     assert_eq!(
         maybe_pushredirect_action(
             RepositoryId::new(-3),
-            Some(&config_loader),
+            Some(&config_handler),
             &infinitepush_action
         )
         .unwrap(),
@@ -183,7 +186,7 @@ fn test_pushredirect_config() {
     assert_eq!(
         maybe_pushredirect_action(
             RepositoryId::new(-2),
-            Some(&config_loader),
+            Some(&config_handler),
             &infinitepush_action
         )
         .unwrap(),
@@ -192,7 +195,7 @@ fn test_pushredirect_config() {
     assert_eq!(
         maybe_pushredirect_action(
             RepositoryId::new(-1),
-            Some(&config_loader),
+            Some(&config_handler),
             &infinitepush_action
         )
         .unwrap(),

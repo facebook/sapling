@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
 use futures::future::Future;
 use futures_ext::FutureExt;
@@ -15,7 +16,7 @@ use stats::service_data::{get_service_data_singleton, ServiceData, ServiceDataWr
 use std::convert::TryInto;
 use std::time::Duration;
 
-use crate::config::ServerConfigHandle;
+use crate::config::ServerConfig;
 
 use crate::errors::ErrorKind;
 use crate::http::HttpError;
@@ -30,11 +31,11 @@ use super::util::http_error_to_handler_error;
 #[derive(Clone, NewMiddleware)]
 pub struct ThrottleMiddleware {
     fb: FacebookInit,
-    handle: ServerConfigHandle,
+    handle: ConfigHandle<ServerConfig>,
 }
 
 impl ThrottleMiddleware {
-    pub fn new(fb: FacebookInit, handle: ServerConfigHandle) -> Self {
+    pub fn new(fb: FacebookInit, handle: ConfigHandle<ServerConfig>) -> Self {
         Self { fb, handle }
     }
 }

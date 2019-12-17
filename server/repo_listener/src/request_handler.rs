@@ -8,10 +8,10 @@
 
 use std::mem;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use anyhow::Error;
-use configerator::ConfigLoader;
+use configerator_cached::ConfigHandle;
 use context::{generate_session_id, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -21,6 +21,7 @@ use futures_stats::Timed;
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use maplit::{hashmap, hashset};
+use pushredirect_enable::types::MononokePushRedirectEnable;
 use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
@@ -48,7 +49,6 @@ lazy_static! {
     };
 }
 
-const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 const DEFAULT_PERCENTAGE: f64 = 100.0;
 
 define_stats! {
@@ -72,8 +72,8 @@ pub fn request_handler(
     }: RepoHandler,
     stdio: Stdio,
     hook_manager: Arc<HookManager>,
-    load_limiting_config: Option<(ConfigLoader, String)>,
-    pushredirect_config: Option<ConfigLoader>,
+    load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
+    pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
 ) -> impl Future<Item = (), Error = ()> {
     let Stdio {
         stdin,
@@ -136,14 +136,11 @@ pub fn request_handler(
 
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
 
-    let load_limiting_config = match load_limiting_config {
-        Some((config_loader, category)) => {
-            loadlimiting_configs(config_loader, client_hostname, &ssh_env_vars)
-                .map(|(throttle_limits, rate_limits)| (throttle_limits, rate_limits, category))
-        }
-        None => None,
-    };
-
+    let load_limiting_config = load_limiting_config.map(|(config, category)| {
+        let (throttle_limits, rate_limits) =
+            loadlimiting_configs(config, client_hostname, &ssh_env_vars);
+        (throttle_limits, rate_limits, category)
+    });
     let session = SessionContainer::new(
         fb,
         session_id,
@@ -217,47 +214,41 @@ pub fn request_handler(
 }
 
 fn loadlimiting_configs(
-    config: ConfigLoader,
+    config: ConfigHandle<MononokeThrottleLimits>,
     client_hostname: String,
     ssh_env_vars: &SshEnvVars,
-) -> Option<(MononokeThrottleLimit, RateLimits)> {
+) -> (MononokeThrottleLimit, RateLimits) {
     let is_quicksand = is_quicksand(&ssh_env_vars);
 
-    let data = config.load(CONFIGERATOR_TIMEOUT).ok();
-    data.and_then(|data| {
-        let config: Option<MononokeThrottleLimits> = serde_json::from_str(&data.contents).ok();
-        config
-    })
-    .map(|config| {
-        let region_percentage = config
-            .datacenter_prefix_capacity
-            .get(&*DATACENTER_REGION_PREFIX)
-            .copied()
-            .unwrap_or(DEFAULT_PERCENTAGE);
-        let host_scheme = hostname_scheme(client_hostname);
-        let limit = config
-            .hostprefixes
-            .get(&host_scheme)
-            .unwrap_or(&config.defaults);
+    let config = config.get();
+    let region_percentage = config
+        .datacenter_prefix_capacity
+        .get(&*DATACENTER_REGION_PREFIX)
+        .copied()
+        .unwrap_or(DEFAULT_PERCENTAGE);
+    let host_scheme = hostname_scheme(client_hostname);
+    let limit = config
+        .hostprefixes
+        .get(&host_scheme)
+        .unwrap_or(&config.defaults);
 
-        let multiplier = if is_quicksand {
-            region_percentage / 100.0 * config.quicksand_multiplier
-        } else {
-            region_percentage / 100.0
-        };
+    let multiplier = if is_quicksand {
+        region_percentage / 100.0 * config.quicksand_multiplier
+    } else {
+        region_percentage / 100.0
+    };
 
-        let throttle_limits = MononokeThrottleLimit {
-            egress_bytes: limit.egress_bytes * multiplier,
-            ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
-            total_manifests: limit.total_manifests * multiplier,
-            quicksand_manifests: limit.quicksand_manifests * multiplier,
-            getfiles_files: limit.getfiles_files * multiplier,
-            getpack_files: limit.getpack_files * multiplier,
-            commits: limit.commits * multiplier,
-        };
+    let throttle_limits = MononokeThrottleLimit {
+        egress_bytes: limit.egress_bytes * multiplier,
+        ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
+        total_manifests: limit.total_manifests * multiplier,
+        quicksand_manifests: limit.quicksand_manifests * multiplier,
+        getfiles_files: limit.getfiles_files * multiplier,
+        getpack_files: limit.getpack_files * multiplier,
+        commits: limit.commits * multiplier,
+    };
 
-        (throttle_limits, config.rate_limits)
-    })
+    (throttle_limits, config.rate_limits.clone())
 }
 
 /// Translates a hostname in to a host scheme:

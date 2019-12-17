@@ -13,7 +13,7 @@ mod monitoring;
 
 use anyhow::Result;
 use clap::{App, ArgMatches};
-use configerator::ConfigSource;
+use configerator_cached::ConfigStore;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::Future;
@@ -21,8 +21,12 @@ use metaconfig_parser::RepoConfigs;
 use slog::{crit, info, Logger};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 static TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);
+
+const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
+const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = App::new("mononoke server")
@@ -103,10 +107,24 @@ fn main(fb: FacebookInit) {
         let test_instance = matches.is_present("test-instance");
         let config_source = if test_instance {
             let local_configerator_path = matches.value_of("local-configerator-path");
-            local_configerator_path
-                .map(|path| ConfigSource::file(PathBuf::from(path), String::new()))
+            local_configerator_path.map(|path| {
+                ConfigStore::file(
+                    root_log.clone(),
+                    PathBuf::from(path),
+                    String::new(),
+                    CONFIGERATOR_POLL_INTERVAL,
+                )
+            })
         } else {
-            Some(ConfigSource::configerator(fb).expect("can't set up configerator API"))
+            Some(
+                ConfigStore::configerator(
+                    fb,
+                    root_log.clone(),
+                    CONFIGERATOR_POLL_INTERVAL,
+                    CONFIGERATOR_REFRESH_TIMEOUT,
+                )
+                .expect("can't set up configerator API"),
+            )
         };
 
         info!(root_log, "Creating repo listeners");

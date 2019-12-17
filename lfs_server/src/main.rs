@@ -25,10 +25,7 @@ use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::{atomic::AtomicBool, Arc};
 use std::thread;
 use std::time::Duration;
 use tokio::net::TcpListener;
@@ -42,7 +39,7 @@ use metaconfig_parser::RepoConfigs;
 use stats::schedule_stats_aggregation;
 
 use crate::acl::LfsAclChecker;
-use crate::config::spawn_config_poller;
+use crate::config::get_server_config;
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
@@ -331,10 +328,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .unwrap()
         .parse()?;
 
-    let (poller, config) = spawn_config_poller(
+    let config = get_server_config(
         fb,
         logger.clone(),
-        will_exit.clone(),
         matches.value_of(ARG_LIVE_CONFIG),
         config_interval,
     )
@@ -350,7 +346,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         server,
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
         max_upload_size,
-        will_exit.clone(),
+        will_exit,
         config,
     )?;
 
@@ -480,7 +476,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         &logger,
         "Waiting {}s before shutting down server", shutdown_grace_period,
     );
-    will_exit.store(true, Ordering::Relaxed);
     thread::sleep(Duration::from_secs(shutdown_grace_period));
 
     info!(&logger, "Shutting down server...");
@@ -492,11 +487,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .shutdown_on_idle()
         .wait()
         .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
-
-    info!(&logger, "Waiting for configuration poller to exit...");
-    poller
-        .join()
-        .map_err(|_| Error::msg("Failed to shutdown configuration poller!"))?;
 
     info!(&logger, "Exiting...");
 

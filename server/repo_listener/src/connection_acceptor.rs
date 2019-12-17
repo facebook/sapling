@@ -20,7 +20,7 @@ use aclchecker::{AclChecker, Identity};
 use anyhow::{bail, format_err, Error, Result};
 use bytes::Bytes;
 use cloned::cloned;
-use configerator::{ConfigLoader, ConfigSource};
+use configerator_cached::{ConfigHandle, ConfigStore};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::sync::mpsc;
@@ -39,6 +39,9 @@ use tokio_codec::{FramedRead, FramedWrite};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_openssl::SslAcceptorExt;
 use x509::identity;
+
+use limits::types::MononokeThrottleLimits;
+use pushredirect_enable::types::MononokePushRedirectEnable;
 
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
@@ -62,7 +65,7 @@ pub fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: &'static AtomicBool,
-    config_source: Option<ConfigSource>,
+    config_store: Option<ConfigStore>,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);
@@ -70,24 +73,23 @@ pub fn connection_acceptor(
         .expect("failed to create listener")
         .map_err(Error::from);
 
-    let (load_limiting_config, pushredirect_config) = match config_source {
-        Some(config_source) => {
+    let (load_limiting_config, pushredirect_config) = match config_store {
+        Some(config_store) => {
             let load_limiting_config = {
-                let config_loader = ConfigLoader::new(
-                    config_source.clone(),
-                    CONFIGERATOR_LIMITS_CONFIG.to_string(),
-                )
-                .expect("can't get limits configerator config");
-                common_config
-                    .loadlimiter_category
-                    .clone()
-                    .map(|category| (config_loader, category))
+                let config_loader = config_store
+                    .get_config_handle(CONFIGERATOR_LIMITS_CONFIG.to_string())
+                    .ok();
+                config_loader.and_then(|config_loader| {
+                    common_config
+                        .loadlimiter_category
+                        .clone()
+                        .map(|category| (config_loader, category))
+                })
             };
 
-            let pushredirect_config = Some(
-                ConfigLoader::new(config_source, CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())
-                    .expect("can't get pushredirect configerator config"),
-            );
+            let pushredirect_config = Some(try_boxfuture!(
+                config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string(),)
+            ));
             (load_limiting_config, pushredirect_config)
         }
         None => (None, None),
@@ -148,8 +150,8 @@ fn accept(
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
     tls_acceptor: Arc<SslAcceptor>,
     security_checker: Arc<ConnectionsSecurityChecker>,
-    load_limiting_config: Option<(ConfigLoader, String)>,
-    pushredirect_config: Option<ConfigLoader>,
+    load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
+    pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();
 

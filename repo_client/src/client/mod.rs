@@ -15,7 +15,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
-use configerator::ConfigLoader;
+use configerator_cached::ConfigHandle;
 use context::{CoreContext, LoggingContainer, Metric, PerfCounterType, SessionContainer};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
@@ -67,8 +67,6 @@ mod logging;
 
 use logging::CommandLogger;
 pub use logging::WireprotoLogging;
-
-const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 
 define_stats! {
     prefix = "mononoke.repo_client";
@@ -241,7 +239,7 @@ pub struct RepoClient {
     support_bundle2_listkeys: bool,
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector: Option<PushRedirector>,
-    pushredirect_config: Option<ConfigLoader>,
+    pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
 }
 
 fn get_pull_default_bookmarks_maybe_stale_raw(
@@ -308,7 +306,7 @@ impl RepoClient {
         support_bundle2_listkeys: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector: Option<PushRedirector>,
-        pushredirect_config: Option<ConfigLoader>,
+        pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
     ) -> Self {
         RepoClient {
             repo,
@@ -677,17 +675,10 @@ impl RepoClient {
 
 fn maybe_pushredirect_action(
     repo_id: RepositoryId,
-    pushredirect_config: Option<&ConfigLoader>,
+    pushredirect_config: Option<&ConfigHandle<MononokePushRedirectEnable>>,
     action: &unbundle::PostResolveAction,
 ) -> Result<bool> {
-    let maybe_config: Option<MononokePushRedirectEnable> = match pushredirect_config {
-        // If you chose not to give us configerator, we won't allow redirect based purely on config
-        None => return Ok(false),
-        Some(ref pushredirect_config) => {
-            let data = pushredirect_config.load(CONFIGERATOR_TIMEOUT)?;
-            serde_json::from_str(&data.contents)?
-        }
-    };
+    let maybe_config = pushredirect_config.map(|config| config.get());
 
     let enabled = maybe_config.and_then(move |config| {
         config.per_repo.get(&(repo_id.id() as i64)).map(|enables| {

@@ -7,22 +7,15 @@
  */
 
 use anyhow::{format_err, Error};
-use cloned::cloned;
-use configerator::{ConfigLoader, ConfigSource};
-use configerator_cached::CachedConfigHandler;
+use configerator_cached::{ConfigHandle, ConfigStore};
 use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
-use slog::{info, warn, Logger};
+use slog::Logger;
 use std::default::Default;
 use std::path::PathBuf;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-const FETCH_TIMEOUT: u64 = 10;
+const CONFIGERATOR_FETCH_TIMEOUT: u64 = 10;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Limit {
@@ -53,95 +46,44 @@ impl Default for ServerConfig {
     }
 }
 
-/// Accessor for the config
-#[derive(Clone)]
-pub struct ServerConfigHandle {
-    inner: Arc<CachedConfigHandler<ServerConfig>>,
-}
-
-impl ServerConfigHandle {
-    fn new(inner: CachedConfigHandler<ServerConfig>) -> Self {
-        Self {
-            inner: Arc::new(inner),
-        }
-    }
-
-    fn maybe_refresh(&self, timeout: Duration) -> Result<bool, Error> {
-        self.inner.maybe_refresh(timeout)
-    }
-
-    pub fn get(&self) -> Arc<ServerConfig> {
-        // We rely on the loop in `spawn_config_poller` updating us, so we should never be badly stale
-        self.inner.get_maybe_stale()
-    }
-}
-
-pub fn spawn_config_poller(
+pub fn get_server_config(
     fb: FacebookInit,
     logger: Logger,
-    will_exit: Arc<AtomicBool>,
     source_spec: Option<&str>,
-    fetch_interval: u64,
-) -> Result<(JoinHandle<()>, ServerConfigHandle), Error> {
-    let timeout = Duration::from_secs(FETCH_TIMEOUT);
+    poll_interval: u64,
+) -> Result<ConfigHandle<ServerConfig>, Error> {
+    let timeout = Duration::from_secs(CONFIGERATOR_FETCH_TIMEOUT);
+    let poll_interval = Duration::from_secs(poll_interval);
+    match source_spec {
+        Some(source_spec) => {
+            // NOTE: This means we don't support file paths with ":" in them, but it also means we can
+            // add other options after the first ":" later if we want.
+            let mut iter = source_spec.split(":");
 
-    let loader = {
-        match source_spec {
-            Some(source_spec) => {
-                // NOTE: This means we don't support file paths with ":" in them, but it also means we can
-                // add other options after the first ":" later if we want.
-                let mut iter = source_spec.split(":");
-
-                // NOTE: We match None as the last element to make sure the input doesn't contain
-                // disallowed trailing parts.
-                match (iter.next(), iter.next(), iter.next()) {
-                    (Some("configerator"), Some(source), None) => {
-                        let config_source = ConfigSource::configerator(fb)?;
-                        ConfigLoader::new(config_source, source.to_string())?
-                    }
-                    (Some("file"), Some(file), None) => {
-                        let config_source = ConfigSource::file(PathBuf::new(), String::new());
-                        ConfigLoader::new(config_source, file.to_string())?
-                    }
-                    (Some("default"), None, None) => ConfigLoader::default_content(
-                        serde_json::to_string(&ServerConfig::default())?,
+            // NOTE: We match None as the last element to make sure the input doesn't contain
+            // disallowed trailing parts.
+            match (iter.next(), iter.next(), iter.next()) {
+                (Some("configerator"), Some(source), None) => Ok(Some((
+                    ConfigStore::configerator(fb, logger, poll_interval, timeout)?,
+                    source.to_string(),
+                ))),
+                (Some("file"), Some(file), None) => Ok(Some((
+                    ConfigStore::file(
+                        logger,
+                        PathBuf::new(),
+                        String::new(),
+                        Duration::from_secs(1),
                     ),
-                    _ => return Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
-                }
+                    file.to_string(),
+                ))),
+                (Some("default"), None, None) => Ok(None),
+                _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
             }
-            None => ConfigLoader::default_content(serde_json::to_string(&ServerConfig::default())?),
         }
-    };
-
-    info!(
-        &logger,
-        "Loading initial LFS configuration through {:?} with timeout {:?}", loader, timeout,
-    );
-
-    let config = ServerConfigHandle::new(CachedConfigHandler::new(
-        loader,
-        Duration::from_secs(fetch_interval),
-        timeout,
-    )?);
-
-    let handle = thread::spawn({
-        cloned!(config);
-        move || loop {
-            if will_exit.load(Ordering::Relaxed) {
-                info!(&logger, "Shutting down configuration poller...");
-                return;
-            }
-
-            match config.maybe_refresh(timeout) {
-                Ok(false) => {}
-                Ok(true) => info!(&logger, "Updated LFS configuration"),
-                Err(e) => warn!(&logger, "Updating LFS configuration failed: {:?}", e),
-            }
-            // NOTE: We only sleep for 1 second here in order to exit the thread quickly if we are
-            // asked to exit.
-            thread::sleep(Duration::from_secs(1));
-        }
-    });
-
-    Ok((handle, config))
+        None => Ok(None),
+    }
+    .and_then(|config| match config {
+        None => Ok(ConfigHandle::default()),
+        Some((source, path)) => source.get_config_handle(path),
+    })
 }
