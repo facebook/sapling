@@ -239,7 +239,7 @@ def prune(ui, repo, *revs, **opts):
             # slower. The new forms makes as much sense and a much faster.
             for dest in ctx.ancestors():
                 if not dest.obsolete():
-                    updatebookmarks = common.bookmarksupdater(repo, ctx.node(), tr)
+                    updatebookmarks = common.bookmarksupdater(repo, ctx.node())
                     updatebookmarks(dest.node())
                     break
 

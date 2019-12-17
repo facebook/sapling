@@ -109,7 +109,7 @@ def latest(repo, rev):
     return latest if latest is not None else rev
 
 
-def bookmarksupdater(repo, oldids, tr):
+def bookmarksupdater(repo, oldids):
     """Return a callable update(newid) updating the current bookmark
     and bookmarks bound to oldid to newid.
     """
@@ -117,6 +117,7 @@ def bookmarksupdater(repo, oldids, tr):
         oldids = [oldids]
 
     def updatebookmarks(newid):
+        tr = repo.currenttransaction()
         dirty = False
         for oldid in oldids:
             changes = []
@@ -146,7 +147,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
             raise error.Abort(_("cannot amend merge changesets"))
         base = old.p1()
         updatebookmarks = bookmarksupdater(
-            repo, [old.node()] + [u.node() for u in updates], tr
+            repo, [old.node()] + [u.node() for u in updates]
         )
 
         # commit a new version of the old changeset, including the update
@@ -244,7 +245,7 @@ def metarewrite(repo, old, newbases, commitopts, copypreds=None):
         wlock = repo.wlock()
         lock = repo.lock()
         tr = repo.transaction("rewrite")
-        updatebookmarks = bookmarksupdater(repo, old.node(), tr)
+        updatebookmarks = bookmarksupdater(repo, old.node())
 
         message = cmdutil.logmessage(repo, commitopts)
         if not message:

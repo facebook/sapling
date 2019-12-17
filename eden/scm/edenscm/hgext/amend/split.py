@@ -61,7 +61,6 @@ def split(ui, repo, *revs, **opts):
     Operates on the current revision by default. Use --rev to split a given
     changeset instead.
     """
-    tr = wlock = lock = None
     newcommits = []
 
     revarg = (list(revs) + opts.get("rev")) or ["."]
@@ -75,13 +74,11 @@ def split(ui, repo, *revs, **opts):
         torebase = ()
     else:
         torebase = repo.revs("descendants(%d) - (%d)", rev, rev)
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
+
+    with repo.wlock(), repo.lock():
         cmdutil.bailifchanged(repo)
         if torebase:
             cmdutil.checkunfinished(repo)
-        tr = repo.transaction("split")
         ctx = repo[rev]
         r = ctx.hex()
         allowunstable = visibility.tracking(repo) or obsolete.isenabled(
@@ -95,7 +92,7 @@ def split(ui, repo, *revs, **opts):
         if len(ctx.parents()) > 1:
             raise error.Abort(_("cannot split merge commits"))
         prev = ctx.p1()
-        bmupdate = common.bookmarksupdater(repo, ctx.node(), tr)
+        bmupdate = common.bookmarksupdater(repo, ctx.node())
         bookactive = repo._activebookmark
         if bookactive is not None:
             repo.ui.status(_("(leaving bookmark %s)\n") % repo._activebookmark)
@@ -139,22 +136,40 @@ def split(ui, repo, *revs, **opts):
         opts["message"] = msg
         opts["edit"] = True
         opts["_commitextrafunc"] = commitextra
-        while haschanges():
-            pats = ()
-            cmdutil.dorecord(
-                ui, repo, commands.commit, "commit", False, recordfilter, *pats, **opts
-            )
-            # TODO: Does no seem like the best way to do this
-            # We should make dorecord return the newly created commit
-            newcommits.append(repo["."])
-            if haschanges():
-                if ui.prompt("Done splitting? [yN]", default="n") == "y":
-                    shouldrecordmutation[0] = True
-                    commands.commit(ui, repo, **opts)
-                    newcommits.append(repo["."])
-                    break
-            else:
-                ui.status(_("no more change to split\n"))
+        try:
+            while haschanges():
+                pats = ()
+                with repo.transaction("split"):
+                    cmdutil.dorecord(
+                        ui,
+                        repo,
+                        commands.commit,
+                        "commit",
+                        False,
+                        recordfilter,
+                        *pats,
+                        **opts
+                    )
+                # TODO: Does no seem like the best way to do this
+                # We should make dorecord return the newly created commit
+                newcommits.append(repo["."])
+                if haschanges():
+                    if ui.prompt("Done splitting? [yN]", default="n") == "y":
+                        shouldrecordmutation[0] = True
+                        with repo.transaction("split"):
+                            commands.commit(ui, repo, **opts)
+                        newcommits.append(repo["."])
+                        break
+                else:
+                    ui.status(_("no more change to split\n"))
+        except Exception:
+            # Rollback everything
+            if newcommits:
+                hg.updaterepo(repo, r, True)  # overwrite=True
+                visibility.remove(repo, [c.node() for c in newcommits])
+            if bookactive is not None:
+                bookmarks.activate(repo, bookactive)
+            raise
 
         if newcommits:
             phabdiffs = {}
@@ -168,17 +183,17 @@ def split(ui, repo, *revs, **opts):
                 )
 
             tip = repo[newcommits[-1]]
-            bmupdate(tip.node())
-            if bookactive is not None:
-                bookmarks.activate(repo, bookactive)
-            if obsolete.isenabled(repo, obsolete.createmarkersopt):
-                obsolete.createmarkers(repo, [(repo[r], newcommits)], operation="split")
+            with repo.transaction("post-split"):
+                bmupdate(tip.node())
+                if bookactive is not None:
+                    bookmarks.activate(repo, bookactive)
+                if obsolete.isenabled(repo, obsolete.createmarkersopt):
+                    obsolete.createmarkers(
+                        repo, [(repo[r], newcommits)], operation="split"
+                    )
             if torebase:
                 rebaseopts = {"dest": "_destrestack(SRC)", "rev": torebase}
                 rebase.rebase(ui, repo, **rebaseopts)
             unfi = repo.unfiltered()
-            visibility.remove(repo, [unfi[r].node()])
-
-        tr.close()
-    finally:
-        lockmod.release(tr, lock, wlock)
+            with repo.transaction("post-split-hide"):
+                visibility.remove(repo, [unfi[r].node()])
