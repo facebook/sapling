@@ -8,13 +8,12 @@
   > EOF
 
   $ hg init
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   > B C   # amend: B -> C
   > |/
   > A
   > EOS
 
-  $ rm .hg/localtags
   $ hg log -G -T '{rev} {desc}\n'
   o  2 C
   |
@@ -63,8 +62,14 @@ Check blackbox logs
 
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":["or","command","command_finish","pinnednodes"]}}'
   [legacy][command] debugdrawdag
-  [legacy][pinnednodes] pinnednodes: ['debugdrawdag'] newpin=[] newunpin=['112478962961'] before=[] after=[]
+  [legacy][pinnednodes] pinnednodes: ['debugdrawdag'] newpin=['112478962961'] newunpin=['112478962961'] before=[] after=[]
   [legacy][command_finish] debugdrawdag exited 0 after 0.00 seconds
+  [legacy][command] bookmarks -T '{bookmark}={node}\n'
+  [legacy][command_finish] bookmarks -T '{bookmark}={node}\n' exited 0 after 0.00 seconds
+  [legacy][command] book -T '{bookmark} '
+  [legacy][command_finish] book -T '{bookmark} ' exited 0 after 0.00 seconds
+  [legacy][command] book -fd A B C
+  [legacy][command_finish] book -fd A B C exited 0 after 0.00 seconds
   [legacy][command] log -G -T '{rev} {desc}\n'
   [legacy][command_finish] log -G -T '{rev} {desc}\n' exited 0 after 0.00 seconds
   [legacy][command] log -G -T '{rev} {desc}\n' --hidden
@@ -96,7 +101,7 @@ commits do not pin them. Test this using "debugobsolete" which will not call
 
 Obsolete working copy, and move working copy away should make things disappear
 
-  $ rm -rf .hg && hg init && hg debugdrawdag <<'EOS'
+  $ rm -rf .hg && hg init && drawdag <<'EOS'
   > C E
   > | |
   > B D
@@ -104,10 +109,9 @@ Obsolete working copy, and move working copy away should make things disappear
   > A
   > EOS
 
-  $ hg up -q E
-  $ hg debugobsolete `HGPLAIN=1 hg log -r E -T '{node}'`
+  $ hg up -q $E
+  $ hg debugobsolete `HGPLAIN=1 hg log -r $E -T '{node}'`
   obsoleted 1 changesets
-  $ hg tag --local --remove E
   $ hg log -G -T '{rev} {desc}\n'
   @  4 E
   |
@@ -119,9 +123,8 @@ Obsolete working copy, and move working copy away should make things disappear
   |/
   o  0 A
   
-  $ hg debugobsolete `HGPLAIN=1 hg log -r D -T '{node}'`
+  $ hg debugobsolete `HGPLAIN=1 hg log -r $D -T '{node}'`
   obsoleted 1 changesets
-  $ hg tag --local --remove D
   $ hg log -G -T '{rev} {desc}\n'
   @  4 E
   |
@@ -133,7 +136,7 @@ Obsolete working copy, and move working copy away should make things disappear
   |/
   o  0 A
   
-  $ hg update -q C
+  $ hg update -q $C
   $ hg log -G -T '{rev} {desc}\n'
   @  3 C
   |
@@ -143,7 +146,7 @@ Obsolete working copy, and move working copy away should make things disappear
   
 Having a bookmark on a commit, obsolete the commit, remove the bookmark
 
-  $ rm -rf .hg && hg init && hg debugdrawdag <<'EOS'
+  $ rm -rf .hg && hg init && drawdag <<'EOS'
   > C E
   > | |
   > B D
@@ -151,12 +154,11 @@ Having a bookmark on a commit, obsolete the commit, remove the bookmark
   > A
   > EOS
 
-  $ hg bookmark -i book-e -r E
-  $ hg debugobsolete `HGPLAIN=1 hg log -r D -T '{node}'`
+  $ hg bookmark -i book-e -r $E
+  $ hg debugobsolete `HGPLAIN=1 hg log -r $D -T '{node}'`
   obsoleted 1 changesets
-  $ hg debugobsolete `HGPLAIN=1 hg log -r E -T '{node}'`
+  $ hg debugobsolete `HGPLAIN=1 hg log -r $E -T '{node}'`
   obsoleted 1 changesets
-  $ rm .hg/localtags
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   x  4 E book-e
   |

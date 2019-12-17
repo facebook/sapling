@@ -14,7 +14,7 @@
 Restack does topological sort and only rebases "D" once:
 
   $ newrepo
-  $ hg debugdrawdag<<'EOS'
+  $ drawdag<<'EOS'
   > D
   > |
   > C
@@ -23,12 +23,12 @@ Restack does topological sort and only rebases "D" once:
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg update $B -q
   $ hg commit --amend -m B2 -q --no-rebase 2>/dev/null
-  $ hg tag --local B2
-  $ hg rebase -r C -d B2 -q
+  $ B2=`hg log -r . -T '{node}'`
+  $ hg rebase -r $C -d $B2 -q
   $ hg commit --amend -m B3 -q --no-rebase 2>/dev/null
-  $ hg tag --local B3
+  $ B3=`hg log -r . -T '{node}'`
   $ showgraph
   @  6 da1d4fe88e84 B3
   |
@@ -45,7 +45,7 @@ Restack does topological sort and only rebases "D" once:
   o  0 426bada5c675 A
   $ hg rebase --restack
   rebasing ca53c8ceb284 "C"
-  rebasing f585351a92f8 "D" (D)
+  rebasing f585351a92f8 "D"
   $ showgraph
   o  8 981f3734c126 D
   |
@@ -53,20 +53,12 @@ Restack does topological sort and only rebases "D" once:
   |
   @  6 da1d4fe88e84 B3
   |
-  | x  4 fdcbd16a7d51 B2
-  |/
-  | x  3 f585351a92f8 D
-  | |
-  | x  2 26805aba1e60 C
-  | |
-  | x  1 112478962961 B
-  |/
   o  0 426bada5c675 A
 
 Restack will only restack the "current" stack and leave other stacks untouched.
 
   $ newrepo
-  $ hg debugdrawdag<<'EOS'
+  $ drawdag<<'EOS'
   >  D   H   K
   >  |   |   |
   >  B C F G J L    # amend: B -> C
@@ -74,26 +66,25 @@ Restack will only restack the "current" stack and leave other stacks untouched.
   >  A   E   I   Z  # amend: J -> L
   > EOS
 
-  $ hg phase --public -r Z+I+A+E
+  $ hg phase --public -r $Z+$I+$A+$E
 
-  $ hg update -q Z
+  $ hg update -q $Z
   $ hg rebase --restack
   nothing to restack
   [1]
 
-  $ hg update -q D
+  $ hg update -q $D
   $ hg rebase --restack
-  rebasing be0ef73c17ad "D" (D)
+  rebasing be0ef73c17ad "D"
 
-  $ hg update -q G
+  $ hg update -q $G
   $ hg rebase --restack
-  rebasing cc209258a732 "H" (H)
+  rebasing cc209258a732 "H"
 
-  $ hg update -q I
+  $ hg update -q $I
   $ hg rebase --restack
-  rebasing 59760668f0e1 "K" (K)
+  rebasing 59760668f0e1 "K"
 
-  $ rm .hg/localtags
   $ showgraph
   o  15 c97827ce80f6 K
   |
@@ -118,7 +109,7 @@ Restack will only restack the "current" stack and leave other stacks untouched.
 The "prune" cases.
 
   $ newrepo
-  $ hg debugdrawdag<<'EOS'
+  $ drawdag<<'EOS'
   > D E
   > |/
   > C
@@ -128,18 +119,17 @@ The "prune" cases.
   > A  F F2
   > EOS
 
-  $ hg update -q B
+  $ hg update -q $B
   $ hg rebase --restack
-  rebasing 112478962961 "B" (B)
-  rebasing f585351a92f8 "D" (D)
-  rebasing 78d2dca436b2 "E" (E tip)
+  rebasing 112478962961 "B"
+  rebasing f585351a92f8 "D"
+  rebasing 78d2dca436b2 "E" (tip)
 
-  $ hg update -q H
+  $ hg update -q $H
   $ hg rebase --restack
-  rebasing 8fdb2c1feb20 "G" (G)
-  rebasing 02ac06fe83b9 "H" (H)
+  rebasing 8fdb2c1feb20 "G"
+  rebasing 02ac06fe83b9 "H"
 
-  $ rm .hg/localtags
   $ showgraph
   @  13 3e1fefc3c8db H
   
@@ -156,7 +146,7 @@ The "prune" cases.
 Restack could resume after resolving merge conflicts.
 
   $ newrepo
-  $ hg debugdrawdag<<'EOS'
+  $ drawdag<<'EOS'
   >  F   G    # F/C = F # cause conflict
   >  |   |    # G/E = G # cause conflict
   >  B C D E  # amend: B -> C
@@ -168,15 +158,13 @@ Restack could resume after resolving merge conflicts.
   >  A
   > EOS
 
-  $ hg update -q F
+  $ hg update -q $F
   $ hg rebase --restack
-  rebasing ed8545a5c22a "F" (F)
+  rebasing ed8545a5c22a "F"
   merging C
   warning: 1 conflicts while merging C! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-
-  $ rm .hg/localtags
 
   $ echo R > C
   $ hg resolve --mark -q

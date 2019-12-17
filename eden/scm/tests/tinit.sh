@@ -140,8 +140,8 @@ EOF
 # commits can still be referred as $TAGNAME.
 drawdag() {
   hg debugdrawdag "$@"
-  eval `hg tags -T '{tag}={node}\n'`
-  rm -f .hg/localtags
+  eval `hg bookmarks -T '{bookmark}={node}\n'`
+  hg book -fd `hg book -T '{bookmark} '`
 }
 
 # Simplify error reporting so crash does not show a traceback.

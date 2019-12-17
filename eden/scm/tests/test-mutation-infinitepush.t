@@ -80,6 +80,8 @@ Something more complicated involving splits and folds.
   798e89a318d8 E
   9d3e6062ef0c F
   f1f3b31bcda8 f1f3b
+  $ A=f9407b1692b9
+  $ C=91713f37cee7
   $ hg up -q $F
 
 Push commit A to a scratch branch, simulating a pushbackup.

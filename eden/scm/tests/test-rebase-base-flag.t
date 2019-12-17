@@ -20,6 +20,7 @@ flag should probably live in somewhere else)
   >   hg rebase "$@" > _rebasetmp
   >   r=$?
   >   grep -v 'saved backup bundle' _rebasetmp
+  >   hg book -d `hg book -T '{bookmark} '`
   >   [ $r -eq 0 ] && tglog
   >   cd ..
   >   return $r

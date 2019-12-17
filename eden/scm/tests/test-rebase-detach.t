@@ -14,17 +14,17 @@ Rebasing D onto B detaching from C (one commit):
   $ hg init a1
   $ cd a1
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > D
   > |
   > C B
   > |/
   > A
   > EOF
-  $ hg phase --force --secret D
+  $ hg phase --force --secret $D
 
-  $ hg rebase -s D -d B
-  rebasing e7b3f00ed42e "D" (D tip)
+  $ hg rebase -s $D -d $B
+  rebasing e7b3f00ed42e "D" (tip)
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/e7b3f00ed42e-6f368371-rebase.hg
 
   $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
@@ -49,7 +49,7 @@ Rebasing D onto B detaching from C (two commits):
   $ hg init a2
   $ cd a2
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > E
   > |
   > D
@@ -59,9 +59,9 @@ Rebasing D onto B detaching from C (two commits):
   > A
   > EOF
 
-  $ hg rebase -s D -d B
-  rebasing e7b3f00ed42e "D" (D)
-  rebasing 69a34c08022a "E" (E tip)
+  $ hg rebase -s $D -d $B
+  rebasing e7b3f00ed42e "D"
+  rebasing 69a34c08022a "E" (tip)
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/e7b3f00ed42e-a2ec7cea-rebase.hg
 
   $ tglog
@@ -88,7 +88,7 @@ Rebasing C onto B using detach (same as not using it):
   $ hg init a3
   $ cd a3
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > D
   > |
   > C B
@@ -96,9 +96,9 @@ Rebasing C onto B using detach (same as not using it):
   > A
   > EOF
 
-  $ hg rebase -s C -d B
-  rebasing dc0947a82db8 "C" (C)
-  rebasing e7b3f00ed42e "D" (D tip)
+  $ hg rebase -s $C -d $B
+  rebasing dc0947a82db8 "C"
+  rebasing e7b3f00ed42e "D" (tip)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/dc0947a82db8-b8481714-rebase.hg
 
   $ tglog
@@ -124,7 +124,7 @@ Rebasing D onto B detaching from C and collapsing:
   $ hg init a4
   $ cd a4
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > E
   > |
   > D
@@ -133,11 +133,11 @@ Rebasing D onto B detaching from C and collapsing:
   > |/
   > A
   > EOF
-  $ hg phase --force --secret E
+  $ hg phase --force --secret $E
 
-  $ hg rebase --collapse -s D -d B
-  rebasing e7b3f00ed42e "D" (D)
-  rebasing 69a34c08022a "E" (E tip)
+  $ hg rebase --collapse -s $D -d $B
+  rebasing e7b3f00ed42e "D"
+  rebasing 69a34c08022a "E" (tip)
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/e7b3f00ed42e-a2ec7cea-rebase.hg
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
@@ -162,7 +162,7 @@ Rebasing across null as ancestor
   $ hg init a5
   $ cd a5
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > E
   > |
   > D
@@ -172,10 +172,10 @@ Rebasing across null as ancestor
   > A B
   > EOF
 
-  $ hg rebase -s C -d B
-  rebasing dc0947a82db8 "C" (C)
-  rebasing e7b3f00ed42e "D" (D)
-  rebasing 69a34c08022a "E" (E tip)
+  $ hg rebase -s $C -d $B
+  rebasing dc0947a82db8 "C"
+  rebasing e7b3f00ed42e "D"
+  rebasing 69a34c08022a "E" (tip)
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/dc0947a82db8-3eefec98-rebase.hg
 
   $ tglog
@@ -211,7 +211,7 @@ Verify that target is not selected as external rev (issue3085)
   $ hg init a6
   $ cd a6
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > H
   > | G
   > |/|
@@ -219,12 +219,12 @@ Verify that target is not selected as external rev (issue3085)
   > |/
   > A
   > EOF
-  $ hg up -q G
+  $ hg up -q $G
 
   $ echo "I" >> E
   $ hg ci -m "I"
-  $ hg tag --local I
-  $ hg merge H
+  $ export I=$(hg log -r . -T "{node}")
+  $ hg merge $H
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m "Merge"
@@ -247,8 +247,8 @@ Verify that target is not selected as external rev (issue3085)
   |/
   o  0: 426bada5c675 'A'
   
-  $ hg rebase -s I -d H --collapse --config ui.merge=internal:other
-  rebasing b92d164ad3cb "I" (I)
+  $ hg rebase -s $I -d $H --collapse --config ui.merge=internal:other
+  rebasing b92d164ad3cb "I"
   rebasing 0cfbc7e8faaf "Merge"
   rebasing c6aaf0d259c0 "J" (tip)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/b92d164ad3cb-88fd7ab7-rebase.hg
@@ -283,17 +283,17 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ hg init a7
   $ cd a7
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > C B
   > |/
   > A
   > EOF
-  $ hg up -q C
+  $ hg up -q $C
   $ echo 'B2' > B
   $ hg ci -A -m 'B2'
   adding B
   $ hg phase --force --secret .
-  $ hg rebase -s . -d B --config ui.merge=internal:fail
+  $ hg rebase -s . -d $B --config ui.merge=internal:fail
   rebasing 17b4880d2402 "B2" (tip)
   merging B
   warning: 1 conflicts while merging B! (edit, then use 'hg resolve --mark')

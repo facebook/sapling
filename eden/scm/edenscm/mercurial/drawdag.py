@@ -92,6 +92,7 @@ import itertools
 import re
 
 from . import (
+    bookmarks,
     context,
     error,
     mutation,
@@ -99,10 +100,10 @@ from . import (
     obsolete,
     pycompat,
     scmutil,
-    tags as tagsmod,
     visibility,
 )
 from .i18n import _
+from .node import hex
 
 
 _pipechars = b"\\/+-|"
@@ -522,11 +523,13 @@ def drawdag(repo, text, **opts):
 
     # Only record mutations if mutation recording is enabled.
     mutationedges = {}
+    mutationpreds = set()
     if mutation.recording(repo):
         # For mutation recording to work, we must include the mutations
         # as extra edges when walking the DAG.
         for succ, (preds, cmd, split) in mutations.items():
             succs = {succ}
+            mutationpreds.update(preds)
             if split:
                 succs.update(split)
             for s in succs:
@@ -565,7 +568,9 @@ def drawdag(repo, text, **opts):
         ctx = simplecommitctx(repo, name, pctxs, added, commitmutations, date)
         n = ctx.commit()
         committed[name] = n
-        tagsmod.tag(repo, [name], n, message=None, user=None, date=None, local=True)
+        if name not in mutationpreds:
+            with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
+                bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
 
     # handle special comments
     with repo.wlock(), repo.lock(), repo.transaction(b"drawdag"):

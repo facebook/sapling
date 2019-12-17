@@ -10,7 +10,7 @@
   $ init() {
   >   N=`expr ${N:-0} + 1`
   >   cd $TESTTMP && hg init repo$N && cd repo$N
-  >   hg debugdrawdag
+  >   drawdag
   > }
 
 Source looks like "N"
@@ -21,7 +21,7 @@ Source looks like "N"
   > A B Z
   > EOS
 
-  $ hg debugbruterebase 'all()-Z' Z
+  $ hg debugbruterebase "all()-$Z" $Z --hidden
      A: A':Z
      B: B':Z
     AB: A':Z B':Z
@@ -47,7 +47,7 @@ Moving backwards
   > |
   > Z
   > EOS
-  $ hg debugbruterebase 'all()-Z' Z
+  $ hg debugbruterebase "all()-$Z" $Z --hidden
     B: B':Z
     A: 
    BA: B':Z

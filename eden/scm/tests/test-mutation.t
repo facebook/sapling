@@ -593,25 +593,19 @@ Drawdag
   > EOS
 
   $ tglogm
-  x  8: b2faf047aa50 'I'
+  x  8: b2faf047aa50 'I' I
   |
-  o  7: a1093b439e1b 'H'
+  o  7: a1093b439e1b 'H' H
   |
-  | o  6: dd319aacbb51 'G'
+  | o  6: dd319aacbb51 'G' G
   | |
-  | o  5: 64a8289d2492 'F'
+  | o  5: 64a8289d2492 'F' F
   | |
-  | | x  4: 17d61397e601 'D'  (Rewritten using rebase into a1093b439e1b)
-  | | |
-  | o |  3: 7fb047a69f22 'E'
-  |/ /
-  | | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 17d61397e601)
-  | |/
-  | x  1: 112478962961 'B'  (Rewritten using split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
+  | o  3: 7fb047a69f22 'E' E
   |/
-  o  0: 426bada5c675 'A'
+  o  0: 426bada5c675 'A' A
   
-  $ hg debugmutation "all()"
+  $ hg debugmutation "all()" --hidden
    *  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
    *  112478962961147124edd43549aedd1a335e44bf
    *  26805aba1e600a82e93661149f2313866a221a7b
@@ -647,18 +641,18 @@ Revsets obey visibility rules
    *  82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af amend by test at 1970-01-01T00:00:00 from:
       2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
       112478962961147124edd43549aedd1a335e44bf
-  $ hg log -T '{node} {desc}\n' -r "successors($B)"
+  $ hg log -T '{node} {desc}\n' -r "successors(1)"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
-  $ hg log -T '{node} {desc}\n' -r "successors($B)" --hidden
+  $ hg log -T '{node} {desc}\n' -r "successors(1)" --hidden
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
   82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af D
-  $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
+  $ hg log -T '{node} {desc}\n' -r "predecessors(2)"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
-  $ hg hide -q $B
-  $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
+  $ hg hide -q 1
+  $ hg log -T '{node} {desc}\n' -r "predecessors(2)"
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
 
 Revsets for filtering commits based on mutated status
@@ -721,8 +715,6 @@ Successors Sets
       ba2b7fa7166d
   54fe561aeb5b
       54fe561aeb5b
-  e67cd4473b7c
-      131b22b23838
   2f9a29935e68
       2f9a29935e68
   131b22b23838
@@ -1034,6 +1026,8 @@ Many splits and folds:
   114f9718bb14 R
   48b9aae0607f Z
 
+  $ A='desc(A)'
+  $ L='desc(L)'
   $ hg debugsuccessorssets $A --hidden
   ac2f7407182b
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
@@ -1258,7 +1252,7 @@ Simulate pushrebase happening remotely and stripping the mutation information.
 
 If we unhide B, we don't know that it was landed.
 
-  $ hg unhide $B
+  $ hg unhide 3
   $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
   |

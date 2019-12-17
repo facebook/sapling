@@ -507,7 +507,7 @@ Test that hiddenoverride has no effect on pinning hidden revisions.
   |
   o  0: 48b9aae0607f 'Z'
   
-  $ hg up -q $B
+  $ hg up -q 917a077edb8d # Update to B
   $ tglogm
   o  6: a77c932a84af 'F'
   |

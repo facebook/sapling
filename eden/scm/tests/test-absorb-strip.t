@@ -47,12 +47,8 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
   |
   o  B
   |
-  | x  E
+  | o  F
   | |
-  | | o  F
-  | | |
-  | x |  D
-  | |/
   | x  C
   | |
   | x  B

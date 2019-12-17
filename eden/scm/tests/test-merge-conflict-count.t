@@ -29,7 +29,7 @@ Encountering a merge conflict prints the number of textual conflicts in each fil
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat b
-  <<<<<<< dest:   2c5d04f1a41f e tip - test: e
+  <<<<<<< dest:   2c5d04f1a41f e - test: e
   b
   =======
   0
@@ -38,7 +38,7 @@ Encountering a merge conflict prints the number of textual conflicts in each fil
   3
   4
   5
-  <<<<<<< dest:   2c5d04f1a41f e tip - test: e
+  <<<<<<< dest:   2c5d04f1a41f e - test: e
   q
   =======
   9

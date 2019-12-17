@@ -503,6 +503,7 @@ Test that amend with --edit invokes editor forcibly
   HG: --
   HG: user: test
   HG: branch 'default'
+  HG: bookmark 'A'
   HG: added A
 
   $ hg log -r. -T '{desc}\n'

@@ -210,7 +210,6 @@ Amend a merge changeset
   $ hg update -q C
   $ hg amend -m FOO
   saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/a35c07e8a2a4-15ff4612-amend.hg (obsstore-off !)
-  $ rm .hg/localtags
   $ hg log -G -T '{desc}\n'
   @    FOO
   |\

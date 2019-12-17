@@ -62,7 +62,7 @@ An alias can be used for simplicity:
 Make another repo with "E" (9bc730a19041):
   $ cd ..
   $ newrepo
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   > E
   > |
   > D

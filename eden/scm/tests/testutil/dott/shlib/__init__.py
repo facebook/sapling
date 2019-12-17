@@ -357,10 +357,10 @@ def newrepo(name=None):
 
 def drawdag(*args, **kwargs):
     result = hg("debugdrawdag", *args, **kwargs)
-    for line in hg("tags", "-T", "{tag}={node}\n").splitlines():
+    for line in hg("book", "-T", "{bookmark}={node}\n").splitlines():
         name, value = line.split("=", 1)
         os.environ[name] = value
-    rm(".hg/localtags")
+        hg("book", "-d", name)
     return result
 
 

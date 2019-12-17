@@ -18,7 +18,7 @@ evolution = createmarkers, allowunstable
 
 # Create repo
 sh % "hg init"
-sh % "hg debugdrawdag" << r"""
+sh % "drawdag" << r"""
 E
 |
 C D

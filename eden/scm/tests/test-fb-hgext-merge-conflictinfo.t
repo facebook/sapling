@@ -732,11 +732,11 @@ mergestate (like shelve):
   $ echo 'state' > b
   $ hg add -q
   $ hg shelve
-  shelved as default
+  shelved as c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg up -q b
   $ hg unshelve
-  unshelving change 'default'
+  unshelving change 'c'
   rebasing shelved changes
   rebasing b0582bede31d "shelve changes to: c" (tip)
   merging b

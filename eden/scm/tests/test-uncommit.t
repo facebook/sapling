@@ -321,8 +321,6 @@ Uncommit leaving an empty changeset
   $ hg log -G -T '{desc} FILES: {files}'
   @  Q FILES:
   |
-  | x  Q FILES: Q
-  |/
   o  P FILES: P
   
   $ hg status

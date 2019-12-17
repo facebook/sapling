@@ -361,7 +361,7 @@ Test copying obsmarkers
 
   $ hg init $TESTTMP/autorel
   $ cd $TESTTMP/autorel
-  $ hg debugdrawdag<<'EOS'
+  $ drawdag<<'EOS'
   > D
   > |
   > C C1 # amend: C -> C1
@@ -370,8 +370,7 @@ Test copying obsmarkers
   > |
   > A
   > EOS
-  $ hg metaedit -r B -m B1
-  $ rm .hg/localtags
+  $ hg metaedit -r $B -m B1
   $ glog -r 'all()'
   o  8:52bc6136aa97@default(draft) D
   |

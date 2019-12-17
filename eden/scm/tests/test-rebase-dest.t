@@ -129,7 +129,7 @@ Setup rebase with multiple destinations
   >   hg rebase "$@" > _rebasetmp
   >   r=$?
   >   grep -v 'saved backup bundle' _rebasetmp
-  >   [ $r -eq 0 ] && rm -f .hg/localtags && tglog
+  >   [ $r -eq 0 ] && rm -f .hg/localtags && hg book -d `hg book -T '{bookmark} '` && tglog
   >   cd ..
   >   return $r
   > }

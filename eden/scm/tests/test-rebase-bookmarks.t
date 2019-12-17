@@ -215,30 +215,28 @@ Bookmark and working parent get moved even if --keep is set (issue5682)
 
   $ hg init $TESTTMP/book-keep
   $ cd $TESTTMP/book-keep
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   > B C
   > |/
   > A
   > EOS
-  $ eval `hg tags -T 'hg bookmark -ir {node} {tag};\n' | grep -v tip`
-  $ rm .hg/localtags
-  $ hg up -q B
+  $ hg up -q $B
   $ tglog
-  o  2: dc0947a82db8 'C' C
+  o  2: dc0947a82db8 'C'
   |
-  | @  1: 112478962961 'B' B
+  | @  1: 112478962961 'B'
   |/
-  o  0: 426bada5c675 'A' A
+  o  0: 426bada5c675 'A'
   
-  $ hg rebase -r B -d C --keep
-  rebasing 112478962961 "B" (B)
+  $ hg rebase -r $B -d $C --keep
+  rebasing 112478962961 "B"
   $ tglog
-  @  3: 9769fc65c4c5 'B' B
+  @  3: 9769fc65c4c5 'B'
   |
-  o  2: dc0947a82db8 'C' C
+  o  2: dc0947a82db8 'C'
   |
   | o  1: 112478962961 'B'
   |/
-  o  0: 426bada5c675 'A' A
+  o  0: 426bada5c675 'A'
   
 

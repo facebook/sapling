@@ -838,6 +838,7 @@ Use delayedstrip to strip inside a transaction
 
   $ hg up -C I
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark I)
   $ echo 3 >> I
   $ cat > $TESTTMP/delayedstrip.py <<EOF
   > from __future__ import absolute_import
@@ -914,15 +915,15 @@ Test high-level scmutil.cleanupnodes API
   saved backup bundle to $TESTTMP/scmutilcleanup/.hg/strip-backup/f585351a92f8-73fb7c03-replace.hg
 
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  8:1473d4b996d1 G2 b-F@divergent3 b-G
+  o  8:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
   |
-  | o  7:d11b3456a873 F2 b-F
+  | o  7:d11b3456a873 F2 F F2 b-F
   | |
-  | o  5:5cb05ba470a7 H
+  | o  5:5cb05ba470a7 H H
   |/|
-  | o  3:7fb047a69f22 E b-F@divergent1
+  | o  3:7fb047a69f22 E E b-F@divergent1
   | |
-  | | o  6:7c78f703e465 D2 b-D
+  | | o  6:7c78f703e465 D2 D D2 b-D
   | | |
   | | o  4:26805aba1e60 C
   | | |
@@ -930,9 +931,22 @@ Test high-level scmutil.cleanupnodes API
   | |/
   o |  1:1fc8102cda62 G
    /
-  o  0:426bada5c675 A b-B b-C b-I
+  o  0:426bada5c675 A A B C I b-B b-C b-I
   
   $ hg bookmark
+     A                         0:426bada5c675
+     B                         0:426bada5c675
+     C                         0:426bada5c675
+     D                         6:7c78f703e465
+     D2                        6:7c78f703e465
+     E                         3:7fb047a69f22
+     F                         7:d11b3456a873
+     F2                        7:d11b3456a873
+     G                         8:1473d4b996d1
+     G2                        8:1473d4b996d1
+     H                         5:5cb05ba470a7
+     I                         0:426bada5c675
+     Z                         -1:000000000000
      b-B                       0:426bada5c675
      b-C                       0:426bada5c675
      b-D                       6:7c78f703e465
@@ -955,17 +969,16 @@ we have reusable code here
 
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
 
-  $ rm .hg/localtags
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  12:1473d4b996d1 G2 b-F@divergent3 b-G
+  o  12:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
   |
-  | o  11:d11b3456a873 F2 b-F
+  | o  11:d11b3456a873 F2 F F2 b-F
   | |
-  | o  8:5cb05ba470a7 H
+  | o  8:5cb05ba470a7 H H
   |/|
-  | o  4:7fb047a69f22 E b-F@divergent1
+  | o  4:7fb047a69f22 E E b-F@divergent1
   | |
-  | | o  10:7c78f703e465 D2 b-D
+  | | o  10:7c78f703e465 D2 D D2 b-D
   | | |
   | | x  6:26805aba1e60 C
   | | |
@@ -973,7 +986,7 @@ we have reusable code here
   | |/
   x |  1:1fc8102cda62 G
    /
-  o  0:426bada5c675 A b-B b-C b-I
+  o  0:426bada5c675 A A B C I b-B b-C b-I
   
   $ hg debugobsolete
   1fc8102cda6204549f031015641606ccf5513ec3 1473d4b996d1d1b121de6b39fab6a04fbf9d873e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}

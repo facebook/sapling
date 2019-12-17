@@ -24,6 +24,7 @@ Test new conflict switching:
 Make conflicts halfway up the stack:
   $ hg up -C f
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark f)
   $ echo "conflict" > c
   $ hg add c
   $ hg amend -q
@@ -34,18 +35,14 @@ Make conflicts halfway up the stack:
   |
   @  f
   |
-  | x  f
-  |/
   o  e
   |
   o  d
   |
   | o  c
   |/
-  | x  g
-  | |
-  o |  b
-  |/
+  o  b
+  |
   o  a
   
   $ cp -R . ../control
@@ -53,11 +50,10 @@ Make conflicts halfway up the stack:
   rebasing in-memory!
   rebasing f4016ed9f5d0 "d" (d)
   rebasing 881eb15e0fdf "e" (e)
-  note: not rebasing 22d86c9ba040 "f" (f) and its descendants as this would cause divergence
-  rebasing e692c3b32196 "f"
+  rebasing e692c3b32196 "f" (f)
   merging c
   hit merge conflicts (in c); switching to on-disk merge
-  rebasing e692c3b32196 "f"
+  rebasing e692c3b32196 "f" (f)
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -68,9 +64,8 @@ Make conflicts halfway up the stack:
   $ hg rebase --continue
   already rebased f4016ed9f5d0 "d" (d) as 32bb4413a7df
   already rebased 881eb15e0fdf "e" (e) as d82c41319fdd
-  note: not rebasing 22d86c9ba040 "f" (f) and its descendants as this would cause divergence
-  rebasing e692c3b32196 "f"
-  rebasing 2a19607ff85c "g"
+  rebasing e692c3b32196 "f" (f)
+  rebasing 2a19607ff85c "g" (g)
   $ hg log -G -r 0:: -T '{desc} {rev} {node|short}'
   o  g 12 24c12a3229e2
   |
@@ -80,18 +75,10 @@ Make conflicts halfway up the stack:
   |
   o  d 9 32bb4413a7df
   |
-  | x  f 6 22d86c9ba040
-  | |
-  | x  e 5 881eb15e0fdf
-  | |
-  | x  d 4 f4016ed9f5d0
-  | |
-  o |  c 3 a82ac2b38757
-  |/
-  | x  g 2 cf64e78ac512
-  | |
-  o |  b 1 488e1b7e7341
-  |/
+  o  c 3 a82ac2b38757
+  |
+  o  b 1 488e1b7e7341
+  |
   o  a 0 b173517d0057
   
 
@@ -102,8 +89,8 @@ Try it with uncommitted changes, ensure it aborts nicely:
   $ echo "test" > a
   $ hg rebase -s d82c41319fdd -d a
   rebasing in-memory!
-  rebasing d82c41319fdd "e"
-  rebasing c33e7f678afd "f"
+  rebasing d82c41319fdd "e" (e)
+  rebasing c33e7f678afd "f" (f)
   transaction abort!
   rollback completed
   abort: must use on-disk merge for this rebase (hit merge conflicts in c), but you have working copy changes

@@ -413,17 +413,16 @@ Test rebase with obsstore turned on and off (issue5606)
   warning: orphaned descendants detected, not stripping 112478962961
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/f585351a92f8-e536a9e4-rebase.hg
 
-  $ rm .hg/localtags
   $ tglogp
-  o  5: c5f6f5f52dbd draft 'D'
+  o  5: c5f6f5f52dbd draft 'D' D
   |
-  o  4: a8990ee99807 draft 'B'
+  o  4: a8990ee99807 draft 'B' B
   |
-  @  3: b2867df0c236 draft 'E'
+  @  3: b2867df0c236 draft 'E' E
   |
-  | o  2: 26805aba1e60 draft 'C'
+  | o  2: 26805aba1e60 draft 'C' C
   | |
   | o  1: 112478962961 draft 'B'
   |/
-  o  0: 426bada5c675 draft 'A'
+  o  0: 426bada5c675 draft 'A' A
   

@@ -62,10 +62,12 @@ amend.autorestack=only-trivial, and simple changes (expect restack)
   hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [426bad] A
+  (leaving bookmark B)
+  [426bad] (A) A
+  (activating bookmark A)
   $ hg amend -m 'Unchanged manifest for A'
-  rebasing 5357953e3ea3 "Unchanged manifest for B"
-  rebasing b635bd2cf20b "C"
+  rebasing 5357953e3ea3 "Unchanged manifest for B" (B)
+  rebasing b635bd2cf20b "C" (C)
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
   hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
 
@@ -85,7 +87,9 @@ amend.autorestack=never
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [426bad] A
+  (leaving bookmark B)
+  [426bad] (A) A
+  (activating bookmark A)
   $ hg amend -m 'Unchanged manifest for A'
   hint[amend-restack]: descendants of 426bada5c675 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
@@ -156,10 +160,6 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   |
   @  3 767372f778c5 B
   |
-  | x  2 ca039b450ae0 C
-  | |
-  | x  1 fe14e2b67b65 B
-  |/
   o  0 426bada5c675 A
   $ cat file
   0
@@ -310,12 +310,8 @@ Test rebasing children with obsolete children themselves needing a restack.
   |
   @  6 21006be03678 A
   |
-  | x  5 01f26f1a10b2 D
+  | x  3 b45c90359798 C
   | |
-  | | x  4 ff9eba5e2480 C2
-  | | |
-  | x |  3 b45c90359798 C
-  | |/
   | x  2 917a077edb8d B
   | |
   | x  1 ac2f7407182b A
@@ -346,12 +342,8 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   |
   @  6 1c28c4186c15 B3
   |
-  | x  5 afb1812f5f28 D
+  | o  4 dbe6ebcaec86 C
   | |
-  | | o  4 dbe6ebcaec86 C
-  | | |
-  | x |  3 1b9d31199d34 B2
-  |/ /
   | x  2 588f87b965af B1
   |/
   o  1 ac2f7407182b A

@@ -35,15 +35,13 @@ Rebase two commits, of which one is already in the right place
   > EOF
   rebasing b18e25de2cf5 "D" (D)
   already rebased 26805aba1e60 "C" (C tip)
-  o  4: fe3b4c6498fa 'D'
+  o  4: fe3b4c6498fa 'D' D
   |
-  | o  3: 26805aba1e60 'C'
+  | o  3: 26805aba1e60 'C' C
   |/
-  | x  2: b18e25de2cf5 'D'
-  | |
-  o |  1: 112478962961 'B'
-  |/
-  o  0: 426bada5c675 'A'
+  o  1: 112478962961 'B' B
+  |
+  o  0: 426bada5c675 'A' A
   
 Can collapse commits even if one is already in the right place
 
@@ -58,14 +56,10 @@ Can collapse commits even if one is already in the right place
   rebasing 26805aba1e60 "C" (C tip)
   o  4: a2493f4ace65 'Collapsed revision
   |  * D
-  |  * C'
-  | x  3: 26805aba1e60 'C'
-  |/
-  | x  2: b18e25de2cf5 'D'
-  | |
-  o |  1: 112478962961 'B'
-  |/
-  o  0: 426bada5c675 'A'
+  |  * C' C D
+  o  1: 112478962961 'B' B
+  |
+  o  0: 426bada5c675 'A' A
   
 Rebase with "holes". The commits after the hole should end up on the parent of
 the hole (B below), not on top of the destination (A).
@@ -81,15 +75,13 @@ the hole (B below), not on top of the destination (A).
   > EOF
   already rebased 112478962961 "B" (B)
   rebasing f585351a92f8 "D" (D tip)
-  o  4: 1e6da8103bc7 'D'
+  o  4: 1e6da8103bc7 'D' D
   |
-  | x  3: f585351a92f8 'D'
-  | |
-  | o  2: 26805aba1e60 'C'
+  | o  2: 26805aba1e60 'C' C
   |/
-  o  1: 112478962961 'B'
+  o  1: 112478962961 'B' B
   |
-  o  0: 426bada5c675 'A'
+  o  0: 426bada5c675 'A' A
   
 Abort doesn't lose the commits that were already in the right place
 
@@ -110,11 +102,11 @@ Abort doesn't lose the commits that were already in the right place
   $ hg rebase --abort
   rebase aborted
   $ tglog
-  o  3: 79f6d6ab7b14 'C'
+  o  3: 79f6d6ab7b14 'C' C
   |
-  | o  2: ef8c0fe0897b 'D'
+  | o  2: ef8c0fe0897b 'D' D
   | |
-  o |  1: 594087dbaf71 'B'
+  o |  1: 594087dbaf71 'B' B
   |/
-  o  0: 426bada5c675 'A'
+  o  0: 426bada5c675 'A' A
   

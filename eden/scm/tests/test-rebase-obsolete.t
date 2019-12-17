@@ -995,10 +995,10 @@ obsolete changeset which successor is in rebase set.
   > instabilities = '{rev}:{node|short} {desc|firstline}{if(instabilities," ({instabilities})")}\n'
   > EOF
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   >   e   f
   >   |   |
-  >   d'  d # replace: d -> d'
+  >   d2  d # replace: d -> d2
   >    \ /
   >     c
   >     |
@@ -1006,14 +1006,14 @@ obsolete changeset which successor is in rebase set.
   >    \|
   >     a
   > EOF
-  $ hg log -G -r 'a'::
+  $ hg log -G -r $a::
   o  7:1143e9adc121 f
   |
-  | o  6:d60ebfa0f1cb e
+  | o  6:493e1ea05b71 e
   | |
-  | o  5:027ad6c5830d d'
+  | o  5:447acf26a46a d2
   | |
-  x |  4:76be324c128b d (rewritten using replace as 5:027ad6c5830d)
+  x |  4:76be324c128b d (rewritten using replace as 5:447acf26a46a)
   |/
   o  3:a82ac2b38757 c
   |
@@ -1025,19 +1025,19 @@ obsolete changeset which successor is in rebase set.
   
 
 Changeset d and its descendants are excluded to avoid divergence of d, which
-would occur because the successor of d (d') is also in rebaseset. As a
+would occur because the successor of d (d2) is also in rebaseset. As a
 consequence f (descendant of d) is left behind.
 
-  $ hg rebase -b 'e' -d 'x'
-  rebasing 488e1b7e7341 "b" (b)
-  rebasing a82ac2b38757 "c" (c)
-  rebasing 027ad6c5830d "d'" (d')
-  rebasing d60ebfa0f1cb "e" (e)
-  note: not rebasing 76be324c128b "d" (d) and its descendants as this would cause divergence
-  $ hg log -G -r 'a'::
-  o  11:eb6d63fc4ed5 e
+  $ hg rebase -b $e -d $x
+  rebasing 488e1b7e7341 "b"
+  rebasing a82ac2b38757 "c"
+  rebasing 447acf26a46a "d2"
+  rebasing 493e1ea05b71 "e"
+  note: not rebasing 76be324c128b "d" and its descendants as this would cause divergence
+  $ hg log -G -r $a::
+  o  11:1ce56955f155 e
   |
-  o  10:44d8c724a70c d'
+  o  10:885d062b1232 d2
   |
   o  9:d008e6b4d3fd c
   |
@@ -1045,12 +1045,8 @@ consequence f (descendant of d) is left behind.
   |
   | o  7:1143e9adc121 f
   | |
-  | | x  6:d60ebfa0f1cb e (rewritten using rebase as 11:eb6d63fc4ed5)
-  | | |
-  | | x  5:027ad6c5830d d' (rewritten using rebase as 10:44d8c724a70c)
-  | | |
-  | x |  4:76be324c128b d (rewritten using replace as 5:027ad6c5830d)
-  | |/
+  | x  4:76be324c128b d (rewritten using rebase, replace as 10:885d062b1232)
+  | |
   | x  3:a82ac2b38757 c (rewritten using rebase as 9:d008e6b4d3fd)
   | |
   o |  2:630d7c95eff7 x
@@ -1061,33 +1057,29 @@ consequence f (descendant of d) is left behind.
   
   $ hg debugstrip --no-backup -q -r 8:
 
-If the rebase set has an obsolete (d) with a successor (d') outside the rebase
+If the rebase set has an obsolete (d) with a successor (d2) outside the rebase
 set and none in destination, we still get the divergence warning.
 By allowing divergence, we can perform the rebase.
 
-  $ hg rebase -r 'c'::'f' -d 'x'
+  $ hg rebase -r $c::$f -d $x
   abort: this rebase will cause divergences from: 76be324c128b
   (to force the rebase please set experimental.evolution.allowdivergence=True)
   [255]
-  $ hg rebase --config experimental.evolution.allowdivergence=true -r 'c'::'f' -d 'x'
-  rebasing a82ac2b38757 "c" (c)
-  rebasing 76be324c128b "d" (d)
-  rebasing 1143e9adc121 "f" (f tip)
-  $ hg log -G -r 'a':: -T instabilities
+  $ hg rebase --config experimental.evolution.allowdivergence=true -r $c::$f -d $x
+  rebasing a82ac2b38757 "c"
+  rebasing 76be324c128b "d"
+  rebasing 1143e9adc121 "f" (tip)
+  $ hg log -G -r $a:: -T instabilities
   o  10:e1744ea07510 f
   |
   o  9:e2b36ea9a0a0 d (content-divergent)
   |
   o  8:6a0376de376e c
   |
-  | x  7:1143e9adc121 f
+  | o  6:493e1ea05b71 e (orphan)
   | |
-  | | o  6:d60ebfa0f1cb e (orphan)
-  | | |
-  | | o  5:027ad6c5830d d' (orphan content-divergent)
-  | | |
-  | x |  4:76be324c128b d
-  | |/
+  | o  5:447acf26a46a d2 (orphan content-divergent)
+  | |
   | x  3:a82ac2b38757 c
   | |
   o |  2:630d7c95eff7 x
@@ -1100,21 +1092,21 @@ By allowing divergence, we can perform the rebase.
 
 (Not skipping obsoletes means that divergence is allowed.)
 
-  $ hg rebase --config experimental.rebaseskipobsolete=false -r 'c'::'f' -d 'x'
-  rebasing a82ac2b38757 "c" (c)
-  rebasing 76be324c128b "d" (d)
-  rebasing 1143e9adc121 "f" (f tip)
+  $ hg rebase --config experimental.rebaseskipobsolete=false -r $c::$f -d $x
+  rebasing a82ac2b38757 "c"
+  rebasing 76be324c128b "d"
+  rebasing 1143e9adc121 "f" (tip)
 
   $ hg debugstrip --no-backup -q -r 0:
 
 Similar test on a more complex graph
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   >       g
   >       |
   >   f   e
   >   |   |
-  >   e'  d # replace: e -> e'
+  >   e2  d # replace: e -> e2
   >    \ /
   >     c
   >     |
@@ -1122,14 +1114,14 @@ Similar test on a more complex graph
   >    \|
   >     a
   > EOF
-  $ hg log -G -r 'a':
+  $ hg log -G -r $a:
   o  8:2876ce66c6eb g
   |
-  | o  7:3ffec603ab53 f
+  | o  7:12df856f4e8e f
   | |
-  x |  6:e36fae928aec e (rewritten using replace as 5:63324dc512ea)
+  x |  6:e36fae928aec e (rewritten using replace as 5:87682c149ad7)
   | |
-  | o  5:63324dc512ea e'
+  | o  5:87682c149ad7 e2
   | |
   o |  4:76be324c128b d
   |/
@@ -1141,19 +1133,19 @@ Similar test on a more complex graph
   |/
   o  0:b173517d0057 a
   
-  $ hg rebase -b 'f' -d 'x'
-  rebasing 488e1b7e7341 "b" (b)
-  rebasing a82ac2b38757 "c" (c)
-  rebasing 63324dc512ea "e'" (e')
-  rebasing 3ffec603ab53 "f" (f)
-  rebasing 76be324c128b "d" (d)
-  note: not rebasing e36fae928aec "e" (e) and its descendants as this would cause divergence
-  $ hg log -G -r 'a':
+  $ hg rebase -b $f -d $x
+  rebasing 488e1b7e7341 "b"
+  rebasing a82ac2b38757 "c"
+  rebasing 87682c149ad7 "e2"
+  rebasing 12df856f4e8e "f"
+  rebasing 76be324c128b "d"
+  note: not rebasing e36fae928aec "e" and its descendants as this would cause divergence
+  $ hg log -G -r $a:
   o  13:a1707a5b7c2c d
   |
-  | o  12:ef6251596616 f
+  | o  12:aa3f1f628d29 f
   | |
-  | o  11:b6f172e64af9 e'
+  | o  11:2963fc7a5743 e2
   |/
   o  10:d008e6b4d3fd c
   |
@@ -1161,14 +1153,10 @@ Similar test on a more complex graph
   |
   | o  8:2876ce66c6eb g
   | |
-  | | x  7:3ffec603ab53 f (rewritten using rebase as 12:ef6251596616)
-  | | |
-  | x |  6:e36fae928aec e (rewritten using replace as 5:63324dc512ea)
-  | | |
-  | | x  5:63324dc512ea e' (rewritten using rebase as 11:b6f172e64af9)
-  | | |
-  | x |  4:76be324c128b d (rewritten using rebase as 13:a1707a5b7c2c)
-  | |/
+  | x  6:e36fae928aec e (rewritten using rebase, replace as 11:2963fc7a5743)
+  | |
+  | x  4:76be324c128b d (rewritten using rebase as 13:a1707a5b7c2c)
+  | |
   | x  3:a82ac2b38757 c (rewritten using rebase as 10:d008e6b4d3fd)
   | |
   o |  2:630d7c95eff7 x
@@ -1185,7 +1173,7 @@ Rebase merge where successor of one parent is equal to destination (issue5198)
   $ hg init p1-succ-is-dest
   $ cd p1-succ-is-dest
 
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   >   F
   >  /|
   > E D B # replace: D -> B
@@ -1193,18 +1181,15 @@ Rebase merge where successor of one parent is equal to destination (issue5198)
   >   A
   > EOF
 
-  $ hg rebase -d B -s D
-  note: not rebasing b18e25de2cf5 "D" (D), already in destination as 112478962961 "B" (B)
-  rebasing 66f1a38021c9 "F" (F tip)
+  $ D=2
+  $ hg rebase -d $B -s $D
+  note: not rebasing b18e25de2cf5 "D", already in destination as 112478962961 "B"
+  rebasing 66f1a38021c9 "F" (tip)
   $ hg log -G
   o    5:50e9d60b99c6 F
   |\
-  | | x  4:66f1a38021c9 F (rewritten using rebase as 5:50e9d60b99c6)
-  | |/|
-  | o |  3:7fb047a69f22 E
-  | | |
-  | | x  2:b18e25de2cf5 D (rewritten using replace as 1:112478962961)
-  | |/
+  | o  3:7fb047a69f22 E
+  | |
   o |  1:112478962961 B
   |/
   o  0:426bada5c675 A
@@ -1230,13 +1215,9 @@ Rebase merge where successor of other parent is equal to destination
   $ hg log -G
   o    5:aae1787dacee F
   |\
-  | | x  4:66f1a38021c9 F (rewritten using rebase as 5:aae1787dacee)
-  | |/|
-  | | x  3:7fb047a69f22 E (rewritten using replace as 1:112478962961)
-  | | |
-  | o |  2:b18e25de2cf5 D
-  | |/
-  o /  1:112478962961 B
+  | o  2:b18e25de2cf5 D
+  | |
+  o |  1:112478962961 B
   |/
   o  0:426bada5c675 A
   
@@ -1262,13 +1243,9 @@ Rebase merge where successor of one parent is ancestor of destination
   $ hg log -G
   o    6:0913febf6439 F
   |\
-  +---x  5:66f1a38021c9 F (rewritten using rebase as 6:0913febf6439)
-  | | |
-  | o |  4:26805aba1e60 C
-  | | |
-  o | |  3:7fb047a69f22 E
-  | | |
-  +---x  2:b18e25de2cf5 D (rewritten using replace as 1:112478962961)
+  | o  4:26805aba1e60 C
+  | |
+  o |  3:7fb047a69f22 E
   | |
   | o  1:112478962961 B
   |/
@@ -1295,15 +1272,11 @@ Rebase merge where successor of other parent is ancestor of destination
   $ hg log -G
   o    6:c6ab0cc6d220 F
   |\
-  +---x  5:66f1a38021c9 F (rewritten using rebase as 6:c6ab0cc6d220)
-  | | |
-  | o |  4:26805aba1e60 C
-  | | |
-  | | x  3:7fb047a69f22 E (rewritten using replace as 1:112478962961)
-  | | |
-  o---+  2:b18e25de2cf5 D
-   / /
-  o /  1:112478962961 B
+  | o  4:26805aba1e60 C
+  | |
+  o |  2:b18e25de2cf5 D
+  | |
+  | o  1:112478962961 B
   |/
   o  0:426bada5c675 A
   
@@ -1330,16 +1303,10 @@ Rebase merge where successor of one parent is ancestor of destination
   $ hg log -G
   o  6:8f47515dda15 D
   |
-  | x    5:66f1a38021c9 F (pruned using rebase)
-  | |\
-  o | |  4:26805aba1e60 C
-  | | |
-  | | x  3:7fb047a69f22 E (rewritten using replace as 1:112478962961)
-  | | |
-  | x |  2:b18e25de2cf5 D (rewritten using rebase as 6:8f47515dda15)
-  | |/
-  o /  1:112478962961 B
-  |/
+  o  4:26805aba1e60 C
+  |
+  o  1:112478962961 B
+  |
   o  0:426bada5c675 A
   
   $ cd ..
@@ -1366,16 +1333,10 @@ Rebase merge where successor of other parent is ancestor of destination
   $ hg log -G
   o  6:533690786a86 E
   |
-  | x    5:66f1a38021c9 F (pruned using rebase)
-  | |\
-  o | |  4:26805aba1e60 C
-  | | |
-  | | x  3:7fb047a69f22 E (rewritten using rebase as 6:533690786a86)
-  | | |
-  | x |  2:b18e25de2cf5 D (rewritten using replace as 1:112478962961)
-  | |/
-  o /  1:112478962961 B
-  |/
+  o  4:26805aba1e60 C
+  |
+  o  1:112478962961 B
+  |
   o  0:426bada5c675 A
   
   $ cd ..
@@ -1414,7 +1375,6 @@ parent moves as requested.
   rebasing fc2b737bb2e5 "B" (B)
   rebasing b8ed089c80ad "D" (D)
 
-  $ rm .hg/localtags
   $ hg log -G
   o  6:e4f78693cc88 D
   |
@@ -1444,7 +1404,6 @@ parent moves as requested.
   note: not rebasing fc2b737bb2e5 "B" (B), already in destination as 96cc3511f894 "C" (C)
   rebasing b8ed089c80ad "D" (D)
 
-  $ rm .hg/localtags
   $ hg log -G
   o  6:1b355ed94d82 D
   |
@@ -1500,7 +1459,7 @@ parent gets moved:
 
   $ hg init $TESTTMP/ancestor-wd-move
   $ cd $TESTTMP/ancestor-wd-move
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   >  E D1  # rebase: D1 -> D2
   >  | |
   >  | C
@@ -1509,18 +1468,17 @@ parent gets moved:
   >  |/
   >  A
   > EOS
-  $ hg update D1 -q
+  $ D1=5
+  $ hg update $D1 -q --hidden
   $ hg bookmark book -i
-  $ hg rebase -r B+D1 -d E
-  rebasing 112478962961 "B" (B)
-  note: not rebasing 15ecf15e0114 "D1" (book D1 tip), already in destination as 0807738e0be9 "D2" (D2)
+  $ hg rebase -r $B+$D1 -d $E
+  rebasing 112478962961 "B"
+  note: not rebasing 15ecf15e0114 "D1" (book tip), already in destination as 0807738e0be9 "D2"
   $ hg log -G -T '{desc} {bookmarks}'
   @  B book
   |
-  | x  D1
-  | |
-  o |  E
-  | |
+  o  E
+  |
   | o  C
   | |
   o |  D2

@@ -22,8 +22,8 @@ Test what said in drawdag.py docstring
   > a
   > EOS
 
-  $ hg log -G -T '{rev} {desc} ({tags})'
-  o  3 d (d tip)
+  $ hg log -G -T '{rev} {desc} ({bookmarks})'
+  o  3 d (d)
   |
   | o  2 c (c)
   |/
@@ -148,7 +148,7 @@ Edges existed in repo are no-ops
   o  A
   
 
-  $ hg debugdrawdag <<'EOS'
+  $ hg debugdrawdag --traceback <<'EOS'
   > C D C
   > | | |
   > B B A

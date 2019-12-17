@@ -35,8 +35,4 @@ sh % "hg log -G -T '{desc} {phase}'" == r"""
     |
     o  B draft
     |
-    | x  C secret
-    | |
-    | x  B draft
-    |/
     o  A public"""

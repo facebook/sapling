@@ -51,11 +51,7 @@ Test invalid value for amend.autorestack
   | |
   | x  4 07863d11c289 C_old
   | |
-  | | x  3 26805aba1e60 C
-  | | |
-  | x |  2 3326d5194fc9 B_old
-  |/ /
-  | x  1 112478962961 B
+  | x  2 3326d5194fc9 B_old
   |/
   o  0 426bada5c675 A
   $ hg rebase --restack
@@ -67,14 +63,8 @@ Test invalid value for amend.autorestack
   |
   @  6 180681c3ccd0 B'
   |
-  | x  5 3c36beb5705f D
-  | |
   | x  4 07863d11c289 C_old
   | |
-  | | x  3 26805aba1e60 C
-  | | |
-  | x |  2 3326d5194fc9 B_old
-  |/ /
-  | x  1 112478962961 B
+  | x  2 3326d5194fc9 B_old
   |/
   o  0 426bada5c675 A

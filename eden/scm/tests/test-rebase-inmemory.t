@@ -14,14 +14,14 @@ TODO: Make this test compatibile with obsstore enabled.
 Rebase a simple DAG:
   $ hg init repo1
   $ cd repo1
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   > c b
   > |/
   > d
   > |
   > a
   > EOS
-  $ hg up -C a
+  $ hg up -C $a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
   o  3: 814f6bd05178 'c'
@@ -36,9 +36,9 @@ Rebase a simple DAG:
   c (no-eol)
   $ hg cat -r 2 b
   b (no-eol)
-  $ hg rebase --debug -r b -d c | grep rebasing
+  $ hg rebase --debug -r $b -d $c | grep rebasing
   rebasing in-memory
-  rebasing db0e82a16a62 "b" (b)
+  rebasing db0e82a16a62 "b"
   $ tglog
   o  3: ca58782ad1e4 'b'
   |
@@ -56,7 +56,7 @@ Rebase a simple DAG:
 Case 2:
   $ hg init repo2
   $ cd repo2
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   > c b
   > |/
   > d
@@ -65,14 +65,14 @@ Case 2:
   > EOS
 
 Add a symlink and executable file:
-  $ hg up -C c
+  $ hg up -C $c
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ln -s somefile e
   $ echo f > f
   $ chmod +x f
   $ hg add e f
   $ hg amend -q
-  $ hg up -Cq a
+  $ hg up -Cq $a
 
 Write files to the working copy, and ensure they're still there after the rebase
   $ echo "abc" > a
@@ -95,9 +95,9 @@ Write files to the working copy, and ensure they're still there after the rebase
   b (no-eol)
   $ hg cat -r 3 e
   somefile (no-eol)
-  $ hg rebase --debug -s b -d a | grep rebasing
+  $ hg rebase --debug -s $b -d $a | grep rebasing
   rebasing in-memory
-  rebasing db0e82a16a62 "b" (b)
+  rebasing db0e82a16a62 "b"
   $ tglog
   o  3: fc055c3b4d33 'b'
   |
@@ -113,7 +113,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   b (no-eol)
   $ hg rebase --debug -s 1 -d 3 | grep rebasing
   rebasing in-memory
-  rebasing 02952614a83d "d" (d)
+  rebasing 02952614a83d "d"
   rebasing f56b71190a8f "c"
   $ tglog
   o  3: 753feb6fd12a 'c'

@@ -14,7 +14,7 @@ sh % "setconfig 'experimental.bundle-phases=yes'"
 # Set up repo with linear history
 sh % "hg init linear"
 sh % "cd linear"
-sh % "hg debugdrawdag" << r"""
+sh % "drawdag" << r"""
 E
 |
 D
@@ -25,8 +25,8 @@ B
 |
 A
 """
-sh % "hg phase --public A"
-sh % "hg phase --force --secret D"
+sh % "hg phase --public $A"
+sh % "hg phase --force --secret $D"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     o  E secret
     |
@@ -38,7 +38,7 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     |
     o  A public"""
 # Phases are restored when unbundling
-sh % "hg bundle --base B -r E bundle" == "3 changesets found"
+sh % "hg bundle --base $B -r $E bundle" == "3 changesets found"
 sh % "hg debugbundle bundle" == r"""
     Stream params: {Compression: BZ}
     changegroup -- {nbchanges: 3, targetphase: 2, version: 02}
@@ -47,7 +47,7 @@ sh % "hg debugbundle bundle" == r"""
         9bc730a19041f9ec7cb33c626e811aa233efb18c
     phase-heads -- {}
         26805aba1e600a82e93661149f2313866a221a7b draft"""
-sh % "hg debugstrip --no-backup C"
+sh % "hg debugstrip --no-backup $C"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -62,7 +62,7 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     o  A public"""
 # Root revision's phase is preserved
 sh % "hg bundle -a bundle" == "5 changesets found"
-sh % "hg debugstrip --no-backup A"
+sh % "hg debugstrip --no-backup $A"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -76,9 +76,9 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     |
     o  A public"""
 # Completely public history can be restored
-sh % "hg phase --public E"
+sh % "hg phase --public $E"
 sh % "hg bundle -a bundle" == "5 changesets found"
-sh % "hg debugstrip --no-backup A"
+sh % "hg debugstrip --no-backup $A"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -92,9 +92,9 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     |
     o  A public"""
 # Direct transition from public to secret can be restored
-sh % "hg phase --secret --force D"
+sh % "hg phase --secret --force $D"
 sh % "hg bundle -a bundle" == "5 changesets found"
-sh % "hg debugstrip --no-backup A"
+sh % "hg debugstrip --no-backup $A"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -108,10 +108,10 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     |
     o  A public"""
 # Revisions within bundle preserve their phase even if parent changes its phase
-sh % "hg phase --draft --force B"
-sh % "hg bundle --base B -r E bundle" == "3 changesets found"
-sh % "hg debugstrip --no-backup C"
-sh % "hg phase --public B"
+sh % "hg phase --draft --force $B"
+sh % "hg bundle --base $B -r $E bundle" == "3 changesets found"
+sh % "hg debugstrip --no-backup $C"
+sh % "hg phase --public $B"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -125,9 +125,9 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     |
     o  A public"""
 # Phase of ancestors of stripped node get advanced to accommodate child
-sh % "hg bundle --base B -r E bundle" == "3 changesets found"
-sh % "hg debugstrip --no-backup C"
-sh % "hg phase --force --secret B"
+sh % "hg bundle --base $B -r $E bundle" == "3 changesets found"
+sh % "hg debugstrip --no-backup $C"
+sh % "hg phase --force --secret $B"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -143,11 +143,11 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
 # Unbundling advances phases of changesets even if they were already in the repo.
 # To test that, create a bundle of everything in draft phase and then unbundle
 # to see that secret becomes draft, but public remains public.
-sh % "hg phase --draft --force A"
-sh % "hg phase --draft E"
+sh % "hg phase --draft --force $A"
+sh % "hg phase --draft $E"
 sh % "hg bundle -a bundle" == "5 changesets found"
-sh % "hg phase --public A"
-sh % "hg phase --secret --force E"
+sh % "hg phase --public $A"
+sh % "hg phase --secret --force $E"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -161,8 +161,8 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     |
     o  A public"""
 # Unbundling change in the middle of a stack does not affect later changes
-sh % "hg debugstrip --no-backup E"
-sh % "hg phase --secret --force D"
+sh % "hg debugstrip --no-backup $E"
+sh % "hg phase --secret --force $D"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     o  D secret
     |
@@ -171,7 +171,7 @@ sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
     o  B draft
     |
     o  A public"""
-sh % "hg bundle --base A -r B bundle" == "1 changesets found"
+sh % "hg bundle --base $A -r $B bundle" == "1 changesets found"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{desc} {phase}\\n'" == r"""
@@ -188,15 +188,15 @@ sh % "cd .."
 # Set up repo with non-linear history
 sh % "hg init non-linear"
 sh % "cd non-linear"
-sh % "hg debugdrawdag" << r"""
+sh % "drawdag" << r"""
 D E
 |\|
 B C
 |/
 A
 """
-sh % "hg phase --public C"
-sh % "hg phase --force --secret B"
+sh % "hg phase --public $C"
+sh % "hg phase --force --secret $B"
 sh % "hg log -G -T '{node|short} {desc} {phase}\\n'" == r"""
     o  03ca77807e91 E draft
     |
@@ -221,7 +221,7 @@ sh % "hg debugbundle bundle" == r"""
     phase-heads -- {}
         dc0947a82db884575bb76ea10ac97b08536bfa03 public
         03ca77807e919db8807c3749086dc36fb478cac0 draft"""
-sh % "hg debugstrip --no-backup A"
+sh % "hg debugstrip --no-backup $A"
 sh % "hg unbundle -q bundle"
 sh % "rm bundle"
 sh % "hg log -G -T '{node|short} {desc} {phase}\\n'" == r"""
@@ -235,7 +235,7 @@ sh % "hg log -G -T '{node|short} {desc} {phase}\\n'" == r"""
     |/
     o  426bada5c675 A public"""
 
-sh % "hg bundle --base 'A + C' -r D bundle" == "2 changesets found"
+sh % "hg bundle --base $A+$C -r $D bundle" == "2 changesets found"
 sh % "hg debugbundle bundle" == r"""
     Stream params: {Compression: BZ}
     changegroup -- {nbchanges: 2, targetphase: 2, version: 02}
@@ -244,7 +244,7 @@ sh % "hg debugbundle bundle" == r"""
     phase-heads -- {}"""
 sh % "rm bundle"
 
-sh % "hg bundle --base A -r D bundle" == "3 changesets found"
+sh % "hg bundle --base $A -r $D bundle" == "3 changesets found"
 sh % "hg debugbundle bundle" == r"""
     Stream params: {Compression: BZ}
     changegroup -- {nbchanges: 3, targetphase: 2, version: 02}
@@ -255,7 +255,7 @@ sh % "hg debugbundle bundle" == r"""
         dc0947a82db884575bb76ea10ac97b08536bfa03 public"""
 sh % "rm bundle"
 
-sh % "hg bundle --base 'B + C' -r 'D + E' bundle" == "2 changesets found"
+sh % "hg bundle --base $B+$C -r $D+$E bundle" == "2 changesets found"
 sh % "hg debugbundle bundle" == r"""
     Stream params: {Compression: BZ}
     changegroup -- {nbchanges: 2, targetphase: 2, version: 02}

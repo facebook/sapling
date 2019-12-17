@@ -65,7 +65,7 @@ sh % "showgraph" == r"""
     |
     @  0 9309aa3b805a driver"""
 sh % "hg rebase -r aa431a9572c1 -d e71547946f82" == r"""
-    rebasing aa431a9572c1 "F"
+    rebasing aa431a9572c1 "F" (F)
     ancestor nodes = ['01ba3ad89eb70070d81f052c0c40a3877c2ba5d8']
     ancestor revs = [3]
     merging file

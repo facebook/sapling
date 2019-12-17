@@ -16,6 +16,7 @@ Updating w/ noconflict prints the conflicting changes:
   > EOS
   $ hg up b
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark b)
   $ echo "conflict" | tee a b y z
   conflict
   $ hg up c

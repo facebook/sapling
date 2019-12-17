@@ -634,13 +634,13 @@ Use scmutil.cleanupnodes API to create divergence
 
   $ hg init cleanupnodes
   $ cd cleanupnodes
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   >   B1  B3 B4
   >   |     \|
   >   A      Z
   > EOS
 
-  $ hg update -q B1
+  $ hg update -q $B1
   $ echo 3 >> B
   $ hg commit --amend -m B2
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
@@ -659,7 +659,6 @@ Use scmutil.cleanupnodes API to create divergence
   >         scmutil.cleanupnodes(repo, mapping, 'test')
   > EOF
 
-  $ rm .hg/localtags
   $ hg cleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
   $ hg log -G -T '{rev}:{node|short} {desc} {instabilities}' -r 'sort(all(), topo)'
   @  5:1a2a9b5b0030 B2 content-divergent
