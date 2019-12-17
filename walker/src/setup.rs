@@ -172,9 +172,19 @@ lazy_static! {
         DEFAULT_INCLUDE_NODE_TYPES
     );
 
+    static ref EXCLUDE_NODE_TYPE_HELP: String = format!(
+        "Graph node types to exclude from walk. They are removed from the include node types. Specific any of: {:?}",
+        NodeType::ALL_VARIANTS,
+    );
+
     static ref INCLUDE_EDGE_TYPE_HELP: String = format!(
         "Graph edge types to include in the walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep: {:?}",
         DEEP_INCLUDE_EDGE_TYPES
+    );
+
+    static ref EXCLUDE_EDGE_TYPE_HELP: String = format!(
+        "Graph edge types to exclude from walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep.  All individual types: {:?}",
+        EdgeType::ALL_VARIANTS,
     );
 }
 
@@ -263,7 +273,7 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help("Graph node types to exclude from the walk. These are removed from the include-node-type list"),
+                .help(&EXCLUDE_NODE_TYPE_HELP),
         )
         .arg(
             Arg::with_name(INCLUDE_NODE_TYPE_ARG)
@@ -283,7 +293,7 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help("Graph edge types to exclude from the walk. These are removed from the include-edge-type list"),
+                .help(&EXCLUDE_EDGE_TYPE_HELP),
         )
         .arg(
             Arg::with_name(INCLUDE_EDGE_TYPE_ARG)

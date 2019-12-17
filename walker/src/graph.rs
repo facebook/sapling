@@ -19,8 +19,36 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, M
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum NodeType {
+// Helper to save repetition for the type enums
+macro_rules! define_type_enum {
+    (enum $enum_name:ident {
+        $($variant:ident),*,
+    }) => {
+        #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+        pub enum $enum_name {
+            $($variant),*
+        }
+
+        impl FromStr for $enum_name {
+            type Err = Error;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s {
+                    $(stringify!($variant)=>Ok($enum_name::$variant),)*
+                    _ => Err(format_err!("Unknown {} {}",stringify!($enum_name), s)),
+                }
+            }
+        }
+
+        impl $enum_name {
+            pub const ALL_VARIANTS: &'static [$enum_name] = &[
+                $($enum_name::$variant),*
+            ];
+        }
+    }
+}
+
+define_type_enum! {
+enum NodeType {
     Root,
     // Bonsai
     Bookmark,
@@ -37,34 +65,11 @@ pub enum NodeType {
     FileContentMetadata,
     AliasContentMapping,
 }
+}
 
 impl fmt::Display for NodeType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
-    }
-}
-
-impl FromStr for NodeType {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Root" => Ok(NodeType::Root),
-            // Bonsai
-            "Bookmark" => Ok(NodeType::Bookmark),
-            "BonsaiChangeset" => Ok(NodeType::BonsaiChangeset),
-            "BonsaiHgMapping" => Ok(NodeType::BonsaiHgMapping),
-            // Hg
-            "HgBonsaiMapping" => Ok(NodeType::HgBonsaiMapping),
-            "HgChangeset" => Ok(NodeType::HgChangeset),
-            "HgManifest" => Ok(NodeType::HgManifest),
-            "HgFileEnvelope" => Ok(NodeType::HgFileEnvelope),
-            "HgFileNode" => Ok(NodeType::HgFileNode),
-            // Content
-            "FileContent" => Ok(NodeType::FileContent),
-            "FileContentMetadata" => Ok(NodeType::FileContentMetadata),
-            "AliasContentMapping" => Ok(NodeType::AliasContentMapping),
-            _ => Err(format_err!("Unknown NodeType {}", s)),
-        }
     }
 }
 
@@ -90,8 +95,9 @@ pub enum Node {
 
 // Some Node types are accessible by more than one type of edge, this allows us to restrict the paths
 // This is really a declaration of the steps a walker can take.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum EdgeType {
+define_type_enum! {
+enum EdgeType {
+    // Roots
     RootToBookmark,
     // Bonsai
     BookmarkToBonsaiChangeset,
@@ -118,6 +124,7 @@ pub enum EdgeType {
     FileContentMetadataToSha256Alias,
     FileContentMetadataToGitSha1Alias,
     AliasContentMappingToFileContent,
+}
 }
 
 impl EdgeType {
@@ -179,40 +186,6 @@ impl EdgeType {
             EdgeType::FileContentMetadataToSha256Alias => NodeType::AliasContentMapping,
             EdgeType::FileContentMetadataToGitSha1Alias => NodeType::AliasContentMapping,
             EdgeType::AliasContentMappingToFileContent => NodeType::FileContent,
-        }
-    }
-}
-
-impl FromStr for EdgeType {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "RootToBookmark" => Ok(EdgeType::RootToBookmark),
-            // Bonsai to
-            "BookmarkToBonsaiHgMapping" => Ok(EdgeType::BookmarkToBonsaiHgMapping),
-            "BookmarkToBonsaiChangeset" => Ok(EdgeType::BookmarkToBonsaiChangeset),
-            "BonsaiChangesetToFileContent" => Ok(EdgeType::BonsaiChangesetToFileContent),
-            "BonsaiChangesetToBonsaiParent" => Ok(EdgeType::BonsaiChangesetToBonsaiParent),
-            "BonsaiChangesetToBonsaiHgMapping" => Ok(EdgeType::BonsaiChangesetToBonsaiHgMapping),
-            "BonsaiHgMappingToHgChangeset" => Ok(EdgeType::BonsaiHgMappingToHgChangeset),
-            // Hg
-            "HgBonsaiMappingToBonsaiChangeset" => Ok(EdgeType::HgBonsaiMappingToBonsaiChangeset),
-            "HgChangesetToHgParent" => Ok(EdgeType::HgChangesetToHgParent),
-            "HgChangesetToHgManifest" => Ok(EdgeType::HgChangesetToHgManifest),
-            "HgManifestToHgFileEnvelope" => Ok(EdgeType::HgManifestToHgFileEnvelope),
-            "HgManifestToHgFileNode" => Ok(EdgeType::HgManifestToHgFileNode),
-            "HgManifestToChildHgManifest" => Ok(EdgeType::HgManifestToChildHgManifest),
-            "HgFileEnvelopeToFileContent" => Ok(EdgeType::HgFileEnvelopeToFileContent),
-            "HgLinkNodeToHgBonsaiMapping" => Ok(EdgeType::HgLinkNodeToHgBonsaiMapping),
-            "HgFileNodeToHgParentFileNode" => Ok(EdgeType::HgFileNodeToHgParentFileNode),
-            "HgFileNodeToHgCopyfromFileNode" => Ok(EdgeType::HgFileNodeToHgCopyfromFileNode),
-            // Content
-            "FileContentToFileContentMetadata" => Ok(EdgeType::FileContentToFileContentMetadata),
-            "FileContentMetadataToSha1Alias" => Ok(EdgeType::FileContentMetadataToSha1Alias),
-            "FileContentMetadataToSha256Alias" => Ok(EdgeType::FileContentMetadataToSha256Alias),
-            "FileContentMetadataToGitSha1Alias" => Ok(EdgeType::FileContentMetadataToGitSha1Alias),
-            "AliasContentMappingToFileContent" => Ok(EdgeType::AliasContentMappingToFileContent),
-            _ => Err(format_err!("Unknown EdgeType {}", s)),
         }
     }
 }
