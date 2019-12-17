@@ -524,7 +524,7 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {
-  return edenMount_->getRootTree();
+  return edenMount_->getRootTree().get();
 }
 
 std::string TestMount::loadFileContentsFromPath(std::string path) {

@@ -631,20 +631,13 @@ TreeInodePtr EdenMount::getRootInode() const {
   return inodeMap_->getRootInode();
 }
 
-folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
-    const {
+folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
   auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
   return objectStore_->getTreeForCommit(commitHash);
 }
 
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
-}
-
-std::shared_ptr<const Tree> EdenMount::getRootTree() const {
-  // TODO: We should convert callers of this API to use the Future-based
-  // version.
-  return getRootTreeFuture().get();
 }
 
 Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {

@@ -954,7 +954,7 @@ void EdenServiceHandler::getManifestEntry(
 std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
     const EdenMount* mount,
     const RelativePathPiece filename) {
-  auto tree = mount->getRootTree();
+  auto tree = mount->getRootTree().get();
   auto parentDirectory = filename.dirname();
   auto objectStore = mount->getObjectStore();
   for (auto piece : parentDirectory.components()) {
