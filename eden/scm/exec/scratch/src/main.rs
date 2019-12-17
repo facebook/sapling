@@ -23,8 +23,6 @@ use std::io::prelude::*;
 #[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
-use telemetry::hostinfo;
-use telemetry::repoinfo;
 
 /// The configuration is intentionally very minimal, and explicitly
 /// not made accessible via command line options; the intent is that
@@ -239,7 +237,15 @@ fn main() {
 /// Returns the current username, falling back to the literal
 /// string `$USER` for env var expansion.
 fn get_current_user() -> String {
-    hostinfo::get_user_name().unwrap_or("$USER".into())
+    let env_name = if cfg!(windows) { "USERNAME" } else { "USER" };
+    env::var(env_name).unwrap_or_else(|_| "$USER".into())
+}
+
+/// Given an absolute path, locate the repository root.
+fn locate_repo_root(path: &Path) -> Option<&Path> {
+    path.ancestors()
+        .filter(|p| p.join(".hg").is_dir() || p.join(".git").exists())
+        .nth(0)
 }
 
 #[cfg(unix)]
@@ -414,10 +420,7 @@ fn path_command(
 
     // Resolve the path to the corresponding repo root.
     // If the path is not a repo then we use the provided path.
-    let repo_root = match repoinfo::locate_repo_root_and_type(&path) {
-        Some((path, _)) => path,
-        None => &path,
-    };
+    let repo_root = locate_repo_root(&path).unwrap_or(&path);
 
     // Get the base scratch path for this repo
     let mut result = scratch_root(&config, repo_root)?;
