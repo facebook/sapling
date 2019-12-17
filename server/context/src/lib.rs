@@ -222,7 +222,7 @@ impl SessionContainer {
         Self::new(
             fb,
             generate_session_id(),
-            TraceContext::new(generate_trace_id(), Instant::now()),
+            TraceContext::new(fb, generate_trace_id(), Instant::now()),
             None,
             None,
             SshEnvVars::default(),

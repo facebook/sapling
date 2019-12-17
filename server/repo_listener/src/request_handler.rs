@@ -99,7 +99,11 @@ pub fn request_handler(
 
     // Info per wireproto command within this session
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
-    let trace = TraceContext::new(TraceId::from_string(session_id.to_string()), Instant::now());
+    let trace = TraceContext::new(
+        fb,
+        TraceId::from_string(session_id.to_string()),
+        Instant::now(),
+    );
 
     // Per-connection logging drain that forks output to normal log and back to client stderr
     let conn_log = {
