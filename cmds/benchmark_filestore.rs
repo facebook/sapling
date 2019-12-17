@@ -17,7 +17,7 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{stream::iter_ok, Future, IntoFuture, Stream};
+use futures::{future::lazy, stream::iter_ok, Future, IntoFuture, Stream};
 use futures_ext::{FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
@@ -28,8 +28,10 @@ use sql_ext::MysqlOptions;
 use sqlblob::Sqlblob;
 use std::fmt::Debug;
 use std::io::BufReader;
+use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
+use throttledblob::ThrottledBlob;
 use tokio::{codec, fs::File};
 
 const NAME: &str = "benchmark_filestore";
@@ -51,6 +53,8 @@ const ARG_INPUT: &str = "input";
 const ARG_DELAY: &str = "delay";
 const ARG_DEBUG: &str = "debug";
 const ARG_RANDOMIZE: &str = "randomize";
+const ARG_READ_QPS: &str = "read-qps";
+const ARG_WRITE_QPS: &str = "write-qps";
 
 fn log_perf<I, E: Debug>(stats: FutureStats, res: Result<&I, &E>, len: u64) -> Result<(), ()> {
     match res {
@@ -171,6 +175,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long("randomize")
                 .required(false),
         )
+        .arg(
+            Arg::with_name(ARG_READ_QPS)
+                .long(ARG_READ_QPS)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_WRITE_QPS)
+                .long(ARG_WRITE_QPS)
+                .takes_value(true)
+                .required(false),
+        )
         .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
         .subcommand(manifold_subcommand)
         .subcommand(memory_subcommand)
@@ -281,6 +297,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
         None => blob,
     };
+
+    let read_qps: Option<NonZeroU32> = matches
+        .value_of(ARG_READ_QPS)
+        .map(|v| v.parse())
+        .transpose()
+        .map_err(Error::from)?;
+
+    let write_qps: Option<NonZeroU32> = matches
+        .value_of(ARG_WRITE_QPS)
+        .map(|v| v.parse())
+        .transpose()
+        .map_err(Error::from)?;
+
+    let blob: Arc<dyn Blobstore> = runtime.block_on(lazy(move || -> Result<_, Error> {
+        let blob = ThrottledBlob::new(blob, read_qps, write_qps);
+        Ok(Arc::new(blob))
+    }))?;
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
