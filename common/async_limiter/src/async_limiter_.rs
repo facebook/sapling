@@ -6,28 +6,29 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use futures::{
     channel::{mpsc, oneshot},
     future::{self, Future, FutureExt},
     stream::StreamExt,
 };
 use futures_util::future::TryFutureExt;
-use ratelimit_meter::{algorithms::Algorithm, DirectRateLimiter, NonConformance};
-use std::time::Instant;
+use ratelimit_meter::{algorithms::Algorithm, clock::Clock, DirectRateLimiter};
 
-use crate::{RateLimitStream, TokioFlavor};
+use crate::{EarliestPossible, ErrorKind, RateLimitStream, TokioFlavor};
 
 /// A shared asynchronous rate limiter.
+#[derive(Clone)]
 pub struct AsyncLimiter {
     dispatch: mpsc::UnboundedSender<oneshot::Sender<()>>,
 }
 
 impl AsyncLimiter {
-    pub fn new<A>(limiter: DirectRateLimiter<A>, flavor: TokioFlavor) -> Self
+    pub fn new<A, C>(limiter: DirectRateLimiter<A, C>, flavor: TokioFlavor) -> Self
     where
-        A: Algorithm<Instant>,
-        A::NegativeDecision: NonConformance,
-        A: 'static,
+        A: Algorithm<C::Instant> + 'static,
+        C: Clock + Send + 'static,
+        A::NegativeDecision: EarliestPossible,
     {
         let (dispatch, dispatch_recv) = mpsc::unbounded();
         let rate_limit = RateLimitStream::new(flavor, limiter);
@@ -61,11 +62,15 @@ impl AsyncLimiter {
     /// the number of pending accesses. Note that this isn't an async fn so as to not capture a
     /// refernce to &self in the future returned by this method, which makes it more suitable for
     /// use in e.g. a futures 0.1 context.
-    pub fn access(&self) -> Result<impl Future<Output = Result<(), ()>>, ()> {
+    pub fn access(&self) -> Result<impl Future<Output = Result<(), Error>>, Error> {
         let (send, recv) = oneshot::channel();
-        self.dispatch.unbounded_send(send).map_err(|_| ())?;
+
+        self.dispatch
+            .unbounded_send(send)
+            .map_err(|_| ErrorKind::RuntimeShuttingDown)?;
+
         Ok(async move {
-            recv.await.map_err(|_| ())?;
+            recv.await.map_err(|_| ErrorKind::RuntimeShuttingDown)?;
             Ok(())
         })
     }

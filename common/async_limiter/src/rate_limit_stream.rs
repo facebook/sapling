@@ -8,7 +8,12 @@
 
 use futures::{compat::Compat01As03, ready, task::Context, Stream};
 use futures_util::{compat::Future01CompatExt, FutureExt};
-use ratelimit_meter::{algorithms::Algorithm, DirectRateLimiter, NonConformance};
+use ratelimit_meter::{
+    algorithms::{leaky_bucket::TooEarly, Algorithm},
+    clock::Clock,
+    example_algorithms::Impossible,
+    DirectRateLimiter, NonConformance,
+};
 use std::pin::Pin;
 use std::task::Poll;
 use std::time::Instant;
@@ -21,20 +26,22 @@ enum TokioDelay {
 }
 
 #[must_use = "streams do nothing unless you poll them"]
-pub struct RateLimitStream<A>
+pub struct RateLimitStream<A, C>
 where
-    A: Algorithm<Instant>,
+    A: Algorithm<C::Instant> + 'static,
+    C: Clock + Send + 'static,
 {
     flavor: TokioFlavor,
-    limiter: DirectRateLimiter<A>,
+    limiter: DirectRateLimiter<A, C>,
     pending: Option<TokioDelay>,
 }
 
-impl<A> RateLimitStream<A>
+impl<A, C> RateLimitStream<A, C>
 where
-    A: Algorithm<Instant>,
+    A: Algorithm<C::Instant> + 'static,
+    C: Clock + Send + 'static,
 {
-    pub fn new(flavor: TokioFlavor, limiter: DirectRateLimiter<A>) -> Self {
+    pub fn new(flavor: TokioFlavor, limiter: DirectRateLimiter<A, C>) -> Self {
         Self {
             flavor,
             limiter,
@@ -45,12 +52,18 @@ where
 
 /// This is normally implemented automatically for us, but we don't get this here because of the
 /// generic bounds on A.
-impl<A: Algorithm<Instant>> Unpin for RateLimitStream<A> {}
-
-impl<A> Stream for RateLimitStream<A>
+impl<A, C> Unpin for RateLimitStream<A, C>
 where
-    A: Algorithm<Instant>,
-    A::NegativeDecision: NonConformance,
+    A: Algorithm<C::Instant> + 'static,
+    C: Clock + Send + 'static,
+{
+}
+
+impl<A, C> Stream for RateLimitStream<A, C>
+where
+    A: Algorithm<C::Instant> + 'static,
+    C: Clock + Send + 'static,
+    A::NegativeDecision: EarliestPossible,
 {
     type Item = ();
 
@@ -87,5 +100,24 @@ where
                 }
             }
         }
+    }
+}
+
+/// We create this extension trait instead of using ratelimit_meter's NonConformance trait to
+/// support algorithms from ratelimit_meter that return NonConformance as well as those that return
+/// something else (e.g. Impossible).
+pub trait EarliestPossible {
+    fn earliest_possible(&self) -> Instant;
+}
+
+impl EarliestPossible for TooEarly<Instant> {
+    fn earliest_possible(&self) -> Instant {
+        <Self as NonConformance<Instant>>::earliest_possible(self)
+    }
+}
+
+impl EarliestPossible for Impossible {
+    fn earliest_possible(&self) -> Instant {
+        Instant::now()
     }
 }

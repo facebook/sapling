@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use chrono::Local;
 use futures::{
     future::{join_all, lazy, Future, IntoFuture},
@@ -16,7 +16,6 @@ use futures_ext::FutureExt as Futures01FutureExt;
 use futures_util::future::{FutureExt, TryFutureExt};
 use nonzero_ext::nonzero;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
-use std::sync::Arc;
 use tokio::runtime::Runtime;
 
 use async_limiter::{AsyncLimiter, TokioFlavor};
@@ -26,7 +25,7 @@ fn main() -> Result<(), Error> {
 
     let fut = lazy(|| {
         let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-        let limiter = Arc::new(AsyncLimiter::new(limiter, TokioFlavor::V01));
+        let limiter = AsyncLimiter::new(limiter, TokioFlavor::V01);
 
         let futs = (0..10)
             .map(|i| {
@@ -44,6 +43,7 @@ fn main() -> Result<(), Error> {
         join_all(futs).map(|_| ())
     });
 
-    runtime.block_on(fut).map_err(|()| anyhow!("Error!"))?;
+    runtime.block_on(fut)?;
+
     Ok(())
 }
