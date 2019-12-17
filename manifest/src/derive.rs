@@ -8,9 +8,10 @@
 
 use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use anyhow::{format_err, Error};
+use cloned::cloned;
 use context::CoreContext;
-use futures::{future, Future, IntoFuture};
-use futures_ext::{bounded_traversal::bounded_traversal, FutureExt};
+use futures::{future, stream::Stream, sync::mpsc, Future, IntoFuture};
+use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
 use mononoke_types::{MPath, MPathElement};
 use std::{
     collections::{BTreeMap, HashSet},
@@ -40,6 +41,40 @@ pub struct LeafInfo<LeafId, Leaf> {
     /// which can potentially be resolved by `create_leaf`, in case of mercurial
     /// multiple leaves with the same content can be successfully resolved.
     pub leaf: Option<Leaf>,
+}
+
+pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+    ctx: CoreContext,
+    store: Store,
+    parents: impl IntoIterator<Item = TreeId>,
+    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    create_tree: T,
+    create_leaf: L,
+) -> impl Future<Item = Option<TreeId>, Error = Error>
+where
+    Store: Sync + Send + Clone + 'static,
+    LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    TreeId: StoreLoadable<Store> + Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
+    T: FnMut(TreeInfo<TreeId, LeafId, Ctx>) -> TFut,
+    TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
+    TFut::Future: Send + 'static,
+    L: FnMut(LeafInfo<LeafId, Leaf>) -> LFut,
+    LFut: IntoFuture<Item = (Ctx, LeafId), Error = Error>,
+    LFut::Future: Send + 'static,
+    Ctx: Send + 'static,
+{
+    let event_id = EventId::new();
+    derive_manifest_inner(
+        ctx.clone(),
+        store,
+        event_id,
+        parents,
+        changes,
+        create_tree,
+        create_leaf,
+    )
+    .traced_with_id(&ctx.trace(), "derive_manifest", None, event_id)
 }
 
 /// Construct a new manifest from parent manifests and a list of changes from a bonsai commit.
@@ -87,9 +122,10 @@ pub struct LeafInfo<LeafId, Leaf> {
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
 ///
-pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+pub fn derive_manifest_inner<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
+    event_id: EventId,
     parents: impl IntoIterator<Item = TreeId>,
     changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
     mut create_tree: T,
@@ -108,7 +144,6 @@ where
     LFut::Future: Send + 'static,
     Ctx: Send + 'static,
 {
-    let event_id = EventId::new();
     bounded_traversal(
         256,
         MergeNode {
@@ -195,7 +230,68 @@ where
         },
     )
     .map(|result: Option<_>| result.and_then(|(_, _, entry)| entry.into_tree()))
-    .traced_with_id(&ctx.trace(), "derive_manifest", None, event_id)
+}
+
+/// A convenience wrapper around `derive_manifest` that allows for the tree and leaf creation
+/// closures to send IO work onto a channel that is then fed into a buffered stream. NOTE: don't
+/// send computationally expensive work as it will block the task.
+///
+/// The sender is commonly used to write blobs to the blobstore concurrently.
+///
+/// `derive_manifest_with_work_sender` guarantees that all work is completed before it returns, but
+/// it does not guarantee the order in which the work is completed.
+pub fn derive_manifest_with_io_sender<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+    ctx: CoreContext,
+    store: Store,
+    parents: impl IntoIterator<Item = TreeId>,
+    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    mut create_tree_with_sender: T,
+    mut create_leaf_with_sender: L,
+) -> impl Future<Item = Option<TreeId>, Error = Error>
+where
+    LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    Store: Sync + Send + Clone + 'static,
+    TreeId: StoreLoadable<Store> + Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
+    T: FnMut(TreeInfo<TreeId, LeafId, Ctx>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> TFut,
+    TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
+    TFut::Future: Send + 'static,
+    L: FnMut(LeafInfo<LeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> LFut,
+    LFut: IntoFuture<Item = (Ctx, LeafId), Error = Error>,
+    LFut::Future: Send + 'static,
+    Ctx: Send + 'static,
+{
+    let (sender, receiver) = mpsc::unbounded();
+
+    let event_id = EventId::new();
+    derive_manifest_inner(
+        ctx.clone(),
+        store,
+        event_id,
+        parents,
+        changes,
+        {
+            cloned!(sender);
+            move |tree_info| create_tree_with_sender(tree_info, sender.clone())
+        },
+        {
+            cloned!(sender);
+            move |leaf_info| create_leaf_with_sender(leaf_info, sender.clone())
+        },
+    )
+    .join(
+        receiver
+            .map_err(|()| format_err!("receiver failed"))
+            .buffer_unordered(1024)
+            .for_each(|_| Ok(())),
+    )
+    .map(|(res, ())| res)
+    .traced_with_id(
+        &ctx.trace(),
+        "derive_manifest_with_io_sender",
+        None,
+        event_id,
+    )
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic

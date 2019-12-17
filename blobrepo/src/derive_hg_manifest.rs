@@ -12,9 +12,9 @@ use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, Future, IntoFuture};
-use futures_ext::FutureExt;
-use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
+use futures::{future, sync::mpsc, Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
+use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
 use mercurial_types::{
     blobs::{
         fetch_file_envelope, ContentBlobMeta, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
@@ -34,17 +34,19 @@ pub fn derive_hg_manifest(
     changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)>,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
     let parents: Vec<_> = parents.into_iter().collect();
-    derive_manifest(
+
+    derive_manifest_with_io_sender(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
         changes,
         {
             cloned!(ctx, blobstore, incomplete_filenodes);
-            move |tree_info| {
+            move |tree_info, sender| {
                 create_hg_manifest(
                     ctx.clone(),
                     blobstore.clone(),
+                    Some(sender),
                     incomplete_filenodes.clone(),
                     tree_info,
                 )
@@ -52,7 +54,7 @@ pub fn derive_hg_manifest(
         },
         {
             cloned!(ctx, blobstore, incomplete_filenodes);
-            move |leaf_info| {
+            move |leaf_info, _sender| {
                 create_hg_file(
                     ctx.clone(),
                     blobstore.clone(),
@@ -71,7 +73,7 @@ pub fn derive_hg_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            create_hg_manifest(ctx, blobstore, incomplete_filenodes, tree_info)
+            create_hg_manifest(ctx, blobstore, None, incomplete_filenodes, tree_info)
                 .map(|(_, tree_id)| tree_id)
                 .right_future()
         }
@@ -94,6 +96,7 @@ fn hg_parents<T: Copy>(parents: &Vec<T>) -> Result<(Option<T>, Option<T>), Error
 fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
+    sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
     incomplete_filenodes: IncompleteFilenodes,
     tree_info: TreeInfo<HgManifestId, (FileType, HgFileNodeId), ()>,
 ) -> impl Future<Item = ((), HgManifestId), Error = Error> {
@@ -130,20 +133,33 @@ fn create_hg_manifest(
         .and_then(move |(p1, p2)| {
             let p1 = p1.map(|id| id.into_nodehash());
             let p2 = p2.map(|id| id.into_nodehash());
-            UploadHgTreeEntry {
+
+            let uploader = UploadHgTreeEntry {
                 upload_node_id: UploadHgNodeHash::Generate,
                 contents: contents.into(),
                 p1,
                 p2,
                 path: path.clone(),
             }
-            .upload(ctx.clone(), blobstore)
-            .map(|(hash, future)| future.map(move |_| hash))
-            .into_future()
-            .flatten()
-            .map({
-                cloned!(incomplete_filenodes);
-                move |hash| {
+            .upload(ctx.clone(), blobstore);
+
+            let (hash, upload_fut) = match uploader {
+                Ok((hash, fut)) => (hash, fut.map(|_| ())),
+                Err(e) => return Err(e).into_future().left_future(),
+            };
+
+            let blobstore_fut = match sender {
+                Some(sender) => sender
+                    .unbounded_send(upload_fut.boxify())
+                    .map_err(|err| format_err!("failed to send hg manifest future {}", err))
+                    .into_future()
+                    .left_future(),
+                None => upload_fut.right_future(),
+            };
+
+            blobstore_fut
+                .map(move |()| {
+                    cloned!(incomplete_filenodes);
                     incomplete_filenodes.add(IncompleteFilenodeInfo {
                         path,
                         filenode: HgFileNodeId::new(hash),
@@ -152,8 +168,8 @@ fn create_hg_manifest(
                         copyfrom: None,
                     });
                     ((), HgManifestId::new(hash))
-                }
-            })
+                })
+                .right_future()
         })
 }
 
@@ -238,7 +254,7 @@ fn create_hg_file(
                 .right_future(),
             _ => {
                 let error = format_err!(
-                    "Unresloved conflict at:\npath: {:?}\nparents: {:?}",
+                    "Unresolved conflict at:\npath: {:?}\nparents: {:?}",
                     path,
                     parents,
                 );
