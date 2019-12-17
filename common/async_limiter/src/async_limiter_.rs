@@ -62,16 +62,49 @@ impl AsyncLimiter {
     /// the number of pending accesses. Note that this isn't an async fn so as to not capture a
     /// refernce to &self in the future returned by this method, which makes it more suitable for
     /// use in e.g. a futures 0.1 context.
-    pub fn access(&self) -> Result<impl Future<Output = Result<(), Error>>, Error> {
+    pub fn access(
+        &self,
+    ) -> Result<impl Future<Output = Result<(), Error>> + 'static + Send + Sync, Error> {
         let (send, recv) = oneshot::channel();
-
-        self.dispatch
-            .unbounded_send(send)
-            .map_err(|_| ErrorKind::RuntimeShuttingDown)?;
+        let dispatch = self.dispatch.clone();
 
         Ok(async move {
+            // NOTE: We do the dispatch in this future here, which effectively makes this lazy.
+            // This ensures that if you create a future, but don't poll it immediately, it only
+            // tries to enter the queue once it's polled.
+            dispatch
+                .unbounded_send(send)
+                .map_err(|_| ErrorKind::RuntimeShuttingDown)?;
+
             recv.await.map_err(|_| ErrorKind::RuntimeShuttingDown)?;
+
             Ok(())
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use nonzero_ext::nonzero;
+    use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
+    use std::time::{Duration, Instant};
+    use tokio_preview as tokio;
+
+    #[tokio::test]
+    async fn test_access_enters_queue_lazily() -> Result<(), Error> {
+        let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
+        let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02);
+
+        for _ in 0..10 {
+            let _ = limiter.access()?;
+        }
+
+        let now = Instant::now();
+        limiter.access()?.await?;
+        limiter.access()?.await?;
+
+        assert!((Instant::now() - now) < Duration::from_millis(100));
+        Ok(())
     }
 }
