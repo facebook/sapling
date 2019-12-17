@@ -19,6 +19,7 @@ use cmdlib::args;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
+use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -90,6 +91,15 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
             };
             Ok(Arc::new(derive_unodes))
         }
+        Some(RootFsnodeId::NAME) => {
+            let mapping = RootFsnodeMapping::new(repo.get_blobstore());
+            let derive_fsnodes = move |csid| {
+                RootFsnodeId::derive(ctx.clone(), repo.clone(), mapping.clone(), csid)
+                    .map(|root| root.fsnode_id().to_string())
+                    .boxify()
+            };
+            Ok(Arc::new(derive_fsnodes))
+        }
         Some(derived_type) => Err(format_err!("unknown derived data type: {}", derived_type)),
     }
 }
@@ -117,7 +127,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                 Arg::with_name(ARG_TYPE)
                     .required(true)
                     .index(1)
-                    .possible_values(&[HG_CHANGESET_TYPE, RootUnodeManifestId::NAME])
+                    .possible_values(&[
+                        HG_CHANGESET_TYPE,
+                        RootUnodeManifestId::NAME,
+                        RootFsnodeId::NAME,
+                    ])
                     .help("derived data type"),
             );
         let app = args::add_logger_args(app);

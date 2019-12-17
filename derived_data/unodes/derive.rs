@@ -11,18 +11,13 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future,
-    sync::{mpsc, oneshot},
-    Future, IntoFuture, Stream,
-};
+use futures::{future, sync::mpsc, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
+use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
-use mononoke_types::MPath;
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPathHash, ManifestUnodeId,
-    MononokeId,
+    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath, MPathHash,
+    ManifestUnodeId, MononokeId,
 };
 use repo_blobstore::RepoBlobstore;
 use std::collections::BTreeMap;
@@ -43,37 +38,28 @@ pub(crate) fn derive_unode_manifest(
     future::lazy(move || {
         let parents: Vec<_> = parents.into_iter().collect();
         let blobstore = repo.get_blobstore();
-        let (result_sender, result_receiver) = oneshot::channel();
-        // Stream is used to batch writes to blobstore
-        let (sender, receiver) = mpsc::unbounded();
 
-        let f = derive_manifest(
+        derive_manifest_with_io_sender(
             ctx.clone(),
             repo.get_blobstore(),
             parents.clone(),
             changes,
             {
-                cloned!(blobstore, ctx, cs_id, sender);
-                move |tree_info| {
+                cloned!(blobstore, ctx, cs_id);
+                move |tree_info, sender| {
                     create_unode_manifest(
                         ctx.clone(),
                         cs_id,
                         blobstore.clone(),
-                        sender.clone(),
+                        Some(sender),
                         tree_info,
                     )
                 }
             },
             {
-                cloned!(blobstore, ctx, cs_id, sender);
-                move |leaf_info| {
-                    create_unode_file(
-                        ctx.clone(),
-                        cs_id,
-                        blobstore.clone(),
-                        sender.clone(),
-                        leaf_info,
-                    )
+                cloned!(blobstore, ctx, cs_id);
+                move |leaf_info, sender| {
+                    create_unode_file(ctx.clone(), cs_id, blobstore.clone(), sender, leaf_info)
                 }
             },
         )
@@ -88,25 +74,12 @@ pub(crate) fn derive_unode_manifest(
                         parents,
                         subentries: Default::default(),
                     };
-                    create_unode_manifest(ctx, cs_id, blobstore, sender, tree_info)
+                    create_unode_manifest(ctx, cs_id, blobstore, None, tree_info)
                         .map(|((), tree_id)| tree_id)
                         .right_future()
                 }
             }
         })
-        .then(move |res| {
-            // Error means receiver went away, just ignore it
-            let _ = result_sender.send(res);
-            Ok(())
-        });
-
-        tokio::spawn(f);
-        let blobstore_put_stream = receiver.map_err(|()| Error::msg("receiver failed"));
-
-        blobstore_put_stream
-            .buffered(1024)
-            .for_each(|_| Ok(()))
-            .and_then(move |()| result_receiver.from_err().and_then(|res| res))
     })
 }
 
@@ -130,7 +103,7 @@ fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
-    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
 ) -> impl Future<Item = ((), ManifestUnodeId), Error = Error> {
     let mut subentries = BTreeMap::new();
@@ -150,13 +123,17 @@ fn create_unode_manifest(
 
     let key = mf_unode_id.blobstore_key();
     let blob = mf_unode.into_blob();
-    let f = future::lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
+    let f = blobstore.put(ctx, key, blob.into());
 
-    sender
-        .unbounded_send(f)
-        .into_future()
-        .map(move |()| ((), mf_unode_id))
-        .map_err(|err| format_err!("failed to send manifest future {}", err))
+    let res = match sender {
+        Some(sender) => sender
+            .unbounded_send(f)
+            .into_future()
+            .map_err(|err| format_err!("failed to send manifest future {}", err))
+            .left_future(),
+        None => f.right_future(),
+    };
+    res.map(move |()| ((), mf_unode_id))
 }
 
 fn create_unode_file(

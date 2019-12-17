@@ -20,7 +20,7 @@ use failure_ext::FutureFailureExt;
 use filestore::{get_metadata, FetchKey};
 use futures::{future, stream, sync::mpsc, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
-use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
+use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
 use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, FsnodeSummary};
 use mononoke_types::hash::{Sha1, Sha256};
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId};
@@ -42,7 +42,6 @@ pub(crate) fn derive_fsnode(
 ) -> impl Future<Item = FsnodeId, Error = Error> {
     future::lazy(move || {
         let blobstore = repo.get_blobstore();
-        let (sender, receiver) = mpsc::unbounded();
         let content_ids = changes
             .iter()
             .filter_map(|(_mpath, content_id_and_file_type)| {
@@ -52,24 +51,24 @@ pub(crate) fn derive_fsnode(
         prefetch_content_metadata(ctx.clone(), blobstore.clone(), content_ids)
             .map(Arc::new)
             .and_then(move |prefetched_content_metadata| {
-                derive_manifest(
+                derive_manifest_with_io_sender(
                     ctx.clone(),
                     blobstore.clone(),
                     parents.clone(),
                     changes,
                     {
-                        cloned!(blobstore, ctx, sender, prefetched_content_metadata);
-                        move |tree_info| {
+                        cloned!(blobstore, ctx, prefetched_content_metadata);
+                        move |tree_info, sender| {
                             create_fsnode(
                                 ctx.clone(),
                                 blobstore.clone(),
-                                sender.clone(),
+                                Some(sender),
                                 prefetched_content_metadata.clone(),
                                 tree_info,
                             )
                         }
                     },
-                    check_fsnode_leaf,
+                    |leaf_info, _sender| check_fsnode_leaf(leaf_info),
                 )
                 .and_then(move |maybe_tree_id| match maybe_tree_id {
                     Some(tree_id) => future::ok(tree_id).left_future(),
@@ -80,25 +79,12 @@ pub(crate) fn derive_fsnode(
                             parents,
                             subentries: Default::default(),
                         };
-                        create_fsnode(
-                            ctx,
-                            blobstore,
-                            sender,
-                            prefetched_content_metadata,
-                            tree_info,
-                        )
-                        .map(|(_, tree_id)| tree_id)
-                        .right_future()
+                        create_fsnode(ctx, blobstore, None, prefetched_content_metadata, tree_info)
+                            .map(|(_, tree_id)| tree_id)
+                            .right_future()
                     }
                 })
             })
-            .join(
-                receiver
-                    .map_err(|()| Error::msg("receiver failed"))
-                    .buffered(1024)
-                    .for_each(|_| Ok(())),
-            )
-            .map(|(result, ())| result)
     })
 }
 
@@ -250,7 +236,7 @@ fn collect_fsnode_subentries(
 fn create_fsnode(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
-    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
 ) -> impl Future<Item = (Option<FsnodeSummary>, FsnodeId), Error = Error> {
@@ -319,11 +305,15 @@ fn create_fsnode(
         let blob = fsnode.into_blob();
         let f = blobstore.put(ctx, key, blob.into()).boxify();
 
-        sender
-            .unbounded_send(f)
-            .into_future()
-            .map(move |()| (Some(summary), fsnode_id))
-            .map_err(|err| format_err!("failed to send fsnode future {}", err))
+        let res = match sender {
+            Some(sender) => sender
+                .unbounded_send(f)
+                .into_future()
+                .map_err(|err| format_err!("failed to send fsnode future {}", err))
+                .left_future(),
+            None => f.right_future(),
+        };
+        res.map(move |()| (Some(summary), fsnode_id))
     })
 }
 
