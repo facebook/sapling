@@ -89,44 +89,20 @@ impl SqlFactoryBase for XdbFactory {
     }
 
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
-        let (tier, filenodes) = match (
-            self.sharded_filenodes.clone(),
-            self.mysql_options.myrouter_port,
-        ) {
-            // TODO: Move the second-level match (i.e. the first 2 branches) to a with_sharded_xdb
-            // method on SqlFilenodes
-            (
-                Some(ShardedFilenodesParams {
-                    shard_map,
-                    shard_num,
-                }),
-                Some(port),
-            ) => {
-                let conn = SqlFilenodes::with_sharded_myrouter(
+        let (tier, filenodes) = match self.sharded_filenodes.clone() {
+            Some(ShardedFilenodesParams {
+                shard_map,
+                shard_num,
+            }) => {
+                let conn = SqlFilenodes::with_sharded_xdb(
                     shard_map.clone(),
-                    port,
-                    self.mysql_options.myrouter_read_service_type(),
+                    self.mysql_options,
                     shard_num.into(),
                     self.readonly,
                 );
                 (shard_map, conn)
             }
-            (
-                Some(ShardedFilenodesParams {
-                    shard_map,
-                    shard_num,
-                }),
-                None,
-            ) => {
-                let conn = SqlFilenodes::with_sharded_raw_xdb(
-                    shard_map.clone(),
-                    self.mysql_options.db_locator_read_instance_requirement(),
-                    shard_num.into(),
-                    self.readonly,
-                );
-                (shard_map, conn)
-            }
-            (None, _) => {
+            None => {
                 let conn = SqlFilenodes::with_xdb(
                     self.db_address.clone(),
                     self.mysql_options,

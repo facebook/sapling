@@ -26,7 +26,8 @@ use mononoke_types::{hash, RepositoryId};
 use sql::queries;
 pub use sql_ext::SqlConstructors;
 use sql_ext::{
-    create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
+    create_myrouter_connections, create_raw_xdb_connections, MysqlOptions, PoolSizeConfig,
+    SqlConnections,
 };
 use stats::define_stats;
 
@@ -204,7 +205,30 @@ impl SqlConstructors for SqlFilenodes {
 }
 
 impl SqlFilenodes {
-    pub fn with_sharded_myrouter(
+    pub fn with_sharded_xdb(
+        tier: String,
+        options: MysqlOptions,
+        shard_count: usize,
+        readonly: bool,
+    ) -> BoxFuture<Self, Error> {
+        match options.myrouter_port {
+            Some(myrouter_port) => Self::with_sharded_myrouter(
+                tier,
+                myrouter_port,
+                options.myrouter_read_service_type(),
+                shard_count,
+                readonly,
+            ),
+            None => Self::with_sharded_raw_xdb(
+                tier,
+                options.db_locator_read_instance_requirement(),
+                shard_count,
+                readonly,
+            ),
+        }
+    }
+
+    fn with_sharded_myrouter(
         tier: String,
         port: u16,
         read_service_type: myrouter::ServiceType,
@@ -226,7 +250,7 @@ impl SqlFilenodes {
         })
     }
 
-    pub fn with_sharded_raw_xdb(
+    fn with_sharded_raw_xdb(
         tier: String,
         read_instance_requirement: raw::InstanceRequirement,
         shard_count: usize,
