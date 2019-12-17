@@ -1109,7 +1109,7 @@ EOF
   hg init repo-hg
   cd repo-hg || exit 1
   setup_hg_server
-  hg debugdrawdag <<EOF
+  drawdag <<EOF
 C
 |
 B
@@ -1334,7 +1334,7 @@ EOF
 hg init repo-hg
 cd repo-hg || exit 1
 setup_hg_server
-hg debugdrawdag <<EOF
+drawdag <<EOF
 C
 |
 B

@@ -42,7 +42,7 @@ setup repo
   $ hg init repo-hg
   $ cd repo-hg
   $ setup_hg_server
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > C
   > |
   > B

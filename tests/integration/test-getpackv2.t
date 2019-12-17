@@ -21,7 +21,7 @@ setup client repo2
 
 make a few commits on the server
   $ cd $TESTTMP/repo-hg
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > C
   > |
   > B
