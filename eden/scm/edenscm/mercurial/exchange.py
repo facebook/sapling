@@ -1704,6 +1704,11 @@ def _pullbookmarks(pullop):
         return
     pullop.stepsdone.add("bookmarks")
     repo = pullop.repo
+    ui = repo.ui
+    # XXX: Ideally we update remotenames right here to avoid race
+    # conditions. See racy-pull-on-push in remotenames.py.
+    if ui.configbool("ui", "skip-local-bookmarks-on-pull"):
+        return
     remotebookmarks = pullop.remotebookmarks
     bookmod.updatefromremote(
         repo.ui,

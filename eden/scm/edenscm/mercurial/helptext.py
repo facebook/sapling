@@ -2519,6 +2519,10 @@ User interface controls.
     Remote command to use for clone/push/pull operations.
     (default: ``hg``)
 
+``skip-local-bookmarks-on-pull``
+    Do not write local bookmarks on pull or clone.
+    Turn on the ``remotenames`` extension to get remote bookmarks.
+
 ``slash``
     (Deprecated. Use ``slashpath`` template filter instead.)
 
