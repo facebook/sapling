@@ -184,16 +184,6 @@ class bzr_source(common.converter_source):
             rev=version,
         )
 
-    def gettags(self):
-        bytetags = {}
-        for branch in self._bzrbranches():
-            if not branch.supports_tags():
-                return {}
-            tagdict = branch.tags.get_tag_dict()
-            for name, rev in tagdict.iteritems():
-                bytetags[self.recode(name)] = rev
-        return bytetags
-
     def getchangedfiles(self, rev, i):
         self._modecache = {}
         curtree = self.sourcerepo.revision_tree(rev)

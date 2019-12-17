@@ -211,24 +211,18 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Subversion Source
     #################
 
-    Subversion source detects classical trunk/branches/tags layouts.
-    By default, the supplied ``svn://repo/path/`` source URL is
-    converted as a single branch. If ``svn://repo/path/trunk`` exists
-    it replaces the default branch. If ``svn://repo/path/branches``
-    exists, its subdirectories are listed as possible branches. If
-    ``svn://repo/path/tags`` exists, it is looked for tags referencing
-    converted branches. Default ``trunk``, ``branches`` and ``tags``
-    values can be overridden with following options. Set them to paths
-    relative to the source URL, or leave them blank to disable auto
-    detection.
+    Subversion source detects classical trunk/branches layouts.  By default, the
+    supplied ``svn://repo/path/`` source URL is converted as a single branch. If
+    ``svn://repo/path/trunk`` exists it replaces the default branch. If
+    ``svn://repo/path/branches`` exists, its subdirectories are listed as
+    possible branches. Default ``trunk`` and ``branches`` values can be
+    overridden with following options. Set them to paths relative to the source
+    URL, or leave them blank to disable auto detection.
 
     The following options can be set with ``--config``:
 
     :convert.svn.branches: specify the directory containing branches.
         The default is ``branches``.
-
-    :convert.svn.tags: specify the directory containing tags. The
-        default is ``tags``.
 
     :convert.svn.trunk: specify the name of the trunk branch. The
         default is ``trunk``.
@@ -346,22 +340,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     :convert.hg.clonebranches: dispatch source branches in separate
         clones. The default is False.
 
-    :convert.hg.tagsbranch: branch name for tag revisions, defaults to
-        ``default``.
-
     :convert.hg.usebranchnames: preserve branch names. The default is
         True.
 
     :convert.hg.sourcename: records the given string as a 'convert_source' extra
         value on each commit made in the target repository. The default is None.
-
-    All Destinations
-    ################
-
-    All destination types accept the following options:
-
-    :convert.skiptags: does not convert tags from the source repo to the target
-        repo. The default is False.
     """
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 

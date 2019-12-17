@@ -467,9 +467,6 @@ class filemap_source(common.converter_source):
         realname, realrev = rev
         return self.base.getfile(realname, realrev)
 
-    def gettags(self):
-        return self.base.gettags()
-
     def hasnativeorder(self):
         return self.base.hasnativeorder()
 

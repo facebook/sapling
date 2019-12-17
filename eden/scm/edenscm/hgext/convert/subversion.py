@@ -496,7 +496,6 @@ class svn_source(converter_source):
         rev = optrev(self.last_changed)
         oldmodule = ""
         trunk = getcfgpath("trunk", rev)
-        self.tags = getcfgpath("tags", rev)
         branches = getcfgpath("branches", rev)
 
         # If the project has a trunk or branches, we will extract heads
@@ -510,8 +509,6 @@ class svn_source(converter_source):
 
         # First head in the list is the module's head
         self.heads = [self.head]
-        if self.tags is not None:
-            self.tags = "%s/%s" % (oldmodule, (self.tags or "tags"))
 
         # Check if branches bring a few more heads to the list
         if branches:
@@ -621,111 +618,6 @@ class svn_source(converter_source):
 
     def numcommits(self):
         return int(self.head.rsplit("@", 1)[1]) - self.startrev
-
-    def gettags(self):
-        tags = {}
-        if self.tags is None:
-            return tags
-
-        # svn tags are just a convention, project branches left in a
-        # 'tags' directory. There is no other relationship than
-        # ancestry, which is expensive to discover and makes them hard
-        # to update incrementally.  Worse, past revisions may be
-        # referenced by tags far away in the future, requiring a deep
-        # history traversal on every calculation.  Current code
-        # performs a single backward traversal, tracking moves within
-        # the tags directory (tag renaming) and recording a new tag
-        # everytime a project is copied from outside the tags
-        # directory. It also lists deleted tags, this behaviour may
-        # change in the future.
-        pendings = []
-        tagspath = self.tags
-        start = svn.ra.get_latest_revnum(self.ra)
-        stream = self._getlog([self.tags], start, self.startrev)
-        try:
-            for entry in stream:
-                origpaths, revnum, author, date, message = entry
-                if not origpaths:
-                    origpaths = []
-                copies = [
-                    (e.copyfrom_path, e.copyfrom_rev, p)
-                    for p, e in origpaths.iteritems()
-                    if e.copyfrom_path
-                ]
-                # Apply moves/copies from more specific to general
-                copies.sort(reverse=True)
-
-                srctagspath = tagspath
-                if copies and copies[-1][2] == tagspath:
-                    # Track tags directory moves
-                    srctagspath = copies.pop()[0]
-
-                for source, sourcerev, dest in copies:
-                    if not dest.startswith(tagspath + "/"):
-                        continue
-                    for tag in pendings:
-                        if tag[0].startswith(dest):
-                            tagpath = source + tag[0][len(dest) :]
-                            tag[:2] = [tagpath, sourcerev]
-                            break
-                    else:
-                        pendings.append([source, sourcerev, dest])
-
-                # Filter out tags with children coming from different
-                # parts of the repository like:
-                # /tags/tag.1 (from /trunk:10)
-                # /tags/tag.1/foo (from /branches/foo:12)
-                # Here/tags/tag.1 discarded as well as its children.
-                # It happens with tools like cvs2svn. Such tags cannot
-                # be represented in mercurial.
-                addeds = dict(
-                    (p, e.copyfrom_path)
-                    for p, e in origpaths.iteritems()
-                    if e.action == "A" and e.copyfrom_path
-                )
-                badroots = set()
-                for destroot in addeds:
-                    for source, sourcerev, dest in pendings:
-                        if not dest.startswith(destroot + "/") or source.startswith(
-                            addeds[destroot] + "/"
-                        ):
-                            continue
-                        badroots.add(destroot)
-                        break
-
-                for badroot in badroots:
-                    pendings = [
-                        p
-                        for p in pendings
-                        if p[2] != badroot and not p[2].startswith(badroot + "/")
-                    ]
-
-                # Tell tag renamings from tag creations
-                renamings = []
-                for source, sourcerev, dest in pendings:
-                    tagname = dest.split("/")[-1]
-                    if source.startswith(srctagspath):
-                        renamings.append([source, sourcerev, tagname])
-                        continue
-                    if tagname in tags:
-                        # Keep the latest tag value
-                        continue
-                    # From revision may be fake, get one with changes
-                    try:
-                        tagid = self.latest(source, sourcerev)
-                        if tagid and tagname not in tags:
-                            tags[tagname] = tagid
-                    except SvnPathNotFound:
-                        # It happens when we are following directories
-                        # we assumed were copied with their parents
-                        # but were really created in the tag
-                        # directory.
-                        pass
-                pendings = renamings
-                tagspath = srctagspath
-        finally:
-            stream.close()
-        return tags
 
     def converted(self, rev, destrev):
         if not self.wc:
@@ -1469,10 +1361,6 @@ class svn_sink(converter_sink, commandline):
             return self.revid(rev)
         finally:
             os.unlink(messagefile)
-
-    def puttags(self, tags):
-        self.ui.warn(_("writing Subversion tags is not yet implemented\n"))
-        return None, None
 
     def hascommitfrommap(self, rev):
         # We trust that revisions referenced in a map still is present

@@ -168,13 +168,6 @@ class converter_source(object):
         """
         return None
 
-    def gettags(self):
-        """Return the tags as a dictionary of name: revision
-
-        Tag names must be UTF-8 strings.
-        """
-        raise NotImplementedError
-
     def recode(self, s, encoding=None):
         if not encoding:
             encoding = self.encoding or "utf-8"
@@ -281,15 +274,6 @@ class converter_sink(object):
         Note that the sink repository is not told to update itself to
         a particular revision (or even what that revision would be)
         before it receives the file data.
-        """
-        raise NotImplementedError
-
-    def puttags(self, tags):
-        """Put tags into sink.
-
-        tags: {tagname: sink_rev_id, ...} where tagname is an UTF-8 string.
-        Return a pair (tag_revision, tag_parent_revision), or (None, None)
-        if nothing was changed.
         """
         raise NotImplementedError
 

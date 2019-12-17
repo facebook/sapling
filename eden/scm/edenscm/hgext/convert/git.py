@@ -388,37 +388,6 @@ class convert_git(common.converter_source, common.commandline):
             raise error.Abort(_("cannot retrieve number of commits in %s") % self.path)
         return len(output)
 
-    def gettags(self):
-        tags = {}
-        alltags = {}
-        output, status = self.gitrunlines("ls-remote", "--tags", self.path)
-
-        if status:
-            raise error.Abort(_("cannot read tags from %s") % self.path)
-        prefix = "refs/tags/"
-
-        # Build complete list of tags, both annotated and bare ones
-        for line in output:
-            line = line.strip()
-            if line.startswith("error:") or line.startswith("fatal:"):
-                raise error.Abort(_("cannot read tags from %s") % self.path)
-            node, tag = line.split(None, 1)
-            if not tag.startswith(prefix):
-                continue
-            alltags[tag[len(prefix) :]] = node
-
-        # Filter out tag objects for annotated tag refs
-        for tag in alltags:
-            if tag.endswith("^{}"):
-                tags[tag[:-3]] = alltags[tag]
-            else:
-                if tag + "^{}" in alltags:
-                    continue
-                else:
-                    tags[tag] = alltags[tag]
-
-        return tags
-
     def getchangedfiles(self, version, i):
         changes = []
         if i is None:

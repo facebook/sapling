@@ -42,12 +42,6 @@ Test that template can print all file copies (issue4362)
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge remote copy' -d '4 0'
 
-Make and delete some tags
-
-  $ hg tag that
-  $ hg tag --remove that
-  $ hg tag this
-
 #if execbit
   $ chmod +x baz
 #else
@@ -60,14 +54,11 @@ Make and delete some tags
   scanning source...
   sorting...
   converting...
-  8 add foo bar
-  7 change foo
-  6 make bar and baz copies of foo
-  5 merge local copy
-  4 merge remote copy
-  3 Added tag that for changeset 88586c4e9f02
-  2 Removed tag that
-  1 Added tag this for changeset c56a7f387039
+  5 add foo bar
+  4 change foo
+  3 make bar and baz copies of foo
+  2 merge local copy
+  1 merge remote copy
   0 mark baz executable
   updating bookmarks
   $ cd new
@@ -79,12 +70,12 @@ Make and delete some tags
 #if execbit
   $ hg bookmarks
      premerge1                 3:973ef48a98a4
-     premerge2                 8:91d107c423ba
+     premerge2                 5:13d9b87cf8f8
 #else
 Different hash because no x bit
   $ hg bookmarks
      premerge1                 3:973ef48a98a4
-     premerge2                 8:3537b15eaaca
+     premerge2                 5:13d9b87cf8f8
 #endif
 
 Test that redoing a convert results in an identical graph
@@ -94,24 +85,15 @@ Test that redoing a convert results in an identical graph
   scanning source...
   sorting...
   converting...
-  8 add foo bar
-  7 change foo
-  6 make bar and baz copies of foo
-  5 merge local copy
-  4 merge remote copy
-  3 Added tag that for changeset 88586c4e9f02
-  2 Removed tag that
-  1 Added tag this for changeset c56a7f387039
+  5 add foo bar
+  4 change foo
+  3 make bar and baz copies of foo
+  2 merge local copy
+  1 merge remote copy
   0 mark baz executable
   updating bookmarks
   $ hg -R new log -G -T '{rev} {desc}'
-  o  8 mark baz executable
-  |
-  o  7 Added tag this for changeset c56a7f387039
-  |
-  o  6 Removed tag that
-  |
-  o  5 Added tag that for changeset 88586c4e9f02
+  o  5 mark baz executable
   |
   o    4 merge remote copy
   |\

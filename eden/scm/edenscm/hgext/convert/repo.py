@@ -1012,12 +1012,6 @@ class repo_source(common.converter_source):
         rawcount = functools.reduce(sumfn, output, 0)
         return 3 * rawcount  # 1 for each of rooted, dirred and unified
 
-    def gettags(self):
-        """See common.converter_source.gettags"""
-        # TODO: Convert to manifest tags only?
-        # tagoutput = self.repo.forallbyproject("git tag")
-        return []
-
     def getchangedfiles(self, rev, i):
         """See common.converter_source.getchangedfiles"""
         if rev is None:

@@ -375,8 +375,5 @@ class p4_source(common.converter_source):
             return self._construct_commit(d, parents=None)
         raise error.Abort(_("cannot find %s in the revmap or parsed changesets") % rev)
 
-    def gettags(self):
-        return {}
-
     def getchangedfiles(self, rev, i):
         return sorted([x[0] for x in self.files[rev]])

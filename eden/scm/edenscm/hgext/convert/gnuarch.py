@@ -63,7 +63,6 @@ class gnuarch_source(common.converter_source, common.commandline):
         self.lastrev = None
         self.changes = {}
         self.parents = {}
-        self.tags = {}
         self.catlogparser = email.Parser.Parser()
         self.encoding = encoding.encoding
         self.archives = []
@@ -196,9 +195,6 @@ class gnuarch_source(common.converter_source, common.commandline):
             rev=rev,
         )
 
-    def gettags(self):
-        return self.tags
-
     def _execute(self, cmd, *args, **kwargs):
         cmdline = [self.execmd, cmd]
         cmdline += args
@@ -299,7 +295,7 @@ class gnuarch_source(common.converter_source, common.commandline):
             )
             self.changes[rev].summary = self.recode(self.changes[rev].summary)
 
-            # Commit revision origin when dealing with a branch or tag
+            # Commit revision origin when dealing with a branch
             if "Continuation-of" in catlog:
                 self.changes[rev].continuationof = self.recode(
                     catlog["Continuation-of"]

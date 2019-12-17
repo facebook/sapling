@@ -85,7 +85,6 @@ class darcs_source(common.converter_source, common.commandline):
         self.lastrev = None
         self.changes = {}
         self.parents = {}
-        self.tags = {}
 
         # Check darcs repository format
         format = self.format()
@@ -105,16 +104,10 @@ class darcs_source(common.converter_source, common.commandline):
         self.checkexit(status)
 
         tree = self.xml("changes", xml_output=True, summary=True, repodir=self.path)
-        tagname = None
         child = None
         for elt in tree.findall("patch"):
             node = elt.get("hash")
             name = elt.findtext("name", "")
-            if name.startswith("TAG "):
-                tagname = name[4:].strip()
-            elif tagname is not None:
-                self.tags[tagname] = node
-                tagname = None
             self.changes[node] = elt
             self.parents[child] = [node]
             child = node
@@ -246,6 +239,3 @@ class darcs_source(common.converter_source, common.commandline):
             raise
         mode = (mode & 0o111) and "x" or ""
         return data, mode
-
-    def gettags(self):
-        return self.tags

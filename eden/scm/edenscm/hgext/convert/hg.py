@@ -59,7 +59,6 @@ class mercurial_sink(common.converter_sink):
         common.converter_sink.__init__(self, ui, repotype, path)
         self.branchnames = ui.configbool("convert", "hg.usebranchnames")
         self.clonebranches = ui.configbool("convert", "hg.clonebranches")
-        self.tagsbranch = ui.config("convert", "hg.tagsbranch")
         self.lastbranch = None
         if os.path.isdir(path) and len(os.listdir(path)) > 0:
             try:
@@ -143,21 +142,6 @@ class mercurial_sink(common.converter_sink):
                 exchange.pull(self.repo, prepo, [prepo.lookup(h) for h in heads])
             self.before()
 
-    def _rewritetags(self, source, revmap, data):
-        fp = stringio()
-        for line in data.splitlines():
-            s = line.split(" ", 1)
-            if len(s) != 2:
-                continue
-            revid = revmap.get(source.lookuprev(s[0]))
-            if not revid:
-                if s[0] == nodemod.nullhex:
-                    revid = s[0]
-                else:
-                    continue
-            fp.write("%s %s\n" % (revid, s[1]))
-        return fp.getvalue()
-
     def _calculatemergedfiles(self, source, p1ctx, p2ctx):
         """Calculates the files from p2 that we need to pull in when merging p1
         and p2, given that the merge is coming from the given source.
@@ -222,8 +206,6 @@ class mercurial_sink(common.converter_sink):
             data, mode = source.getfile(f, v)
             if data is None:
                 return None
-            if f == ".hgtags":
-                data = self._rewritetags(source, revmap, data)
             return context.memfilectx(
                 self.repo, memctx, f, data, "l" in mode, "x" in mode, copies.get(f)
             )
@@ -348,66 +330,6 @@ class mercurial_sink(common.converter_sink):
                 self.repo.rollback(force=True)
                 return parent
         return p2
-
-    def puttags(self, tags):
-        try:
-            parentctx = self.repo[self.tagsbranch]
-            tagparent = parentctx.node()
-        except error.RepoError:
-            parentctx = None
-            tagparent = nodemod.nullid
-
-        oldlines = set()
-        for branch, heads in self.repo.branchmap().iteritems():
-            for h in heads:
-                if ".hgtags" in self.repo[h]:
-                    oldlines.update(
-                        set(self.repo[h][".hgtags"].data().splitlines(True))
-                    )
-        oldlines = sorted(list(oldlines))
-
-        newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])
-        if newlines == oldlines:
-            return None, None
-
-        # if the old and new tags match, then there is nothing to update
-        oldtags = set()
-        newtags = set()
-        for line in oldlines:
-            s = line.strip().split(" ", 1)
-            if len(s) != 2:
-                continue
-            oldtags.add(s[1])
-        for line in newlines:
-            s = line.strip().split(" ", 1)
-            if len(s) != 2:
-                continue
-            if s[1] not in oldtags:
-                newtags.add(s[1].strip())
-
-        if not newtags:
-            return None, None
-
-        data = "".join(newlines)
-
-        def getfilectx(repo, memctx, f):
-            return context.memfilectx(repo, memctx, f, data, False, False, None)
-
-        self.ui.status(_("updating tags\n"))
-        date = "%s 0" % int(time.mktime(time.gmtime()))
-        extra = {"branch": self.tagsbranch}
-        ctx = context.memctx(
-            self.repo,
-            (tagparent, None),
-            "update tags",
-            [".hgtags"],
-            getfilectx,
-            "convert-repo",
-            date,
-            extra,
-        )
-        node = self.repo.commitctx(ctx)
-        return nodemod.hex(node), nodemod.hex(tagparent)
 
     def setfilemapmode(self, active):
         self.filemapmode = active
@@ -602,13 +524,6 @@ class mercurial_source(common.converter_source):
             sortkey=ctx.rev(),
             saverev=self.saverev,
             phase=ctx.phase(),
-        )
-
-    def gettags(self):
-        # This will get written to .hgtags, filter non global tags out.
-        tags = [t for t in self.repo.tagslist() if self.repo.tagtype(t[0]) == "global"]
-        return dict(
-            [(name, nodemod.hex(node)) for name, node in tags if self.keep(node)]
         )
 
     def getchangedfiles(self, rev, i):
