@@ -15,7 +15,6 @@ setup repo
   $ hg ci -ma
   $ hg log
   changeset:   1:f9ae6ef0865e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

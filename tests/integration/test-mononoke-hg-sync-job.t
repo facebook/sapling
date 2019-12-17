@@ -88,7 +88,6 @@ Sync a pushrebase bookmark move
   $ hg log -r master_bookmark
   changeset:   2:1e43292ffbb3
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushcommit
@@ -100,7 +99,6 @@ Sync a pushrebase bookmark move
   $ hg log -r master_bookmark
   changeset:   3:6cc06ef82eeb
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     anothercommit
@@ -128,7 +126,6 @@ Enable replay verification hooks
   $ hg log -r master_bookmark
   changeset:   1:add0c792bfce
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a => bar
@@ -158,7 +155,6 @@ Set the correct timestamp back
   $ hg log -r master_bookmark
   changeset:   1:add0c792bfce
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a => bar
@@ -188,7 +184,6 @@ Continue replay
   $ hg log -r tip
   changeset:   4:67d5c96d65a7
   bookmark:    master_bookmark
-  tag:         tip
   parent:      2:1e43292ffbb3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -242,7 +237,6 @@ Continue replay
   $ hg log -r master_bookmark
   changeset:   6:6f24f1b38581
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     symlink
@@ -275,7 +269,6 @@ Test hook bypass using REPLAY_BYPASS file
   $ hg log -r master_bookmark
   changeset:   1:add0c792bfce
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a => bar
@@ -341,7 +334,6 @@ Test bookmark deletion sync
   $ hg log -r master_bookmark
   changeset:   6:6f24f1b38581
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        * (glob)
   summary:     symlink
@@ -354,7 +346,6 @@ Test force pushrebase sync
   $ mkcommit commit_to_force_pushmaster
   $ hg log -r .
   changeset:   10:cc83c88b72d3
-  tag:         tip
   parent:      6:a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -365,7 +356,6 @@ Test force pushrebase sync
 -- master should now point to it
   $ hg log -r .
   changeset:   10:cc83c88b72d3
-  tag:         tip
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
   parent:      6:a7acac33c050
@@ -382,7 +372,6 @@ Test force pushrebase sync
   $ hg log -r master_bookmark
   changeset:   7:cc83c88b72d3
   bookmark:    master_bookmark
-  tag:         tip
   parent:      5:a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

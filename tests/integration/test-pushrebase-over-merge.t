@@ -42,7 +42,6 @@ Now try to push over a merge commit
   $ hgmn push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   changeset:   10:c8a34708eb3a
-  tag:         tip
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
   parent:      8:2a9ef460b971

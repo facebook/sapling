@@ -31,7 +31,6 @@ setup repo-hg
   $ hg ci -mlong
   $ hg log
   changeset:   0:b8119d283b73
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
@@ -72,7 +71,6 @@ pull on repo2
   $ hgmn log
   changeset:   0:b8119d283b73
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
@@ -97,7 +95,6 @@ push one more long path from repo2
   $ hg log
   changeset:   1:8fffbbe6af55
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2
@@ -129,7 +126,6 @@ pull on repo3
   $ hgmn log
   changeset:   1:8fffbbe6af55
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2

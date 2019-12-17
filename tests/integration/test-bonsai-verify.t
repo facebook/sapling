@@ -33,7 +33,6 @@ Init treemanifest and remotefilelog
   $ hg ci -ma
   $ hg log
   changeset:   0:3903775176ed
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

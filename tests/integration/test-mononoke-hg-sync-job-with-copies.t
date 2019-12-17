@@ -98,7 +98,6 @@ Push of a merge with a copy
   $ hgmn push -r . --to master_bookmark -q
   $ hg log -r tip
   changeset:   9:bc6bfc6ac632
-  tag:         tip
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
   parent:      8:af1639811192
@@ -121,7 +120,6 @@ Push of a merge with a copy
   $ hg log -r tip
   changeset:   7:bc6bfc6ac632
   bookmark:    master_bookmark
-  tag:         tip
   parent:      6:af1639811192
   parent:      5:21ecc753c272
   user:        test

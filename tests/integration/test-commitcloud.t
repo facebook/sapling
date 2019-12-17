@@ -171,7 +171,7 @@ On the first client rebase the stack
   $ hgmn rebase -s 15f040cf571c -d 44641a2b1a42
   rebasing 15f040cf571c "commit4"
   rebasing a1806767adaa "commit5"
-  rebasing 58508421158d "commit6" (tip)
+  rebasing 58508421158d "commit6"
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
   backing up stack rooted at 660cb078da57

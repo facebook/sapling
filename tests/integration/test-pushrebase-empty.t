@@ -19,7 +19,6 @@ Push single empty commit
   $ hg commit --amend
   $ hg show
   changeset:   4:4d5799789652
-  tag:         tip
   parent:      0:426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

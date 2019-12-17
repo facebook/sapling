@@ -81,7 +81,6 @@
   $ hg show master_bookmark
   changeset:   * (glob)
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        * (glob)
   description:

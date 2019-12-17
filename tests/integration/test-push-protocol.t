@@ -24,7 +24,6 @@ verify content
   changeset:   0:0e7ec5675652
   bookmark:    master_bookmark
   bookmark:    master_bookmark2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -113,7 +112,6 @@ move master bookmarks
   $ hg log -r "reverse(all())" --stat
   changeset:   6:634de738bb0f
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     g
@@ -217,7 +215,6 @@ move master bookmarks
    (re)
   changeset:   6:634de738bb0f
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     g
@@ -278,7 +275,6 @@ Now pull what was just pushed
   changeset:   0:0e7ec5675652
   bookmark:    master_bookmark
   bookmark:    master_bookmark2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

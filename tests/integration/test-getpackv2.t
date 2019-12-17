@@ -94,7 +94,6 @@ Then make sure update succeeds
   $ hg log -f A
   changeset:   3:be4e0feadad6
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     AA

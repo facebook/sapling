@@ -30,7 +30,6 @@ verify content
   $ hg log
   changeset:   1:c201a1696ba0
   bookmark:    master_bookmark
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b

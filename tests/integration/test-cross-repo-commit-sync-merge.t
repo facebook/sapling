@@ -106,7 +106,6 @@ check that the changes are synced
   $ hg log -G
   o    changeset:   2:9c3b218de12e
   |\   bookmark:    megarepo_master
-  | |  tag:         tip
   | |  parent:      0:14e20a60e5f4
   | |  parent:      1:4523b8346e49
   | |  user:        test
