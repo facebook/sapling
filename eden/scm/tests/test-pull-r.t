@@ -13,7 +13,6 @@
 
   $ hg log
   changeset:   2:effea6de0384
-  tag:         tip
   parent:      0:bbd179dfa0a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -81,7 +80,6 @@ Pull multiple revisions with update:
   $ hg pull -qr 0 ../repo
   $ hg log
   changeset:   0:bbd179dfa0a7
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo
@@ -89,7 +87,6 @@ Pull multiple revisions with update:
   $ hg pull -qr 1 ../repo
   $ hg log
   changeset:   1:ed1b79f46b9a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change foo
@@ -129,7 +126,6 @@ We use http because http is better is our racy-est option.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  changeset:   2:effea6de0384
-  |  tag:         tip
   |  parent:      0:bbd179dfa0a7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

@@ -58,7 +58,7 @@ Test basic repo behaviors
 
 Test rebase
   $ cmd hg rebase -d 775bfdd --config "extensions.rebase="
-  rebasing 4b6cc7d5194b "c3" (active tip)
+  rebasing 4b6cc7d5194b "c3" (active)
   merging b
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -124,7 +124,7 @@ Test unshelve
   $ cmd hg unshelve --config "extensions.shelve="
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 19f7fec7f80b "shelve changes to: c3" (tip)
+  rebasing 19f7fec7f80b "shelve changes to: c3"
   other [source] changed b which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')

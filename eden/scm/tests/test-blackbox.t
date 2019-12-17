@@ -112,7 +112,6 @@ we must not cause a failure if we cannot write to the log
   searching for changes
   all local heads known remotely
   changeset:   2:d02f48003e62c24e2659d97d30f2a83abe5d5d51
-  tag:         tip
   phase:       draft
   parent:      1:6563da9dcf87b1949716e38ff3e3dfaa3198eb06
   parent:      -1:0000000000000000000000000000000000000000

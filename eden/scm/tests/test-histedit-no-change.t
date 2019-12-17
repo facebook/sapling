@@ -103,7 +103,7 @@ editing a changeset without any actual change would corrupt the repository
 
 check state of working copy
   $ hg id
-  794fe033d0a0 tip
+  794fe033d0a0
 
   $ graphlog "log after history editing"
   % log after history editing

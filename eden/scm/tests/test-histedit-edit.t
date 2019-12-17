@@ -23,7 +23,6 @@ TODO: Make this test compatibile with obsstore enabled.
 log before edit
   $ hg log --graph
   @  changeset:   6:3c6a8ed2ebe8
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     g
@@ -174,7 +173,6 @@ Stripping necessary commits should not break --abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r .
   changeset:   6:b5f70786f9b0
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -234,7 +232,6 @@ check histedit_source
 log after edit
   $ hg log --limit 1
   changeset:   6:a107ee126658
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -249,7 +246,6 @@ say we'll change the message, but don't.
   $ hg status
   $ hg log --limit 1
   changeset:   6:1fd3b2fe7754
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -367,7 +363,6 @@ then, check "modify the message" itself
   $ hg status
   $ hg log --limit 1
   changeset:   6:62feedb1200e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -395,7 +390,6 @@ rollback should not work after a histedit
 
   $ hg log -G
   @  changeset:   0:0efcea34f18a
-     tag:         tip
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a

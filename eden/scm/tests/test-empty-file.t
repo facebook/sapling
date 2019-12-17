@@ -18,7 +18,6 @@
 
   $ hg heads
   changeset:   2:a1cb177e0d44
-  tag:         tip
   parent:      0:1e1d9c4e5b64
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

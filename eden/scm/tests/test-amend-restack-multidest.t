@@ -123,7 +123,7 @@ The "prune" cases.
   $ hg rebase --restack
   rebasing 112478962961 "B"
   rebasing f585351a92f8 "D"
-  rebasing 78d2dca436b2 "E" (tip)
+  rebasing 78d2dca436b2 "E"
 
   $ hg update -q $H
   $ hg rebase --restack
@@ -171,7 +171,7 @@ Restack could resume after resolving merge conflicts.
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing ed8545a5c22a "F"
-  rebasing 4d1ef7d890c5 "G" (tip)
+  rebasing 4d1ef7d890c5 "G"
   merging E
   warning: 1 conflicts while merging E! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

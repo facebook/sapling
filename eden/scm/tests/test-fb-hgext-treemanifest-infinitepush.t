@@ -86,7 +86,6 @@ Pull a non-tree scratch branch into a normal client
   $ hg log -r tip -vp
   changeset:   2:ebde88dba372
   bookmark:    scratch/nontree
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/car
@@ -136,7 +135,6 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   new changesets 02c12aef64ff
   $ hg log -r 02c12aef64ff  --stat
   changeset:   1:02c12aef64ff
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add subdir/a
@@ -158,7 +156,6 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   $ hg log -G
   o  changeset:   2:5a7a7de8a420
   |  bookmark:    scratch/foo
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     edit subdir/a
@@ -189,7 +186,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   new changesets 3ef288300b64
   $ hg log -r 3ef288300b64 --stat
   changeset:   3:3ef288300b64
-  tag:         tip
   parent:      0:085784c01c08
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -235,7 +231,6 @@ Verify its not on the server
   $ cd master
   $ hg log -G
   @  changeset:   0:085784c01c08
-     tag:         tip
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add x

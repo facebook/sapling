@@ -30,7 +30,6 @@ share shouldn't have a store dir
 share shouldn't have a cache dir, original repo should
 
   $ hg tags
-  tip                                0:d3873e73d99e
   $ test -d .hg/cache
   [1]
   $ ls -1 ../repo1/.hg/cache
@@ -60,7 +59,6 @@ check original
   $ cd ../repo1
   $ hg log
   changeset:   1:8af4dc49db9e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change in shared clone
@@ -87,7 +85,6 @@ check in shared clone
   $ cd ../repo2
   $ hg log
   changeset:   2:c2e0ac586386
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another file
@@ -125,7 +122,7 @@ check that a change does not propagate
   $ hg commit -m'change in unshared'
   $ cd ../repo1
   $ hg id -r tip
-  c2e0ac586386 tip
+  c2e0ac586386
 
   $ cd ..
 

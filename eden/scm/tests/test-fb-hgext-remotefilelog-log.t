@@ -44,7 +44,6 @@ Log on a file without -f
 
   $ hg log dir/y
   changeset:   1:79c51fb96423
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -55,7 +54,6 @@ Log on a file with -f
 
   $ hg log -f dir/y
   changeset:   1:79c51fb96423
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -65,7 +63,6 @@ Log on a file with -f
 Log on a file with kind in path
   $ hg log -r "filelog('path:dir/y')"
   changeset:   1:79c51fb96423
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -76,7 +73,6 @@ Log on multiple files with -f
 
   $ hg log -f dir/y x
   changeset:   1:79c51fb96423
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -92,7 +88,6 @@ Log on a directory
 
   $ hg log dir
   changeset:   1:79c51fb96423
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -104,7 +99,6 @@ Log on a file from inside a directory
   $ cd dir
   $ hg log y
   changeset:   1:79c51fb96423
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test

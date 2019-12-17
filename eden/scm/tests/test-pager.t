@@ -42,7 +42,6 @@ By default diff and log are paged, but id is not:
 
   $ hg log --limit 2
   paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -54,27 +53,24 @@ By default diff and log are paged, but id is not:
   paged! '\n'
 
   $ hg id
-  46106edeeb38 tip
+  46106edeeb38
 
 We can control the pager from the config
 
   $ hg log --limit 1 --config 'ui.paginate=False'
   changeset:   10:46106edeeb38
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
   
   $ hg log --limit 1 --config 'ui.paginate=0'
   changeset:   10:46106edeeb38
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
   
   $ hg log --limit 1 --config 'ui.paginate=1'
   paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -89,7 +85,6 @@ explicit --pager=on should take precedence over other configurations
   > EOF
   $ hg log --limit 1 --pager=on
   paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -102,7 +97,6 @@ explicit --pager=on should take precedence over other configurations
   > EOF
   $ hg log --limit 1 --pager=off
   changeset:   10:46106edeeb38
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
@@ -112,7 +106,7 @@ We can enable the pager on id:
 
 BROKEN: should be paged
   $ hg --config pager.attend-id=yes id
-  46106edeeb38 tip
+  46106edeeb38
 
 Setting attend-$COMMAND to a false value works, even with pager in
 core:
@@ -129,7 +123,6 @@ Command aliases should have same behavior as main command
 
   $ hg history --limit 2
   paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -144,7 +137,6 @@ Abbreviated command alias should also be paged
 
   $ hg history -l 1
   paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -153,7 +145,7 @@ Abbreviated command alias should also be paged
 Attend for an abbreviated command does not work
 
   $ hg --config pager.attend-ident=true ident
-  46106edeeb38 tip
+  46106edeeb38
 
 Pager should not start if stdout is not a tty.
 
@@ -176,7 +168,6 @@ even though stdout is no longer a tty.
   > EOF
   $ hg log --limit 3
   paged! '\x1b[0;33mchangeset:   10:46106edeeb38\x1b[0m\n'
-  paged! 'tag:         tip\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -198,7 +189,6 @@ use shell=True in the subprocess call:
   $ hg log --limit 3 --config pager.pager=this-command-better-never-exist
   missing pager command 'this-command-better-never-exist', skipping pager
   \x1b[0;33mchangeset:   10:46106edeeb38\x1b[0m (esc)
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10

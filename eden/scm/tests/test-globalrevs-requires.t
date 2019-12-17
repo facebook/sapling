@@ -52,7 +52,6 @@ Test that `globalrevs` extensions is a requirement
 
   $ hg log -r tip
   changeset:   0:dc9179e745c2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x

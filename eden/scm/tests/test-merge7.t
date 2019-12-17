@@ -121,7 +121,6 @@ pull and merge from test-a again
 
   $ hg log
   changeset:   4:40d11a4173a8
-  tag:         tip
   parent:      2:96b70246a118
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

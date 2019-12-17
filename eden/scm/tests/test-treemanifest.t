@@ -340,7 +340,6 @@ Stripping and recovering changes should work
   comparing with .hg/strip-backup/*-backup.hg (glob)
   searching for changes
   changeset:   6:51cfd7b1e13b
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify dir1/a

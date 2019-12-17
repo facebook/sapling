@@ -39,7 +39,7 @@ of the files in a commit we're updating to
   nothing changed
   [1]
   $ hg sum
-  parent: 1:b8bb4a988f25 tip
+  parent: 1:b8bb4a988f25 
    commit #1
   commit: (clean)
   phases: 2 draft
@@ -50,7 +50,7 @@ $ rm b/nonempty
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
-  parent: 1:b8bb4a988f25 tip
+  parent: 1:b8bb4a988f25 
    commit #1
   commit: (clean)
   phases: 2 draft

@@ -45,14 +45,12 @@ Testing -R/--repository:
 
   $ hg -R a tip
   changeset:   0:8580ff50825a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
   $ hg --repository b tip
   changeset:   0:b6c483daf290
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -84,7 +82,6 @@ Abbreviation of long option:
 
   $ hg --repo c tip
   changeset:   1:b6c483daf290
-  tag:         tip
   parent:      -1:000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -95,7 +92,6 @@ earlygetopt with duplicate options (36d23de02da1):
 
   $ hg --cwd a --cwd b --cwd c tip
   changeset:   1:b6c483daf290
-  tag:         tip
   parent:      -1:000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -103,7 +99,6 @@ earlygetopt with duplicate options (36d23de02da1):
   
   $ hg --repo c --repository b -R a tip
   changeset:   0:8580ff50825a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
@@ -139,7 +134,6 @@ Testing --cwd:
 
   $ hg --cwd a parents
   changeset:   0:8580ff50825a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
@@ -166,7 +160,6 @@ Testing -v/--verbose:
 
   $ hg --cwd c head -v
   changeset:   1:b6c483daf290
-  tag:         tip
   parent:      -1:000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -185,7 +178,6 @@ Testing -v/--verbose:
   
   $ hg --cwd b tip --verbose
   changeset:   0:b6c483daf290
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       b
@@ -218,7 +210,6 @@ Testing --debug:
 
   $ hg --cwd c log --debug
   changeset:   1:b6c483daf2907ce5825c0bb50f5716226281cc1a
-  tag:         tip
   phase:       public
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
@@ -255,7 +246,7 @@ Testing --traceback (this does not work with the Rust code path):
 Testing --time:
 
   $ hg --cwd a --time id
-  8580ff50825a tip
+  8580ff50825a
   time: real * (glob)
 
 Testing --version:

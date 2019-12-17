@@ -232,7 +232,6 @@ folding preserves initial author but uses later date
 tip before edit
   $ hg log --rev .
   changeset:   5:10c36dd37515
-  tag:         tip
   user:        someone else
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     f
@@ -251,7 +250,6 @@ tip before edit
 tip after edit, which should use the later date, from the second changeset
   $ hg log --rev .
   changeset:   4:e4f3ec5d0b40
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     e

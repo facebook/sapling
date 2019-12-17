@@ -90,7 +90,6 @@ Remove the directory, then try to replace it with a file (issue754)
   $ hg -R git-repo-hg tip -v
   changeset:   5:c78094926be2
   bookmark:    master
-  tag:         tip
   parent:      3:f5f5cb45432b
   parent:      4:4e174f80c67c
   user:        test <test@example.org>
@@ -411,7 +410,6 @@ convert author committer
   $ hg -R git-repo4-hg log -v
   changeset:   1:d63e967f93da
   bookmark:    master
-  tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
   files:       foo
@@ -461,7 +459,6 @@ custom prefix on messagedifferent works
   $ hg -R git-repo4-hg-messagedifferentprefix log -v
   changeset:   1:2fe0c98a109d
   bookmark:    master
-  tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
   files:       foo
@@ -494,7 +491,6 @@ messagealways will always add the "committer: " line even if committer identical
   $ hg -R git-repo4-hg-messagealways log -v
   changeset:   1:8db057d8cd37
   bookmark:    master
-  tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
   files:       foo
@@ -529,7 +525,6 @@ custom prefix on messagealways works
   $ hg -R git-repo4-hg-messagealwaysprefix log -v
   changeset:   1:83c17174de79
   bookmark:    master
-  tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
   files:       foo
@@ -564,7 +559,6 @@ replaceauthor replaces author with committer
   $ hg -R git-repo4-hg-replaceauthor log -v
   changeset:   1:122c1d8999ea
   bookmark:    master
-  tag:         tip
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
   files:       foo
@@ -595,7 +589,6 @@ dropcommitter removes the committer
   $ hg -R git-repo4-hg-dropcommitter log -v
   changeset:   1:190b2da396cc
   bookmark:    master
-  tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
   files:       foo
@@ -756,7 +749,6 @@ convert sub modules
   $ hg -R git-repo6-hg log -v
   changeset:   0:* (glob)
   bookmark:    master
-  tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:23 2007 +0000
   description:
@@ -967,7 +959,6 @@ convert will not retain custom metadata keys by default
   $ hg -R hgextras1 log --debug -r 1
   changeset:   1:e13a39880f68479127b2a80fa0b448cc8524aa09
   bookmark:    master
-  tag:         tip
   phase:       draft
   parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
   parent:      -1:0000000000000000000000000000000000000000
@@ -1002,7 +993,6 @@ Converting a specific extra works
   $ hg -R hgextras2 log --debug -r 1
   changeset:   1:d40fb205d58597e6ecfd55b16f198be5bf436391
   bookmark:    master
-  tag:         tip
   phase:       draft
   parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
   parent:      -1:0000000000000000000000000000000000000000
@@ -1031,7 +1021,6 @@ Converting multiple extras works
   $ hg -R hgextras3 log --debug -r 1
   changeset:   1:0105af33379e7b6491501fd34141b7af700fe125
   bookmark:    master
-  tag:         tip
   phase:       draft
   parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
   parent:      -1:0000000000000000000000000000000000000000
@@ -1061,7 +1050,6 @@ convert.git.saverev can be disabled to prevent convert_revision from being writt
   $ hg -R hgextras4 log --debug -r 1
   changeset:   1:1dcaf4ffe5bee43fa86db2800821f6f0af212c5c
   bookmark:    master
-  tag:         tip
   phase:       draft
   parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
   parent:      -1:0000000000000000000000000000000000000000
@@ -1089,7 +1077,6 @@ convert_revision from source
   $ hg -R hgextras5 log --debug -r 1
   changeset:   1:574d85931544d4542007664fee3747360e85ee28
   bookmark:    master
-  tag:         tip
   phase:       draft
   parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
   parent:      -1:0000000000000000000000000000000000000000

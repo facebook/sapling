@@ -36,7 +36,6 @@ Revert interactive tests
   $ hg commit -m "modifying folder2/h"
   $ hg tip
   changeset:   6:59dd6e4ab63a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modifying folder2/h

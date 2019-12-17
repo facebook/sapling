@@ -105,7 +105,7 @@ Test rebasing a stack of commits results in a pack with all the trees
   rebasing 6a2476258ba5 "modify subdir/y"
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, based on 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66
   1 trees fetched over * (glob)
-  rebasing f096b21e165f "modify subdir/y again" (tip)
+  rebasing f096b21e165f "modify subdir/y again"
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/6a2476258ba5-a90056a1-rebase.hg (glob)
   $ hg log -r '.^::.' -T '{manifest}\n'
   0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655

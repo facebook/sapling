@@ -40,7 +40,6 @@ Load commonly used test logic
   
   changeset:   2:49480a0fbf45
   bookmark:    master
-  tag:         tip
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma
@@ -63,7 +62,6 @@ Load commonly used test logic
   
   changeset:   2:49480a0fbf45
   bookmark:    master
-  tag:         tip
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma

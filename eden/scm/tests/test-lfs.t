@@ -463,7 +463,7 @@
   b: binary=False
   c: binary=True
   d: binary=False
-  b55353847f02 tip
+  b55353847f02
 
   $ cd ..
 

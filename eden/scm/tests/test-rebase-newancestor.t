@@ -112,7 +112,7 @@ Full rebase all the way back from branching point:
   rebasing aeae94a564c6 "dev2"
   rebasing da5b1609fcb1 "devmerge1"
   note: rebase of 6:da5b1609fcb1 created no changes to commit
-  rebasing bea5bcfda5f9 "devmerge2" (tip)
+  rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1e48f4172d62-cc446d63-rebase.hg
   $ tglog
@@ -139,7 +139,7 @@ Grafty cherry picking rebasing:
   rebasing aeae94a564c6 "dev2"
   rebasing da5b1609fcb1 "devmerge1"
   note: rebase of 6:da5b1609fcb1 created no changes to commit
-  rebasing bea5bcfda5f9 "devmerge2" (tip)
+  rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/aeae94a564c6-2b0faa8a-rebase.hg
   $ tglog
@@ -175,7 +175,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   $ hg ci -m 'merge p1 3=outside p2 1=ancestor'
   $ hg par
   changeset:   4:6990226659be
-  tag:         tip
   parent:      3:f59da8fc0fcf
   parent:      1:dd40c13f7a6f
   user:        test
@@ -187,7 +186,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   $ hg ci -qm 'merge p1 1=ancestor p2 3=outside'
   $ hg par
   changeset:   5:a57575f79074
-  tag:         tip
   parent:      1:dd40c13f7a6f
   parent:      3:f59da8fc0fcf
   user:        test
@@ -212,7 +210,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/6990226659be-4d67a0d3-rebase.hg
   $ hg tip
   changeset:   5:cca50676b1c5
-  tag:         tip
   parent:      2:a60552eb93fb
   parent:      3:f59da8fc0fcf
   user:        test
@@ -224,7 +221,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/a57575f79074-385426e5-rebase.hg
   $ hg tip
   changeset:   5:f9daf77ffe76
-  tag:         tip
   parent:      2:a60552eb93fb
   parent:      3:f59da8fc0fcf
   user:        test
@@ -251,7 +247,7 @@ rebase of merge of ancestors
   $ echo 'other change while merging future "rebase ancestors"' > other
   $ hg ci -Aqm 'merge rebase ancestors'
   $ hg rebase -d 5 -v
-  rebasing 4c5f12f25ebe "merge rebase ancestors" (tip)
+  rebasing 4c5f12f25ebe "merge rebase ancestors"
   resolving manifests
   removing other
   note: merging f9daf77ffe76+ and 4c5f12f25ebe using bids from ancestors a60552eb93fb and f59da8fc0fcf
@@ -323,7 +319,7 @@ may include unwanted content:
   $ hg rebase -r D+E+F -d Z
   rebasing 5f2c926dfecf "D" (D)
   rebasing b296604d9846 "E" (E)
-  rebasing caa9781e507d "F" (F tip)
+  rebasing caa9781e507d "F" (F)
   abort: rebasing 7:caa9781e507d will include unwanted changes from 4:d6003a550c2c or 3:c1e6b162678d
   [255]
 
@@ -343,7 +339,7 @@ The warning does not get printed if there is no unwanted change detected:
   $ hg rebase -r B+C+D -d Z
   rebasing c1e6b162678d "B" (B)
   rebasing d6003a550c2c "C" (C)
-  rebasing c8f78076273e "D" (D tip)
+  rebasing c8f78076273e "D" (D)
   saved backup bundle to $TESTTMP/dual-merge-base2/.hg/strip-backup/d6003a550c2c-6f1424b6-rebase.hg
   $ hg manifest -r 'desc(D)'
   B
@@ -364,7 +360,7 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   > EOS
   $ hg rebase -r D+F -d Z
   rebasing 004dc1679908 "D" (D)
-  rebasing 4be4cbf6f206 "F" (F tip)
+  rebasing 4be4cbf6f206 "F" (F)
   saved backup bundle to $TESTTMP/chosen-merge-base1/.hg/strip-backup/004dc1679908-06a66a3c-rebase.hg
   $ hg manifest -r 'desc(F)'
   C
@@ -385,7 +381,7 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   > EOS
   $ hg rebase -r E+F -d Z
   rebasing 974e4943c210 "E" (E)
-  rebasing 4be4cbf6f206 "F" (F tip)
+  rebasing 4be4cbf6f206 "F" (F)
   saved backup bundle to $TESTTMP/chosen-merge-base2/.hg/strip-backup/974e4943c210-b2874da5-rebase.hg
   $ hg manifest -r 'desc(F)'
   B

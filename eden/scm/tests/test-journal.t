@@ -207,7 +207,6 @@ Test that verbose, JSON, template and commit output work
   changeset:   1:1e6c11564562
   bookmark:    bar
   bookmark:    baz
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -222,7 +221,6 @@ Test that verbose, JSON, template and commit output work
   changeset:   1:1e6c11564562
   bookmark:    bar
   bookmark:    baz
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b

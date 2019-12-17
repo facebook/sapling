@@ -74,7 +74,7 @@ Simple creation and amending of draft commits
   $ mkcommit draft2a
   $ hg rebase -s ".^" -d 1
   rebasing bc066ca12b45 "draft1 amend1"
-  rebasing 2ccd7cddaa94 "draft2a" (tip)
+  rebasing 2ccd7cddaa94 "draft2a"
   $ tglogp
   @  7: ecfc0c412bb8 draft 'draft2a'
   |
@@ -90,7 +90,7 @@ Simple creation and amending of draft commits
   ecfc0c412bb878c3e7b1b3468cae773b473fd3ec
   v1
   $ hg rebase -s . -d 2
-  rebasing ecfc0c412bb8 "draft2a" (tip)
+  rebasing ecfc0c412bb8 "draft2a"
   $ tglogp
   @  8: af54c09bb37d draft 'draft2a'
   |
@@ -549,7 +549,7 @@ Test that shelve and unshelve work
   $ hg unshelve --keep
   unshelving change 'default'
   rebasing shelved changes
-  rebasing f321a4a9343c "shelve changes to: F" (tip)
+  rebasing f321a4a9343c "shelve changes to: F"
   $ hg st
   A file
   $ tglogm

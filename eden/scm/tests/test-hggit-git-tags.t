@@ -26,7 +26,6 @@ Load commonly used test logic
   |  bookmark:    master
   |  tag:         beta
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add beta

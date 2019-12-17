@@ -24,7 +24,7 @@ Load commonly used test logic
   $ hg ci -m "merge"
 
   $ hg log --graph --style compact
-  @    4[tip]:3,2   eaa21d002113   1970-01-01 00:00 +0000   test
+  @    4:3,2   eaa21d002113   1970-01-01 00:00 +0000   test
   |\     merge
   | |
   | o  3:0   ea82b67264a1   1970-01-01 00:00 +0000   test
@@ -59,7 +59,7 @@ Load commonly used test logic
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
-  @    4[default/master,tip][master]:1,3   b08a922386d5   1970-01-01 00:00 +0000   test
+  @    4[default/master][master]:1,3   b08a922386d5   1970-01-01 00:00 +0000   test
   |\     merge
   | |
   | o  3   8bfd72bff163   1970-01-01 00:00 +0000   test

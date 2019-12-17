@@ -15,7 +15,7 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ touch .hg/rebasestate
   $ hg sum
-  parent: -1:000000000000 tip (empty repository)
+  parent: -1:000000000000  (empty repository)
   commit: (clean)
   abort: .hg/rebasestate is incomplete
   [255]
@@ -59,7 +59,7 @@ Conflicting rebase:
 
   $ hg rebase -s 3 -d 2
   rebasing 3163e20567cc "L1"
-  rebasing 46f0b057b5c0 "L2" (tip)
+  rebasing 46f0b057b5c0 "L2"
   merging common
   warning: 1 conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -134,7 +134,7 @@ earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
 
   $ hg rebase -s 3 -d 2
   rebasing 3163e20567cc "L1"
-  rebasing 46f0b057b5c0 "L2" (tip)
+  rebasing 46f0b057b5c0 "L2"
   merging common
   warning: 1 conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -203,7 +203,7 @@ Rebase and abort without generating new changesets:
   $ hg rebase -b 4 -d 2
   rebasing a6484957d6b9 "B bis"
   note: rebase of 3:a6484957d6b9 created no changes to commit
-  rebasing 145842775fec "C1" (tip)
+  rebasing 145842775fec "C1"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -262,7 +262,7 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   
 
   $ hg rebase -d master -r foo
-  rebasing 6c0f977a22d8 "C" (foo tip)
+  rebasing 6c0f977a22d8 "C" (foo)
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -301,7 +301,7 @@ user has somehow managed to update to a different revision (issue4009)
   $ hg commit -m b2
 
   $ hg rebase -d @ -b foo --tool=internal:fail
-  rebasing 070cf4580bb5 "b2" (foo tip)
+  rebasing 070cf4580bb5 "b2" (foo)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -421,7 +421,7 @@ during a rebase (issue4661)
   $ hg rebase --abort
   rebase aborted
   $ hg summary
-  parent: 3:b16646383533 tip
+  parent: 3:b16646383533 
    conflicting 2
   commit: (clean)
   phases: 4 draft

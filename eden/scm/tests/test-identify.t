@@ -23,28 +23,28 @@ create repo
 basic id usage
 
   $ hg id
-  cb9a9f314b8b tip
+  cb9a9f314b8b
   $ hg id --debug
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b tip
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   $ hg id -q
   cb9a9f314b8b
   $ hg id -v
-  cb9a9f314b8b tip
+  cb9a9f314b8b
 
 with options
 
   $ hg id -r.
-  cb9a9f314b8b tip
+  cb9a9f314b8b
   $ hg id -n
   0
   $ hg id -t
-  tip
+  
   $ hg id -b
   default
   $ hg id -i
   cb9a9f314b8b
   $ hg id -n -t -b -i
-  cb9a9f314b8b 0 default tip
+  cb9a9f314b8b 0 default
   $ hg id -Tjson
   [
    {
@@ -53,7 +53,7 @@ with options
     "id": "cb9a9f314b8b",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
     "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
-    "tags": ["tip"]
+    "tags": []
    }
   ]
 
@@ -68,7 +68,7 @@ with modifications
 
   $ echo b > a
   $ hg id -n -t -b -i
-  cb9a9f314b8b+ 0+ default tip
+  cb9a9f314b8b+ 0+ default
   $ hg id -Tjson
   [
    {
@@ -77,7 +77,7 @@ with modifications
     "id": "cb9a9f314b8b+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
     "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
-    "tags": ["tip"]
+    "tags": []
    }
   ]
 
@@ -85,7 +85,7 @@ other local repo
 
   $ cd ..
   $ hg -R test id
-  cb9a9f314b8b+ tip
+  cb9a9f314b8b+
 #if no-outer-repo
   $ hg id test
   cb9a9f314b8b+ tip
@@ -126,7 +126,7 @@ test bookmark support
      Y                         0:cb9a9f314b8b
    * Z                         0:cb9a9f314b8b
   $ hg id
-  cb9a9f314b8b+ tip Y/Z
+  cb9a9f314b8b+ Y/Z
   $ hg id --bookmarks
   Y Z
 

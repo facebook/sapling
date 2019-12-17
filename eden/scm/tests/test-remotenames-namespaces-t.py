@@ -34,11 +34,10 @@ sh % "hg bookmark local"
 # Test colors
 
 sh % "hg log '--color=always' -l 1" == r"""
-    \x1b[0;33mchangeset:   0:cb9a9f314b8b\x1b[0m (esc)
+    [0;33mchangeset:   0:cb9a9f314b8b[0m
     bookmark:    local
-    tag:         tip
-    \x1b[0;33mbookmark:    default/bm2\x1b[0m (esc)
-    \x1b[0;34mhoistedname: bm2\x1b[0m (esc)
+    [0;33mbookmark:    default/bm2[0m
+    [0;34mhoistedname: bm2[0m
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a"""

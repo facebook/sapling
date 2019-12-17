@@ -121,7 +121,6 @@ test style
   $ hg log --style bisect
   changeset:   14:cbf2f3105bbf
   bisect:      
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     14

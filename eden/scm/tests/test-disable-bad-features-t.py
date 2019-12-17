@@ -28,9 +28,7 @@ sh % "hg merge" == r"""
 
 # Test disabling the `hg tag` command:
 sh % "hg tag foo"
-sh % "hg tags" == r"""
-    tip                                1:9b0f5d3c138d
-    foo                                0:426bada5c675"""
+sh % "hg tags" == "foo                                0:426bada5c675"
 sh % "setconfig 'ui.allowtags=False'"
 sh % "hg tag foo2" == r"""
     abort: new tags are disabled in this repository

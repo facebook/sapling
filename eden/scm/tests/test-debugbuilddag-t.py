@@ -40,7 +40,7 @@ sh % "hg debugdag -t -b" == r"""
     +2:f
     +3:p2
     @temp*f+3
-    @default*/p2+2:tip"""
+    @default*/p2+2"""
 # tip
 sh % "hg id" == "000000000000"
 # glog
@@ -84,7 +84,7 @@ sh % "hg debugdag -t -b" == r"""
     @default+1:f
     +3:p2
     @temp*f+3
-    @default*/p2+2:tip"""
+    @default*/p2+2"""
 # tip
 sh % "hg id" == "000000000000"
 # glog
@@ -139,7 +139,6 @@ sh % "hg log -G --template '{rev}: {desc} [{branches}]\\n' of" == r"""
     o  0: r0 [start]"""
 # tags
 sh % "hg tags -v" == r"""
-    tip                               11:9ffe238a67a2
     p2                                 4:bbccf1697690 local
     f                                  1:f778700ebd50 local"""
 # cat of
@@ -156,7 +155,7 @@ sh % "hg debugdag -t -b" == r"""
     +2:f
     +3:p2
     @temp*f+3
-    @default*/p2+2:tip"""
+    @default*/p2+2"""
 # tip
 sh % "hg id" == "000000000000"
 # glog

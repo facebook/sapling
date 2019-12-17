@@ -153,7 +153,6 @@ sh % "hg export tip --git" == r"""
 
 sh % "hg log --debug -r tip" == r"""
     changeset:   7:ef0ef43d49e79e81ddafdc7997401ba0041efc82
-    tag:         tip
     phase:       draft
     parent:      0:68795b066622ca79a25816a662041d8f78f3cd9e
     parent:      -1:0000000000000000000000000000000000000000
@@ -242,7 +241,7 @@ sh % "'HGEDITOR=cat' hg graft 4 3 --log --debug" == r"""
 # Summary should mention graft:
 
 sh % "hg summary" == r"""
-    parent: 9:9436191a062e tip
+    parent: 9:9436191a062e 
      5
     commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)
     phases: 5 draft, 1 secret"""
@@ -389,7 +388,6 @@ sh % "hg log -r 2 --template '{rev}:{node}\\n'" == "2:5c095ad7e90f871700f02dd1fa
 
 sh % "hg log --debug -r tip" == r"""
     changeset:   13:7a4785234d87ec1aa420ed6b11afe40fa73e12a9
-    tag:         tip
     phase:       draft
     parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
     parent:      -1:0000000000000000000000000000000000000000
@@ -594,7 +592,7 @@ sh % "hg log -G -T '{rev}\\n'" == r"""
     |
     o  0"""
 sh % "hg up -q 0"
-sh % "hg graft -r 1" == 'grafting 1:0e067c57feba "b" (tip)'
+sh % "hg graft -r 1" == 'grafting 1:0e067c57feba "b"'
 sh % "hg log -G -T '{rev}\\n'" == r"""
     @  2
     |
@@ -604,7 +602,7 @@ sh % "hg log -G -T '{rev}\\n'" == r"""
 # Graft to duplicate a commit twice
 
 sh % "hg up -q 0"
-sh % "hg graft -r 2" == 'grafting 2:044ec77f6389 "b" (tip)'
+sh % "hg graft -r 2" == 'grafting 2:044ec77f6389 "b"'
 sh % "hg log -G -T '{rev}\\n'" == r"""
     @  3
     |
@@ -689,7 +687,6 @@ sh % "echo c4d" > "f4a"
 sh % "hg ci -qAm D0"
 sh % "hg log -G" == r"""
     @  changeset:   3:b69f5839d2d9
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     D0
@@ -748,7 +745,6 @@ sh % "hg mv f5a f5b"
 sh % "hg ci -qAm E0"
 sh % "hg log -G" == r"""
     @  changeset:   6:6bd1736cab86
-    |  tag:         tip
     |  parent:      0:11f7a1b56675
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -808,7 +804,6 @@ sh % "'HGEDITOR=echo D2 >' hg graft -r 'desc(\"D0\")' --edit" == r"""
 
 sh % "hg log -CGv --patch --git" == r"""
     @  changeset:   8:93ee502e8b0a
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  files:       f3d f4e

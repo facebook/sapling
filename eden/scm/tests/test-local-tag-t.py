@@ -18,9 +18,7 @@ B
 # Create a local tag:
 
 sh % "hg tag -l -r $A tag1"
-sh % "hg tags" == r"""
-    tip                                1:25c348c2bb87
-    tag1                               1:25c348c2bb87"""
+sh % "hg tags" == "tag1                               1:25c348c2bb87"
 
 sh % "hg update -r tag1 -q"
 
@@ -47,4 +45,4 @@ sh % "hg log -r $A -T '{tags}\\n'" == "tag1"
 # Delete a tag:
 
 sh % "hg tag -l --remove tag1"
-sh % "hg tags" == "tip                                2:6a5655092097"
+sh % "hg tags" == ""

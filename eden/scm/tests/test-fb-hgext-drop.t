@@ -70,7 +70,7 @@ TEST: dropping changeset in the middle of the stack
   
   $ hg drop -r 2
   Dropping changeset c175ba: r2
-  rebasing c034855f2b01 "r3" (tip)
+  rebasing c034855f2b01 "r3"
   merging mf
   $ hg log -G -T '{rev} {desc|firstline}'
   o  4 r3
@@ -123,7 +123,7 @@ TEST: dropping a changest with child changesets
   merging mf
   rebasing 4905937520ff "r6"
   merging mf
-  rebasing 2c7cfba83429 "r7" (tip)
+  rebasing 2c7cfba83429 "r7"
   merging mf
   $ hg log -G -T '{rev} {desc|firstline}'
   o  12 r7

@@ -24,7 +24,6 @@
   $ hg log
   changeset:   3:593cbf6fb2b4
   tag:         local-tag
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added tag some-tag for changeset ad681a868e44
@@ -136,7 +135,6 @@ test tag rewriting
   0 add baz
   $ cd new-filemap
   $ hg tags
-  tip                                2:3c74706b1ff8
   some-tag                           0:ba8636729451
   $ cd ..
 
@@ -294,7 +292,6 @@ Make changes in dest and convert back:
   $ hg -R dest ci -Aqm 'change in dest'
   $ hg -R dest tip
   changeset:   5:a2e0e3cc6d1d
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change in dest
@@ -313,7 +310,6 @@ Verify the conversion back:
 
   $ hg -R source log --debug -r tip
   changeset:   7:e6d364a69ff1248b2099e603b0c145504cade6f0
-  tag:         tip
   phase:       draft
   parent:      6:0613c8e59a3ddb9789072ef52f1ed13496489bb4
   parent:      -1:0000000000000000000000000000000000000000
@@ -465,7 +461,6 @@ Two way tests
 
   $ hg -R 0 log -G
   o  changeset:   2:637fbbbe96b6
-  |  tag:         tip
   |  parent:      0:8a028c7c77f6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

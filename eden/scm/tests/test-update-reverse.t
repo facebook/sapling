@@ -26,7 +26,6 @@
 
   $ hg log
   changeset:   3:91ebc10ed028
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added side2
@@ -50,7 +49,6 @@
 
   $ hg heads
   changeset:   3:91ebc10ed028
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added side2

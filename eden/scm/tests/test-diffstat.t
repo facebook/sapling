@@ -102,7 +102,6 @@ Filename without "a/" or "b/" (issue5759):
   +a
   
   changeset:   2:c60a6c753773
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     createb

@@ -9,7 +9,6 @@
 """Create a Mercurial repository in revlog format 0
 
 changeset:   0:a1ef0b125355
-tag:         tip
 user:        user
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       empty

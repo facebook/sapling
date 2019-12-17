@@ -32,7 +32,6 @@ pull a tag
      bookmark:    master
      tag:         default/master
      tag:         t_alpha
-     tag:         tip
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -58,7 +57,6 @@ pull a branch
   o  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
   |  tag:         default/beta
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
@@ -91,7 +89,6 @@ pull everything else
   o  changeset:   3:78f47553e70d
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  parent:      0:69982ec78c6d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
@@ -138,7 +135,6 @@ pull the merge
   o    changeset:   4:10c1db28cc89
   |\   bookmark:    master
   | |  tag:         default/master
-  | |  tag:         tip
   | |  parent:      3:78f47553e70d
   | |  parent:      1:3bb02b6794dd
   | |  user:        test <test@example.org>
@@ -199,7 +195,6 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   o  changeset:   6:47d709856ce8
   |  bookmark:    releases/v2
   |  tag:         default/releases/v2
-  |  tag:         tip
   |  parent:      4:10c1db28cc89
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
@@ -307,7 +302,6 @@ also add an annotated tag
   changeset:   9:497a89953f7c
   bookmark:    master
   tag:         default/master
-  tag:         tip
   user:        test <test@example.org>
   date:        Wed Jan 01 00:00:00 2014 +0000
   summary:     newcommit

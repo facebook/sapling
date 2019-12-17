@@ -74,7 +74,6 @@ Test adding .hgeol
   % hg status
   % hg tip -p
   changeset:   1:33503edb53b0
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:03:20 1970 +0000
   summary:     Added .hgeol file
@@ -102,7 +101,6 @@ Test adding .hgeol
   % hg status
   % hg tip -p
   changeset:   1:6e64eaa9eb23
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:03:20 1970 +0000
   summary:     Added .hgeol file

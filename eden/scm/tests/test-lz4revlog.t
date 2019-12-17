@@ -89,7 +89,6 @@ a new repo should use lz4 by default
   $ hg verify -q
   $ hg tip
   changeset:   1:18e28922b6ed
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     lz1

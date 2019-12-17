@@ -85,7 +85,6 @@ log should show foo and quux changed:
 
   $ hg log -v -r tip
   changeset:   3:d8a521142a3c
-  tag:         tip
   parent:      1:f6718a9cb7f3
   parent:      2:bdd988058d16
   user:        test

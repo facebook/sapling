@@ -58,7 +58,6 @@ Pull scratch commit from the second client
   $ hg log -G
   @  changeset:   0:2d9cfa751213
      bookmark:    scratch/book
-     tag:         tip
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     scratchcommit

@@ -132,7 +132,6 @@
   $ hg heads
   changeset:   8:04dd21731d95
   bookmark:    g
-  tag:         tip
   parent:      6:be381d1126a0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

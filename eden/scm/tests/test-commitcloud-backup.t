@@ -503,7 +503,7 @@ Create logs directory and set correct permissions
   26805aba1e600a82e93661149f2313866a221a7b backed up
   $ hg rebase -s B -d D --config infinitepushbackup.autobackup=True --config infinitepushbackup.logdir=$TESTTMP/logs
   rebasing 112478962961 "B" (B)
-  rebasing 26805aba1e60 "C" (C tip)
+  rebasing 26805aba1e60 "C" (C)
   $ waitbgbackup
   $ hg log -r ':' -G -T '{desc} {node}'
   o  C ffeec75ec60331057b875fc5356c57c3ff204500

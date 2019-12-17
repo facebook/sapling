@@ -31,7 +31,6 @@ Load commonly used test logic
   @  changeset:   1:efe51d25e3ad
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     Added tag alpha for changeset 69982ec78c6d
@@ -59,7 +58,6 @@ git should have the tag alpha
   @  changeset:   1:948f1361f9c9
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     Added tag alpha for changeset 69982ec78c6d

@@ -44,7 +44,6 @@ Clone a client and access git revision. Make sure it works
   $ cd client
   $ hg log -r "gffffffffffffffffffffffffffffffffffffffff"
   changeset:   0:3903775176ed
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

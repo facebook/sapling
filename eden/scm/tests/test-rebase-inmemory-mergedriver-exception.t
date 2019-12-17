@@ -38,7 +38,7 @@ Now make two conflicting commits:
 
 Without IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing c1d523ef4657 "B" (B tip)
+  rebasing c1d523ef4657 "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -52,14 +52,14 @@ Without IMM:
 With IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing c1d523ef4657 "B" (B tip)
+  rebasing c1d523ef4657 "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing c1d523ef4657 "B" (B tip)
+  rebasing c1d523ef4657 "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -102,7 +102,7 @@ have to try it both ways. (It might be nice to change that.)
 Without IMM, you can see we try to merge FILE twice (once in preprocess() and once later),
 and it fails:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing ffa05d84855d "B" (B tip)
+  rebasing ffa05d84855d "B" (B)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
@@ -122,14 +122,14 @@ and it fails:
 With IMM, it's *very* noisy, but we do eventually get to the same place:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing ffa05d84855d "B" (B tip)
+  rebasing ffa05d84855d "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: in-memory merge does not support merge conflicts
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing ffa05d84855d "B" (B tip)
+  rebasing ffa05d84855d "B" (B)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()

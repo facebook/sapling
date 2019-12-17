@@ -77,7 +77,6 @@ sh % "hg -R a outgoing b" == r"""
     comparing with b
     searching for changes
     changeset:   4:1ec3c74fc0e0
-    tag:         tip
     parent:      1:79f9e10cd04e
     parent:      2:8e1bb01c1a24
     user:        test
@@ -96,7 +95,6 @@ sh % "hg -R b outgoing c" == r"""
     comparing with c
     searching for changes
     changeset:   3:d15a0c284984
-    tag:         tip
     parent:      2:8e1bb01c1a24
     parent:      1:79f9e10cd04e
     user:        test
@@ -106,7 +104,6 @@ sh % "hg -R c outgoing b" == r"""
     comparing with b
     searching for changes
     changeset:   3:1ec3c74fc0e0
-    tag:         tip
     parent:      1:79f9e10cd04e
     parent:      2:8e1bb01c1a24
     user:        test

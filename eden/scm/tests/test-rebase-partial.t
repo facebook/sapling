@@ -34,7 +34,7 @@ Rebase two commits, of which one is already in the right place
   > A
   > EOF
   rebasing b18e25de2cf5 "D" (D)
-  already rebased 26805aba1e60 "C" (C tip)
+  already rebased 26805aba1e60 "C" (C)
   o  4: fe3b4c6498fa 'D' D
   |
   | o  3: 26805aba1e60 'C' C
@@ -53,7 +53,7 @@ Can collapse commits even if one is already in the right place
   > A
   > EOF
   rebasing b18e25de2cf5 "D" (D)
-  rebasing 26805aba1e60 "C" (C tip)
+  rebasing 26805aba1e60 "C" (C)
   o  4: a2493f4ace65 'Collapsed revision
   |  * D
   |  * C' C D
@@ -74,7 +74,7 @@ the hole (B below), not on top of the destination (A).
   > A
   > EOF
   already rebased 112478962961 "B" (B)
-  rebasing f585351a92f8 "D" (D tip)
+  rebasing f585351a92f8 "D" (D)
   o  4: 1e6da8103bc7 'D' D
   |
   | o  2: 26805aba1e60 'C' C

@@ -45,7 +45,6 @@ as well
   default-push = ssh://user@dummy/repo?write
   $ hg log -r .
   changeset:   1:a89d614e2364
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -64,7 +63,6 @@ as well
   updating bookmark master
   $ hg log -r .
   changeset:   2:421535db10b6
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -77,7 +75,6 @@ as well
   no changes found
   $ hg log -r .
   changeset:   2:421535db10b6
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test

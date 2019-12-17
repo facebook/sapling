@@ -136,7 +136,6 @@ find outgoing
   comparing with ssh://user@dummy/remote
   searching for changes
   changeset:   1:a28a9d1a809c
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -148,7 +147,6 @@ find incoming on the remote side
   comparing with ssh://user@dummy/local
   searching for changes
   changeset:   1:a28a9d1a809c
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -160,7 +158,6 @@ find incoming on the remote side (using absolute path)
   comparing with ssh://user@dummy/$TESTTMP/local
   searching for changes
   changeset:   1:a28a9d1a809c
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -181,7 +178,6 @@ check remote tip
 
   $ hg tip
   changeset:   1:a28a9d1a809c
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -276,7 +272,6 @@ push should succeed even though it has an unexpected response
   remote: KABOOM IN PROCESS
   $ hg -R ../remote heads
   changeset:   3:1383141674ec
-  tag:         tip
   parent:      1:a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

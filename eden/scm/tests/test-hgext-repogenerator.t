@@ -9,7 +9,6 @@
   created *, * sec elapsed (* commits/sec, * per hour, * per day) (glob)
   $ hg log -G -r ::tip
   o  changeset:   2:26c418a67612
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     memory commit

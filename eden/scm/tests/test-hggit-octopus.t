@@ -67,7 +67,7 @@ Load commonly used test logic
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph --style compact
-  @    9[default/master,tip][master]:7,8   49ab838a9c6d   2007-01-01 00:00 +0000   test
+  @    9[default/master][master]:7,8   49ab838a9c6d   2007-01-01 00:00 +0000   test
   |\     Merge branches 'branch3' and 'branch4'
   | |
   | o    8:3,4   772137582d44   2007-01-01 00:00 +0000   test

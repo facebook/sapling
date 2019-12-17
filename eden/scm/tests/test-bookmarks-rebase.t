@@ -40,13 +40,12 @@ bookmark list
 rebase
 
   $ hg rebase -s two -d one
-  rebasing 2ae46b1d99a7 "3" (two tip)
+  rebasing 2ae46b1d99a7 "3" (two)
   saved backup bundle to $TESTTMP/.hg/strip-backup/2ae46b1d99a7-e6b057bc-rebase.hg
 
   $ hg log
   changeset:   3:42e5ed2cdcf4
   bookmark:    two
-  tag:         tip
   parent:      1:925d80f479bb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -79,7 +78,7 @@ aborted rebase should restore active bookmark.
   adding d
   $ hg bookmark three
   $ hg rebase -s three -d two
-  rebasing dd7c838e8362 "4" (three tip)
+  rebasing dd7c838e8362 "4" (three)
   merging d
   warning: 1 conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -94,7 +93,7 @@ aborted rebase should restore active bookmark.
 after aborted rebase, restoring a bookmark that has been removed should not fail
 
   $ hg rebase -s three -d two
-  rebasing dd7c838e8362 "4" (three tip)
+  rebasing dd7c838e8362 "4" (three)
   merging d
   warning: 1 conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

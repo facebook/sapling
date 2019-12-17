@@ -12,7 +12,7 @@ Alias can override a builtin command to another builtin command.
   $ newrepo
   $ setconfig alias.log=id
   $ hg log -r null
-  000000000000 tip
+  000000000000
 
 Alias can refer to another alias. Order does not matter.
 

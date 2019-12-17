@@ -153,7 +153,6 @@ Tree-only amend
 Test looking at the tree from inside the bundle
   $ hg log -r tip -vp -R $TESTTMP/client/.hg/strip-backup/43903a6bf43f-712cb952-amend.hg --pager=off
   changeset:   4:43903a6bf43f
-  tag:         tip
   parent:      0:d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -183,7 +182,6 @@ Test unbundling the original commit
   \s*12 (re)
   $ hg log -r tip --stat
   changeset:   4:43903a6bf43f
-  tag:         tip
   parent:      0:d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -217,7 +215,6 @@ Test pulling new commits from a hybrid server
   fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143* (glob)
   2 trees fetched over * (glob)
   changeset:   5:098a163f13ea
-  tag:         tip
   parent:      0:d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -427,7 +424,6 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
   changeset:   2:dad1be784127
-  tag:         tip
   parent:      0:d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -548,7 +544,6 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
        4       176      44     -1       7 d20854ad7783 f4c373af9a41 000000000000
   $ hg -R ../master log -r tip --stat
   changeset:   7:5f0bc1aaff22
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushable treeonly commit
@@ -571,7 +566,6 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
   remote: added 4 changesets with 4 changes to 2 files
   $ hg -R ../master log -r tip --stat
   changeset:   7:5f0bc1aaff22
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushable treeonly commit
@@ -648,7 +642,6 @@ Test creating a treeonly repo from scratch
   $ hg commit -Aqm 'add a'
   $ hg log -r . -p
   changeset:   0:f87d03aef498
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a

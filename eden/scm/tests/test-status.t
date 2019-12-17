@@ -571,7 +571,6 @@ This is buggy behavior.
 using log status template, the copy information is displayed correctly.
   $ hg log -Tstatus -r. -C
   changeset:   1:6685fde43d21
-  tag:         tip
   user:        test
   date:        * (glob)
   summary:     blah

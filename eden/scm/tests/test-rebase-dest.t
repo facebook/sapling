@@ -25,15 +25,15 @@ Require a destination
   (use: hg rebase -d REV)
   [255]
   $ hg rebase -d 1
-  rebasing 5db65b93a12b "cc" (tip)
+  rebasing 5db65b93a12b "cc"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/5db65b93a12b-4fb789ec-rebase.hg
   $ hg rebase -d 0 -r . -q
   $ HGPLAIN=1 hg rebase
-  rebasing 889b0bc6a730 "cc" (tip)
+  rebasing 889b0bc6a730 "cc"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/889b0bc6a730-41ec4f81-rebase.hg
   $ hg rebase -d 0 -r . -q
   $ hg --config commands.rebase.requiredest=False rebase
-  rebasing 279de9495438 "cc" (tip)
+  rebasing 279de9495438 "cc"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/279de9495438-ab0a5128-rebase.hg
 
 Requiring dest should not break continue or other rebase options
@@ -50,7 +50,7 @@ Requiring dest should not break continue or other rebase options
   o  0 aa
   
   $ hg rebase -d 2
-  rebasing 0537f6b50def "dc" (tip)
+  rebasing 0537f6b50def "dc"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -60,7 +60,7 @@ Requiring dest should not break continue or other rebase options
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 0537f6b50def "dc" (tip)
+  rebasing 0537f6b50def "dc"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0537f6b50def-be4c7386-rebase.hg
 
   $ cd ..
@@ -183,7 +183,7 @@ Rebase to null should work:
   > EOS
   already rebased 426bada5c675 "A" (A)
   already rebased dc0947a82db8 "C" (C)
-  rebasing 004dc1679908 "D" (D tip)
+  rebasing 004dc1679908 "D" (D)
   o  4: d8d8601abd5e 'D'
   
   o  2: dc0947a82db8 'C'
@@ -228,7 +228,7 @@ Switch roots:
   rebasing 112478962961 "B" (B)
   rebasing 26805aba1e60 "C" (C)
   rebasing cd488e83d208 "E" (E)
-  rebasing 0069ba24938a "F" (F tip)
+  rebasing 0069ba24938a "F" (F)
   o  9: d150ff263fc8 'F'
   |
   o  8: 66f30a1a2eab 'E'
@@ -253,7 +253,7 @@ Different destinations for merge changesets with a same root:
   > A D
   > EOS
   rebasing a4256619d830 "B" (B)
-  rebasing 8e139e245220 "C" (C tip)
+  rebasing 8e139e245220 "C" (C)
   o    8: 51e2ce92e06a 'C'
   |\
   | o    7: 2ed0c8546285 'B'
@@ -283,7 +283,7 @@ Move to a previous parent:
   > EOS
   rebasing 33441538d4aa "F" (F)
   rebasing cf43ad9da869 "G" (G)
-  rebasing eef94f3b5f03 "H" (H tip)
+  rebasing eef94f3b5f03 "H" (H)
   o  10: b3d84c6666cf 'H'
   |
   | o  9: f7c28a1a15e2 'G'
@@ -354,7 +354,7 @@ Detect source is ancestor of dest in runtime:
   already rebased dc0947a82db8 "C" (C)
   already rebased b18e25de2cf5 "D" (D)
   already rebased 312782b8f06e "E" (E)
-  already rebased ad6717a6a58e "F" (F tip)
+  already rebased ad6717a6a58e "F" (F)
   o  5: ad6717a6a58e 'F'
   |
   | o    4: 312782b8f06e 'E'
@@ -386,7 +386,7 @@ Massively rewrite the DAG:
   rebasing 112478962961 "B" (B)
   rebasing 7fb047a69f22 "E" (E)
   rebasing f585351a92f8 "D" (D)
-  rebasing ae41898d7875 "K" (K tip)
+  rebasing ae41898d7875 "K" (K)
   rebasing 711f53bbef0b "G" (G)
   rebasing 64a8289d2492 "F" (F)
   o  21: 3735afb3713a 'F'
@@ -430,7 +430,7 @@ Resolve instability:
   >     \|          # amend: I -> I2
   >      A
   > EOF
-  rebasing 5c432343bf59 "J" (J tip)
+  rebasing 5c432343bf59 "J" (J)
   rebasing 26805aba1e60 "C" (C)
   rebasing f585351a92f8 "D" (D)
   rebasing ffebc37c5d0b "E3" (E3)

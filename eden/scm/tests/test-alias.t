@@ -491,7 +491,6 @@ interaction with defaults
 
   $ hg mylog
   changeset:   0:e63c23eaa88a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo
@@ -587,13 +586,13 @@ shadowing
   (use 'hg help' to get help)
   [255]
   $ hg id
-  c0c7cf58edc5 tip
+  c0c7cf58edc5
   $ hg ida
   unknown command 'ida'
   (use 'hg help' to get help)
   [255]
   $ hg idalias
-  c0c7cf58edc5 tip
+  c0c7cf58edc5
   $ hg idaliasl
   unknown command 'idaliasl'
   (use 'hg help' to get help)
@@ -743,7 +742,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
 This should show id:
 
   $ hg --config alias.log='id' log
-  000000000000 tip
+  000000000000
 
 This shouldn't:
 

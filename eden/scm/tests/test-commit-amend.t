@@ -42,7 +42,7 @@ Amending changeset with changes in working dir:
   $ echo a >> A
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -m 'amend base1'
   pretxncommit 217e580a9218a74044be7970e41021181317b52b
-  217e580a9218 tip
+  217e580a9218
 
   $ echo '%unset pretxncommit.foo' >> $HGRCPATH
 
@@ -134,7 +134,6 @@ Test -u/-d:
 
   $ hg log -r .
   changeset:   7:815553afc946
-  tag:         tip
   parent:      0:4a2df7238c3b
   user:        foo
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -224,7 +223,6 @@ Same, but with changes in working dir (different code path):
   $ rm editor.sh
   $ hg log -r .
   changeset:   9:f7f2c5aae908
-  tag:         tip
   parent:      0:4a2df7238c3b
   user:        foo
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -554,7 +552,6 @@ Test if amend preserves executable bit changes
   $ hg ci --amend -m "chmod amended second time"
   $ hg log -p --git -r .
   changeset:   4:b4aab18bba3e
-  tag:         tip
   parent:      1:112478962961
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

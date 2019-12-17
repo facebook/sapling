@@ -126,7 +126,6 @@ and now for something completely different
   $ hg ci -m 5
   $ hg log -v
   changeset:   5:f0b1c8d75fce
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bin
@@ -190,7 +189,6 @@ and now for something completely different
   $ hg -R dupe ci -m d dupe/d
   $ hg -R dupe log -v
   changeset:   8:67ac5962ab43
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       d
@@ -295,7 +293,6 @@ and now for something completely different
 
   $ hg log -v
   changeset:   5:f0b1c8d75fce
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bin
@@ -374,14 +371,14 @@ Trigger deprecation warning:
 
   $ hg id -t
   win32text is deprecated: https://mercurial-scm.org/wiki/Win32TextExtension
-  tip
+  
 
 Disable warning:
 
   $ echo '[win32text]' >> .hg/hgrc
   $ echo 'warn = no' >> .hg/hgrc
   $ hg id -t
-  tip
+  
 
   $ rm f3 f4.bat bin
   $ hg co -C

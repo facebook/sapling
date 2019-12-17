@@ -289,7 +289,6 @@ sh % "echo '__base__ = map-cmdline.default'" > "map-simple"
 sh % "echo 'cset = \"changeset: ***{rev}***\\n\"'" >> "map-simple"
 sh % "hg log -l1 -T./map-simple" == r"""
     changeset: ***8***
-    tag:         tip
     user:        test
     date:        Wed Jan 01 10:01:00 2020 +0000
     summary:     third"""
@@ -348,7 +347,7 @@ sh % "hg tip -v --template '\\n'"
 # Compact style works:
 
 sh % "hg log -Tcompact" == r"""
-    8[tip]   95c24699272e   2020-01-01 10:01 +0000   test
+    8   95c24699272e   2020-01-01 10:01 +0000   test
       third
 
     7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
@@ -376,7 +375,7 @@ sh % "hg log -Tcompact" == r"""
       line 1"""
 
 sh % "hg log -v --style compact" == r"""
-    8[tip]   95c24699272e   2020-01-01 10:01 +0000   test
+    8   95c24699272e   2020-01-01 10:01 +0000   test
       third
 
     7:-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
@@ -408,7 +407,7 @@ sh % "hg log -v --style compact" == r"""
     line 2"""
 
 sh % "hg log --debug --style compact" == r"""
-    8[tip]:7,-1   95c24699272e   2020-01-01 10:01 +0000   test
+    8:7,-1   95c24699272e   2020-01-01 10:01 +0000   test
       third
 
     7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
@@ -450,7 +449,6 @@ sh % "hg log --style xml" == r"""
     <?xml version="1.0"?>
     <log>
     <logentry revision="8" node="95c24699272ef57d062b8bccc32c878bf841784a">
-    <tag>tip</tag>
     <author email="test">test</author>
     <date>2020-01-01T10:01:00+00:00</date>
     <msg xml:space="preserve">third</msg>
@@ -510,7 +508,6 @@ sh % "hg log -v --style xml" == r"""
     <?xml version="1.0"?>
     <log>
     <logentry revision="8" node="95c24699272ef57d062b8bccc32c878bf841784a">
-    <tag>tip</tag>
     <author email="test">test</author>
     <date>2020-01-01T10:01:00+00:00</date>
     <msg xml:space="preserve">third</msg>
@@ -600,7 +597,6 @@ sh % "hg log --debug --style xml" == r"""
     <?xml version="1.0"?>
     <log>
     <logentry revision="8" node="95c24699272ef57d062b8bccc32c878bf841784a">
-    <tag>tip</tag>
     <parent revision="7" node="29114dbae42b9f078cf2714dbe3a86bba8ec7453" />
     <parent revision="-1" node="0000000000000000000000000000000000000000" />
     <author email="test">test</author>
@@ -733,7 +729,7 @@ sh % "hg log -vpr . -Tjson --stat" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": ["tip"],
+      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "files": ["fourth", "second", "third"],
       "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n",
@@ -753,7 +749,7 @@ sh % "hg --config 'diff.noprefix=True' log --git -vpr . -Tjson" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": ["tip"],
+      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "files": ["fourth", "second", "third"],
       "diff": "diff --git a/second b/fourth\nrename from second\nrename to fourth\ndiff --git a/third b/third\nnew file mode 100644\n--- /dev/null\n+++ b/third\n@@ -0,0 +1,1 @@\n+third\n"
@@ -771,7 +767,7 @@ sh % "hg log -T json" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": ["tip"],
+      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"]
      },
      {
@@ -883,7 +879,7 @@ sh % "hg heads -v -Tjson" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": ["tip"],
+      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "files": ["fourth", "second", "third"]
      },
@@ -913,7 +909,7 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": ["tip"],
+      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "manifest": "94961b75a2da554b4df6fb599e5bfc7d48de0c64",
       "extra": {"branch": "default"},
@@ -1158,7 +1154,7 @@ sh % "cat" << r"""
 changeset = '{tags % rev}'
 rev = '{rev} {tag}\n'
 """ > "issue4758"
-sh % "hg log --style ./issue4758 -r tip" == "8 tip"
+sh % "hg log --style ./issue4758 -r tip" == ""
 
 # Check that {phase} works correctly on parents:
 
@@ -1232,69 +1228,69 @@ sh % "hg log '--style=changelog'" > "changelog"
 sh % "cat changelog" == r"""
     2020-01-01  test  <test>
 
-    	* fourth, second, third:
-    	third
-    	[95c24699272e] [tip]
+     * fourth, second, third:
+     third
+     [95c24699272e]
 
     1970-01-12  User Name  <user@hostname>
 
-    	* second:
-    	second
-    	[29114dbae42b]
+     * second:
+     second
+     [29114dbae42b]
 
     1970-01-18  person  <person>
 
-    	* merge
-    	[f7e5795620e7]
+     * merge
+     [f7e5795620e7]
 
-    	* d:
-    	new head
-    	[13207e5a10d9]
+     * d:
+     new head
+     [13207e5a10d9]
 
     1970-01-17  person  <person>
 
-    	* new branch
-    	[07fa1db10648]
+     * new branch
+     [07fa1db10648]
 
     1970-01-16  person  <person>
 
-    	* c:
-    	no user, no domain
-    	[10e46f2dcbf4]
+     * c:
+     no user, no domain
+     [10e46f2dcbf4]
 
     1970-01-14  other  <other@place>
 
-    	* c:
-    	no person
-    	[97054abb4ab8]
+     * c:
+     no person
+     [97054abb4ab8]
 
     1970-01-13  A. N. Other  <other@place>
 
-    	* b:
-    	other 1 other 2
+     * b:
+     other 1 other 2
 
-    	other 3
-    	[b608e9d1a3f0]
+     other 3
+     [b608e9d1a3f0]
 
     1970-01-12  User Name  <user@hostname>
 
-    	* a:
-    	line 1 line 2
-    	[1e4e1b8f71e0]"""
+     * a:
+     line 1 line 2
+     [1e4e1b8f71e0]"""
 
 # Issue2130: xml output for 'hg heads' is malformed
 
 sh % "hg heads --style changelog" == r"""
     2020-01-01  test  <test>
 
-    	* fourth, second, third:
-    	third
-    	[95c24699272e] [tip]
+     * fourth, second, third:
+     third
+     [95c24699272e]
 
     1970-01-18  person  <person>
 
-    	* merge
-    	[f7e5795620e7]"""
+     * merge
+     [f7e5795620e7]"""
 
 # Keys work:
 
@@ -1726,7 +1722,6 @@ eq(
     rev--debug: 2
     rev--debug: 1
     rev--debug: 0
-    tags: tip
     tags:
     tags:
     tags:
@@ -1735,7 +1730,7 @@ eq(
     tags:
     tags:
     tags:
-    tags--verbose: tip
+    tags:
     tags--verbose:
     tags--verbose:
     tags--verbose:
@@ -1744,7 +1739,8 @@ eq(
     tags--verbose:
     tags--verbose:
     tags--verbose:
-    tags--debug: tip
+    tags--verbose:
+    tags--debug:
     tags--debug:
     tags--debug:
     tags--debug:
@@ -2085,7 +2081,7 @@ sh % "hg log -l1 --template '{node|count} {node|short|count}\\n'" == "40 12"
 sh % 'hg log -l1 --template \'{revset("null^")|count} {revset(".")|count} {revset("0::3")|count}\\n\'' == "0 1 4"
 
 sh % "hg log -G --template '{rev}: children: {children|count}, tags: {tags|count}, file_adds: {file_adds|count}, ancestors: {revset(\"ancestors(%s)\", rev)|count}'" == r"""
-    @  9: children: 0, tags: 1, file_adds: 1, ancestors: 3
+    @  9: children: 0, tags: 0, file_adds: 1, ancestors: 3
     |
     o  8: children: 1, tags: 0, file_adds: 2, ancestors: 2
     |
@@ -2131,7 +2127,6 @@ color=
 
 sh % "hg log -T status -r 10" == r"""
     changeset:   10:0f9759ec227a
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     Modify, add, remove, rename
@@ -2143,7 +2138,6 @@ sh % "hg log -T status -r 10" == r"""
     R fourth"""
 sh % "hg log -T status -C -r 10" == r"""
     changeset:   10:0f9759ec227a
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     Modify, add, remove, rename
@@ -2156,7 +2150,6 @@ sh % "hg log -T status -C -r 10" == r"""
     R fourth"""
 sh % "hg log -T status -C -r 10 -v" == r"""
     changeset:   10:0f9759ec227a
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     description:
@@ -2171,7 +2164,6 @@ sh % "hg log -T status -C -r 10 -v" == r"""
     R fourth"""
 sh % "hg log -T status -C -r 10 --debug" == r"""
     changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c
-    tag:         tip
     phase:       secret
     parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066
     parent:      -1:0000000000000000000000000000000000000000
@@ -2192,7 +2184,6 @@ sh % "hg log -T status -C -r 10 --debug" == r"""
 sh % "hg log -T status -C -r 10 --quiet" == "10:0f9759ec227a"
 sh % "hg '--color=debug' log -T status -r 10" == r"""
     [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
-    [log.tag|tag:         tip]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [log.summary|summary:     Modify, add, remove, rename]
@@ -2204,7 +2195,6 @@ sh % "hg '--color=debug' log -T status -r 10" == r"""
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10" == r"""
     [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
-    [log.tag|tag:         tip]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [log.summary|summary:     Modify, add, remove, rename]
@@ -2217,7 +2207,6 @@ sh % "hg '--color=debug' log -T status -C -r 10" == r"""
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
     [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
-    [log.tag|tag:         tip]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [ui.note log.description|description:]
@@ -2232,7 +2221,6 @@ sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10 --debug" == r"""
     [log.changeset changeset.secret|changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c]
-    [log.tag|tag:         tip]
     [log.phase|phase:       secret]
     [log.parent changeset.secret|parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066]
     [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
@@ -3814,7 +3802,7 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
      bookmarks color=bookmark builtin=True
       bar,foo,text.{rev}
      tags color=tag builtin=True
-      tip
+      
      branches color=branch builtin=True
       default
      revnames color=revname builtin=False
@@ -3824,7 +3812,7 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
      bookmarks color=bookmark builtin=True
       baz
      tags color=tag builtin=True
-       (trailing space)
+      
      branches color=branch builtin=True
       default
      revnames color=revname builtin=False
@@ -3832,9 +3820,9 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
 
     0
      bookmarks color=bookmark builtin=True
-       (trailing space)
+      
      tags color=tag builtin=True
-       (trailing space)
+      
      branches color=branch builtin=True
       default
      revnames color=revname builtin=False
@@ -3847,7 +3835,7 @@ del namespaces.namespacetable["revnames"]
 
 sh % "hg log -r2 -T '{namespaces % \"{namespace}: {names}\\n\"}'" == r"""
     bookmarks: bar foo text.{rev}
-    tags: tip
+    tags: 
     branches: default"""
 sh % 'hg log -r2 -T \'{namespaces % "{namespace}:\\n{names % " {name}\\n"}"}\'' == r"""
     bookmarks:
@@ -3855,7 +3843,6 @@ sh % 'hg log -r2 -T \'{namespaces % "{namespace}:\\n{names % " {name}\\n"}"}\'' 
      foo
      text.{rev}
     tags:
-     tip
     branches:
      default"""
 sh % 'hg log -r2 -T \'{get(namespaces, "bookmarks") % "{name}\\n"}\'' == r"""

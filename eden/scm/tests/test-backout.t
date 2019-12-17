@@ -44,7 +44,7 @@ specified explicitly)
   $ cat a
   a
   $ hg summary
-  parent: 2:8540552e2ce9 tip
+  parent: 2:8540552e2ce9 
    Back out "b"
   commit: (clean)
   phases: 3 draft
@@ -70,7 +70,7 @@ commit option
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   changeset 3:6b2e5750efab backs out changeset 1:22cb4f70d813
   $ hg summary
-  parent: 3:6b2e5750efab tip
+  parent: 3:6b2e5750efab 
    Back out "chair"
   commit: (clean)
   phases: 4 draft
@@ -83,7 +83,7 @@ commit option
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg summary
-  parent: 4:2cf19744f63f tip
+  parent: 4:2cf19744f63f 
    ypples
   commit: 1 unresolved (clean)
   phases: 5 draft
@@ -109,7 +109,7 @@ specified explicitly)
   $ cat a
   content
   $ hg summary
-  parent: 2:0ab3c2be0b32 tip
+  parent: 2:0ab3c2be0b32 
    Backed out changeset 76862dcce372
   commit: (clean)
   phases: 3 draft
@@ -122,7 +122,7 @@ backout of backout is as if nothing happened
   $ test -f a
   [1]
   $ hg summary
-  parent: 3:5b1b9b2a0f35 tip
+  parent: 3:5b1b9b2a0f35 
    Back out "Backed out changeset 76862dcce372"
   commit: (clean)
   phases: 4 draft
@@ -183,7 +183,7 @@ should fail
   $ hg ci -Am2
   adding c
   $ hg summary
-  parent: 2:db815d6d32e6 tip
+  parent: 2:db815d6d32e6 
    2
   commit: (clean)
   phases: 3 draft
@@ -194,7 +194,7 @@ should fail
   abort: cannot backout change that is not an ancestor
   [255]
   $ hg summary
-  parent: 2:db815d6d32e6 tip
+  parent: 2:db815d6d32e6 
    2
   commit: (clean)
   phases: 3 draft
@@ -210,7 +210,7 @@ backout with merge
   $ hg commit -d '0 0' -A -m a
   adding a
   $ hg summary
-  parent: 0:59395513a13a tip
+  parent: 0:59395513a13a 
    a
   commit: (clean)
   phases: 1 draft
@@ -232,7 +232,7 @@ remove line 1
   (branch merge, don't forget to commit)
   $ hg commit -d '4 0' -m d
   $ hg summary
-  parent: 4:76e753f52d24 tip
+  parent: 4:76e753f52d24 
    d
   commit: (clean)
   phases: 5 draft
@@ -346,7 +346,7 @@ backout should not back out subsequent changesets
   $ hg commit -d '2 0' -A -m c
   adding b
   $ hg summary
-  parent: 2:882396649954 tip
+  parent: 2:882396649954 
    c
   commit: (clean)
   phases: 3 draft
@@ -362,7 +362,7 @@ without --merge
   $ hg locate b
   b
   $ hg summary
-  parent: 2:882396649954 tip
+  parent: 2:882396649954 
    c
   commit: (clean)
   phases: 3 draft
@@ -403,7 +403,7 @@ with --merge
   (branch merge, don't forget to commit)
   $ hg commit -d '4 0' -A -m d
   $ hg summary
-  parent: 4:b2f3bb92043e tip
+  parent: 4:b2f3bb92043e 
    d
   commit: (clean)
   phases: 5 draft
@@ -432,7 +432,7 @@ backout with valid parent should be ok
   removing d
   changeset 5:84e16af81ce4 backs out changeset 4:b2f3bb92043e
   $ hg summary
-  parent: 5:84e16af81ce4 tip
+  parent: 5:84e16af81ce4 
    Back out "d"
   commit: (clean)
   phases: 6 draft
@@ -443,7 +443,7 @@ backout with valid parent should be ok
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg summary
-  parent: 4:b2f3bb92043e tip
+  parent: 4:b2f3bb92043e 
    d
   commit: (clean)
   phases: 5 draft
@@ -452,7 +452,7 @@ backout with valid parent should be ok
   removing c
   changeset 5:042ecc423244 backs out changeset 4:b2f3bb92043e
   $ hg summary
-  parent: 5:042ecc423244 tip
+  parent: 5:042ecc423244 
    Back out "d"
   commit: (clean)
   phases: 6 draft
@@ -485,7 +485,7 @@ without --merge
   C default
   C file2
   $ hg summary
-  parent: 2:ce121fd37829 tip
+  parent: 2:ce121fd37829 
    file2
   bookmarks: branch2
   commit: 1 removed
@@ -516,7 +516,7 @@ explicitly regardless of '--message')
   $ hg summary
   parent: 2:ce121fd37829 
    file2
-  parent: 3:3ee3eb817232 tip
+  parent: 3:3ee3eb817232 
    backout on branch1
   bookmarks: branch2
   commit: 1 removed (merge)
@@ -545,12 +545,12 @@ on branch2 with branch1 merged, so file1 should be gone:
   (branch merge, don't forget to commit)
   $ hg ci -d '4 0' -m 'merge backout of branch1'
   $ hg id
-  1589644119df tip
+  1589644119df
   $ hg st -A
   C default
   C file2
   $ hg summary
-  parent: 4:1589644119df tip
+  parent: 4:1589644119df 
    merge backout of branch1
   commit: (clean)
   phases: 5 draft
@@ -661,7 +661,7 @@ Test usage of `hg resolve` in case of conflict
   $ hg resolve -l  # still unresolved
   U foo
   $ hg summary
-  parent: 2:b71750c4b0fd tip
+  parent: 2:b71750c4b0fd 
    capital ten
   commit: 1 unresolved (clean)
   phases: 3 draft
@@ -678,7 +678,7 @@ Test usage of `hg resolve` in case of conflict
   $ hg resolve -l
   R foo
   $ hg summary
-  parent: 2:b71750c4b0fd tip
+  parent: 2:b71750c4b0fd 
    capital ten
   commit: 1 modified, 1 unknown
   phases: 3 draft

@@ -80,7 +80,6 @@ Clone and apply patch:
   applying ../c/p
   $ hg log -v -r 1
   changeset:   1:cd0bde79c428
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a

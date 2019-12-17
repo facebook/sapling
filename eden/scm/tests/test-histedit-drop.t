@@ -26,7 +26,6 @@ TODO: Make this test compatibile with obsstore enabled.
 log before edit
   $ hg log --graph
   @  changeset:   5:652413bf663e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -68,7 +67,6 @@ edit the history
 log after edit
   $ hg log --graph
   @  changeset:   4:f518305ce889
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -98,7 +96,6 @@ Check histedit_source
 
   $ hg log --debug --rev f518305ce889
   changeset:   4:f518305ce889c07cb5bd05522176d75590ef3324
-  tag:         tip
   phase:       draft
   parent:      3:a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
   parent:      -1:0000000000000000000000000000000000000000
@@ -130,7 +127,6 @@ Drop the last changeset
   > EOF
   $ hg log --graph
   @  changeset:   3:a4f7421b80f7
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -167,7 +163,6 @@ Drop the last changeset
   > EOF
   $ hg log --graph
   @  changeset:   1:e99c679bf03e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e

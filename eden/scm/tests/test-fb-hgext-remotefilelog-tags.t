@@ -38,7 +38,6 @@
   $ ls .hg/store/data
   ~2ehgtags.i
   $ hg tags
-  tip                                1:6ce44dcfda68
   tag1                               0:e0360bc0d9e1
   $ hg update
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -58,7 +57,6 @@
   added 1 changesets with 0 changes to 0 files
   new changesets 6a22dfa4fd34
   $ hg tags
-  tip                                2:6a22dfa4fd34
   tag2                               1:6ce44dcfda68
   tag1                               0:e0360bc0d9e1
   $ hg update
@@ -69,7 +67,6 @@
 
   $ hg log -l 1 --stat
   changeset:   2:6a22dfa4fd34
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added tag tag2 for changeset 6ce44dcfda68

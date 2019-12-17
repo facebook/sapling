@@ -27,7 +27,6 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg log --graph
   @  changeset:   5:652413bf663e
   |  bookmark:    five
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -96,7 +95,6 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg log --graph
   @  changeset:   3:cacdfd884a93
   |  bookmark:    five
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -157,7 +155,6 @@ likely the useful signal.
   |  bookmark:    five
   |  bookmark:    four
   |  bookmark:    three
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d

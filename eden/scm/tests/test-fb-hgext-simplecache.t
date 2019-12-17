@@ -82,7 +82,6 @@ Test that output remains the same with multiple invocations.
   got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2 from local
   changeset:   1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
-  tag:         tip
   phase:       draft
   parent:      0:b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   parent:      -1:0000000000000000000000000000000000000000
@@ -112,7 +111,6 @@ Test that output remains the same with multiple invocations.
   $ hg log -vp -r .
   changeset:   1:a5d935fe38ad
   bookmark:    foo
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x y
@@ -169,7 +167,6 @@ Test that corrupt caches are gracefully ignored, and updated
   got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2 from local
   changeset:   1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
-  tag:         tip
   phase:       draft
   parent:      0:b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   parent:      -1:0000000000000000000000000000000000000000
@@ -226,7 +223,6 @@ Test strange (unicode) filenames
   got value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v2 from local
   changeset:   2:f3a143469693894d291b7388ea8392a07492751f
   bookmark:    foo
-  tag:         tip
   phase:       draft
   parent:      1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   parent:      -1:0000000000000000000000000000000000000000

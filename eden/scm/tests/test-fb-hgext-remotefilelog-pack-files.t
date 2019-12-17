@@ -176,7 +176,7 @@
   $ hg rebase -s $C -d $B
   rebasing e6011cdb8530 "C"
   merging foo
-  rebasing f579bc04d2ae "D" (tip)
+  rebasing f579bc04d2ae "D"
   merging foo
 
 # Test compatibility with LFS

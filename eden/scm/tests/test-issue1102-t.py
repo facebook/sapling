@@ -19,8 +19,6 @@ sh % "hg tag --remove t1"
 
 sh % "hg co 1" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg tag -f -r0 t1"
-sh % "hg tags" == r"""
-    tip                                3:a49829c4fc11
-    t1                                 0:f7b1eb17ad24"""
+sh % "hg tags" == "t1                                 0:f7b1eb17ad24"
 
 sh % "cd .."

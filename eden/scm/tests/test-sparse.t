@@ -190,7 +190,7 @@ Verify adding sparseness hides files
 Verify rebase temporarily includes excluded files
 
   $ hg rebase -d 1 -r 2 --config extensions.rebase=
-  rebasing b91df4f39e75 "edit hide" (tip)
+  rebasing b91df4f39e75 "edit hide"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging hide
   warning: 1 conflicts while merging hide! (edit, then use 'hg resolve --mark')
@@ -280,7 +280,7 @@ Verify rebase succeeds if all changed files are in sparse checkout
 
   $ hg commit -Aqm "add show2"
   $ hg rebase -d 1 --config extensions.rebase=
-  rebasing bdde55290160 "add show2" (tip)
+  rebasing bdde55290160 "add show2"
 
 Verify log --sparse only shows commits that affect the sparse checkout
 

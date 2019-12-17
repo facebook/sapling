@@ -18,7 +18,7 @@
   rebasing 112478962961 "B"
   rebasing 039c3379aaa9 "C2"
   rebasing 26805aba1e60 "C"
-  rebasing f585351a92f8 "D" (tip)
+  rebasing f585351a92f8 "D"
   $ hg log -G -T '{node|short} {desc} {obsfate}'
   o  f7f4f5b9173a D
   |

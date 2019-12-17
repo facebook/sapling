@@ -27,7 +27,6 @@ clone a tag
      bookmark:    master
      tag:         alpha
      tag:         default/master
-     tag:         tip
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -40,7 +39,6 @@ clone a branch
   @  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
   |  tag:         default/beta
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
@@ -78,7 +76,6 @@ pull works after 'hg git-cleanup'
   o  changeset:   2:3db9bf9073b5
   |  bookmark:    beta
   |  tag:         default/beta
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add to beta

@@ -39,7 +39,7 @@ Single branching point, without merge:
   > EOS
   rebasing d6003a550c2c "C" (C)
   rebasing 4526cf523425 "D" (D)
-  rebasing b296604d9846 "E" (E tip)
+  rebasing b296604d9846 "E" (E)
   o  6: 4870f5e7df37 'E'
   |
   | o  5: dc999528138a 'D'
@@ -69,7 +69,7 @@ Multiple branching points caused by selecting a single merge changeset:
   > EOS
   rebasing c1e6b162678d "B" (B)
   rebasing d6003a550c2c "C" (C)
-  rebasing 54c8f00cb91c "E" (E tip)
+  rebasing 54c8f00cb91c "E" (E)
   o    6: 00598421b616 'E'
   |\
   | o  5: 6b3e11729672 'C'
@@ -96,7 +96,7 @@ Rebase should not extend the "--base" revset using "descendants":
   >   R
   > EOS
   rebasing c1e6b162678d "B" (B)
-  rebasing 54c8f00cb91c "E" (E tip)
+  rebasing 54c8f00cb91c "E" (E)
   o    5: e583bf3ff54c 'E'
   |\
   | o  4: 85260910e847 'B'
@@ -122,7 +122,7 @@ Rebase should not simplify the "--base" revset using "roots":
   > EOS
   rebasing c1e6b162678d "B" (B)
   rebasing d6003a550c2c "C" (C)
-  rebasing 54c8f00cb91c "E" (E tip)
+  rebasing 54c8f00cb91c "E" (E)
   o    5: 00598421b616 'E'
   |\
   | o  4: 6b3e11729672 'C'
@@ -236,7 +236,7 @@ Multiple branching points with multiple merges:
   rebasing e131637a1cb6 "L" (L)
   rebasing d1f6d0c3c7e4 "M" (M)
   rebasing 7aaec6f81888 "N" (N)
-  rebasing 325bc8f1760d "P" (P tip)
+  rebasing 325bc8f1760d "P" (P)
   o    15: 6ef6a0ea3b18 'P'
   |\
   | o    14: 20ba3610a7e5 'N'
@@ -288,7 +288,7 @@ Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pip
   rebasing fdb955e2faed "A2" (A2)
   rebasing 4e449bd1a643 "A3" (A3)
   rebasing 0a33b0519128 "B1" (B1)
-  rebasing 209327807c3a "B3" (B3 tip)
+  rebasing 209327807c3a "B3" (B3)
   o    12: ceb984566332 'B3'
   |\
   | o  11: 19d93caac497 'B1'
@@ -378,7 +378,7 @@ Multiple roots. One root is not an ancestor of dest. Select using a merge:
   >   A C
   > EOF
   rebasing f675d5a1c6a4 "B" (B)
-  rebasing f68696fe6af8 "E" (E tip)
+  rebasing f68696fe6af8 "E" (E)
   o    5: f6e6f5081554 'E'
   |\
   | o    4: 30cabcba27be 'B'

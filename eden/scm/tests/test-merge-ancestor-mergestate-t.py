@@ -46,7 +46,7 @@ sh % "hg rebase -s A -d 0" == r"""
     rebasing 09810f6b52c0 "F" (F)
     rebasing 3ff755c5931b "C" (C)
     rebasing dc7f2675f9ab "D" (D)
-    rebasing 5eb863826611 "E" (E tip)
+    rebasing 5eb863826611 "E" (E)
     saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/19c6d3b0d8fb-a2cf1ad8-rebase.hg"""
 sh % "showgraph" == r"""
     o  7 e71547946f82 E

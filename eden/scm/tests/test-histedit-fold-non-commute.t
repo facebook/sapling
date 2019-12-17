@@ -56,7 +56,6 @@ Initial generation of the command files
 log before edit
   $ hg log --graph
   @  changeset:   7:42abbb61bede
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     does not commute with e
@@ -142,7 +141,6 @@ keep the non-commuting change, and thus the pending change will be dropped
 log after edit
   $ hg log --graph
   @  changeset:   5:1300355b1a54
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
@@ -211,7 +209,6 @@ Initial generation of the command files
 log before edit
   $ hg log --graph
   @  changeset:   7:42abbb61bede
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     does not commute with e
@@ -282,7 +279,6 @@ just continue this time
 log after edit
   $ hg log --graph
   @  changeset:   5:b538bcb461be
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f

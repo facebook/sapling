@@ -106,7 +106,6 @@ final manifest in git is just beta
   @  changeset:   8:378e6ad159a5
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     remove betalink
@@ -235,7 +234,6 @@ test with rename detection enabled
   @  changeset:   8:378e6ad159a5
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     remove betalink

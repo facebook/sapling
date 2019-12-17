@@ -321,7 +321,7 @@ convert
   1 initial
   0 keywords
   $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=1 desc="keywords" tags="tip" files="crazy_symlink+k file_binary file_binary+k file_binary+kx file_binary+x file_ctext file_cxtext file_ktext file_kxtext file_ltext file_tempobj file_text file_text+c file_text+d file_text+f file_text+k file_text+ko file_text+kx file_text+l file_text+m file_text+s file_text+s2 file_text+w file_text+x file_ubinary file_uxbinary file_xbinary file_xltext file_xtempobj file_xtext target_symlink target_symlink+k"
+  rev=1 desc="keywords" tags="" files="crazy_symlink+k file_binary file_binary+k file_binary+kx file_binary+x file_ctext file_cxtext file_ktext file_kxtext file_ltext file_tempobj file_text file_text+c file_text+d file_text+f file_text+k file_text+ko file_text+kx file_text+l file_text+m file_text+s file_text+s2 file_text+w file_text+x file_ubinary file_uxbinary file_xbinary file_xltext file_xtempobj file_xtext target_symlink target_symlink+k"
   rev=0 desc="initial" tags="" files="file_binary file_binary+k file_binary+kx file_binary+x file_ctext file_cxtext file_ktext file_kxtext file_ltext file_symlink file_symlink+k file_text file_text+c file_text+d file_text+f file_text+k file_text+ko file_text+kx file_text+l file_text+m file_text+s2 file_text+w file_text+x file_ubinary file_uxbinary file_xbinary file_xltext file_xtext target_symlink target_symlink+k"
 
 revision 0

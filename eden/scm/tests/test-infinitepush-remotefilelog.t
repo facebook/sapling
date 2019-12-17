@@ -143,7 +143,6 @@ Second client: pull regex file an make sure it is readable
   new changesets 2eea49d22494
   $ hg log -r 2eea49d22494 --stat
   changeset:   3:2eea49d22494
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Add foo[bar]

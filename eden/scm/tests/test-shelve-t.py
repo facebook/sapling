@@ -503,10 +503,10 @@ sh % "hg shelve" == r"""
     shelved as default
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 sh % "hg up -q 1"
-sh % "hg unshelve" == r"""
+sh % "hg unshelve" == r'''
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 7eac9d98447f "shelve changes to: c" (tip)"""
+    rebasing 7eac9d98447f "shelve changes to: c"'''
 sh % "hg status" == "A d"
 
 # Unshelve should work on an ancestor of the original commit
@@ -514,10 +514,10 @@ sh % "hg shelve" == r"""
     shelved as default
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 sh % "hg up 0" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
-sh % "hg unshelve" == r"""
+sh % "hg unshelve" == r'''
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 325b64d70042 "shelve changes to: b" (tip)"""
+    rebasing 325b64d70042 "shelve changes to: b"'''
 sh % "hg status" == "A d"
 
 # Test bug 4073 we need to enable obsolete markers for it
@@ -679,7 +679,7 @@ sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing * "shelve changes to: second" (tip) (glob)
+    rebasing * "shelve changes to: second" (glob)
     merging a/a
     warning: 1 conflicts while merging a/a! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -694,7 +694,7 @@ sh % "hg resolve -m a/a" == r"""
     (no more unresolved files)
     continue: hg unshelve --continue"""
 sh % "hg unshelve -c" == r"""
-    rebasing * "shelve changes to: second" (tip) (glob)
+    rebasing * "shelve changes to: second" (glob)
     note: rebase of 23:f3b9a2b33e15 created no changes to commit
     unshelve of 'default' complete"""
 sh % "hg bookmark" == " * test                      * (glob)"

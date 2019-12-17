@@ -11,7 +11,6 @@
   $ hg commit -m commit-1
   $ hg tip
   changeset:   0:53f268a58230
-  tag:         tip
   user:        My Name <myname@example.com>
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
@@ -22,7 +21,6 @@
   $ hg commit -u "foo@bar.com" -m commit-1
   $ hg tip
   changeset:   1:3871b2a9e9bf
-  tag:         tip
   user:        foo@bar.com
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
@@ -33,7 +31,6 @@
   $ hg commit -m commit-1
   $ hg tip
   changeset:   2:8eeac6695c1c
-  tag:         tip
   user:        foobar <foo@bar.com>
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
@@ -42,7 +39,6 @@
   $ hg commit -u "foo@bar.com" -m commit-1
   $ hg tip
   changeset:   3:957606a725e4
-  tag:         tip
   user:        foo@bar.com
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
@@ -63,7 +59,6 @@
   $ hg commit -m commit-1
   $ hg tip
   changeset:   4:6f24bfb4c617
-  tag:         tip
   user:        Foo Bar II <foo2@bar.com>
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
@@ -87,7 +82,6 @@
   enter a commit username: Asked User <ask@example.com>
   $ hg tip
   changeset:   5:84c91d963b70
-  tag:         tip
   user:        Asked User <ask@example.com>
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     ask

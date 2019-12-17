@@ -486,7 +486,7 @@ Setting up
   postclose-tip:e7ec4e813ba6 draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   $ hg id
-  e7ec4e813ba6 tip
+  e7ec4e813ba6
   $ cd ..
 
   $ cat << EOF >> $HGRCPATH

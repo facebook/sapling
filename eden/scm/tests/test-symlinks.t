@@ -216,7 +216,6 @@ commit and update back
 
   $ hg tip -v
   changeset:   0:cabd88b706fc
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dangling

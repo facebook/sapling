@@ -128,7 +128,6 @@ log
 
   $ hg log
   changeset:   18:d42e18c7bc9b
-  tag:         tip
   parent:      15:857b178a7cf3
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000

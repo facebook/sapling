@@ -37,7 +37,6 @@ sh % "hg debugstrip -r tip" == r"""
 
 sh % "hg log -l 1" == r"""
     changeset:   0:b292c1e3311f
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     x"""

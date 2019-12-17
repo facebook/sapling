@@ -30,7 +30,6 @@ sh % 'hg commit -A -l "$TESTDIR/ctrlchar-msg.txt"' == r"""
 sh % 'hg commit -A -l "$TESTDIR/perfectlyok-msg.txt"' == "adding a"
 sh % "hg log -r ." == r"""
     changeset:   0:d9cf9881be7b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     This commit message is perfectly OK, and has no sneaky control characters."""

@@ -19,7 +19,6 @@ Test basic functionality of url#rev syntax
   $ hg --cwd clone heads
   changeset:   1:17d330177ee9
   bookmark:    foo
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change a
@@ -27,7 +26,6 @@ Test basic functionality of url#rev syntax
   $ hg --cwd clone parents
   changeset:   1:17d330177ee9
   bookmark:    foo
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change a
@@ -61,7 +59,6 @@ Changing original repo:
 
   $ hg log
   changeset:   3:ad4513930219
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
@@ -86,7 +83,7 @@ Changing original repo:
   2:7d4251d04d20
   3:ad4513930219
   $ hg summary --remote --config paths.default='../clone'
-  parent: 3:ad4513930219 tip
+  parent: 3:ad4513930219 
    add bar
   commit: (clean)
   phases: 4 draft
@@ -94,7 +91,7 @@ Changing original repo:
   $ hg -q outgoing '../clone#foo'
   2:7d4251d04d20
   $ hg summary --remote --config paths.default='../clone#foo'
-  parent: 3:ad4513930219 tip
+  parent: 3:ad4513930219 
    add bar
   commit: (clean)
   phases: 4 draft
@@ -103,7 +100,7 @@ Changing original repo:
   $ hg -q --cwd ../clone incoming '../repo#foo'
   2:7d4251d04d20
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
-  parent: 1:17d330177ee9 tip
+  parent: 1:17d330177ee9 
    change a
   bookmarks: foo
   commit: (clean)
@@ -114,7 +111,6 @@ Changing original repo:
   $ hg --cwd ../clone heads
   changeset:   2:7d4251d04d20
   bookmark:    foo
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
@@ -140,7 +136,6 @@ Changing original repo:
   $ hg heads
   changeset:   2:7d4251d04d20
   bookmark:    foo
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
@@ -181,7 +176,6 @@ Pull -u takes us back to branch foo:
   $ hg parents
   changeset:   2:7d4251d04d20
   bookmark:    foo
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
@@ -203,14 +197,12 @@ Pull -u takes us back to branch foo:
 
   $ hg parents
   changeset:   3:ad4513930219
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
   
   $ hg heads
   changeset:   3:ad4513930219
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
@@ -241,14 +233,14 @@ Test handling common incoming revisions between "default" and
   4:44b4e0c07491
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
-  parent: 4:44b4e0c07491 tip
+  parent: 4:44b4e0c07491 
    new head to push current default head
   commit: (clean)
   phases: 1 draft
   remote: 1 outgoing
 
   $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
-  parent: 4:44b4e0c07491 tip
+  parent: 4:44b4e0c07491 
    new head to push current default head
   commit: (clean)
   phases: 1 draft

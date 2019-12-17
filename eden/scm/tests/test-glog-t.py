@@ -239,7 +239,6 @@ sh % "hg log -G -q" == r"""
 
 sh % "hg log -G" == r"""
     @  changeset:   34:fea3ac5810e0
-    |  tag:         tip
     |  parent:      32:d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
@@ -475,7 +474,6 @@ sh % "hg log -G" == r"""
 # File glog:
 sh % "hg log -G a" == r"""
     @  changeset:   34:fea3ac5810e0
-    |  tag:         tip
     |  parent:      32:d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
@@ -712,7 +710,6 @@ sh % "hg log -G a" == r"""
 
 sh % "hg log -G -r 'file(\"a\")'" == r"""
     @  changeset:   34:fea3ac5810e0
-    |  tag:         tip
     |  parent:      32:d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
@@ -1149,14 +1146,12 @@ if feature.check(["no-outer-repo"]):
     # From outer space:
     sh % "hg log -G -l1 repo" == r"""
         @  changeset:   34:fea3ac5810e0
-        |  tag:         tip
         ~  parent:      32:d06dffa21a31
            user:        test
            date:        Thu Jan 01 00:00:34 1970 +0000
            summary:     (34) head"""
     sh % "hg log -G -l1 repo/a" == r"""
         @  changeset:   34:fea3ac5810e0
-        |  tag:         tip
         ~  parent:      32:d06dffa21a31
            user:        test
            date:        Thu Jan 01 00:00:34 1970 +0000
@@ -1177,7 +1172,6 @@ sh % "echo more" > "two"
 sh % "hg commit -mmore"
 sh % "hg log -G two" == r"""
     @  changeset:   2:12c28321755b
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     more
@@ -1220,7 +1214,6 @@ sh % "hg incoming --graph ../repo" == r"""
     comparing with ../repo
     searching for changes
     o  changeset:   34:fea3ac5810e0
-    |  tag:         tip
     |  parent:      32:d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
@@ -1250,7 +1243,6 @@ sh % "hg -R repo outgoing --graph repo2" == r"""
     comparing with repo2
     searching for changes
     @  changeset:   34:fea3ac5810e0
-    |  tag:         tip
     |  parent:      32:d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
@@ -1382,7 +1374,6 @@ sh % "hg log -G -l10 '-r33:34' a" == r"""
 sh % "commit 36 'buggy merge: identical parents' 35 35"
 sh % "hg log -G -l5" == r"""
     @  changeset:   36:95fa8febd08a
-    |  tag:         tip
     |  parent:      35:9159c3644c5e
     |  parent:      35:9159c3644c5e
     |  user:        test
@@ -1864,9 +1855,8 @@ sh % "hg log -G --git --stat --follow b" == r"""
 sh % "hg up -q 6"
 sh % "hg log -G --git --patch --follow-first e" == r"""
     @    changeset:   6:fc281d8ff18d
-    |\   tag:         tip
-    | ~  parent:      5:99b31f1c2782
-    |    parent:      4:17d952250a9d
+    |\   parent:      5:99b31f1c2782
+    | ~  parent:      4:17d952250a9d
     |    user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     merge 5 and 4
@@ -2321,7 +2311,6 @@ graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r 'file(\"a\")' -m" == r"""
     @  changeset:   36:95fa8febd08a
-    :  tag:         tip
     :  parent:      35:9159c3644c5e
     :  parent:      35:9159c3644c5e
     :  user:        test
@@ -2521,7 +2510,6 @@ sh % "hg log -G -r 'file(\"a\")' -m" == r"""
 
 sh % "'HGPLAIN=1' hg log -G -r 'file(\"a\")' -m" == r"""
     @  changeset:   36:95fa8febd08a
-    |  tag:         tip
     |  parent:      35:9159c3644c5e
     |  parent:      35:9159c3644c5e
     |  user:        test
@@ -2722,7 +2710,6 @@ sh % "'HGPLAIN=1' hg log -G -r 'file(\"a\")' -m" == r"""
 
 sh % "'HGPLAIN=1' 'HGPLAINEXCEPT=graph' hg log -G -r 'file(\"a\")' -m" == r"""
     @  changeset:   36:95fa8febd08a
-    :  tag:         tip
     :  parent:      35:9159c3644c5e
     :  parent:      35:9159c3644c5e
     :  user:        test
@@ -2932,7 +2919,6 @@ graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     @  changeset:   36:95fa8febd08a
-    !  tag:         tip
     !  parent:      35:9159c3644c5e
     !  parent:      35:9159c3644c5e
     !  user:        test
@@ -3039,9 +3025,8 @@ graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     @  changeset:   36:95fa8febd08a
-    !  tag:         tip
     !  parent:      35:9159c3644c5e
-    .  parent:      35:9159c3644c5e
+    !  parent:      35:9159c3644c5e
     .  user:        test
     .  date:        Thu Jan 01 00:00:36 1970 +0000
     .  summary:     (36) buggy merge: identical parents
@@ -3264,8 +3249,7 @@ sh % "hg merge -r 3" == r"""
 sh % "hg ci -qm 6"
 sh % "hg log -G -r '0 | 1 | 2 | 6'" == r"""
     @    changeset:   6:851fe89689ad
-    :\   tag:         tip
-    : :  parent:      5:4f1e3cf15f5d
+    :\   parent:      5:4f1e3cf15f5d
     : :  parent:      3:b74ba7084d2d
     : :  user:        test
     : :  date:        Thu Jan 01 00:00:00 1970 +0000

@@ -83,7 +83,7 @@ convert
   1 change a
   0 change b/c
   $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=2 desc="change b/c" tags="tip" files="b/c"
+  rev=2 desc="change b/c" tags="" files="b/c"
   rev=1 desc="change a" tags="" files="a"
   rev=0 desc="initial" tags="" files="a b/c"
 
@@ -110,7 +110,7 @@ convert again
   converting...
   0 change a b/c
   $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=3 desc="change a b/c" tags="tip" files="a b/c"
+  rev=3 desc="change a b/c" tags="" files="a b/c"
   rev=2 desc="change b/c" tags="" files="b/c"
   rev=1 desc="change a" tags="" files="a"
   rev=0 desc="initial" tags="" files="a b/c"
@@ -139,7 +139,7 @@ convert again
   converting...
   0 add d e f
   $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=4 desc="add d e f" tags="tip" files=" e/ f d d"
+  rev=4 desc="add d e f" tags="" files=" e/ f d d"
   rev=3 desc="change a b/c" tags="" files="a b/c"
   rev=2 desc="change b/c" tags="" files="b/c"
   rev=1 desc="change a" tags="" files="a"

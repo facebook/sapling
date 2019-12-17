@@ -463,7 +463,6 @@ initial setup
 
   $ hg log -G # of alpha
   o  changeset:   6:145e75495359
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     n-B

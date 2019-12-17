@@ -84,7 +84,6 @@ sh % "hg --debug log 'glob:a*' -T '{rev}: {desc}\\n'" == r"""
 
 sh % "hg log dir" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e
@@ -95,7 +94,6 @@ sh % "hg log dir" == r"""
     summary:     c"""
 sh % "hg log somethingthatdoesntexist dir" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e
@@ -182,7 +180,6 @@ sh % "hg log -f -l1 --style something" == r"""
 
 sh % "hg log -f -l1 --style phases" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     phase:       draft
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
@@ -194,7 +191,6 @@ sh % "hg log -f -l1 --style phases -q" == "4:7e4639b4691b"
 
 sh % "hg log -f" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e
@@ -235,7 +231,6 @@ sh % "hg log -vf a" == r"""
 sh % "hg up -q tip"
 sh % "hg log -vf e" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     files:       dir/b e
@@ -504,7 +499,6 @@ sh % "hg log -vC --template '{rev} {file_copies_switch}\\n'" == r"""
 
 sh % "hg log -vC -r4" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     files:       dir/b e
@@ -513,7 +507,6 @@ sh % "hg log -vC -r4" == r"""
     e"""
 sh % "hg log -vC -r4 '--style=default'" == r"""
     changeset:   4:7e4639b4691b
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     files:       dir/b e
@@ -531,7 +524,7 @@ sh % "hg log -vC -r4 -Tjson" == r"""
       "date": [5, 0],
       "desc": "e",
       "bookmarks": [],
-      "tags": ["tip"],
+      "tags": [],
       "parents": ["2ca5ba7019804f1f597249caddf22a64d34df0ba"],
       "files": ["dir/b", "e"],
       "copies": {"e": "dir/b"}
@@ -638,7 +631,6 @@ sh % "hg ci -Amb1 -d '1 0'" == "adding b1"
 
 sh % "hg log -f" == r"""
     changeset:   3:e62f78d544b4
-    tag:         tip
     parent:      1:3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -668,7 +660,6 @@ sh % "hg log -r 'follow('\\''glob:b*'\\'')'" == r"""
     summary:     r1
 
     changeset:   3:e62f78d544b4
-    tag:         tip
     parent:      1:3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -680,7 +671,6 @@ sh % "echo b2" > "b2"
 sh % "hg ci -Amb2 -d '1 0'" == "adding b2"
 sh % "hg log -f -r '1 + 4'" == r"""
     changeset:   4:ddb82e70d1a1
-    tag:         tip
     parent:      0:67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -699,7 +689,6 @@ sh % "hg log -f -r '1 + 4'" == r"""
 
 sh % "hg log -r 'follow('\\''set:grep(b2)'\\'')'" == r"""
     changeset:   4:ddb82e70d1a1
-    tag:         tip
     parent:      0:67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -709,7 +698,6 @@ sh % "hg log -r 'follow('\\''set:grep(b2)'\\'')'" == r"""
 sh % "hg up -qC 0"
 sh % "hg log -r 'follow('\\''set:grep(b2)'\\'', 4)'" == r"""
     changeset:   4:ddb82e70d1a1
-    tag:         tip
     parent:      0:67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -779,7 +767,6 @@ sh % "hg log -r ." == r"""
 sh % "hg ci -mm12 -d '1 0'"
 sh % "hg log -r ." == r"""
     changeset:   5:302e9dd6890d
-    tag:         tip
     parent:      3:e62f78d544b4
     parent:      4:ddb82e70d1a1
     user:        test
@@ -794,7 +781,6 @@ sh % "hg ci -Amb1.1 '-d1 0'"
 
 sh % "hg log --follow-first" == r"""
     changeset:   6:2404bbcab562
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -827,7 +813,6 @@ sh % "hg log --follow-first" == r"""
 
 sh % "hg log -P 2" == r"""
     changeset:   6:2404bbcab562
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -856,7 +841,6 @@ sh % "hg log -P 2" == r"""
 
 sh % "hg log -r tip -p --git" == r"""
     changeset:   6:2404bbcab562
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -892,38 +876,36 @@ sh % "hg log -k r1" == r"""
 # log -p -l2 --color=always
 
 sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--color=always'" == r"""
-    \x1b[0;33mchangeset:   6:2404bbcab562\x1b[0m (esc)
-    tag:         tip
+    [0;33mchangeset:   6:2404bbcab562[0m
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
 
-    \x1b[0;1mdiff -r 302e9dd6890d -r 2404bbcab562 b1\x1b[0m (esc)
-    \x1b[0;31;1m--- a/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
-    \x1b[0;32;1m+++ b/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
-    \x1b[0;35m@@ -1,1 +1,2 @@\x1b[0m (esc)
+    [0;1mdiff -r 302e9dd6890d -r 2404bbcab562 b1[0m
+    [0;31;1m--- a/b1 Thu Jan 01 00:00:01 1970 +0000[0m
+    [0;32;1m+++ b/b1 Thu Jan 01 00:00:01 1970 +0000[0m
+    [0;35m@@ -1,1 +1,2 @@[0m
      b1
-    \x1b[0;92m+postm\x1b[0m (esc)
+    [0;92m+postm[0m
 
-    \x1b[0;33mchangeset:   5:302e9dd6890d\x1b[0m (esc)
+    [0;33mchangeset:   5:302e9dd6890d[0m
     parent:      3:e62f78d544b4
     parent:      4:ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
 
-    \x1b[0;1mdiff -r e62f78d544b4 -r 302e9dd6890d b2\x1b[0m (esc)
-    \x1b[0;31;1m--- /dev/null	Thu Jan 01 00:00:00 1970 +0000\x1b[0m (esc)
-    \x1b[0;32;1m+++ b/b2	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
-    \x1b[0;35m@@ -0,0 +1,1 @@\x1b[0m (esc)
-    \x1b[0;92m+b2\x1b[0m (esc)"""
+    [0;1mdiff -r e62f78d544b4 -r 302e9dd6890d b2[0m
+    [0;31;1m--- /dev/null Thu Jan 01 00:00:00 1970 +0000[0m
+    [0;32;1m+++ b/b2 Thu Jan 01 00:00:01 1970 +0000[0m
+    [0;35m@@ -0,0 +1,1 @@[0m
+    [0;92m+b2[0m"""
 
 
 # log -r tip --stat
 
 sh % "hg log -r tip --stat" == r"""
     changeset:   6:2404bbcab562
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -1173,7 +1155,6 @@ sh % "hg log -u 'User One <user1@example.org>'" == r"""
     summary:     a"""
 sh % "hg log -u user1 -u user2" == r"""
     changeset:   1:e834b5e69c0e
-    tag:         tip
     user:        User Two <user2@example.org>
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     b
@@ -1231,15 +1212,14 @@ sh % "mkdir dir"
 sh % "hg log -p --cwd dir" == r"""
     changeset:   3:91f0fa364897
     bookmark:    test
-    tag:         tip
     parent:      1:45efe61fb969
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on test
 
     diff -r 45efe61fb969 -r 91f0fa364897 c
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/c Thu Jan 01 00:00:00 1970 +0000
     @@ -0,0 +1,1 @@
     +c
 
@@ -1249,8 +1229,8 @@ sh % "hg log -p --cwd dir" == r"""
     summary:     commit on default
 
     diff -r 45efe61fb969 -r 735dba46f54d c
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/c Thu Jan 01 00:00:00 1970 +0000
     @@ -0,0 +1,1 @@
     +c
 
@@ -1260,8 +1240,8 @@ sh % "hg log -p --cwd dir" == r"""
     summary:     commit on test
 
     diff -r 24427303d56f -r 45efe61fb969 b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:00 1970 +0000
     @@ -0,0 +1,1 @@
     +b
 
@@ -1271,8 +1251,8 @@ sh % "hg log -p --cwd dir" == r"""
     summary:     commit on default
 
     diff -r 000000000000 -r 24427303d56f a
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:00 1970 +0000
     @@ -0,0 +1,1 @@
     +a"""
 
@@ -1351,8 +1331,7 @@ sh % "hg ci -m 'Last merge, related'"
 
 sh % "hg log --graph" == r"""
     @    changeset:   10:4dae8563d2c5
-    |\   tag:         tip
-    | |  parent:      9:7b35701b003e
+    |\   parent:      9:7b35701b003e
     | |  parent:      4:88176d361b69
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1414,7 +1393,6 @@ sh % "hg log --graph" == r"""
 
 sh % "hg --traceback log -f foo" == r"""
     changeset:   10:4dae8563d2c5
-    tag:         tip
     parent:      9:7b35701b003e
     parent:      4:88176d361b69
     user:        test
@@ -1508,7 +1486,6 @@ sh % "hg diff --rev '2:3'" == r"""
 
 sh % "hg log -vpr 3" == r"""
     changeset:   3:8e07aafe1edc
-    tag:         tip
     parent:      2:b09be438c43a
     parent:      1:925d80f479bb
     user:        test
@@ -1519,14 +1496,14 @@ sh % "hg log -vpr 3" == r"""
 
 
     diff -r b09be438c43a -r 8e07aafe1edc a
-    --- a/a	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+    --- a/a Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +1,1 @@
     -b
     +c
     diff -r b09be438c43a -r 8e07aafe1edc b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:00 1970 +0000
     @@ -0,0 +1,1 @@
     +b"""
 sh % "cd .."
@@ -1661,13 +1638,12 @@ sh % "hg log -l1 .d6/f1 -T '{node|short}'" == "65624cd9070a"
 
 sh % "hg log -r ':null'" == r"""
     changeset:   0:65624cd9070a
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a bunch of weird directories
 
     changeset:   -1:000000000000
-    user:         (trailing space)
+    user:        
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -r 'null:null'" == r"""
     changeset:   -1:000000000000
@@ -1825,15 +1801,13 @@ def barlookup(repo):
 
 sh % "hg --config 'extensions.names=../names.py' log -r 0" == r"""
     changeset:   0:65624cd9070a
-    tag:         tip
     barlog:      foo
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a bunch of weird directories"""
 sh % "hg --config 'extensions.names=../names.py' --config 'extensions.color=' --config 'color.log.barcolor=red' '--color=always' log -r 0" == r"""
-    \x1b[0;33mchangeset:   0:65624cd9070a\x1b[0m (esc)
-    tag:         tip
-    \x1b[0;31mbarlog:      foo\x1b[0m (esc)
+    [0;33mchangeset:   0:65624cd9070a[0m
+    [0;31mbarlog:      foo[0m
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a bunch of weird directories"""
@@ -1907,7 +1881,6 @@ sh % "echo 3" > "a"
 sh % "hg commit -m content3"
 sh % "hg log -G" == r"""
     @  changeset:   4:50b9b36e9c5d
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
@@ -1937,7 +1910,6 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -Gf a" == r"""
     @  changeset:   4:50b9b36e9c5d
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
@@ -1957,7 +1929,6 @@ sh % "hg log -Gf a" == r"""
 
 sh % "hg log -G a" == r"""
     @  changeset:   4:50b9b36e9c5d
-    :  tag:         tip
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
     :  summary:     content3
@@ -1995,7 +1966,6 @@ sh % "hg log -T '{node}\\n' -r 1" == "2294ae80ad8447bc78383182eeac50cb049df623"
 sh % "hg debugobsolete 2294ae80ad8447bc78383182eeac50cb049df623" == "obsoleted 1 changesets"
 sh % "hg log -G" == r"""
     o  changeset:   4:50b9b36e9c5d
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
@@ -2020,7 +1990,6 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -G a" == r"""
     o  changeset:   4:50b9b36e9c5d
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
@@ -2041,7 +2010,6 @@ sh % "hg log -T '{node}\\n' -r 4" == "50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2"
 sh % "hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2" == "obsoleted 1 changesets"
 sh % "hg log -G a" == r"""
     @  changeset:   3:15b2327059e5
-    :  tag:         tip
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
     :  summary:     content2
@@ -2071,7 +2039,6 @@ sh % "hg ci -Am2" == "adding c"
 sh % "hg up 'head() and not .'" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "hg log -G" == r"""
     o  changeset:   3:db815d6d32e6
-    |  tag:         tip
     |  parent:      0:f7b1eb17ad24
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2124,7 +2091,6 @@ sh % "hg commit -m A3B2C2"
 
 sh % "hg log -G" == r"""
     @  changeset:   2:fe5fc3d0eb17
-    |  tag:         tip
     |  parent:      0:abf4f0e38563
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2144,7 +2110,6 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -fG B" == r"""
     @  changeset:   2:fe5fc3d0eb17
-    |  tag:         tip
     |  parent:      0:abf4f0e38563
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000

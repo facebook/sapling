@@ -59,7 +59,7 @@ Should succeed:
     "id": "f25cbe84d8b3+2d95304fed5d+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
     "parents": [{"node": "f25cbe84d8b320e298e7703f18a25a3959518c23", "rev": 4}, {"node": "2d95304fed5d89bc9d70b2a0d02f0d567469c3ab", "rev": 2}],
-    "tags": ["tip"]
+    "tags": []
    }
   ]
   $ hg commit -mm1
@@ -144,7 +144,6 @@ Test experimental destination revset
 
   $ hg log -r '_destmerge(e88e33f3bf62)'
   changeset:   7:b613918999e2
-  tag:         tip
   parent:      5:a431fabd6039
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

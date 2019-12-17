@@ -32,7 +32,6 @@ Check the log
 
   $ hg log --config extensions.t=$TESTTMP/logexthook.py
   changeset:   1:70fc82b23320
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   fhzznel:     Nqq N, O, P
@@ -48,7 +47,6 @@ Check that exthook is working with graph log too
 
   $ hg log -G --config extensions.t=$TESTTMP/logexthook.py
   @  changeset:   1:70fc82b23320
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  fhzznel:     Nqq N, O, P

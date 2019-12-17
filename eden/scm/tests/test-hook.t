@@ -720,7 +720,7 @@ commit and update hooks should run after command completion.
   $ echo 'update = hg id' >> .hg/hgrc
   $ echo bb > a
   $ hg ci -ma
-  223eafe2750c tip
+  223eafe2750c
   $ hg up 0
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -757,7 +757,7 @@ new tags must be visible in pretxncommit (issue3210)
 
   $ echo 'pretxncommit.printtags = python:hooktests.printtags' >> .hg/hgrc
   $ hg tag -f foo
-  ['a', 'foo', 'tip']
+  ['a', 'foo']
 
 post-init hooks must not crash (issue4983)
 This also creates the `to` repo for the next test block.
@@ -787,7 +787,6 @@ new commits must be visible in pretxnchangegroup (issue3428)
   pushing to $TESTTMP/to
   searching for changes
   changeset:   0:cb9a9f314b8b
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -797,7 +796,6 @@ new commits must be visible in pretxnchangegroup (issue3428)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   changeset:   1:9836a07b9b9d
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -900,7 +898,6 @@ Non-blocking hook
   txnclose hook called
   $ hg log
   changeset:   0:3903775176ed
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -918,7 +915,6 @@ Non-blocking hook
   txnclose hook called
   $ hg log
   changeset:   1:f9ae6ef0865e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

@@ -296,12 +296,12 @@ Test summary
   parent: -1:000000000000  (no revision checked out)
   commit: (clean)
   $ hg summary -R initialrepo
-  parent: 7:17a481b3bccb tip
+  parent: 7:17a481b3bccb 
    merge B' and E
   commit: (clean) (secret)
   phases: 3 draft, 3 secret
   $ hg summary -R initialrepo --quiet
-  parent: 7:17a481b3bccb tip
+  parent: 7:17a481b3bccb 
 
 Test revset
 
@@ -322,7 +322,6 @@ test that phase are displayed in log at debug level
 
   $ hg log --debug
   changeset:   7:17a481b3bccb796c0521ae97903d81c52bfee4af
-  tag:         tip
   phase:       secret
   parent:      6:cf9fe039dfd67e829edf6522a45de057b5c86519
   parent:      4:a603bfb5a83e312131cebcd05353c217d4d21dde
@@ -714,8 +713,7 @@ Check that pretxnclose-phase hook can control phase movement
   test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:  public -> secret
   $ hg log -G -T phases
   @    changeset:   7:17a481b3bccb
-  |\   tag:         tip
-  | |  phase:       secret
+  |\   phase:       secret
   | |  parent:      6:cf9fe039dfd6
   | |  parent:      4:a603bfb5a83e
   | |  user:        test

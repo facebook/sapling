@@ -170,7 +170,6 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hg log -r 2 --stat
   changeset:   2:19edf50f4de7
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

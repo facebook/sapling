@@ -20,7 +20,7 @@
 
   $ hg rebase -s $B -d $C
   rebasing c84328973e26 "B"
-  rebasing 2f1af6263db7 "A1" (tip)
+  rebasing 2f1af6263db7 "A1"
   other [source] changed A which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -28,7 +28,6 @@
 
   $ hg log -Gr 'all()'
   @  changeset:   4:27652fba03b2
-  |  tag:         tip
   |  parent:      0:96cc3511f894
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -67,7 +66,6 @@
 
   $ hg log -Gr 'all()'
   o  changeset:   5:8bbb642d1454
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     A1

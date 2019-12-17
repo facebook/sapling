@@ -47,7 +47,6 @@ test custom revlog chunk cache sizes
   [255]
   $ hg --config format.chunkcachesize=1024 log -R local -pv
   changeset:   0:08b9e9f63b32
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo
@@ -117,7 +116,6 @@ init+push to remote2
   $ hg incoming -R remote2 local
   comparing with local
   changeset:   0:08b9e9f63b32
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init

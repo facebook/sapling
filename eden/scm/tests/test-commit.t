@@ -214,7 +214,6 @@ subdir log 2
 
   $ hg log -v bar
   changeset:   1:aa809156d50d
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
@@ -227,7 +226,6 @@ full log
 
   $ hg log -v
   changeset:   1:aa809156d50d
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
@@ -273,7 +271,6 @@ full log
 
   $ hg log -v
   changeset:   1:95b38e3a5b2e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
@@ -295,7 +292,6 @@ subdir log
   $ cd foo
   $ hg log .
   changeset:   1:95b38e3a5b2e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-dot
@@ -638,7 +634,6 @@ Test making empty commits
   $ hg commit --config ui.allowemptycommit=True -m "empty commit"
   $ hg log -r . -v --stat
   changeset:   2:d809f3644287
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:

@@ -31,7 +31,6 @@ sh % "hg clone upstream primary" == r"""
 sh % "cd primary"
 sh % "hg log --graph" == r"""
     @  changeset:   0:d26a60f4f448
-       tag:         tip
        bookmark:    default/mainline
        hoistedname: mainline
        user:        test
@@ -46,7 +45,6 @@ sh % "hg share -B primary secondary" == r"""
 sh % "cd secondary"
 sh % "hg log --graph" == r"""
     @  changeset:   0:d26a60f4f448
-       tag:         tip
        bookmark:    default/mainline
        hoistedname: mainline
        user:        test

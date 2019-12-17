@@ -59,7 +59,6 @@ Convert without tags
   0 rev1
   updating bookmarks
   $ hg -R hg-repo tags
-  tip                                0:d98c8ad3a4cf
   $ rm -rf hg-repo
 
 Do a first conversion

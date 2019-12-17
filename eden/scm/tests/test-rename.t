@@ -17,7 +17,7 @@ rename a single file
   abort: filename contains 'con', which is reserved on Windows: d1/con.xml
   [255]
   $ hg sum
-  parent: 0:9b4b6e7b2c26 tip
+  parent: 0:9b4b6e7b2c26 
    1
   commit: 1 renamed
   phases: 1 draft

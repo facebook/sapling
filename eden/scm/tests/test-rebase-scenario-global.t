@@ -170,7 +170,7 @@ F onto E - rebase of a branching point (skip G):
   rebasing 24b6387c8c8c "F"
   rebasing eea13746799a "G"
   note: rebase of 6:eea13746799a created no changes to commit
-  rebasing 02de42196ebe "H" (tip)
+  rebasing 02de42196ebe "H"
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg
 
   $ tglog
@@ -228,7 +228,7 @@ F onto B - G maintains E as parent:
   $ hg rebase -s 5 -d 1
   rebasing 24b6387c8c8c "F"
   rebasing eea13746799a "G"
-  rebasing 02de42196ebe "H" (tip)
+  rebasing 02de42196ebe "H"
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg
 
   $ tglog
@@ -333,32 +333,32 @@ Check rebasing public changeset
 
   $ hg rebase -d 5 -b 6 --keep
   rebasing e1c4361dd923 "C"
-  rebasing c9659aac0000 "D" (tip)
+  rebasing c9659aac0000 "D"
 
 Check rebasing mutable changeset
 Source phase greater or equal to destination phase: new changeset get the phase of source:
   $ hg id -n
   5
   $ hg rebase -s9 -d0
-  rebasing 2b23e52411f4 "D" (tip)
+  rebasing 2b23e52411f4 "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2b23e52411f4-f942decf-rebase.hg
   $ hg id -n # check we updated back to parent
   5
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg rebase -s9 -d1
-  rebasing 2cb10d0cfc6c "D" (tip)
+  rebasing 2cb10d0cfc6c "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2cb10d0cfc6c-ddb0f256-rebase.hg
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg phase --force --secret 9
   $ hg rebase -s9 -d0
-  rebasing c5b12b67163a "D" (tip)
+  rebasing c5b12b67163a "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c5b12b67163a-4e372053-rebase.hg
   $ hg log --template "{phase}\n" -r 9
   secret
   $ hg rebase -s9 -d1
-  rebasing 2a0524f868ac "D" (tip)
+  rebasing 2a0524f868ac "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2a0524f868ac-cefd8574-rebase.hg
   $ hg log --template "{phase}\n" -r 9
   secret
@@ -454,7 +454,7 @@ Source on have two descendant heads but ask for one
   rebasing ffd453c31098 "D"
   rebasing 3d8a618087a7 "G"
   rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I" (tip)
+  rebasing 479ddb54a924 "I"
   $ tglog
   o  13: 9bf1d9358a90 'I'
   |
@@ -499,7 +499,7 @@ Base on have one descendant heads we ask for but common ancestor have two
   rebasing ffd453c31098 "D"
   rebasing 3d8a618087a7 "G"
   rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I" (tip)
+  rebasing 479ddb54a924 "I"
   $ tglog
   o  12: 9d7da0053b1c 'I'
   |
@@ -625,7 +625,7 @@ rebase on ancestor with revset
   $ hg rebase -r '6::' -d 2
   rebasing 3d8a618087a7 "G"
   rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I" (tip)
+  rebasing 479ddb54a924 "I"
   saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-b4f73f31-rebase.hg
   $ tglog
   o  8: fcb52e68a694 'I'
@@ -660,7 +660,7 @@ We would expect heads are I, F if it was supported
   rebasing 41bfcc75ed73 "F"
   rebasing 3d8a618087a7 "G"
   rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I" (tip)
+  rebasing 479ddb54a924 "I"
   saved backup bundle to $TESTTMP/ah6/.hg/strip-backup/3d8a618087a7-aae93a24-rebase.hg
   $ tglog
   o  8: 9136df9a87cf 'I'
@@ -728,7 +728,7 @@ each root have a different common ancestor with the destination and this is a de
 
   $ hg rebase --dest 'desc(G)' --rev 'desc(K) + desc(I)'
   rebasing e7ec4e813ba6 "I"
-  rebasing 23a4ace37988 "K" (tip)
+  rebasing 23a4ace37988 "K"
   saved backup bundle to $TESTTMP/a8/.hg/strip-backup/23a4ace37988-b06984b3-rebase.hg
   $ hg log --rev 'children(desc(G))'
   changeset:   9:adb617877056
@@ -738,7 +738,6 @@ each root have a different common ancestor with the destination and this is a de
   summary:     I
   
   changeset:   10:882431a34a0e
-  tag:         tip
   parent:      6:eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -794,7 +793,7 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   rebasing 779a07b1b7a0 "first source commit"
   current directory was removed (rmcwd !)
   (consider changing to repo root: $TESTTMP/cwd-vanish) (rmcwd !)
-  rebasing a7d6f3a00bf3 "second source with subdir" (tip)
+  rebasing a7d6f3a00bf3 "second source with subdir"
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-rebase.hg
 
 Get back to the root of cwd-vanish. Note that even though `cd ..`
@@ -876,7 +875,6 @@ Make the repo a bit more interesting
   $ hg commit -m aaa
   $ hg log -G
   @  changeset:   4:5f7bc9025ed2
-  |  tag:         tip
   |  parent:      1:58d79cc1cf43
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -909,7 +907,6 @@ Testing from lower head
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
   changeset:   4:5f7bc9025ed2
-  tag:         tip
   parent:      1:58d79cc1cf43
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -967,7 +964,7 @@ Testing rebase being called inside another transaction
   > EOS
 
   $ hg rebase -s C -d B
-  rebasing dc0947a82db8 "C" (C tip)
+  rebasing dc0947a82db8 "C" (C)
 
   $ [ -f .hg/rebasestate ] && echo 'WRONG: rebasestate should not exist'
   [1]

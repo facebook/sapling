@@ -65,7 +65,6 @@ Push scratch commit and scratch bookmark
   $ hg -R ../repo log -G
   @  changeset:   0:ac312cb08db5
      bookmark:    scratch/serverbook
-     tag:         tip
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     servercommit
@@ -115,7 +114,6 @@ Create one more branch head on the server
   $ mkcommit head2
   $ hg log -G
   @  changeset:   2:dc4b2ecb723b
-  |  tag:         tip
   |  parent:      0:ac312cb08db5
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

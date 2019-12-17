@@ -35,7 +35,6 @@ Load commonly used test logic
   @  changeset:   3:98151df7e752
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     Added tag gamm a for changeset 44d87fefd1de
@@ -76,7 +75,6 @@ git should have only the valid tag alph#a but have full commit log including the
   @  changeset:   3:ca21cf0f93ef
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     Added tag gamm a for changeset 44d87fefd1de

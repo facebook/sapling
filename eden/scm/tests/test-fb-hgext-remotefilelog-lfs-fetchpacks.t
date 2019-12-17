@@ -111,7 +111,6 @@
 
   $ hg show
   changeset:   0:0d2948821b2b
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x

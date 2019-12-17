@@ -18,7 +18,7 @@ Simple Dependency
   ext2: uisetup
   ext1: extsetup
   ext2: extsetup
-  000000000000 tip
+  000000000000
 
   $ cat >> .hg/hgrc << EOF
   > [extorder]
@@ -32,7 +32,7 @@ Simple Dependency
   ext2: uisetup
   ext2: extsetup
   ext1: extsetup
-  000000000000 tip
+  000000000000
 
 Conflicting deps
 

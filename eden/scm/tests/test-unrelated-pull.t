@@ -32,7 +32,6 @@
 
   $ hg heads
   changeset:   1:9a79c33a9db3
-  tag:         tip
   parent:      -1:000000000000
   user:        a
   date:        Thu Jan 01 00:00:00 1970 +0000

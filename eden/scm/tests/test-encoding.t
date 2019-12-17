@@ -44,7 +44,6 @@ hg log (ascii)
 
   $ hg --encoding ascii log
   changeset:   3:ca661e7520de
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: ?
@@ -69,7 +68,6 @@ hg log (latin-1)
 
   $ hg --encoding latin-1 log
   changeset:   3:ca661e7520de
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xe9 (esc)
@@ -94,7 +92,6 @@ hg log (utf-8)
 
   $ hg --encoding utf-8 log
   changeset:   3:ca661e7520de
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xc3\xa9 (esc)
@@ -118,35 +115,25 @@ hg log (utf-8)
 hg tags (ascii)
 
   $ HGENCODING=ascii hg tags
-  tip                                3:ca661e7520de
 
 hg tags (latin-1)
 
   $ HGENCODING=latin-1 hg tags
-  tip                                3:ca661e7520de
 
 hg tags (utf-8)
 
   $ HGENCODING=utf-8 hg tags
-  tip                                3:ca661e7520de
 
 hg tags (JSON)
 
   $ hg tags -Tjson
   [
-   {
-    "node": "ca661e7520dec3f5438a63590c350bebadb04989",
-    "rev": 3,
-    "tag": "tip",
-    "type": ""
-   }
   ]
 
 hg log (utf-8)
 
   $ HGENCODING=utf-8 hg log
   changeset:   3:ca661e7520de
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xc3\xa9 (esc)

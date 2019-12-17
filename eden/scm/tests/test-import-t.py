@@ -54,7 +54,6 @@ sh % "'HGEDITOR=cat' hg --cwd b import ../exported-tip.patch" == "applying ../ex
 
 sh % "hg --cwd b tip" == r"""
     changeset:   1:1d4bd90af0e4
-    tag:         tip
     user:        someone
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     second change"""
@@ -133,7 +132,6 @@ sh % "hg clone -qr0 a b3"
 sh % "hg --cwd b3 import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
 sh % "hg -R b3 tip -pv" == r"""
     changeset:   1:ca68f19f3a40
-    tag:         tip
     user:        user@nowhere.net
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a
@@ -142,8 +140,8 @@ sh % "hg -R b3 tip -pv" == r"""
 
 
     diff -r 80971e65b431 -r ca68f19f3a40 a
-    --- a/a	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+    --- a/a Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:01 1970 +0000
     @@ -1,1 +1,2 @@
      line 1
     +line 2"""
@@ -200,8 +198,8 @@ sh % "hg --cwd b6 import -" << open(
 
 sh % "hg init b7"
 sh % "hg --cwd a export '0:tip'" | "hg --cwd b7 import -" == "applying patch from stdin"
-sh % "hg --cwd a id" == "1d4bd90af0e4 tip"
-sh % "hg --cwd b7 id" == "1d4bd90af0e4 tip"
+sh % "hg --cwd a id" == "1d4bd90af0e4"
+sh % "hg --cwd b7 id" == "1d4bd90af0e4"
 
 
 # override commit message
@@ -351,7 +349,6 @@ sh % "cd ../../.."
 
 sh % "hg --cwd b13 tip" == r"""
     changeset:   1:3577f5aea227
-    tag:         tip
     user:        someoneelse
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     subdir change"""
@@ -710,7 +707,6 @@ diff -r 000000000000 -r 9b4c1e343b55 test.txt
 sh % "hg import -d '0 0' a.patch" == "applying a.patch"
 sh % "hg parents -v" == r"""
     changeset:   0:5a681217c0ad
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       a
@@ -741,7 +737,6 @@ new file mode 100644
 sh % "hg import -d '0 0' a.patch -q"
 sh % "hg parents -v" == r"""
     changeset:   0:f34d9187897d
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       a
@@ -837,7 +832,7 @@ new mode 100755
 if feature.check(["execbit"]):
 
     sh % "hg sum" == r"""
-        parent: 1:d59915696727 tip
+        parent: 1:d59915696727 
          help management of empty pkg and lib directories in perforce
         commit: (clean)
         phases: 2 draft"""
@@ -864,7 +859,7 @@ if feature.check(["execbit"]):
 else:
 
     sh % "hg sum" == r"""
-        parent: 1:28f089cc9ccc tip
+        parent: 1:28f089cc9ccc 
          help management of empty pkg and lib directories in perforce
         commit: (clean)
         phases: 2 draft"""
@@ -986,7 +981,6 @@ blah blah
 """
 sh % "hg --config 'diff.git=1' log -pv" == r"""
     changeset:   0:c6ef204ef767
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       empty nonempty
@@ -1011,7 +1005,6 @@ sh % "hg init plain"
 sh % "hg export 0" | "hg -R plain import -" == "applying patch from stdin"
 sh % "hg --config 'diff.git=1' -R plain log -pv" == r"""
     changeset:   0:60a2d231e71f
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       nonempty
@@ -1034,7 +1027,6 @@ sh % "hg init git"
 sh % "hg --config 'diff.git=1' export 0" | "hg -R git import -" == "applying patch from stdin"
 sh % "hg --config 'diff.git=1' -R git log -pv" == r"""
     changeset:   0:c6ef204ef767
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       empty nonempty

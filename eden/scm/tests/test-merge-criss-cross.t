@@ -40,7 +40,6 @@ Criss cross merging
 
   $ hg log -G
   @  changeset:   6:6373bbfdae1d
-  |  tag:         tip
   |  parent:      3:c202c8af058d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

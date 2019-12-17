@@ -48,7 +48,6 @@ Initial generation of the command files
 log before edit
   $ hg log --graph
   @  changeset:   7:39522b764e3d
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
@@ -106,7 +105,6 @@ second edit set
 
   $ hg log --graph
   @  changeset:   7:39522b764e3d
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
@@ -185,7 +183,6 @@ make sure the to-be-empty commit doesn't screw up the state (issue5545)
 log after edit
   $ hg log --graph
   @  changeset:   6:7efe1373e4bc
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -268,7 +265,6 @@ second edit also fails, but just continue
 post message fix
   $ hg log --graph
   @  changeset:   6:7efe1373e4bc
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f

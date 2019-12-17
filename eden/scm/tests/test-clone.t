@@ -184,7 +184,6 @@ Repo a has two heads:
   $ hg heads
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -216,7 +215,6 @@ Repo ua has both heads:
   $ hg -R ua heads
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -254,7 +252,6 @@ Repo ua has both heads:
   $ hg -R ua heads
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -286,7 +283,6 @@ Repo ua has both heads:
   $ hg -R ua heads
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -302,7 +298,6 @@ Branch 'stable' is checked out:
   $ hg -R ua parents
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -322,7 +317,6 @@ Repo ua has both heads:
   $ hg -R ua heads
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -347,7 +341,6 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
   $ hg -R ua heads
   changeset:   15:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -384,7 +377,6 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
   $ hg -R ua heads
   changeset:   13:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -416,7 +408,6 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
   $ hg -R ua heads
   changeset:   13:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -427,7 +418,6 @@ Branch 'stable' is checked out:
   $ hg -R ua parents
   changeset:   13:7b0a8591eda2
   bookmark:    stable
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -747,7 +737,6 @@ Checked out revision should be head of default branch
   $ hg -R share-dest1b log -r .
   changeset:   6:79168763a548
   bookmark:    branch2
-  tag:         tip
   parent:      0:b5f04eac9d8f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -824,7 +813,6 @@ request to clone a single revision is respected in sharing mode
   $ hg -R share-1arev log -G
   @  changeset:   1:4a8dc1ab4c13
   |  bookmark:    head1
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     head1
@@ -852,7 +840,6 @@ making another clone should only pull down requested rev
   $ hg -R share-1brev log -G
   @  changeset:   2:99f71071f117
   |  bookmark:    head2
-  |  tag:         tip
   |  parent:      0:b5f04eac9d8f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -900,7 +887,6 @@ Cloning into pooled storage doesn't race (issue5104)
   $ hg -R share-destrace1 log -r tip
   changeset:   2:e5bfe23c0b47
   bookmark:    bookA
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1a
@@ -909,7 +895,6 @@ Cloning into pooled storage doesn't race (issue5104)
   $ hg -R share-destrace2 log -r tip
   changeset:   2:e5bfe23c0b47
   bookmark:    bookA
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1a

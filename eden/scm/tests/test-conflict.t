@@ -43,7 +43,7 @@
   [1]
 
   $ hg id
-  618808747361+c0c68e4fe667+ tip
+  618808747361+c0c68e4fe667+
 
   $ echo "[commands]" >> $HGRCPATH
   $ echo "status.verbose=true" >> $HGRCPATH

@@ -329,7 +329,7 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
-    rebasing dd2a887139a3 "add c" (tip)
+    rebasing dd2a887139a3 "add c"
     rebasing 47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
     @  7 4e2bc7d6cfea add d
@@ -455,7 +455,7 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
-    rebasing dd2a887139a3 "add c" (tip)
+    rebasing dd2a887139a3 "add c"
     rebasing 47d2a3944de8 "add d"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
@@ -532,7 +532,7 @@ sh % "showgraph" == r"""
 sh % "hg rebase --restack" == r"""
     rebasing 849d5cce0019 "add f"
     rebasing dd2a887139a3 "add c"
-    rebasing 8282a17a7483 "add g" (tip)
+    rebasing 8282a17a7483 "add g"
     rebasing 47d2a3944de8 "add d"
     rebasing e86422ad5d0e "add h"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""

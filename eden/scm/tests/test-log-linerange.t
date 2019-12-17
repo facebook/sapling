@@ -105,7 +105,6 @@ Add some changes with two diff hunks
 
   $ hg log -f -L foo,5:7 -p
   changeset:   5:cfdf972b3971
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -193,7 +192,7 @@ With --template.
     "date": [0, 0],
     "desc": "foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+",
     "bookmarks": [],
-    "tags": ["tip"],
+    "tags": [],
     "parents": ["eaec41c1a0c9ad0a5e999611d0149d171beffb8c"]
    },
    {
@@ -238,7 +237,6 @@ With some white-space diff option, respective revisions are skipped.
 
   $ hg log -f -L foo,5:7 -p --config diff.ignorews=true
   changeset:   5:cfdf972b3971
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -338,7 +336,6 @@ range are show.
 
   $ hg log -f -L foo,5:7 -L bar,1:2 -p
   changeset:   5:cfdf972b3971
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -432,7 +429,6 @@ specified line ranges.
 
   $ hg log -f -L foo,5:7 -L foo,14:15 -p
   changeset:   5:cfdf972b3971
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -568,7 +564,6 @@ A file with a comma in its name.
   $ hg ci -m 'azerty'
   $ hg log -f -L ba,z,1:2 -p
   changeset:   8:52373265138b
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     azerty
@@ -709,7 +704,6 @@ Renames are followed.
   +1+1-
   $ hg log -f -L relpath:baz,5:7 -p
   changeset:   9:6af29c3a778f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo -> dir/baz; 1-1+
@@ -808,7 +802,6 @@ Binary files work but without diff hunks filtering.
 #if common-zlib
   $ hg log -f -L binary,1:2 -p
   changeset:   10:c96381c229df
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a binary file
@@ -825,7 +818,6 @@ Binary files work but without diff hunks filtering.
 
   $ hg log -f -L binary,1:2 -p --config diff.git=false
   changeset:   10:c96381c229df
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a binary file

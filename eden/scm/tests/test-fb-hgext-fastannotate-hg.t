@@ -696,7 +696,6 @@ create history with a filerev whose linkrev points to another branch
   $ echo W >> a
   $ hg log -G
   @  changeset:   4:072f1e8df249
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     contentC

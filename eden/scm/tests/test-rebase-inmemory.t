@@ -160,7 +160,7 @@ cleanly.
   $ hg up 0
   1 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ hg rebase -r 4 -d .
-  rebasing 0666f6a71f74 "change a's flags" (tip)
+  rebasing 0666f6a71f74 "change a's flags"
   saved backup bundle to $TESTTMP/repo1/repo3/.hg/strip-backup/0666f6a71f74-a2618702-rebase.hg
   $ hg up -q tip
   $ ls -l a | cut -c -10
@@ -173,7 +173,7 @@ Rebase the working copy parent:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
   rebasing in-memory
-  rebasing 753feb6fd12a "c" (tip)
+  rebasing 753feb6fd12a "c"
   $ tglog
   @  3: 844a7de3e617 'c'
   |

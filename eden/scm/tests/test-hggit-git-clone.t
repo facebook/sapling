@@ -20,7 +20,6 @@ Load commonly used test logic
   @  changeset:   1:3bb02b6794dd
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta

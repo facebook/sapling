@@ -41,8 +41,7 @@
   $ hg --cwd ../master log -G -l 1 --stat
   o  changeset:   1:6b73ab2c9773
   |  bookmark:    master
-  ~  tag:         tip
-     user:        test
+  ~  user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Modify dir/x
   

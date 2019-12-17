@@ -74,7 +74,6 @@ http incoming
   summary:     7
   
   changeset:   8:e4feb4ac9035
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
@@ -102,7 +101,6 @@ http incoming
   summary:     3
   
   changeset:   4:70d7eb252d49
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
@@ -153,7 +151,6 @@ local incoming
   summary:     7
   
   changeset:   8:e4feb4ac9035
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
@@ -275,7 +272,6 @@ test with --bundle
   summary:     7
   
   changeset:   8:e4feb4ac9035
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
@@ -323,7 +319,6 @@ test with --bundle
   summary:     7
   
   changeset:   8:e4feb4ac9035
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
@@ -348,14 +343,12 @@ test the resulting bundles
   new changesets 00a43fa82f62:e4feb4ac9035
   $ hg -R temp tip
   changeset:   8:e4feb4ac9035
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
   $ hg -R temp2 tip
   changeset:   8:e4feb4ac9035
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
@@ -404,7 +397,6 @@ test outgoing
   summary:     12
   
   changeset:   13:96bbff09a7cc
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
@@ -469,7 +461,6 @@ limit to 3 changesets
   summary:     12
   
   changeset:   13:96bbff09a7cc
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
@@ -519,7 +510,6 @@ Create a "split" repo that pulls from r1 and pushes to r2, using default-push
   comparing with $TESTTMP/r2
   searching for changes
   changeset:   0:3e92d79f743a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -541,7 +531,6 @@ Windows needs a leading slash to make a URL that passes all of the checks
   comparing with file:/*/$TESTTMP/r2 (glob)
   searching for changes
   changeset:   0:3e92d79f743a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

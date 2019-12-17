@@ -107,8 +107,7 @@ Clone fresh repo and try to restore from backup
   $ hg sl --all
   @  changeset:   2:948715751816
   |  bookmark:    master
-  ~  tag:         tip
-     user:        test
+  ~  user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add b
    (re)
@@ -141,7 +140,6 @@ Clone fresh repo and try to restore from backup
   :  summary:     add b
   :
   : o  changeset:   4:3969cd9723d1
-  : |  tag:         tip
   : |  user:        test
   : |  date:        Thu Jan 01 00:00:00 1970 +0000
   : |  instability: orphan
@@ -198,7 +196,6 @@ Test createlandedasmarkers option disabled
   :  summary:     add b
   :
   : o  changeset:   4:3969cd9723d1
-  : |  tag:         tip
   : |  user:        test
   : |  date:        Thu Jan 01 00:00:00 1970 +0000
   : |  summary:     add c

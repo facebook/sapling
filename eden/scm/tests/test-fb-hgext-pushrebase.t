@@ -578,7 +578,6 @@ Test that the prepushrebase hook can run against the bundle repo
   pushing to ssh://user@dummy/prepushrebaseserver
   searching for changes
   remote: changeset:   1:0e067c57feba
-  remote: tag:         tip
   remote: user:        test
   remote: date:        Thu Jan 01 00:00:00 1970 +0000
   remote: summary:     b

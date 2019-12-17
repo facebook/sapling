@@ -211,7 +211,7 @@ More complex case where part of the rebase set were already rebased
   
   $ hg rebase --source 'desc(B)' --dest 'tip' --config experimental.rebaseskipobsolete=True
   rebasing 8877864f1edb "B"
-  note: not rebasing 08483444fef9 "D", already in destination as 4596109a6a43 "D" (tip)
+  note: not rebasing 08483444fef9 "D", already in destination as 4596109a6a43 "D"
   rebasing 5ae4c968c6ac "C"
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
@@ -259,10 +259,9 @@ More complex case where part of the rebase set were already rebased
   grafting 11:4596109a6a43 "D"
   $ hg up -qr 'desc(E)'
   $ hg rebase -s tip -d .
-  rebasing 9e36056a46e3 "D" (tip)
+  rebasing 9e36056a46e3 "D"
   $ hg log --style default --debug -r tip
   changeset:   15:627d4614809036ba22b9e7cb31638ddc06ab99ab
-  tag:         tip
   phase:       draft
   parent:      4:9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   parent:      -1:0000000000000000000000000000000000000000
@@ -353,7 +352,7 @@ collapse rebase
   o  0:cd010b8cd998 A
   
   $ hg id --debug -r tip
-  4dc2197e807bae9817f09905b50ab288be2dbbcf tip
+  4dc2197e807bae9817f09905b50ab288be2dbbcf
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
@@ -489,7 +488,7 @@ Test multiple root handling
   $ hg rebase --dest 4 --rev '7+11+9'
   rebasing cf44d2f5a9f4 "D"
   rebasing 02de42196ebe "H"
-  rebasing 0d8f238b634c "C" (tip)
+  rebasing 0d8f238b634c "C"
   $ hg log -G
   o  14:1e8370e38cca C
   |
@@ -529,7 +528,7 @@ Detach both parents
   $ hg rebase -d G -r 'B + D + F'
   rebasing 112478962961 "B" (B)
   rebasing b18e25de2cf5 "D" (D)
-  rebasing f15c3adaf214 "F" (F tip)
+  rebasing f15c3adaf214 "F" (F)
   abort: cannot rebase 6:f15c3adaf214 without moving at least one of its parents
   [255]
 
@@ -582,7 +581,7 @@ test on rebase dropping a merge
   $ hg rebase --dest 6 --rev '((desc(H) + desc(D))::) - desc(M)'
   rebasing 32af7686d403 "D"
   rebasing 02de42196ebe "H"
-  rebasing 4bde274eefcf "I" (tip)
+  rebasing 4bde274eefcf "I"
   $ hg log -G
   @  12:acd174b7ab39 I
   |
@@ -621,7 +620,7 @@ Test hidden changesets in the rebase set (issue4504)
 
   $ hg rebase --rev .~1::. --dest 'max(desc(D))' --traceback --config experimental.rebaseskipobsolete=off
   rebasing 4bde274eefcf "I"
-  rebasing 06edfc82198f "J" (tip)
+  rebasing 06edfc82198f "J"
   $ hg log -G
   @  15:5ae8a643467b J
   |
@@ -745,7 +744,7 @@ Rebase finds its way in a chain of marker
 
   $ hg rebase -d 'desc(B2)'
   note: not rebasing a8b11f55fb19 "B0", already in destination as 261e70097290 "B2"
-  rebasing 212cb178bcbb "C" (tip)
+  rebasing 212cb178bcbb "C"
 
 Even when the chain include missing node
 
@@ -770,7 +769,7 @@ Even when the chain include missing node
 
   $ hg rebase -d 'desc(B2)'
   note: not rebasing a8b11f55fb19 "B0", already in destination as 261e70097290 "B2"
-  rebasing 1a79b7535141 "D" (tip)
+  rebasing 1a79b7535141 "D"
   $ hg up 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "O" > O
@@ -797,7 +796,7 @@ Even when the chain include missing node
   $ hg rebase -d 6 -r "4::"
   rebasing ff2c4d47b71d "C"
   note: not rebasing 360bbaa7d3ce "O", it has no successor
-  rebasing 8d47583e023f "P" (tip)
+  rebasing 8d47583e023f "P"
 
 If all the changeset to be rebased are obsolete and present in the destination, we
 should display a friendly error message
@@ -835,7 +834,7 @@ should display a friendly error message
   o  0:4a2df7238c3b A
   
   $ hg rebase -r . -d 10
-  note: not rebasing f44da1f4954c "nonrelevant" (tip), it has no successor
+  note: not rebasing f44da1f4954c "nonrelevant", it has no successor
 
 If a rebase is going to create divergence, it should abort
 
@@ -884,7 +883,7 @@ If a rebase is going to create divergence, it should abort
   o  0:4a2df7238c3b A
   
   $ hg summary
-  parent: 14:73568ab6879d tip (orphan)
+  parent: 14:73568ab6879d  (orphan)
    bar foo
   commit: (clean)
   phases: 8 draft
@@ -914,9 +913,9 @@ With experimental.evolution.allowdivergence=True, rebase can create divergence
 
   $ hg rebase -s 10 -d 12 --config experimental.evolution.allowdivergence=True
   rebasing 121d9e3bc4c6 "P"
-  rebasing 73568ab6879d "bar foo" (tip)
+  rebasing 73568ab6879d "bar foo"
   $ hg summary
-  parent: 16:61bd55f69bc4 tip
+  parent: 16:61bd55f69bc4 
    bar foo
   commit: (clean)
   phases: 8 draft
@@ -979,7 +978,7 @@ Create the changes that we will rebase
   $ hg rebase --continue
   rebasing b82fb57ea638 "willconflict second version"
   note: not rebasing 8b31da3c4919 "dummy change", already in destination as 601db7a18f51 "dummy change successor"
-  rebasing 7bdc8a87673d "dummy change" (tip)
+  rebasing 7bdc8a87673d "dummy change"
   $ cd ..
 
 Divergence cases due to obsolete changesets
@@ -1068,7 +1067,7 @@ By allowing divergence, we can perform the rebase.
   $ hg rebase --config experimental.evolution.allowdivergence=true -r $c::$f -d $x
   rebasing a82ac2b38757 "c"
   rebasing 76be324c128b "d"
-  rebasing 1143e9adc121 "f" (tip)
+  rebasing 1143e9adc121 "f"
   $ hg log -G -r $a:: -T instabilities
   o  10:e1744ea07510 f
   |
@@ -1095,7 +1094,7 @@ By allowing divergence, we can perform the rebase.
   $ hg rebase --config experimental.rebaseskipobsolete=false -r $c::$f -d $x
   rebasing a82ac2b38757 "c"
   rebasing 76be324c128b "d"
-  rebasing 1143e9adc121 "f" (tip)
+  rebasing 1143e9adc121 "f"
 
   $ hg debugstrip --no-backup -q -r 0:
 
@@ -1184,7 +1183,7 @@ Rebase merge where successor of one parent is equal to destination (issue5198)
   $ D=2
   $ hg rebase -d $B -s $D
   note: not rebasing b18e25de2cf5 "D", already in destination as 112478962961 "B"
-  rebasing 66f1a38021c9 "F" (tip)
+  rebasing 66f1a38021c9 "F"
   $ hg log -G
   o    5:50e9d60b99c6 F
   |\
@@ -1211,7 +1210,7 @@ Rebase merge where successor of other parent is equal to destination
 
   $ hg rebase -d B -s E
   note: not rebasing 7fb047a69f22 "E" (E), already in destination as 112478962961 "B" (B)
-  rebasing 66f1a38021c9 "F" (F tip)
+  rebasing 66f1a38021c9 "F" (F)
   $ hg log -G
   o    5:aae1787dacee F
   |\
@@ -1238,7 +1237,7 @@ Rebase merge where successor of one parent is ancestor of destination
 
   $ hg rebase -d C -s D
   note: not rebasing b18e25de2cf5 "D" (D), already in destination as 112478962961 "B" (B)
-  rebasing 66f1a38021c9 "F" (F tip)
+  rebasing 66f1a38021c9 "F" (F)
 
   $ hg log -G
   o    6:0913febf6439 F
@@ -1268,7 +1267,7 @@ Rebase merge where successor of other parent is ancestor of destination
 
   $ hg rebase -d C -s E
   note: not rebasing 7fb047a69f22 "E" (E), already in destination as 112478962961 "B" (B)
-  rebasing 66f1a38021c9 "F" (F tip)
+  rebasing 66f1a38021c9 "F" (F)
   $ hg log -G
   o    6:c6ab0cc6d220 F
   |\
@@ -1298,7 +1297,7 @@ Rebase merge where successor of one parent is ancestor of destination
   $ hg rebase -d C -b F
   rebasing b18e25de2cf5 "D" (D)
   note: not rebasing 7fb047a69f22 "E" (E), already in destination as 112478962961 "B" (B)
-  rebasing 66f1a38021c9 "F" (F tip)
+  rebasing 66f1a38021c9 "F" (F)
   note: rebase of 5:66f1a38021c9 created no changes to commit
   $ hg log -G
   o  6:8f47515dda15 D
@@ -1327,7 +1326,7 @@ Rebase merge where successor of other parent is ancestor of destination
   $ hg rebase -d C -b F
   note: not rebasing b18e25de2cf5 "D" (D), already in destination as 112478962961 "B" (B)
   rebasing 7fb047a69f22 "E" (E)
-  rebasing 66f1a38021c9 "F" (F tip)
+  rebasing 66f1a38021c9 "F" (F)
   note: rebase of 5:66f1a38021c9 created no changes to commit
 
   $ hg log -G
@@ -1355,7 +1354,7 @@ Rebase merge where both parents have successors in destination
   $ hg rebase -r A+B+E -d F
   note: not rebasing a3d17304151f "A" (A), already in destination as 96cc3511f894 "C" (C)
   note: not rebasing b23a2cc00842 "B" (B), already in destination as 058c1e1fb10a "D" (D)
-  rebasing dac5d11c5a7d "E" (E tip)
+  rebasing dac5d11c5a7d "E" (E)
   abort: rebasing 7:dac5d11c5a7d will include unwanted changes from 3:59c792af609c, 5:b23a2cc00842 or 2:ba2b7fa7166d, 4:a3d17304151f
   [255]
   $ cd ..
@@ -1436,7 +1435,7 @@ equivalents in destination
   $ echo b > b && hg ci -Am b
   adding b
   $ hg rebase -r 2 -d 1
-  rebasing 1e9a3c00cbe9 "b" (tip)
+  rebasing 1e9a3c00cbe9 "b"
   $ hg log -r .  # working dir is at rev 3 (successor of 2)
   3:be1832deae9a b (no-eol)
   $ hg book -r 2 mybook --hidden  # rev 2 has a bookmark on it now
@@ -1444,7 +1443,7 @@ equivalents in destination
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   2:1e9a3c00cbe9 b (rewritten using rebase as 3:be1832deae9a) (no-eol)
   $ hg rebase -r 2 -d 3 --config experimental.evolution.track-operation=1
-  note: not rebasing 1e9a3c00cbe9 "b" (mybook), already in destination as be1832deae9a "b" (tip)
+  note: not rebasing 1e9a3c00cbe9 "b" (mybook), already in destination as be1832deae9a "b"
 Check that working directory and bookmark was updated to rev 3 although rev 2
 was skipped
   $ hg log -r .
@@ -1473,7 +1472,7 @@ parent gets moved:
   $ hg bookmark book -i
   $ hg rebase -r $B+$D1 -d $E
   rebasing 112478962961 "B"
-  note: not rebasing 15ecf15e0114 "D1" (book tip), already in destination as 0807738e0be9 "D2"
+  note: not rebasing 15ecf15e0114 "D1" (book), already in destination as 0807738e0be9 "D2"
   $ hg log -G -T '{desc} {bookmarks}'
   @  B book
   |
@@ -1551,7 +1550,7 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
   o  0:426bada5c675 A
   
   $ hg summary
-  parent: 2:b18e25de2cf5 tip
+  parent: 2:b18e25de2cf5 
    D
   parent: 1:2ec65233581b  (obsolete)
    B
@@ -1570,7 +1569,7 @@ Also test --continue for the above case
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing 2ec65233581b "B"
-  rebasing 7829726be4dc "C" (tip)
+  rebasing 7829726be4dc "C"
   $ hg log -G
   @  5:1964d5d5b547 C
   |

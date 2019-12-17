@@ -86,7 +86,6 @@ master and default/master should be diferent
   $ hg log -r default/master
   changeset:   3:59db0d26c08d
   tag:         default/master
-  tag:         tip
   parent:      0:69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
@@ -143,7 +142,6 @@ hg-git issue103 -- directories can lose information at hg-git export time
   changeset:   5:e4281e9db8f8
   bookmark:    master
   tag:         default/master
-  tag:         tip
   user:        test
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add dir1/beta
@@ -159,7 +157,6 @@ hg-git issue103 -- directories can lose information at hg-git export time
   changeset:   4:8df619e46009
   bookmark:    master
   tag:         default/master
-  tag:         tip
   user:        test
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add dir1/beta

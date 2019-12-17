@@ -215,7 +215,6 @@
 
   $ hg snapshot show "$HOID"
   changeset:   11:03d785189d28
-  tag:         tip
   parent:      3:ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -233,7 +232,6 @@
 
   $ hg show --hidden "$HOID"
   changeset:   11:03d785189d28
-  tag:         tip
   parent:      3:ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -283,7 +281,6 @@
   |    summary:     draft1 amend2
   |
   | s  changeset:   11:03d785189d28
-  | |  tag:         tip
   | |  parent:      3:ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -410,7 +407,6 @@
   |    summary:     draft1 amend2
   |
   | s  changeset:   11:03d785189d28
-  | |  tag:         tip
   | |  parent:      3:ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -455,7 +451,6 @@
   summary:     snapshot
   
   changeset:   11:03d785189d28
-  tag:         tip
   parent:      3:ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -63,7 +63,6 @@
   updating bookmark master
   $ hg log -r .
   changeset:   2:0b41a6a811a2
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -85,7 +84,6 @@
   default-push = ssh://user@dummy/repo?write
   $ hg log -r .
   changeset:   1:a89d614e2364
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -96,7 +94,6 @@
   $ hg commit -qAm x4
   $ hg log -r .
   changeset:   2:e68715a0fc4c
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x4
@@ -122,7 +119,6 @@
   obsoleted 1 changesets
   $ hg log -r .
   changeset:   4:12f14bedbd28
-  tag:         tip
   bookmark:    default/master
   hoistedname: master
   user:        test

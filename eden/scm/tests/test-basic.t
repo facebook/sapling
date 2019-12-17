@@ -65,7 +65,6 @@ This command is ancient:
 
   $ hg history
   changeset:   0:acb14030fe0a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     test

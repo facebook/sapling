@@ -12,7 +12,6 @@
   warning: tag default conflicts with existing branch name
   $ hg log
   changeset:   2:30a83d1e4a1e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added tag default for changeset f7b1eb17ad24
@@ -41,7 +40,6 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   2:30a83d1e4a1e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added tag default for changeset f7b1eb17ad24

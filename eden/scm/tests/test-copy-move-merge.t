@@ -73,7 +73,7 @@ Test disabling copy tracing
 
   $ hg up -qC 2
   $ hg rebase --keep -d 1 -b 2 --config extensions.rebase=
-  rebasing add3f11052fa "other" (tip)
+  rebasing add3f11052fa "other"
   merging b and a to b
   merging c and a to c
 
@@ -91,7 +91,7 @@ Test disabling copy tracing
   $ hg rebase --keep -d 1 -b 2 --config extensions.rebase= --config experimental.copytrace=off --config ui.interactive=True << EOF
   > c
   > EOF
-  rebasing add3f11052fa "other" (tip)
+  rebasing add3f11052fa "other"
   other [source] changed a which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? c
 
@@ -158,12 +158,11 @@ Verify we duplicate existing copies, instead of detecting them
   o  0 add a
   
   $ hg rebase -d 2 -s 3 --config extensions.rebase= --config experimental.copytrace=off
-  rebasing 47e1a9e6273b "copy a->b (2)" (tip)
+  rebasing 47e1a9e6273b "copy a->b (2)"
   saved backup bundle to $TESTTMP/copydisable3/.hg/strip-backup/47e1a9e6273b-2d099c59-rebase.hg
 
   $ hg log -G -f b
   @  changeset:   3:76024fb4b05b
-  :  tag:         tip
   :  user:        test
   :  date:        Thu Jan 01 00:00:00 1970 +0000
   :  summary:     copy a->b (2)

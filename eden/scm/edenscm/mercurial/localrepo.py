@@ -1109,7 +1109,6 @@ class localrepository(object):
         for (name, (node, hist)) in alltags.iteritems():
             if node != nullid:
                 tags[encoding.tolocal(name)] = node
-        tags["tip"] = self.changelog.tip()
         tagtypes = dict(
             [(encoding.tolocal(name), value) for (name, value) in tagtypes.iteritems()]
         )

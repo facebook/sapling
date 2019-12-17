@@ -160,7 +160,6 @@ Log -R full.hg in fresh empty
   $ cd empty
   $ hg -R ../full.hg log
   changeset:   8:aa35859c02ea
-  tag:         tip
   parent:      3:eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -405,7 +404,6 @@ Log -R full.hg in partial
 
   $ hg -R ../full.hg log -T phases
   changeset:   8:aa35859c02ea
-  tag:         tip
   phase:       draft
   parent:      3:eebf5a27f8ca
   user:        test
@@ -489,7 +487,6 @@ Incoming full.hg in partial
   summary:     1.3m
   
   changeset:   8:aa35859c02ea
-  tag:         tip
   parent:      3:eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -523,7 +520,6 @@ Outgoing -R full.hg vs partial2 in partial
   summary:     1.3m
   
   changeset:   8:aa35859c02ea
-  tag:         tip
   parent:      3:eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -553,7 +549,6 @@ Direct clone from bundle (all-history)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R full-clone heads
   changeset:   8:aa35859c02ea
-  tag:         tip
   parent:      3:eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -650,7 +645,6 @@ test for 540d1059c802
   comparing with ../bundle.hg
   searching for changes
   changeset:   2:ed1b79f46b9a
-  tag:         tip
   parent:      0:bbd179dfa0a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -820,7 +814,6 @@ directory does not exist
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   o  changeset:   3:8bd3e1f196af
-  |  tag:         tip
   |  parent:      1:a01eca7af26d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

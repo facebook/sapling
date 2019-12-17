@@ -65,7 +65,6 @@ Continue testing
 graph shows tags for the branch heads of each path
   $ hg log --graph
   @  changeset:   4:9d206ffc875e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add e
@@ -120,7 +119,6 @@ make sure bogus revisions in .hg/store/remotenames do not break hg
   > .hg/store/remotenames
   $ hg parents
   changeset:   4:9d206ffc875e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add e
@@ -128,7 +126,6 @@ make sure bogus revisions in .hg/store/remotenames do not break hg
 Verify that the revsets operate as expected:
   $ hg log -r 'not pushed()'
   changeset:   4:9d206ffc875e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add e
@@ -159,7 +156,6 @@ Upstream without configuration is synonymous with upstream('default'):
   summary:     add d
   
   changeset:   4:9d206ffc875e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add e
@@ -170,7 +166,6 @@ but configured, it'll do the expected thing:
   $ echo 'upstream=alpha' >> .hg/hgrc
   $ hg log --graph -r 'not upstream()'
   @  changeset:   4:9d206ffc875e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add e

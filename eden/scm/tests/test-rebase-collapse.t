@@ -42,7 +42,7 @@ Rebasing B onto H and collapsing changesets:
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg rebase --collapse -e --dest $H
   rebasing 112478962961 "B"
   rebasing 26805aba1e60 "C"
-  rebasing f585351a92f8 "D" (tip)
+  rebasing f585351a92f8 "D"
   ==== before editing
   Collapsed revision
   * B
@@ -199,7 +199,7 @@ Rebase and collapse - E onto H:
   $ hg rebase -s $E --dest $H --collapse # root (E) is not a merge
   rebasing 49cb92066bfd "E"
   rebasing 11abe3fb10b8 "F"
-  rebasing 202d1982ae8b "G" (tip)
+  rebasing 202d1982ae8b "G"
 
   $ hg log -Gr 'all()' -T '{desc}'
   o    Collapsed revision
@@ -258,7 +258,7 @@ Rebase and collapse - E onto I:
   rebasing 3cf8a9483881 "F"
   merging E
   rebasing 066fd31e12b9 "G"
-  rebasing c8947cb2e149 "H" (tip)
+  rebasing c8947cb2e149 "H"
 
   $ hg log -Gr 'all()' -T '{desc}'
   o    Collapsed revision
@@ -316,7 +316,7 @@ Rebase and collapse - B onto F:
   rebasing 112478962961 "B"
   rebasing 26805aba1e60 "C"
   rebasing be0ef73c17ad "D"
-  rebasing 02c4367d6973 "E" (tip)
+  rebasing 02c4367d6973 "E"
 
   $ hg log -Gr 'all()' -T '{desc}'
   o  Collapsed revision
@@ -362,7 +362,7 @@ Rebase, collapse and copies
   merging a and d to d
   merging b and e to e
   merging c and f to f
-  rebasing 2ccc3426bf6d "Q" (tip)
+  rebasing 2ccc3426bf6d "Q"
   merging f and c to c
   merging e and g to g
   $ hg st
@@ -397,7 +397,7 @@ Test collapsing in place
 
   $ hg rebase --collapse -b . -d $X
   rebasing 71cf332de4cf "Y"
-  rebasing c2a9a5beba1a "Collapsed revision" (tip)
+  rebasing c2a9a5beba1a "Collapsed revision"
   $ hg st --change tip --copies
   M a
   M c
@@ -440,7 +440,7 @@ Test collapsing changes that add then remove a file
   $ hg book foo
   $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
   rebasing 6d8d9f24eec3 "a"
-  rebasing 1cc73eca5ecc "b" (foo tip)
+  rebasing 1cc73eca5ecc "b" (foo)
   $ hg log -G --template "{rev}: '{desc}' {bookmarks}"
   @  3: 'collapsed' foo
   |
@@ -467,7 +467,7 @@ running into merge conflict and invoking rebase --continue.
   $ echo "a-dev" > a
   $ hg commit -m "a-dev"
   $ hg rebase --collapse -m "a-default-dev" -d 1
-  rebasing 1fb04abbc715 "a-dev" (tip)
+  rebasing 1fb04abbc715 "a-dev"
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -477,10 +477,9 @@ running into merge conflict and invoking rebase --continue.
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 1fb04abbc715 "a-dev" (tip)
+  rebasing 1fb04abbc715 "a-dev"
   $ hg log
   changeset:   3:3f6f2136305e
-  tag:         tip
   parent:      1:3c8db56a44bc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

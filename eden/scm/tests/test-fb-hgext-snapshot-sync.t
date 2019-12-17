@@ -77,7 +77,6 @@
   7917335ca0064e431e045fdebf0bd483fcc8e28d
   $ hg snapshot show --debug $OID1
   changeset:   1:7917335ca0064e431e045fdebf0bd483fcc8e28d
-  tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
@@ -108,7 +107,6 @@
   5e55990d984329c0cd0395dad5fcee6d6e8cc126
   $ hg snapshot show --debug $OID2
   changeset:   1:5e55990d984329c0cd0395dad5fcee6d6e8cc126
-  tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
@@ -178,7 +176,6 @@
   7917335ca006 snapshot
   $ hg snapshot show --debug "$OID1"
   changeset:   2:7917335ca0064e431e045fdebf0bd483fcc8e28d
-  tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
@@ -246,7 +243,6 @@
 
   $ hg snapshot show --debug "$OID2"
   changeset:   2:5e55990d984329c0cd0395dad5fcee6d6e8cc126
-  tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000

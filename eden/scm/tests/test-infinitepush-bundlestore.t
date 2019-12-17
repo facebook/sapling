@@ -44,7 +44,6 @@ the history but is stored on disk
 
   $ hg log -G
   @  changeset:   1:20759b6926ce
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     scratchcommit
@@ -56,7 +55,6 @@ the history but is stored on disk
   
   $ hg log -G -R ../repo
   o  changeset:   0:67145f466344
-     tag:         tip
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     initialcommit
@@ -90,7 +88,6 @@ From another client we can get the scratchbranch if we ask for it explicitely
   $ hg log -G
   o  changeset:   1:20759b6926ce
   |  bookmark:    scratch/mybranch
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     scratchcommit

@@ -25,7 +25,6 @@ TODO: Make this test compatibile with obsstore enabled.
 log before edit
   $ hg log --graph
   @  changeset:   5:652413bf663e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -115,7 +114,6 @@ rules should end up in .hg/histedit-last-edit.txt:
 log after edit
   $ hg log --graph
   @  changeset:   5:07114f51870f
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -157,7 +155,6 @@ put things back
 
   $ hg log --graph
   @  changeset:   5:7eca9b5b1148
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -198,7 +195,6 @@ slightly different this time
   > EOF
   $ hg log --graph
   @  changeset:   5:38b92f448761
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -238,7 +234,6 @@ keep prevents stripping dead revs
   > EOF
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -289,7 +284,6 @@ try with --rev
   (only use listed changesets)
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -373,7 +367,6 @@ should also work if a commit message is missing
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
   @  changeset:   2:bd22688093b3
-  |  tag:         tip
   |  user:        Robert Altman <robert.altman@telventDTN.com>
   |  date:        Mon Nov 28 16:40:04 2011 +0000
   |  summary:     Update file.

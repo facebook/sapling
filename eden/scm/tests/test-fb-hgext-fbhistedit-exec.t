@@ -28,7 +28,6 @@ log before edit
 
   $ hg log --graph
   @  changeset:   5:652413bf663e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -76,7 +75,6 @@ exec & continue should not preserve hashes
 
   $ hg log --graph
   @  changeset:   5:652413bf663e
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f

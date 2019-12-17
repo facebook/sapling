@@ -10,7 +10,7 @@
   $ chmod +x a
   $ hg ci -m'executable'
   $ hg id
-  79abf14474dc tip
+  79abf14474dc
 
 Make sure we notice the change of mode if the cached size == -1:
 

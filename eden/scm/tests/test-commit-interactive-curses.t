@@ -46,7 +46,6 @@ Committing some changes but stopping on the way
   [1]
   $ hg tip
   changeset:   -1:000000000000
-  tag:         tip
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -59,7 +58,6 @@ Committing some changes
   $ hg commit -i  -m "a" -d "0 0"
   $ hg tip
   changeset:   0:cb9a9f314b8b
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -82,7 +80,6 @@ Committing only one file
   $ hg commit -i  -m "one file" -d "0 0"
   $ hg tip
   changeset:   1:fb2705a663ea
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one file
@@ -127,7 +124,6 @@ Committing only one hunk while aborting edition of hunk
   $ rm editor.sh
   $ hg tip
   changeset:   2:7d10dfe755a8
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one hunk
@@ -160,7 +156,6 @@ Committing only one hunk while aborting edition of hunk
   $ hg commit -m "other hunks"
   $ hg tip
   changeset:   3:a6735021574d
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     other hunks

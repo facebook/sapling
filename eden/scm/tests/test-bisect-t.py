@@ -23,7 +23,6 @@ for i in range(32):
 
 sh % "hg log" == r"""
     changeset:   31:58c80a7c8a40
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:31 1970 +0000
     summary:     msg 31
@@ -197,7 +196,7 @@ sh % "hg status -v" == r"""
     # To abort:                      hg bisect --reset"""
 sh % "hg status -v --config 'commands.status.skipstates=bisect'"
 sh % "hg summary" == r"""
-    parent: 31:58c80a7c8a40 tip
+    parent: 31:58c80a7c8a40 
      msg 31
     commit: (clean)
     phases: 32 draft"""
@@ -574,7 +573,6 @@ sh % "hg bisect --command true" == r"""
     changeset 29:b5bd63375ab9: good
     The first bad revision is:
     changeset:   30:ed2d2f24b11c
-    tag:         tip
     user:        test
     date:        Thu Jan 01 00:00:30 1970 +0000
     summary:     msg 30"""

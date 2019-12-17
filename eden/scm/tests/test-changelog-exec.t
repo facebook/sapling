@@ -40,7 +40,6 @@ this should not mention bar but should mention foo:
 
   $ hg tip -v
   changeset:   3:c53d17ff3380
-  tag:         tip
   parent:      2:ed1b79f46b9a
   parent:      1:d394a8db219b
   user:        test

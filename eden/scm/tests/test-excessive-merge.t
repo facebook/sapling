@@ -34,7 +34,6 @@
 
   $ hg log
   changeset:   4:2ee31f665a86
-  tag:         tip
   parent:      1:96155394af80
   parent:      2:92cc4c306b19
   user:        test

@@ -159,7 +159,7 @@ changesets
   note: not rebasing 1a07332e9fa1 "add c", already in destination as d446b1b2be43 "add c"
   note: not rebasing ee96b78ae17d "add d", already in destination as 1f539cc6f364 "add d"
   note: not rebasing d5895ab36037 "add e", already in destination as 461a5b25b3dc "add e" (default/master master)
-  rebasing 7dcd118e395a "add k" (tip)
+  rebasing 7dcd118e395a "add k"
 
   $ echo more >> k
   $ hg amend

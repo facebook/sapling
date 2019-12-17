@@ -607,7 +607,7 @@ Expected result: client2 should be moved to 68e035cc1996
   $ hg id -i
   99e818be5af0
   $ hg rebase -s 99e818be5af0 -d a7bb357e7299 -m "`hg descr | head -n1` rebased" --collapse
-  rebasing 99e818be5af0 "commit2 amended amended rebased amended" (tip)
+  rebasing 99e818be5af0 "commit2 amended amended rebased amended"
   $ echo 6 >> filea.txt && hg amend -m "`hg descr | head -n1` amended"
   $ tglog -r '.'
   @  15: 68e035cc1996 'commit2 amended amended rebased amended rebased amended'

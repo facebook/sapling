@@ -212,7 +212,7 @@ the merge tool goes to /dev/null because we're more interested in the results of
   > EOF
 
   $ hg rebase -s . -d 3 --tool test
-  rebasing b08445fd6b2a "c4" (tip)
+  rebasing b08445fd6b2a "c4"
   merging a
   custom merge tool
   custom merge tool end

@@ -62,7 +62,6 @@ sh % "hg commit --amend -m A2 --config 'devel.default-date=987654321 0' --config
 
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:d004c8f274b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -117,7 +116,6 @@ sh % "hg fatelogkw" == r"""
 
 sh % "hg log -G --config 'ui.logtemplate='" == r"""
     o  changeset:   3:d004c8f274b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -136,7 +134,6 @@ sh % "hg log -G --config 'ui.logtemplate='" == r"""
 
 sh % "hg log -G -T default" == r"""
     o  changeset:   3:d004c8f274b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -280,7 +277,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
 
 sh % "hg log -G -T default --hidden" == r"""
     @  changeset:   3:d004c8f274b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -305,7 +301,6 @@ sh % "hg log -G -T default --hidden" == r"""
        summary:     ROOT"""
 sh % "hg log -G -T default --hidden -v" == r"""
     @  changeset:   3:d004c8f274b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -352,7 +347,6 @@ sh % "hg commit -A -m A0" == r"""
     adding b"""
 sh % "hg log --hidden -G" == r"""
     @  changeset:   1:471597cad322
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A0
@@ -371,7 +365,6 @@ sh % "hg debugobsolete 1 2 3" == "obsoleted 1 changesets"
 
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:f257fde29c7a
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A0
@@ -498,7 +491,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
 
 sh % "hg log -G -T default --hidden" == r"""
     @  changeset:   3:f257fde29c7a
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A0
@@ -533,7 +525,6 @@ sh % "mkcommit A0"
 sh % "mkcommit B0"
 sh % "hg log --hidden -G" == r"""
     @  changeset:   2:0dec01379d3b
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     B0
@@ -559,7 +550,6 @@ sh % "hg debugobsolete 'desc(B0)' 'desc(C0)'" == "obsoleted 1 changesets"
 
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:eb5a0daa2192
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -705,7 +695,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
     o  ea207398892e"""
 sh % "hg log -G -T default --hidden" == r"""
     @  changeset:   3:eb5a0daa2192
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -741,7 +730,6 @@ sh % "mkcommit A0"
 sh % "hg commit --amend -m A1"
 sh % "hg log --hidden -G" == r"""
     @  changeset:   2:fdf9bde5129a
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -761,7 +749,6 @@ sh % "hg update --hidden 'desc(A0)'" == "0 files updated, 0 files merged, 0 file
 sh % "hg commit --amend -m A2"
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:65b757b745b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -789,7 +776,6 @@ sh % "hg log --hidden -G" == r"""
 sh % "hg commit --amend -m A3"
 sh % "hg log --hidden -G" == r"""
     @  changeset:   4:019fadeab383
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -958,7 +944,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
     o  ea207398892e"""
 sh % "hg log -G -T default --hidden" == r"""
     o  changeset:   4:019fadeab383
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1005,7 +990,6 @@ sh % "mkcommit B0"
 sh % "hg commit --amend -m B1"
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:b7ea6d14e664
-    |  tag:         tip
     |  parent:      1:471f378eab4c
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1038,7 +1022,6 @@ sh % "hg debugobsolete 'desc(B1)' 'desc(C0)'" == "obsoleted 1 changesets"
 
 sh % "hg log --hidden -G" == r"""
     @  changeset:   4:eb5a0daa2192
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1240,7 +1223,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
     o  ea207398892e"""
 sh % "hg log -G -T default --hidden" == r"""
     @  changeset:   4:eb5a0daa2192
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1286,7 +1268,6 @@ sh % 'hg clone "$TESTTMP/templates-local-remote-markers-1" "$TESTTMP/templates-l
 sh % 'cd "$TESTTMP/templates-local-remote-markers-2"'
 sh % "hg log --hidden -G" == r"""
     @  changeset:   1:471f378eab4c
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A0
@@ -1300,7 +1281,6 @@ sh % "hg commit --amend -m A1"
 sh % "hg commit --amend -m A2"
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:7a230b46bf61
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1336,7 +1316,6 @@ sh % "hg pull" == r"""
     new changesets 7a230b46bf61"""
 sh % "hg log --hidden -G" == r"""
     o  changeset:   2:7a230b46bf61
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1435,7 +1414,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
     o  ea207398892e"""
 sh % "hg log -G -T default --hidden" == r"""
     @  changeset:   2:7a230b46bf61
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1547,7 +1525,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
 
 sh % "hg log -G -T default --hidden" == r"""
     x  changeset:   3:65b757b745b9
-    |  tag:         tip
     |  parent:      0:ea207398892e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1586,7 +1563,6 @@ sh % "hg commit -A -m A0" == r"""
     adding b"""
 sh % "hg log --hidden -G" == r"""
     @  changeset:   1:471597cad322
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A0
@@ -1608,7 +1584,6 @@ sh % "hg debugobsolete --record-parent ." == "obsoleted 1 changesets"
 
 sh % "hg log --hidden -G" == r"""
     @  changeset:   3:0d0ef4bdf70e
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  obsolete:    pruned
@@ -1682,7 +1657,6 @@ sh % "hg fatelogkw --hidden -v" == r"""
     o  ea207398892e"""
 sh % "hg log -G -T default --hidden" == r"""
     @  changeset:   3:0d0ef4bdf70e
-    |  tag:         tip
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  obsolete:    pruned

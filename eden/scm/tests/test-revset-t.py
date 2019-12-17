@@ -1888,7 +1888,9 @@ sh % "log 'tag()'" == r"""
     7
     8"""
 sh % "log 'tag(1.0)'" == "6"
-sh % "log 'tag(tip)'" == "9"
+sh % "log 'tag(tip)'" == r"""
+    abort: tag 'tip' does not exist!
+    [255]"""
 
 # Test order of revisions in compound expression
 # ----------------------------------------------

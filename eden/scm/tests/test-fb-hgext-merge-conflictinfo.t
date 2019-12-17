@@ -230,7 +230,7 @@ Test case 1: Source deleted, dest changed
   
 
   $ hg rebase -d 1 -s 2
-  rebasing 25c2ef28f4c7 "source" (tip)
+  rebasing 25c2ef28f4c7 "source"
   local [dest] changed file which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -738,7 +738,7 @@ mergestate (like shelve):
   $ hg unshelve
   unshelving change 'c'
   rebasing shelved changes
-  rebasing b0582bede31d "shelve changes to: c" (tip)
+  rebasing b0582bede31d "shelve changes to: c"
   merging b
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')

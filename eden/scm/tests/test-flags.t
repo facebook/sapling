@@ -50,7 +50,6 @@ the changelog should mention file a:
   new changesets 7f4313b42a34
   $ hg heads
   changeset:   2:7f4313b42a34
-  tag:         tip
   parent:      0:22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -63,7 +62,6 @@ the changelog should mention file a:
   
   $ hg history
   changeset:   2:7f4313b42a34
-  tag:         tip
   parent:      0:22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -102,7 +100,6 @@ the changelog should mention file a:
   new changesets 7f4313b42a34
   $ hg heads
   changeset:   2:7f4313b42a34
-  tag:         tip
   parent:      0:22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -115,7 +112,6 @@ the changelog should mention file a:
   
   $ hg history
   changeset:   2:7f4313b42a34
-  tag:         tip
   parent:      0:22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -51,7 +51,6 @@ look up bookmark
   $ hg log -r X
   changeset:   0:f7b1eb17ad24
   bookmark:    X
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
@@ -111,7 +110,6 @@ bookmarks revset
   
   changeset:   1:925d80f479bb
   bookmark:    X2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
@@ -120,7 +118,6 @@ bookmarks revset
   $ hg log -r 'bookmark(X2)'
   changeset:   1:925d80f479bb
   bookmark:    X2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
@@ -134,7 +131,6 @@ bookmarks revset
   
   changeset:   1:925d80f479bb
   bookmark:    X2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
@@ -313,7 +309,6 @@ look up stripped bookmark name
   changeset:   2:db815d6d32e6
   bookmark:    Y
   bookmark:    x  y
-  tag:         tip
   parent:      0:f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -494,7 +489,7 @@ the bookmark extension should be ignored now that it is part of core
 test summary
 
   $ hg summary
-  parent: 2:db815d6d32e6 tip
+  parent: 2:db815d6d32e6 
    2
   bookmarks: *Z Y x  y
   commit: (clean)
@@ -503,7 +498,7 @@ test summary
 test id
 
   $ hg id
-  db815d6d32e6 tip Y/Z/x  y
+  db815d6d32e6 Y/Z/x  y
 
 test rollback
 
@@ -745,7 +740,6 @@ test stripping a non-checked-out but bookmarked revision
 
   $ hg log --graph
   @  changeset:   4:9c404beeabc2
-  |  tag:         tip
   |  parent:      2:db815d6d32e6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -785,7 +779,6 @@ tipmost surviving ancestor of the stripped revision.
   @  changeset:   3:9c404beeabc2
   |  bookmark:    four
   |  bookmark:    should-end-on-two
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     y
@@ -821,7 +814,7 @@ working directory of current repository)
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
-  parent: 3:9c404beeabc2 tip
+  parent: 3:9c404beeabc2 
    y
   bookmarks: *four should-end-on-two
   commit: 2 unknown (clean)
@@ -962,7 +955,6 @@ ensure changelog is written before bookmarks
   $ hg log -r .
   changeset:   0:867bc5792c8c
   bookmark:    mybook
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one
@@ -1043,7 +1035,6 @@ add hooks:
 
   $ hg log -G -T phases
   @  changeset:   6:81dcce76aa0b
-  |  tag:         tip
   |  phase:       draft
   |  parent:      4:125c9a1d6df6
   |  user:        test

@@ -100,7 +100,6 @@ Load commonly used test logic
   @  changeset:   8:de0c236bcd02
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test >test@example.com>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
@@ -156,7 +155,6 @@ Load commonly used test logic
   @  changeset:   8:0e82f70d8365
   |  bookmark:    master
   |  tag:         default/master
-  |  tag:         tip
   |  user:        test ?test@example.com <test ?test@example.com>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta

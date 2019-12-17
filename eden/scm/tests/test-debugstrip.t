@@ -44,7 +44,6 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hg log
   changeset:   4:443431ffac4f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -75,7 +74,6 @@ TODO: Make this test compatibile with obsstore enabled.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update 4, strip 4
   changeset:   4:443431ffac4f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -84,7 +82,6 @@ TODO: Make this test compatibile with obsstore enabled.
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 4
   changeset:   3:65bd5f99a4a3
-  tag:         tip
   parent:      1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -94,7 +91,6 @@ TODO: Make this test compatibile with obsstore enabled.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update 4, strip 3
   changeset:   4:443431ffac4f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -126,7 +122,6 @@ TODO: Make this test compatibile with obsstore enabled.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update 4, strip 2
   changeset:   4:443431ffac4f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -134,7 +129,6 @@ TODO: Make this test compatibile with obsstore enabled.
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 2
   changeset:   3:443431ffac4f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -143,7 +137,6 @@ TODO: Make this test compatibile with obsstore enabled.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update 4, strip 1
   changeset:   4:264128213d29
-  tag:         tip
   parent:      1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -153,7 +146,6 @@ TODO: Make this test compatibile with obsstore enabled.
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 1
   changeset:   0:9ab35a2d17cb
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -166,7 +158,6 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hg log
   changeset:   4:264128213d29
-  tag:         tip
   parent:      1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -196,7 +187,6 @@ TODO: Make this test compatibile with obsstore enabled.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   4:264128213d29
-  tag:         tip
   parent:      1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -229,7 +219,6 @@ TODO: Make this test compatibile with obsstore enabled.
   $ rm .hg/strip-backup/*
   $ hg log --graph
   o  changeset:   4:264128213d29
-  |  tag:         tip
   |  parent:      1:ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -270,7 +259,6 @@ before strip of merge parent
   summary:     d
   
   changeset:   4:264128213d29
-  tag:         tip
   parent:      1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -296,7 +284,6 @@ after strip of merge parent
   1 other heads for branch "default"
   $ hg log -G
   @  changeset:   4:264128213d29
-  |  tag:         tip
   |  parent:      1:ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -329,7 +316,6 @@ after strip of merge parent
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg log -G
   @  changeset:   2:264128213d29
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -347,7 +333,6 @@ after strip of merge parent
   $ restore
   $ hg log -G
   o  changeset:   4:443431ffac4f
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -388,7 +373,6 @@ Failed hook while applying "saveheads" bundle.
   $ restore
   $ hg log -G
   o  changeset:   4:443431ffac4f
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -421,7 +405,6 @@ Failed hook while applying "saveheads" bundle.
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg log -G
   o  changeset:   2:65bd5f99a4a3
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -659,8 +642,7 @@ initialization (previous repo is empty anyway)
   $ hg ci -m 'mergeCD'
   $ hg log -G
   @    changeset:   4:d8db9d137221
-  |\   tag:         tip
-  | |  parent:      2:5c51d8d6557d
+  |\   parent:      2:5c51d8d6557d
   | |  parent:      3:6625a5168474
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -700,7 +682,6 @@ Check bundle behavior:
   summary:     commitD
   
   changeset:   4:d8db9d137221
-  tag:         tip
   parent:      2:5c51d8d6557d
   parent:      3:6625a5168474
   user:        test
@@ -730,7 +711,6 @@ check strip behavior
   saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/6625a5168474-345bb43d-backup.hg
   $ hg log -G
   o  changeset:   2:5c51d8d6557d
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     commitC
@@ -756,7 +736,6 @@ strip backup content
   summary:     commitD
   
   changeset:   4:d8db9d137221
-  tag:         tip
   parent:      2:5c51d8d6557d
   parent:      3:6625a5168474
   user:        test

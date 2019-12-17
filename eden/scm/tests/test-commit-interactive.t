@@ -32,7 +32,6 @@ Select no files
 
   $ hg tip -p
   changeset:   -1:000000000000
-  tag:         tip
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -53,7 +52,6 @@ Select files but no hunks
 
   $ hg tip -p
   changeset:   -1:000000000000
-  tag:         tip
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -80,7 +78,6 @@ Record empty file
 
   $ hg tip -p
   changeset:   0:c0708cf4e46e
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     empty
@@ -90,7 +87,7 @@ Record empty file
 Summary shows we updated to the new cset
 
   $ hg summary
-  parent: 0:c0708cf4e46e tip
+  parent: 0:c0708cf4e46e 
    empty
   commit: (clean)
   phases: 1 draft
@@ -109,7 +106,6 @@ Rename empty file
 
   $ hg tip -p
   changeset:   1:d695e8dcb197
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     rename
@@ -130,7 +126,6 @@ Copy empty file
 
   $ hg tip -p
   changeset:   2:1d4b90bea524
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   summary:     copy
@@ -150,7 +145,6 @@ Delete empty file
 
   $ hg tip -p
   changeset:   3:b39a238f01a1
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     delete
@@ -173,7 +167,6 @@ Add binary file
 
   $ hg tip -p
   changeset:   4:72e9d7d0ef46
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     binary
@@ -196,7 +189,6 @@ Change binary file
 
   $ hg tip -p
   changeset:   5:c0f95062740f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:05 1970 +0000
   summary:     binary-change
@@ -222,7 +214,6 @@ Rename and change binary file
 
   $ hg tip -p
   changeset:   6:121c8f7bde73
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     binary-change-rename
@@ -263,7 +254,6 @@ Add plain file
   
   $ hg tip -p
   changeset:   7:25bd6137b6e6
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     plain
@@ -531,7 +521,6 @@ changes numbering
 
   $ hg tip -p
   changeset:   13:0e4b75d875cd
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     begin-and-end
@@ -603,7 +592,6 @@ Record end
 
   $ hg tip -p
   changeset:   14:1a962fbf33f8
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     end-only
@@ -641,7 +629,6 @@ Record beginning
 
   $ hg tip -p
   changeset:   15:848213c8ae97
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     begin-only
@@ -749,7 +736,6 @@ Record beginning, middle, and test that format-breaking diffopts are ignored
 
   $ hg tip -p
   changeset:   17:62a02df29cdd
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     middle-only
@@ -791,7 +777,6 @@ Record end
 
   $ hg tip -p
   changeset:   18:40f1eaffc151
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     end-only
@@ -830,7 +815,6 @@ Record end
 
   $ hg tip -p
   changeset:   20:3698085a8c2a
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     subdir-change
@@ -977,7 +961,6 @@ s, all
 
   $ hg tip -p
   changeset:   22:b6ec082e5d4f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     x
@@ -1002,7 +985,6 @@ f
 
   $ hg tip -p
   changeset:   23:f0c58857264c
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:19 1970 +0000
   summary:     y
@@ -1041,7 +1023,6 @@ Preserve chmod +x
 
   $ hg tip --config diff.git=True -p
   changeset:   24:04dff1450229
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
   summary:     z
@@ -1079,7 +1060,6 @@ Preserve execute permission on original
 
   $ hg tip --config diff.git=True -p
   changeset:   25:e43fd23533b3
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
   summary:     aa
@@ -1119,7 +1099,6 @@ Preserve chmod -x
 
   $ hg tip --config diff.git=True -p
   changeset:   26:d685544b7481
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
   summary:     ab
@@ -1162,7 +1141,6 @@ Mock "Preserve chmod +x"
 
   $ hg tip --config diff.git=True -p
   changeset:   24:c26cfe2c4eb0
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
   summary:     z
@@ -1198,7 +1176,6 @@ Mock "Preserve execute permission on original"
 
   $ hg tip --config diff.git=True -p
   changeset:   25:a48d2d60adde
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
   summary:     aa
@@ -1236,7 +1213,6 @@ Mock "Preserve chmod -x"
 
   $ hg tip --config diff.git=True -p
   changeset:   26:5cc89ae210fa
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
   summary:     ab
@@ -1547,7 +1523,6 @@ Ignore win32text deprecation warning for now:
   C subdir/f1
   $ hg tip -p
   changeset:   29:ae3cd1fa0aef
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:24 1970 +0000
   summary:     w1
@@ -1617,7 +1592,6 @@ The #if execbit block above changes the hash here on some systems
   C plain3
   $ hg tip
   changeset:   31:113649fb68c0
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     moving_files
@@ -1682,7 +1656,6 @@ Add new file from within a subdirectory
 The #if execbit block above changes the hashes here on some systems
   $ hg tip -p
   changeset:   33:211b43f781aa
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     newfilesubdir

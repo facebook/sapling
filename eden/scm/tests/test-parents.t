@@ -115,7 +115,6 @@ merge working dir with 2 parents, hg parents c
   summary:     c
   
   changeset:   4:48cee28d4b4e
-  tag:         tip
   parent:      1:d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
@@ -137,7 +136,6 @@ merge working dir with 1 parent, hg parents
   summary:     b
   
   changeset:   4:48cee28d4b4e
-  tag:         tip
   parent:      1:d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
@@ -148,7 +146,6 @@ merge working dir with 1 parent, hg parents c
 
   $ hg parents c
   changeset:   4:48cee28d4b4e
-  tag:         tip
   parent:      1:d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000

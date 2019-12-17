@@ -64,7 +64,6 @@
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:1e71731e6fbb
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -119,14 +118,12 @@
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:1e71731e6fbb
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
   $ hg -v history
   changeset:   1:1e71731e6fbb
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a b

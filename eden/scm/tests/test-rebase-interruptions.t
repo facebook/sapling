@@ -287,7 +287,7 @@ Test rebase interrupted by hooks
   $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.precommit=hg status | grep "M A"'
   rebasing 965c486023db "C"
   M A
-  rebasing a0b2430ebfb8 "F" (tip)
+  rebasing a0b2430ebfb8 "F"
   abort: precommit hook exited with status 1
   [255]
   $ tglogp
@@ -340,7 +340,7 @@ Test rebase interrupted by hooks
   $ hg rebase --source 2 --dest 5 --tool internal:other --config "hooks.pretxncommit=hg log -r $NODE | grep \"summary:     C\""
   rebasing 965c486023db "C"
   summary:     C
-  rebasing a0b2430ebfb8 "F" (tip)
+  rebasing a0b2430ebfb8 "F"
   transaction abort!
   rollback completed
   abort: pretxncommit hook exited with status 1
@@ -390,7 +390,7 @@ Test rebase interrupted by hooks
   $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.pretxnclose=hg log -r tip | grep "summary:     C"'
   rebasing 965c486023db "C"
   summary:     C
-  rebasing a0b2430ebfb8 "F" (tip)
+  rebasing a0b2430ebfb8 "F"
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1

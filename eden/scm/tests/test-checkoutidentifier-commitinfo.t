@@ -92,7 +92,7 @@ Rebase with conflict resolution
   $ hg rebase --continue
   rebasing 78930e916793 "2z"
   commit_info (author=test checkoutidentifier=0000000000000008 mutation=rebase node=2a9f3f40eebf9d189f51eeba40f6d45935255c3e predecessors=78930e916793ff11b38f4f89f92221c180f922a3)
-  rebasing 27fd2733660c "3" (tip)
+  rebasing 27fd2733660c "3"
   commit_info (author=test checkoutidentifier=0000000000000009 mutation=rebase node=b42c49c8c650d6040d4a4003a30c82e1cde21c50 predecessors=27fd2733660ce0233ef4603cebe6328681aa598d)
   $ hg debugcheckoutidentifier
   0000000000000010

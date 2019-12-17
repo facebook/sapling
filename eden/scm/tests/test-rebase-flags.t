@@ -37,7 +37,6 @@ Test rebasing a single commit that changes flags:
   $ hg com -m "change"
   $ hg log -G
   @  changeset:   2:a7f7eece6b0c
-  |  tag:         tip
   |  parent:      0:c0233516197f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

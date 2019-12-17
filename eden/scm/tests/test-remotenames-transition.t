@@ -44,7 +44,6 @@ Test hoisting basics
   default
   remote/bm1
   remote/bm2
-  tip
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "hoist = remote" >> $HGRCPATH
   $ hg debugnamecomplete
@@ -53,7 +52,6 @@ Test hoisting basics
   default
   remote/bm1
   remote/bm2
-  tip
 
 Test hoisting name lookup
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'

@@ -23,7 +23,6 @@ Test that hgsql is a requirement
   [255]
   $ hg log -r tip
   changeset:   0:b292c1e3311f
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x

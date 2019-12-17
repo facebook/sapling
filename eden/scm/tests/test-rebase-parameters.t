@@ -422,7 +422,7 @@ Test --tool parameter:
   $ cd b1
 
   $ hg rebase -s 2 -d 1 --tool internal:local
-  rebasing e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b"
   note: rebase of 2:e4e3f3546619 created no changes to commit
 
   $ hg cat c2
@@ -435,7 +435,7 @@ Test --tool parameter:
   $ cd b2
 
   $ hg rebase -s 2 -d 1 --tool internal:other
-  rebasing e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b"
 
   $ hg cat c2
   c2b
@@ -447,14 +447,14 @@ Test --tool parameter:
   $ cd b3
 
   $ hg rebase -s 2 -d 1 --tool internal:fail
-  rebasing e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b"
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
   $ hg summary
   parent: 1:56daeba07f4b 
    c2
-  parent: 2:e4e3f3546619 tip
+  parent: 2:e4e3f3546619 
    c2b
   commit: 1 modified, 1 unresolved (merge)
   phases: 3 draft
@@ -471,7 +471,7 @@ Test --tool parameter:
   (continue: hg rebase --continue)
   [255]
   $ hg rebase -c --tool internal:fail
-  rebasing e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b"
   note: rebase of 2:e4e3f3546619 created no changes to commit
 
   $ hg rebase -i

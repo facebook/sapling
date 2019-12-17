@@ -97,7 +97,7 @@ Do not try to keep active but deleted divergent bookmark
   $ hg book W@diverge
 
   $ hg rebase -s W -d .
-  rebasing 41acb9dca9eb "D" (W tip)
+  rebasing 41acb9dca9eb "D" (W)
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/41acb9dca9eb-b35a6a63-rebase.hg
 
   $ hg bookmarks
@@ -208,7 +208,7 @@ as --rev arguments (issue3950)
   $ hg rebase -r '"bisect"^^::"bisect"^' -r bisect -d Z
   rebasing 345c90f326a4 "bisect"
   rebasing f677a2907404 "bisect2"
-  rebasing 325c16001345 "bisect3" (bisect tip)
+  rebasing 325c16001345 "bisect3" (bisect)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/345c90f326a4-b4840586-rebase.hg
 
 Bookmark and working parent get moved even if --keep is set (issue5682)

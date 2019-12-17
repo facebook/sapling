@@ -445,7 +445,6 @@ Test debugnamecomplete
   default
   fee
   fo
-  tip
   $ hg debugnamecomplete f
   fee
   fo
@@ -458,7 +457,6 @@ used for completions in some shells.
   default
   fee
   fo
-  tip
   $ hg debuglabelcomplete f
   fee
   fo

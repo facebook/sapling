@@ -165,7 +165,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   $ hg log -G
   o    changeset:   10:2f2496ddf49d
   |\   branch:      f1
-  | |  tag:         tip
   | |  parent:      7:4c9fbe56a16f
   | |  parent:      9:e31216eec445
   | |  user:        szhang
@@ -265,7 +264,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   committing manifest
   committing changelog
   rebased as 19c888675e13
-  rebasing 2f2496ddf49d "merge" (tip)
+  rebasing 2f2496ddf49d "merge"
    future parents are 11 and 7
   rebase status stored
    already in destination
@@ -339,7 +338,7 @@ Test minimization of merge conflicts
   $ echo c >> a
   $ hg commit -q -m 'abc'
   $ hg rebase -s 7bc217434fc1 -d ab --keep
-  rebasing 7bc217434fc1 "abc" (tip)
+  rebasing 7bc217434fc1 "abc"
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -359,7 +358,7 @@ Test minimization of merge conflicts
   rebase aborted
   $ hg up -q -C 7bc217434fc1
   $ hg rebase -s . -d ab --keep -t internal:merge3
-  rebasing 7bc217434fc1 "abc" (tip)
+  rebasing 7bc217434fc1 "abc"
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

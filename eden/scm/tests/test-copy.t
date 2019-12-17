@@ -23,7 +23,7 @@
   $ hg status
   A b
   $ hg sum
-  parent: 0:c19d34741b0a tip
+  parent: 0:c19d34741b0a 
    1
   commit: 1 copied
   phases: 1 draft
@@ -39,7 +39,6 @@ we should see two history entries
 
   $ hg history -v
   changeset:   1:93580a2c28a5
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       b
@@ -75,7 +74,6 @@ we should see one log entry for b
 
   $ hg log b
   changeset:   1:93580a2c28a5
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2

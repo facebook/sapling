@@ -57,7 +57,7 @@ sh % "hg rebase --continue" == r"""
     rebasing 6f7a236de685 "D" (D)
     rebasing de008c61a447 "E" (E)
     rebasing d2fa1c02b240 "G" (G)
-    rebasing 6582e6951a9c "H" (H tip)
+    rebasing 6582e6951a9c "H" (H)
     warning: orphaned descendants detected, not stripping c1e6b162678d, de008c61a447
     saved backup bundle to $TESTTMP/.hg/strip-backup/6f7a236de685-9880a3dc-rebase.hg"""
 

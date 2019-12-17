@@ -27,7 +27,6 @@
 log before edit
   $ hg log --graph
   @  changeset:   6:bfa474341cc9
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
@@ -128,7 +127,6 @@ log after abort
   $ hg resolve -l
   $ hg log --graph
   @  changeset:   6:bfa474341cc9
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e

@@ -84,7 +84,6 @@ should fail
 
   $ hg log -r "heads(. or wdir() & file('**'))"
   changeset:   0:* (glob)
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
