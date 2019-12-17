@@ -492,7 +492,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .help("path to the ssl ticket seeds"),
         );
 
-    let app = cmdlib::args::add_myrouter_args(app);
+    let app = cmdlib::args::add_mysql_options_args(app);
     let app = cmdlib::args::add_logger_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
@@ -573,7 +573,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         fb,
         mononoke_logger.clone(),
         repo_configs,
-        cmdlib::args::parse_myrouter_port(&matches),
+        cmdlib::args::parse_mysql_options(&matches),
         cmdlib::args::parse_readonly_storage(&matches),
         cache,
         with_cachelib,

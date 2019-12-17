@@ -22,6 +22,7 @@ use futures_preview::future;
 use futures_preview::future::try_join_all;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
+use sql_ext::MysqlOptions;
 use synced_commit_mapping::SyncedCommitMapping;
 use unodes::RootUnodeManifestMapping;
 use warm_bookmarks_cache::WarmBookmarksCache;
@@ -75,7 +76,7 @@ impl Mononoke {
         fb: FacebookInit,
         logger: Logger,
         configs: RepoConfigs,
-        myrouter_port: Option<u16>,
+        mysql_options: MysqlOptions,
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
     ) -> Result<Self, Error> {
@@ -95,7 +96,7 @@ impl Mononoke {
                             name.clone(),
                             config,
                             common_config,
-                            myrouter_port,
+                            mysql_options,
                             with_cachelib,
                             readonly_storage,
                         )

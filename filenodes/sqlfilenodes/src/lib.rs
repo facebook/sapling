@@ -17,7 +17,7 @@ use context::{CoreContext, PerfCounterType};
 use failure_ext::chain::ChainExt;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
+use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
 use stats::Timeseries;
 
 use filenodes::{FilenodeInfo, Filenodes};
@@ -207,6 +207,7 @@ impl SqlFilenodes {
     pub fn with_sharded_myrouter(
         tier: String,
         port: u16,
+        read_service_type: myrouter::ServiceType,
         shard_count: usize,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
@@ -215,6 +216,7 @@ impl SqlFilenodes {
                 tier.clone(),
                 Some(shard_id),
                 port,
+                read_service_type,
                 PoolSizeConfig::for_sharded_connection(),
                 "shardedfilenodes".into(),
                 readonly,
@@ -226,11 +228,17 @@ impl SqlFilenodes {
 
     pub fn with_sharded_raw_xdb(
         tier: String,
+        read_instance_requirement: raw::InstanceRequirement,
         shard_count: usize,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
-            create_raw_xdb_connections(format!("{}.{}", tier, shard_id), readonly).boxify()
+            create_raw_xdb_connections(
+                format!("{}.{}", tier, shard_id),
+                read_instance_requirement,
+                readonly,
+            )
+            .boxify()
         })
     }
 

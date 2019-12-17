@@ -20,6 +20,7 @@ use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
+use sql_ext::MysqlOptions;
 use sql_ext::SqlConstructors;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
@@ -141,11 +142,11 @@ impl MononokeRepo {
 pub fn streaming_clone(
     blobrepo: BlobRepo,
     db_address: String,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     repoid: RepositoryId,
     readonly_storage: bool,
 ) -> BoxFuture<SqlStreamingCloneConfig, Error> {
-    SqlStreamingChunksFetcher::with_xdb(db_address, myrouter_port, readonly_storage)
+    SqlStreamingChunksFetcher::with_xdb(db_address, mysql_options, readonly_storage)
         .map(move |fetcher| SqlStreamingCloneConfig {
             fetcher,
             blobstore: blobrepo.get_blobstore(),

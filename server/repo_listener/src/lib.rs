@@ -26,6 +26,7 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
+use sql_ext::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicBool;
 
@@ -38,7 +39,7 @@ pub fn create_repo_listeners(
     fb: FacebookInit,
     common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     caching: Caching,
     disabled_hooks: &HashMap<String, HashSet<String>>,
     root_log: &Logger,
@@ -56,7 +57,7 @@ pub fn create_repo_listeners(
         repo_handlers(
             fb,
             repos,
-            myrouter_port,
+            mysql_options,
             caching,
             disabled_hooks,
             common_config.scuba_censored_table.clone(),

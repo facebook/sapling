@@ -39,6 +39,7 @@ use repo_client::{
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::fetch_skiplist_index;
+use sql_ext::MysqlOptions;
 use sql_ext::SqlConstructors;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -98,7 +99,7 @@ struct PushRedirectorArgs {
     commit_sync_config: CommitSyncConfig,
     synced_commit_mapping: SqlSyncedCommitMapping,
     db_config: MetadataDBConfig,
-    maybe_myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
 }
 
 #[derive(Clone)]
@@ -116,7 +117,7 @@ pub struct RepoHandler {
 
 fn open_db_from_config<S: SqlConstructors>(
     dbconfig: &MetadataDBConfig,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<S, Error> {
     match dbconfig {
@@ -126,7 +127,7 @@ fn open_db_from_config<S: SqlConstructors>(
                 .boxify()
         }
         MetadataDBConfig::Mysql { ref db_address, .. } => {
-            S::with_xdb(db_address.clone(), myrouter_port, readonly_storage.0)
+            S::with_xdb(db_address.clone(), mysql_options, readonly_storage.0)
         }
     }
 }
@@ -146,7 +147,7 @@ fn create_push_redirector(
         commit_sync_config,
         synced_commit_mapping,
         db_config,
-        maybe_myrouter_port,
+        mysql_options,
     } = push_redirector_args;
 
     let small_repo = source_repo.blobrepo().clone();
@@ -168,7 +169,7 @@ fn create_push_redirector(
         ctx.clone(),
         small_repo,
         db_config,
-        maybe_myrouter_port,
+        mysql_options,
         readonly_storage,
     )
     .map(move |target_repo_dbs| PushRedirector {
@@ -213,7 +214,7 @@ fn get_maybe_create_push_redirector_fut(
 pub fn repo_handlers(
     fb: FacebookInit,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     caching: Caching,
     disabled_hooks: &HashMap<String, HashSet<String>>,
     scuba_censored_table: Option<String>,
@@ -258,7 +259,7 @@ pub fn repo_handlers(
                 fb,
                 config.storage_config.clone(),
                 repoid,
-                myrouter_port,
+                mysql_options,
                 caching,
                 config.bookmarks_cache_ttl,
                 config.redaction,
@@ -321,7 +322,7 @@ pub fn repo_handlers(
                     streaming_clone(
                         blobrepo.clone(),
                         db_address,
-                        myrouter_port,
+                        mysql_options,
                         repoid,
                         readonly_storage.0,
                     )
@@ -333,7 +334,7 @@ pub fn repo_handlers(
 
                 // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
                 let sql_read_write_status = if let Some(addr) = write_lock_db_address {
-                    SqlRepoReadWriteStatus::with_xdb(addr, myrouter_port, readonly_storage.0)
+                    SqlRepoReadWriteStatus::with_xdb(addr, mysql_options, readonly_storage.0)
                         .map(Some)
                         .left_future()
                 } else {
@@ -342,16 +343,16 @@ pub fn repo_handlers(
 
                 let sql_mutable_counters = open_db_from_config::<SqlMutableCounters>(
                     &dbconfig,
-                    myrouter_port,
+                    mysql_options,
                     readonly_storage,
                 );
 
                 let phases_hint =
-                    open_db_from_config::<SqlPhases>(&dbconfig, myrouter_port, readonly_storage);
+                    open_db_from_config::<SqlPhases>(&dbconfig, mysql_options, readonly_storage);
 
                 let sql_commit_sync_mapping = open_db_from_config::<SqlSyncedCommitMapping>(
                     &dbconfig,
-                    myrouter_port,
+                    mysql_options,
                     readonly_storage,
                 );
 
@@ -469,7 +470,7 @@ pub fn repo_handlers(
                                                     commit_sync_config,
                                                     synced_commit_mapping: sql_commit_sync_mapping,
                                                     db_config: dbconfig,
-                                                    maybe_myrouter_port: myrouter_port,
+                                                    mysql_options,
                                                 }
                                             });
 

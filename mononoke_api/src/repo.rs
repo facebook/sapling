@@ -40,6 +40,7 @@ use mononoke_types::{
 use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
+use sql_ext::MysqlOptions;
 use stats::service_data::{get_service_data_singleton, ServiceData};
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 use unodes::{derive_unodes, RootUnodeManifestMapping};
@@ -85,7 +86,7 @@ impl fmt::Debug for RepoContext {
 
 pub async fn open_synced_commit_mapping(
     config: RepoConfig,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> Result<SqlSyncedCommitMapping, Error> {
     let name = SqlSyncedCommitMapping::LABEL;
@@ -94,7 +95,7 @@ pub async fn open_synced_commit_mapping(
             SqlSyncedCommitMapping::with_sqlite_path(path.join(name), readonly_storage.0)
         }
         MetadataDBConfig::Mysql { db_address, .. } => {
-            SqlSyncedCommitMapping::with_xdb(db_address, myrouter_port, readonly_storage.0)
+            SqlSyncedCommitMapping::with_xdb(db_address, mysql_options, readonly_storage.0)
                 .compat()
                 .await
         }
@@ -108,7 +109,7 @@ impl Repo {
         name: String,
         config: RepoConfig,
         common_config: CommonConfig,
-        myrouter_port: Option<u16>,
+        mysql_options: MysqlOptions,
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
     ) -> Result<Self, Error> {
@@ -117,7 +118,7 @@ impl Repo {
         let repoid = config.repoid;
 
         let synced_commit_mapping = Arc::new(
-            open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage).await?,
+            open_synced_commit_mapping(config.clone(), mysql_options, readonly_storage).await?,
         );
         let service_config = config.source_control_service.clone();
         let monitoring_config = config.source_control_service_monitoring.clone();
@@ -126,7 +127,7 @@ impl Repo {
             fb,
             config.storage_config.clone(),
             repoid,
-            myrouter_port,
+            mysql_options,
             with_cachelib,
             config.bookmarks_cache_ttl,
             config.redaction,

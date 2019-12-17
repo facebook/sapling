@@ -465,7 +465,7 @@ pub fn setup_common(
         sort_by_string(&include_node_types)
     );
 
-    let myrouter_port = args::parse_myrouter_port(&matches);
+    let myrouter_port = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let storage_config = match storage_id {

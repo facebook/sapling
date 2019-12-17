@@ -24,6 +24,7 @@ use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
+use sql_ext::MysqlOptions;
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {
     if !ctx.trace().is_enabled() {
@@ -280,9 +281,9 @@ pub fn get_root_manifest_id(
     })
 }
 
-pub fn open_sql_with_config_and_myrouter_port<T>(
+pub fn open_sql_with_config_and_mysql_options<T>(
     dbconfig: MetadataDBConfig,
-    maybe_myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<T, Error>
 where
@@ -296,7 +297,7 @@ where
                 .boxify()
         }
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            T::with_xdb(db_address, maybe_myrouter_port, readonly_storage.0)
+            T::with_xdb(db_address, mysql_options, readonly_storage.0)
         }
         MetadataDBConfig::Mysql { .. } => Err(Error::msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",

@@ -19,6 +19,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt};
 use slog::{debug, info, o, Logger};
+use sql_ext::MysqlOptions;
 
 use metaconfig_parser::RepoConfigs;
 
@@ -44,7 +45,7 @@ impl Mononoke {
         fb: FacebookInit,
         logger: Logger,
         configs: RepoConfigs,
-        myrouter_port: Option<u16>,
+        mysql_options: MysqlOptions,
         readonly_storage: ReadOnlyStorage,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
@@ -68,7 +69,7 @@ impl Mononoke {
                                     logger.new(o!("repo" => name.clone())),
                                     config,
                                     common_config,
-                                    myrouter_port,
+                                    mysql_options,
                                     readonly_storage,
                                     cache,
                                     with_cachelib,

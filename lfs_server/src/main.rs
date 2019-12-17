@@ -232,7 +232,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let caching = args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches);
-    let myrouter_port = args::parse_myrouter_port(&matches);
+    let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
@@ -296,7 +296,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     fb,
                     config.storage_config.clone(),
                     config.repoid,
-                    myrouter_port,
+                    mysql_options,
                     caching,
                     config.bookmarks_cache_ttl,
                     config.redaction,

@@ -125,7 +125,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 fb,
                 logger.clone(),
                 repo_configs,
-                args::parse_myrouter_port(&matches),
+                args::parse_mysql_options(&matches),
                 caching,
                 args::parse_readonly_storage(&matches),
             )

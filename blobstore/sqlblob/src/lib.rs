@@ -24,7 +24,7 @@ use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::BlobstoreBytes;
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
+use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, open_sqlite_in_memory,
     open_sqlite_path, PoolSizeConfig, SqlConnections,
@@ -76,6 +76,7 @@ impl Sqlblob<MemcacheOps> {
         fb: FacebookInit,
         shardmap: String,
         port: u16,
+        read_service_type: myrouter::ServiceType,
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
@@ -84,6 +85,7 @@ impl Sqlblob<MemcacheOps> {
                 shardmap.clone(),
                 Some(shard_id),
                 port,
+                read_service_type,
                 PoolSizeConfig::for_sharded_connection(),
                 "blobstore".into(),
                 readonly,
@@ -96,11 +98,17 @@ impl Sqlblob<MemcacheOps> {
     pub fn with_raw_xdb_shardmap(
         fb: FacebookInit,
         shardmap: String,
+        read_instance_requirement: raw::InstanceRequirement,
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
         Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
-            create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id), readonly).boxify()
+            create_raw_xdb_connections(
+                format!("{}.{}", shardmap, shard_id),
+                read_instance_requirement,
+                readonly,
+            )
+            .boxify()
         })
     }
 

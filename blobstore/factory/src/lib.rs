@@ -33,7 +33,7 @@ use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, create_sqlite_connections,
-    myrouter_ready, PoolSizeConfig, SqlConnections,
+    myrouter_ready, MysqlOptions, PoolSizeConfig, SqlConnections,
 };
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
@@ -61,21 +61,21 @@ trait SqlFactoryBase: Send + Sync {
 struct XdbFactory {
     db_address: String,
     readonly: bool,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     sharded_filenodes: Option<ShardedFilenodesParams>,
 }
 
 impl XdbFactory {
     fn new(
         db_address: String,
-        myrouter_port: Option<u16>,
+        mysql_options: MysqlOptions,
         sharded_filenodes: Option<ShardedFilenodesParams>,
         readonly: bool,
     ) -> Self {
         XdbFactory {
             db_address,
             readonly,
-            myrouter_port,
+            mysql_options,
             sharded_filenodes,
         }
     }
@@ -83,13 +83,18 @@ impl XdbFactory {
 
 impl SqlFactoryBase for XdbFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
-        T::with_xdb(self.db_address.clone(), self.myrouter_port, self.readonly)
+        T::with_xdb(self.db_address.clone(), self.mysql_options, self.readonly)
             .map(|r| Arc::new(r))
             .boxify()
     }
 
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
-        let (tier, filenodes) = match (self.sharded_filenodes.clone(), self.myrouter_port) {
+        let (tier, filenodes) = match (
+            self.sharded_filenodes.clone(),
+            self.mysql_options.myrouter_port,
+        ) {
+            // TODO: Move the second-level match (i.e. the first 2 branches) to a with_sharded_xdb
+            // method on SqlFilenodes
             (
                 Some(ShardedFilenodesParams {
                     shard_map,
@@ -100,6 +105,7 @@ impl SqlFactoryBase for XdbFactory {
                 let conn = SqlFilenodes::with_sharded_myrouter(
                     shard_map.clone(),
                     port,
+                    self.mysql_options.myrouter_read_service_type(),
                     shard_num.into(),
                     self.readonly,
                 );
@@ -114,13 +120,18 @@ impl SqlFactoryBase for XdbFactory {
             ) => {
                 let conn = SqlFilenodes::with_sharded_raw_xdb(
                     shard_map.clone(),
+                    self.mysql_options.db_locator_read_instance_requirement(),
                     shard_num.into(),
                     self.readonly,
                 );
                 (shard_map, conn)
             }
-            (None, port) => {
-                let conn = SqlFilenodes::with_xdb(self.db_address.clone(), port, self.readonly);
+            (None, _) => {
+                let conn = SqlFilenodes::with_xdb(
+                    self.db_address.clone(),
+                    self.mysql_options,
+                    self.readonly,
+                );
                 (self.db_address.clone(), conn)
             }
         };
@@ -131,17 +142,23 @@ impl SqlFactoryBase for XdbFactory {
     }
 
     fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
-        match self.myrouter_port {
-            Some(myrouter_port) => future::ok(create_myrouter_connections(
+        match self.mysql_options.myrouter_port {
+            Some(mysql_options) => future::ok(create_myrouter_connections(
                 self.db_address.clone(),
                 None,
-                myrouter_port,
+                mysql_options,
+                self.mysql_options.myrouter_read_service_type(),
                 PoolSizeConfig::for_regular_connection(),
                 label,
                 self.readonly,
             ))
             .boxify(),
-            None => create_raw_xdb_connections(self.db_address.clone(), self.readonly).boxify(),
+            None => create_raw_xdb_connections(
+                self.db_address.clone(),
+                self.mysql_options.db_locator_read_instance_requirement(),
+                self.readonly,
+            )
+            .boxify(),
         }
     }
 }
@@ -207,7 +224,7 @@ impl SqlFactory {
 
 pub fn make_sql_factory(
     dbconfig: MetadataDBConfig,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     readonly: ReadOnlyStorage,
     logger: Logger,
 ) -> impl Future<Item = SqlFactory, Error = Error> {
@@ -225,11 +242,11 @@ pub fn make_sql_factory(
         } => {
             let sql_factory = XdbFactory::new(
                 db_address.clone(),
-                myrouter_port,
+                mysql_options,
                 sharded_filenodes,
                 readonly.0,
             );
-            myrouter_ready(Some(db_address), myrouter_port, logger)
+            myrouter_ready(Some(db_address), mysql_options, logger)
                 .map(move |()| SqlFactory {
                     underlying: Either::Right(sql_factory),
                 })
@@ -244,7 +261,13 @@ pub fn make_blobstore_no_sql(
     blobconfig: &BlobConfig,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
-    make_blobstore_impl(fb, blobconfig, None, None, readonly_storage)
+    make_blobstore_impl(
+        fb,
+        blobconfig,
+        None,
+        MysqlOptions::default(),
+        readonly_storage,
+    )
 }
 
 /// Construct a blobstore according to the specification. The multiplexed blobstore
@@ -253,14 +276,14 @@ pub fn make_blobstore(
     fb: FacebookInit,
     blobconfig: &BlobConfig,
     sql_factory: &SqlFactory,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     make_blobstore_impl(
         fb,
         blobconfig,
         Some(sql_factory),
-        myrouter_port,
+        mysql_options,
         readonly_storage,
     )
 }
@@ -269,7 +292,7 @@ fn make_blobstore_impl(
     fb: FacebookInit,
     blobconfig: &BlobConfig,
     sql_factory: Option<&SqlFactory>,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
@@ -319,16 +342,23 @@ fn make_blobstore_impl(
         Mysql {
             shard_map,
             shard_num,
-        } => if let Some(myrouter_port) = myrouter_port {
+        } => if let Some(myrouter_port) = mysql_options.myrouter_port {
             Sqlblob::with_myrouter(
                 fb,
                 shard_map.clone(),
                 myrouter_port,
+                mysql_options.myrouter_read_service_type(),
                 *shard_num,
                 readonly_storage.0,
             )
         } else {
-            Sqlblob::with_raw_xdb_shardmap(fb, shard_map.clone(), *shard_num, readonly_storage.0)
+            Sqlblob::with_raw_xdb_shardmap(
+                fb,
+                shard_map.clone(),
+                mysql_options.db_locator_read_instance_requirement(),
+                *shard_num,
+                readonly_storage.0,
+            )
         }
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()
@@ -353,7 +383,7 @@ fn make_blobstore_impl(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(fb, config, sql_factory, myrouter_port, readonly_storage)
+                        make_blobstore(fb, config, sql_factory, mysql_options, readonly_storage)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -398,7 +428,7 @@ fn make_blobstore_impl(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(fb, config, sql_factory, myrouter_port, readonly_storage)
+                        make_blobstore(fb, config, sql_factory, mysql_options, readonly_storage)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })

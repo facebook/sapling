@@ -35,6 +35,7 @@ use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
+use sql_ext::MysqlOptions;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 
@@ -61,7 +62,7 @@ pub fn open_blobrepo(
     fb: FacebookInit,
     storage_config: StorageConfig,
     repoid: RepositoryId,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
     redaction: Redaction,
@@ -72,7 +73,7 @@ pub fn open_blobrepo(
 ) -> BoxFuture<BlobRepo, Error> {
     let sql_fut = make_sql_factory(
         storage_config.dbconfig,
-        myrouter_port,
+        mysql_options,
         readonly_storage,
         logger.clone(),
     );
@@ -84,7 +85,7 @@ pub fn open_blobrepo(
                     fb,
                     &blobconfig,
                     &sql_factory,
-                    myrouter_port,
+                    mysql_options,
                     readonly_storage,
                 ),
                 sql_factory,

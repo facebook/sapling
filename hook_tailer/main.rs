@@ -91,7 +91,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         fb,
         config.storage_config.clone(),
         config.repoid,
-        cmdlib::args::parse_myrouter_port(&matches),
+        cmdlib::args::parse_mysql_options(&matches),
         caching,
         config.bookmarks_cache_ttl,
         config.redaction,

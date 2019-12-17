@@ -37,6 +37,7 @@ use manifest::{Entry as ManifestEntry, ManifestOps};
 use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
+use sql_ext::MysqlOptions;
 use time_ext::DurationExt;
 use unodes::{derive_unodes, RootUnodeManifestId, RootUnodeManifestMapping};
 
@@ -114,7 +115,7 @@ impl MononokeRepo {
         logger: Logger,
         config: RepoConfig,
         common_config: CommonConfig,
-        myrouter_port: Option<u16>,
+        mysql_options: MysqlOptions,
         readonly_storage: ReadOnlyStorage,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
@@ -128,14 +129,14 @@ impl MononokeRepo {
         let monitoring_config = config.source_control_service_monitoring.clone();
 
         // This is hacky, for the benefit of the new Mononoke object type
-        open_synced_commit_mapping(config.clone(), myrouter_port, readonly_storage)
+        open_synced_commit_mapping(config.clone(), mysql_options, readonly_storage)
             .boxed()
             .compat()
             .join(open_blobrepo(
                 fb,
                 config.storage_config.clone(),
                 repoid,
-                myrouter_port,
+                mysql_options,
                 with_cachelib,
                 config.bookmarks_cache_ttl,
                 config.redaction,

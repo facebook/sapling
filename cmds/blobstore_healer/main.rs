@@ -34,6 +34,7 @@ use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use prefixblob::PrefixBlobstore;
 use slog::{error, info, o, Logger};
 use sql::{myrouter, Connection};
+use sql_ext::MysqlOptions;
 use sqlblob::Sqlblob;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -82,6 +83,7 @@ fn maybe_schedule_healer_for_storage(
                         fb,
                         shard_map,
                         myrouter_port,
+                        MysqlOptions::default().myrouter_read_service_type(),
                         shard_num,
                         readonly_storage,
                     )
@@ -120,6 +122,7 @@ fn maybe_schedule_healer_for_storage(
         let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(
             db_address.clone(),
             myrouter_port,
+            MysqlOptions::default().myrouter_read_service_type(),
             readonly_storage,
         );
 
@@ -286,8 +289,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         .value_of("storage-id")
         .ok_or(Error::msg("Missing storage-id"))?;
     let logger = args::init_logging(fb, &matches);
-    let myrouter_port =
-        args::parse_myrouter_port(&matches).ok_or(Error::msg("Missing --myrouter-port"))?;
+    let myrouter_port = args::parse_mysql_options(&matches)
+        .myrouter_port
+        .ok_or(Error::msg("Missing --myrouter-port"))?;
     let readonly_storage = args::parse_readonly_storage(&matches);
     let storage_config = args::read_storage_configs(fb, &matches)?
         .remove(storage_id)

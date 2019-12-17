@@ -31,6 +31,7 @@ use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, SqlRedactedContentStore};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
+use sql_ext::MysqlOptions;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
@@ -67,7 +68,7 @@ fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     logger: Logger,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
@@ -75,7 +76,7 @@ fn get_blobstore(
 
     make_sql_factory(
         storage_config.dbconfig,
-        myrouter_port,
+        mysql_options,
         readonly_storage,
         logger,
     )
@@ -84,7 +85,7 @@ fn get_blobstore(
             fb,
             &blobconfig,
             &sql_factory,
-            myrouter_port,
+            mysql_options,
             readonly_storage,
         )
     })
@@ -102,13 +103,13 @@ pub fn subcommand_blobstore_fetch(
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let myrouter_port = args::parse_myrouter_port(&matches);
+    let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_fut = get_blobstore(
         fb,
         storage_config,
         inner_blobstore_id,
-        myrouter_port,
+        mysql_options,
         logger.clone(),
         readonly_storage,
     );

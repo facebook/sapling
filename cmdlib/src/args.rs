@@ -33,9 +33,10 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 use slog_logview::LogViewDrain;
+use sql_ext::MysqlOptions;
 
 use crate::helpers::{
-    init_cachelib_from_settings, open_sql_with_config_and_myrouter_port, setup_repo_dir,
+    init_cachelib_from_settings, open_sql_with_config_and_mysql_options, setup_repo_dir,
     CachelibSettings, CreateStorage,
 };
 use crate::log;
@@ -49,6 +50,8 @@ const TARGET_REPO_GROUP: &str = "target-repo";
 const TARGET_REPO_ID: &str = "target-repo-id";
 const TARGET_REPO_NAME: &str = "target-repo-name";
 const ENABLE_MCROUTER: &str = "enable-mcrouter";
+const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
+const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -243,7 +246,7 @@ impl MononokeApp {
         }
 
         app = add_logger_args(app);
-        app = add_myrouter_args(app);
+        app = add_mysql_options_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
 
         app
@@ -439,11 +442,11 @@ where
     T: SqlConstructors,
 {
     let (_, config) = try_boxfuture!(get_config(fb, matches));
-    let maybe_myrouter_port = parse_myrouter_port(matches);
+    let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
-    open_sql_with_config_and_myrouter_port(
+    open_sql_with_config_and_mysql_options(
         config.storage_config.dbconfig,
-        maybe_myrouter_port,
+        mysql_options,
         readonly_storage,
     )
 }
@@ -454,11 +457,11 @@ where
 {
     let source_repo_id = try_boxfuture!(get_source_repo_id(fb, matches));
     let (_, config) = try_boxfuture!(get_config_by_repoid(fb, matches, source_repo_id));
-    let maybe_myrouter_port = parse_myrouter_port(matches);
+    let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
-    open_sql_with_config_and_myrouter_port(
+    open_sql_with_config_and_mysql_options(
         config.storage_config.dbconfig,
-        maybe_myrouter_port,
+        mysql_options,
         readonly_storage,
     )
 }
@@ -655,8 +658,19 @@ pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching 
     caching
 }
 
-pub fn add_myrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.args_from_usage(r"--myrouter-port=[PORT]    'port for local myrouter instance'")
+pub fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(MYSQL_MYROUTER_PORT)
+            .long(MYSQL_MYROUTER_PORT)
+            .help("Use MyRouter at this port")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name(MYSQL_MASTER_ONLY)
+            .long(MYSQL_MASTER_ONLY)
+            .help("Connect to MySQL master only")
+            .takes_value(false),
+    )
 }
 
 pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -781,7 +795,7 @@ fn open_repo_internal_with_repo_id<'a>(
         _ => {}
     };
 
-    let myrouter_port = parse_myrouter_port(matches);
+    let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
 
     cloned!(logger);
@@ -789,7 +803,7 @@ fn open_repo_internal_with_repo_id<'a>(
         fb,
         config.storage_config,
         repo_id,
-        myrouter_port,
+        mysql_options,
         caching,
         config.bookmarks_cache_ttl,
         redaction_override.unwrap_or(config.redaction),
@@ -824,13 +838,20 @@ pub fn parse_readonly_storage<'a>(matches: &ArgMatches<'a>) -> ReadOnlyStorage {
     ReadOnlyStorage(matches.is_present("readonly-storage"))
 }
 
-pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
-    match matches.value_of("myrouter-port") {
+pub fn parse_mysql_options<'a>(matches: &ArgMatches<'a>) -> MysqlOptions {
+    let myrouter_port = match matches.value_of(MYSQL_MYROUTER_PORT) {
         Some(port) => Some(
             port.parse::<u16>()
                 .expect("Provided --myrouter-port is not u16"),
         ),
         None => None,
+    };
+
+    let master_only = matches.is_present(MYSQL_MASTER_ONLY);
+
+    MysqlOptions {
+        myrouter_port,
+        master_only,
     }
 }
 

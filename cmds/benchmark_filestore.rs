@@ -24,6 +24,7 @@ use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
 use prefixblob::PrefixBlobstore;
 use rand::Rng;
+use sql_ext::MysqlOptions;
 use sqlblob::Sqlblob;
 use std::fmt::Debug;
 use std::io::BufReader;
@@ -233,9 +234,22 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let fut = match sub.value_of(ARG_MYROUTER_PORT) {
                 Some(port) => {
                     let port = port.parse().map_err(Error::from)?;
-                    Sqlblob::with_myrouter(fb, shardmap, port, shard_count, false)
+                    Sqlblob::with_myrouter(
+                        fb,
+                        shardmap,
+                        port,
+                        MysqlOptions::default().myrouter_read_service_type(),
+                        shard_count,
+                        false,
+                    )
                 }
-                None => Sqlblob::with_raw_xdb_shardmap(fb, shardmap, shard_count, false),
+                None => Sqlblob::with_raw_xdb_shardmap(
+                    fb,
+                    shardmap,
+                    MysqlOptions::default().db_locator_read_instance_requirement(),
+                    shard_count,
+                    false,
+                ),
             };
             let blobstore = runtime.block_on(fut)?;
             Arc::new(blobstore)

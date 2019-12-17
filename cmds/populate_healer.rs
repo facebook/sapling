@@ -24,7 +24,7 @@ use context::CoreContext;
 use manifoldblob::{ManifoldRange, ThriftManifoldBlob};
 use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, StorageConfig};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-use sql_ext::SqlConstructors;
+use sql_ext::{MysqlOptions, SqlConstructors};
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
@@ -224,8 +224,9 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
             _ => bail!("source blobstore must be a manifold"),
         })?;
 
-    let myrouter_port =
-        args::parse_myrouter_port(&matches).ok_or(Error::msg("myrouter-port must be specified"))?;
+    let myrouter_port = args::parse_mysql_options(&matches)
+        .myrouter_port
+        .ok_or(Error::msg("myrouter-port must be specified"))?;
 
     let readonly_storage = args::parse_readonly_storage(&matches);
 
@@ -374,6 +375,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
         config.db_address.clone(),
         config.myrouter_port,
+        MysqlOptions::default().myrouter_read_service_type(),
         config.readonly_storage,
     ));
     let mut runtime = runtime::Runtime::new()?;

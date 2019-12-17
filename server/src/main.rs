@@ -46,7 +46,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --local-configerator-path [PATH]                    'local path to fetch configerator configs from. used only if --test-instance is '
             "#,
         );
-    let app = cmdlib::args::add_myrouter_args(app);
+    let app = cmdlib::args::add_mysql_options_args(app);
     let app = cmdlib::args::add_mcrouter_args(app);
     let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
     let app = cmdlib::args::add_disabled_hooks_args(app);
@@ -115,7 +115,7 @@ fn main(fb: FacebookInit) {
             fb,
             config.common,
             config.repos.into_iter(),
-            cmdlib::args::parse_myrouter_port(&matches),
+            cmdlib::args::parse_mysql_options(&matches),
             cmdlib::args::init_cachelib(fb, &matches),
             &cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
             root_log,

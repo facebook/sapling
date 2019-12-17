@@ -16,6 +16,7 @@ use inlinable_string::InlinableString;
 use metaconfig_types::{BlobConfig, BlobstoreId, StorageConfig};
 use prefixblob::PrefixBlobstore;
 use slog::Logger;
+use sql_ext::MysqlOptions;
 use std::{convert::From, sync::Arc};
 
 fn get_blobconfig(
@@ -50,7 +51,7 @@ fn get_blobconfig(
 
 pub fn open_blobstore(
     fb: FacebookInit,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
     // TODO(ahornby) take multiple prefix for when scrubbing multiple repos
@@ -63,7 +64,7 @@ pub fn open_blobstore(
 
     let datasources = make_sql_factory(
         storage_config.dbconfig,
-        myrouter_port,
+        mysql_options,
         readonly_storage,
         logger,
     )
@@ -73,7 +74,7 @@ pub fn open_blobstore(
                 fb,
                 &blobconfig,
                 &sql_factory,
-                myrouter_port,
+                mysql_options,
                 readonly_storage,
             ),
             sql_factory,

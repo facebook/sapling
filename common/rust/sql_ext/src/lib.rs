@@ -23,6 +23,39 @@ use sql::{
     Connection, Transaction,
 };
 
+#[derive(Copy, Clone, Debug)]
+pub struct MysqlOptions {
+    pub myrouter_port: Option<u16>,
+    pub master_only: bool,
+}
+
+impl Default for MysqlOptions {
+    fn default() -> Self {
+        Self {
+            myrouter_port: None,
+            master_only: false,
+        }
+    }
+}
+
+impl MysqlOptions {
+    pub fn myrouter_read_service_type(&self) -> myrouter::ServiceType {
+        if self.master_only {
+            myrouter::ServiceType::MASTER
+        } else {
+            myrouter::ServiceType::ANY
+        }
+    }
+
+    pub fn db_locator_read_instance_requirement(&self) -> raw::InstanceRequirement {
+        if self.master_only {
+            raw::InstanceRequirement::Master
+        } else {
+            raw::InstanceRequirement::ReplicaFirst
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SqlConnections {
     pub write_connection: Connection,
@@ -67,6 +100,7 @@ pub fn create_myrouter_connections(
     tier: String,
     shard_id: Option<usize>,
     port: u16,
+    read_service_type: myrouter::ServiceType,
     pool_size_config: PoolSizeConfig,
     label: String,
     readonly: bool,
@@ -77,7 +111,10 @@ pub fn create_myrouter_connections(
     builder.tie_break(myrouter::TieBreak::SLAVE_FIRST);
 
     builder.label(label);
+
     let read_connection = builder
+        .clone()
+        .service_type(read_service_type)
         .max_num_of_concurrent_connections(pool_size_config.read_pool_size)
         .build_read_only();
 
@@ -105,6 +142,7 @@ pub fn create_myrouter_connections(
 
 fn do_create_raw_xdb_connections<'a, T>(
     tier: &'a T,
+    read_instance_requirement: raw::InstanceRequirement,
     readonly: bool,
 ) -> impl Future<Item = SqlConnections, Error = Error>
 where
@@ -134,7 +172,7 @@ where
     let read_connection = raw::RawConnection::new_from_tier(
         fb,
         tier,
-        raw::InstanceRequirement::ReplicaFirst,
+        read_instance_requirement,
         None,
         None,
         Some("scriptro"),
@@ -160,12 +198,13 @@ where
 
 pub fn create_raw_xdb_connections(
     tier: String,
+    read_instance_requirement: raw::InstanceRequirement,
     readonly: bool,
 ) -> impl Future<Item = SqlConnections, Error = Error> {
     let max_attempts = 5;
 
     loop_fn(0, move |i| {
-        do_create_raw_xdb_connections(&tier, readonly).then(move |r| {
+        do_create_raw_xdb_connections(&tier, read_instance_requirement, readonly).then(move |r| {
             let loop_state = if r.is_ok() || i > max_attempts {
                 Loop::Break(r)
             } else {
@@ -245,11 +284,17 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
 
     fn get_up_query() -> &'static str;
 
-    fn with_myrouter(tier: String, port: u16, readonly: bool) -> Self {
+    fn with_myrouter(
+        tier: String,
+        port: u16,
+        read_service_type: myrouter::ServiceType,
+        readonly: bool,
+    ) -> Self {
         let r = create_myrouter_connections(
             tier,
             None,
             port,
+            read_service_type,
             PoolSizeConfig::for_regular_connection(),
             Self::LABEL.to_string(),
             readonly,
@@ -257,16 +302,30 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
         Self::from_sql_connections(r)
     }
 
-    fn with_raw_xdb_tier(tier: String, readonly: bool) -> BoxFuture<Self, Error> {
-        create_raw_xdb_connections(tier, readonly)
+    fn with_raw_xdb_tier(
+        tier: String,
+        read_instance_requirement: raw::InstanceRequirement,
+        readonly: bool,
+    ) -> BoxFuture<Self, Error> {
+        create_raw_xdb_connections(tier, read_instance_requirement, readonly)
             .map(|r| Self::from_sql_connections(r))
             .boxify()
     }
 
-    fn with_xdb(tier: String, port: Option<u16>, readonly: bool) -> BoxFuture<Self, Error> {
-        match port {
-            Some(myrouter_port) => ok(Self::with_myrouter(tier, myrouter_port, readonly)).boxify(),
-            None => Self::with_raw_xdb_tier(tier, readonly),
+    fn with_xdb(tier: String, options: MysqlOptions, readonly: bool) -> BoxFuture<Self, Error> {
+        match options.myrouter_port {
+            Some(myrouter_port) => ok(Self::with_myrouter(
+                tier,
+                myrouter_port,
+                options.myrouter_read_service_type(),
+                readonly,
+            ))
+            .boxify(),
+            None => Self::with_raw_xdb_tier(
+                tier,
+                options.db_locator_read_instance_requirement(),
+                readonly,
+            ),
         }
     }
 
@@ -291,7 +350,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
 
 pub fn myrouter_ready(
     db_addr_opt: Option<String>,
-    myrouter_port: Option<u16>,
+    mysql_options: MysqlOptions,
     logger: Logger,
 ) -> impl Future<Item = (), Error = Error> {
     let logger_fut = loop_fn((), move |()| {
@@ -306,7 +365,7 @@ pub fn myrouter_ready(
     let f = match db_addr_opt {
         None => ok(()).left_future(), // No DB required: we can skip myrouter.
         Some(db_address) => {
-            if let Some(myrouter_port) = myrouter_port {
+            if let Some(myrouter_port) = mysql_options.myrouter_port {
                 myrouter::wait_for_myrouter(myrouter_port, db_address).right_future()
             } else {
                 // Myrouter was not enabled: we don't need to wait for it.
