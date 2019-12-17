@@ -27,7 +27,7 @@ TEST(InodeBase, getPath) {
   EXPECT_EQ("<root>", root->getLogPath());
 
   auto getChild = [](const TreeInodePtr& parent, StringPiece name) {
-    return parent->getChildByName(PathComponentPiece{name}).get();
+    return parent->getOrLoadChild(PathComponentPiece{name}).get();
   };
   auto childTree = [&getChild](const TreeInodePtr& parent, StringPiece name) {
     return getChild(parent, name).asTreePtr();

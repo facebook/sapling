@@ -184,11 +184,6 @@ Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
   return attr;
 }
 
-folly::Future<InodePtr> TreeInode::getChildByName(
-    PathComponentPiece namepiece) {
-  return getOrLoadChild(namepiece);
-}
-
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
   TraceBlock block("getOrLoadChild");
 

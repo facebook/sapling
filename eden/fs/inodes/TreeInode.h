@@ -113,10 +113,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   Dispatcher::Attr getAttrLocked(const DirContents& contents);
 
-  /** Implements the InodeBase method used by the Dispatcher
-   * to create the Inode instance for a given name */
-  folly::Future<InodePtr> getChildByName(PathComponentPiece namepiece);
-
   /**
    * Get the inode object for a child of this directory.
    *
