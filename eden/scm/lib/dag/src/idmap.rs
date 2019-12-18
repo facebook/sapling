@@ -162,7 +162,9 @@ impl IdMap {
         if id < self.next_free_id(group)? {
             let existing_slice = self.find_slice_by_id(id)?;
             if let Some(existing_slice) = existing_slice {
-                if existing_slice != slice {
+                if existing_slice == slice {
+                    return Ok(());
+                } else {
                     bail!(
                         "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                         id,
@@ -180,7 +182,9 @@ impl IdMap {
             // master branch, the id is re-assigned to master. But, the
             // ids in the master group will never be re-assigned to
             // non-master groups.
-            if existing_id != id && existing_id.group_id() <= group {
+            if existing_id == id {
+                return Ok(());
+            } else if existing_id.group_id() <= group {
                 bail!(
                     "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                     id,
@@ -495,7 +499,6 @@ mod tests {
   abc: 1,
   def: 2,
   ghi: 10,
-  jkl: N0,
   jkl: N0,
   jkl2: N1,
   jkl2: 15,
