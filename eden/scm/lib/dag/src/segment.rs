@@ -328,8 +328,8 @@ impl Dag {
         let mut current_low = None;
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
-        let mut head_ids: HashSet<Id> = if group == Group::MASTER && low > Id(0) {
-            self.heads(Id(0)..=(low - 1))?.iter().collect()
+        let mut head_ids: HashSet<Id> = if group == Group::MASTER && low > Id::MIN {
+            self.heads(Id::MIN..=(low - 1))?.iter().collect()
         } else {
             Default::default()
         };
@@ -352,7 +352,7 @@ impl Dag {
             if parents.len() != 1 || parents[0] + 1 != id || current_low.is_none() {
                 // Must start a new segment.
                 if let Some(low) = current_low {
-                    debug_assert!(id > Id(0));
+                    debug_assert!(id > Id::MIN);
                     let flags = get_flags(&current_parents, id - 1);
                     self.insert(flags, 0, low, id - 1, &current_parents)?;
                     insert_count += 1;
@@ -397,7 +397,7 @@ impl Dag {
         max_high_id: Id,
         level: Level,
     ) -> Result<impl Iterator<Item = Result<Segment>>> {
-        let lower_bound = Self::serialize_head_level_lookup_key(Id(0), level);
+        let lower_bound = Self::serialize_head_level_lookup_key(Id::MIN, level);
         let upper_bound = Self::serialize_head_level_lookup_key(max_high_id, level);
         let iter = self
             .log
@@ -612,7 +612,7 @@ impl Dag {
             if let Some(ref s) = flat_seg {
                 if s.only_head()? {
                     // Fast path.
-                    result.push_span((Id(0)..=id).into());
+                    result.push_span((Id::MIN..=id).into());
                     break 'outer;
                 }
             }
@@ -680,7 +680,7 @@ impl Dag {
 
             // Get parents for a linear set (ex. parent(i) is (i - 1)).
             fn parents_linear(set: &SpanSet) -> SpanSet {
-                debug_assert!(!set.contains(Id(0)));
+                debug_assert!(!set.contains(Id::MIN));
                 SpanSet::from_sorted_spans(set.as_spans().iter().map(|s| s.low - 1..=s.high - 1))
             }
 
@@ -903,7 +903,7 @@ impl Dag {
             Ok(())
         }
 
-        let result_lower_bound = set.min().unwrap_or(Id::max_value());
+        let result_lower_bound = set.min().unwrap_or(Id::MAX);
         let mut ctx = Context {
             this: self,
             set,
@@ -911,7 +911,7 @@ impl Dag {
             result: SpanSet::empty(),
         };
 
-        visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
+        visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
         Ok(ctx.result)
     }
 
@@ -1111,7 +1111,7 @@ impl Dag {
         };
 
         if ctx.roots_min <= ctx.ancestors_max {
-            visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
+            visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
         }
         Ok(ctx.result)
     }
@@ -1189,7 +1189,7 @@ impl Dag {
             result: SpanSet::empty(),
         };
 
-        visit_segments(&mut ctx, (Id(0)..=Id::max_value()).into(), self.max_level)?;
+        visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
         Ok(ctx.result)
     }
 }
@@ -1203,7 +1203,7 @@ impl Dag {
         full_idmap: &dyn crate::idmap::IdMapLike,
         sparse_idmap: &mut crate::idmap::IdMap,
     ) -> Result<()> {
-        for seg in self.next_segments(Id(0), 0)? {
+        for seg in self.next_segments(Id::MIN, 0)? {
             let parents = seg.parents()?;
             // Is it a merge?
             if parents.len() >= 2 {
@@ -1507,7 +1507,7 @@ mod tests {
 
         let flags = SegmentFlags::empty();
 
-        dag.insert(flags, 0, Id(0), Id(50), &vec![]).unwrap();
+        dag.insert(flags, 0, Id::MIN, Id(50), &vec![]).unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 51);
         dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
             .unwrap();
@@ -1516,7 +1516,7 @@ mod tests {
             .unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 151);
         assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
-        dag.insert(flags, 1, Id(0), Id(100), &vec![]).unwrap();
+        dag.insert(flags, 1, Id::MIN, Id(100), &vec![]).unwrap();
         assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 101);
         dag.insert(flags, 1, Id(101), Id(150), &vec![Id(100)])
             .unwrap();

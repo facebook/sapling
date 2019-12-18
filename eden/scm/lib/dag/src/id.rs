@@ -89,12 +89,6 @@ impl Id {
 
     pub const MAX: Self = Self(u64::max_value());
     pub const MIN: Self = Self(0);
-    pub fn max_value() -> Self {
-        Self::MAX
-    }
-    pub fn min_value() -> Self {
-        Self::MIN
-    }
 }
 
 impl fmt::Display for Id {

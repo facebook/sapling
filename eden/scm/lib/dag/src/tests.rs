@@ -484,7 +484,7 @@ Lv2: R0-11[]"#
     assert_eq!(first_ancestor_nth(11, 4), "5");
     assert_eq!(first_ancestor_nth(11, 6), "1");
     assert_eq!(first_ancestor_nth(11, 7), "0");
-    assert!(dag.first_ancestor_nth(Id(0), 1).is_err());
+    assert!(dag.first_ancestor_nth(Id::MIN, 1).is_err());
     assert!(dag.first_ancestor_nth(Id(11), 8).is_err());
 
     assert_eq!(to_first_ancestor_nth(0), "Some((1, 1))");
