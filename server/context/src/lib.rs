@@ -361,6 +361,11 @@ impl CoreContext {
         )
     }
 
+    pub fn clone_and_reset(&self) -> Self {
+        self.session
+            .new_context(self.logger().clone(), self.scuba().clone())
+    }
+
     pub fn with_mutated_scuba(
         &self,
         sample: impl FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,

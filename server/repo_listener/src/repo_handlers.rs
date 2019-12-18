@@ -392,14 +392,13 @@ pub fn repo_handlers(
                             );
 
                             info!(logger, "Warming up cache");
-                            let initial_warmup = cache_warmup(
-                                ctx.clone(),
-                                blobrepo.clone(),
-                                cache_warmup_params,
-                                listen_log.clone(),
-                            )
-                            .chain_err(format!("while warming up cache for repo: {}", reponame))
-                            .from_err();
+                            let initial_warmup =
+                                cache_warmup(ctx.clone(), blobrepo.clone(), cache_warmup_params)
+                                    .chain_err(format!(
+                                        "while warming up cache for repo: {}",
+                                        reponame
+                                    ))
+                                    .from_err();
 
                             let mutable_counters = Arc::new(sql_mutable_counters);
 
