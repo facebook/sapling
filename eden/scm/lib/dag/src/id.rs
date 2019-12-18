@@ -43,9 +43,10 @@ impl Group {
 
     pub const ALL: [Self; 2] = [Self::MASTER, Self::NON_MASTER];
 
-    // 4 Groups are available. Used 2. Reserved 2.
-    const BITS: u32 = 2;
-    pub(crate) const MAX: usize = 1 << Self::BITS;
+    pub(crate) const COUNT: usize = Self::ALL.len();
+
+    // Reserved 1 bit so u64 can be casted to i64 safely.
+    const BITS: u32 = 65 - ((Self::COUNT - 1) as u64).leading_zeros();
 
     /// The first [`Id`] in this group.
     pub fn min_id(self) -> Id {
@@ -62,7 +63,7 @@ impl Id {
     /// The [`Group`] of an Id.
     pub fn group(self) -> Group {
         let group = (self.0 >> (64 - Group::BITS)) as usize;
-        debug_assert!(group < Group::MAX);
+        debug_assert!(group < Group::COUNT);
         Group(group)
     }
 

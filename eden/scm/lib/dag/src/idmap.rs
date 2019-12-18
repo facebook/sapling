@@ -25,7 +25,7 @@ use std::sync::atomic::{self, AtomicU64};
 pub struct IdMap {
     log: log::Log,
     path: PathBuf,
-    cached_next_free_ids: [AtomicU64; Group::MAX],
+    cached_next_free_ids: [AtomicU64; Group::COUNT],
 }
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
