@@ -8,7 +8,6 @@
 
 use std::time::Instant;
 
-use aclchecker::Identity;
 use actix_web::{
     error::Result as ActixResult,
     http::header::{HeaderMap, HeaderValue},
@@ -18,13 +17,13 @@ use actix_web::{
 use anyhow::{format_err, Error};
 use context::{generate_session_id, CoreContext, SessionContainer};
 use fbinit::FacebookInit;
+use identity::Identity;
 use json_encoded::get_identities;
 use openssl::x509::X509;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
 use sshrelay::SshEnvVars;
-use x509::identity;
 
 use tracing::TraceContext;
 
@@ -81,7 +80,7 @@ fn extract_client_identities(cert: &X509, headers: &HeaderMap) -> Result<Vec<Ide
     const PROXY_IDENTITY_DATA: &str = "proxygen";
     const PROXY_IDENTITY_HEADER: &str = "x-fb-validated-client-encoded-identity";
 
-    let cert_identities = identity::get_identities(&cert)?;
+    let cert_identities = x509::identity::get_identities(&cert)?;
 
     let cert_is_trusted_proxy = cert_identities.iter().any(|identity| {
         identity.get_type() == PROXY_IDENTITY_TYPE && identity.get_data() == PROXY_IDENTITY_DATA
