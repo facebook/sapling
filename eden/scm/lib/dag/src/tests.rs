@@ -7,6 +7,7 @@
 
 use crate::id::{GroupId, Id};
 use crate::idmap::IdMap;
+use crate::protocol::{Process, RequestLocationToSlice, RequestSliceToLocation};
 use crate::segment::Dag;
 use crate::segment::FirstAncestorConstraint;
 use crate::spanset::SpanSet;
@@ -44,6 +45,47 @@ static ASCII_DAG5: &str = r#"
         B---D---F
          \   \   \
       A---C---E---G"#;
+
+#[test]
+fn test_protocols() {
+    let built = build_segments(ASCII_DAG1, "A C E L", 3);
+    assert_eq!(
+        built.ascii[3],
+        r#"
+                1-3-\     /--8--9--\
+            0-2------4-5-6-7--------10-11
+Lv0: RH0-0[] R1-1[] 2-2[0] 3-3[1] H4-4[2, 3] H5-7[4] 8-9[6] H10-11[7, 9]
+Lv1: R0-0[] R1-1[] 2-4[0, 1] 5-11[4]
+Lv2: R0-4[] 5-11[4]
+Lv3: R0-11[]"#
+    );
+
+    // Replace "[66]" to "B", "[67]" to "C", etc.
+    let replace = |mut s: String| -> String {
+        for ch in "ABCDEFGHIJKL".chars() {
+            s = s.replace(&format!("[{}]", ch as u8), &format!("{}", ch));
+        }
+        s
+    };
+
+    // [Id] -> RequestLocationToSlice (useful for getting commit hashes from ids).
+    let ids: Vec<Id> = (b'A'..=b'L')
+        .map(|b| built.id_map.find_id_by_slice(&[b]).unwrap().unwrap())
+        .collect();
+    let request1: RequestLocationToSlice = (&built.id_map, &built.dag).process(ids).unwrap();
+    assert_eq!(
+        replace(format!("{:?}", &request1)),
+        "RequestLocationToSlice { paths: [B~1, B~0, D~1, D~0, H~3, H~2, H~1, H~0, J~1, J~0, L~1, L~0] }"
+    );
+
+    // [slice] -> RequestSliceToLocation (useful for getting ids from commit hashes).
+    let slices = (b'A'..=b'L').map(|b| vec![b].into_boxed_slice()).collect();
+    let request2: RequestSliceToLocation = (&built.id_map, &built.dag).process(slices).unwrap();
+    assert_eq!(
+        replace(format!("{:?}", &request2)),
+        "RequestSliceToLocation { slices: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
+    );
+}
 
 #[test]
 fn test_segment_examples() {

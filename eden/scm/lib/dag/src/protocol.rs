@@ -17,8 +17,9 @@
 //! - Slice -> Id: Slice -> RequestSliceToLocation -> ResponseIdSlicePair -> Id
 
 use crate::idmap::IdMapLike;
+use crate::segment::FirstAncestorConstraint;
 use crate::{segment::Dag, Id, IdMap};
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -102,8 +103,16 @@ pub(crate) trait Process<I, O> {
 // Works on an incomplete IdMap, client-side.
 impl<M: IdMapLike> Process<Vec<Box<[u8]>>, RequestSliceToLocation> for (&M, &Dag) {
     fn process(self, slices: Vec<Box<[u8]>>) -> Result<RequestSliceToLocation> {
-        let _ = slices;
-        unimplemented!()
+        let map = &self.0;
+        let dag = &self.1;
+        // Only provides heads in the master group, since it's expected that the
+        // non-master group is already locally known.
+        let heads = dag
+            .heads_ancestors(dag.master_group()?)?
+            .iter()
+            .map(|id| map.slice(id))
+            .collect::<Result<Vec<Box<[u8]>>>>()?;
+        Ok(RequestSliceToLocation { slices, heads })
     }
 }
 
@@ -111,8 +120,31 @@ impl<M: IdMapLike> Process<Vec<Box<[u8]>>, RequestSliceToLocation> for (&M, &Dag
 // Works on an incomplete IdMap, client-side.
 impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToSlice> for (&M, &Dag) {
     fn process(self, ids: Vec<Id>) -> Result<RequestLocationToSlice> {
-        let _ = ids;
-        unimplemented!()
+        let map = &self.0;
+        let dag = &self.1;
+        let heads = dag.heads_ancestors(dag.master_group()?)?;
+
+        let paths = ids
+            .into_iter()
+            .map(|id| {
+                let (x, n) = dag
+                    .to_first_ancestor_nth(
+                        id,
+                        FirstAncestorConstraint::KnownUniversally {
+                            heads: heads.clone(),
+                        },
+                    )?
+                    .ok_or_else(|| format_err!("no segment for id {}", id))?;
+                let x = map.slice(x)?;
+                Ok(AncestorPath {
+                    x,
+                    n,
+                    batch_size: 1,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(RequestLocationToSlice { paths })
     }
 }
 

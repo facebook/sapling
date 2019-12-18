@@ -579,6 +579,17 @@ impl Dag {
         Ok(result)
     }
 
+    /// Return a [`SpanSet`] that covers all ids stored in the master group.
+    pub(crate) fn master_group(&self) -> Result<SpanSet> {
+        let group = GroupId::MASTER;
+        let next = self.next_free_id(0, group)?;
+        if next > group.min_id() {
+            Ok((group.min_id()..=(next - 1)).into())
+        } else {
+            Ok(SpanSet::empty())
+        }
+    }
+
     /// Calculate all ancestors reachable from any id from the given set.
     ///
     /// ```plain,ignore
