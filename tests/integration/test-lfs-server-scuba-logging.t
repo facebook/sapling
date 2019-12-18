@@ -60,6 +60,7 @@
     },
     "normal": {
       "build_revision": *, (glob)
+      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -103,6 +104,7 @@
     },
     "normal": {
       "build_revision": *, (glob)
+      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -151,6 +153,7 @@
     "normal": {
       "batch_order": "*", (glob)
       "build_revision": *, (glob)
+      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -195,6 +198,7 @@
     },
     "normal": {
       "build_revision": *, (glob)
+      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -236,6 +240,7 @@
     },
     "normal": {
       "build_revision": *, (glob)
+      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": *, (glob)
