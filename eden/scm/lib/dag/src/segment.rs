@@ -1209,7 +1209,7 @@ impl Dag {
             if parents.len() >= 2 {
                 for id in parents {
                     debug_assert_eq!(id.group(), Group::MASTER);
-                    result.insert(id);
+                    sparse_idmap.insert(id, &full_idmap.slice(id)?)?;
                 }
             }
         }
@@ -1217,9 +1217,9 @@ impl Dag {
         if next_master.0 > 0 {
             let master = next_master - 1;
             let slice = full_idmap.slice(master)?;
-            sparse_idmap.insert(master, &slice)?
+            sparse_idmap.insert(master, &slice)?;
         }
-        Ok(result)
+        Ok(())
     }
 }
 
@@ -1376,27 +1376,21 @@ impl<'a> Segment<'a> {
 impl Debug for Dag {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut first = true;
-        let mut last_level = 255;
-        let mut segments = self
-            .log
-            .iter()
-            .map(|e| Segment(e.unwrap()))
-            .collect::<Vec<_>>();
-        segments.sort_by_key(|s| (s.level().unwrap(), s.head().unwrap()));
-
-        for segment in segments {
-            let level = segment.level().unwrap();
-            if level != last_level {
-                if !first {
-                    write!(f, "\n")?;
-                }
-                first = false;
-                write!(f, "Lv{}: ", level)?;
-                last_level = level;
-            } else {
-                write!(f, " ")?;
+        for level in 0..=self.max_level {
+            if !first {
+                write!(f, "\n")?;
             }
-            write!(f, "{:?}", segment)?;
+            first = false;
+            write!(f, "Lv{}:", level)?;
+
+            for group in Group::ALL.iter() {
+                let segments = self.next_segments(group.min_id(), level).unwrap();
+                if !segments.is_empty() {
+                    for segment in segments {
+                        write!(f, " {:?}", segment)?;
+                    }
+                }
+            }
         }
         Ok(())
     }
