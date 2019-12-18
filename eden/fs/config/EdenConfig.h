@@ -316,6 +316,14 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether EdenFS uses EdenApi to import data from remote.
    */
   ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};
+
+  /**
+   * The maximum number of tree prefetch operations to allow in parallel for any
+   * checkout.  Setting this to 0 will disable prefetch operations.
+   */
+  ConfigSetting<uint64_t> maxTreePrefetches{"store:max-tree-prefetches",
+                                            5,
+                                            this};
 };
 } // namespace eden
 } // namespace facebook

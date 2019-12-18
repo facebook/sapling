@@ -73,6 +73,7 @@ class Overlay;
 class OverlayFileAccess;
 class ServerState;
 class Tree;
+class TreePrefetchLease;
 class UnboundedQueueExecutor;
 
 class RenameLock;
@@ -622,6 +623,19 @@ class EdenMount {
   FOLLY_NODISCARD folly::Future<folly::Unit> ensureDirectoryExists(
       RelativePathPiece fromRoot);
 
+  /**
+   * Request to start a new tree prefetch.
+   *
+   * Returns a new TreePrefetchLease if you can start a new prefetch, or
+   * std::nullopt if there are too many prefetches already in progress and a new
+   * one should not be started.  If a TreePrefetchLease object is returned the
+   * caller should hold onto it until the prefetch is complete.  When the
+   * TreePrefetchLease is destroyed this will inform the EdenMount that the
+   * prefetch has finished.
+   */
+  FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
+      TreeInodePtr treeInode);
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
@@ -746,6 +760,9 @@ class EdenMount {
    * std::unique_ptr or std::shared_ptr).
    */
   ~EdenMount();
+
+  friend class TreePrefetchLease;
+  void treePrefetchFinished() noexcept;
 
   static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
@@ -886,6 +903,11 @@ class EdenMount {
    * returned via initStatData().
    */
   folly::Synchronized<Owner> owner_;
+
+  /**
+   * The number of tree prefetches in progress for this mount point.
+   */
+  std::atomic<uint64_t> numPrefetchesInProgress_{0};
 
   /**
    * The associated fuse channel to the kernel.

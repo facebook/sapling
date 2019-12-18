@@ -30,6 +30,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/inodes/TreePrefetchLease.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -3265,47 +3266,63 @@ void TreeInode::prefetch() {
   if (!prefetched_.compare_exchange_strong(expected, true)) {
     return;
   }
+  auto prefetchLease = getMount()->tryStartTreePrefetch(inodePtrFromThis());
+  if (!prefetchLease) {
+    XLOG(DBG3) << "skipping prefetch for " << getLogPath()
+               << ": too many prefetches already in progress";
+    prefetched_.store(false);
+    return;
+  }
+  XLOG(DBG4) << "starting prefetch for " << getLogPath();
 
-  folly::via(getMount()->getThreadPool().get(), [self = inodePtrFromThis()] {
-    // prefetch() is called by readdir, under the assumption that a series of
-    // stat calls on its entries will follow. (e.g. `ls -l` or `find -ls`).
-    // To optimize that common situation, load trees and blob metadata in
-    // parallel here.
+  folly::via(
+      getMount()->getThreadPool().get(),
+      [lease = std::move(*prefetchLease)]() mutable {
+        // prefetch() is called by readdir, under the assumption that a series
+        // of stat calls on its entries will follow. (e.g. `ls -l` or `find
+        // -ls`). To optimize that common situation, load trees and blob
+        // metadata in parallel here.
 
-    std::vector<IncompleteInodeLoad> pendingLoads;
-    std::vector<Future<Unit>> inodeFutures;
+        std::vector<IncompleteInodeLoad> pendingLoads;
+        std::vector<Future<Unit>> inodeFutures;
 
-    {
-      auto contents = self->contents_.wlock();
+        {
+          auto contents = lease.getTreeInode()->contents_.wlock();
 
-      for (auto& [name, entry] : contents->entries) {
-        if (entry.getInode()) {
-          // Already loaded
-          continue;
+          for (auto& [name, entry] : contents->entries) {
+            if (entry.getInode()) {
+              // Already loaded
+              continue;
+            }
+
+            // Userspace will commonly issue a readdir() followed by a series of
+            // stat()s. In FUSE, that translates into readdir() and then
+            // lookup(), which returns the same information as a stat(),
+            // including the number of directory entries or number of bytes in a
+            // file. Perform those operations here by loading inodes, trees, and
+            // blob sizes.
+            inodeFutures.emplace_back(
+                lease.getTreeInode()
+                    ->loadChildLocked(
+                        contents->entries, name, entry, pendingLoads)
+                    .thenValue([](InodePtr inode) { return inode->getattr(); })
+                    .unit());
+          }
         }
 
-        // Userspace will commonly issue a readdir() followed by a series of
-        // stat()s. In FUSE, that translates into readdir() and then lookup(),
-        // which returns the same information as a stat(), including the number
-        // of directory entries or number of bytes in a file.
-        // Perform those operations here by loading inodes, trees, and blob
-        // sizes.
-        inodeFutures.emplace_back(
-            self->loadChildLocked(contents->entries, name, entry, pendingLoads)
-                .thenValue([](InodePtr inode) { return inode->getattr(); })
-                .unit());
-      }
-    }
+        // Hook up the pending load futures to properly complete the loading
+        // process then the futures are ready.  We can only do this after
+        // releasing the contents_ lock.
+        for (auto& load : pendingLoads) {
+          load.finish();
+        }
 
-    // Hook up the pending load futures to properly complete the loading
-    // process then the futures are ready.  We can only do this after
-    // releasing the contents_ lock.
-    for (auto& load : pendingLoads) {
-      load.finish();
-    }
-
-    return folly::collectAll(inodeFutures).unit();
-  });
+        return folly::collectAll(inodeFutures)
+            .thenTry([lease = std::move(lease)](auto&&) {
+              XLOG(DBG4) << "finished prefetch for "
+                         << lease.getTreeInode()->getLogPath();
+            });
+      });
 }
 
 folly::Future<Dispatcher::Attr> TreeInode::setattr(

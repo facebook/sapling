@@ -33,6 +33,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/TreePrefetchLease.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
@@ -1266,6 +1267,26 @@ Future<Unit> ensureDirectoryExistsHelper(
 Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
   auto [childName, rest] = splitFirst(fromRoot);
   return ensureDirectoryExistsHelper(getRootInode(), childName, rest);
+}
+
+std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
+    TreeInodePtr treeInode) {
+  auto config = serverState_->getEdenConfig(ConfigReloadBehavior::NoReload);
+  auto maxTreePrefetches = config->maxTreePrefetches.getValue();
+  auto numInProgress =
+      numPrefetchesInProgress_.fetch_add(1, std::memory_order_acq_rel);
+  if (numInProgress < maxTreePrefetches) {
+    return TreePrefetchLease{std::move(treeInode)};
+  } else {
+    numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);
+    return std::nullopt;
+  }
+}
+
+void EdenMount::treePrefetchFinished() noexcept {
+  auto oldValue =
+      numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);
+  XDCHECK_NE(uint64_t{0}, oldValue);
 }
 
 bool EdenMount::MountingUnmountingState::fuseMountStarted() const noexcept {
