@@ -196,23 +196,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
     let input = matches.value_of("input").unwrap().to_string();
 
-    let input_capacity: usize = matches
-        .value_of(ARG_INPUT_CAPACITY)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
+    let input_capacity: usize = matches.value_of(ARG_INPUT_CAPACITY).unwrap().parse()?;
 
-    let chunk_size: u64 = matches
-        .value_of(ARG_CHUNK_SIZE)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
+    let chunk_size: u64 = matches.value_of(ARG_CHUNK_SIZE).unwrap().parse()?;
 
-    let concurrency: usize = matches
-        .value_of(ARG_CONCURRENCY)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
+    let concurrency: usize = matches.value_of(ARG_CONCURRENCY).unwrap().parse()?;
 
     let delay: Option<Duration> = matches
         .value_of(ARG_DELAY)
@@ -242,14 +230,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (CMD_MEMORY, Some(_)) => Arc::new(memblob::LazyMemblob::new()),
         (CMD_XDB, Some(sub)) => {
             let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
-            let shard_count = sub
-                .value_of(ARG_SHARD_COUNT)
-                .unwrap()
-                .parse()
-                .map_err(Error::from)?;
+            let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;
             let fut = match sub.value_of(ARG_MYROUTER_PORT) {
                 Some(port) => {
-                    let port = port.parse().map_err(Error::from)?;
+                    let port = port.parse()?;
                     Sqlblob::with_myrouter(
                         fb,
                         shardmap,
@@ -281,7 +265,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
         Some(size) => {
-            let cache_size_bytes = size.parse().map_err(Error::from)?;
+            let cache_size_bytes = size.parse()?;
             cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
 
             let presence_pool =
@@ -301,14 +285,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let read_qps: Option<NonZeroU32> = matches
         .value_of(ARG_READ_QPS)
         .map(|v| v.parse())
-        .transpose()
-        .map_err(Error::from)?;
+        .transpose()?;
 
     let write_qps: Option<NonZeroU32> = matches
         .value_of(ARG_WRITE_QPS)
         .map(|v| v.parse())
-        .transpose()
-        .map_err(Error::from)?;
+        .transpose()?;
 
     let blob: Arc<dyn Blobstore> = runtime.block_on(lazy(move || -> Result<_, Error> {
         let blob = ThrottledBlob::new(blob, read_qps, write_qps);
