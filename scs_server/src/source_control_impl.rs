@@ -17,7 +17,7 @@ use mononoke_api::{
     SessionContainer, TreeContext, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::{ScubaSampleBuilder, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
 use source_control::server::SourceControlService;
@@ -59,7 +59,11 @@ impl SourceControlServiceImpl {
         SourceControlServiceThriftImpl(self.clone())
     }
 
-    pub(crate) fn create_ctx(&self, specifier: Option<&dyn SpecifierExt>) -> CoreContext {
+    pub(crate) fn create_ctx(
+        &self,
+        req_ctxt: &RequestContext,
+        specifier: Option<&dyn SpecifierExt>,
+    ) -> Result<CoreContext, errors::ServiceError> {
         let mut scuba = self.scuba_builder.clone();
         scuba.add_common_server_data().add("type", "thrift");
         if let Some(specifier) = specifier {
@@ -76,18 +80,28 @@ impl SourceControlServiceImpl {
         let session_id = generate_session_id();
         scuba.add("session_uuid", session_id.to_string());
 
+        let identities = req_ctxt.identities().map_err(errors::internal_error)?;
+        scuba.add(
+            "identities",
+            identities
+                .entries()
+                .into_iter()
+                .map(|id| id.to_string())
+                .collect::<ScubaValue>(),
+        );
+
         let session = SessionContainer::new(
             self.fb,
             session_id,
             TraceContext::default(),
             None,
             None,
-            None,
+            Some(identities),
             SshEnvVars::default(),
             None,
         );
 
-        session.new_context(self.logger.clone(), scuba)
+        Ok(session.new_context(self.logger.clone(), scuba))
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.
@@ -216,7 +230,7 @@ macro_rules! impl_thrift_methods {
         $(
             fn $method_name<'implementation, 'req_ctxt, 'async_trait>(
                 &'implementation self,
-                _req_ctxt: &'req_ctxt RequestContext,
+                req_ctxt: &'req_ctxt RequestContext,
                 $( $param_name: $param_type ),*
             ) -> Pin<Box<dyn Future<Output = $result_type> + Send + 'async_trait>>
             where
@@ -224,7 +238,7 @@ macro_rules! impl_thrift_methods {
                 'req_ctxt: 'async_trait,
                 Self: Sync + 'async_trait,
             {
-                Box::pin((self.0).$method_name( $( $param_name ),* ))
+                Box::pin((self.0).$method_name(req_ctxt, $( $param_name ),* ))
             }
         )*
     }

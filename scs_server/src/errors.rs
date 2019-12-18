@@ -48,6 +48,7 @@ macro_rules! impl_into_thrift_error {
     };
 }
 
+impl_into_thrift_error!(service::ListReposExn);
 impl_into_thrift_error!(service::RepoResolveBookmarkExn);
 impl_into_thrift_error!(service::RepoListBookmarksExn);
 impl_into_thrift_error!(service::RepoCreateCommitExn);

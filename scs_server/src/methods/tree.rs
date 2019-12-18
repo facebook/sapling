@@ -8,6 +8,7 @@
 
 use source_control as thrift;
 use source_control::services::source_control_service as service;
+use srserver::RequestContext;
 
 use crate::from_request::check_range_and_convert;
 use crate::into_response::IntoResponse;
@@ -17,10 +18,11 @@ impl SourceControlServiceImpl {
     /// List the contents of a directory.
     pub(crate) async fn tree_list(
         &self,
+        req_ctxt: &RequestContext,
         tree: thrift::TreeSpecifier,
         params: thrift::TreeListParams,
     ) -> Result<thrift::TreeListResponse, service::TreeListExn> {
-        let ctx = self.create_ctx(Some(&tree));
+        let ctx = self.create_ctx(req_ctxt, Some(&tree))?;
         let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
         let offset: usize = check_range_and_convert("offset", params.offset, 0..)?;
         let limit: usize = check_range_and_convert(

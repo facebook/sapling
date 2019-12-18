@@ -87,6 +87,7 @@ macro_rules! impl_into_thrift_error(
 // Implement From<MononokeError> for source control service exceptions. This allows using ? on
 // MononokeError and have it turn into the right exception. When adding a new error to source
 // control, add it here to get this behavior for free.
+impl_into_thrift_error!(service::ListReposExn);
 impl_into_thrift_error!(service::RepoResolveBookmarkExn);
 impl_into_thrift_error!(service::RepoListBookmarksExn);
 impl_into_thrift_error!(service::RepoCreateCommitExn);
