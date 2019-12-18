@@ -18,6 +18,7 @@
 
 use crate::idmap::IdMapLike;
 use crate::segment::FirstAncestorConstraint;
+use crate::spanset::SpanSet;
 use crate::{segment::Dag, Id, IdMap};
 use anyhow::{format_err, Result};
 use serde::{Deserialize, Serialize};
@@ -152,8 +153,39 @@ impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToSlice> for (&M, &Dag) {
 // Works on a complete IdMap, server-side.
 impl<M: IdMapLike> Process<RequestSliceToLocation, ResponseIdSlicePair> for (&M, &Dag) {
     fn process(self, request: RequestSliceToLocation) -> Result<ResponseIdSlicePair> {
-        let _ = request;
-        unimplemented!()
+        let map = &self.0;
+        let dag = &self.1;
+        let heads = request
+            .heads
+            .into_iter()
+            .map(|s| map.id(&s))
+            .collect::<Result<Vec<Id>>>()?;
+        let heads = SpanSet::from_spans(heads);
+        let path_slices = request
+            .slices
+            .into_iter()
+            .map(|slice| -> Result<_> {
+                let id = map.id(&slice)?;
+                let (x, n) = dag
+                    .to_first_ancestor_nth(
+                        id,
+                        FirstAncestorConstraint::KnownUniversally {
+                            heads: heads.clone(),
+                        },
+                    )?
+                    .ok_or_else(|| format_err!("no path found for slice {:?}", slice))?;
+                let head = map.slice(x)?;
+                Ok((
+                    AncestorPath {
+                        x: head.to_vec().into_boxed_slice(),
+                        n,
+                        batch_size: 1,
+                    },
+                    vec![slice.to_vec().into_boxed_slice()],
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(ResponseIdSlicePair { path_slices })
     }
 }
 
@@ -161,16 +193,49 @@ impl<M: IdMapLike> Process<RequestSliceToLocation, ResponseIdSlicePair> for (&M,
 // Works on a complete IdMap, server-side.
 impl<M: IdMapLike> Process<RequestLocationToSlice, ResponseIdSlicePair> for (&M, &Dag) {
     fn process(self, request: RequestLocationToSlice) -> Result<ResponseIdSlicePair> {
-        let _ = request;
-        unimplemented!()
+        let map = &self.0;
+        let dag = &self.1;
+        let path_slices = request
+            .paths
+            .into_iter()
+            .map(|path| -> Result<_> {
+                let id = map.id(&path.x)?;
+                let mut id = dag.first_ancestor_nth(id, path.n)?;
+                let slices = (0..path.batch_size)
+                    .map(|i| -> Result<Box<[u8]>> {
+                        if i > 0 {
+                            id = dag.first_ancestor_nth(id, 1)?;
+                        }
+                        let slice = map.slice(id)?;
+                        Ok(slice.to_vec().into_boxed_slice())
+                    })
+                    .collect::<Result<Vec<Box<[u8]>>>>()?;
+                debug_assert_eq!(path.batch_size, slices.len() as u64);
+                Ok((path, slices))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(ResponseIdSlicePair { path_slices })
     }
 }
 
 // Slice -> Id or Id -> Slice, step 3: Apply RequestSliceToLocation to a local IdMap.
 // Works on an incomplete IdMap, client-side.
 impl<'a> Process<&ResponseIdSlicePair, ()> for (&'a mut IdMap, &'a Dag) {
-    fn process(self, response: &ResponseIdSlicePair) -> Result<()> {
-        let _ = response;
-        unimplemented!()
+    fn process(mut self, res: &ResponseIdSlicePair) -> Result<()> {
+        let map = &mut self.0;
+        let dag = &self.1;
+        for (path, slices) in res.path_slices.iter() {
+            let x: Id = map
+                .find_id_by_slice(&path.x)?
+                .ok_or_else(|| format_err!("server referred an unknown slice {:?}", &path.x))?;
+            let mut id = dag.first_ancestor_nth(x, path.n)?;
+            for (i, slice) in slices.iter().enumerate() {
+                if i > 0 {
+                    id = dag.first_ancestor_nth(x, 1)?;
+                }
+                map.insert(id, slice)?;
+            }
+        }
+        Ok(())
     }
 }

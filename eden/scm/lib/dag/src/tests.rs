@@ -48,7 +48,7 @@ static ASCII_DAG5: &str = r#"
 
 #[test]
 fn test_protocols() {
-    let built = build_segments(ASCII_DAG1, "A C E L", 3);
+    let mut built = build_segments(ASCII_DAG1, "A C E L", 3);
     assert_eq!(
         built.ascii[3],
         r#"
@@ -85,6 +85,25 @@ Lv3: R0-11[]"#
         replace(format!("{:?}", &request2)),
         "RequestSliceToLocation { slices: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
     );
+
+    // RequestLocationToSlice -> ResponseIdSlicePair
+    let response1 = (&built.id_map, &built.dag).process(request1).unwrap();
+    assert_eq!(
+        replace(format!("{:?}", &response1)),
+        "ResponseIdSlicePair { path_slices: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
+    );
+
+    // RequestSliceToLocation -> ResponseIdSlicePair
+    // Only B, D, H, J, L are used since they are "universally known".
+    let response2 = (&built.id_map, &built.dag).process(request2).unwrap();
+    assert_eq!(
+        replace(format!("{:?}", &response2)),
+        "ResponseIdSlicePair { path_slices: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
+    );
+
+    // Applying responses to IdMap. Should not cause errors.
+    (&mut built.id_map, &built.dag).process(&response1).unwrap();
+    (&mut built.id_map, &built.dag).process(&response2).unwrap();
 }
 
 #[test]
