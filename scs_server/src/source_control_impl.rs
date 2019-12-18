@@ -82,6 +82,7 @@ impl SourceControlServiceImpl {
             TraceContext::default(),
             None,
             None,
+            None,
             SshEnvVars::default(),
             None,
         );

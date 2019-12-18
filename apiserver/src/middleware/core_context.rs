@@ -141,6 +141,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             TraceContext::default(),
             None,
             None,
+            None,
             SshEnvVars::default(),
             None,
         );

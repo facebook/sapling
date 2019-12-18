@@ -11,6 +11,7 @@
 use anyhow::Error;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
+use identity::IdentitySet;
 use limits::types::{MononokeThrottleLimit, RateLimits};
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
 use std::{
@@ -179,6 +180,7 @@ pub struct SessionContainerInner {
     trace: TraceContext,
     user_unix_name: Option<String>,
     source_hostname: Option<String>,
+    identities: Option<IdentitySet>,
     ssh_env_vars: SshEnvVars,
     load_limiter: Option<LoadLimiter>,
 }
@@ -196,6 +198,7 @@ impl SessionContainer {
         trace: TraceContext,
         user_unix_name: Option<String>,
         source_hostname: Option<String>,
+        identities: Option<IdentitySet>,
         ssh_env_vars: SshEnvVars,
         load_limiter: Option<(MononokeThrottleLimit, RateLimits, String)>,
     ) -> Self {
@@ -208,6 +211,7 @@ impl SessionContainer {
             trace,
             user_unix_name,
             source_hostname,
+            identities,
             ssh_env_vars,
             load_limiter,
         };
@@ -223,6 +227,7 @@ impl SessionContainer {
             fb,
             generate_session_id(),
             TraceContext::new(fb, generate_trace_id(), Instant::now()),
+            None,
             None,
             None,
             SshEnvVars::default(),
@@ -258,6 +263,10 @@ impl SessionContainer {
 
     pub fn source_hostname(&self) -> &Option<String> {
         &self.inner.source_hostname
+    }
+
+    pub fn identities(&self) -> &Option<IdentitySet> {
+        &self.inner.identities
     }
 
     pub fn ssh_env_vars(&self) -> &SshEnvVars {
@@ -351,6 +360,7 @@ impl CoreContext {
             TraceContext::default(),
             None,
             None,
+            None,
             SshEnvVars::default(),
             None,
         );
@@ -396,6 +406,10 @@ impl CoreContext {
 
     pub fn user_unix_name(&self) -> &Option<String> {
         &self.session.user_unix_name()
+    }
+
+    pub fn identities(&self) -> &Option<IdentitySet> {
+        &self.session.identities()
     }
 
     pub fn source_hostname(&self) -> &Option<String> {

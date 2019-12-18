@@ -129,6 +129,7 @@ impl MononokeAPIServiceImpl {
             TraceContext::default(),
             None,
             None,
+            None,
             SshEnvVars::default(),
             None,
         );
