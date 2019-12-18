@@ -104,6 +104,52 @@ Lv3: R0-11[]"#
     // Applying responses to IdMap. Should not cause errors.
     (&mut built.id_map, &built.dag).process(&response1).unwrap();
     (&mut built.id_map, &built.dag).process(&response2).unwrap();
+
+    // Try applying response2 to a sparse IdMap.
+    // Prepare the sparse IdMap.
+    let mut sparse_id_map = IdMap::open(built.dir.path().join("sparse-id")).unwrap();
+    built
+        .dag
+        .write_sparse_idmap(&built.id_map, &mut sparse_id_map)
+        .unwrap();
+    assert_eq!(
+        format!("{:?}", &sparse_id_map),
+        r#"IdMap {
+  B: 2,
+  D: 3,
+  H: 7,
+  J: 9,
+  L: 11,
+}
+"#
+    );
+    // Apply response2.
+    (&mut sparse_id_map, &built.dag)
+        .process(&response2)
+        .unwrap();
+    assert_eq!(
+        format!("{:?}", &sparse_id_map),
+        r#"IdMap {
+  B: 2,
+  D: 3,
+  H: 7,
+  J: 9,
+  L: 11,
+  A: 0,
+  B: 2,
+  C: 1,
+  D: 3,
+  E: 4,
+  F: 5,
+  G: 6,
+  H: 7,
+  I: 8,
+  J: 9,
+  K: 10,
+  L: 11,
+}
+"#
+    );
 }
 
 #[test]

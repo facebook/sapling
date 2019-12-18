@@ -1194,6 +1194,35 @@ impl Dag {
     }
 }
 
+// Full IdMap -> Sparse IdMap
+impl Dag {
+    /// Copy a subset of "Universal" mapping from `full_idmap` to
+    /// `sparse_idmap`. See [`Dag::universal`].
+    pub fn write_sparse_idmap(
+        &self,
+        full_idmap: &dyn crate::idmap::IdMapLike,
+        sparse_idmap: &mut crate::idmap::IdMap,
+    ) -> Result<()> {
+        for seg in self.next_segments(Id(0), 0)? {
+            let parents = seg.parents()?;
+            // Is it a merge?
+            if parents.len() >= 2 {
+                for id in parents {
+                    debug_assert_eq!(id.group(), Group::MASTER);
+                    result.insert(id);
+                }
+            }
+        }
+        let next_master = self.next_free_id(0, GroupId::MASTER)?;
+        if next_master.0 > 0 {
+            let master = next_master - 1;
+            let slice = full_idmap.slice(master)?;
+            sparse_idmap.insert(master, &slice)?
+        }
+        Ok(result)
+    }
+}
+
 /// There are many `x~n`s that all resolves to a single commit.
 /// Constraint about `x~n`.
 pub enum FirstAncestorConstraint {
