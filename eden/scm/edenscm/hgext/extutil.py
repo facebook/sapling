@@ -23,16 +23,15 @@ if pycompat.iswindows:
 
     def runbgcommand(script, env, shell=False, stdout=None, stderr=None):
         """Spawn a command without waiting for it to finish."""
-        # we can't use close_fds *and* redirect stdin. I'm not sure that we
-        # need to because the detached process has no console connection.
+        # According to the Python standard library, we can't use close_fds
+        # *and* redirect std*. I'm not sure that we need to because the
+        # detached process has no console connection.
+        if stdout is not None or stderr is not None:
+            raise error.ProgrammingError(
+                "runbgcommand on Windows does not support stdout or stderr"
+            )
         subprocess.Popen(
-            script,
-            shell=shell,
-            env=env,
-            close_fds=True,
-            creationflags=_creationflags,
-            stdout=stdout,
-            stderr=stderr,
+            script, shell=shell, env=env, close_fds=True, creationflags=_creationflags
         )
 
 
