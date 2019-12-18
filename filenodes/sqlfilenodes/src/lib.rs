@@ -506,6 +506,13 @@ fn ensure_paths_exists(
                 }
             }
 
+            // If you have two concurrent INSERT OR IGNORE queries happening with the same rows,
+            // but in different order, they will deadlock. Sorting the rows in each of our INSERT
+            // OR IGNORE queries solves that. So we do it here.
+            for shard in path_rows.iter_mut() {
+                shard.sort();
+            }
+
             let futures: Vec<_> = write_connections
                 .iter()
                 .enumerate()
