@@ -13,10 +13,13 @@
 
 pub mod id;
 pub mod idmap;
+pub mod protocol;
 pub mod segment;
 pub mod spanset;
 
 pub use id::{GroupId, Id};
+pub use idmap::IdMap;
+pub use segment::Dag;
 
 #[cfg(test)]
 mod tests;
