@@ -846,7 +846,6 @@ class poststatus(object):
 
 
 def makedirstate(repo, dirstate):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class fsmonitordirstate(dirstate.__class__):
         def _fsmonitorinit(self, repo):
             self._fs = fsmonitorfilesystem(self._root, self, repo)
@@ -1055,7 +1054,6 @@ def reposetup(ui, repo):
         # repo.dirstate is not a fsmonitordirstate
         makedirstate(repo, dirstate)
 
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class fsmonitorrepo(repo.__class__):
         def status(self, *args, **kwargs):
             orig = super(fsmonitorrepo, self).status

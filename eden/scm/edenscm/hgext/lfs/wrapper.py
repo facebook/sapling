@@ -189,7 +189,6 @@ def convertsink(orig, sink):
     sink = orig(sink)
     if sink.repotype == "hg":
 
-        # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
         class lfssink(sink.__class__):
             def putcommit(
                 self, files, copies, parents, commit, source, revmap, full, cleanp2

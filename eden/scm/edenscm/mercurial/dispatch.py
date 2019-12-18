@@ -91,7 +91,6 @@ class request(object):
         if util.safehasattr(signal, "SIGPIPE"):
             signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 
-        # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
         class ignoreerrorui(self.ui.__class__):
             def _write(self, *args, **kwargs):
                 try:

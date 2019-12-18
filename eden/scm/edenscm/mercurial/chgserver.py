@@ -64,7 +64,6 @@ _log = commandserver.log
 
 
 def _newchgui(srcui, csystem, attachio):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class chgui(srcui.__class__):
         def __init__(self, src=None):
             super(chgui, self).__init__(src)

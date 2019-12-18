@@ -332,6 +332,8 @@ if has_https:
             self.key_file = key_file
             self.cert_file = cert_file
 
+        # pyre-fixme[15]: `connect` overrides method defined in `HTTPConnection`
+        #  inconsistently.
         def connect(self):
             self.sock = socket.create_connection((self.host, self.port))
 
@@ -348,6 +350,7 @@ if has_https:
             )
             sslutil.validatesocket(self.sock)
 
+    # pyre-fixme[11]: Annotation `httpshandler` is not defined as a type.
     class httpshandler(keepalive.KeepAliveHandler, urlreq.httpshandler):
         def __init__(self, ui):
             keepalive.KeepAliveHandler.__init__(self)

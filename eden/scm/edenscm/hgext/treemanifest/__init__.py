@@ -472,7 +472,6 @@ def clientreposetup(repo):
 
 
 def wraprepo(repo):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class treerepository(repo.__class__):
         def transaction(self, *args, **kwargs):
             tr = super(treerepository, self).transaction(*args, **kwargs)
@@ -1329,7 +1328,6 @@ def getbundlemanifestlog(orig, self):
 
             return dpack, hpack
 
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class bundlemanifestlog(wrapmfl.__class__):
         def add(
             self,

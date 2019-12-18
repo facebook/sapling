@@ -720,7 +720,6 @@ def _wraprepo(ui, repo):
     # metadata parsing expression
     metadata_key_value = re.compile(r"(?P<key>.*)\s*[:=]\s*(?P<value>.*)")
 
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class SparseRepo(repo.__class__):
         def readsparseconfig(self, raw, filename=None, warn=True):
             """Takes a string sparse config and returns a SparseConfig

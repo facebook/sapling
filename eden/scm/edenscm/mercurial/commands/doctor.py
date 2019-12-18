@@ -27,7 +27,6 @@ def doctor(ui, repo, **opts):
     """
 
     if repo.ui.configbool("mutation", "enabled"):
-        # pyre-fixme[18]
         repairsvfs(repo, "mutation", mutationstore.mutationstore)
 
     if repo.svfs.isdir("metalog"):
@@ -75,7 +74,6 @@ def repair(ui, name, path, fixfunc):
             ui.warn(_("%s: failed to fix: %s\n") % (name, ex))
         else:
             newmtime = mtime(path)
-            # pyre-fixme[18]
             tracing.singleton.event(
                 (("cat", "repair"), ("name", "repair %s" % name), ("details", message))
             )

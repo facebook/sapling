@@ -25,6 +25,7 @@ if PY2:
         return d.iterkeys()
 
     # Python 2 is bereft of a read-only dict proxy, so we make one!
+    # pyre-fixme[11]: Annotation `IterableUserDict` is not defined as a type.
     class ReadOnlyDict(IterableUserDict):
         """
         Best-effort read-only dict wrapper.

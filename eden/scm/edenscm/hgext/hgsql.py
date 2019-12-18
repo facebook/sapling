@@ -636,7 +636,6 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
 
 
 def wraprepo(repo):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class sqllocalrepo(repo.__class__):
         def sqlconnect(self):
             if self.sqlconn:
@@ -1648,7 +1647,6 @@ def wraprepo(repo):
 
     repo.__class__ = sqllocalrepo
 
-    # pyre-fixme[11]: Annotation `MySQLConverter` is not defined as a type.
     class CustomConverter(mysql.connector.conversion.MySQLConverter):
         """Ensure that all values being returned are returned as python string
         (versus the default byte arrays)."""

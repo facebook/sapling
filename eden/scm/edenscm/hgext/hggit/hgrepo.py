@@ -23,7 +23,6 @@ except NameError:
 
 
 def generate_repo_subclass(baseclass):
-    # pyre-fixme[11]: Annotation `baseclass` is not defined as a type.
     class hgrepo(baseclass):
         if hgutil.safehasattr(localrepo.localrepository, "pull"):
             # Mercurial < 3.2

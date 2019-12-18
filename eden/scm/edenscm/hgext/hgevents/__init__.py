@@ -67,7 +67,6 @@ def reposetup(ui, repo):
         ui.log("hgevents", "Watchman exception: %s\n", ex)
         return
 
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class hgeventsrepo(repo.__class__):
         def wlocknostateupdate(self, *args, **kwargs):
             return super(hgeventsrepo, self).wlock(*args, **kwargs)

@@ -61,8 +61,6 @@ class InfraTests(unittest.TestCase):
 
         # Define a subclass of HgSnapshot.  We use define this solely so we can use its
         # helper write_file(), make_socket(), and mkdir() methods
-        # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-        # pyre-fixme[13]: Attribute `system_hgrc_path` is never initialized.
         class MockSnapshot(snapshot_mod.HgSnapshot):
             def populate_backing_repo(self) -> None:
                 pass

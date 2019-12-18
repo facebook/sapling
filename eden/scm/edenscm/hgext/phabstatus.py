@@ -302,8 +302,6 @@ def _getlogrevs(orig, repo, pats, opts):
     # phabstatus code will be able to peek ahead at the revs to be logged.
     orig_type = revs.__class__
 
-    # pyre-fixme[31]: Expression
-    #  `type($local_edenscm?hgext?phabstatus?_getlogrevs$revs)` is not a valid type.
     class wrapped_class(type(revs)):
         def __iter__(self):
             # The first time __iter__() is called, return a

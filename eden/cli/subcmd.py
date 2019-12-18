@@ -101,7 +101,6 @@ def subcmd(
         # https://github.com/python/mypy/issues/2477
         cls_mypy: Any = cls
 
-        # pyre-fixme[11]: Annotation `cls_mypy` is not defined as a type.
         class SubclassedCmd(cls_mypy):
             NAME = name
             HELP = help

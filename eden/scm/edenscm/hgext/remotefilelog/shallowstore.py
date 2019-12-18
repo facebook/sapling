@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 
 def wrapstore(store):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class shallowstore(store.__class__):
         def __contains__(self, path):
             # Assume it exists

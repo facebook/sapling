@@ -2682,8 +2682,6 @@ def MBTextWrapper(**kwargs):
             return ucstr, ""
 
         # overriding of base class
-        # pyre-fixme[15]: `_handle_long_word` overrides method defined in
-        #  `TextWrapper` inconsistently.
         def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
             space_left = max(width - cur_len, 1)
 
@@ -2696,8 +2694,6 @@ def MBTextWrapper(**kwargs):
 
         # this overriding code is imported from TextWrapper of Python 2.6
         # to calculate columns of string by 'encoding.ucolwidth()'
-        # pyre-fixme[15]: `_wrap_chunks` overrides method defined in `TextWrapper`
-        #  inconsistently.
         def _wrap_chunks(self, chunks):
             colwidth = encoding.ucolwidth
 
@@ -4101,7 +4097,6 @@ class _zstdengine(compressionengine):
         # Not all installs have the zstd module available. So defer importing
         # until first access.
         try:
-            # pyre-fixme[21]: Could not find `bindings`.
             from bindings import zstd
 
             # Force delayed import.

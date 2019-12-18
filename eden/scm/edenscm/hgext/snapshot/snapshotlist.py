@@ -21,7 +21,6 @@ FORMAT_VERSION = "v1"
 
 
 def reposetup(ui, repo):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class snapshotrepo(repo.__class__):
         @localrepo.storecache("snapshotlist")
         def snapshotlist(self):

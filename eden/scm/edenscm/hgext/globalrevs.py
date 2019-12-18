@@ -163,7 +163,6 @@ def _sqllocalrepowrapper(orig, repo):
         return
 
     # This class will effectively extend the `sqllocalrepo` class.
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class globalrevsrepo(repo.__class__):
         def commitctx(self, ctx, error=False):
             # Assign global revs automatically

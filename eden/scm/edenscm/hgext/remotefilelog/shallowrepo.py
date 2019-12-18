@@ -21,7 +21,6 @@ requirement = "remotefilelog"
 
 
 def wraprepo(repo):
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class shallowrepository(repo.__class__):
         @util.propertycache
         def name(self):

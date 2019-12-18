@@ -42,7 +42,6 @@ svn_config = None
 
 def _create_auth_baton(pool):
     """Create a Subversion authentication baton. """
-    # pyre-fixme[21]: Could not find `svn`.
     import svn.client
 
     # Give the client context baton a suite of authentication

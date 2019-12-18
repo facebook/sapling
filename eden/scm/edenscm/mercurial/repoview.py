@@ -274,7 +274,6 @@ def newtype(base):
     """Create a new type with the repoview mixin and the given base class"""
     if base not in _filteredrepotypes:
 
-        # pyre-fixme[11]: Annotation `base` is not defined as a type.
         class filteredrepo(repoview, base):
             pass
 

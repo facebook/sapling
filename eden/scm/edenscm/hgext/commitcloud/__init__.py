@@ -225,7 +225,6 @@ def reposetup(ui, repo):
     if synccheckout:
         extensions.wrapfunction(localrepo.dirstate.dirstate, "loginfo", _sendlocation)
 
-    # pyre-fixme[11]: Annotation `__class__` is not defined as a type.
     class commitcloudrepo(repo.__class__):
         def transaction(self, *args, **kwargs):
             def finalize(tr):
