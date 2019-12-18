@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 indexedlog = { path = "../indexedlog" }
+types = { path = "../types" }
 vlqencoding = { path = "../vlqencoding" }
 
 anyhow = "1.0.20"

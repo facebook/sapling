@@ -14,8 +14,9 @@ use anyhow::{bail, ensure, format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
+use std::fmt;
 use std::fs::{self, File};
-use std::io::{Cursor, Write};
+use std::io::{Cursor, Read, Write};
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicU64};
@@ -384,6 +385,29 @@ impl<'a> SyncableIdMap<'a> {
     }
 }
 
+impl fmt::Debug for IdMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "IdMap {{\n")?;
+        for data in self.log.iter() {
+            if let Ok(mut data) = data {
+                let id = data.read_u64::<BigEndian>().unwrap();
+                let mut slice = Vec::with_capacity(20);
+                data.read_to_end(&mut slice).unwrap();
+                let name = if slice.len() == 20 {
+                    let id20 = types::Id20::from_slice(&slice).unwrap();
+                    id20.to_hex()
+                } else {
+                    String::from_utf8_lossy(&slice).to_string()
+                };
+                let id = Id(id);
+                write!(f, "  {}: {},\n", name, id)?;
+            }
+        }
+        write!(f, "}}\n")?;
+        Ok(())
+    }
+}
+
 impl<'a> Deref for SyncableIdMap<'a> {
     type Target = IdMap;
 
@@ -424,7 +448,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_simple_lookups() {
+    fn test_basic_operations() {
         let dir = tempdir().unwrap();
         let mut map = IdMap::open(dir.path()).unwrap();
         let mut map = map.prepare_filesystem_sync().unwrap();
@@ -463,5 +487,20 @@ mod tests {
             assert!(map.find_id_by_slice(b"jkl3").unwrap().is_none());
             map.sync().unwrap();
         }
+
+        // Test Debug
+        assert_eq!(
+            format!("{:?}", map.deref()),
+            r#"IdMap {
+  abc: 1,
+  def: 2,
+  ghi: 10,
+  jkl: N0,
+  jkl: N0,
+  jkl2: N1,
+  jkl2: 15,
+}
+"#
+        );
     }
 }
