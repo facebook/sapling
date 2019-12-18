@@ -11,7 +11,7 @@ use anyhow::Error;
 use cpython::*;
 use cpython_failure::{FallibleExt, ResultPyErrExt};
 use dag::{
-    id::{GroupId, Id},
+    id::{Group, Id},
     idmap::IdMap,
     segment::Dag,
     spanset::{SpanSet, SpanSetIter},
@@ -181,7 +181,7 @@ py_class!(class dagindex |py| {
     def build(&self, masternodes: Vec<PyBytes>, othernodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyObject> {
         let map = self.map(py).borrow();
         // All nodes known and nothing needs to be built?
-        if masternodes.iter().all(|n| is_ok_some(map.find_id_by_slice_with_max_group(n.data(py), GroupId::MASTER)))
+        if masternodes.iter().all(|n| is_ok_some(map.find_id_by_slice_with_max_group(n.data(py), Group::MASTER)))
             && othernodes.iter().all(|n| is_ok_some(map.find_id_by_slice(n.data(py)))) {
             return Ok(py.None());
         }
@@ -189,7 +189,7 @@ py_class!(class dagindex |py| {
         let get_parents = translate_get_parents(py, parentfunc);
         let mut map = self.map(py).borrow_mut();
         let mut map = map.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-        for (nodes, group) in [(masternodes, GroupId::MASTER), (othernodes, GroupId::NON_MASTER)].iter() {
+        for (nodes, group) in [(masternodes, Group::MASTER), (othernodes, Group::NON_MASTER)].iter() {
             for node in nodes {
                 let node = node.data(py);
                 map.assign_head(&node, &get_parents, *group).map_pyerr::<exc::RuntimeError>(py)?;
@@ -201,7 +201,7 @@ py_class!(class dagindex |py| {
         let mut dag = self.dag(py).borrow_mut();
         use std::ops::DerefMut;
         let mut syncable = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-        for &group in GroupId::ALL.iter() {
+        for &group in Group::ALL.iter() {
             let id = map.next_free_id(group).map_pyerr::<exc::IOError>(py)?;
             if id > group.min_id() {
                 syncable.build_segments_persistent(id - 1, &get_parents).map_pyerr::<exc::IOError>(py)?;

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::id::{GroupId, Id};
+use crate::id::{Group, Id};
 use crate::idmap::IdMap;
 use crate::protocol::{Process, RequestLocationToSlice, RequestSliceToLocation};
 use crate::segment::Dag;
@@ -345,7 +345,7 @@ Lv3: R0-12[] N0-N8[1, 5]"#
     // 'm' has 2 ids: 8 (master) and 5 (non-master).
     assert_eq!(built.id_map.find_id_by_slice(b"m").unwrap().unwrap(), Id(8));
     assert_eq!(built.id_map.find_slice_by_id(Id(8)).unwrap().unwrap(), b"m");
-    let id = GroupId::NON_MASTER.min_id() + 5;
+    let id = Group::NON_MASTER.min_id() + 5;
     assert_eq!(built.id_map.find_slice_by_id(id).unwrap().unwrap(), b"m");
 }
 
@@ -740,7 +740,7 @@ impl IdMap {
     /// Replace names in an ASCII DAG using the ids assigned.
     fn replace(&self, text: &str) -> String {
         let mut result = text.to_string();
-        for &group in GroupId::ALL.iter() {
+        for &group in Group::ALL.iter() {
             for id in group.min_id().to(self.next_free_id(group).unwrap()) {
                 if let Ok(Some(name)) = self.find_slice_by_id(id) {
                     let name = String::from_utf8(name.to_vec()).unwrap();
@@ -794,9 +794,9 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
         .map(|head| {
             // Assign to non-master if the name starts with a lowercase character.
             let group = if head.chars().nth(0).unwrap().is_lowercase() {
-                GroupId::NON_MASTER
+                Group::NON_MASTER
             } else {
-                GroupId::MASTER
+                Group::MASTER
             };
             let head = head.as_bytes();
             id_map.assign_head(head, &parents_by_name, group).unwrap();

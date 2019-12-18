@@ -14,7 +14,7 @@
 //! have in-memory-only changes. [`SyncableDag`] is the only way to update
 //! the filesystem state, and does not support queires.
 
-use crate::id::{GroupId, Id};
+use crate::id::{Group, Id};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use anyhow::{bail, ensure, format_err, Result};
@@ -188,7 +188,7 @@ impl Dag {
     /// Return the next unused id for segments of the specified level.
     ///
     /// Useful for building segments incrementally.
-    pub fn next_free_id(&self, level: Level, group: GroupId) -> Result<Id> {
+    pub fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
         let lower_bound = group.min_id().to_prefixed_bytearray(level);
         let upper_bound = group.max_id().to_prefixed_bytearray(level);
         let range = &lower_bound[..]..=&upper_bound[..];
@@ -296,7 +296,7 @@ impl Dag {
     {
         let mut count = 0;
         count += self.build_flat_segments(high, get_parents, 0)?;
-        if self.next_free_id(0, high.group_id())? <= high {
+        if self.next_free_id(0, high.group())? <= high {
             bail!("internal error: flat segments are not built as expected");
         }
         count += self.build_all_high_level_segments(false)?;
@@ -323,12 +323,12 @@ impl Dag {
     where
         F: Fn(Id) -> Result<Vec<Id>>,
     {
-        let group = high.group_id();
+        let group = high.group();
         let low = self.next_free_id(0, group)?;
         let mut current_low = None;
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
-        let mut head_ids: HashSet<Id> = if group == GroupId::MASTER && low > Id(0) {
+        let mut head_ids: HashSet<Id> = if group == Group::MASTER && low > Id(0) {
             self.heads(Id(0)..=(low - 1))?.iter().collect()
         } else {
             Default::default()
@@ -338,7 +338,7 @@ impl Dag {
             if parents.is_empty() {
                 flags |= SegmentFlags::HAS_ROOT
             }
-            if group == GroupId::MASTER {
+            if group == Group::MASTER {
                 head_ids = &head_ids - &parents.iter().cloned().collect();
                 if head_ids.is_empty() {
                     flags |= SegmentFlags::ONLY_HEAD;
@@ -377,7 +377,7 @@ impl Dag {
     /// Find segments that covers `id..` range at the given level, within a same group.
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         let lower_bound = Self::serialize_head_level_lookup_key(id, level);
-        let upper_bound = Self::serialize_head_level_lookup_key(id.group_id().max_id(), level);
+        let upper_bound = Self::serialize_head_level_lookup_key(id.group().max_id(), level);
         let mut result = Vec::new();
         for entry in self
             .log
@@ -432,7 +432,7 @@ impl Dag {
         let size = self.new_seg_size;
 
         let mut insert_count = 0;
-        for &group in GroupId::ALL.iter() {
+        for &group in Group::ALL.iter() {
             // `get_parents` is on the previous level of segments.
             let get_parents = |head: Id| -> Result<Vec<Id>> {
                 if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
@@ -570,7 +570,7 @@ impl Dag {
     /// Return a [`SpanSet`] that covers all ids stored in this [`Dag`].
     pub fn all(&self) -> Result<SpanSet> {
         let mut result = SpanSet::empty();
-        for &group in GroupId::ALL.iter().rev() {
+        for &group in Group::ALL.iter().rev() {
             let next = self.next_free_id(0, group)?;
             if next > group.min_id() {
                 result.push(group.min_id()..=(next - 1));
@@ -581,7 +581,7 @@ impl Dag {
 
     /// Return a [`SpanSet`] that covers all ids stored in the master group.
     pub(crate) fn master_group(&self) -> Result<SpanSet> {
-        let group = GroupId::MASTER;
+        let group = Group::MASTER;
         let next = self.next_free_id(0, group)?;
         if next > group.min_id() {
             Ok((group.min_id()..=(next - 1)).into())
@@ -1213,7 +1213,7 @@ impl Dag {
                 }
             }
         }
-        let next_master = self.next_free_id(0, GroupId::MASTER)?;
+        let next_master = self.next_free_id(0, Group::MASTER)?;
         if next_master.0 > 0 {
             let master = next_master - 1;
             let slice = full_idmap.slice(master)?;
@@ -1502,25 +1502,25 @@ mod tests {
     fn test_segment_basic_lookups() {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 0);
-        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
 
         let flags = SegmentFlags::empty();
 
         dag.insert(flags, 0, Id(0), Id(50), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 51);
+        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 51);
         dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
             .unwrap();
-        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 101);
+        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 101);
         dag.insert(flags, 0, Id(101), Id(150), &vec![Id(100)])
             .unwrap();
-        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 151);
-        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 151);
+        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
         dag.insert(flags, 1, Id(0), Id(100), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 101);
+        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 101);
         dag.insert(flags, 1, Id(101), Id(150), &vec![Id(100)])
             .unwrap();
-        assert_eq!(dag.next_free_id(1, GroupId::MASTER).unwrap().0, 151);
+        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 151);
 
         // Helper functions to make the below lines shorter.
         let low_by_head = |head, level| match dag.find_segment_by_head_and_level(Id(head), level) {
@@ -1568,7 +1568,7 @@ mod tests {
     fn test_sync_reload() {
         let dir = tempdir().unwrap();
         let mut dag = Dag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0, GroupId::MASTER).unwrap().0, 0);
+        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
 
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
         syncable

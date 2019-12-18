@@ -24,9 +24,9 @@ pub struct Id(pub u64);
 ///
 /// `(Group, Id)` are also topologically sorted.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct GroupId(pub(crate) usize);
+pub struct Group(pub(crate) usize);
 
-impl GroupId {
+impl Group {
     /// The "master" group. `ancestors(master)`.
     /// - Expected to have most of the commits in a repo.
     /// - Expected to be free from fragmentation. In other words,
@@ -59,11 +59,11 @@ impl GroupId {
 }
 
 impl Id {
-    /// The [`GroupId`] of an Id.
-    pub fn group_id(self) -> GroupId {
-        let group = (self.0 >> (64 - GroupId::BITS)) as usize;
-        debug_assert!(group < GroupId::MAX);
-        GroupId(group)
+    /// The [`Group`] of an Id.
+    pub fn group(self) -> Group {
+        let group = (self.0 >> (64 - Group::BITS)) as usize;
+        debug_assert!(group < Group::MAX);
+        Group(group)
     }
 
     /// Similar to `self..=other`.
@@ -99,8 +99,8 @@ impl Id {
 
 impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let group = self.group_id();
-        if group == GroupId::NON_MASTER {
+        let group = self.group();
+        if group == Group::NON_MASTER {
             write!(f, "N")?;
         }
         write!(f, "{}", self.0 - group.min_id().0)
@@ -113,7 +113,7 @@ impl fmt::Debug for Id {
     }
 }
 
-impl fmt::Display for GroupId {
+impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }

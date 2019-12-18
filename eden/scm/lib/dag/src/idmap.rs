@@ -9,7 +9,7 @@
 //!
 //! See [`IdMap`] for the main structure.
 
-use crate::id::{GroupId, Id};
+use crate::id::{Group, Id};
 use anyhow::{bail, ensure, format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
@@ -25,7 +25,7 @@ use std::sync::atomic::{self, AtomicU64};
 pub struct IdMap {
     log: log::Log,
     path: PathBuf,
-    cached_next_free_ids: [AtomicU64; GroupId::MAX],
+    cached_next_free_ids: [AtomicU64; Group::MAX],
 }
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
@@ -143,10 +143,10 @@ impl IdMap {
     pub fn find_id_by_slice_with_max_group(
         &self,
         slice: &[u8],
-        max_group: GroupId,
+        max_group: Group,
     ) -> Result<Option<Id>> {
         Ok(self.find_id_by_slice(slice)?.and_then(|id| {
-            if id.group_id() <= max_group {
+            if id.group() <= max_group {
                 Some(id)
             } else {
                 None
@@ -158,7 +158,7 @@ impl IdMap {
     ///
     /// Errors if the new entry conflicts with existing entries.
     pub fn insert(&mut self, id: Id, slice: &[u8]) -> Result<()> {
-        let group = id.group_id();
+        let group = id.group();
         if id < self.next_free_id(group)? {
             let existing_slice = self.find_slice_by_id(id)?;
             if let Some(existing_slice) = existing_slice {
@@ -184,7 +184,7 @@ impl IdMap {
             // non-master groups.
             if existing_id == id {
                 return Ok(());
-            } else if existing_id.group_id() <= group {
+            } else if existing_id.group() <= group {
                 bail!(
                     "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                     id,
@@ -207,7 +207,7 @@ impl IdMap {
     }
 
     /// Return the next unused id in the given group.
-    pub fn next_free_id(&self, group: GroupId) -> Result<Id> {
+    pub fn next_free_id(&self, group: Group) -> Result<Id> {
         let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
         let id = if cached == 0 {
             let id = Self::get_next_free_id(&self.log, group)?;
@@ -221,7 +221,7 @@ impl IdMap {
 
     // Find an unused id that is bigger than existing ids.
     // Used internally. It should match `next_free_id`.
-    fn get_next_free_id(log: &log::Log, group: GroupId) -> Result<Id> {
+    fn get_next_free_id(log: &log::Log, group: Group) -> Result<Id> {
         // Checks should have been done at callsite.
         let lower_bound_id = group.min_id();
         let upper_bound_id = group.max_id();
@@ -256,7 +256,7 @@ impl IdMap {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
-    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F, group: GroupId) -> Result<Id>
+    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F, group: Group) -> Result<Id>
     where
         F: Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
     {
@@ -456,18 +456,18 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut map = IdMap::open(dir.path()).unwrap();
         let mut map = map.prepare_filesystem_sync().unwrap();
-        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 0);
+        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 0);
         map.insert(Id(1), b"abc").unwrap();
-        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 2);
+        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 2);
         map.insert(Id(2), b"def").unwrap();
-        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 3);
+        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 3);
         map.insert(Id(10), b"ghi").unwrap();
-        assert_eq!(map.next_free_id(GroupId::MASTER).unwrap().0, 11);
+        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 11);
         map.insert(Id(11), b"ghi").unwrap_err(); // ghi maps to 10
         map.insert(Id(10), b"ghi2").unwrap_err(); // 10 maps to ghi
 
         // Test another group.
-        let id = map.next_free_id(GroupId::NON_MASTER).unwrap();
+        let id = map.next_free_id(Group::NON_MASTER).unwrap();
         map.insert(id, b"jkl").unwrap();
         map.insert(id, b"jkl").unwrap();
         map.insert(id, b"jkl2").unwrap_err(); // id maps to jkl
@@ -475,7 +475,7 @@ mod tests {
         map.insert(id + 2, b"jkl2").unwrap_err(); // jkl2 maps to id + 1
         map.insert(Id(15), b"jkl2").unwrap(); // reassign jkl2 to master group - ok.
         map.insert(id + 3, b"abc").unwrap_err(); // reassign abc to non-master group - error.
-        assert_eq!(map.next_free_id(GroupId::NON_MASTER).unwrap(), id + 2);
+        assert_eq!(map.next_free_id(Group::NON_MASTER).unwrap(), id + 2);
 
         for _ in 0..=1 {
             assert_eq!(map.find_slice_by_id(Id(1)).unwrap().unwrap(), b"abc");

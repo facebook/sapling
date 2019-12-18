@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet, GroupId, Id};
+use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet, Group, Id};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
@@ -30,7 +30,7 @@ fn main() {
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
     id_map
-        .assign_head(&head_name, &parents_by_name, GroupId::MASTER)
+        .assign_head(&head_name, &parents_by_name, Group::MASTER)
         .unwrap();
 
     let head_id = id_map.find_id_by_slice(&head_name).unwrap().unwrap();
