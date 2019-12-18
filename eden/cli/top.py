@@ -111,9 +111,6 @@ class Top:
             self.curses.use_default_colors()
             self.curses.init_pair(COLOR_SELECTED, self.curses.COLOR_GREEN, -1)
 
-            # Avoid displaying a blank screen during the first update()
-            self.render(stdscr)
-
             while self.running:
                 self.update(client)
                 self.render(stdscr)
@@ -140,7 +137,7 @@ class Top:
             self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
 
     def render(self, stdscr):
-        stdscr.clear()
+        stdscr.erase()
 
         self.render_top_bar(stdscr)
         # TODO: daemon memory/inode stats on line 2
