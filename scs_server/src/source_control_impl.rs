@@ -22,6 +22,7 @@ use slog::Logger;
 use source_control as thrift;
 use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
+use srserver::RequestContext;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 
@@ -212,12 +213,14 @@ impl SourceControlServiceImpl {
 macro_rules! impl_thrift_methods {
     ( $( async fn $method_name:ident($( $param_name:ident : $param_type:ty, )*) -> $result_type:ty; )* ) => {
         $(
-            fn $method_name<'implementation, 'async_trait>(
+            fn $method_name<'implementation, 'req_ctxt, 'async_trait>(
                 &'implementation self,
+                _req_ctxt: &'req_ctxt RequestContext,
                 $( $param_name: $param_type ),*
             ) -> Pin<Box<dyn Future<Output = $result_type> + Send + 'async_trait>>
             where
                 'implementation: 'async_trait,
+                'req_ctxt: 'async_trait,
                 Self: Sync + 'async_trait,
             {
                 Box::pin((self.0).$method_name( $( $param_name ),* ))
@@ -227,6 +230,8 @@ macro_rules! impl_thrift_methods {
 }
 
 impl SourceControlService for SourceControlServiceThriftImpl {
+    type RequestContext = RequestContext;
+
     impl_thrift_methods! {
         async fn list_repos(
             params: thrift::ListReposParams,
