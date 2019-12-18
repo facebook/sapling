@@ -209,8 +209,10 @@ impl Mononoke {
         let reporting_futs: Vec<_> = self
             .repos
             .iter()
-            .map(|(_, repo)| RepoContext::new(ctx.clone(), repo.clone()))
-            .map(|repo| async move { repo.report_monitoring_stats().await })
+            .map(|(_, repo)| {
+                let ctx = &ctx;
+                async move { repo.report_monitoring_stats(&ctx).await }
+            })
             .collect();
         try_join_all(reporting_futs).await.map(|_| ())
     }

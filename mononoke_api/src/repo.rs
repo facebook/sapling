@@ -27,7 +27,6 @@ use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::try_join_all;
 use futures_preview::StreamExt as NewStreamExt;
-use futures_util::try_join;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
     CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
@@ -241,6 +240,207 @@ impl Repo {
             monitoring_config: None,
         })
     }
+
+    pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
+        match self.monitoring_config.as_ref() {
+            None => Ok(()),
+            Some(monitoring_config) => {
+                let reporting_futs = monitoring_config
+                    .bookmarks_to_report_age
+                    .iter()
+                    .map(move |bookmark| self.report_bookmark_age_difference(ctx, &bookmark));
+                try_join_all(reporting_futs).await.map(|_| ())
+            }
+        }
+    }
+
+    fn set_counter(&self, ctx: &CoreContext, name: &dyn AsRef<str>, value: i64) {
+        get_service_data_singleton(ctx.fb).set_counter(name, value);
+    }
+
+    fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
+        error!(
+            ctx.logger(),
+            "Monitored bookmark does not exist in the cache: {}", bookmark
+        );
+
+        let counter_name = format!(
+            "{}.{}.{}.{}",
+            COMMON_COUNTER_PREFIX,
+            MISSING_FROM_CACHE_INFIX,
+            self.blob_repo.get_repoid(),
+            bookmark,
+        );
+        self.set_counter(ctx, &counter_name, 1);
+    }
+
+    fn report_bookmark_missing_from_repo(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
+        error!(
+            ctx.logger(),
+            "Monitored bookmark does not exist in the repo: {}", bookmark
+        );
+
+        let counter_name = format!(
+            "{}.{}.{}.{}",
+            COMMON_COUNTER_PREFIX,
+            MISSING_FROM_REPO_INFIX,
+            self.blob_repo.get_repoid(),
+            bookmark,
+        );
+        self.set_counter(ctx, &counter_name, 1);
+    }
+
+    fn report_bookmark_staleness(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+        staleness: i64,
+    ) {
+        debug!(
+            ctx.logger(),
+            "Reporting staleness of {} to be {}s", bookmark, staleness
+        );
+
+        let counter_name = format!(
+            "{}.{}.{}.{}",
+            COMMON_COUNTER_PREFIX,
+            STALENESS_INFIX,
+            self.blob_repo.get_repoid(),
+            bookmark,
+        );
+        self.set_counter(ctx, &counter_name, staleness);
+    }
+
+    async fn report_bookmark_age_difference(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+    ) -> Result<(), MononokeError> {
+        let repo = &self.blob_repo;
+
+        let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(bookmark);
+        let maybe_bcs_id_from_blobrepo = repo
+            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .compat()
+            .await?;
+
+        if maybe_bcs_id_from_blobrepo.is_none() {
+            self.report_bookmark_missing_from_repo(ctx, bookmark);
+        }
+
+        if maybe_bcs_id_from_service.is_none() {
+            self.report_bookmark_missing_from_cache(ctx, bookmark);
+        }
+
+        if let (Some(service_bcs_id), Some(blobrepo_bcs_id)) =
+            (maybe_bcs_id_from_service, maybe_bcs_id_from_blobrepo)
+        {
+            // We report the difference between current time (i.e. SystemTime::now())
+            // and timestamp of the first child of bookmark value from cache (see graph below)
+            //
+            //       O <- bookmark value from blobrepo
+            //       |
+            //      ...
+            //       |
+            //       O <- first child of bookmark value from cache.
+            //       |
+            //       O <- bookmark value from cache, it's outdated
+            //
+            // This way of reporting shows for how long the oldest commit not in cache hasn't been
+            // imported, and it should work correctly both for high and low commit rates.
+
+            let difference = if blobrepo_bcs_id == service_bcs_id {
+                0
+            } else {
+                let limit = 100;
+                let maybe_child = self
+                    .try_find_child(ctx, service_bcs_id, blobrepo_bcs_id, limit)
+                    .await?;
+
+                // If we can't find a child of a bookmark value from cache, then it might mean
+                // that either cache is too far behind or there was a non-forward bookmark move.
+                // Either way, we can't really do much about it here, so let's just find difference
+                // between current timestamp and bookmark value from cache.
+                let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
+
+                let compare_timestamp = repo
+                    .get_bonsai_changeset(ctx.clone(), compare_bcs_id)
+                    .compat()
+                    .await?
+                    .author_date()
+                    .timestamp_secs();
+
+                let current_timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(Error::from)?;
+                let current_timestamp = current_timestamp.as_secs() as i64;
+                current_timestamp - compare_timestamp
+            };
+            self.report_bookmark_staleness(ctx, bookmark, difference);
+        }
+
+        Ok(())
+    }
+
+    /// Try to find a changeset that's ancestor of `descendant` and direct child of
+    /// `ancestor`. Returns None if this commit doesn't exist (for example if `ancestor` is not
+    /// actually an ancestor of `descendant`) or if child is too far away from descendant.
+    async fn try_find_child(
+        &self,
+        ctx: &CoreContext,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+        limit: u64,
+    ) -> Result<Option<ChangesetId>, Error> {
+        // This is a generation number beyond which we don't need to traverse
+        let min_gen_num = self.fetch_gen_num(ctx, &ancestor).await?;
+
+        let mut ancestors = AncestorsNodeStream::new(
+            ctx.clone(),
+            &self.blob_repo.get_changeset_fetcher(),
+            descendant,
+        )
+        .compat();
+
+        let mut traversed = 0;
+        while let Some(cs_id) = ancestors.next().await {
+            traversed += 1;
+            if traversed > limit {
+                return Ok(None);
+            }
+
+            let cs_id = cs_id?;
+            let parents = self
+                .blob_repo
+                .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+                .compat()
+                .await?;
+
+            if parents.contains(&ancestor) {
+                return Ok(Some(cs_id));
+            } else {
+                let gen_num = self.fetch_gen_num(ctx, &cs_id).await?;
+                if gen_num < min_gen_num {
+                    return Ok(None);
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    async fn fetch_gen_num(
+        &self,
+        ctx: &CoreContext,
+        cs_id: &ChangesetId,
+    ) -> Result<Generation, Error> {
+        let maybe_gen_num = self
+            .blob_repo
+            .get_generation_number_by_bonsai(ctx.clone(), *cs_id)
+            .compat()
+            .await?;
+        maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
+    }
 }
 
 /// A context object representing a query to a particular repo.
@@ -329,13 +529,6 @@ impl RepoContext {
         bookmark: impl AsRef<str>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let bookmark = BookmarkName::new(bookmark.as_ref())?;
-        self.resolve_bookmark_impl(&bookmark).await
-    }
-
-    async fn resolve_bookmark_impl(
-        &self,
-        bookmark: &BookmarkName,
-    ) -> Result<Option<ChangesetContext>, MononokeError> {
         let mut cs_id = self.warm_bookmarks_cache().get(&bookmark);
 
         if cs_id.is_none() {
@@ -518,226 +711,6 @@ impl RepoContext {
         }
     }
 
-    pub async fn report_monitoring_stats(&self) -> Result<(), MononokeError> {
-        match self.repo.monitoring_config.as_ref() {
-            None => Ok(()),
-            Some(monitoring_config) => {
-                let reporting_futs = monitoring_config
-                    .bookmarks_to_report_age
-                    .iter()
-                    .map(move |bookmark| self.report_bookmark_age_difference(&bookmark));
-                try_join_all(reporting_futs).await.map(|_| ())
-            }
-        }
-    }
-
-    fn set_counter(&self, name: &dyn AsRef<str>, value: i64) {
-        get_service_data_singleton(self.ctx.fb).set_counter(name, value);
-    }
-
-    fn report_bookmark_missing_from_cache(&self, bookmark: &BookmarkName) {
-        error!(
-            self.ctx().logger(),
-            "Monitored bookmark does not exist in the cache: {}", bookmark
-        );
-
-        let counter_name = format!(
-            "{}.{}.{}.{}",
-            COMMON_COUNTER_PREFIX,
-            MISSING_FROM_CACHE_INFIX,
-            self.blob_repo().get_repoid(),
-            bookmark,
-        );
-        self.set_counter(&counter_name, 1);
-    }
-
-    fn report_bookmark_missing_from_repo(&self, bookmark: &BookmarkName) {
-        error!(
-            self.ctx().logger(),
-            "Monitored bookmark does not exist in the repo: {}", bookmark
-        );
-
-        let counter_name = format!(
-            "{}.{}.{}.{}",
-            COMMON_COUNTER_PREFIX,
-            MISSING_FROM_REPO_INFIX,
-            self.blob_repo().get_repoid(),
-            bookmark,
-        );
-        self.set_counter(&counter_name, 1);
-    }
-
-    fn report_bookmark_staleness(&self, bookmark: &BookmarkName, staleness: i64) {
-        debug!(
-            self.ctx().logger(),
-            "Reporting staleness of {} to be {}s", bookmark, staleness
-        );
-
-        let counter_name = format!(
-            "{}.{}.{}.{}",
-            COMMON_COUNTER_PREFIX,
-            STALENESS_INFIX,
-            self.blob_repo().get_repoid(),
-            bookmark,
-        );
-        self.set_counter(&counter_name, staleness);
-    }
-
-    async fn report_bookmark_age_difference(
-        &self,
-        bookmark: &BookmarkName,
-    ) -> Result<(), MononokeError> {
-        let repo = self.blob_repo();
-        let ctx = self.ctx();
-
-        let maybe_changeset_context_from_service = self.resolve_bookmark_impl(bookmark).await?;
-        let maybe_bcs_id_from_blobrepo = repo
-            .get_bonsai_bookmark(ctx.clone(), &bookmark)
-            .compat()
-            .await?;
-
-        if maybe_bcs_id_from_blobrepo.is_none() {
-            self.report_bookmark_missing_from_repo(bookmark);
-        }
-
-        if maybe_changeset_context_from_service.is_none() {
-            self.report_bookmark_missing_from_cache(bookmark);
-        }
-
-        let (changeset_context_from_service, blobrepo_bcs_id) = match (
-            maybe_changeset_context_from_service,
-            maybe_bcs_id_from_blobrepo,
-        ) {
-            (Some(changeset_context_from_service), Some(bcs_id)) => {
-                (changeset_context_from_service, bcs_id)
-            }
-            // At this point we've already reported missing monitored bookmark
-            // either in the cache, or in the repo, or in both. Let's just silenly
-            // return success, as we don't want the service to crash.
-            _ => return Ok(()),
-        };
-
-        // We report the difference between current time (i.e. SystemTime::now())
-        // and timestamp of the first child of bookmark value from cache (see graph below)
-        //
-        //       O <- bookmark value from blobrepo
-        //       |
-        //      ...
-        //       |
-        //       O <- first child of bookmark value from cache.
-        //       |
-        //       O <- bookmark value from cache, it's outdated
-        //
-        // This way of reporting shows for how long the oldest commit not in cache hasn't been
-        // imported, and it should work correctly both for high and low commit rates.
-
-        let difference = if blobrepo_bcs_id == changeset_context_from_service.id() {
-            0
-        } else {
-            let limit = 100;
-            let maybe_child = self
-                .try_find_child(
-                    ChangesetSpecifier::Bonsai(changeset_context_from_service.id()),
-                    ChangesetSpecifier::Bonsai(blobrepo_bcs_id),
-                    limit,
-                )
-                .await?;
-
-            // If we can't find a child of a bookmark value from cache, then it might mean
-            // that either cache is too far behind or there was a non-forward bookmark move.
-            // Either way, we can't really do much about it here, so let's just find difference
-            // between current timestamp and bookmark value from cache.
-            let cs_id_to_compare_ts_with =
-                maybe_child.unwrap_or(changeset_context_from_service.id());
-
-            let bcs = repo
-                .get_bonsai_changeset(ctx.clone(), cs_id_to_compare_ts_with)
-                .compat()
-                .await?;
-
-            let current_timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_err(Error::from)?;
-            let current_timestamp = current_timestamp.as_secs() as i64;
-            current_timestamp - bcs.author_date().timestamp_secs()
-        };
-        self.report_bookmark_staleness(bookmark, difference);
-
-        Ok(())
-    }
-
-    /// Try to find a changeset that's ancestor of `descendant` and direct child of
-    /// `ancestor`. Returns None if this commit doesn't exist (for example if `ancestor` is not
-    /// actually an ancestor of `descendant`) or if child is too far away from descendant.
-    async fn try_find_child(
-        &self,
-        ancestor: ChangesetSpecifier,
-        descendant: ChangesetSpecifier,
-        limit: u64,
-    ) -> Result<Option<ChangesetId>, Error> {
-        let ancestor = async {
-            let res: Result<_, Error> = Ok(self
-                .changeset(ancestor)
-                .await?
-                .ok_or(format_err!("cannot resolve {}", ancestor))?
-                .id());
-            res
-        };
-        let descendant = async {
-            let res: Result<_, Error> = Ok(self
-                .changeset(descendant)
-                .await?
-                .ok_or(format_err!("cannot resolve {}", descendant))?
-                .id());
-            res
-        };
-        let (ancestor, descendant) = try_join!(ancestor, descendant)?;
-
-        let ctx = self.ctx();
-        let repo = self.blob_repo();
-        // This is a generation number beyond which we don't need to traverse
-        let min_gen_num = self.fetch_gen_num(&ancestor).await?;
-
-        let mut ancestors =
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), descendant)
-                .compat();
-
-        let mut traversed = 0;
-        while let Some(cs_id) = ancestors.next().await {
-            traversed += 1;
-            if traversed > limit {
-                return Ok(None);
-            }
-
-            let cs_id = cs_id?;
-            let parents = repo
-                .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-                .compat()
-                .await?;
-
-            if parents.contains(&ancestor) {
-                return Ok(Some(cs_id));
-            } else {
-                let gen_num = self.fetch_gen_num(&cs_id).await?;
-                if gen_num < min_gen_num {
-                    return Ok(None);
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    async fn fetch_gen_num(&self, cs_id: &ChangesetId) -> Result<Generation, Error> {
-        let ctx = self.ctx();
-        let repo = self.blob_repo();
-        let maybe_gen_num = repo
-            .get_generation_number_by_bonsai(ctx.clone(), *cs_id)
-            .compat()
-            .await?;
-        maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
-    }
-
     /// Get a write context to make changes to this repository.
     pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
         if !self.repo.service_config.permit_writes {
@@ -756,7 +729,6 @@ mod tests {
     use super::*;
     use fixtures::{linear, merge_even};
     use futures_preview::{FutureExt as NewFutureExt, TryFutureExt};
-    use std::str::FromStr;
 
     #[fbinit::test]
     fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {
@@ -765,36 +737,26 @@ mod tests {
             async move {
                 let ctx = CoreContext::test_mock(fb);
                 let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb)).await?;
-                let repo = RepoContext::new(ctx, Arc::new(repo));
 
-                let ancestor = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let descendant =
-                    HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
-                let maybe_child = repo
-                    .try_find_child(
-                        ChangesetSpecifier::Hg(ancestor),
-                        ChangesetSpecifier::Hg(descendant),
-                        100,
-                    )
-                    .await?;
+                let ancestor = ChangesetId::from_str(
+                    "c9f9a2a39195a583d523a4e5f6973443caeb0c66a315d5bf7db1b5775c725310",
+                )?;
+                let descendant = ChangesetId::from_str(
+                    "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
+                )?;
+
+                let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
                 let child = maybe_child.ok_or(format_err!("didn't find child"))?;
-                let child = ChangesetContext::new(repo.clone(), child)
-                    .hg_id()
-                    .await?
-                    .unwrap();
                 assert_eq!(
                     child,
-                    HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f")?
+                    ChangesetId::from_str(
+                        "98ef3234c2f1acdbb272715e8cfef4a6378e5443120677e0d87d113571280f79"
+                    )?
                 );
 
-                let maybe_child = repo
-                    .try_find_child(
-                        ChangesetSpecifier::Hg(ancestor),
-                        ChangesetSpecifier::Hg(descendant),
-                        1,
-                    )
-                    .await?;
+                let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 1).await?;
                 assert!(maybe_child.is_none());
+
                 Ok(())
             }
                 .boxed()
@@ -809,20 +771,16 @@ mod tests {
             async move {
                 let ctx = CoreContext::test_mock(fb);
                 let repo = Repo::new_test(ctx.clone(), merge_even::getrepo(fb)).await?;
-                let repo = RepoContext::new(ctx, Arc::new(repo));
 
-                let ancestor = HgChangesetId::from_str("16839021e338500b3cf7c9b871c8a07351697d68")?;
-                let descendant =
-                    HgChangesetId::from_str("4dcf230cd2f20577cb3e88ba52b73b376a2b3f69")?;
-                let maybe_child = repo
-                    .try_find_child(
-                        ChangesetSpecifier::Hg(ancestor),
-                        ChangesetSpecifier::Hg(descendant),
-                        100,
-                    )
-                    .await?;
+                let ancestor = ChangesetId::from_str(
+                    "35fb4e0fb3747b7ca4d18281d059be0860d12407dc5dce5e02fb99d1f6a79d2a",
+                )?;
+                let descendant = ChangesetId::from_str(
+                    "567a25d453cafaef6550de955c52b91bf9295faf38d67b6421d5d2e532e5adef",
+                )?;
+
+                let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
                 let child = maybe_child.ok_or(format_err!("didn't find child"))?;
-                let child = ChangesetContext::new(repo, child).hg_id().await?.unwrap();
                 assert_eq!(child, descendant);
                 Ok(())
             }
