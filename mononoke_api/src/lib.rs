@@ -191,12 +191,10 @@ impl Mononoke {
         ctx: CoreContext,
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContext>, MononokeError> {
-        let name = name.as_ref();
-        let repo = self
-            .repos
-            .get(name)
-            .map(move |repo| RepoContext::new(ctx, repo.clone()));
-        Ok(repo)
+        self.repos
+            .get(name.as_ref())
+            .map(move |repo| RepoContext::new(ctx, repo.clone()))
+            .transpose()
     }
 
     /// Returns an `Iterator` over all repo names.

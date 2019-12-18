@@ -12,7 +12,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use bookmarks::{BookmarkName, BookmarkPrefix};
@@ -21,12 +21,14 @@ use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use fsnodes::{derive_fsnodes, RootFsnodeMapping};
 
+use aclchecker::AclChecker;
 use blame::derive_blame;
 use futures::stream::{self, Stream};
-use futures_ext::StreamExt;
+use futures_ext::{asynchronize, StreamExt};
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future::try_join_all;
+use futures_preview::future::{try_join3, try_join_all};
 use futures_preview::StreamExt as NewStreamExt;
+use identity::Identity;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
     CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
@@ -56,6 +58,7 @@ const COMMON_COUNTER_PREFIX: &'static str = "mononoke.api";
 const STALENESS_INFIX: &'static str = "staleness.secs";
 const MISSING_FROM_CACHE_INFIX: &'static str = "missing_from_cache";
 const MISSING_FROM_REPO_INFIX: &'static str = "missing_from_repo";
+const ACL_CHECKER_TIMEOUT_MS: u32 = 10_000;
 
 pub(crate) struct Repo {
     pub(crate) name: String,
@@ -69,6 +72,7 @@ pub(crate) struct Repo {
     pub(crate) service_config: SourceControlServiceParams,
     // Needed to report stats
     pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
+    pub(crate) acl_checker: Option<Arc<AclChecker>>,
 }
 
 #[derive(Clone)]
@@ -139,32 +143,54 @@ impl Repo {
         .await?;
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+        let acl_checker = asynchronize({
+            let acl = config.hipster_acl;
+            move || match &acl {
+                Some(acl) => {
+                    let id = Identity::new("REPO", &acl);
+                    let acl_checker = Arc::new(AclChecker::new(fb, &id)?);
+                    if acl_checker.do_wait_updated(ACL_CHECKER_TIMEOUT_MS) {
+                        Ok(Some(acl_checker))
+                    } else {
+                        bail!("Failed to update AclChecker")
+                    }
+                }
+                None => Ok(None),
+            }
+        })
+        .compat();
+
         let skiplist_index = fetch_skiplist_index(
             ctx.clone(),
             skiplist_index_blobstore_key,
             blob_repo.get_blobstore().boxed(),
         )
-        .compat()
-        .await?;
+        .compat();
+
+        let warm_bookmarks_cache = async {
+            Ok(Arc::new(
+                WarmBookmarksCache::new(
+                    ctx.clone(),
+                    blob_repo.clone(),
+                    vec![
+                        Box::new(&warm_hg_changeset),
+                        Box::new(&derive_unodes),
+                        Box::new(&derive_fsnodes),
+                        Box::new(&derive_blame),
+                    ],
+                )
+                .compat()
+                .await?,
+            ))
+        };
+
+        let (acl_checker, skiplist_index, warm_bookmarks_cache) =
+            try_join3(acl_checker, skiplist_index, warm_bookmarks_cache).await?;
 
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
         let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
-
-        let warm_bookmarks_cache = Arc::new(
-            WarmBookmarksCache::new(
-                ctx.clone(),
-                blob_repo.clone(),
-                vec![
-                    Box::new(&warm_hg_changeset),
-                    Box::new(&derive_unodes),
-                    Box::new(&derive_fsnodes),
-                    Box::new(&derive_blame),
-                ],
-            )
-            .compat()
-            .await?,
-        );
 
         Ok(Self {
             name,
@@ -176,6 +202,7 @@ impl Repo {
             synced_commit_mapping,
             service_config,
             monitoring_config,
+            acl_checker,
         })
     }
 
@@ -202,6 +229,7 @@ impl Repo {
                 permit_writes: false,
             },
             monitoring_config,
+            acl_checker: None,
         }
     }
 
@@ -238,6 +266,7 @@ impl Repo {
                 permit_writes: true,
             },
             monitoring_config: None,
+            acl_checker: None,
         })
     }
 
@@ -445,8 +474,19 @@ impl Repo {
 
 /// A context object representing a query to a particular repo.
 impl RepoContext {
-    pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Self {
-        Self { repo, ctx }
+    pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
+        // For now we just log if the ACL check fails.
+        if let Some(acl_checker) = repo.acl_checker.as_ref() {
+            if let Some(identities) = ctx.identities() {
+                if !acl_checker.check_set(&identities, &["read"]) {
+                    debug!(
+                        ctx.logger(),
+                        "Access check would have failed for repo {}", repo.name
+                    );
+                }
+            }
+        }
+        Ok(Self { repo, ctx })
     }
 
     /// The context for this query.
@@ -484,9 +524,14 @@ impl RepoContext {
         &self.repo.synced_commit_mapping
     }
 
-    /// The warm bookmarks cache for the references repository.
+    /// The warm bookmarks cache for the referenced repository.
     pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         &self.repo.warm_bookmarks_cache
+    }
+
+    /// The ACL checker for the referenced repository.
+    pub(crate) fn acl_checker(&self) -> Option<&Arc<AclChecker>> {
+        self.repo.acl_checker.as_ref()
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset
@@ -719,7 +764,18 @@ impl RepoContext {
             )));
         }
 
-        // TODO(mbthomas): verify user is permitted to write.
+        // For now we just log the ACL check.
+        if let Some(acl_checker) = self.acl_checker() {
+            if let Some(identities) = self.ctx().identities() {
+                if !acl_checker.check_set(&identities, &["write"]) {
+                    debug!(
+                        self.ctx().logger(),
+                        "Write access checked would have failed"
+                    );
+                }
+            }
+        }
+
         Ok(RepoWriteContext::new(self))
     }
 }

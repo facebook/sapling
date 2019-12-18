@@ -7,6 +7,7 @@
  */
 
 #![deny(unused)]
+#![type_length_limit = "2097152"]
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
