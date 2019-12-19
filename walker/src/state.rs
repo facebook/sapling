@@ -11,6 +11,7 @@ use crate::walk::{expand_checked_nodes, OutgoingEdge, ResolvedNode, WalkVisitor}
 use chashmap::CHashMap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPath, MPathHash};
+use phases::Phase;
 use std::{cmp, collections::HashSet, hash::Hash, ops::Add, sync::Arc};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -41,6 +42,7 @@ pub struct WalkStateCHashMap {
     include_edge_types: HashSet<EdgeType>,
     visited_bcs: CHashMap<ChangesetId, ()>,
     visited_bcs_mapping: CHashMap<ChangesetId, ()>,
+    visited_bcs_phase: CHashMap<ChangesetId, ()>,
     visited_file: CHashMap<ContentId, ()>,
     visited_hg_cs: CHashMap<HgChangesetId, ()>,
     visited_hg_cs_mapping: CHashMap<HgChangesetId, ()>,
@@ -73,6 +75,7 @@ impl WalkStateCHashMap {
             include_edge_types,
             visited_bcs: CHashMap::new(),
             visited_bcs_mapping: CHashMap::new(),
+            visited_bcs_phase: CHashMap::new(),
             visited_file: CHashMap::new(),
             visited_hg_cs: CHashMap::new(),
             visited_hg_cs_mapping: CHashMap::new(),
@@ -84,7 +87,7 @@ impl WalkStateCHashMap {
     }
 
     /// If the set did not have this value present, true is returned.
-    fn is_first_visit(&self, outgoing: &OutgoingEdge) -> bool {
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         let target_node: &Node = &outgoing.target;
         let k = target_node.get_type();
         &self.visit_count.upsert(k, || 1, |old| *old += 1);
@@ -93,6 +96,10 @@ impl WalkStateCHashMap {
             Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
             // TODO - measure if worth tracking - the mapping is cachelib enabled.
             Node::BonsaiHgMapping(bcs_id) => self.visited_bcs_mapping.insert(*bcs_id, ()).is_none(),
+            Node::BonsaiPhaseMapping(bcs_id) => {
+                // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
+                !self.visited_bcs_phase.contains_key(bcs_id)
+            }
             Node::HgBonsaiMapping(hg_cs_id) => {
                 self.visited_hg_cs_mapping.insert(*hg_cs_id, ()).is_none()
             }
@@ -102,6 +109,19 @@ impl WalkStateCHashMap {
             Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
             Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
             _ => true,
+        }
+    }
+
+    fn record_resolved_visit(&self, source: &ResolvedNode) {
+        match (&source.node, &source.data) {
+            (
+                &Node::BonsaiPhaseMapping(bcs_id),
+                &NodeData::BonsaiPhaseMapping(Some(Phase::Public)),
+            ) => {
+                // Only retain visit if already public, otherwise it could mutate between walks.
+                self.visited_bcs_phase.insert(bcs_id, ());
+            }
+            _ => (),
         }
     }
 
@@ -132,12 +152,14 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>)> for WalkStateCHash
         outgoing.retain(|e| self.retain_edge(e));
         let num_direct = outgoing.len();
 
-        outgoing.retain(|e| self.is_first_visit(&e));
+        outgoing.retain(|e| self.needs_visit(&e));
         let num_direct_new = outgoing.len();
 
         expand_checked_nodes(&mut outgoing);
         // Make sure we don't expand to types of node and edge not wanted
         outgoing.retain(|e| self.retain_edge(e));
+
+        self.record_resolved_visit(&source);
 
         // Stats
         let num_expanded_new = outgoing.len();

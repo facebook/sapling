@@ -190,7 +190,7 @@ pub struct SqlPhases {
 }
 
 impl SqlPhases {
-    fn get_single_raw(
+    pub fn get_single_raw(
         &self,
         repo_id: RepositoryId,
         cs_id: ChangesetId,

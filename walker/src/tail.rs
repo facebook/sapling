@@ -6,11 +6,10 @@
  * directory of this source tree.
  */
 
-use crate::setup::RepoWalkParams;
+use crate::setup::{RepoWalkDatasources, RepoWalkParams};
 use crate::walk::{walk_exact, WalkVisitor};
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -23,9 +22,9 @@ use tokio_timer::Delay;
 
 pub fn walk_exact_tail<SinkFac, SinkOut, WS, VOut>(
     ctx: CoreContext,
+    datasources: RepoWalkDatasources,
     walk_params: RepoWalkParams,
     walk_state: WS,
-    blobrepo: impl Future<Item = BlobRepo, Error = Error>,
     make_sink: SinkFac,
 ) -> impl Future<Item = (), Error = Error>
 where
@@ -34,13 +33,20 @@ where
     WS: 'static + Clone + WalkVisitor<VOut> + Send,
     VOut: 'static + Send,
 {
-    let traversal_fut = blobrepo.and_then(move |repo| {
+    let datasources = datasources.blobrepo.join(datasources.phases_store);
+    let traversal_fut = datasources.and_then(move |(repo, phases_store)| {
         cloned!(walk_params.tail_secs);
         let stream = repeat(()).and_then({
             move |()| {
-                cloned!(ctx, repo, walk_params.walk_roots, walk_state,);
-                let walk_output =
-                    walk_exact(ctx, repo, walk_roots, walk_state, walk_params.scheduled_max);
+                cloned!(ctx, repo, phases_store, walk_params.walk_roots, walk_state,);
+                let walk_output = walk_exact(
+                    ctx,
+                    repo,
+                    phases_store,
+                    walk_roots,
+                    walk_state,
+                    walk_params.scheduled_max,
+                );
                 make_sink(walk_output)
             }
         });

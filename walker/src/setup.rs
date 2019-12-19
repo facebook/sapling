@@ -19,13 +19,19 @@ use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
 use fbinit::FacebookInit;
+use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;
 use metaconfig_types::Redaction;
+use phases::SqlPhases;
 use slog::{info, Logger};
-use std::{collections::HashSet, iter::FromIterator, str::FromStr};
+use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc};
 
-#[derive(Clone)]
+pub struct RepoWalkDatasources {
+    pub blobrepo: BoxFuture<BlobRepo, Error>,
+    pub phases_store: BoxFuture<Arc<SqlPhases>, Error>,
+}
+
 pub struct RepoWalkParams {
     pub scheduled_max: usize,
     pub walk_roots: Vec<OutgoingEdge>,
@@ -70,6 +76,7 @@ pub const SCUBA_TABLE_ARG: &'static str = "scuba-table";
 
 const SHALLOW_VALUE_ARG: &'static str = "shallow";
 const DEEP_VALUE_ARG: &'static str = "deep";
+const MARKER_VALUE_ARG: &'static str = "marker";
 const HG_VALUE_ARG: &'static str = "hg";
 const BONSAI_VALUE_ARG: &'static str = "bonsai";
 
@@ -81,6 +88,7 @@ const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
     NodeType::BonsaiChangeset,
     NodeType::BonsaiHgMapping,
+    NodeType::BonsaiPhaseMapping,
     NodeType::HgBonsaiMapping,
     NodeType::HgChangeset,
     NodeType::HgManifest,
@@ -170,6 +178,9 @@ const BONSAI_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
 ];
+
+// Things like phases and obs markers will go here
+const MARKER_EDGE_TYPES: &[EdgeType] = &[EdgeType::BonsaiChangesetToBonsaiPhaseMapping];
 
 lazy_static! {
     static ref INCLUDE_CHECK_TYPE_HELP: String = format!(
@@ -388,6 +399,7 @@ fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
     match arg {
         BONSAI_VALUE_ARG => Ok(HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned())),
         DEEP_VALUE_ARG => Ok(HashSet::from_iter(DEEP_INCLUDE_EDGE_TYPES.iter().cloned())),
+        MARKER_VALUE_ARG => Ok(HashSet::from_iter(MARKER_EDGE_TYPES.iter().cloned())),
         HG_VALUE_ARG => Ok(HashSet::from_iter(HG_EDGE_TYPES.iter().cloned())),
         SHALLOW_VALUE_ARG => Ok(HashSet::from_iter(
             SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned(),
@@ -464,7 +476,7 @@ pub fn setup_common(
     logger: &Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> Result<(BoxFuture<BlobRepo, Error>, RepoWalkParams), Error> {
+) -> Result<(RepoWalkDatasources, RepoWalkParams), Error> {
     let (_, config) = args::get_config(fb, &matches)?;
     let quiet = sub_m.is_present(QUIET_ARG);
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
@@ -544,7 +556,11 @@ pub fn setup_common(
         logger.clone(),
     );
 
-    let blobrepo_fut = open_blobrepo_given_datasources(
+    let phases_store = args::open_sql::<SqlPhases>(fb, &matches)
+        .map(|phases| Arc::new(phases))
+        .boxify();
+
+    let blobrepo = open_blobrepo_given_datasources(
         fb,
         datasources_fut,
         config.repoid,
@@ -558,7 +574,10 @@ pub fn setup_common(
     .boxify();
 
     Ok((
-        blobrepo_fut,
+        RepoWalkDatasources {
+            blobrepo,
+            phases_store,
+        },
         RepoWalkParams {
             scheduled_max,
             walk_roots,

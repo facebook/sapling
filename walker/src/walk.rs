@@ -25,7 +25,8 @@ use futures_ext::{
 use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
-use std::iter::IntoIterator;
+use phases::SqlPhases;
+use std::{iter::IntoIterator, sync::Arc};
 
 // Holds type of edge and target Node that we want to load in next step(s)
 // Combined with current node, this forms an complegte edge.
@@ -87,6 +88,18 @@ fn bookmark_step(
         .boxify()
 }
 
+fn bonsai_phase_step(
+    _ctx: CoreContext,
+    repo: &BlobRepo,
+    phases_store: &Arc<SqlPhases>,
+    bcs_id: ChangesetId,
+) -> BoxFuture<StepOutput, Error> {
+    phases_store
+        .get_single_raw(repo.get_repoid(), bcs_id)
+        .map(|phase| StepOutput(NodeData::BonsaiPhaseMapping(phase), vec![]))
+        .boxify()
+}
+
 fn bonsai_changeset_step(
     ctx: CoreContext,
     repo: &BlobRepo,
@@ -109,6 +122,11 @@ fn bonsai_changeset_step(
             recurse.push(OutgoingEdge::new(
                 EdgeType::BonsaiChangesetToBonsaiHgMapping,
                 Node::BonsaiHgMapping(bcs_id),
+            ));
+            // Lookup phases
+            recurse.push(OutgoingEdge::new(
+                EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
+                Node::BonsaiPhaseMapping(bcs_id),
             ));
             recurse.append(
                 &mut bcs
@@ -409,6 +427,7 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
 pub fn walk_exact<V, VOut>(
     ctx: CoreContext,
     repo: BlobRepo,
+    phases_store: Arc<SqlPhases>,
     walk_roots: Vec<OutgoingEdge>,
     visitor: V,
     scheduled_max: usize,
@@ -436,6 +455,9 @@ where
                 Node::Bookmark(bookmark_name) => bookmark_step(ctx, &repo, bookmark_name),
                 Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
                 Node::BonsaiHgMapping(bcs_id) => bonsai_to_hg_mapping_step(ctx, &repo, bcs_id),
+                Node::BonsaiPhaseMapping(bcs_id) => {
+                    bonsai_phase_step(ctx, &repo, &phases_store, bcs_id)
+                }
                 // Hg
                 Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid),
                 Node::HgChangeset(hg_csid) => hg_changeset_step(ctx, &repo, hg_csid),

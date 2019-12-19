@@ -438,7 +438,7 @@ pub fn validate(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let (blobrepo, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
+    let (datasources, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
@@ -511,5 +511,5 @@ pub fn validate(
         }
     };
 
-    walk_exact_tail(ctx, walk_params, stateful_visitor, blobrepo, make_sink).boxify()
+    walk_exact_tail(ctx, datasources, walk_params, stateful_visitor, make_sink).boxify()
 }

@@ -33,7 +33,7 @@ pub fn count_objects(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let (blobrepo, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
+    let (datasources, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
@@ -63,5 +63,5 @@ pub fn count_objects(
         include_node_types,
         include_edge_types,
     ));
-    walk_exact_tail(ctx, walk_params, walk_state, blobrepo, make_sink).boxify()
+    walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxify()
 }

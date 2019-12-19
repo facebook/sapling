@@ -16,6 +16,7 @@ use mercurial_types::{
     HgManifestId,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
+use phases::Phase;
 use std::fmt;
 use std::str::FromStr;
 
@@ -54,6 +55,7 @@ enum NodeType {
     Bookmark,
     BonsaiChangeset,
     BonsaiHgMapping,
+    BonsaiPhaseMapping,
     // Hg
     HgBonsaiMapping,
     HgChangeset,
@@ -81,6 +83,7 @@ pub enum Node {
     Bookmark(BookmarkName),
     BonsaiChangeset(ChangesetId),
     BonsaiHgMapping(ChangesetId),
+    BonsaiPhaseMapping(ChangesetId),
     // Hg
     HgBonsaiMapping(HgChangesetId),
     HgChangeset(HgChangesetId),
@@ -105,6 +108,7 @@ enum EdgeType {
     BonsaiChangesetToFileContent,
     BonsaiChangesetToBonsaiParent,
     BonsaiChangesetToBonsaiHgMapping,
+    BonsaiChangesetToBonsaiPhaseMapping,
     BonsaiHgMappingToHgChangeset,
     // Hg
     HgBonsaiMappingToBonsaiChangeset,
@@ -137,6 +141,7 @@ impl EdgeType {
             EdgeType::BonsaiChangesetToFileContent => Some(NodeType::BonsaiChangeset),
             EdgeType::BonsaiChangesetToBonsaiParent => Some(NodeType::BonsaiChangeset),
             EdgeType::BonsaiChangesetToBonsaiHgMapping => Some(NodeType::BonsaiChangeset),
+            EdgeType::BonsaiChangesetToBonsaiPhaseMapping => Some(NodeType::BonsaiChangeset),
             EdgeType::BonsaiHgMappingToHgChangeset => Some(NodeType::BonsaiHgMapping),
             // Hg
             EdgeType::HgBonsaiMappingToBonsaiChangeset => Some(NodeType::HgBonsaiMapping),
@@ -167,6 +172,7 @@ impl EdgeType {
             EdgeType::BonsaiChangesetToFileContent => NodeType::FileContent,
             EdgeType::BonsaiChangesetToBonsaiParent => NodeType::BonsaiChangeset,
             EdgeType::BonsaiChangesetToBonsaiHgMapping => NodeType::BonsaiHgMapping,
+            EdgeType::BonsaiChangesetToBonsaiPhaseMapping => NodeType::BonsaiPhaseMapping,
             EdgeType::BonsaiHgMappingToHgChangeset => NodeType::HgChangeset,
             // Hg
             EdgeType::HgBonsaiMappingToBonsaiChangeset => NodeType::BonsaiChangeset,
@@ -210,6 +216,7 @@ pub enum NodeData {
     Bookmark(ChangesetId),
     BonsaiChangeset(BonsaiChangeset),
     BonsaiHgMapping(HgChangesetId),
+    BonsaiPhaseMapping(Option<Phase>),
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),
     HgChangeset(HgBlobChangeset),
@@ -230,6 +237,7 @@ impl Node {
             Node::Bookmark(_) => NodeType::Bookmark,
             Node::BonsaiChangeset(_) => NodeType::BonsaiChangeset,
             Node::BonsaiHgMapping(_) => NodeType::BonsaiHgMapping,
+            Node::BonsaiPhaseMapping(_) => NodeType::BonsaiPhaseMapping,
             // Hg
             Node::HgBonsaiMapping(_) => NodeType::HgBonsaiMapping,
             Node::HgChangeset(_) => NodeType::HgChangeset,
@@ -250,6 +258,7 @@ impl Node {
             Node::Bookmark(k) => k.to_string(),
             Node::BonsaiChangeset(k) => k.blobstore_key(),
             Node::BonsaiHgMapping(k) => k.blobstore_key(),
+            Node::BonsaiPhaseMapping(k) => k.blobstore_key(),
             // Hg
             Node::HgBonsaiMapping(k) => k.blobstore_key(),
             Node::HgChangeset(k) => k.blobstore_key(),
@@ -271,6 +280,7 @@ impl Node {
             Node::Bookmark(_) => None,
             Node::BonsaiChangeset(_) => None,
             Node::BonsaiHgMapping(_) => None,
+            Node::BonsaiPhaseMapping(_) => None,
             // Hg
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,
