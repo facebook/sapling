@@ -38,7 +38,7 @@ validate, expecting all valid
   Performing check types [HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:28,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:37,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
   Exiting...
 
 Remove all filenodes
@@ -55,21 +55,7 @@ validate, expecting validation fails
   Validation failed: *hg_link_node_populated* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:25,0,3; EdgesChecked:3; CheckType:Pass,Fail Total:0,3 HgLinkNodePopulated:0,3
-  Exiting...
-
-repair by blobimport.
-  $ blobimport repo-hg/.hg repo
-
-validate, expecting all valid
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore validate -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
-  Walking edge types * (glob)
-  Walking node types * (glob)
-  Performing check types [HgLinkNodePopulated]
-  Final count: * (glob)
-  Walked* (glob)
-  Nodes,Pass,Fail:28,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:34,0,3; EdgesChecked:3; CheckType:Pass,Fail Total:0,3 HgLinkNodePopulated:0,3
   Exiting...
 
 repair by blobimport.
@@ -83,7 +69,7 @@ validate, expecting all valid, this time checking marker types as well
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:31,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
   Exiting...
 
 Remove the phase information, linknodes already point to them
@@ -97,5 +83,5 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:31,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
   Exiting...

@@ -38,7 +38,7 @@ validate, expecting all valid, checking marker types
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:31,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
   Exiting...
 
 Remove the phase information, linknodes already point to them
@@ -52,7 +52,7 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:31,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
   Exiting...
 
 Record the filenode info
@@ -83,5 +83,5 @@ validate, expect failures on phase info, as we now point to a non-public commit
   Validation failed: *bonsai_phase_is_public* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:40,7,1; EdgesChecked:16; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
+  Nodes,Pass,Fail:52,7,1; EdgesChecked:16; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
   Exiting...

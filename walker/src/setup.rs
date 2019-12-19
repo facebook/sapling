@@ -81,6 +81,7 @@ const DEEP_VALUE_ARG: &'static str = "deep";
 const MARKER_VALUE_ARG: &'static str = "marker";
 const HG_VALUE_ARG: &'static str = "hg";
 const BONSAI_VALUE_ARG: &'static str = "bonsai";
+const CONTENT_META_VALUE_ARG: &'static str = "contentmeta";
 
 // Toplevel args - healer and populate healer have this one at top level
 // so keeping it there for consistency
@@ -98,6 +99,7 @@ const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::HgFileNode,
     NodeType::FileContent,
     NodeType::FileContentMetadata,
+    NodeType::AliasContentMapping,
 ];
 
 // Goes as far into history as it can
@@ -173,6 +175,9 @@ const BONSAI_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BookmarkToBonsaiChangeset,
     EdgeType::BonsaiChangesetToFileContent,
     EdgeType::BonsaiChangesetToBonsaiParent,
+];
+
+const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[
     // Content
     EdgeType::FileContentToFileContentMetadata,
     EdgeType::FileContentMetadataToSha1Alias,
@@ -407,6 +412,7 @@ fn parse_node_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<NodeType>, Error> 
 fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
     match arg {
         BONSAI_VALUE_ARG => Ok(HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned())),
+        CONTENT_META_VALUE_ARG => Ok(HashSet::from_iter(CONTENT_META_EDGE_TYPES.iter().cloned())),
         DEEP_VALUE_ARG => Ok(HashSet::from_iter(DEEP_INCLUDE_EDGE_TYPES.iter().cloned())),
         MARKER_VALUE_ARG => Ok(HashSet::from_iter(MARKER_EDGE_TYPES.iter().cloned())),
         HG_VALUE_ARG => Ok(HashSet::from_iter(HG_EDGE_TYPES.iter().cloned())),
