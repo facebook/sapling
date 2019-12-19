@@ -50,9 +50,9 @@ validate, expecting validation fails
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]
-  Validation failed: check_type,node, HgLinkNodePopulated,HgFileNode* (glob)
-  Validation failed: check_type,node, HgLinkNodePopulated,HgFileNode* (glob)
-  Validation failed: check_type,node, HgLinkNodePopulated,HgFileNode* (glob)
+  Validation failed: *hg_link_node_populated* (glob)
+  Validation failed: *hg_link_node_populated* (glob)
+  Validation failed: *hg_link_node_populated* (glob)
   Final count: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:25,0,3; EdgesChecked:3; CheckType:Pass,Fail Total:0,3 HgLinkNodePopulated:0,3

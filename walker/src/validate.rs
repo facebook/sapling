@@ -18,7 +18,7 @@ use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressRecorderUnprotected, ProgressReporter,
     ProgressReporterUnprotected, ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::setup::{setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG};
+use crate::setup::{setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, SCUBA_TABLE_ARG};
 use crate::state::{StepStats, WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
@@ -32,6 +32,8 @@ use fbinit::FacebookInit;
 use futures::{Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use itertools::Itertools;
+use mononoke_types::MPath;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use stats::service_data::{get_service_data_singleton, ServiceData};
 use stats::{define_stats, DynamicTimeseries};
@@ -66,7 +68,6 @@ const VALIDATE_PROGRESS_SAMPLE_DURATION_S: u64 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum CheckStatus {
-    // could add more info as parameter to Fail if needed
     Fail,
     Pass,
 }
@@ -248,6 +249,7 @@ fn parse_check_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<CheckType>, Error
 struct ValidateProgressState {
     logger: Logger,
     fb: FacebookInit,
+    scuba_builder: ScubaSampleBuilder,
     repo_stats_key: String,
     types_sorted_by_name: Vec<CheckType>,
     stats_by_type: HashMap<CheckType, CheckStats>,
@@ -264,6 +266,7 @@ impl ValidateProgressState {
     fn new(
         logger: Logger,
         fb: FacebookInit,
+        scuba_builder: ScubaSampleBuilder,
         repo_stats_key: String,
         included_types: HashSet<CheckType>,
         sample_rate: u64,
@@ -274,6 +277,7 @@ impl ValidateProgressState {
         Self {
             logger,
             fb,
+            scuba_builder,
             repo_stats_key,
             types_sorted_by_name,
             stats_by_type: HashMap::new(),
@@ -372,11 +376,25 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                     STATS::walker_validate
                         .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), FAIL));
                     stats.fail += 1;
-                    // For failures log immediately as well as reporting via stats
-                    warn!(
-                        self.logger,
-                        "Validation failed: check_type,node, {:?},{:?}", k, n
-                    )
+                    // For failures log immediately
+                    let mut scuba = self.scuba_builder.clone();
+                    if let Some(path) = n.stats_path() {
+                        scuba.add("node_path", MPath::display_opt(path).to_string());
+                    }
+                    scuba
+                        .add("walk_type", "validate")
+                        .add("repo", self.repo_stats_key.to_string())
+                        .add("check_type", k.stats_key())
+                        .add(
+                            "check_fail",
+                            if c.status == CheckStatus::Pass { 0 } else { 1 },
+                        )
+                        .add("node_type", n.get_type().to_string())
+                        .add("node_key", n.stats_key())
+                        .log();
+                    for json in scuba.get_sample().to_json() {
+                        warn!(self.logger, "Validation failed: {}", json)
+                    }
                 }
             }
         });
@@ -425,6 +443,10 @@ pub fn validate(
 
     let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
 
+    let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
+    let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
+    scuba_builder.add_common_server_data();
+
     cloned!(
         walk_params.include_node_types,
         walk_params.include_edge_types,
@@ -458,6 +480,7 @@ pub fn validate(
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
         logger.clone(),
         ctx.fb,
+        scuba_builder,
         repo_stats_key,
         include_check_types,
         PROGRESS_SAMPLE_RATE,

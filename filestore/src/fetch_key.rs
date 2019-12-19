@@ -46,7 +46,7 @@ impl Loadable for FetchKey {
 }
 
 impl Alias {
-    fn blobstore_key(&self) -> String {
+    pub fn blobstore_key(&self) -> String {
         match self {
             Alias::GitSha1(git_sha1) => format!("alias.gitsha1.{}", git_sha1.to_hex()),
             Alias::Sha1(sha1) => format!("alias.sha1.{}", sha1.to_hex()),

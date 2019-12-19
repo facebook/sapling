@@ -15,7 +15,7 @@ use mercurial_types::{
     blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifest,
     HgManifestId,
 };
-use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
 use std::fmt;
 use std::str::FromStr;
 
@@ -240,6 +240,47 @@ impl Node {
             Node::FileContent(_) => NodeType::FileContent,
             Node::FileContentMetadata(_) => NodeType::FileContentMetadata,
             Node::AliasContentMapping(_) => NodeType::AliasContentMapping,
+        }
+    }
+
+    pub fn stats_key(&self) -> String {
+        match self {
+            Node::Root => "root".to_string(),
+            // Bonsai
+            Node::Bookmark(k) => k.to_string(),
+            Node::BonsaiChangeset(k) => k.blobstore_key(),
+            Node::BonsaiHgMapping(k) => k.blobstore_key(),
+            // Hg
+            Node::HgBonsaiMapping(k) => k.blobstore_key(),
+            Node::HgChangeset(k) => k.blobstore_key(),
+            Node::HgManifest((_, k)) => k.blobstore_key(),
+            Node::HgFileEnvelope(k) => k.blobstore_key(),
+            Node::HgFileNode((_, k)) => k.blobstore_key(),
+            // Content
+            Node::FileContent(k) => k.blobstore_key(),
+            Node::FileContentMetadata(k) => k.blobstore_key(),
+            Node::AliasContentMapping(k) => k.blobstore_key(),
+        }
+    }
+
+    /// None means no path at all,  Some(None) means its the root MPath
+    pub fn stats_path(&self) -> Option<Option<&MPath>> {
+        match self {
+            Node::Root => None,
+            // Bonsai
+            Node::Bookmark(_) => None,
+            Node::BonsaiChangeset(_) => None,
+            Node::BonsaiHgMapping(_) => None,
+            // Hg
+            Node::HgBonsaiMapping(_) => None,
+            Node::HgChangeset(_) => None,
+            Node::HgManifest((p, _)) => Some(p.as_ref()),
+            Node::HgFileEnvelope(_) => None,
+            Node::HgFileNode((p, _)) => Some(p.as_ref()),
+            // Content
+            Node::FileContent(_) => None,
+            Node::FileContentMetadata(_) => None,
+            Node::AliasContentMapping(_) => None,
         }
     }
 }

@@ -66,6 +66,7 @@ pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
 pub const EXCLUDE_CHECK_TYPE_ARG: &'static str = "exclude-check-type";
 pub const INCLUDE_CHECK_TYPE_ARG: &'static str = "include-check-type";
+pub const SCUBA_TABLE_ARG: &'static str = "scuba-table";
 
 const SHALLOW_VALUE_ARG: &'static str = "shallow";
 const DEEP_VALUE_ARG: &'static str = "deep";
@@ -246,6 +247,14 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .number_of_values(1)
             .required(false)
             .help(&INCLUDE_CHECK_TYPE_HELP),
+    )
+    .arg(
+        Arg::with_name(SCUBA_TABLE_ARG)
+            .long(SCUBA_TABLE_ARG)
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .help("Scuba table for logging nodes with issues. e.g. mononoke_walker"),
     );
 
     let app = app_template.build()
