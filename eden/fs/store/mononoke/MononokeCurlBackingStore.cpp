@@ -89,7 +89,7 @@ MononokeCurlBackingStore::MononokeCurlBackingStore(
               timeout))),
       serverExecutor_(std::move(executor)) {}
 
-folly::Future<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTree(
+folly::SemiFuture<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTree(
     const Hash& id) {
   return folly::via(
              clientThreadPool_.get(),

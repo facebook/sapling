@@ -37,7 +37,8 @@ class MononokeCurlBackingStore : public BackingStore {
       std::chrono::milliseconds timeout,
       std::shared_ptr<folly::Executor> executor);
 
-  virtual folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
+  virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+      const Hash& id) override;
   virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id) override;
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(

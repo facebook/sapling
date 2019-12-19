@@ -20,9 +20,7 @@
 #include "eden/fs/store/LocalStore.h"
 
 using folly::ByteRange;
-using folly::Future;
 using folly::IOBuf;
-using folly::makeFuture;
 using folly::makeSemiFuture;
 using folly::SemiFuture;
 using folly::StringPiece;
@@ -74,9 +72,9 @@ const char* GitBackingStore::getPath() const {
   return git_repository_path(repo_);
 }
 
-Future<unique_ptr<Tree>> GitBackingStore::getTree(const Hash& id) {
+SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(const Hash& id) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeFuture(getTreeImpl(id));
+  return makeSemiFuture(getTreeImpl(id));
 }
 
 unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {

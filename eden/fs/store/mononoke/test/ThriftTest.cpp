@@ -229,7 +229,10 @@ TEST_F(MononokeThriftTest, getTreeNotFound) {
 
   handler->setGetTreeExpectation(treeHash, files);
 
-  auto result = store.getTree(Hash(badHash)).wait(kTimeout).result();
+  auto result = store.getTree(Hash(badHash))
+                    .via(&folly::QueuedImmediateExecutor::instance())
+                    .wait(kTimeout)
+                    .result();
   EXPECT_TRUE(result.hasException());
 
   auto exception = result.exception().get_exception<MononokeAPIException>();

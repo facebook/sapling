@@ -60,8 +60,7 @@ ObjectStore::~ObjectStore() {}
 Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
   return localStore_->getTree(id).thenValue(
-      [self = shared_from_this(), id, backingStore = backingStore_](
-          shared_ptr<const Tree> tree) {
+      [self = shared_from_this(), id](shared_ptr<const Tree> tree) {
         if (tree) {
           XLOG(DBG4) << "tree " << id << " found in local store";
           return makeFuture(std::move(tree));
@@ -79,8 +78,9 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
 
         // Load the tree from the BackingStore.
         self->recordBackingStoreImport();
-        return backingStore->getTree(id).thenValue(
-            [id](unique_ptr<const Tree> loadedTree) {
+        return self->backingStore_->getTree(id)
+            .via(self->executor_)
+            .thenValue([id](unique_ptr<const Tree> loadedTree) {
               if (!loadedTree) {
                 // TODO: Perhaps we should do some short-term negative caching?
                 XLOG(DBG2) << "unable to find tree " << id;

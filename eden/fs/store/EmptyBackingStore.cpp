@@ -12,8 +12,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 
-using folly::Future;
-using folly::makeFuture;
 using folly::makeSemiFuture;
 using folly::SemiFuture;
 using std::unique_ptr;
@@ -25,8 +23,9 @@ EmptyBackingStore::EmptyBackingStore() {}
 
 EmptyBackingStore::~EmptyBackingStore() {}
 
-Future<unique_ptr<Tree>> EmptyBackingStore::getTree(const Hash& /* id */) {
-  return makeFuture<unique_ptr<Tree>>(std::domain_error("empty backing store"));
+SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTree(const Hash& /* id */) {
+  return makeSemiFuture<unique_ptr<Tree>>(
+      std::domain_error("empty backing store"));
 }
 
 SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(const Hash& /* id */) {
@@ -43,7 +42,8 @@ SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(
 SemiFuture<std::unique_ptr<Tree>> EmptyBackingStore::getTreeForManifest(
     const Hash& /* commitID */,
     const Hash& /* manifestID */) {
-  return makeFuture<unique_ptr<Tree>>(std::domain_error("empty backing store"));
+  return makeSemiFuture<unique_ptr<Tree>>(
+      std::domain_error("empty backing store"));
 }
 } // namespace eden
 } // namespace facebook

@@ -177,7 +177,7 @@ MononokeHttpBackingStore::MononokeHttpBackingStore(
 
 MononokeHttpBackingStore::~MononokeHttpBackingStore() {}
 
-folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
+folly::SemiFuture<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
     const Hash& id) {
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("tree", id); })

@@ -37,7 +37,7 @@ FakeBackingStore::FakeBackingStore(std::shared_ptr<LocalStore> localStore)
 
 FakeBackingStore::~FakeBackingStore() {}
 
-Future<unique_ptr<Tree>> FakeBackingStore::getTree(const Hash& id) {
+SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(const Hash& id) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
   auto it = data->trees.find(id);

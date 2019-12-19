@@ -382,7 +382,7 @@ std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
   return nullptr;
 }
 
-Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
+SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
   HgProxyHash pathInfo(localStore_, id, "importTree");
   return importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
@@ -732,8 +732,8 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
             }));
   }
 
-  futures.push_back(
-      getBlobFromHgImporter(id).thenValue([stats = stats_, watch](auto&& blob) {
+  futures.push_back(getBlobFromHgImporter(id).deferValue(
+      [stats = stats_, watch](SemiFuture<std::unique_ptr<Blob>>&& blob) {
         stats->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
         return std::move(blob);
@@ -745,14 +745,11 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
       });
 }
 
-Future<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
+SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
     const Hash& id) {
-  return folly::via(
-             importThreadPool_.get(),
-             [id] { return getThreadLocalImporter().importFileContents(id); })
-      // Ensure that the control moves back to the main thread pool
-      // to process the caller-attached .then routine.
-      .via(serverThreadPool_);
+  return folly::via(importThreadPool_.get(), [id] {
+    return getThreadLocalImporter().importFileContents(id);
+  });
 }
 
 folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(

@@ -66,7 +66,7 @@ MononokeThriftBackingStore::MononokeThriftBackingStore(
 
 MononokeThriftBackingStore::~MononokeThriftBackingStore() {}
 
-folly::Future<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
+folly::SemiFuture<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
     const Hash& id) {
   const auto& treeHashString = id.toString();
 

@@ -21,7 +21,7 @@ class EmptyBackingStore : public BackingStore {
   EmptyBackingStore();
   ~EmptyBackingStore() override;
 
-  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
+  folly::SemiFuture<std::unique_ptr<Tree>> getTree(const Hash& id) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;

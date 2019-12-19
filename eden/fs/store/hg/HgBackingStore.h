@@ -74,7 +74,7 @@ class HgBackingStore : public BackingStore {
 
   ~HgBackingStore() override;
 
-  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
+  folly::SemiFuture<std::unique_ptr<Tree>> getTree(const Hash& id) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
@@ -155,7 +155,8 @@ class HgBackingStore : public BackingStore {
   initializeCurlMononokeBackingStore();
 #endif
 
-  folly::Future<std::unique_ptr<Blob>> getBlobFromHgImporter(const Hash& id);
+  folly::SemiFuture<std::unique_ptr<Blob>> getBlobFromHgImporter(
+      const Hash& id);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
