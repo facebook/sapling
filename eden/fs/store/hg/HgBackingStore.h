@@ -88,7 +88,7 @@ class HgBackingStore : public BackingStore {
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
-  folly::Future<Hash> importTreeManifest(const Hash& commitId);
+  folly::Future<std::unique_ptr<Tree>> importTreeManifest(const Hash& commitId);
 
  private:
   // Forbidden copy constructor and assignment operator
@@ -187,8 +187,6 @@ class HgBackingStore : public BackingStore {
       const Hash& edenTreeID,
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
-
-  folly::Future<Hash> importManifest(Hash commitId);
 
   LocalStore* localStore_{nullptr};
   std::shared_ptr<EdenStats> stats_;

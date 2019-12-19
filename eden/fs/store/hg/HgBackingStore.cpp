@@ -655,7 +655,8 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
   return tree;
 }
 
-folly::Future<Hash> HgBackingStore::importTreeManifest(const Hash& commitId) {
+folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
+    const Hash& commitId) {
   return folly::via(
              importThreadPool_.get(),
              [commitId] {
@@ -678,7 +679,7 @@ folly::Future<Hash> HgBackingStore::importTreeManifest(const Hash& commitId) {
               HgProxyHash::store(info, batch.get());
               batch->flush();
 
-              return tree->getHash();
+              return tree;
             });
       });
 }
@@ -820,20 +821,18 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
           });
 }
 
-folly::Future<Hash> HgBackingStore::importManifest(Hash commitId) {
-  return importTreeManifest(commitId);
-}
-
 folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
     Hash commitID) {
-  return importManifest(commitID).thenValue(
-      [this, commitID](Hash rootTreeHash) {
+  return importTreeManifest(commitID).thenValue(
+      [this, commitID](std::unique_ptr<Tree> rootTree) {
         XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
-                   << " as tree " << rootTreeHash.toString();
+                   << " as tree " << rootTree->getHash().toString();
 
         localStore_->put(
-            KeySpace::HgCommitToTreeFamily, commitID, rootTreeHash.getBytes());
-        return localStore_->getTree(rootTreeHash);
+            KeySpace::HgCommitToTreeFamily,
+            commitID,
+            rootTree->getHash().getBytes());
+        return rootTree;
       });
 }
 
