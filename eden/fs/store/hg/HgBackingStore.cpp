@@ -53,6 +53,7 @@
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
+using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
 using std::unique_ptr;
@@ -682,7 +683,7 @@ folly::Future<Hash> HgBackingStore::importTreeManifest(const Hash& commitId) {
       });
 }
 
-Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
+SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   auto edenConfig = config_->getEdenConfig();
 
   // Look up the mercurial path and file revision hash,
@@ -706,7 +707,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
     }
   }
 
-  folly::small_vector<Future<unique_ptr<Blob>>, 2> futures;
+  folly::small_vector<SemiFuture<unique_ptr<Blob>>, 2> futures;
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   auto mononoke = getMononoke();
@@ -716,14 +717,14 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
     auto revHashCopy = hgInfo.revHash();
     futures.push_back(
         mononoke->getBlob(revHashCopy)
-            .thenValue([stats = stats_, watch](auto&& blob) {
+            .deferValue([stats = stats_, watch](auto&& blob) {
               stats->getHgBackingStoreStatsForCurrentThread()
                   .mononokeBackingStoreGetBlob.addValue(
                       watch.elapsed().count());
               return std::move(blob);
             })
-            .thenError([path = hgInfo.path().copy(), revHash = revHashCopy](
-                           const folly::exception_wrapper& ex) {
+            .deferError([path = hgInfo.path().copy(), revHash = revHashCopy](
+                            const folly::exception_wrapper& ex) {
               XLOG(WARN) << "Error while fetching file contents of '" << path
                          << "', " << revHash.toString()
                          << " from mononoke: " << ex.what();
@@ -738,9 +739,8 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
         return std::move(blob);
       }));
 
-  return folly::collectAnyWithoutException(futures)
-      .via(serverThreadPool_)
-      .thenValue([](std::pair<size_t, unique_ptr<Blob>>&& result) {
+  return folly::collectAnyWithoutException(futures).deferValue(
+      [](std::pair<size_t, unique_ptr<Blob>>&& result) {
         return std::move(result.second);
       });
 }

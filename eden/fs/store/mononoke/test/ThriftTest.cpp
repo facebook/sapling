@@ -183,7 +183,10 @@ TEST_F(MononokeThriftTest, getBlobNotFound) {
 
   handler->setGetBlobExpectation(hash, blob);
 
-  auto result = store.getBlob(Hash(badHash)).wait(kTimeout).result();
+  auto result = store.getBlob(Hash(badHash))
+                    .via(folly::getIOExecutor().get())
+                    .wait(kTimeout)
+                    .result();
   EXPECT_TRUE(result.hasException());
 
   auto exception = result.exception().get_exception<MononokeAPIException>();

@@ -108,7 +108,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
         return std::make_unique<Tree>(std::move(entries), id);
       });
 }
-folly::Future<std::unique_ptr<Blob>> MononokeThriftBackingStore::getBlob(
+folly::SemiFuture<std::unique_ptr<Blob>> MononokeThriftBackingStore::getBlob(
     const Hash& id) {
   const auto& blobHashString = id.toString();
 

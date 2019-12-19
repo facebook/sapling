@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
@@ -22,7 +23,9 @@ class ObjectStoreTest : public ::testing::Test {
     localStore_ = std::make_shared<MemoryLocalStore>();
     backingStore_ = std::make_shared<FakeBackingStore>(localStore_);
     stats_ = std::make_shared<EdenStats>();
-    objectStore_ = ObjectStore::create(localStore_, backingStore_, stats_);
+    executor_ = &folly::QueuedImmediateExecutor::instance();
+    objectStore_ =
+        ObjectStore::create(localStore_, backingStore_, stats_, executor_);
   }
 
   Hash putReadyBlob(folly::StringPiece data) {
@@ -37,6 +40,7 @@ class ObjectStoreTest : public ::testing::Test {
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<EdenStats> stats_;
   std::shared_ptr<ObjectStore> objectStore_;
+  folly::QueuedImmediateExecutor* executor_;
 };
 
 TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
@@ -46,7 +50,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   // Get blob size from backing store, caches in local store
   objectStore_->getBlobSize(id);
   // Clear backing store
-  objectStore_ = ObjectStore::create(localStore_, nullptr, stats_);
+  objectStore_ = ObjectStore::create(localStore_, nullptr, stats_, executor_);
 
   size_t expectedSize = data.size();
   size_t size = objectStore_->getBlobSize(id).get();

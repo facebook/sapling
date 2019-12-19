@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/Diff.h"
 
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -55,7 +56,10 @@ class DiffTest : public ::testing::Test {
     localStore_ = make_shared<MemoryLocalStore>();
     backingStore_ = make_shared<FakeBackingStore>(localStore_);
     store_ = ObjectStore::create(
-        localStore_, backingStore_, std::make_shared<EdenStats>());
+        localStore_,
+        backingStore_,
+        std::make_shared<EdenStats>(),
+        &folly::QueuedImmediateExecutor::instance());
   }
 
   Future<std::unique_ptr<ScmStatus>> diffCommits(

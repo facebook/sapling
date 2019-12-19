@@ -23,6 +23,8 @@ using folly::ByteRange;
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
+using folly::makeSemiFuture;
+using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
 using std::string;
@@ -124,9 +126,9 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
   return tree;
 }
 
-Future<unique_ptr<Blob>> GitBackingStore::getBlob(const Hash& id) {
+SemiFuture<unique_ptr<Blob>> GitBackingStore::getBlob(const Hash& id) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeFuture(getBlobImpl(id));
+  return makeSemiFuture(getBlobImpl(id));
 }
 
 unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {

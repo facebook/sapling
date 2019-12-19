@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -56,8 +57,11 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       &importer,
       localStore.get(),
       stats)};
-  std::shared_ptr<ObjectStore> objectStore{
-      ObjectStore::create(localStore, backingStore, stats)};
+  std::shared_ptr<ObjectStore> objectStore{ObjectStore::create(
+      localStore,
+      backingStore,
+      stats,
+      &folly::QueuedImmediateExecutor::instance())};
 };
 
 TEST_F(

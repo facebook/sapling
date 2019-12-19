@@ -24,6 +24,7 @@ using folly::ByteRange;
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
+using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
 using std::unique_ptr;
@@ -53,7 +54,7 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTree(const Hash& id) {
   return it->second->getFuture();
 }
 
-Future<unique_ptr<Blob>> FakeBackingStore::getBlob(const Hash& id) {
+SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(const Hash& id) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
   auto it = data->blobs.find(id);

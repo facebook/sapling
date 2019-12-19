@@ -186,7 +186,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
       });
 }
 
-folly::Future<std::unique_ptr<Blob>> MononokeHttpBackingStore::getBlob(
+folly::SemiFuture<std::unique_ptr<Blob>> MononokeHttpBackingStore::getBlob(
     const Hash& id) {
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("blob", id); })

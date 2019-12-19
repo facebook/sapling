@@ -7,6 +7,7 @@
 
 #include "eden/fs/testharness/FakeBackingStore.h"
 
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -92,7 +93,9 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   EXPECT_FALSE(future4.isReady());
   bool future4Failed = false;
   folly::exception_wrapper future4Error;
+
   std::move(future4)
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([](auto&&) { FAIL() << "future4 should not succeed\n"; })
       .thenError([&](const folly::exception_wrapper& ew) {
         future4Failed = true;

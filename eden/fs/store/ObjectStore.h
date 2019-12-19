@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Executor.h>
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
@@ -40,7 +41,8 @@ class ObjectStore : public IObjectStore,
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
-      std::shared_ptr<EdenStats> stats);
+      std::shared_ptr<EdenStats> stats,
+      folly::Executor::KeepAlive<folly::Executor> executor);
   ~ObjectStore() override;
 
   /**
@@ -109,7 +111,8 @@ class ObjectStore : public IObjectStore,
   ObjectStore(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
-      std::shared_ptr<EdenStats> stats);
+      std::shared_ptr<EdenStats> stats,
+      folly::Executor::KeepAlive<folly::Executor> executor);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
@@ -157,6 +160,8 @@ class ObjectStore : public IObjectStore,
   std::shared_ptr<BackingStore> backingStore_;
 
   std::shared_ptr<EdenStats> const stats_;
+
+  folly::Executor::KeepAlive<folly::Executor> executor_;
 
   void updateBlobStats(bool local, bool backing) const;
   void updateBlobSizeStats(bool local, bool backing) const;

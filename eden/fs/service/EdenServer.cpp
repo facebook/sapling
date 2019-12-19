@@ -943,8 +943,11 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
-  auto objectStore =
-      ObjectStore::create(getLocalStore(), backingStore, getSharedStats());
+  auto objectStore = ObjectStore::create(
+      getLocalStore(),
+      backingStore,
+      getSharedStats(),
+      serverState_->getThreadPool().get());
   auto journal = std::make_unique<Journal>(getSharedStats());
 
 #if _WIN32

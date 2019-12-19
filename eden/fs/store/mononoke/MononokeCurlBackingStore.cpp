@@ -103,7 +103,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTree(
       });
 }
 
-folly::Future<std::unique_ptr<Blob>> MononokeCurlBackingStore::getBlob(
+folly::SemiFuture<std::unique_ptr<Blob>> MononokeCurlBackingStore::getBlob(
     const Hash& id) {
   return folly::via(
              clientThreadPool_.get(),

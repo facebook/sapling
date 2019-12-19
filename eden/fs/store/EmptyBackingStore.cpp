@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "EmptyBackingStore.h"
+#include "eden/fs/store/EmptyBackingStore.h"
 
 #include <folly/futures/Future.h>
 #include "eden/fs/model/Blob.h"
@@ -14,6 +14,8 @@
 
 using folly::Future;
 using folly::makeFuture;
+using folly::makeSemiFuture;
+using folly::SemiFuture;
 using std::unique_ptr;
 
 namespace facebook {
@@ -27,8 +29,9 @@ Future<unique_ptr<Tree>> EmptyBackingStore::getTree(const Hash& /* id */) {
   return makeFuture<unique_ptr<Tree>>(std::domain_error("empty backing store"));
 }
 
-Future<unique_ptr<Blob>> EmptyBackingStore::getBlob(const Hash& /* id */) {
-  return makeFuture<unique_ptr<Blob>>(std::domain_error("empty backing store"));
+SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(const Hash& /* id */) {
+  return makeSemiFuture<unique_ptr<Blob>>(
+      std::domain_error("empty backing store"));
 }
 
 Future<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(

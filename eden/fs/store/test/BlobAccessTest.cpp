@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/BlobAccess.h"
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <gtest/gtest.h>
 #include <chrono>
 #include "eden/fs/store/LocalStore.h"
@@ -69,7 +70,8 @@ struct BlobAccessTest : ::testing::Test {
         objectStore{ObjectStore::create(
             localStore,
             backingStore,
-            std::make_shared<EdenStats>())},
+            std::make_shared<EdenStats>(),
+            &folly::QueuedImmediateExecutor::instance())},
         blobCache{BlobCache::create(10, 0)},
         blobAccess{objectStore, blobCache} {
     backingStore->putBlob(hash3, "333"_sp)->setReady();

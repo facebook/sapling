@@ -8,6 +8,7 @@
 #include "ObjectStore.h"
 
 #include <folly/Conv.h>
+#include <folly/Executor.h>
 #include <folly/Format.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
@@ -35,19 +36,24 @@ namespace eden {
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
-    shared_ptr<EdenStats> stats) {
-  return std::shared_ptr<ObjectStore>{new ObjectStore{
-      std::move(localStore), std::move(backingStore), std::move(stats)}};
+    shared_ptr<EdenStats> stats,
+    folly::Executor::KeepAlive<folly::Executor> executor) {
+  return std::shared_ptr<ObjectStore>{new ObjectStore{std::move(localStore),
+                                                      std::move(backingStore),
+                                                      std::move(stats),
+                                                      executor}};
 }
 
 ObjectStore::ObjectStore(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
-    shared_ptr<EdenStats> stats)
+    shared_ptr<EdenStats> stats,
+    folly::Executor::KeepAlive<folly::Executor> executor)
     : metadataCache_{folly::in_place, kCacheSize},
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
-      stats_{std::move(stats)} {}
+      stats_{std::move(stats)},
+      executor_{executor} {}
 
 ObjectStore::~ObjectStore() {}
 
@@ -169,8 +175,9 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
 
     // Look in the BackingStore
     self->recordBackingStoreImport();
-    return self->backingStore_->getBlob(id).thenValue(
-        [self, id](unique_ptr<const Blob> loadedBlob) {
+    return self->backingStore_->getBlob(id)
+        .via(self->executor_)
+        .thenValue([self, id](unique_ptr<const Blob> loadedBlob) {
           if (loadedBlob) {
             XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
             self->updateBlobStats(false, true);
@@ -225,8 +232,9 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         // TODO: This should probably check the LocalStore for the blob first,
         // especially when we begin to expire entries in RocksDB.
         self->recordBackingStoreImport();
-        return self->backingStore_->getBlob(id).thenValue(
-            [self, id](std::unique_ptr<Blob> blob) {
+        return self->backingStore_->getBlob(id)
+            .via(self->executor_)
+            .thenValue([self, id](std::unique_ptr<Blob> blob) {
               if (blob) {
                 self->updateBlobMetadataStats(false, false, true);
                 auto metadata = self->localStore_->putBlob(id, blob.get());
@@ -268,8 +276,9 @@ Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
 
         // Check backing store for blob
         self->recordBackingStoreImport();
-        return self->backingStore_->getBlob(id).thenValue(
-            [self, id](std::unique_ptr<Blob> blob) {
+        return self->backingStore_->getBlob(id)
+            .via(self->executor_)
+            .thenValue([self, id](std::unique_ptr<Blob> blob) {
               if (blob) {
                 const uint64_t size = blob.get()->getSize();
                 self->updateBlobSizeStats(false, true);

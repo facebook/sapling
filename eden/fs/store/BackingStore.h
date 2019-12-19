@@ -37,7 +37,7 @@ class BackingStore {
   virtual ~BackingStore() {}
 
   virtual folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) = 0;
-  virtual folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) = 0;
+  virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) = 0;
   virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) = 0;
   virtual folly::Future<std::unique_ptr<Tree>> getTreeForManifest(
