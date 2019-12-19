@@ -13,6 +13,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
+use failure_ext::chain::ChainExt;
 use filestore::{self, Alias, FetchKey};
 use futures::{
     future::{self},
@@ -27,6 +28,7 @@ use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgMani
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use phases::{Phase, SqlPhases};
 use std::{iter::IntoIterator, sync::Arc};
+use thiserror::Error;
 
 // Holds type of edge and target Node that we want to load in next step(s)
 // Combined with current node, this forms an complegte edge.
@@ -40,6 +42,12 @@ impl OutgoingEdge {
     pub fn new(label: EdgeType, target: Node) -> Self {
         Self { label, target }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum ErrorKind {
+    #[error("Could not step to {0:?}")]
+    NotTraversable(OutgoingEdge),
 }
 
 pub struct ResolvedNode {
@@ -478,6 +486,7 @@ where
         // Each step returns the walk result, and next steps
         move |walk_item| {
             cloned!(ctx);
+            let edge_label = walk_item.label;
             let node = walk_item.target.clone();
             let next = match node.clone() {
                 Node::Root => {
@@ -511,6 +520,8 @@ where
                 }
                 Node::AliasContentMapping(alias) => alias_content_mapping_step(ctx, &repo, alias),
             }
+            .chain_err(ErrorKind::NotTraversable(walk_item))
+            .from_err()
             .and_then({
                 cloned!(visitor);
                 move |StepOutput(node_data, children)| {
@@ -545,7 +556,7 @@ where
 
                     // Allow WalkVisitor to record state and decline outgoing nodes if already visited
                     Ok(visitor.visit(
-                        ResolvedNode::new(node, node_data, Some(walk_item.label)),
+                        ResolvedNode::new(node, node_data, Some(edge_label)),
                         children,
                     ))
                 }
