@@ -35,6 +35,6 @@ compression-benefit, not expecting any compression from the tiny test files
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (*, 3) (glob)
+  Final count: * (glob)
   * Total: SizingStats { raw: 3, compressed: 3 },000% * (glob)
   Exiting...

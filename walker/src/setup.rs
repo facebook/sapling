@@ -9,6 +9,7 @@
 use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
 use crate::progress::sort_by_string;
+use crate::validate::CheckType;
 use crate::walk::OutgoingEdge;
 
 use anyhow::{format_err, Error};
@@ -48,6 +49,7 @@ impl RepoWalkParams {
 pub const COUNT_OBJECTS: &'static str = "count-objects";
 pub const SCRUB_OBJECTS: &'static str = "scrub-objects";
 pub const COMPRESSION_BENEFIT: &'static str = "compression-benefit";
+pub const VALIDATE: &'static str = "validate";
 
 // Subcommand args
 const QUIET_ARG: &'static str = "quiet";
@@ -62,6 +64,8 @@ const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
+pub const EXCLUDE_CHECK_TYPE_ARG: &'static str = "exclude-check-type";
+pub const INCLUDE_CHECK_TYPE_ARG: &'static str = "include-check-type";
 
 const SHALLOW_VALUE_ARG: &'static str = "shallow";
 const DEEP_VALUE_ARG: &'static str = "deep";
@@ -167,6 +171,11 @@ const BONSAI_EDGE_TYPES: &[EdgeType] = &[
 ];
 
 lazy_static! {
+    static ref INCLUDE_CHECK_TYPE_HELP: String = format!(
+        "Check types to include, defaults to: {:?}",
+        CheckType::ALL_VARIANTS,
+    );
+
     static ref INCLUDE_NODE_TYPE_HELP: String = format!(
         "Graph node types we want to step to in the walk. Defaults to core Mononoke and Hg types: {:?}",
         DEFAULT_INCLUDE_NODE_TYPES
@@ -215,6 +224,30 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .help("How many files to sample. Pass 1 to try all, 120 to do 1 in 120, etc."),
     );
 
+    let validate = setup_subcommand_args(
+        SubCommand::with_name(VALIDATE).about("estimate compression benefit"),
+    )
+    .arg(
+        Arg::with_name(EXCLUDE_CHECK_TYPE_ARG)
+            .long(EXCLUDE_CHECK_TYPE_ARG)
+            .short("C")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .required(false)
+            .help("Checks to exclude"),
+    )
+    .arg(
+        Arg::with_name(INCLUDE_CHECK_TYPE_ARG)
+            .long(INCLUDE_CHECK_TYPE_ARG)
+            .short("c")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .required(false)
+            .help(&INCLUDE_CHECK_TYPE_HELP),
+    );
+
     let app = app_template.build()
         .version("0.0.0")
         .about("Walks the mononoke commit and/or derived data graphs, with option of performing validations and modifications")
@@ -227,7 +260,8 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
         )
         .subcommand(compression_benefit)
         .subcommand(count_objects)
-        .subcommand(scrub_objects);
+        .subcommand(scrub_objects)
+        .subcommand(validate);
     let app = args::add_fb303_args(app);
     app
 }

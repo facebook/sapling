@@ -85,14 +85,14 @@ fn size_sampling_stream<InStream, InStats>(
     sample_rate: u64,
     s: InStream,
     compressor_type: CompressorType,
-) -> impl Stream<Item = (Node, Option<(SizingStats, NodeData)>), Error = Error>
+) -> impl Stream<Item = (Node, Option<NodeData>, Option<SizingStats>), Error = Error>
 where
-    InStream: 'static + Stream<Item = (Node, Option<(InStats, NodeData)>), Error = Error> + Send,
-    InStats: Add<InStats, Output = InStats> + Copy + Default,
+    InStream:
+        'static + Stream<Item = (Node, Option<NodeData>, Option<InStats>), Error = Error> + Send,
 {
-    s.map(move |(n, opt)| match (&n, opt) {
+    s.map(move |(n, data_opt, _stats_opt)| match (&n, data_opt) {
         // Sample on first byte of hash for reproducible values
-        (Node::FileContent(content_id), Some((_ss, NodeData::FileContent(fc))))
+        (Node::FileContent(content_id), Some(NodeData::FileContent(fc)))
             if content_id.blake2().as_ref()[0] as u64 % sample_rate == 0 =>
         {
             match fc {
@@ -109,12 +109,13 @@ where
             .map(move |sizes| {
                 (
                     n,
-                    Some((sizes, NodeData::FileContent(FileContentData::Consumed(0)))),
+                    Some(NodeData::FileContent(FileContentData::Consumed(sizes.raw))),
+                    Some(sizes),
                 )
             })
             .left_future()
         }
-        _ => future::ok((n, None)).right_future(),
+        (_, data_opt) => future::ok((n, data_opt, None)).right_future(),
     })
     .buffered(100)
 }

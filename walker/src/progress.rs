@@ -222,10 +222,7 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
     }
 }
 
-pub trait ProgressRecorder<SS>
-where
-    SS: Add + Default,
-{
+pub trait ProgressRecorder<SS> {
     fn record_step(&self, n: &Node, ss: Option<&SS>);
 }
 
@@ -249,7 +246,6 @@ impl<Inner> ProgressStateMutex<Inner> {
 
 impl<Inner, SS> ProgressRecorder<SS> for ProgressStateMutex<Inner>
 where
-    SS: Add + Default,
     Inner: ProgressRecorderUnprotected<SS>,
 {
     fn record_step(&self, n: &Node, ss: Option<&SS>) {
@@ -286,34 +282,33 @@ pub fn progress_stream<InStream, PS, ND, SS>(
     quiet: bool,
     progress_state: PS,
     s: InStream,
-) -> impl Stream<Item = (Node, Option<(SS, ND)>), Error = Error>
+) -> impl Stream<Item = (Node, Option<ND>, Option<SS>), Error = Error>
 where
-    InStream: 'static + Stream<Item = (Node, Option<(SS, ND)>), Error = Error> + Send,
+    InStream: 'static + Stream<Item = (Node, Option<ND>, Option<SS>), Error = Error> + Send,
     PS: 'static + Send + Clone + ProgressRecorder<SS> + ProgressReporter,
-    SS: Add + Default,
 {
-    s.map(move |(n, opt)| {
-        progress_state.record_step(&n, opt.as_ref().map(|(ss, _)| ss));
+    s.map(move |(n, data_opt, stats_opt)| {
+        progress_state.record_step(&n, stats_opt.as_ref());
         if !quiet {
             progress_state.report_throttled(ctx.logger());
         }
-        (n, opt)
+        (n, data_opt, stats_opt)
     })
 }
 
 // Final status summary, plus count of seen nodes
-pub fn report_state<InStream, PS, ND>(
+pub fn report_state<InStream, PS, ND, SS>(
     ctx: CoreContext,
     progress_state: PS,
     s: InStream,
 ) -> impl Future<Item = (), Error = Error>
 where
-    InStream: Stream<Item = (Node, Option<ND>), Error = Error>,
+    InStream: Stream<Item = (Node, Option<ND>, Option<SS>), Error = Error>,
     PS: 'static + Send + Clone + ProgressReporter,
 {
     let init_stats: (usize, usize) = (0, 0);
     s.fold(init_stats, {
-        move |(mut seen, mut loaded), (_n, nd)| {
+        move |(mut seen, mut loaded), (_n, nd, _ss)| {
             let data_count = match nd {
                 None => 0,
                 _ => 1,

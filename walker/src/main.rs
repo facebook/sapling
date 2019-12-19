@@ -19,6 +19,7 @@ use slog::{error, info};
 
 mod blobstore;
 mod count_objects;
+#[macro_use]
 mod graph;
 mod progress;
 mod scrub;
@@ -26,6 +27,7 @@ mod setup;
 mod sizing;
 mod state;
 mod tail;
+mod validate;
 mod walk;
 
 #[fbinit::main]
@@ -44,6 +46,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
             sizing::compression_benefit(fb, logger.clone(), &matches, sub_m)
         }
+        (setup::VALIDATE, Some(sub_m)) => validate::validate(fb, logger.clone(), &matches, sub_m),
         _ => Err(Error::msg("Invalid Arguments, pass --help for usage."))
             .into_future()
             .boxify(),

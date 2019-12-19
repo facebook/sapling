@@ -11,7 +11,6 @@ use crate::progress::{
     progress_stream, report_state, ProgressStateCountByType, ProgressStateMutex,
 };
 use crate::setup::setup_common;
-use crate::state::StepStats;
 use crate::state::{WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 
@@ -32,27 +31,28 @@ const PROGRESS_SAMPLE_RATE: u64 = 100;
 const PROGRESS_SAMPLE_DURATION_S: u64 = 1;
 
 // Force load of leaf data like file contents that graph traversal did not need
-pub fn loading_stream<InStream>(
+pub fn loading_stream<InStream, SS>(
     s: InStream,
-) -> impl Stream<Item = (Node, Option<(StepStats, NodeData)>), Error = Error>
+) -> impl Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>
 where
-    InStream: Stream<Item = (Node, Option<(StepStats, NodeData)>), Error = Error>,
+    InStream: Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>,
 {
-    s.map(move |(n, opt)| match opt {
-        Some((ss, nd)) => match nd {
-            NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)) => {
-                file_bytes_stream
-                    .fold(0, |acc, file_bytes| {
-                        future::ok::<_, Error>(acc + file_bytes.size())
-                    })
-                    .map(|num_bytes| NodeData::FileContent(FileContentData::Consumed(num_bytes)))
-                    .left_future()
-            }
-            _ => future::ok(nd).right_future(),
+    s.map(move |(n, nd, ss)| match nd {
+        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
+            file_bytes_stream
+                .fold(0, |acc, file_bytes| {
+                    future::ok::<_, Error>(acc + file_bytes.size())
+                })
+                .map(|num_bytes| {
+                    (
+                        n,
+                        Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
+                        ss,
+                    )
+                })
+                .left_future()
         }
-        .map(move |d| (n, Some((ss, d))))
-        .left_future(),
-        None => future::ok((n, opt)).right_future(),
+        _ => future::ok((n, nd, ss)).right_future(),
     })
     .buffered(100)
 }

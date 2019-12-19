@@ -119,13 +119,15 @@ impl WalkStateCHashMap {
     }
 }
 
-impl WalkVisitor<(Node, Option<(StepStats, NodeData)>)> for WalkStateCHashMap {
+impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>)> for WalkStateCHashMap {
     fn visit(
         &self,
-        // Option as roots have no source
         source: ResolvedNode,
         mut outgoing: Vec<OutgoingEdge>,
-    ) -> ((Node, Option<(StepStats, NodeData)>), Vec<OutgoingEdge>) {
+    ) -> (
+        (Node, Option<NodeData>, Option<StepStats>),
+        Vec<OutgoingEdge>,
+    ) {
         // Filter things we don't want to enter the WalkVisitor at all.
         outgoing.retain(|e| self.retain_edge(e));
         let num_direct = outgoing.len();
@@ -142,7 +144,7 @@ impl WalkVisitor<(Node, Option<(StepStats, NodeData)>)> for WalkStateCHashMap {
         let node = source.node;
         let node_data = source.data;
         let via = source.via;
-        let payload = via.map(|_via| {
+        let stats = via.map(|_via| {
             let visited_of_type = self.get_visit_count(&node.get_type());
             let stats = StepStats {
                 num_direct,
@@ -150,9 +152,9 @@ impl WalkVisitor<(Node, Option<(StepStats, NodeData)>)> for WalkStateCHashMap {
                 num_expanded_new,
                 visited_of_type,
             };
-            (stats, node_data)
+            stats
         });
-        ((node, payload), outgoing)
+        ((node, Some(node_data), stats), outgoing)
     }
 }
 
