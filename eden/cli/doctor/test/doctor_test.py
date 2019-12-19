@@ -16,6 +16,7 @@ from eden.cli.config import EdenCheckout, EdenInstance
 from eden.cli.doctor import check_hg, check_watchman
 from eden.cli.doctor.test.lib.fake_client import FakeClient, ResetParentsCommitsArgs
 from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
 from eden.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.cli.test.lib.output import TestOutput
@@ -609,7 +610,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_dirstate_p0(checkout, snapshot_hex)
 
     def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
-        def check_commit_validity(path: bytes, commit: str) -> bool:
+        def check_commit_validity(commit: str) -> bool:
             if commit == "12345678" * 5:
                 return False
             return True
@@ -649,7 +650,10 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
     def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
         self, mock_get_tip_commit_hash
     ):
-        def check_commit_validity(path: bytes, commit: str) -> bool:
+        def check_commit_validity(commit: str) -> bool:
+            null_commit = "00000000" * 5
+            if commit == null_commit:
+                return True
             return False
 
         dirstate_hash_hex = "12000000" * 5
@@ -691,7 +695,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
     def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
         self, mock_get_tip_commit_hash
     ):
-        def check_commit_validity(path: bytes, commit: str) -> bool:
+        def check_commit_validity(commit: str) -> bool:
             return False
 
         dirstate_hash_hex = "12000000" * 5
@@ -732,7 +736,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_dirstate_p0(checkout, valid_commit_hash)
 
     def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(self):
-        def check_commit_validity(path: bytes, commit: str) -> bool:
+        def check_commit_validity(commit: str) -> bool:
             if commit == "12000000" * 5:
                 return False
             return True
@@ -763,7 +767,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         dirstate_hash_hex: str,
         snapshot_hex: str,
         dirstate_parent2_hash_hex=None,
-        commit_checker: Optional[Callable[[bytes, str], bool]] = None,
+        commit_checker: Optional[Callable[[str], bool]] = None,
     ) -> Tuple[EdenCheckout, doctor.ProblemFixer, str]:
         instance = FakeEdenInstance(self.make_temporary_directory())
         if dirstate_parent2_hash_hex is None:
@@ -777,9 +781,10 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                 dirstate_parent=(dirstate_hash_hex, dirstate_parent2_hash_hex),
             )
 
-        if commit_checker:
-            client = typing.cast(FakeClient, checkout.instance.get_thrift_client())
-            client.commit_checker = commit_checker
+        hg_repo = checkout.instance.get_hg_repo(str(checkout.path))
+        if commit_checker and hg_repo is not None:
+            fake_hg_repo = typing.cast(FakeHgRepo, hg_repo)
+            fake_hg_repo.commit_checker = commit_checker
 
         fixer, out = self.create_fixer(dry_run=False)
         check_hg.check_hg(fixer, checkout)

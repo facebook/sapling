@@ -295,15 +295,17 @@ class HgRepo(Repo):
     def __repr__(self) -> str:
         return f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
 
-    def _run_hg(self, args: List[str]) -> bytes:
+    def _run_hg(self, args: List[str], stderr_output=None) -> bytes:
         cmd = [self._hg_binary] + args
-        out_bytes = subprocess.check_output(cmd, cwd=self.working_dir, env=self._env)
+        out_bytes = subprocess.check_output(
+            cmd, cwd=self.working_dir, env=self._env, stderr=stderr_output
+        )
         # pyre-fixme[22]: The cast is redundant.
         out = typing.cast(bytes, out_bytes)
         return out
 
-    def get_commit_hash(self, commit: str) -> str:
-        out = self._run_hg(["log", "-r", commit, "-T{node}"])
+    def get_commit_hash(self, commit: str, stderr_output=None) -> str:
+        out = self._run_hg(["log", "-r", commit, "-T{node}"], stderr_output)
         return out.strip().decode("utf-8")
 
     def cat_file(self, commit: str, path: str) -> bytes:
@@ -364,7 +366,7 @@ def _get_git_repo(path: str) -> Optional[GitRepo]:
     return None
 
 
-def _get_hg_repo(path: str) -> Optional[HgRepo]:
+def get_hg_repo(path: str) -> Optional[HgRepo]:
     """
     If path points to a mercurial repository, return a HgRepo object.
     Otherwise, if path is not a mercurial repository, return None.
@@ -401,7 +403,7 @@ def get_repo(path: str) -> Optional[Repo]:
         return None
 
     while True:
-        hg_repo = _get_hg_repo(path)
+        hg_repo = get_hg_repo(path)
         if hg_repo is not None:
             return hg_repo
         git_repo = _get_git_repo(path)

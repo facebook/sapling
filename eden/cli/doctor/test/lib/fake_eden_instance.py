@@ -20,6 +20,7 @@ from eden.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthSt
 from fb303_core.ttypes import fb303_status
 
 from .fake_client import FakeClient
+from .fake_hg_repo import FakeHgRepo
 from .fake_mount_table import FakeMountTable
 
 
@@ -30,7 +31,7 @@ class FakeCheckout(NamedTuple):
 
 
 class FakeEdenInstance:
-    default_commit_hash = "1" * 40
+    default_commit_hash: str = "1" * 40
 
     def __init__(
         self,
@@ -54,7 +55,7 @@ class FakeEdenInstance:
 
         # A map from mount path --> FakeCheckout
         self._checkouts_by_path: Dict[str, FakeCheckout] = {}
-
+        self._hg_repo_by_path: Dict[str, FakeHgRepo] = {}
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
 
@@ -161,7 +162,7 @@ class FakeEdenInstance:
         full_path: str,
         fake_checkout: FakeCheckout,
         dirstate_parent: Union[str, Tuple[str, str], None],
-    ):
+    ) -> None:
         hg_dir = Path(full_path) / ".hg"
         hg_dir.mkdir()
         dirstate_path = hg_dir / "dirstate"
@@ -190,6 +191,8 @@ class FakeEdenInstance:
         (hg_dir / "shared").write_text("bookmarks\n")
         (hg_dir / "bookmarks").touch()
         (hg_dir / "branch").write_text("default\n")
+
+        self._hg_repo_by_path[full_path] = FakeHgRepo()
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._checkouts_by_path.keys()
@@ -238,3 +241,8 @@ class FakeEdenInstance:
 
     def get_config_value(self, key: str, default: str) -> str:
         return self._config.get(key, default)
+
+    def get_hg_repo(self, path: str) -> Optional[FakeHgRepo]:
+        if path in self._hg_repo_by_path:
+            return self._hg_repo_by_path[path]
+        return None

@@ -16,7 +16,6 @@ import facebook.eden.ttypes as eden_ttypes
 from eden.cli import hg_util
 from eden.cli.config import EdenCheckout
 from eden.cli.doctor.problem import FixableProblem, ProblemTracker, UnexpectedCheckError
-from thrift.Thrift import TApplicationException
 
 
 class HgChecker:
@@ -202,18 +201,21 @@ class DirstateChecker(HgFileChecker):
         return binascii.hexlify(commit).decode("utf-8")
 
     def _is_commit_hash_valid(self, commit_hash: bytes) -> bool:
-        # The null commit ID is always valid
-        if commit_hash == self._null_commit_id:
-            return True
-
         try:
-            with self.checkout.instance.get_thrift_client() as client:
-                client.getScmStatusBetweenRevisions(
-                    bytes(self.checkout.path), commit_hash, commit_hash
+            repo = self.checkout.instance.get_hg_repo(str(self.checkout.path))
+            if repo is not None:
+                repo.get_commit_hash(
+                    self._commit_hex(commit_hash), stderr_output=subprocess.STDOUT
                 )
-            return True
-        except (TApplicationException, eden_ttypes.EdenError) as ex:
-            if "RepoLookupError: unknown revision" in str(ex):
+                return True
+            else:
+                # This case can happen if the repo is corrupted. In this case return
+                # true and assume that the commit was valid before the repo corrupted
+                # This will also be hit in the cli unit tests since the FakeEdenInstance
+                # does not set up a complete .hg directory.
+                return True
+        except subprocess.CalledProcessError as ex:
+            if b"unknown revision" in ex.output:
                 return False
             raise
 

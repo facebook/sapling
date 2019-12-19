@@ -758,6 +758,9 @@ Do you want to run `eden mount %s` instead?"""
 
         return checkouts
 
+    def get_hg_repo(self, path: str) -> Optional[util.HgRepo]:
+        return util.get_hg_repo(path)
+
     def _get_directory_map(self) -> Dict[Path, str]:
         """
         Parse config.json which holds a mapping of mount paths to their

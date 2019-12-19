@@ -18,8 +18,6 @@ class ResetParentsCommitsArgs(NamedTuple):
 
 
 class FakeClient:
-    commit_checker: Optional[Callable[[bytes, str], bool]] = None
-
     def __init__(self):
         self._mounts = []
         self.set_parents_calls: List[ResetParentsCommitsArgs] = []
@@ -50,40 +48,3 @@ class FakeClient:
                 mount=mountPoint, parent1=parents.parent1, parent2=parents.parent2
             )
         )
-
-    def getScmStatus(
-        self,
-        mountPoint: Optional[bytes] = None,
-        listIgnored: Optional[bool] = None,
-        commit: Optional[bytes] = None,
-    ) -> Optional[eden_ttypes.ScmStatus]:
-        assert mountPoint is not None
-        self._check_commit_valid(mountPoint, commit)
-        return None
-
-    def getScmStatusBetweenRevisions(
-        self,
-        mountPoint: Optional[bytes] = None,
-        oldHash: Optional[bytes] = None,
-        newHash: Optional[bytes] = None,
-    ) -> Optional[eden_ttypes.ScmStatus]:
-        assert mountPoint is not None
-        self._check_commit_valid(mountPoint, oldHash)
-        self._check_commit_valid(mountPoint, newHash)
-        return None
-
-    def _check_commit_valid(self, path: bytes, commit: Union[None, bytes, str]):
-        if self.commit_checker is None:
-            return
-
-        if commit is None:
-            return
-        if isinstance(commit, str):
-            commit_hex = commit
-        else:
-            commit_hex = binascii.hexlify(commit).decode("utf-8")
-
-        if not self.commit_checker(path, commit_hex):
-            raise eden_ttypes.EdenError(
-                message=f"RepoLookupError: unknown revision {commit_hex}"
-            )
