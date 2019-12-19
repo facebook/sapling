@@ -13,7 +13,7 @@
 //  3. Add a new validation method
 //  4. Add the method to the match/case in ValidatingVisitor::visit()
 
-use crate::graph::{EdgeType, Node, NodeType};
+use crate::graph::{EdgeType, Node, NodeData, NodeType};
 use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressRecorderUnprotected, ProgressReporter,
     ProgressReporterUnprotected, ProgressStateCountByType, ProgressStateMutex,
@@ -33,6 +33,7 @@ use futures::{Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use itertools::Itertools;
 use mononoke_types::MPath;
+use phases::Phase;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use stats::service_data::{get_service_data_singleton, ServiceData};
@@ -60,7 +61,10 @@ define_stats! {
     walker_validate: dynamic_timeseries("{}.{}.{}", (repo: String, check: &'static str, status: &'static str); RATE, SUM),
 }
 
-pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[CheckType::HgLinkNodePopulated];
+pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[
+    CheckType::BonsaiChangesetPhaseIsPublic,
+    CheckType::HgLinkNodePopulated,
+];
 
 const PROGRESS_SAMPLE_RATE: u64 = 1000;
 const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
@@ -74,6 +78,7 @@ enum CheckStatus {
 
 define_type_enum! {
 enum CheckType {
+    BonsaiChangesetPhaseIsPublic,
     HgLinkNodePopulated,
 }
 }
@@ -81,11 +86,13 @@ enum CheckType {
 impl CheckType {
     fn stats_key(&self) -> &'static str {
         match self {
+            CheckType::BonsaiChangesetPhaseIsPublic => "bonsai_phase_is_public",
             CheckType::HgLinkNodePopulated => "hg_link_node_populated",
         }
     }
     pub fn node_type(&self) -> NodeType {
         match self {
+            CheckType::BonsaiChangesetPhaseIsPublic => NodeType::BonsaiPhaseMapping,
             CheckType::HgLinkNodePopulated => NodeType::HgFileNode,
         }
     }
@@ -132,6 +139,13 @@ impl ValidatingVisitor {
                 .map(|(key, group)| (key, HashSet::from_iter(group)))
                 .collect(),
         }
+    }
+}
+
+fn check_bonsai_phase_is_public(current: &ResolvedNode) -> CheckStatus {
+    match &current.data {
+        NodeData::BonsaiPhaseMapping(Some(Phase::Public)) => CheckStatus::Pass,
+        _ => CheckStatus::Fail,
     }
 }
 
@@ -188,6 +202,9 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>)> for ValidatingVis
                 set.iter().filter_map(|check| {
                     // Lets check!
                     let status = match check {
+                        CheckType::BonsaiChangesetPhaseIsPublic => {
+                            check_bonsai_phase_is_public(&current)
+                        }
                         CheckType::HgLinkNodePopulated => {
                             num_edges += outgoing.len() as u64;
                             check_linknode_populated(&outgoing)
