@@ -80,7 +80,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
         self->recordBackingStoreImport();
         return self->backingStore_->getTree(id)
             .via(self->executor_)
-            .thenValue([id](unique_ptr<const Tree> loadedTree) {
+            .thenValue([id, localStore = self->localStore_](
+                           unique_ptr<const Tree> loadedTree) {
               if (!loadedTree) {
                 // TODO: Perhaps we should do some short-term negative caching?
                 XLOG(DBG2) << "unable to find tree " << id;
@@ -88,11 +89,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
                     folly::to<string>("tree ", id.toString(), " not found"));
               }
 
-              // TODO: For now, the BackingStore objects actually end up already
-              // saving the Tree object in the LocalStore, so we don't do
-              // anything here.
-              //
-              // localStore_->putTree(loadedTree.get());
+              localStore->putTree(loadedTree.get());
               XLOG(DBG3) << "tree " << id << " retrieved from backing store";
               return shared_ptr<const Tree>(std::move(loadedTree));
             });
@@ -105,15 +102,13 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
 
   recordBackingStoreImport();
   return backingStore_->getTreeForCommit(commitID).via(executor_).thenValue(
-      [commitID](std::shared_ptr<const Tree> tree) {
+      [commitID, localStore = localStore_](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(
               "unable to import commit ", commitID.toString()));
         }
 
-        // For now we assume that the BackingStore will insert the Tree into the
-        // LocalStore on its own, so we don't have to update the LocalStore
-        // ourselves here.
+        localStore->putTree(tree.get());
         return tree;
       });
 }
@@ -126,7 +121,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
   recordBackingStoreImport();
   return backingStore_->getTreeForManifest(commitID, manifestID)
       .via(executor_)
-      .thenValue([commitID, manifestID](std::shared_ptr<const Tree> tree) {
+      .thenValue([commitID, manifestID, localStore = localStore_](
+                     std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(
               "unable to import commit ",
@@ -135,9 +131,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
               manifestID.toString()));
         }
 
-        // For now we assume that the BackingStore will insert the Tree into the
-        // LocalStore on its own, so we don't have to update the LocalStore
-        // ourselves here.
+        localStore->putTree(tree.get());
         return tree;
       });
 }

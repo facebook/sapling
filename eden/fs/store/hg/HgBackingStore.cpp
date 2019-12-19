@@ -402,11 +402,6 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   // handled specially in the code.
   if (path.empty() && manifestNode == kZeroHash) {
     auto tree = make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
-    auto serialized = LocalStore::serializeTree(tree.get());
-    auto writeBatch = localStore_->beginWrite();
-    writeBatch->put(
-        KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-    writeBatch->flush();
     return makeFuture(std::move(tree));
   }
 
@@ -455,12 +450,6 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                 }
               }
 
-              auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-              auto serialized = LocalStore::serializeTree(tree.get());
-              writeBatch->put(
-                  KeySpace::TreeFamily,
-                  edenTreeID,
-                  serialized.second.coalesce());
               writeBatch->flush();
 
               auto& currentThreadStats =
@@ -468,6 +457,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
               currentThreadStats.mononokeBackingStoreGetTree.addValue(
                   watch.elapsed().count());
 
+              auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
               return makeFuture(std::move(tree));
             })
             .thenError(
@@ -646,13 +636,9 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
     iter.next();
   }
-
-  auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-  auto serialized = LocalStore::serializeTree(tree.get());
-  writeBatch->put(
-      KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
   writeBatch->flush();
-  return tree;
+
+  return make_unique<Tree>(std::move(entries), edenTreeID);
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(

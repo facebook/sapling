@@ -186,6 +186,7 @@ usecunionstore=True
   // Now test running prefetch
   // Build a list of file blob IDs to prefetch.
   auto rootTree = store.getTreeForCommit(commit2).get(10s);
+  ASSERT_TRUE(rootTree);
   auto srcTree =
       store.getTree(rootTree->getEntryAt("src"_pc).getHash()).get(10s);
   auto edenTree =
