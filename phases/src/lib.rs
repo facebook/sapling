@@ -247,6 +247,54 @@ impl SqlPhases {
         SelectAllPublic::query(&self.read_connection, &repo_id)
             .map(|ans| ans.into_iter().map(|x| x.0).collect())
     }
+
+    pub fn get_public_derive(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csids: Vec<ChangesetId>,
+        ephemeral_derive: bool,
+    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
+        if csids.is_empty() {
+            return future::ok(Default::default()).boxify();
+        }
+        let repoid = repo.get_repoid();
+        let this = self.clone();
+        self.get_public_raw(repoid, &csids)
+            .and_then(move |public_cold| {
+                let mut unknown: Vec<_> = csids
+                    .into_iter()
+                    .filter(|csid| !public_cold.contains(csid))
+                    .collect();
+                if unknown.is_empty() {
+                    return future::ok(public_cold).left_future();
+                }
+                repo.get_bonsai_heads_maybe_stale(ctx.clone())
+                    .collect()
+                    .and_then({
+                        cloned!(this);
+                        move |heads| {
+                            mark_reachable_as_public(ctx, repo, this, &heads, ephemeral_derive)
+                        }
+                    })
+                    .and_then(move |freshly_marked| {
+                        // Still do the get_public_raw incase someone else marked the changes as public
+                        // and thus mark_reachable_as_public did not return them as freshly_marked
+                        this.get_public_raw(repoid, &unknown)
+                            .map(move |public_hot| {
+                                let public_combined = public_cold.into_iter().chain(public_hot);
+                                if ephemeral_derive {
+                                    unknown.retain(|e| freshly_marked.contains(e));
+                                    public_combined.chain(unknown).collect()
+                                } else {
+                                    public_combined.collect()
+                                }
+                            })
+                    })
+                    .right_future()
+            })
+            .boxify()
+    }
 }
 
 impl SqlConstructors for SqlPhases {
@@ -276,35 +324,7 @@ impl Phases for SqlPhases {
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        if csids.is_empty() {
-            return future::ok(Default::default()).boxify();
-        }
-        let repoid = repo.get_repoid();
-        let this = self.clone();
-        self.get_public_raw(repoid, &csids)
-            .and_then(move |public_cold| {
-                let unknown: Vec<_> = csids
-                    .into_iter()
-                    .filter(|csid| !public_cold.contains(csid))
-                    .collect();
-                if unknown.is_empty() {
-                    return future::ok(public_cold).left_future();
-                }
-                repo.get_bonsai_heads_maybe_stale(ctx.clone())
-                    .collect()
-                    .and_then({
-                        cloned!(this);
-                        move |heads| mark_reachable_as_public(ctx, repo, this, &heads)
-                    })
-                    .and_then(move |_| {
-                        this.get_public_raw(repoid, &unknown)
-                            .map(move |public_hot| {
-                                public_cold.into_iter().chain(public_hot).collect()
-                            })
-                    })
-                    .right_future()
-            })
-            .boxify()
+        self.get_public_derive(ctx, repo, csids, false)
     }
 
     fn add_reachable_as_public(
@@ -313,7 +333,7 @@ impl Phases for SqlPhases {
         repo: BlobRepo,
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        mark_reachable_as_public(ctx, repo, self.clone(), &heads).boxify()
+        mark_reachable_as_public(ctx, repo, self.clone(), &heads, false).boxify()
     }
 }
 
@@ -323,6 +343,7 @@ fn mark_reachable_as_public<'a, Heads>(
     repo: BlobRepo,
     phases: SqlPhases,
     public_heads: &'a Heads,
+    ephemeral_derive: bool,
 ) -> impl Future<Item = Vec<ChangesetId>, Error = Error>
 where
     &'a Heads: IntoIterator<Item = &'a ChangesetId>,
@@ -383,7 +404,15 @@ where
                 let mark: Vec<_> = unmarked.into_iter().map(|(_gen, cs)| cs).collect();
                 stream::iter_ok(mark.clone())
                     .chunks(100)
-                    .and_then(move |chunk| phases.add_public(ctx.clone(), repo.clone(), chunk))
+                    .and_then(move |chunk| {
+                        if !ephemeral_derive {
+                            phases
+                                .add_public(ctx.clone(), repo.clone(), chunk)
+                                .left_future()
+                        } else {
+                            future::ok(()).right_future()
+                        }
+                    })
                     .for_each(|()| future::ok(()))
                     .map(move |_| mark)
             }
@@ -699,6 +728,7 @@ mod tests {
             repo.clone(),
             phases.clone(),
             &[bcss[1]],
+            false,
         ))?;
         assert_eq!(
             rt.block_on(get_phases_map())?,
@@ -710,6 +740,7 @@ mod tests {
             repo.clone(),
             phases.clone(),
             &[bcss[2], bcss[5]],
+            false,
         ))?;
         assert_eq!(
             rt.block_on(get_phases_map())?,

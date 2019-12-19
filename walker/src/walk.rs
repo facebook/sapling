@@ -25,7 +25,7 @@ use futures_ext::{
 use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
-use phases::SqlPhases;
+use phases::{Phase, SqlPhases};
 use std::{iter::IntoIterator, sync::Arc};
 
 // Holds type of edge and target Node that we want to load in next step(s)
@@ -89,14 +89,18 @@ fn bookmark_step(
 }
 
 fn bonsai_phase_step(
-    _ctx: CoreContext,
-    repo: &BlobRepo,
+    ctx: CoreContext,
+    repo: BlobRepo,
     phases_store: &Arc<SqlPhases>,
     bcs_id: ChangesetId,
 ) -> BoxFuture<StepOutput, Error> {
     phases_store
-        .get_single_raw(repo.get_repoid(), bcs_id)
-        .map(|phase| StepOutput(NodeData::BonsaiPhaseMapping(phase), vec![]))
+        .get_public_derive(ctx, repo, vec![bcs_id], true)
+        .map(move |public| public.contains(&bcs_id))
+        .map(|is_public| {
+            let phase = if is_public { Some(Phase::Public) } else { None };
+            StepOutput(NodeData::BonsaiPhaseMapping(phase), vec![])
+        })
         .boxify()
 }
 
@@ -456,7 +460,7 @@ where
                 Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
                 Node::BonsaiHgMapping(bcs_id) => bonsai_to_hg_mapping_step(ctx, &repo, bcs_id),
                 Node::BonsaiPhaseMapping(bcs_id) => {
-                    bonsai_phase_step(ctx, &repo, &phases_store, bcs_id)
+                    bonsai_phase_step(ctx, repo.clone(), &phases_store, bcs_id)
                 }
                 // Hg
                 Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid),

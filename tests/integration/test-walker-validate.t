@@ -86,19 +86,16 @@ validate, expecting all valid, this time checking marker types as well
   Nodes,Pass,Fail:31,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
   Exiting...
 
-Set commits non-public, linknodes already point to them
+Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
-validate, expecting failures on phase info
+validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
-  Validation failed: *bonsai_phase_is_public* (glob)
-  Validation failed: *bonsai_phase_is_public* (glob)
-  Validation failed: *bonsai_phase_is_public* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:31,3,3; EdgesChecked:12; CheckType:Pass,Fail Total:3,3 BonsaiChangesetPhaseIsPublic:0,3 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:31,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
   Exiting...
