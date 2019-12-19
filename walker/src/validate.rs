@@ -26,12 +26,15 @@ use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
+use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use itertools::Itertools;
 use slog::{info, warn, Logger};
+use stats::service_data::{get_service_data_singleton, ServiceData};
+use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -41,6 +44,19 @@ use std::{
     str::FromStr,
     time::{Duration, Instant},
 };
+
+pub const STATS_PREFIX: &'static str = "mononoke.walker.validate";
+pub const NODES: &'static str = "nodes";
+pub const EDGES: &'static str = "edges";
+pub const PASS: &'static str = "pass";
+pub const FAIL: &'static str = "fail";
+pub const TOTAL: &'static str = "total";
+
+define_stats! {
+    prefix = "mononoke.walker.validate";
+    // e.g. mononoke.walker.validate.testrepo.hg_link_node_populated.pass
+    walker_validate: dynamic_timeseries("{}.{}.{}", (repo: String, check: &'static str, status: &'static str); RATE, SUM),
+}
 
 pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[CheckType::HgLinkNodePopulated];
 
@@ -62,6 +78,11 @@ enum CheckType {
 }
 
 impl CheckType {
+    fn stats_key(&self) -> &'static str {
+        match self {
+            CheckType::HgLinkNodePopulated => "hg_link_node_populated",
+        }
+    }
     pub fn node_type(&self) -> NodeType {
         match self {
             CheckType::HgLinkNodePopulated => NodeType::HgFileNode,
@@ -75,6 +96,7 @@ impl fmt::Display for CheckType {
     }
 }
 
+#[derive(Debug)]
 struct CheckOutput {
     check: CheckType,
     status: CheckStatus,
@@ -87,17 +109,20 @@ impl CheckOutput {
 }
 
 struct ValidatingVisitor {
+    repo_stats_key: String,
     inner: WalkStateCHashMap,
     checks_by_node_type: HashMap<NodeType, HashSet<CheckType>>,
 }
 
 impl ValidatingVisitor {
     pub fn new(
+        repo_stats_key: String,
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
         include_checks: HashSet<CheckType>,
     ) -> Self {
         Self {
+            repo_stats_key,
             inner: WalkStateCHashMap::new(include_node_types, include_edge_types),
             checks_by_node_type: include_checks
                 .into_iter()
@@ -179,6 +204,11 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>)> for ValidatingVis
             .flatten()
             .collect();
 
+        STATS::walker_validate.add_value(
+            num_edges as i64,
+            (self.repo_stats_key.clone(), EDGES, TOTAL),
+        );
+
         // Call inner after checks. otherwise it will prune outgoing edges we wanted to check.
         let ((node, _opt_data, opt_stats), outgoing) = self.inner.visit(current, outgoing);
 
@@ -217,6 +247,8 @@ fn parse_check_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<CheckType>, Error
 
 struct ValidateProgressState {
     logger: Logger,
+    fb: FacebookInit,
+    repo_stats_key: String,
     types_sorted_by_name: Vec<CheckType>,
     stats_by_type: HashMap<CheckType, CheckStats>,
     total_checks: CheckStats,
@@ -231,6 +263,8 @@ struct ValidateProgressState {
 impl ValidateProgressState {
     fn new(
         logger: Logger,
+        fb: FacebookInit,
+        repo_stats_key: String,
         included_types: HashSet<CheckType>,
         sample_rate: u64,
         throttle_duration: Duration,
@@ -239,6 +273,8 @@ impl ValidateProgressState {
         let now = Instant::now();
         Self {
             logger,
+            fb,
+            repo_stats_key,
             types_sorted_by_name,
             stats_by_type: HashMap::new(),
             total_checks: CheckStats::default(),
@@ -248,6 +284,64 @@ impl ValidateProgressState {
             throttle_reporting_rate: sample_rate,
             throttle_duration,
             last_update: now,
+        }
+    }
+
+    fn report_progress_log(&self) {
+        let detail_by_type = &self
+            .types_sorted_by_name
+            .iter()
+            .map(|t| {
+                let d = CheckStats::default();
+                let stats = self.stats_by_type.get(t).unwrap_or(&d);
+                format!("{}:{},{}", t, stats.pass, stats.fail)
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        info!(
+            self.logger,
+            "Nodes,Pass,Fail:{},{},{}; EdgesChecked:{}; CheckType:Pass,Fail Total:{},{} {}",
+            self.checked_nodes,
+            self.passed_nodes,
+            self.failed_nodes,
+            self.total_checks.edges,
+            self.total_checks.pass,
+            self.total_checks.fail,
+            detail_by_type,
+        );
+    }
+
+    fn report_progress_stats(&self) {
+        let service_data = get_service_data_singleton(self.fb);
+        // Per check type
+        for (k, v) in self.stats_by_type.iter() {
+            for (desc, value) in &[(PASS, v.pass), (FAIL, v.fail), (EDGES, v.edges)] {
+                service_data.set_counter(
+                    &format!(
+                        "{}.{}.{}.last_completed.{}",
+                        STATS_PREFIX,
+                        self.repo_stats_key,
+                        k.stats_key(),
+                        desc,
+                    ),
+                    *value as i64,
+                );
+            }
+        }
+        // Overall by nodes and edges
+        for (stat, desc, value) in &[
+            (NODES, PASS, self.passed_nodes),
+            (NODES, FAIL, self.failed_nodes),
+            (NODES, TOTAL, self.checked_nodes),
+            (EDGES, TOTAL, self.total_checks.edges),
+        ] {
+            service_data.set_counter(
+                &format!(
+                    "{}.{}.{}.last_completed.{}",
+                    STATS_PREFIX, self.repo_stats_key, stat, desc,
+                ),
+                *value as i64,
+            );
         }
     }
 }
@@ -272,7 +366,11 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                 let stats = self.stats_by_type.entry(k).or_insert(CheckStats::default());
                 if c.status == CheckStatus::Pass {
                     stats.pass += 1;
+                    STATS::walker_validate
+                        .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), PASS));
                 } else {
+                    STATS::walker_validate
+                        .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), FAIL));
                     stats.fail += 1;
                     // For failures log immediately as well as reporting via stats
                     warn!(
@@ -285,43 +383,27 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
 
         if had_pass {
             self.passed_nodes += 1;
+            STATS::walker_validate.add_value(1, (self.repo_stats_key.clone(), NODES, PASS));
         } else if had_fail {
-            self.failed_nodes += 1
+            self.failed_nodes += 1;
+            STATS::walker_validate.add_value(1, (self.repo_stats_key.clone(), NODES, FAIL));
         }
+        STATS::walker_validate.add_value(1, (self.repo_stats_key.clone(), NODES, TOTAL));
     }
 }
 
 impl ProgressReporterUnprotected for ValidateProgressState {
-    fn report_progress(self: &mut Self, logger: &Logger, _delta_time: Option<Duration>) {
-        let detail_by_type = &self
-            .types_sorted_by_name
-            .iter()
-            .map(|t| {
-                let d = CheckStats::default();
-                let stats = self.stats_by_type.get(t).unwrap_or(&d);
-                format!("{}:{},{}", t, stats.pass, stats.fail)
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-        info!(
-            logger,
-            "Nodes,Pass,Fail:{},{},{}; EdgesChecked:{}; CheckType:Pass,Fail Total:{},{} {}",
-            self.checked_nodes,
-            self.passed_nodes,
-            self.failed_nodes,
-            self.total_checks.edges,
-            self.total_checks.pass,
-            self.total_checks.fail,
-            detail_by_type,
-        );
+    fn report_progress(self: &mut Self) {
+        self.report_progress_log();
+        self.report_progress_stats();
     }
 
-    fn report_throttled(self: &mut Self, logger: &Logger) -> Option<Duration> {
+    fn report_throttled(self: &mut Self) -> Option<Duration> {
         if self.checked_nodes % self.throttle_reporting_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.last_update);
             if delta_time >= self.throttle_duration {
-                self.report_progress(logger, Some(delta_time));
+                self.report_progress_log();
                 self.last_update = new_update;
             }
             Some(delta_time)
@@ -341,6 +423,8 @@ pub fn validate(
     let (blobrepo, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
+    let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
+
     cloned!(
         walk_params.include_node_types,
         walk_params.include_edge_types,
@@ -350,6 +434,9 @@ pub fn validate(
     include_check_types.retain(|t| include_node_types.contains(&t.node_type()));
 
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        logger.clone(),
+        "validate",
+        repo_stats_key.clone(),
         walk_params.progress_node_types(),
         PROGRESS_SAMPLE_RATE,
         Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
@@ -362,6 +449,7 @@ pub fn validate(
     );
 
     let stateful_visitor = WalkState::new(ValidatingVisitor::new(
+        repo_stats_key.clone(),
         include_node_types,
         include_edge_types,
         include_check_types.clone(),
@@ -369,6 +457,8 @@ pub fn validate(
 
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
         logger.clone(),
+        ctx.fb,
+        repo_stats_key,
         include_check_types,
         PROGRESS_SAMPLE_RATE,
         Duration::from_secs(VALIDATE_PROGRESS_SAMPLE_DURATION_S),
@@ -379,24 +469,18 @@ pub fn validate(
         move |walk_output| {
             cloned!(ctx, progress_state, validate_progress_state);
             let walk_progress =
-                progress_stream(ctx.clone(), quiet, progress_state.clone(), walk_output).map(
-                    |(n, d, s)| {
-                        // swap stats and data round
-                        (n, s, d)
-                    },
-                );
+                progress_stream(quiet, progress_state.clone(), walk_output).map(|(n, d, s)| {
+                    // swap stats and data round
+                    (n, s, d)
+                });
 
-            let validate_progress = progress_stream(
-                ctx.clone(),
-                quiet,
-                validate_progress_state.clone(),
-                walk_progress,
-            );
+            let validate_progress =
+                progress_stream(quiet, validate_progress_state.clone(), walk_progress);
 
             let one_fut = report_state(ctx.clone(), progress_state, validate_progress).map({
-                cloned!(ctx, validate_progress_state);
+                cloned!(validate_progress_state);
                 move |d| {
-                    validate_progress_state.report_progress(ctx.logger(), None);
+                    validate_progress_state.report_progress();
                     d
                 }
             });

@@ -17,6 +17,7 @@ use crate::tail::walk_exact_tail;
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
+use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -66,7 +67,12 @@ pub fn scrub_objects(
 ) -> BoxFuture<(), Error> {
     let (blobrepo, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        logger.clone(),
+        "scrub",
+        repo_stats_key.clone(),
         walk_params.progress_node_types(),
         PROGRESS_SAMPLE_RATE,
         Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
@@ -77,8 +83,7 @@ pub fn scrub_objects(
         move |walk_output| {
             cloned!(ctx, progress_state);
             let loading = loading_stream(walk_output);
-            let show_progress =
-                progress_stream(ctx.clone(), quiet, progress_state.clone(), loading);
+            let show_progress = progress_stream(quiet, progress_state.clone(), loading);
             let one_fut = report_state(ctx, progress_state.clone(), show_progress);
             one_fut
         }

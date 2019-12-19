@@ -16,6 +16,7 @@ use futures::{
     Future, Stream,
 };
 use slog::{info, Logger};
+use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::{HashMap, HashSet},
     ops::Add,
@@ -23,19 +24,29 @@ use std::{
     time::{Duration, Instant},
 };
 
+define_stats! {
+    prefix = "mononoke.walker";
+    walk_progress_walked: dynamic_timeseries("{}.progress.{}.walked", (subcommand: &'static str, repo: String); RATE, SUM),
+    walk_progress_queued: dynamic_timeseries("{}.progress.{}.queued", (subcommand: &'static str, repo: String); RATE, SUM),
+}
+
 pub trait ProgressRecorderUnprotected<SS> {
     fn record_step(&mut self, n: &Node, ss: Option<&SS>);
 }
 
 pub trait ProgressReporterUnprotected {
     /// Report progress unconditional. e.g. called at end of run to report final progress
-    fn report_progress(&mut self, logger: &Logger, delta_time: Option<Duration>);
+    fn report_progress(&mut self);
+
     /// Apply your own throttling criteria, once called might chose to do nothing,
     /// in which case return None, otherwise return how long since last report.
-    fn report_throttled(&mut self, logger: &Logger) -> Option<Duration>;
+    fn report_throttled(&mut self) -> Option<Duration>;
 }
 
 struct ProgressStateByTypeParams {
+    logger: Logger,
+    subcommand_stats_key: &'static str,
+    repo_stats_key: String,
     types_sorted_by_name: Vec<NodeType>,
     throttle_sample_rate: u64,
     throttle_duration: Duration,
@@ -101,6 +112,9 @@ where
     SS: Add<SS, Output = SS> + Default,
 {
     pub fn new(
+        logger: Logger,
+        subcommand_stats_key: &'static str,
+        repo_stats_key: String,
         included_types: HashSet<NodeType>,
         sample_rate: u64,
         throttle_duration: Duration,
@@ -110,6 +124,9 @@ where
         let now = Instant::now();
         Self {
             params: ProgressStateByTypeParams {
+                logger,
+                subcommand_stats_key,
+                repo_stats_key,
                 types_sorted_by_name: types_by_name,
                 throttle_sample_rate: sample_rate,
                 throttle_duration,
@@ -129,18 +146,8 @@ where
         }
     }
 }
-
-impl<SS> ProgressRecorderUnprotected<SS> for ProgressStateCountByType<SS>
-where
-    SS: Add<SS, Output = SS> + Copy + Default,
-{
-    fn record_step(self: &mut Self, n: &Node, opt: Option<&SS>) {
-        self.work_stats.record_step(n, opt);
-    }
-}
-
-impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
-    fn report_progress(self: &mut Self, logger: &Logger, delta_time: Option<Duration>) {
+impl ProgressStateCountByType<StepStats> {
+    fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
         let new_node_count = &self
             .work_stats
             .stats_by_type
@@ -188,7 +195,7 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
         };
 
         info!(
-            logger,
+            self.params.logger,
             "Walked/s,Children/s,Walked,Children,Time; Delta {:06}/s,{:06}/s,{},{},{}s; Run {:06}/s,{:06}/s,{},{},{}s; Type:Walked,Checks,Children {}",
             walked_per_s,
             queued_per_s,
@@ -204,15 +211,45 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
         );
         self.reporting_stats.last_reported = self.work_stats.total_progress;
         self.reporting_stats.last_node_count = *new_node_count;
+
+        STATS::walk_progress_walked.add_value(
+            delta_progress as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+            ),
+        );
+        STATS::walk_progress_queued.add_value(
+            delta_node_count as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+            ),
+        );
+    }
+}
+
+impl<SS> ProgressRecorderUnprotected<SS> for ProgressStateCountByType<SS>
+where
+    SS: Add<SS, Output = SS> + Copy + Default,
+{
+    fn record_step(self: &mut Self, n: &Node, opt: Option<&SS>) {
+        self.work_stats.record_step(n, opt);
+    }
+}
+
+impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
+    fn report_progress(self: &mut Self) {
+        self.report_progress_log(None);
     }
 
     // Throttle by sample, then time
-    fn report_throttled(self: &mut Self, logger: &Logger) -> Option<Duration> {
+    fn report_throttled(self: &mut Self) -> Option<Duration> {
         if self.work_stats.total_progress % self.params.throttle_sample_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.reporting_stats.last_update);
             if delta_time >= self.params.throttle_duration {
-                self.report_progress(logger, Some(delta_time));
+                self.report_progress_log(Some(delta_time));
                 self.reporting_stats.last_update = new_update;
             }
             Some(delta_time)
@@ -227,8 +264,8 @@ pub trait ProgressRecorder<SS> {
 }
 
 pub trait ProgressReporter {
-    fn report_progress(&self, logger: &Logger, delta_time: Option<Duration>);
-    fn report_throttled(&self, logger: &Logger) -> Option<Duration>;
+    fn report_progress(&self);
+    fn report_throttled(&self) -> Option<Duration>;
 }
 
 #[derive(Debug)]
@@ -257,14 +294,12 @@ impl<Inner> ProgressReporter for ProgressStateMutex<Inner>
 where
     Inner: ProgressReporterUnprotected,
 {
-    fn report_progress(&self, logger: &Logger, delta_time: Option<Duration>) {
-        self.inner
-            .lock()
-            .unwrap()
-            .report_progress(logger, delta_time)
+    fn report_progress(&self) {
+        self.inner.lock().unwrap().report_progress()
     }
-    fn report_throttled(&self, logger: &Logger) -> Option<Duration> {
-        self.inner.lock().unwrap().report_throttled(logger)
+
+    fn report_throttled(&self) -> Option<Duration> {
+        self.inner.lock().unwrap().report_throttled()
     }
 }
 
@@ -278,7 +313,6 @@ impl<Inner> Clone for ProgressStateMutex<Inner> {
 
 // Print some status update, passing on all data unchanged
 pub fn progress_stream<InStream, PS, ND, SS>(
-    ctx: CoreContext,
     quiet: bool,
     progress_state: PS,
     s: InStream,
@@ -290,7 +324,7 @@ where
     s.map(move |(n, data_opt, stats_opt)| {
         progress_state.record_step(&n, stats_opt.as_ref());
         if !quiet {
-            progress_state.report_throttled(ctx.logger());
+            progress_state.report_throttled();
         }
         (n, data_opt, stats_opt)
     })
@@ -322,7 +356,7 @@ where
         cloned!(ctx);
         move |stats| {
             info!(ctx.logger(), "Final count: {:?}", stats);
-            progress_state.report_progress(ctx.logger(), None);
+            progress_state.report_progress();
             ()
         }
     })

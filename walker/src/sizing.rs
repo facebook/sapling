@@ -121,6 +121,7 @@ where
 }
 
 struct SizingState {
+    logger: Logger,
     sample: SizingStats,
     total: SizingStats,
     num_sampled: u64,
@@ -130,9 +131,10 @@ struct SizingState {
 }
 
 impl SizingState {
-    pub fn new(sample_rate: u64) -> Self {
+    pub fn new(logger: Logger, sample_rate: u64) -> Self {
         let now = Instant::now();
         Self {
+            logger,
             sample: SizingStats::default(),
             total: SizingStats::default(),
             num_sampled: 0,
@@ -158,9 +160,9 @@ impl ProgressRecorderUnprotected<SizingStats> for SizingState {
 
 impl ProgressReporterUnprotected for SizingState {
     // For size sampling we report via glog
-    fn report_progress(self: &mut Self, logger: &Logger, _delta_time: Option<Duration>) {
+    fn report_progress(self: &mut Self) {
         info!(
-            logger,
+            self.logger,
             "Samples={}, Raw,Compressed,%OfRaw; Total: {:?},{:03}% File: {:?},{:03}%",
             self.num_sampled,
             self.total,
@@ -171,12 +173,12 @@ impl ProgressReporterUnprotected for SizingState {
     }
 
     // Drive the report sampling by the number of files we have tried compressing
-    fn report_throttled(self: &mut Self, logger: &Logger) -> Option<Duration> {
+    fn report_throttled(self: &mut Self) -> Option<Duration> {
         if self.num_sampled % self.throttle_sample_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.last_update);
             if delta_time >= self.throttle_duration {
-                self.report_progress(logger, Some(delta_time));
+                self.report_progress();
                 self.last_update = new_update;
             }
             Some(delta_time)
@@ -196,13 +198,18 @@ pub fn compression_benefit(
     let (blobrepo, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
+    let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
+
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        logger.clone(),
+        "compression_benefit",
+        repo_stats_key.clone(),
         walk_params.progress_node_types(),
         PROGRESS_SAMPLE_RATE,
         Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
     ));
 
-    let sizing_state = ProgressStateMutex::new(SizingState::new(1));
+    let sizing_state = ProgressStateMutex::new(SizingState::new(logger.clone(), 1));
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
 
@@ -210,8 +217,7 @@ pub fn compression_benefit(
         cloned!(ctx, walk_params.quiet);
         move |walk_output| {
             cloned!(ctx, progress_state, sizing_state);
-            let walk_progress =
-                progress_stream(ctx.clone(), quiet, progress_state.clone(), walk_output);
+            let walk_progress = progress_stream(quiet, progress_state.clone(), walk_output);
             let compressor = size_sampling_stream(
                 sample_rate,
                 walk_progress,
@@ -219,8 +225,7 @@ pub fn compression_benefit(
                     level: compression_level,
                 },
             );
-            let report_sizing =
-                progress_stream(ctx.clone(), quiet, sizing_state.clone(), compressor);
+            let report_sizing = progress_stream(quiet, sizing_state.clone(), compressor);
             let one_fut = report_state(ctx, sizing_state, report_sizing);
             one_fut
         }
