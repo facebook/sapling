@@ -16,11 +16,8 @@
       Accepted source formats [identifiers]:
   
       - Mercurial [hg]
-      - Darcs [darcs]
       - git [git]
       - Subversion [svn]
-      - GNU Arch [gnuarch]
-      - Bazaar [bzr]
       - Perforce [p4]
       - Google Repo [repo]
   
@@ -399,9 +396,6 @@ override $PATH to ensure p4 not visible
   $TESTTMP/emptydir does not look like a Git repository
   emptydir does not look like a Subversion repository
   emptydir is not a local Mercurial repository
-  emptydir does not look like a darcs repository
-  emptydir does not look like a GNU Arch repository
-  emptydir does not look like a Bazaar repository
   cannot find required "p4" tool
   emptydir does not look like a repo repository
   abort: emptydir: missing or unsupported repository

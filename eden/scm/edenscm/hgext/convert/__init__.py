@@ -63,11 +63,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Accepted source formats [identifiers]:
 
     - Mercurial [hg]
-    - Darcs [darcs]
     - git [git]
     - Subversion [svn]
-    - GNU Arch [gnuarch]
-    - Bazaar [bzr]
     - Perforce [p4]
     - Google Repo [repo]
 

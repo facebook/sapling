@@ -19,12 +19,9 @@ from edenscm.mercurial import encoding, error, hg, progress, scmutil, util
 from edenscm.mercurial.i18n import _
 
 from . import (
-    bzr,
     common,
-    darcs,
     filemap,
     git,
-    gnuarch,
     hg as hgconvert,
     p4,
     repo,
@@ -37,10 +34,7 @@ MissingTool = common.MissingTool
 NoRepo = common.NoRepo
 SKIPREV = common.SKIPREV
 
-bzr_source = bzr.bzr_source
 convert_git = git.convert_git
-darcs_source = darcs.darcs_source
-gnuarch_source = gnuarch.gnuarch_source
 mercurial_sink = hgconvert.mercurial_sink
 mercurial_source = hgconvert.mercurial_source
 p4_source = p4.p4_source
@@ -96,9 +90,6 @@ source_converters = [
     ("git", convert_git, "branchsort"),
     ("svn", svn_source, "branchsort"),
     ("hg", mercurial_source, "sourcesort"),
-    ("darcs", darcs_source, "branchsort"),
-    ("gnuarch", gnuarch_source, "branchsort"),
-    ("bzr", bzr_source, "branchsort"),
     ("p4", p4_source, "branchsort"),
     ("repo", repo_source, "branchsort"),
 ]
