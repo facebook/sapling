@@ -50,15 +50,6 @@ blobimport hg servers repos into Mononoke repos
   $ REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
 
 get some bonsai hashes to avoid magic strings later
-  $ function get_bonsai_bookmark() {
-  >   local bookmark repoid_backup
-  >   repoid_backup=$REPOID
-  >   export REPOID="$1"
-  >   bookmark="$2"
-  >   mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
-  >   export REPOID=$repoid_backup
-  > }
-
   $ FBSOURCE_C1_BONSAI=$(get_bonsai_bookmark 1 fbsource_c1)
   $ FBSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark 1 fbsource_master)
   $ MEGAREPO_MERGE_BONSAI=$(get_bonsai_bookmark 0 megarepo_master)

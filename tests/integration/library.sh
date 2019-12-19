@@ -1236,6 +1236,15 @@ CONFIG
 
 }
 
+function get_bonsai_bookmark() {
+  local bookmark repoid_backup
+  repoid_backup=$REPOID
+  export REPOID="$1"
+  bookmark="$2"
+  mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
+  export REPOID="$repoid_backup"
+}
+
 function create_replaybookmarks_table() {
   if [[ -n "$DB_SHARD_NAME" ]]; then
     # We don't need to do anything: the MySQL setup creates this for us.
