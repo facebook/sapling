@@ -86,7 +86,7 @@ fn health_handler(state: State) -> (State, &'static str) {
 fn config_handler(state: State) -> (State, Response<Body>) {
     let lfs_ctx = LfsServerContext::borrow_from(&state);
 
-    let res = match serde_json::to_string(&lfs_ctx.get_config()) {
+    let res = match serde_json::to_string(&*lfs_ctx.get_config()) {
         Ok(json) => create_response(&state, StatusCode::OK, mime::APPLICATION_JSON, json),
         Err(_) => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
     };
