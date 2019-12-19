@@ -16,6 +16,7 @@ from eden.cli.config import EdenCheckout, EdenInstance
 from eden.cli.doctor import check_hg, check_watchman
 from eden.cli.doctor.test.lib.fake_client import FakeClient, ResetParentsCommitsArgs
 from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
 from eden.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
@@ -105,7 +106,7 @@ class DoctorTest(DoctorTestBase):
             instance,
             dry_run,
             instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -180,7 +181,7 @@ https://fb.facebook.com/groups/eden.users/
             instance,
             dry_run,
             mount_table=instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -207,7 +208,7 @@ https://fb.facebook.com/groups/eden.users/
             instance,
             dry_run,
             FakeMountTable(),
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -229,7 +230,7 @@ https://fb.facebook.com/groups/eden.users/
             instance,
             dry_run,
             FakeMountTable(),
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -264,7 +265,7 @@ https://fb.facebook.com/groups/eden.users/
             instance,
             dry_run,
             FakeMountTable(),
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -299,7 +300,7 @@ https://fb.facebook.com/groups/eden.users/
             instance,
             dry_run,
             FakeMountTable(),
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -852,7 +853,7 @@ may have important bug fixes or performance improvements.
             instance,
             dry_run,
             instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -955,7 +956,7 @@ Would remount {mounts[1]}
             typing.cast(EdenInstance, instance),
             dry_run,
             instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -977,7 +978,7 @@ Would remount {mounts[1]}
             typing.cast(EdenInstance, instance),
             dry_run=False,
             mount_table=instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -1052,7 +1053,7 @@ Checking {mount}
                 typing.cast(EdenInstance, instance),
                 dry_run=False,
                 mount_table=instance.mount_table,
-                fs_util=filesystem.LinuxFsUtil(),
+                fs_util=FakeFsUtil(),
                 process_finder=self.make_process_finder(),
                 out=out,
             )

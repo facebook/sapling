@@ -12,6 +12,7 @@ import eden.cli.doctor as doctor
 from eden.cli import filesystem
 from eden.cli.config import EdenInstance
 from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.cli.test.lib.output import TestOutput
 
@@ -146,7 +147,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             typing.cast(EdenInstance, self.instance),
             dry_run,
             self.instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )

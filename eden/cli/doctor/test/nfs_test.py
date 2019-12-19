@@ -11,6 +11,7 @@ from unittest.mock import patch
 import eden.cli.doctor as doctor
 from eden.cli import filesystem
 from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.cli.test.lib.output import TestOutput
 
@@ -30,7 +31,7 @@ class NfsTest(DoctorTestBase):
             instance,
             dry_run,
             instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )
@@ -139,7 +140,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at\
             instance,
             dry_run,
             instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
+            fs_util=FakeFsUtil(),
             process_finder=self.make_process_finder(),
             out=out,
         )

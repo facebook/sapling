@@ -132,7 +132,9 @@ def run_edenfs_not_healthy_checks(
     check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
 
     configured_mounts = instance.get_mount_paths()
-    check_filesystems.check_disk_usage(tracker, list(configured_mounts), instance)
+    check_filesystems.check_disk_usage(
+        tracker, list(configured_mounts), instance, fs_util=fs_util
+    )
     if configured_mounts:
         tracker.add_problem(EdenfsNotHealthy())
 
@@ -232,7 +234,7 @@ def run_normal_checks(
     check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
     check_edenfs_version(tracker, instance)
     check_filesystems.check_disk_usage(
-        tracker, list(instance.get_mount_paths()), instance
+        tracker, list(instance.get_mount_paths()), instance, fs_util=fs_util
     )
 
     watchman_info = check_watchman.pre_check()

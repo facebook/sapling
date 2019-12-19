@@ -13,6 +13,7 @@ from typing import List, Set
 
 from eden.cli.config import EdenInstance
 from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
+from eden.cli.filesystem import FsUtil
 
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
@@ -131,7 +132,10 @@ def get_mount_pts_set(
 
 
 def check_disk_usage(
-    tracker: ProblemTracker, mount_paths: List[str], instance: EdenInstance
+    tracker: ProblemTracker,
+    mount_paths: List[str],
+    instance: EdenInstance,
+    fs_util: FsUtil,
 ) -> None:
     prob_advice_space_used_ratio_threshold = 0.90
     prob_error_absolute_space_used_threshold = 1024 * 1024 * 1024  # 1GB
@@ -140,7 +144,7 @@ def check_disk_usage(
 
     for eden_mount_pt in eden_mount_pts_set:
         if eden_mount_pt and os.path.exists(eden_mount_pt):
-            disk_status = os.statvfs(eden_mount_pt)
+            disk_status = fs_util.statvfs(eden_mount_pt)
 
             avail = disk_status.f_frsize * disk_status.f_bavail
             size = disk_status.f_frsize * disk_status.f_blocks

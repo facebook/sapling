@@ -13,17 +13,20 @@ import eden.cli.doctor as doctor
 from eden.cli.config import EdenInstance
 from eden.cli.doctor.problem import ProblemBase, ProblemTracker
 from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class DiskUsageTest(DoctorTestBase):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.fs_util = FakeFsUtil()
+
     def _mock_disk_usage(self, blocks, avail, frsize=1024) -> None:
         """Mock test for disk usage."""
-        mock_statvfs_patcher = patch("eden.cli.doctor.os.statvfs")
-        mock_statvfs = mock_statvfs_patcher.start()
-        self.addCleanup(lambda: mock_statvfs.stop())
-        statvfs_tuple = collections.namedtuple("statvfs", "f_blocks f_bavail f_frsize")
-        mock_statvfs.return_value = statvfs_tuple(blocks, avail, frsize)
+        self.fs_util.f_blocks = blocks
+        self.fs_util.f_bavail = avail
+        self.fs_util.f_frsize = frsize
 
         mock_getmountpt_and_deviceid_patcher = patch(
             "eden.cli.doctor.check_filesystems.get_mountpt"
@@ -43,6 +46,7 @@ class DiskUsageTest(DoctorTestBase):
             tracker=problem_collector,
             mount_paths=["/"],
             instance=typing.cast(EdenInstance, instance),
+            fs_util=self.fs_util,
         )
         return problem_collector.problems
 
