@@ -47,7 +47,7 @@ class GitBackingStore : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
-  folly::Future<std::unique_ptr<Tree>> getTreeForManifest(
+  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
       const Hash& manifestID) override;
 

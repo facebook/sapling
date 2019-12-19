@@ -151,7 +151,7 @@ MononokeThriftBackingStore::getTreeForCommit(const Hash& commitID) {
       });
 }
 
-folly::Future<std::unique_ptr<Tree>>
+folly::SemiFuture<std::unique_ptr<Tree>>
 MononokeThriftBackingStore::getTreeForManifest(
     const Hash& /* commitID */,
     const Hash& manifestID) {

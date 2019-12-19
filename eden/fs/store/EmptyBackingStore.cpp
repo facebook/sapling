@@ -39,7 +39,7 @@ Future<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(
   return makeFuture<unique_ptr<Tree>>(std::domain_error("empty backing store"));
 }
 
-Future<std::unique_ptr<Tree>> EmptyBackingStore::getTreeForManifest(
+SemiFuture<std::unique_ptr<Tree>> EmptyBackingStore::getTreeForManifest(
     const Hash& /* commitID */,
     const Hash& /* manifestID */) {
   return makeFuture<unique_ptr<Tree>>(std::domain_error("empty backing store"));

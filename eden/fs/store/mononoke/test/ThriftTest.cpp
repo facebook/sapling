@@ -266,6 +266,7 @@ TEST_F(MononokeThriftTest, getTreeForManifest) {
   handler->setGetChangesetExpectation(changesetHash, manifest);
 
   auto result = store.getTreeForManifest(Hash(changesetHash), Hash(manifest))
+                    .via(&folly::QueuedImmediateExecutor::instance())
                     .get(kTimeout);
   auto entries = result->getTreeEntries();
 

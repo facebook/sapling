@@ -790,7 +790,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
           });
 }
 
-folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForManifest(
+folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForManifest(
     const Hash& commitID,
     const Hash& manifestID) {
   // Construct the edenTreeID to pass to localStore lookup

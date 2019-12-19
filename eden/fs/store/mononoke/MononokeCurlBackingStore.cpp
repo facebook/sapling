@@ -132,7 +132,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTreeForCommit(
         return getTree(hash);
       });
 }
-folly::Future<std::unique_ptr<Tree>>
+folly::SemiFuture<std::unique_ptr<Tree>>
 MononokeCurlBackingStore::getTreeForManifest(
     const Hash& /* commitID */,
     const Hash& manifestID) {

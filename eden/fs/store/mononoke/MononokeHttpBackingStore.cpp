@@ -209,7 +209,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTreeForCommit(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>>
+folly::SemiFuture<std::unique_ptr<Tree>>
 MononokeHttpBackingStore::getTreeForManifest(
     const Hash& /* commitID */,
     const Hash& manifestID) {

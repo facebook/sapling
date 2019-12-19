@@ -187,7 +187,7 @@ Future<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> GitBackingStore::getTreeForManifest(
+SemiFuture<std::unique_ptr<Tree>> GitBackingStore::getTreeForManifest(
     const Hash& commitID,
     const Hash& /* manifestID */) {
   return getTreeForCommit(commitID);

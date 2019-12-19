@@ -125,6 +125,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
 
   recordBackingStoreImport();
   return backingStore_->getTreeForManifest(commitID, manifestID)
+      .via(executor_)
       .thenValue([commitID, manifestID](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(

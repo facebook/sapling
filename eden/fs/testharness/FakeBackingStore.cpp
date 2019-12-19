@@ -88,7 +88,7 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> FakeBackingStore::getTreeForManifest(
+folly::SemiFuture<std::unique_ptr<Tree>> FakeBackingStore::getTreeForManifest(
     const Hash& commitID,
     const Hash& manifestID) {
   // Check in the LocalStore for the tree first.
