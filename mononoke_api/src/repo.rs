@@ -327,7 +327,10 @@ impl Repo {
     ) {
         debug!(
             ctx.logger(),
-            "Reporting staleness of {} to be {}s", bookmark, staleness
+            "Reporting staleness of {} in repo {} to be {}s",
+            bookmark,
+            self.blob_repo.get_repoid(),
+            staleness
         );
 
         let counter_name = format!(
@@ -377,6 +380,14 @@ impl Repo {
             //
             // This way of reporting shows for how long the oldest commit not in cache hasn't been
             // imported, and it should work correctly both for high and low commit rates.
+            debug!(
+                ctx.logger(),
+                "Reporting bookmark age difference for {}: latest {} value is {}, cache points to {}",
+                repo.get_repoid(),
+                bookmark,
+                blobrepo_bcs_id,
+                service_bcs_id,
+            );
 
             let difference = if blobrepo_bcs_id == service_bcs_id {
                 0
