@@ -33,6 +33,7 @@ pub struct RepoWalkDatasources {
 }
 
 pub struct RepoWalkParams {
+    pub enable_derive: bool,
     pub scheduled_max: usize,
     pub walk_roots: Vec<OutgoingEdge>,
     pub include_node_types: HashSet<NodeType>,
@@ -68,6 +69,7 @@ const EXCLUDE_EDGE_TYPE_ARG: &'static str = "exclude-edge-type";
 const INCLUDE_EDGE_TYPE_ARG: &'static str = "include-edge-type";
 const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
+const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
 pub const EXCLUDE_CHECK_TYPE_ARG: &'static str = "exclude-check-type";
@@ -320,6 +322,13 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Tail by polling the entry points at interval of TAIL seconds"),
         )
         .arg(
+            Arg::with_name(ENABLE_DERIVE_ARG)
+                .long(ENABLE_DERIVE_ARG)
+                .takes_value(false)
+                .required(false)
+                .help("Enable derivation of data (e.g. hg, file metadata). Default is false"),
+        )
+        .arg(
             Arg::with_name(EXCLUDE_NODE_TYPE_ARG)
                 .long(EXCLUDE_NODE_TYPE_ARG)
                 .short("x")
@@ -484,6 +493,8 @@ pub fn setup_common(
     let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
 
+    let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
+
     let redaction = if sub_m.is_present(ENABLE_REDACTION_ARG) {
         config.redaction
     } else {
@@ -579,6 +590,7 @@ pub fn setup_common(
             phases_store,
         },
         RepoWalkParams {
+            enable_derive,
             scheduled_max,
             walk_roots,
             include_node_types,

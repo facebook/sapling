@@ -195,18 +195,28 @@ fn bonsai_to_hg_mapping_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     bcs_id: ChangesetId,
+    enable_derive: bool,
 ) -> BoxFuture<StepOutput, Error> {
-    repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
-        .map({
-            |hg_cs_id| {
-                StepOutput(
-                    NodeData::BonsaiHgMapping(hg_cs_id),
-                    vec![OutgoingEdge::new(
-                        EdgeType::BonsaiHgMappingToHgChangeset,
-                        Node::HgChangeset(hg_cs_id),
-                    )],
-                )
-            }
+    let hg_cs_id = if enable_derive {
+        repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
+            .map(|hg_cs_id| Some(hg_cs_id))
+            .left_future()
+    } else {
+        repo.get_bonsai_hg_mapping()
+            .get_hg_from_bonsai(ctx, repo.get_repoid(), bcs_id)
+            .right_future()
+    };
+
+    hg_cs_id
+        .map(|maybe_hg_cs_id| match maybe_hg_cs_id {
+            Some(hg_cs_id) => StepOutput(
+                NodeData::BonsaiHgMapping(Some(hg_cs_id)),
+                vec![OutgoingEdge::new(
+                    EdgeType::BonsaiHgMappingToHgChangeset,
+                    Node::HgChangeset(hg_cs_id),
+                )],
+            ),
+            None => StepOutput(NodeData::BonsaiHgMapping(None), vec![]),
         })
         .boxify()
 }
@@ -432,6 +442,7 @@ pub fn walk_exact<V, VOut>(
     ctx: CoreContext,
     repo: BlobRepo,
     phases_store: Arc<SqlPhases>,
+    enable_derive: bool,
     walk_roots: Vec<OutgoingEdge>,
     visitor: V,
     scheduled_max: usize,
@@ -458,7 +469,9 @@ where
                 // Bonsai
                 Node::Bookmark(bookmark_name) => bookmark_step(ctx, &repo, bookmark_name),
                 Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
-                Node::BonsaiHgMapping(bcs_id) => bonsai_to_hg_mapping_step(ctx, &repo, bcs_id),
+                Node::BonsaiHgMapping(bcs_id) => {
+                    bonsai_to_hg_mapping_step(ctx, &repo, bcs_id, enable_derive)
+                }
                 Node::BonsaiPhaseMapping(bcs_id) => {
                     bonsai_phase_step(ctx, repo.clone(), &phases_store, bcs_id)
                 }

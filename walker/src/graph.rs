@@ -215,7 +215,7 @@ pub enum NodeData {
     // Bonsai
     Bookmark(ChangesetId),
     BonsaiChangeset(BonsaiChangeset),
-    BonsaiHgMapping(HgChangesetId),
+    BonsaiHgMapping(Option<HgChangesetId>),
     BonsaiPhaseMapping(Option<Phase>),
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),

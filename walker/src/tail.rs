@@ -38,12 +38,13 @@ where
         cloned!(walk_params.tail_secs);
         let stream = repeat(()).and_then({
             move |()| {
-                cloned!(ctx, repo, phases_store, walk_params.walk_roots, walk_state,);
+                cloned!(ctx, repo, phases_store, walk_state,);
                 let walk_output = walk_exact(
                     ctx,
                     repo,
                     phases_store,
-                    walk_roots,
+                    walk_params.enable_derive,
+                    walk_params.walk_roots.clone(),
                     walk_state,
                     walk_params.scheduled_max,
                 );
