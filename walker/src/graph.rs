@@ -225,7 +225,7 @@ pub enum NodeData {
     HgFileNode(Option<FilenodeInfo>),
     // Content
     FileContent(FileContentData),
-    FileContentMetadata(ContentMetadata),
+    FileContentMetadata(Option<ContentMetadata>),
     AliasContentMapping(ContentId),
 }
 

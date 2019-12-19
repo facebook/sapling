@@ -36,37 +36,45 @@ pub fn get_metadata<B: Blobstore + Clone>(
     ctx: CoreContext,
     content_id: ContentId,
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
+    get_metadata_readonly(&blobstore, ctx.clone(), content_id).and_then({
+        move |maybe_metadata| match maybe_metadata {
+            // We found the metadata. Return it.
+            Some(metadata) => Ok(Some(metadata)).into_future().left_future(),
+
+            // We didn't find the metadata. Try to recompute it. This might fail if the
+            // content doesn't exist, or due to an internal error.
+            None => rebuild_metadata(blobstore, ctx, content_id)
+                .map(Some)
+                .or_else({
+                    use RebuildBackmappingError::*;
+                    |e| match e {
+                        // If we didn't find the ContentId we're rebuilding the metadata for,
+                        // then there is nothing else to do but indicate this metadata does not
+                        // exist.
+                        NotFound(_) => Ok(None),
+                        // If we ran into some error rebuilding the metadata that isn't not
+                        // having found the content, then we pass it up.
+                        e @ InternalError(..) => Err(e.into()),
+                    }
+                })
+                .right_future(),
+        }
+    })
+}
+
+/// Finds the metadata for a ContentId. Returns None if the content metadata does not exist
+/// and returns Some(metadata) if it already exists. Does not recompute it on the fly.
+pub fn get_metadata_readonly<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    content_id: ContentId,
+) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
     ContentMetadataId::from(content_id)
-        .load(ctx.clone(), &blobstore)
+        .load(ctx.clone(), blobstore)
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
             LoadableError::Missing(_) => Ok(None),
-        })
-        .and_then({
-            cloned!(blobstore, ctx);
-            move |maybe_metadata| match maybe_metadata {
-                // We found the metadata. Return it.
-                Some(metadata) => Ok(Some(metadata)).into_future().left_future(),
-
-                // We didn't find the metadata. Try to recompute it. This might fail if the
-                // content doesn't exist, or due to an internal error.
-                None => rebuild_metadata(blobstore, ctx, content_id)
-                    .map(Some)
-                    .or_else({
-                        use RebuildBackmappingError::*;
-                        |e| match e {
-                            // If we didn't find the ContentId we're rebuilding the metadata for,
-                            // then there is nothing else to do but indicate this metadata does not
-                            // exist.
-                            NotFound(_) => Ok(None),
-                            // If we ran into some error rebuilding the metadata that isn't not
-                            // having found the content, then we pass it up.
-                            e @ InternalError(..) => Err(e.into()),
-                        }
-                    })
-                    .right_future(),
-            }
         })
 }
 

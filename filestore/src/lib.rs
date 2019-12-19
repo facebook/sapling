@@ -169,6 +169,31 @@ pub fn get_metadata<B: Blobstore + Clone>(
         })
 }
 
+/// Fetch the metadata for the underlying content. This will return None if the content does
+/// not exist, Some(None) if the metadata does not exist, and Some(Some(ContentMetadata))
+/// when metadata found. It will not recompute metadata on the fly
+pub fn get_metadata_readonly<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = Option<Option<ContentMetadata>>, Error = Error> {
+    key.load(ctx.clone(), blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing(_) => Ok(None),
+        })
+        .and_then({
+            cloned!(blobstore, ctx);
+            move |maybe_id| match maybe_id {
+                Some(id) => metadata::get_metadata_readonly(&blobstore, ctx, id)
+                    .map(|maybe_metadata| Some(maybe_metadata))
+                    .left_future(),
+                None => Ok(Some(None)).into_future().right_future(),
+            }
+        })
+}
+
 /// Return true if the given key exists. A successful return means the key definitely
 /// either exists or doesn't; an error means the existence could not be determined.
 pub fn exists<B: Blobstore + Clone>(

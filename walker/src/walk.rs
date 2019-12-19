@@ -13,7 +13,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use filestore::Alias;
+use filestore::{self, Alias, FetchKey};
 use futures::{
     future::{self},
     Future,
@@ -169,24 +169,41 @@ fn file_content_metadata_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     id: ContentId,
+    enable_derive: bool,
 ) -> BoxFuture<StepOutput, Error> {
-    repo.get_file_content_metadata(ctx, id)
-        .map(|metadata| {
-            let recurse = vec![
-                OutgoingEdge::new(
-                    EdgeType::FileContentMetadataToSha1Alias,
-                    Node::AliasContentMapping(Alias::Sha1(metadata.sha1)),
-                ),
-                OutgoingEdge::new(
-                    EdgeType::FileContentMetadataToSha256Alias,
-                    Node::AliasContentMapping(Alias::Sha256(metadata.sha256)),
-                ),
-                OutgoingEdge::new(
-                    EdgeType::FileContentMetadataToGitSha1Alias,
-                    Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1)),
-                ),
-            ];
-            StepOutput(NodeData::FileContentMetadata(metadata), recurse)
+    let loader = if enable_derive {
+        repo.get_file_content_metadata(ctx, id)
+            .map(|d| Some(Some(d)))
+            .left_future()
+    } else {
+        filestore::get_metadata_readonly(
+            &repo.get_blobstore().boxed(),
+            ctx,
+            &FetchKey::Canonical(id),
+        )
+        .right_future()
+    };
+
+    loader
+        .map(|metadata_opt| match metadata_opt {
+            Some(Some(metadata)) => {
+                let recurse = vec![
+                    OutgoingEdge::new(
+                        EdgeType::FileContentMetadataToSha1Alias,
+                        Node::AliasContentMapping(Alias::Sha1(metadata.sha1)),
+                    ),
+                    OutgoingEdge::new(
+                        EdgeType::FileContentMetadataToSha256Alias,
+                        Node::AliasContentMapping(Alias::Sha256(metadata.sha256)),
+                    ),
+                    OutgoingEdge::new(
+                        EdgeType::FileContentMetadataToGitSha1Alias,
+                        Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1)),
+                    ),
+                ];
+                StepOutput(NodeData::FileContentMetadata(Some(metadata)), recurse)
+            }
+            Some(None) | None => StepOutput(NodeData::FileContentMetadata(None), vec![]),
         })
         .boxify()
 }
@@ -490,7 +507,7 @@ where
                 // Content
                 Node::FileContent(content_id) => file_content_step(ctx, &repo, content_id),
                 Node::FileContentMetadata(content_id) => {
-                    file_content_metadata_step(ctx, &repo, content_id)
+                    file_content_metadata_step(ctx, &repo, content_id, enable_derive)
                 }
                 Node::AliasContentMapping(alias) => alias_content_mapping_step(ctx, &repo, alias),
             }
