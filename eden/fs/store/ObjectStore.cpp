@@ -104,7 +104,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
   recordBackingStoreImport();
-  return backingStore_->getTreeForCommit(commitID).thenValue(
+  return backingStore_->getTreeForCommit(commitID).via(executor_).thenValue(
       [commitID](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(

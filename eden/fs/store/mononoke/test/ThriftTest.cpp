@@ -159,7 +159,7 @@ class MononokeThriftTest : public ::testing::Test {
   MononokeThriftBackingStore store = MononokeThriftBackingStore(
       runner.newClient<MononokeAPIServiceAsyncClient>(),
       "fbsource",
-      folly::getIOExecutor().get());
+      &folly::QueuedImmediateExecutor::instance());
 };
 
 TEST_F(MononokeThriftTest, getBlob) {
@@ -184,7 +184,7 @@ TEST_F(MononokeThriftTest, getBlobNotFound) {
   handler->setGetBlobExpectation(hash, blob);
 
   auto result = store.getBlob(Hash(badHash))
-                    .via(folly::getIOExecutor().get())
+                    .via(&folly::QueuedImmediateExecutor::instance())
                     .wait(kTimeout)
                     .result();
   EXPECT_TRUE(result.hasException());
@@ -281,7 +281,10 @@ TEST_F(MononokeThriftTest, getChangesetNotFound) {
 
   handler->setGetChangesetExpectation(changesetHash, manifest);
 
-  auto result = store.getTreeForCommit(Hash(badHash)).wait(kTimeout).result();
+  auto result = store.getTreeForCommit(Hash(badHash))
+                    .via(&folly::QueuedImmediateExecutor::instance())
+                    .wait(kTimeout)
+                    .result();
   EXPECT_TRUE(result.hasException());
 
   auto exception = result.exception().get_exception<MononokeAPIException>();

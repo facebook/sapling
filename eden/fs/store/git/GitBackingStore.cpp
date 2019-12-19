@@ -154,7 +154,7 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
   return make_unique<Blob>(id, std::move(buf));
 }
 
-Future<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
+SemiFuture<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
     const Hash& commitID) {
   // TODO: Use a separate thread pool to do the git I/O
   XLOG(DBG4) << "resolving tree for commit " << commitID;

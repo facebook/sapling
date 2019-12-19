@@ -66,7 +66,7 @@ SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(const Hash& id) {
   return it->second->getFuture();
 }
 
-Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
+SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
     const Hash& commitID) {
   StoredHash* storedTreeHash;
   {

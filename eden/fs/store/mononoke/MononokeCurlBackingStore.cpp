@@ -117,8 +117,8 @@ folly::SemiFuture<std::unique_ptr<Blob>> MononokeCurlBackingStore::getBlob(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTreeForCommit(
-    const Hash& commitID) {
+folly::SemiFuture<std::unique_ptr<Tree>>
+MononokeCurlBackingStore::getTreeForCommit(const Hash& commitID) {
   return folly::via(
              clientThreadPool_.get(),
              [this, commitID] {

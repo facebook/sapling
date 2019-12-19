@@ -195,8 +195,8 @@ folly::SemiFuture<std::unique_ptr<Blob>> MononokeHttpBackingStore::getBlob(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTreeForCommit(
-    const Hash& commitID) {
+folly::SemiFuture<std::unique_ptr<Tree>>
+MononokeHttpBackingStore::getTreeForCommit(const Hash& commitID) {
   return folly::via(executor_)
       .thenValue([this, commitID](auto&&) {
         return sendRequest("changeset", commitID);

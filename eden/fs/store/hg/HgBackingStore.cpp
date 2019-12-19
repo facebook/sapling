@@ -765,20 +765,13 @@ folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
       .via(serverThreadPool_);
 }
 
-Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
+SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
     const Hash& commitID) {
-  // Ensure that the control moves back to the main thread pool
-  // to process the caller-attached .then routine.
-  return getTreeForCommitImpl(commitID).via(serverThreadPool_);
-}
-
-folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
-    Hash commitID) {
   return localStore_
       ->getFuture(KeySpace::HgCommitToTreeFamily, commitID.getBytes())
       .thenValue(
-          [this,
-           commitID](StoreResult result) -> folly::Future<unique_ptr<Tree>> {
+          [this, commitID](
+              StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
             if (!result.isValid()) {
               return importTreeForCommit(commitID);
             }
@@ -810,15 +803,23 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
               return std::move(tree);
             }
 
-            // No corresponding tree for this commit ID! Must
-            // re-import. This could happen if RocksDB is corrupted
-            // in some way or deleting entries races with
-            // population.
-            return importTreeForCommit(commitID).thenValue(
-                [rootTreeHash](std::unique_ptr<Tree> tree) {
-                  DCHECK_EQ(rootTreeHash, tree->getHash());
-                  return tree;
-                });
+            return localStore_->getTree(rootTreeHash)
+                .thenValue(
+                    [this, rootTreeHash, commitID](std::unique_ptr<Tree> tree)
+                        -> folly::SemiFuture<unique_ptr<Tree>> {
+                      if (tree) {
+                        return std::move(tree);
+                      }
+
+                      // No corresponding tree for this commit ID! Must
+                      // re-import. This could happen if RocksDB is corrupted
+                      // in some way or deleting entries races with
+                      // population.
+                      XLOG(WARN) << "No corresponding tree " << rootTreeHash
+                                 << " for commit " << commitID
+                                 << "; will import again";
+                      return importTreeForCommit(commitID);
+                    });
           });
 }
 
@@ -826,7 +827,7 @@ folly::Future<Hash> HgBackingStore::importManifest(Hash commitId) {
   return importTreeManifest(commitId);
 }
 
-folly::Future<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
+folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
     Hash commitID) {
   return importManifest(commitID).thenValue(
       [this, commitID](Hash rootTreeHash) {

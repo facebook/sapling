@@ -129,7 +129,7 @@ folly::SemiFuture<std::unique_ptr<Blob>> MononokeThriftBackingStore::getBlob(
         return std::make_unique<Blob>(id, std::move(*response.get_content()));
       });
 }
-folly::Future<std::unique_ptr<Tree>>
+folly::SemiFuture<std::unique_ptr<Tree>>
 MononokeThriftBackingStore::getTreeForCommit(const Hash& commitID) {
   const auto& commitIdString = commitID.toString();
 
