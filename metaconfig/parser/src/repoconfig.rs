@@ -27,6 +27,7 @@ use configerator::ConfigeratorAPI;
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use itertools::Itertools;
+use maplit::hashmap;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, HookBypass,
@@ -43,6 +44,7 @@ use repos::{
     RawWireprotoLoggingConfig,
 };
 
+const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
 const CONFIGERATOR_PREFIX: &'static str = "configerator://";
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
@@ -804,14 +806,17 @@ impl RepoConfigs {
             // this intentionally doesn't use ConfigSource, since we'll be expanding
             // ConfigeratorAPI to support signed configs, hence we will need to use
             // the lower API directly
-            let cfgr = ConfigeratorAPI::new(fb)?;
+            let cfg_path = config_path
+                .strip_prefix(CONFIGERATOR_PREFIX)?
+                .to_string_lossy();
+            let cfgr = ConfigeratorAPI::with_signed_config_validation(
+                fb,
+                hashmap! {
+                    cfg_path.to_string() => CONFIGERATOR_CRYPTO_PROJECT.to_owned(),
+                },
+            )?;
             let repo_configs = cfgr
-                .get_entity(
-                    &config_path
-                        .strip_prefix(CONFIGERATOR_PREFIX)?
-                        .to_string_lossy(),
-                    Duration::from_secs(30),
-                )?
+                .get_entity(&cfg_path, Duration::from_secs(30))?
                 .contents;
             Ok(serde_json::from_str(&repo_configs)?)
         } else if config_path.is_dir() {
