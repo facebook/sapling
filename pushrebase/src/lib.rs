@@ -1327,11 +1327,15 @@ mod tests {
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
     use futures_ext::spawn_future;
+    use futures_preview::compat::Future01CompatExt;
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
     use std::{collections::BTreeMap, str::FromStr};
-    use tests_utils::{create_commit, create_commit_with_date, store_files, store_rename};
+    use tests_utils::{
+        bookmark, create_commit, create_commit_with_date, store_files, store_rename,
+        CreateCommitContext,
+    };
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
@@ -1364,46 +1368,37 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn pushrebase_one_commit(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb);
-            // Bottom commit of the repo
-            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
-                .wait()
-                .unwrap()
-                .unwrap();
-            let parents = vec![p];
+    fn pushrebase_one_commit(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(
+            async move {
+                let ctx = CoreContext::test_mock(fb);
+                let repo = linear::getrepo(fb);
+                // Bottom commit of the repo
+                let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
+                let bcs_id = CreateCommitContext::new(ctx.clone(), repo.clone(), parents)
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
+                let hg_cs = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                    .compat()
+                    .await?;
 
-            let bcs_id = create_commit(
-                ctx.clone(),
-                repo.clone(),
-                parents,
-                store_files(
-                    ctx.clone(),
-                    btreemap! {"file" => Some("content")},
-                    repo.clone(),
-                ),
-            );
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .wait()
-                .unwrap();
+                let book = master_bookmark();
+                bookmark(&ctx, &repo, book.bookmark.clone())
+                    .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
+                    .await?;
 
-            let book = master_bookmark();
-            set_bookmark(
-                ctx.clone(),
-                repo.clone(),
-                &book.bookmark,
-                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-            );
-
-            do_pushrebase(ctx, repo, Default::default(), book, hashset![hg_cs], None)
-                .wait()
-                .expect("pushrebase failed");
-        });
+                do_pushrebase(ctx, repo, Default::default(), book, hashset![hg_cs], None)
+                    .map_err(|err| format_err!("{:?}", err))
+                    .compat()
+                    .await?;
+                Ok(())
+            }
+                .boxed()
+                .compat(),
+        )
     }
 
     #[fbinit::test]
