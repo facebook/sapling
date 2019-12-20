@@ -129,7 +129,7 @@ impl MononokeRepo {
         let monitoring_config = config.source_control_service_monitoring.clone();
 
         // This is hacky, for the benefit of the new Mononoke object type
-        open_synced_commit_mapping(config.clone(), mysql_options, readonly_storage)
+        open_synced_commit_mapping(fb, config.clone(), mysql_options, readonly_storage)
             .boxed()
             .compat()
             .join(open_blobrepo(

@@ -15,6 +15,7 @@ use anyhow::{Error, Result};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use failure_ext::chain::ChainExt;
+use fbinit::FacebookInit;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
@@ -205,6 +206,7 @@ impl SqlConstructors for SqlFilenodes {
 
 impl SqlFilenodes {
     pub fn with_sharded_xdb(
+        fb: FacebookInit,
         tier: String,
         options: MysqlOptions,
         shard_count: usize,
@@ -219,6 +221,7 @@ impl SqlFilenodes {
                 readonly,
             ),
             None => Self::with_sharded_raw_xdb(
+                fb,
                 tier,
                 options.db_locator_read_instance_requirement(),
                 shard_count,
@@ -249,7 +252,8 @@ impl SqlFilenodes {
         })
     }
 
-    fn with_sharded_raw_xdb(
+    pub fn with_sharded_raw_xdb(
+        fb: FacebookInit,
         tier: String,
         read_instance_requirement: raw::InstanceRequirement,
         shard_count: usize,
@@ -257,6 +261,7 @@ impl SqlFilenodes {
     ) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
             create_raw_xdb_connections(
+                fb,
                 format!("{}.{}", tier, shard_id),
                 read_instance_requirement,
                 readonly,

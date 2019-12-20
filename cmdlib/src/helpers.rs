@@ -282,6 +282,7 @@ pub fn get_root_manifest_id(
 }
 
 pub fn open_sql_with_config_and_mysql_options<T>(
+    fb: FacebookInit,
     dbconfig: MetadataDBConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
@@ -297,7 +298,7 @@ where
                 .boxify()
         }
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            T::with_xdb(db_address, mysql_options, readonly_storage.0)
+            T::with_xdb(fb, db_address, mysql_options, readonly_storage.0)
         }
         MetadataDBConfig::Mysql { .. } => Err(Error::msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",

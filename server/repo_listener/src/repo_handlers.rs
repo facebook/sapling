@@ -116,6 +116,7 @@ pub struct RepoHandler {
 }
 
 fn open_db_from_config<S: SqlConstructors>(
+    fb: FacebookInit,
     dbconfig: &MetadataDBConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
@@ -127,7 +128,7 @@ fn open_db_from_config<S: SqlConstructors>(
                 .boxify()
         }
         MetadataDBConfig::Mysql { ref db_address, .. } => {
-            S::with_xdb(db_address.clone(), mysql_options, readonly_storage.0)
+            S::with_xdb(fb, db_address.clone(), mysql_options, readonly_storage.0)
         }
     }
 }
@@ -320,6 +321,7 @@ pub fn repo_handlers(
 
                 let streaming_clone = if let Some(db_address) = dbconfig.get_db_address() {
                     streaming_clone(
+                        fb,
                         blobrepo.clone(),
                         db_address,
                         mysql_options,
@@ -334,7 +336,7 @@ pub fn repo_handlers(
 
                 // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
                 let sql_read_write_status = if let Some(addr) = write_lock_db_address {
-                    SqlRepoReadWriteStatus::with_xdb(addr, mysql_options, readonly_storage.0)
+                    SqlRepoReadWriteStatus::with_xdb(fb, addr, mysql_options, readonly_storage.0)
                         .map(Some)
                         .left_future()
                 } else {
@@ -342,15 +344,21 @@ pub fn repo_handlers(
                 };
 
                 let sql_mutable_counters = open_db_from_config::<SqlMutableCounters>(
+                    fb,
                     &dbconfig,
                     mysql_options,
                     readonly_storage,
                 );
 
-                let phases_hint =
-                    open_db_from_config::<SqlPhases>(&dbconfig, mysql_options, readonly_storage);
+                let phases_hint = open_db_from_config::<SqlPhases>(
+                    fb,
+                    &dbconfig,
+                    mysql_options,
+                    readonly_storage,
+                );
 
                 let sql_commit_sync_mapping = open_db_from_config::<SqlSyncedCommitMapping>(
+                    fb,
                     &dbconfig,
                     mysql_options,
                     readonly_storage,

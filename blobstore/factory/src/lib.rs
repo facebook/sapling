@@ -59,6 +59,7 @@ trait SqlFactoryBase: Send + Sync {
 }
 
 struct XdbFactory {
+    fb: FacebookInit,
     db_address: String,
     readonly: bool,
     mysql_options: MysqlOptions,
@@ -67,12 +68,14 @@ struct XdbFactory {
 
 impl XdbFactory {
     fn new(
+        fb: FacebookInit,
         db_address: String,
         mysql_options: MysqlOptions,
         sharded_filenodes: Option<ShardedFilenodesParams>,
         readonly: bool,
     ) -> Self {
         XdbFactory {
+            fb,
             db_address,
             readonly,
             mysql_options,
@@ -83,9 +86,14 @@ impl XdbFactory {
 
 impl SqlFactoryBase for XdbFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
-        T::with_xdb(self.db_address.clone(), self.mysql_options, self.readonly)
-            .map(|r| Arc::new(r))
-            .boxify()
+        T::with_xdb(
+            self.fb,
+            self.db_address.clone(),
+            self.mysql_options,
+            self.readonly,
+        )
+        .map(|r| Arc::new(r))
+        .boxify()
     }
 
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
@@ -95,6 +103,7 @@ impl SqlFactoryBase for XdbFactory {
                 shard_num,
             }) => {
                 let conn = SqlFilenodes::with_sharded_xdb(
+                    self.fb,
                     shard_map.clone(),
                     self.mysql_options,
                     shard_num.into(),
@@ -104,6 +113,7 @@ impl SqlFactoryBase for XdbFactory {
             }
             None => {
                 let conn = SqlFilenodes::with_xdb(
+                    self.fb,
                     self.db_address.clone(),
                     self.mysql_options,
                     self.readonly,
@@ -130,6 +140,7 @@ impl SqlFactoryBase for XdbFactory {
             ))
             .boxify(),
             None => create_raw_xdb_connections(
+                self.fb,
                 self.db_address.clone(),
                 self.mysql_options.db_locator_read_instance_requirement(),
                 self.readonly,
@@ -199,6 +210,7 @@ impl SqlFactory {
 }
 
 pub fn make_sql_factory(
+    fb: FacebookInit,
     dbconfig: MetadataDBConfig,
     mysql_options: MysqlOptions,
     readonly: ReadOnlyStorage,
@@ -217,6 +229,7 @@ pub fn make_sql_factory(
             sharded_filenodes,
         } => {
             let sql_factory = XdbFactory::new(
+                fb,
                 db_address.clone(),
                 mysql_options,
                 sharded_filenodes,

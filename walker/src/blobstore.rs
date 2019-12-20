@@ -63,6 +63,7 @@ pub fn open_blobstore(
     let blobconfig = try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
 
     let datasources = make_sql_factory(
+        fb,
         storage_config.dbconfig,
         mysql_options,
         readonly_storage,

@@ -445,6 +445,7 @@ where
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
+        fb,
         config.storage_config.dbconfig,
         mysql_options,
         readonly_storage,
@@ -460,6 +461,7 @@ where
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
+        fb,
         config.storage_config.dbconfig,
         mysql_options,
         readonly_storage,

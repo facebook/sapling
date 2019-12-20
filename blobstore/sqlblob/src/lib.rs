@@ -104,6 +104,7 @@ impl Sqlblob<MemcacheOps> {
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
         Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(
+                fb,
                 format!("{}.{}", shardmap, shard_id),
                 read_instance_requirement,
                 readonly,

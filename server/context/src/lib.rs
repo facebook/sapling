@@ -357,7 +357,7 @@ impl CoreContext {
         let session = SessionContainer::new(
             fb,
             generate_session_id(),
-            TraceContext::default(),
+            TraceContext::default(fb),
             None,
             None,
             None,

@@ -138,7 +138,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
         let session = SessionContainer::new(
             self.fb,
             session_id,
-            TraceContext::default(),
+            TraceContext::default(self.fb),
             None,
             None,
             None,

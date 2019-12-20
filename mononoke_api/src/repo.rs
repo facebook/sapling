@@ -88,6 +88,7 @@ impl fmt::Debug for RepoContext {
 }
 
 pub async fn open_synced_commit_mapping(
+    fb: FacebookInit,
     config: RepoConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
@@ -98,7 +99,7 @@ pub async fn open_synced_commit_mapping(
             SqlSyncedCommitMapping::with_sqlite_path(path.join(name), readonly_storage.0)
         }
         MetadataDBConfig::Mysql { db_address, .. } => {
-            SqlSyncedCommitMapping::with_xdb(db_address, mysql_options, readonly_storage.0)
+            SqlSyncedCommitMapping::with_xdb(fb, db_address, mysql_options, readonly_storage.0)
                 .compat()
                 .await
         }
@@ -121,7 +122,7 @@ impl Repo {
         let repoid = config.repoid;
 
         let synced_commit_mapping = Arc::new(
-            open_synced_commit_mapping(config.clone(), mysql_options, readonly_storage).await?,
+            open_synced_commit_mapping(fb, config.clone(), mysql_options, readonly_storage).await?,
         );
         let service_config = config.source_control_service.clone();
         let monitoring_config = config.source_control_service_monitoring.clone();
@@ -855,5 +856,4 @@ mod tests {
                 .compat(),
         )
     }
-
 }

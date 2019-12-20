@@ -72,6 +72,7 @@ pub fn open_blobrepo(
     logger: Logger,
 ) -> BoxFuture<BlobRepo, Error> {
     let sql_fut = make_sql_factory(
+        fb,
         storage_config.dbconfig,
         mysql_options,
         readonly_storage,

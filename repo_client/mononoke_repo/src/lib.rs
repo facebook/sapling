@@ -8,6 +8,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use fbinit::FacebookInit;
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::HookManager;
@@ -140,13 +141,14 @@ impl MononokeRepo {
 }
 
 pub fn streaming_clone(
+    fb: FacebookInit,
     blobrepo: BlobRepo,
     db_address: String,
     mysql_options: MysqlOptions,
     repoid: RepositoryId,
     readonly_storage: bool,
 ) -> BoxFuture<SqlStreamingCloneConfig, Error> {
-    SqlStreamingChunksFetcher::with_xdb(db_address, mysql_options, readonly_storage)
+    SqlStreamingChunksFetcher::with_xdb(fb, db_address, mysql_options, readonly_storage)
         .map(move |fetcher| SqlStreamingCloneConfig {
             fetcher,
             blobstore: blobrepo.get_blobstore(),

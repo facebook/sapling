@@ -8,6 +8,7 @@
 
 use anyhow::{Error, Result};
 use cloned::cloned;
+use fbinit::FacebookInit;
 use futures::{
     future::{loop_fn, ok, Loop},
     Future,
@@ -141,6 +142,7 @@ pub fn create_myrouter_connections(
 }
 
 fn do_create_raw_xdb_connections<'a, T>(
+    fb: FacebookInit,
     tier: &'a T,
     read_instance_requirement: raw::InstanceRequirement,
     readonly: bool,
@@ -149,9 +151,6 @@ where
     T: ?Sized,
     &'a T: AsRef<str>,
 {
-    // TODO(dtolnay): this needs to be passed down from main instead.
-    let fb = *fbinit::FACEBOOK;
-
     let tier: &str = tier.as_ref();
 
     let write_connection = if readonly {
@@ -197,6 +196,7 @@ where
 }
 
 pub fn create_raw_xdb_connections(
+    fb: FacebookInit,
     tier: String,
     read_instance_requirement: raw::InstanceRequirement,
     readonly: bool,
@@ -204,14 +204,16 @@ pub fn create_raw_xdb_connections(
     let max_attempts = 5;
 
     loop_fn(0, move |i| {
-        do_create_raw_xdb_connections(&tier, read_instance_requirement, readonly).then(move |r| {
-            let loop_state = if r.is_ok() || i > max_attempts {
-                Loop::Break(r)
-            } else {
-                Loop::Continue(i + 1)
-            };
-            Ok(loop_state)
-        })
+        do_create_raw_xdb_connections(fb, &tier, read_instance_requirement, readonly).then(
+            move |r| {
+                let loop_state = if r.is_ok() || i > max_attempts {
+                    Loop::Break(r)
+                } else {
+                    Loop::Continue(i + 1)
+                };
+                Ok(loop_state)
+            },
+        )
     })
     .and_then(|r| r)
 }
@@ -303,16 +305,22 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
     }
 
     fn with_raw_xdb_tier(
+        fb: FacebookInit,
         tier: String,
         read_instance_requirement: raw::InstanceRequirement,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
-        create_raw_xdb_connections(tier, read_instance_requirement, readonly)
+        create_raw_xdb_connections(fb, tier, read_instance_requirement, readonly)
             .map(|r| Self::from_sql_connections(r))
             .boxify()
     }
 
-    fn with_xdb(tier: String, options: MysqlOptions, readonly: bool) -> BoxFuture<Self, Error> {
+    fn with_xdb(
+        fb: FacebookInit,
+        tier: String,
+        options: MysqlOptions,
+        readonly: bool,
+    ) -> BoxFuture<Self, Error> {
         match options.myrouter_port {
             Some(myrouter_port) => ok(Self::with_myrouter(
                 tier,
@@ -322,6 +330,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             ))
             .boxify(),
             None => Self::with_raw_xdb_tier(
+                fb,
                 tier,
                 options.db_locator_read_instance_requirement(),
                 readonly,
