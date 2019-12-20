@@ -33,10 +33,6 @@ pub struct Blackbox {
     // The on-disk files are considered bad (ex. no permissions, or no disk space)
     // and further write attempts will be ignored.
     is_broken: Cell<bool>,
-
-    // Timestamp of the last write operation. Used to reduce frequency of
-    // log.sync().
-    last_write_time: Cell<u64>,
 }
 
 #[derive(Copy, Clone)]
@@ -96,7 +92,6 @@ impl BlackboxOptions {
             // pid is used as an initial guess of "unique" session id
             session_id: new_session_id(),
             is_broken: Cell::new(false),
-            last_write_time: Cell::new(0),
         };
         Ok(blackbox)
     }
@@ -110,7 +105,6 @@ impl BlackboxOptions {
             // pid is used as an initial guess of "unique" session id
             session_id: new_session_id(),
             is_broken: Cell::new(false),
-            last_write_time: Cell::new(0),
         })
     }
 
@@ -135,6 +129,7 @@ impl BlackboxOptions {
         OpenOptions::new()
             .max_bytes_per_log(self.max_bytes_per_log)
             .max_log_count(self.max_log_count)
+            .auto_sync_threshold(1 << 21) // 20MB in-memory buffer
             .index("event", |bytes| {
                 // Index on fields of `event`. This index includes fields from some dedicated
                 // events. For example, timestamps of Start and Finish, etc.
@@ -262,31 +257,7 @@ impl Blackbox {
 
         let now = time_to_u64(&SystemTime::now());
         if let Some(buf) = Entry::to_vec(data, now, self.session_id) {
-            self.log.append(&buf).unwrap();
-
-            // Skip sync() for frequent writes (within a threshold).
-            let last = self.last_write_time.get();
-            // On Linux, sync() takes 1-2ms. On Windows, sync() takes 100ms
-            // (atomicwrite a file takes 20ms. That adds up).
-            // Threshold is set so the sync() overhead is <2%.
-            let threshold = if cfg!(windows) { 5000 } else { 100 };
-            if last <= now && now - last < threshold {
-                return;
-            }
-            self.last_write_time.set(now);
-
-            if self.log.sync().is_err() {
-                // Not fatal. Try rotate the log.
-                if self.log.force_rotate().is_err() {
-                    self.is_broken.set(true);
-                } else {
-                    // `force_rotate` might drop the data. Append again.
-                    self.log.append(&buf).unwrap();
-                    if self.log.sync().is_err() {
-                        self.is_broken.set(true);
-                    }
-                }
-            }
+            let _ = self.log.append(&buf);
         }
     }
 
