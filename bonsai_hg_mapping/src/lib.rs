@@ -24,7 +24,7 @@ use heapsize_derive::HeapSizeOf;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::queries;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 
 mod caching;
 mod errors;
@@ -36,9 +36,9 @@ pub use crate::mem_writes::MemWritesBonsaiHgMapping;
 
 define_stats! {
     prefix = "mononoke.bonsai_hg_mapping";
-    gets: timeseries(RATE, SUM),
-    gets_master: timeseries(RATE, SUM),
-    adds: timeseries(RATE, SUM),
+    gets: timeseries(Rate, Sum),
+    gets_master: timeseries(Rate, Sum),
+    adds: timeseries(Rate, Sum),
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]

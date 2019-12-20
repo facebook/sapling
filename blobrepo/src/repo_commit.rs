@@ -20,7 +20,7 @@ use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use stats::Timeseries;
+use stats::prelude::*;
 use tracing::{trace_args, Traced};
 
 use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
@@ -34,7 +34,6 @@ use mercurial_types::{
     HgChangesetId, HgEntry, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType, RepositoryId};
-use stats::define_stats;
 
 use crate::errors::*;
 use crate::BlobRepo;
@@ -42,14 +41,14 @@ use repo_blobstore::RepoBlobstore;
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
-    process_file_entry: timeseries(RATE, SUM),
-    process_tree_entry: timeseries(RATE, SUM),
-    finalize_required: timeseries(RATE, AVG, SUM),
-    finalize_parent: timeseries(RATE, AVG, SUM),
-    finalize_uploaded: timeseries(RATE, AVG, SUM),
-    finalize_uploaded_filenodes: timeseries(RATE, AVG, SUM),
-    finalize_uploaded_manifests: timeseries(RATE, AVG, SUM),
-    finalize_compute_copy_from_info: timeseries(RATE, SUM),
+    process_file_entry: timeseries(Rate, Sum),
+    process_tree_entry: timeseries(Rate, Sum),
+    finalize_required: timeseries(Rate, Average, Sum),
+    finalize_parent: timeseries(Rate, Average, Sum),
+    finalize_uploaded: timeseries(Rate, Average, Sum),
+    finalize_uploaded_filenodes: timeseries(Rate, Average, Sum),
+    finalize_uploaded_manifests: timeseries(Rate, Average, Sum),
+    finalize_compute_copy_from_info: timeseries(Rate, Sum),
 }
 
 /// A handle to a possibly incomplete HgBlobChangeset. This is used instead of

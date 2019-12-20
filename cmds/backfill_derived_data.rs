@@ -43,7 +43,7 @@ use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
-use stats::{define_stats_struct, Timeseries};
+use stats::prelude::*;
 use std::{
     collections::HashMap,
     fs,
@@ -58,7 +58,7 @@ use unodes::{find_unode_renames, RootUnodeManifestId, RootUnodeManifestMapping};
 
 define_stats_struct! {
     DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
-    pending_heads: timeseries(RATE, SUM),
+    pending_heads: timeseries(Rate, Sum),
 }
 
 const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";

@@ -12,7 +12,7 @@ use futures::future::Future;
 use futures_ext::FutureExt;
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
-use stats::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
+use stats_facebook::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
 use std::convert::TryInto;
 use std::time::Duration;
 

@@ -20,7 +20,7 @@ use heapsize_derive::HeapSizeOf;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection, Transaction};
 pub use sql_ext::SqlConstructors;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::result;
 
@@ -35,11 +35,11 @@ pub use errors::ErrorKind;
 
 define_stats! {
     prefix = "mononoke.changesets";
-    gets: timeseries(RATE, SUM),
-    get_many: timeseries(RATE, SUM),
-    gets_master: timeseries(RATE, SUM),
-    get_many_master: timeseries(RATE, SUM),
-    adds: timeseries(RATE, SUM),
+    gets: timeseries(Rate, Sum),
+    get_many: timeseries(Rate, Sum),
+    gets_master: timeseries(Rate, Sum),
+    get_many_master: timeseries(Rate, Sum),
+    adds: timeseries(Rate, Sum),
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]

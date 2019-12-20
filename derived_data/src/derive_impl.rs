@@ -22,7 +22,7 @@ use mononoke_types::ChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::debug;
 use slog::warn;
-use stats::{define_stats, DynamicTimeseries};
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
@@ -35,7 +35,7 @@ use tracing::{trace_args, EventId, Traced};
 define_stats! {
     prefix = "mononoke.derived_data";
     derived_data_latency:
-        dynamic_timeseries("{}.deriving.latency_ms", (derived_data_type: &'static str); AVG),
+        dynamic_timeseries("{}.deriving.latency_ms", (derived_data_type: &'static str); Average),
 }
 
 const DERIVE_TRACE_THRESHOLD: Duration = Duration::from_secs(3);

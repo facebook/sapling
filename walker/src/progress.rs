@@ -16,7 +16,7 @@ use futures::{
     Future, Stream,
 };
 use slog::{info, Logger};
-use stats::{define_stats, DynamicTimeseries};
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     ops::Add,
@@ -26,8 +26,8 @@ use std::{
 
 define_stats! {
     prefix = "mononoke.walker";
-    walk_progress_walked: dynamic_timeseries("{}.progress.{}.walked", (subcommand: &'static str, repo: String); RATE, SUM),
-    walk_progress_queued: dynamic_timeseries("{}.progress.{}.queued", (subcommand: &'static str, repo: String); RATE, SUM),
+    walk_progress_walked: dynamic_timeseries("{}.progress.{}.walked", (subcommand: &'static str, repo: String); Rate, Sum),
+    walk_progress_queued: dynamic_timeseries("{}.progress.{}.queued", (subcommand: &'static str, repo: String); Rate, Sum),
 }
 
 pub trait ProgressRecorderUnprotected<SS> {

@@ -18,7 +18,7 @@ use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
 use mercurial_types::{HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
 use rand::random;
-use stats::{define_stats, Histogram, Timeseries};
+use stats::prelude::*;
 use std::{collections::HashSet, convert::TryFrom, sync::Arc, time::Duration};
 
 use super::thrift::{MC_CODEVER, MC_SITEVER};
@@ -28,19 +28,19 @@ define_stats! {
     prefix = "mononoke.filenodes";
     gaf_compact_bytes: histogram(
         "get_all_filenodes.thrift_compact.bytes";
-        500, 0, 1_000_000, AVG, SUM, COUNT; P 50; P 95; P 99
+        500, 0, 1_000_000, Average, Sum, Count; P 50; P 95; P 99
     ),
-    point_filenode_hit: timeseries("point_filenode.memcache.hit"; RATE, SUM),
-    point_filenode_miss: timeseries("point_filenode.memcache.miss"; RATE, SUM),
-    point_filenode_internal_err: timeseries("point_filenode.memcache.internal_err"; RATE, SUM),
-    point_filenode_deserialize_err: timeseries("point_filenode.memcache.deserialize_err"; RATE, SUM),
-    point_filenode_pointers_err: timeseries("point_filenode.memcache.pointers_err"; RATE, SUM),
-    gaf_hit: timeseries("get_all_filenodes.memcache.hit"; RATE, SUM),
-    gaf_miss: timeseries("get_all_filenodes.memcache.miss"; RATE, SUM),
-    gaf_pointers: timeseries("get_all_filenodes.memcache.pointers"; RATE, SUM),
-    gaf_internal_err: timeseries("get_all_filenodes.memcache.internal_err"; RATE, SUM),
-    gaf_deserialize_err: timeseries("get_all_filenodes.memcache.deserialize_err"; RATE, SUM),
-    gaf_pointers_err: timeseries("get_all_filenodes.memcache.pointers_err"; RATE, SUM),
+    point_filenode_hit: timeseries("point_filenode.memcache.hit"; Rate, Sum),
+    point_filenode_miss: timeseries("point_filenode.memcache.miss"; Rate, Sum),
+    point_filenode_internal_err: timeseries("point_filenode.memcache.internal_err"; Rate, Sum),
+    point_filenode_deserialize_err: timeseries("point_filenode.memcache.deserialize_err"; Rate, Sum),
+    point_filenode_pointers_err: timeseries("point_filenode.memcache.pointers_err"; Rate, Sum),
+    gaf_hit: timeseries("get_all_filenodes.memcache.hit"; Rate, Sum),
+    gaf_miss: timeseries("get_all_filenodes.memcache.miss"; Rate, Sum),
+    gaf_pointers: timeseries("get_all_filenodes.memcache.pointers"; Rate, Sum),
+    gaf_internal_err: timeseries("get_all_filenodes.memcache.internal_err"; Rate, Sum),
+    gaf_deserialize_err: timeseries("get_all_filenodes.memcache.deserialize_err"; Rate, Sum),
+    gaf_pointers_err: timeseries("get_all_filenodes.memcache.pointers_err"; Rate, Sum),
 }
 
 const TTL_SEC: u64 = 8 * 60 * 60;

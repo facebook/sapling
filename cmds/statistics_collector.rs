@@ -29,7 +29,7 @@ use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
 use scuba_ext::ScubaSampleBuilder;
 use slog::info;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::ops::{Add, Sub};
@@ -39,7 +39,7 @@ use std::time::Duration;
 
 define_stats! {
     prefix = "mononoke.statistics_collector";
-    calculated_changesets: timeseries(RATE, SUM),
+    calculated_changesets: timeseries(Rate, Sum),
 }
 
 const ARG_IN_FILENAME: &'static str = "in-filename";

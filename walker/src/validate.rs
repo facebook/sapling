@@ -36,8 +36,8 @@ use mononoke_types::MPath;
 use phases::Phase;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
-use stats::service_data::{get_service_data_singleton, ServiceData};
-use stats::{define_stats, DynamicTimeseries};
+use stats::prelude::*;
+use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -58,7 +58,7 @@ pub const TOTAL: &'static str = "total";
 define_stats! {
     prefix = "mononoke.walker.validate";
     // e.g. mononoke.walker.validate.testrepo.hg_link_node_populated.pass
-    walker_validate: dynamic_timeseries("{}.{}.{}", (repo: String, check: &'static str, status: &'static str); RATE, SUM),
+    walker_validate: dynamic_timeseries("{}.{}.{}", (repo: String, check: &'static str, status: &'static str); Rate, Sum),
 }
 
 pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[

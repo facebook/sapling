@@ -29,7 +29,7 @@ use sql::mysql_async::{
 };
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
@@ -145,9 +145,9 @@ pub trait Phases: Send + Sync {
 
 define_stats! {
     prefix = "mononoke.phases";
-    get_single: timeseries(RATE, SUM),
-    get_many: timeseries(RATE, SUM),
-    add_many: timeseries(RATE, SUM),
+    get_single: timeseries(Rate, Sum),
+    get_many: timeseries(Rate, Sum),
+    add_many: timeseries(Rate, Sum),
 }
 
 queries! {

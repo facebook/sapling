@@ -42,7 +42,7 @@ use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 use sql_ext::MysqlOptions;
-use stats::service_data::{get_service_data_singleton, ServiceData};
+use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 use unodes::{derive_unodes, RootUnodeManifestMapping};
 use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};

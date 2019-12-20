@@ -18,15 +18,15 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::{DateTime, Timestamp};
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::iter::IntoIterator;
 use std::sync::Arc;
 
 define_stats! {
     prefix = "mononoke.blobstore_sync_queue";
-    adds: timeseries(RATE, SUM),
-    iters: timeseries(RATE, SUM),
-    dels: timeseries(RATE, SUM),
+    adds: timeseries(Rate, Sum),
+    iters: timeseries(Rate, Sum),
+    dels: timeseries(Rate, Sum),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]

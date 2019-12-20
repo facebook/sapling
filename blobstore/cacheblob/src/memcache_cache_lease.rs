@@ -19,7 +19,7 @@ use blobstore::{Blobstore, CountedBlobstore};
 use context::PerfCounterType;
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
-use stats::{define_stats, DynamicTimeseries, Timeseries};
+use stats::prelude::*;
 
 use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
@@ -29,19 +29,19 @@ use memcache_lock_thrift::LockState;
 
 define_stats! {
     prefix = "mononoke.blobstore.memcache";
-    blob_put: timeseries("blob_put"; RATE, SUM),
-    blob_put_err: timeseries("blob_put_err"; RATE, SUM),
-    presence_put: timeseries("presence_put"; RATE, SUM),
-    presence_put_err: timeseries("presence_put_err"; RATE, SUM),
-    blob_presence: timeseries("blob_presence"; RATE, SUM),
-    blob_presence_hit: timeseries("blob_presence_hit"; RATE, SUM),
-    blob_presence_miss: timeseries("blob_presence_miss"; RATE, SUM),
-    blob_presence_err: timeseries("blob_presence_err"; RATE, SUM),
-    presence_get: timeseries("presence_get"; RATE, SUM),
-    presence_check_hit: timeseries("presence_check_hit"; RATE, SUM),
-    presence_check_miss: timeseries("presence_check_miss"; RATE, SUM),
+    blob_put: timeseries("blob_put"; Rate, Sum),
+    blob_put_err: timeseries("blob_put_err"; Rate, Sum),
+    presence_put: timeseries("presence_put"; Rate, Sum),
+    presence_put_err: timeseries("presence_put_err"; Rate, Sum),
+    blob_presence: timeseries("blob_presence"; Rate, Sum),
+    blob_presence_hit: timeseries("blob_presence_hit"; Rate, Sum),
+    blob_presence_miss: timeseries("blob_presence_miss"; Rate, Sum),
+    blob_presence_err: timeseries("blob_presence_err"; Rate, Sum),
+    presence_get: timeseries("presence_get"; Rate, Sum),
+    presence_check_hit: timeseries("presence_check_hit"; Rate, Sum),
+    presence_check_miss: timeseries("presence_check_miss"; Rate, Sum),
     // This can come from leases as well as presence checking.
-    presence_err: timeseries("presence_err"; RATE, SUM),
+    presence_err: timeseries("presence_err"; Rate, Sum),
 }
 
 #[allow(non_snake_case)]
@@ -49,13 +49,13 @@ mod LEASE_STATS {
     use stats::define_stats;
     define_stats! {
         prefix = "mononoke.blobstore.memcache.lease";
-        claim: dynamic_timeseries("{}.claim", (lease_type: &'static str); RATE, SUM),
-        claim_err: dynamic_timeseries("{}.claim_err", (lease_type: &'static str); RATE, SUM),
-        conflict: dynamic_timeseries("{}.conflict", (lease_type: &'static str); RATE, SUM),
-        wait_ms: dynamic_timeseries("{}.wait_ms", (lease_type: &'static str); RATE, SUM),
-        release: dynamic_timeseries("{}.release", (lease_type: &'static str); RATE, SUM),
-        release_good: dynamic_timeseries("{}.release_good", (lease_type: &'static str); RATE, SUM),
-        release_bad: dynamic_timeseries("{}.release_bad", (lease_type: &'static str); RATE, SUM),
+        claim: dynamic_timeseries("{}.claim", (lease_type: &'static str); Rate, Sum),
+        claim_err: dynamic_timeseries("{}.claim_err", (lease_type: &'static str); Rate, Sum),
+        conflict: dynamic_timeseries("{}.conflict", (lease_type: &'static str); Rate, Sum),
+        wait_ms: dynamic_timeseries("{}.wait_ms", (lease_type: &'static str); Rate, Sum),
+        release: dynamic_timeseries("{}.release", (lease_type: &'static str); Rate, Sum),
+        release_good: dynamic_timeseries("{}.release_good", (lease_type: &'static str); Rate, Sum),
+        release_bad: dynamic_timeseries("{}.release_bad", (lease_type: &'static str); Rate, Sum),
     }
     pub use self::STATS::*;
 }

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use stats::{define_stats_struct, Timeseries};
+use stats::prelude::*;
 
 use context::CoreContext;
 
@@ -20,20 +20,20 @@ use crate::{Blobstore, BlobstoreBytes};
 
 define_stats_struct! {
     CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),
-    get: timeseries(RATE, SUM),
-    get_miss: timeseries(RATE, SUM),
-    get_hit: timeseries(RATE, SUM),
-    get_err: timeseries(RATE, SUM),
-    put: timeseries(RATE, SUM),
-    put_ok: timeseries(RATE, SUM),
-    put_err: timeseries(RATE, SUM),
-    is_present: timeseries(RATE, SUM),
-    is_present_miss: timeseries(RATE, SUM),
-    is_present_hit: timeseries(RATE, SUM),
-    is_present_err: timeseries(RATE, SUM),
-    assert_present: timeseries(RATE, SUM),
-    assert_present_ok: timeseries(RATE, SUM),
-    assert_present_err: timeseries(RATE, SUM),
+    get: timeseries(Rate, Sum),
+    get_miss: timeseries(Rate, Sum),
+    get_hit: timeseries(Rate, Sum),
+    get_err: timeseries(Rate, Sum),
+    put: timeseries(Rate, Sum),
+    put_ok: timeseries(Rate, Sum),
+    put_err: timeseries(Rate, Sum),
+    is_present: timeseries(Rate, Sum),
+    is_present_miss: timeseries(Rate, Sum),
+    is_present_hit: timeseries(Rate, Sum),
+    is_present_err: timeseries(Rate, Sum),
+    assert_present: timeseries(Rate, Sum),
+    assert_present_ok: timeseries(Rate, Sum),
+    assert_present_err: timeseries(Rate, Sum),
 }
 
 #[derive(Clone, Debug)]

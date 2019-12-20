@@ -24,15 +24,15 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{FutureStats, Timed};
 use mononoke_types::{ContentId, FileType, MPath, RepoPath};
 use slog::{trace, Logger};
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::sync::Arc;
 use time_ext::DurationExt;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    upload_hg_file_entry: timeseries(RATE, SUM),
-    upload_hg_tree_entry: timeseries(RATE, SUM),
-    upload_blob: timeseries(RATE, SUM),
+    upload_hg_file_entry: timeseries(Rate, Sum),
+    upload_hg_tree_entry: timeseries(Rate, Sum),
+    upload_blob: timeseries(Rate, Sum),
 }
 
 /// Information about a content blob associated with a push that is available in

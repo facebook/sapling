@@ -23,12 +23,12 @@ use futures_stats::Timed;
 use lock_ext::RwLockExt;
 use mononoke_types::ChangesetId;
 use slog::info;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use time_ext::DurationExt;
 
 define_stats! {
     prefix = "mononoke.bookmarks.warm_bookmarks_cache";
-    cached_bookmark_update_time_ms: timeseries(RATE, SUM),
+    cached_bookmark_update_time_ms: timeseries(Rate, Sum),
 }
 
 pub struct WarmBookmarksCache {

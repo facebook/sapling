@@ -24,17 +24,17 @@ use iobuf::IOBuf;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
 define_stats! {
     prefix = "mononoke.changesets";
-    memcache_hit: timeseries("memcache.hit"; RATE, SUM),
-    memcache_miss: timeseries("memcache.miss"; RATE, SUM),
-    memcache_internal_err: timeseries("memcache.internal_err"; RATE, SUM),
-    memcache_deserialize_err: timeseries("memcache.deserialize_err"; RATE, SUM),
+    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
+    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
+    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
+    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
 }
 
 pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {

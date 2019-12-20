@@ -20,7 +20,7 @@ use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::queries;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
@@ -35,12 +35,12 @@ pub enum ErrorKind {
 // TODO(simonfar): Once we've proven the concept, we want to cache these
 define_stats! {
     prefix = "mononoke.synced_commit_mapping";
-    gets: timeseries(RATE, SUM),
-    gets_master: timeseries(RATE, SUM),
-    adds: timeseries(RATE, SUM),
-    add_bulks: timeseries(RATE, SUM),
-    insert_working_copy_eqivalence: timeseries(RATE, SUM),
-    get_equivalent_working_copy: timeseries(RATE, SUM),
+    gets: timeseries(Rate, Sum),
+    gets_master: timeseries(Rate, Sum),
+    adds: timeseries(Rate, Sum),
+    add_bulks: timeseries(Rate, Sum),
+    insert_working_copy_eqivalence: timeseries(Rate, Sum),
+    get_equivalent_working_copy: timeseries(Rate, Sum),
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

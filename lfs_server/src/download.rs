@@ -19,7 +19,7 @@ use std::str::FromStr;
 
 use filestore::{self, Alias, FetchKey};
 use mononoke_types::ContentId;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 
 use crate::errors::ErrorKind;
 use crate::http::{HttpError, StreamBody, TryIntoResponse};
@@ -28,7 +28,11 @@ use crate::middleware::LfsMethod;
 
 define_stats! {
     prefix = "mononoke.lfs.download";
-    size_bytes_sent: timeseries("size_bytes_sent"; SUM; 5, 15, 60),
+    size_bytes_sent: timeseries(
+        "size_bytes_sent";
+        Sum;
+        Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(60)
+    ),
 }
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]

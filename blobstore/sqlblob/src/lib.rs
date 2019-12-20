@@ -29,7 +29,7 @@ use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, open_sqlite_in_memory,
     open_sqlite_path, PoolSizeConfig, SqlConnections,
 };
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
@@ -47,8 +47,8 @@ pub type CountedSqlblob<C> = CountedBlobstore<Sqlblob<C>>;
 
 define_stats! {
     prefix = "mononoke.blobstore.sqlblob";
-    data_cache_hit_permille: timeseries(AVG, COUNT),
-    chunk_cache_hit_permille: timeseries(AVG, COUNT),
+    data_cache_hit_permille: timeseries(Average, Count),
+    chunk_cache_hit_permille: timeseries(Average, Count),
 }
 
 enum DataEntry {

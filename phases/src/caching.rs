@@ -16,7 +16,7 @@ use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
@@ -31,9 +31,9 @@ const MC_SITEVER: u32 = 0;
 
 define_stats! {
     prefix = "mononoke.phases";
-    memcache_hit: timeseries("memcache.hit"; RATE, SUM),
-    memcache_miss: timeseries("memcache.miss"; RATE, SUM),
-    memcache_internal_err: timeseries("memcache.internal_err"; RATE, SUM),
+    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
+    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
+    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
 }
 
 // 6 hours in sec

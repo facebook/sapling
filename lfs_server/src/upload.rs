@@ -18,7 +18,7 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, Request};
 use serde::Deserialize;
-use stats::{define_stats, Histogram, Timeseries};
+use stats::prelude::*;
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -36,11 +36,11 @@ use crate::middleware::{LfsMethod, ScubaKey, ScubaMiddlewareState};
 
 define_stats! {
     prefix ="mononoke.lfs.upload";
-    upstream_uploads: timeseries(RATE, SUM),
-    upstream_success: timeseries(RATE, SUM),
-    internal_uploads: timeseries(RATE, SUM),
-    internal_success: timeseries(RATE, SUM),
-    size_bytes: histogram(1_500_000, 0, 150_000_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    upstream_uploads: timeseries(Rate, Sum),
+    upstream_success: timeseries(Rate, Sum),
+    internal_uploads: timeseries(Rate, Sum),
+    internal_success: timeseries(Rate, Sum),
+    size_bytes: histogram(1_500_000, 0, 150_000_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 // Small buffers for Filestore & Dewey

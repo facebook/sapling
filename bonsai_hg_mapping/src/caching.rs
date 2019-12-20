@@ -25,16 +25,16 @@ use iobuf::IOBuf;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 define_stats! {
     prefix = "mononoke.bonsai_hg_mapping";
-    memcache_hit: timeseries("memcache.hit"; RATE, SUM),
-    memcache_miss: timeseries("memcache.miss"; RATE, SUM),
-    memcache_internal_err: timeseries("memcache.internal_err"; RATE, SUM),
-    memcache_deserialize_err: timeseries("memcache.deserialize_err"; RATE, SUM),
+    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
+    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
+    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
+    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
 }
 
 /// Used for cache key generation

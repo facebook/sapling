@@ -18,7 +18,7 @@ use scribe::ScribeClient;
 use scuba_ext::{
     ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue,
 };
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -27,11 +27,11 @@ use time_ext::DurationExt;
 define_stats! {
     prefix = "mononoke.repo_client.logging";
 
-    wireproto_blobstore_success: timeseries(RATE, SUM),
-    wireproto_blobstore_failure: timeseries(RATE, SUM),
-    wireproto_scribe_success: timeseries(RATE, SUM),
-    wireproto_scribe_failure: timeseries(RATE, SUM),
-    wireproto_serialization_failure: timeseries(RATE, SUM),
+    wireproto_blobstore_success: timeseries(Rate, Sum),
+    wireproto_blobstore_failure: timeseries(Rate, Sum),
+    wireproto_scribe_success: timeseries(Rate, Sum),
+    wireproto_scribe_failure: timeseries(Rate, Sum),
+    wireproto_serialization_failure: timeseries(Rate, Sum),
 }
 
 pub struct WireprotoLogging {

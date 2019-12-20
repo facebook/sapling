@@ -16,7 +16,7 @@ use maplit::hashmap;
 use scuba::ScubaValue;
 use serde::Deserialize;
 use slog::debug;
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::HashMap;
 use time_ext::DurationExt;
 
@@ -36,12 +36,12 @@ use crate::middleware::{LfsMethod, RequestContext, ScubaKey, ScubaMiddlewareStat
 
 define_stats! {
     prefix ="mononoke.lfs.batch";
-    download_redirect_internal: timeseries(RATE, SUM),
-    download_redirect_upstream: timeseries(RATE, SUM),
-    download_unknown: timeseries(RATE, SUM),
-    upload_redirect: timeseries(RATE, SUM),
-    upload_no_redirect: timeseries(RATE, SUM),
-    upload_rejected: timeseries(RATE, SUM),
+    download_redirect_internal: timeseries(Rate, Sum),
+    download_redirect_upstream: timeseries(Rate, Sum),
+    download_unknown: timeseries(Rate, Sum),
+    upload_redirect: timeseries(Rate, Sum),
+    upload_no_redirect: timeseries(Rate, Sum),
+    upload_rejected: timeseries(Rate, Sum),
 }
 
 enum Source {

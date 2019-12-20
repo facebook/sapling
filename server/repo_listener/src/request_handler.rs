@@ -25,7 +25,7 @@ use pushredirect_enable::types::MononokePushRedirectEnable;
 use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
-use stats::{define_stats, Histogram};
+use stats::prelude::*;
 use time_ext::DurationExt;
 use tracing::{trace_args, TraceContext, TraceId, Traced};
 
@@ -54,7 +54,7 @@ const DEFAULT_PERCENTAGE: f64 = 100.0;
 define_stats! {
     prefix = "mononoke.request_handler";
     wireproto_ms:
-        histogram(500, 0, 100_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(500, 0, 100_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 pub fn request_handler(

@@ -24,7 +24,7 @@ use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection, Transaction as SqlTransaction};
 pub use sql_ext::{SqlConstructors, TransactionResult};
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -33,21 +33,21 @@ const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks";
-    list_all_by_prefix: timeseries(RATE, SUM),
-    list_all_by_prefix_maybe_stale: timeseries(RATE, SUM),
-    list_pull_default_by_prefix: timeseries(RATE, SUM),
-    list_pull_default_by_prefix_maybe_stale: timeseries(RATE, SUM),
-    list_publishing_by_prefix: timeseries(RATE, SUM),
-    list_publishing_by_prefix_maybe_stale: timeseries(RATE, SUM),
-    get_bookmark: timeseries(RATE, SUM),
-    bookmarks_update_log_insert_success: timeseries(RATE, SUM),
-    bookmarks_update_log_insert_success_attempt_count: timeseries(RATE, AVG, SUM),
-    bookmarks_insert_retryable_error: timeseries(RATE, SUM),
-    bookmarks_insert_retryable_error_attempt_count: timeseries(RATE, AVG, SUM),
-    bookmarks_insert_logic_error: timeseries(RATE, SUM),
-    bookmarks_insert_logic_error_attempt_count: timeseries(RATE, AVG, SUM),
-    bookmarks_insert_other_error: timeseries(RATE, SUM),
-    bookmarks_insert_other_error_attempt_count: timeseries(RATE, AVG, SUM),
+    list_all_by_prefix: timeseries(Rate, Sum),
+    list_all_by_prefix_maybe_stale: timeseries(Rate, Sum),
+    list_pull_default_by_prefix: timeseries(Rate, Sum),
+    list_pull_default_by_prefix_maybe_stale: timeseries(Rate, Sum),
+    list_publishing_by_prefix: timeseries(Rate, Sum),
+    list_publishing_by_prefix_maybe_stale: timeseries(Rate, Sum),
+    get_bookmark: timeseries(Rate, Sum),
+    bookmarks_update_log_insert_success: timeseries(Rate, Sum),
+    bookmarks_update_log_insert_success_attempt_count: timeseries(Rate, Average, Sum),
+    bookmarks_insert_retryable_error: timeseries(Rate, Sum),
+    bookmarks_insert_retryable_error_attempt_count: timeseries(Rate, Average, Sum),
+    bookmarks_insert_logic_error: timeseries(Rate, Sum),
+    bookmarks_insert_logic_error_attempt_count: timeseries(Rate, Average, Sum),
+    bookmarks_insert_other_error: timeseries(Rate, Sum),
+    bookmarks_insert_other_error_attempt_count: timeseries(Rate, Average, Sum),
 }
 
 #[derive(Clone)]

@@ -47,7 +47,7 @@ use mercurial_types::{
 };
 use metaconfig_types::{CommonConfig, RepoConfig, SourceControlServiceMonitoring};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use stats::{define_stats, Timeseries};
+use stats::prelude::*;
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
@@ -73,20 +73,20 @@ use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 
 define_stats! {
     prefix = "mononoke.apiserver.repo";
-    get_raw_file: timeseries(RATE, SUM),
-    get_blob_content: timeseries(RATE, SUM),
-    list_directory: timeseries(RATE, SUM),
-    list_directory_unodes: timeseries(RATE, SUM),
-    get_tree: timeseries(RATE, SUM),
-    get_changeset: timeseries(RATE, SUM),
-    get_branches: timeseries(RATE, SUM),
-    get_file_history: timeseries(RATE, SUM),
-    get_last_commit_on_path: timeseries(RATE, SUM),
-    is_ancestor: timeseries(RATE, SUM),
-    eden_get_data: timeseries(RATE, SUM),
-    eden_get_history: timeseries(RATE, SUM),
-    eden_get_trees: timeseries(RATE, SUM),
-    eden_prefetch_trees: timeseries(RATE, SUM),
+    get_raw_file: timeseries(Rate, Sum),
+    get_blob_content: timeseries(Rate, Sum),
+    list_directory: timeseries(Rate, Sum),
+    list_directory_unodes: timeseries(Rate, Sum),
+    get_tree: timeseries(Rate, Sum),
+    get_changeset: timeseries(Rate, Sum),
+    get_branches: timeseries(Rate, Sum),
+    get_file_history: timeseries(Rate, Sum),
+    get_last_commit_on_path: timeseries(Rate, Sum),
+    is_ancestor: timeseries(Rate, Sum),
+    eden_get_data: timeseries(Rate, Sum),
+    eden_get_history: timeseries(Rate, Sum),
+    eden_get_trees: timeseries(Rate, Sum),
+    eden_prefetch_trees: timeseries(Rate, Sum),
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]

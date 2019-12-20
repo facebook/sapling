@@ -18,7 +18,7 @@ use failure_ext::chain::ChainExt;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
-use stats::Timeseries;
+use stats::prelude::*;
 
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
@@ -29,7 +29,6 @@ use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, MysqlOptions, PoolSizeConfig,
     SqlConnections,
 };
-use stats::define_stats;
 
 use crate::errors::ErrorKind;
 
@@ -46,10 +45,10 @@ pub struct SqlFilenodes {
 
 define_stats! {
     prefix = "mononoke.filenodes";
-    gets: timeseries(RATE, SUM),
-    gets_master: timeseries(RATE, SUM),
-    range_gets: timeseries(RATE, SUM),
-    adds: timeseries(RATE, SUM),
+    gets: timeseries(Rate, Sum),
+    gets_master: timeseries(Rate, Sum),
+    range_gets: timeseries(Rate, Sum),
+    adds: timeseries(Rate, Sum),
 }
 
 queries! {

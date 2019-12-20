@@ -51,7 +51,7 @@ use revisionstore::Metadata;
 use scuba_ext::ScubaSampleBuilderExt;
 use serde_json::{self, json};
 use slog::{debug, info, o};
-use stats::{define_stats, DynamicTimeseries, Histogram, Timeseries};
+use stats::prelude::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::str::FromStr;
@@ -71,25 +71,25 @@ pub use logging::WireprotoLogging;
 define_stats! {
     prefix = "mononoke.repo_client";
     getbundle_ms:
-        histogram(10, 0, 1_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(10, 0, 1_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     gettreepack_ms:
-        histogram(2, 0, 200, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getfiles_ms:
-        histogram(5, 0, 500, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(5, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getpack_ms:
-        histogram(20, 0, 2_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    total_tree_count: timeseries(RATE, SUM),
-    quicksand_tree_count: timeseries(RATE, SUM),
-    total_tree_size: timeseries(RATE, SUM),
-    quicksand_tree_size: timeseries(RATE, SUM),
-    total_fetched_file_size: timeseries(RATE, SUM),
-    quicksand_fetched_file_size: timeseries(RATE, SUM),
+        histogram(20, 0, 2_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    total_tree_count: timeseries(Rate, Sum),
+    quicksand_tree_count: timeseries(Rate, Sum),
+    total_tree_size: timeseries(Rate, Sum),
+    quicksand_tree_size: timeseries(Rate, Sum),
+    total_fetched_file_size: timeseries(Rate, Sum),
+    quicksand_fetched_file_size: timeseries(Rate, Sum),
 
-    push_success: dynamic_timeseries("push_success.{}", (reponame: String); RATE, SUM),
-    push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); RATE, SUM),
-    push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); RATE, SUM),
-    rate_limits_exceeded: dynamic_timeseries("rate_limits_exceeded.{}", (reponame: String); RATE, SUM),
-    push_error: dynamic_timeseries("push_error.{}", (reponame: String); RATE, SUM),
+    push_success: dynamic_timeseries("push_success.{}", (reponame: String); Rate, Sum),
+    push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); Rate, Sum),
+    push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); Rate, Sum),
+    rate_limits_exceeded: dynamic_timeseries("rate_limits_exceeded.{}", (reponame: String); Rate, Sum),
+    push_error: dynamic_timeseries("push_error.{}", (reponame: String); Rate, Sum),
 }
 
 mod ops {
