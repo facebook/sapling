@@ -7,6 +7,11 @@ import sys
 from edenscm.hgext import sshaskpass
 
 
+if not sys.platform.startswith("linux"):
+    sys.stderr.write("this test only supports linux\n")
+    sys.exit(80)
+
+
 # stdin, stderr have to be tty to run test
 pid, master = os.forkpty()
 if pid:
