@@ -329,7 +329,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
       }
       if (loc->parent == parent) {
         // Our parent is still the same.  We're done.
-        XLOG(DBG6) << "getParentInfo() acquired parent lock after " << numTries
+        XLOG(DBG9) << "getParentInfo() acquired parent lock after " << numTries
                    << " tries";
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, std::move(parentContents)};

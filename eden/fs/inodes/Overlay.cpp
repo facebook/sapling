@@ -443,7 +443,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
     try {
       auto dirData = fsOverlay_.loadOverlayDir(ino);
       if (!dirData.has_value()) {
-        XLOG(DBG3) << "no dir data for inode " << ino;
+        XLOG(DBG7) << "no dir data for inode " << ino;
         continue;
       } else {
         dir = std::move(*dirData);

@@ -661,7 +661,7 @@ void FuseChannel::sendInvalidateInode(
       throwSystemErrorExplicit(
           exc.code().value(), "error invalidating FUSE inode ", ino);
     } else {
-      XLOG(DBG3) << "sendInvalidateInode(ino=" << ino << ", off=" << off
+      XLOG(DBG6) << "sendInvalidateInode(ino=" << ino << ", off=" << off
                  << ", len=" << len << ") failed with ENOENT";
     }
   }

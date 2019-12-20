@@ -650,7 +650,7 @@ bool InodeMap::isInodeRemembered(InodeNumber ino) const {
 void InodeMap::onInodeUnreferenced(
     InodeBase* inode,
     ParentInodeInfo&& parentInfo) {
-  XLOG(DBG5) << "inode " << inode->getNodeId()
+  XLOG(DBG8) << "inode " << inode->getNodeId()
              << " unreferenced: " << inode->getLogPath();
   // Acquire our lock.
   auto data = data_.wlock();
