@@ -49,3 +49,11 @@ Remove the mapfile so we can ensure the gitnode is from the extras not the mapfi
   abort: git-mapfile@7e: ambiguous identifier!
   [255]
   $ hg log --template "gitnode_notexists {rev}\n" --rev "gitnode(1234567890ab)"
+
+Try other extensioins that provide "{gitnode}":
+  $ hg log -r 'tip^' --template "{gitnode}\n"
+  7e2a5465ff4e3b992c429bb87a392620a0ac97b7
+  $ hg log -r 'tip^' --template "{gitnode}\n" --config extensions.fbscmquery=
+  7e2a5465ff4e3b992c429bb87a392620a0ac97b7
+  $ hg log -r 'tip^' --template "{gitnode}\n" --config extensions.gitrevset=
+  7e2a5465ff4e3b992c429bb87a392620a0ac97b7

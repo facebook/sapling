@@ -34,6 +34,12 @@ templatekeyword = registrar.templatekeyword()
 @templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
+    # Try reading from commit extra first.
+    extra = ctx.extra()
+    if "hg-git-rename-source" in extra:
+        hexnode = extra.get("convert_revision")
+        if hexnode:
+            return hexnode
     binnode = _lookup_node(repo, ctx.hex(), from_scm_type="hg")
     # templates are expected to return an empty string when no
     # data exists

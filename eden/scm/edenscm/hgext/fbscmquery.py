@@ -90,6 +90,12 @@ templatekeyword = registrar.templatekeyword()
 @templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
+    # Try reading from commit extra first.
+    extra = ctx.extra()
+    if "hg-git-rename-source" in extra:
+        hexnode = extra.get("convert_revision")
+        if hexnode:
+            return hexnode
     reponame = repo.ui.config("fbscmquery", "reponame")
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
