@@ -284,11 +284,24 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
     if not _trackaccessedbookmarks(repo.ui):
         return
 
+    # Are bookmarks already marked as accessed?
+    existing = set(
+        name
+        for _node, _nametype, oldremote, name in repo._accessedbookmarks
+        if oldremote == remotepath
+    )
+    newdata = set(bookmarks)
+    if existing.issuperset(newdata):
+        # If so, then skip updating the accessed file.
+        # Note: we ignore the "node" portion of the data since it's not
+        # actually used.
+        return
+
     vfs = repo.sharedvfs
 
     totalaccessednames = 0
     with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
-        knownbooks = set(_readremotenamesfrom(vfs, _selectivepullaccessedbookmarks))
+        knownbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
 
         with vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
             newbookmarks = {}
@@ -311,6 +324,10 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
             for rname, node in newbookmarks.iteritems():
                 totalaccessednames += 1
                 _writesingleremotename(f, remotepath, "bookmarks", rname, node)
+
+        repo._accessedbookmarks = list(
+            _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
+        )
 
     # log the number of accessed bookmarks currently tracked
     repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)
@@ -841,6 +858,9 @@ def reposetup(ui, repo):
         return
 
     repo._remotenames = remotenames(repo)
+    repo._accessedbookmarks = list(
+        _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
+    )
 
 
 def _tracking(ui):
