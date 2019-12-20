@@ -869,7 +869,18 @@ class dirstate(object):
         # "M" files.
         mtolog = self._ui.configint("experimental", "samplestatus")
 
-        nonnormalset = dmap.nonnormalset
+        if "treestate" in self._repo.requirements:
+            # treestate has a fast path to filter out ignored directories.
+            ignorevisitdir = ignore.visitdir
+
+            def dirfilter(path):
+                result = ignorevisitdir(path.rstrip("/"))
+                return result == "all"
+
+            nonnormalset = dmap.nonnormalsetfiltered(dirfilter)
+        else:
+            nonnormalset = dmap.nonnormalset
+
         otherparentset = dmap.otherparentset
         oldid = self.identity()
 
