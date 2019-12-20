@@ -202,7 +202,7 @@ class _gitlfsremote(object):
         for k, v in headers:
             request.add_header(k, v)
 
-        response = b""
+        blocks = []
         contentlength = None
         try:
             res = self.urlopener.open(request)
@@ -211,11 +211,13 @@ class _gitlfsremote(object):
                 data = res.read(1048576)
                 if not data:
                     break
-                response += data
+                blocks.append(data)
         except util.urlerr.httperror as ex:
             raise LfsRemoteError(
                 _("HTTP error: %s (oid=%s, action=%s)") % (ex, oid, action)
             )
+
+        response = b"".join(blocks)
 
         # If the server advertised a length longer than what we actually
         # received, then we should expect that the server crashed while
