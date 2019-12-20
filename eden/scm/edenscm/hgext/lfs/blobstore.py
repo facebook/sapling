@@ -203,16 +203,32 @@ class _gitlfsremote(object):
             request.add_header(k, v)
 
         response = b""
+        contentlength = None
         try:
-            req = self.urlopener.open(request)
+            res = self.urlopener.open(request)
+            contentlength = res.info().get("content-length")
             while True:
-                data = req.read(1048576)
+                data = res.read(1048576)
                 if not data:
                     break
                 response += data
         except util.urlerr.httperror as ex:
             raise LfsRemoteError(
                 _("HTTP error: %s (oid=%s, action=%s)") % (ex, oid, action)
+            )
+
+        # If the server advertised a length longer than what we actually
+        # received, then we should expect that the server crashed while
+        # producing the response (but the server has no way of telling us
+        # that), and we really don't need to try to write the response to the
+        # localstore, because it's not going to match the expected.
+        responselength = len(response)
+        if contentlength is not None and int(contentlength) != responselength:
+            raise LfsRemoteError(
+                _(
+                    "Response length (%s) does not match Content-Length header (%s): likely server-side crash"
+                )
+                % (responselength, contentlength)
             )
 
         if action == "download":
