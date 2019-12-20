@@ -258,43 +258,8 @@ Future<Hash> ObjectStore::getBlobSha1(const Hash& id) const {
 }
 
 Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
-  auto self = shared_from_this();
-
-  // Check local store for size
-  return self->localStore_->getBlobSize(id).thenValue(
-      [self, id](std::optional<uint64_t> size) {
-        if (size) {
-          self->updateBlobSizeStats(true, false);
-          self->localStore_->putBlobSize(id, *size);
-          return makeFuture(*size);
-        }
-
-        // Check backing store for blob
-        self->recordBackingStoreImport();
-        return self->backingStore_->getBlob(id)
-            .via(self->executor_)
-            .thenValue([self, id](std::unique_ptr<Blob> blob) {
-              if (blob) {
-                const uint64_t size = blob.get()->getSize();
-                self->updateBlobSizeStats(false, true);
-                self->localStore_->putBlobWithoutMetadata(id, blob.get());
-                self->localStore_->putBlobSize(id, size);
-
-                return makeFuture(size);
-              }
-
-              // Not found
-              self->updateBlobSizeStats(false, false);
-              throw std::domain_error(
-                  folly::to<string>("blob ", id.toString(), " not found"));
-            });
-      });
-}
-
-void ObjectStore::updateBlobSizeStats(bool local, bool backing) const {
-  ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
-  stats.getBlobSizeFromLocalStore.addValue(local);
-  stats.getBlobSizeFromBackingStore.addValue(backing);
+  return getBlobMetadata(id).thenValue(
+      [](const BlobMetadata& metadata) { return metadata.size; });
 }
 
 void ObjectStore::recordBackingStoreImport() const {

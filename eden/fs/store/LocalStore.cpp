@@ -124,20 +124,6 @@ folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
       });
 }
 
-folly::Future<std::optional<uint64_t>> LocalStore::getBlobSize(
-    const Hash& id) const {
-  return getFuture(KeySpace::BlobSizeFamily, id.getBytes())
-      .thenValue([](StoreResult&& data) -> std::optional<uint64_t> {
-        if (!data.isValid()) {
-          return std::nullopt;
-        }
-
-        folly::IOBuf dataIOBuf = data.iobufWrapper();
-        folly::io::Cursor cursor{&dataIOBuf};
-        return cursor.readBE<uint64_t>();
-      });
-}
-
 std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
   GitTreeSerializer serializer;
   for (auto& entry : tree->getTreeEntries()) {
@@ -177,8 +163,27 @@ Hash LocalStore::WriteBatch::putTree(const Tree* tree) {
 BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
   BlobMetadata metadata = getMetadataFromBlob(blob);
 
-  putBlobWithoutMetadata(id, blob);
-  putBlobMetadata(id, metadata);
+  if (!enableBlobCaching) {
+    XLOG(DBG8) << "Skipping caching " << id
+               << " because blob cache is disabled via config";
+  } else {
+    // Since blob serialization is moderately complex, just delegate
+    // the immediate putBlob to the method on the WriteBatch.
+    // Pre-allocate a buffer of approximately the right size; it
+    // needs to hold the blob content plus have room for a couple of
+    // hashes for the keys, plus some padding.
+    auto batch = beginWrite(blob->getSize() + 64);
+    batch->putBlob(id, blob);
+    batch->flush();
+  }
+
+  // Even if blob caching is disabled, it's worth caching the size and SHA-1.
+  auto hashBytes = id.getBytes();
+  SerializedBlobMetadata metadataBytes(metadata);
+
+  put(LocalStore::KeySpace::BlobMetaDataFamily,
+      hashBytes,
+      metadataBytes.slice());
 
   return metadata;
 }
@@ -187,44 +192,6 @@ BlobMetadata LocalStore::getMetadataFromBlob(const Blob* blob) {
   Hash sha1 = Hash::sha1(blob->getContents());
   uint64_t size = blob->getSize();
   return BlobMetadata{sha1, size};
-}
-
-void LocalStore::putBlobWithoutMetadata(const Hash& id, const Blob* blob) {
-  if (!enableBlobCaching) {
-    XLOG(DBG8) << "Skipping caching " << id
-               << " because blob cache is disabled via config";
-    return;
-  }
-  // Since blob serialization is moderately complex, just delegate
-  // the immediate putBlob to the method on the WriteBatch.
-  // Pre-allocate a buffer of approximately the right size; it
-  // needs to hold the blob content plus have room for a couple of
-  // hashes for the keys, plus some padding.
-  auto batch = beginWrite(blob->getSize() + 64);
-  batch->putBlob(id, blob);
-  batch->flush();
-}
-
-void LocalStore::putBlobMetadata(const Hash& id, const BlobMetadata& metadata) {
-  auto hashBytes = id.getBytes();
-  SerializedBlobMetadata metadataBytes(metadata);
-
-  put(LocalStore::KeySpace::BlobMetaDataFamily,
-      hashBytes,
-      metadataBytes.slice());
-
-  putBlobSize(id, metadata.size);
-}
-
-void LocalStore::putBlobSize(const Hash& id, const uint64_t size) {
-  auto hashBytes = id.getBytes();
-
-  uint64_t sizeBE = folly::Endian::big(size);
-  std::array<uint8_t, sizeof(uint64_t)> bytes;
-  memcpy(bytes.data(), &sizeBE, sizeof(uint64_t));
-  auto sizeBytes = folly::ByteRange{bytes};
-
-  put(LocalStore::KeySpace::BlobSizeFamily, hashBytes, sizeBytes);
 }
 
 void LocalStore::put(

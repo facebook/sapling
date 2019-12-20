@@ -61,6 +61,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
     TreeFamily = 2,
     HgProxyHashFamily = 3,
     HgCommitToTreeFamily = 4,
+    // TODO: Clear this keyspace at startup.
     BlobSizeFamily = 5,
 
     End, // must be last!
@@ -157,8 +158,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   folly::Future<std::optional<BlobMetadata>> getBlobMetadata(
       const Hash& id) const;
 
-  folly::Future<std::optional<uint64_t>> getBlobSize(const Hash& id) const;
-
   /**
    * Compute the serialized version of the tree.
    * Returns the key and the (not coalesced) serialized data.
@@ -188,10 +187,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * its contents.
    */
   BlobMetadata putBlob(const Hash& id, const Blob* blob);
-
-  void putBlobWithoutMetadata(const Hash& id, const Blob* blob);
-  void putBlobMetadata(const Hash& id, const BlobMetadata& metadata);
-  void putBlobSize(const Hash& id, const uint64_t size);
 
   /**
    * Put arbitrary data in the store.

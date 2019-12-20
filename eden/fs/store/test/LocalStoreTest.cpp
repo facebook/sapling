@@ -57,25 +57,6 @@ TEST_P(LocalStoreTest, testReadNonexistent) {
   EXPECT_FALSE(retreivedMetadata.has_value());
 }
 
-TEST_P(LocalStoreTest, putAndGetBlobSize) {
-  auto data = "A"_sp;
-  Hash id = Hash::sha1(data);
-
-  store_->putBlobSize(id, data.size());
-
-  std::optional<size_t> size = store_->getBlobSize(id).get();
-  ASSERT_TRUE(size.has_value());
-
-  size_t expectedSize = data.size();
-  EXPECT_EQ(expectedSize, *size);
-}
-
-TEST_P(LocalStoreTest, getBlobSizeNotFound) {
-  Hash id;
-  std::optional<size_t> size = store_->getBlobSize(id).get();
-  ASSERT_FALSE(size.has_value());
-}
-
 TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   using folly::unhexlify;
   using std::string;

@@ -99,20 +99,6 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         counters = self.get_counters()
         self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 100)
 
-    def test_get_blob_size(self) -> None:
-        TEMPLATE = "object_store.get_blob_size.{}_store.pct"
-        LOCAL = TEMPLATE.format("local")
-        BACKING = TEMPLATE.format("backing")
-
-        counters = self.get_counters()
-        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 0)
-
-        foo = Path(self.mount) / "foo.txt"
-        foo.stat()
-
-        counters = self.get_counters()
-        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 100)
-
 
 class HgBackingStoreStatsTest(testcase.EdenRepoTest):
     def test_reading_file_gets_file_from_hg(self) -> None:

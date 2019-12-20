@@ -164,7 +164,6 @@ class ObjectStore : public IObjectStore,
   folly::Executor::KeepAlive<folly::Executor> executor_;
 
   void updateBlobStats(bool local, bool backing) const;
-  void updateBlobSizeStats(bool local, bool backing) const;
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
 
   void recordBackingStoreImport() const;

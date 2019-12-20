@@ -16,31 +16,35 @@
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
+using namespace std::chrono_literals;
 
-class ObjectStoreTest : public ::testing::Test {
- protected:
+struct ObjectStoreTest : ::testing::Test {
   void SetUp() override {
-    localStore_ = std::make_shared<MemoryLocalStore>();
-    backingStore_ = std::make_shared<FakeBackingStore>(localStore_);
-    stats_ = std::make_shared<EdenStats>();
-    executor_ = &folly::QueuedImmediateExecutor::instance();
-    objectStore_ =
-        ObjectStore::create(localStore_, backingStore_, stats_, executor_);
+    localStore = std::make_shared<MemoryLocalStore>();
+    backingStore = std::make_shared<FakeBackingStore>(localStore);
+    stats = std::make_shared<EdenStats>();
+    executor = &folly::QueuedImmediateExecutor::instance();
+    objectStore =
+        ObjectStore::create(localStore, backingStore, stats, executor);
+
+    readyBlobId = putReadyBlob("readyblob");
   }
 
   Hash putReadyBlob(folly::StringPiece data) {
-    StoredBlob* storedBlob = backingStore_->putBlob(data);
+    StoredBlob* storedBlob = backingStore->putBlob(data);
     storedBlob->setReady();
 
     Blob blob = storedBlob->get();
     return blob.getHash();
   }
 
-  std::shared_ptr<LocalStore> localStore_;
-  std::shared_ptr<FakeBackingStore> backingStore_;
-  std::shared_ptr<EdenStats> stats_;
-  std::shared_ptr<ObjectStore> objectStore_;
-  folly::QueuedImmediateExecutor* executor_;
+  std::shared_ptr<LocalStore> localStore;
+  std::shared_ptr<FakeBackingStore> backingStore;
+  std::shared_ptr<EdenStats> stats;
+  std::shared_ptr<ObjectStore> objectStore;
+  folly::QueuedImmediateExecutor* executor;
+
+  Hash readyBlobId;
 };
 
 TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
@@ -48,12 +52,12 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   Hash id = putReadyBlob(data);
 
   // Get blob size from backing store, caches in local store
-  objectStore_->getBlobSize(id);
+  objectStore->getBlobSize(id);
   // Clear backing store
-  objectStore_ = ObjectStore::create(localStore_, nullptr, stats_, executor_);
+  objectStore = ObjectStore::create(localStore, nullptr, stats, executor);
 
   size_t expectedSize = data.size();
-  size_t size = objectStore_->getBlobSize(id).get();
+  size_t size = objectStore->getBlobSize(id).get();
   EXPECT_EQ(expectedSize, size);
 }
 
@@ -62,7 +66,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromBackingStore) {
   Hash id = putReadyBlob(data);
 
   size_t expectedSize = data.size();
-  size_t size = objectStore_->getBlobSize(id).get();
+  size_t size = objectStore->getBlobSize(id).get();
   EXPECT_EQ(expectedSize, size);
 }
 
@@ -70,7 +74,7 @@ TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
   Hash id;
 
   EXPECT_THROW_RE(
-      objectStore_->getBlobSize(id).get(),
+      objectStore->getBlobSize(id).get(),
       std::domain_error,
       "blob .* not found");
 }
@@ -80,7 +84,7 @@ TEST_F(ObjectStoreTest, getBlobSha1) {
   Hash id = putReadyBlob(data);
 
   Hash expectedSha1 = Hash::sha1(data);
-  Hash sha1 = objectStore_->getBlobSha1(id).get();
+  Hash sha1 = objectStore->getBlobSha1(id).get();
   EXPECT_EQ(expectedSha1.toString(), sha1.toString());
 }
 
@@ -88,7 +92,14 @@ TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
   Hash id;
 
   EXPECT_THROW_RE(
-      objectStore_->getBlobSha1(id).get(),
+      objectStore->getBlobSha1(id).get(),
       std::domain_error,
       "blob .* not found");
+}
+
+TEST_F(ObjectStoreTest, get_size_and_sha1_only_imports_blob_once) {
+  objectStore->getBlobSize(readyBlobId).get(0ms);
+  objectStore->getBlobSha1(readyBlobId).get(0ms);
+
+  EXPECT_EQ(1, backingStore->getAccessCount(readyBlobId));
 }
