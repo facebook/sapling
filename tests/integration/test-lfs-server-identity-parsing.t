@@ -16,6 +16,7 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Check for identities provided in X509 cert
+  $ wait_for_json_record_count "$SCUBA" 2
   $ jq -S .normvector.client_identities < "$SCUBA"
   [
     "USER:myusername0",
