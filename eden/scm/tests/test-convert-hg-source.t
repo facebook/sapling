@@ -1,4 +1,5 @@
 #chg-compatible
+#require execbit
 
   $ setconfig extensions.treemanifest=!
   $ . helpers-usechg.sh
@@ -42,11 +43,7 @@ Test that template can print all file copies (issue4362)
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge remote copy' -d '4 0'
 
-#if execbit
   $ chmod +x baz
-#else
-  $ echo some other change to make sure we get a rev 5 > baz
-#endif
   $ hg ci -m 'mark baz executable' -d '5 0'
   $ cd ..
   $ hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
@@ -67,16 +64,9 @@ Test that template can print all file copies (issue4362)
   searching for changes
   no changes found
   [1]
-#if execbit
   $ hg bookmarks
      premerge1                 3:973ef48a98a4
      premerge2                 5:13d9b87cf8f8
-#else
-Different hash because no x bit
-  $ hg bookmarks
-     premerge1                 3:973ef48a98a4
-     premerge2                 5:13d9b87cf8f8
-#endif
 
 Test that redoing a convert results in an identical graph
   $ cd ../
