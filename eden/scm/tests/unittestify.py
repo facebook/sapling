@@ -23,18 +23,18 @@ try:
     hgpath = pathutils.get_build_rule_output_path(
         "//eden/scm:hg", pathutils.BuildRuleTypes.SH_BINARY
     )
-    pythonbinpath = pathutils.get_build_rule_output_path("//eden/scm:hgpython")
-    watchman = pathutils.get_build_rule_output_path("//watchman:watchman")
-    # XXX: the above function might return "watchman.par" which does not exist.
-    # Fix it by stripping ".par".
-    if not os.path.exists(watchman):
-        alternative = watchman[:-4]  # strip ".par"
-        if os.path.exists(alternative):
-            watchman = alternative
-        else:
-            watchman = None
-    mononoke_server = pathutils.get_build_rule_output_path("//scm/mononoke:mononoke")
-    mononoke_hgcli = pathutils.get_build_rule_output_path("//scm/mononoke/hgcli:hgcli")
+    pythonbinpath = pathutils.get_build_rule_output_path(
+        "//eden/scm:hgpython", pathutils.BuildRuleTypes.SH_BINARY
+    )
+    watchman = pathutils.get_build_rule_output_path(
+        "//watchman:watchman", pathutils.BuildRuleTypes.CXX_BINARY
+    )
+    mononoke_server = pathutils.get_build_rule_output_path(
+        "//scm/mononoke:mononoke", pathutils.BuildRuleTypes.RUST_BINARY
+    )
+    mononoke_hgcli = pathutils.get_build_rule_output_path(
+        "//scm/mononoke/hgcli:hgcli", pathutils.BuildRuleTypes.RUST_BINARY
+    )
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")
@@ -43,6 +43,11 @@ except ImportError:
     mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
     mononoke_hgcli = os.environ.get("HGTEST_MONONOKE_HGCLI")
 
+
+if watchman is not None and not os.path.exists(str(watchman)):
+    watchman = None
+
+os.environ["PYTHON_SYS_EXECUTABLE"] = pythonbinpath
 
 try:
     shlex_quote = shlex.quote  # Python 3.3 and up

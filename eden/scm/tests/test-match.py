@@ -15,7 +15,7 @@ class NeverMatcherTests(unittest.TestCase):
     def testManyGlobRaises(self):
         n = 10000
         rules = ["a/b/*/c/d/e/f/g/%s/**" % i for i in range(n)]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             # "Compiled regex exceeds size limit of 10485760 bytes."
             matchmod.treematcher("", "", rules=rules)
 

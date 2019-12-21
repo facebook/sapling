@@ -87,6 +87,19 @@ try:
 except ImportError:
     RLock = threading.RLock
 
+try:
+    import libfb.py.pathutils as pathutils
+
+    def buckpath(rulename, ruletype):
+        path = pathutils.get_build_rule_output_path(rulename, ruletype)
+        if not os.path.exists(path):
+            return None
+        return path
+
+    buckruletype = pathutils.BuildRuleTypes
+except ImportError:
+    buckpath = buckruletype = None
+
 if os.environ.get("RTUNICODEPEDANTRY", False):
     try:
         reload(sys)
@@ -281,7 +294,12 @@ def Popen4(cmd, wd, timeout, env=None):
     return p
 
 
-PYTHON = _bytespath(sys.executable.replace("\\", "/"))
+if buckpath:
+    PYTHON = buckpath("//eden/scm:hgpython", buckruletype.SH_BINARY)
+else:
+    PYTHON = _bytespath(
+        os.environ.get("PYTHON_SYS_EXECUTABLE", sys.executable).replace("\\", "/")
+    )
 IMPL_PATH = b"PYTHONPATH"
 if "java" in sys.platform:
     IMPL_PATH = b"JYTHONPATH"
@@ -603,6 +621,11 @@ def getparser():
 def parseargs(args, parser):
     """Parse arguments with our OptionParser and validate results."""
     options = parser.parse_args(args)
+
+    # Populate default paths inside buck build or test.
+    if buckpath is not None:
+        options.with_hg = buckpath("//eden/scm:hg", buckruletype.SH_BINARY)
+        options.with_watchman = buckpath("//watchman:watchman", buckruletype.CXX_BINARY)
 
     if options.with_hg:
         options.with_hg = canonpath(_bytespath(options.with_hg))
@@ -1453,7 +1476,7 @@ class Test(unittest.TestCase):
         rcpaths = self._extrarcpaths + [rcpath]
         env["HGRCPATH"] = os.pathsep.join(rcpaths)
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b"daemon.pids")
-        env["HGEDITOR"] = '"' + sys.executable + '"' + ' -c "import sys; sys.exit(0)"'
+        env["HGEDITOR"] = '"' + PYTHON + '"' + ' -c "import sys; sys.exit(0)"'
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"] = "test"
         env["HGENCODING"] = "ascii"
@@ -1483,6 +1506,14 @@ class Test(unittest.TestCase):
             + "NO_PROXY CHGDEBUG HGDETECTRACE"
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
+            # LD_LIBRARY_PATH is usually set by buck sh_binary wrapper to import
+            # Python extensions depending on buck runtime shared objects.
+            # However, that breaks system executables like "curl" depending on
+            # system libraries. Just unset it here. For code requiring importing
+            # Python extensions, expect them to use "hg debugpython" or "python"
+            # in the test, which will go through the wrapper and get a correct
+            # environment again.
+            + " LD_LIBRARY_PATH"
         ).split():
             if k in env:
                 del env[k]
@@ -2941,7 +2972,7 @@ class TextTestRunner(unittest.TextTestRunner):
             withhg = self._runner.options.with_hg
             if withhg:
                 opts += " --with-hg=%s " % shellquote(_strpath(withhg))
-            rtc = "%s %s %s %s" % (sys.executable, sys.argv[0], opts, test)
+            rtc = "%s %s %s %s" % (PYTHON, sys.argv[0], opts, test)
             data = pread(bisectcmd + ["--command", rtc])
             m = re.search(
                 (
@@ -3616,28 +3647,25 @@ class TestRunner(object):
         # Tests must use the same interpreter as us or bad things will happen.
         pyexename = sys.platform == "win32" and b"python.exe" or b"python"
         if getattr(os, "symlink", None):
-            vlog(
-                "# Making python executable in test path a symlink to '%s'"
-                % sys.executable
-            )
+            vlog("# Making python executable in test path a symlink to '%s'" % PYTHON)
             mypython = os.path.join(self._tmpbindir, pyexename)
             try:
-                if os.readlink(mypython) == sys.executable:
+                if os.readlink(mypython) == PYTHON:
                     return
                 os.unlink(mypython)
             except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
-            if self._findprogram(pyexename) != sys.executable:
+            if self._findprogram(pyexename) != PYTHON:
                 try:
-                    os.symlink(sys.executable, mypython)
+                    os.symlink(PYTHON, mypython)
                     self._createdfiles.append(mypython)
                 except OSError as err:
                     # child processes may race, which is harmless
                     if err.errno != errno.EEXIST:
                         raise
         else:
-            exedir, exename = os.path.split(sys.executable)
+            exedir, exename = os.path.split(PYTHON)
             vlog(
                 "# Modifying search path to find %s as %s in '%s'"
                 % (exename, pyexename, exedir)
@@ -3681,7 +3709,7 @@ class TestRunner(object):
 
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
-        exe = sys.executable
+        exe = PYTHON
         if PYTHON3:
             compiler = _bytespath(compiler)
             script = _bytespath(script)
@@ -3911,8 +3939,7 @@ def ensureenv():
     newenv = os.environ.copy()
     newenv.update(env)
     # Pick the right Python interpreter
-    python = env.get("PYTHON_SYS_EXECUTABLE", sys.executable)
-    p = subprocess.Popen([python] + sys.argv, env=newenv)
+    p = subprocess.Popen([PYTHON] + sys.argv, env=newenv)
     sys.exit(p.wait())
 
 

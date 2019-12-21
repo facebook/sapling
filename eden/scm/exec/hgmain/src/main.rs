@@ -19,7 +19,7 @@ mod windows;
 use windows::disable_standard_handle_inheritability;
 
 fn main() {
-    let full_args = match dispatch::args() {
+    let mut full_args = match dispatch::args() {
         Ok(args) => args,
         Err(_) => {
             eprintln!("abort: cannot decode command line arguments");
@@ -27,8 +27,8 @@ fn main() {
         }
     };
 
-    if let Some(cmd) = full_args.get(1) {
-        if cmd.ends_with("buildinfo") {
+    match full_args.get(0).map(AsRef::as_ref) {
+        Some("buildinfo") => {
             // This code path keeps buildinfo-related symbols alive.
             #[cfg(feature = "buildinfo")]
             unsafe {
@@ -42,6 +42,17 @@ fn main() {
 
             return;
         }
+        Some(name) if name.ends_with("python") => {
+            // Translate to the "debugpython" command.
+            // ex. "python foo.py" => "hg debugpython -- foo.py"
+            let debugpython_args = vec!["hg", "debugpython", "--"]
+                .into_iter()
+                .map(ToString::to_string)
+                .chain(full_args.into_iter().skip(1))
+                .collect::<Vec<String>>();
+            full_args = debugpython_args;
+        }
+        _ => (),
     }
 
     #[cfg(feature = "with_chg")]
