@@ -209,7 +209,12 @@ def _hg_runner(
             args.insert(0, manifest_env["NETWORK_BLACKHOLE"])
 
         env = os.environ.copy()
-        env.update({"HGPYTHONPATH": manifest_env["RUN_TESTS_LIBRARY"]})
+        env.update(
+            {
+                "HGPYTHONPATH": manifest_env["RUN_TESTS_LIBRARY"],
+                "PYTHON_SYS_EXECUTABLE": manifest_env["BINARY_HGPYTHON"],
+            }
+        )
         env.update(manifest_env)
         env.update(extra_env)
 
