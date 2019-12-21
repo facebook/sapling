@@ -6,7 +6,7 @@
  */
 
 use cpython::*;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

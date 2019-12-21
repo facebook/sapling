@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4"
-cpython-failure = { path = "../../../../lib/cpython-failure" }
+cpython-ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
 edenapi = { path = "../../../../lib/edenapi" }
 encoding = { path = "../../../../lib/encoding" }

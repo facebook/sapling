@@ -9,7 +9,7 @@
 
 use anyhow::Error;
 use cpython::*;
-use cpython_failure::{FallibleExt, ResultPyErrExt};
+use cpython_ext::{FallibleExt, ResultPyErrExt};
 use dag::{
     id::{Group, Id},
     idmap::IdMap,

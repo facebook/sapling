@@ -14,7 +14,7 @@ use std::str;
 use bytes::Bytes;
 use cpython::*;
 
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use edenapi::{
     ApiError, ApiErrorKind, Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn,
     ProgressStats,

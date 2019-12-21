@@ -10,7 +10,7 @@
 use std::path::Path;
 
 use cpython::*;
-use cpython_ext::failure::ResultPyErrExt;
+use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::Bytes;
 
 use encoding::local_bytes_to_path;

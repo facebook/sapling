@@ -9,7 +9,7 @@
 
 use cpython::*;
 use cpython_ext::Bytes;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 #[cfg(feature = "python2")]

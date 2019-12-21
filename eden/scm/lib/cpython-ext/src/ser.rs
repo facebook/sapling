@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::failure::PyErr as Error;
+use crate::PyErr as Error;
 use cpython::*;
 use serde::{ser, Serialize};
 

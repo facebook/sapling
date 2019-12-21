@@ -13,7 +13,7 @@ use cpython::*;
 
 use ::nodemap::{NodeMap, NodeSet, Repair};
 use cpython_ext::Bytes;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 use types::node::Node;
 

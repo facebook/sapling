@@ -11,7 +11,7 @@ use std::cell::RefCell;
 
 use cpython::*;
 
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use encoding::{local_bytes_to_path, repo_path_to_local_bytes};
 use pypathmatcher::UnsafePythonMatcher;
 use workingcopy::Walker;

@@ -8,7 +8,9 @@
 //! Integrate cpython with anyhow
 
 use anyhow::{Error, Result};
-use cpython::{exc, py_exception, ObjectProtocol, PyClone, PyResult, Python};
+use cpython::{
+    exc, py_exception, FromPyObject, ObjectProtocol, PyClone, PyList, PyModule, PyResult, Python,
+};
 use std::fmt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
@@ -22,7 +24,7 @@ use std::fmt;
 /// ```
 /// use anyhow::{format_err, Error};
 /// use cpython::{exc, Python, PyResult};
-/// use cpython_ext::failure::ResultPyErrExt;
+/// use cpython_ext::error::ResultPyErrExt;
 ///
 /// fn fail_if_negative(i: i32) -> Result<i32, Error> {
 ///    if (i >= 0) {
@@ -46,7 +48,7 @@ pub trait ResultPyErrExt<T> {
 ///
 /// ```
 /// use anyhow::Result;
-/// use cpython_ext::failure::{FallibleExt, PyErr};
+/// use cpython_ext::error::{FallibleExt, PyErr};
 ///
 /// fn eval_py() -> Result<i32> {
 ///     let gil = cpython::Python::acquire_gil();
@@ -59,7 +61,7 @@ pub trait ResultPyErrExt<T> {
 ///     let gil = cpython::Python::acquire_gil();
 ///     let py = gil.python();
 ///     let res = py.eval("1 + 2", None, None).into_fallible();
-///     use cpython_ext::failure::ResultPyErrExt;
+///     use cpython_ext::error::ResultPyErrExt;
 ///     res.map(|_| ()).map_pyerr(py)
 /// }
 /// ```
@@ -156,4 +158,23 @@ impl PyErr {
     pub fn into_inner(self) -> cpython::PyErr {
         self.inner
     }
+}
+
+pub fn format_py_error(py: Python, err: &cpython::PyErr) -> PyResult<String> {
+    let traceback = PyModule::import(py, "traceback")?;
+    let py_message = traceback.call(
+        py,
+        "format_exception",
+        (&err.ptype, &err.pvalue, &err.ptraceback),
+        None,
+    )?;
+
+    let py_lines = PyList::extract(py, &py_message)?;
+
+    let lines: Vec<String> = py_lines
+        .iter(py)
+        .map(|l| l.extract::<String>(py).unwrap_or_default())
+        .collect();
+
+    Ok(lines.join(""))
 }

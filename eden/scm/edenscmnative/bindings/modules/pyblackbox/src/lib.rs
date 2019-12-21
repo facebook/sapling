@@ -9,7 +9,7 @@
 
 use blackbox::{self, event::Event, init, log, serde_json, BlackboxOptions, SessionId, ToValue};
 use cpython::*;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 use std::ops::Deref;
 

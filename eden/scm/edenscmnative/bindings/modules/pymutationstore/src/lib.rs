@@ -12,7 +12,7 @@ use std::{cell::RefCell, io::Cursor};
 use anyhow::Error;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use thiserror::Error;
 
 use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore, Repair};

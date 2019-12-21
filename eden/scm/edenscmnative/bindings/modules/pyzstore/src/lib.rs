@@ -10,7 +10,7 @@
 use ::zstore::{Id20, Repair, Zstore};
 use cpython::*;
 use cpython_ext::Bytes;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use std::cell::RefCell;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

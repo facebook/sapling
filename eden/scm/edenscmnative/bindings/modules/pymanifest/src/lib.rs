@@ -13,8 +13,8 @@ use anyhow::{format_err, Error};
 use bytes::Bytes;
 use cpython::*;
 
+use cpython_ext::ResultPyErrExt;
 use cpython_ext::{pyset_add, pyset_new};
-use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
 use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
 use manifest_tree::TreeManifest;

@@ -10,7 +10,6 @@ python3 = []
 
 [dependencies]
 cpython-ext = { path = "../../../../lib/cpython-ext" }
-cpython-failure = { path = "../../../../lib/cpython-failure" }
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
 lazy_static = "1"
 mincode = { path = "../../../../lib/mincode" }

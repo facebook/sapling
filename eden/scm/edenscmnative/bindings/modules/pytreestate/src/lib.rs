@@ -34,7 +34,7 @@ use ::treestate::{
     treedirstate::TreeDirstate,
     treestate::TreeState,
 };
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 
 type Result<T, E = Error> = std::result::Result<T, E>;

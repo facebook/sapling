@@ -20,7 +20,7 @@ use cpython::*;
 use parking_lot::RwLock;
 
 use cpython_ext::PyErr;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},

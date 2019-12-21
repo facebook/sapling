@@ -8,8 +8,8 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
+use cpython_ext::ResultPyErrExt;
 use cpython_ext::{allocate_pybytes, vec_to_pyobj, SimplePyBuf};
-use cpython_failure::ResultPyErrExt;
 use lz4_pyframe::{compress, compresshc, decompress_into, decompress_size};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

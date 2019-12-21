@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
-cpython-failure = { path = "../../../../lib/cpython-failure" }
+cpython-ext = { path = "../../../../lib/cpython-ext" }
 encoding = { path = "../../../../lib/encoding" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }

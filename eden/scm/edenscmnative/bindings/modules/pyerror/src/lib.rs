@@ -6,7 +6,7 @@
  */
 
 use cpython::*;
-use cpython_ext::failure as error;
+use cpython_ext::error;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "error"].join(".");

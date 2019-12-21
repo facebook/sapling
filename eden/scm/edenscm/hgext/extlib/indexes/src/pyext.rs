@@ -6,11 +6,11 @@
  */
 
 use crate::nodemap::NodeRevMap;
-use cpython::{exc, PyBytes, PyObject, PyResult};
+use cpython::{PyBytes, PyObject, PyResult};
 use std::slice;
 
+use cpython_ext::ResultPyErrExt;
 use cpython_ext::SimplePyBuf;
-use cpython_failure::ResultPyErrExt;
 
 py_module_initializer!(indexes, initindexes, PyInit_indexes, |py, m| {
     m.add_class::<nodemap>(py)?;

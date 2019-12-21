@@ -10,7 +10,7 @@
 use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
 use cpython::*;
 use cpython_ext::Bytes;
-use cpython_failure::ResultPyErrExt;
+use cpython_ext::ResultPyErrExt;
 use std::cell::RefCell;
 use std::time::SystemTime;
 
