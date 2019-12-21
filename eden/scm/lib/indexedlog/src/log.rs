@@ -159,6 +159,11 @@ pub enum IndexOutput {
     /// Use this if the index key is not in the entry. For example, if the entry
     /// is compressed.
     Owned(Box<[u8]>),
+
+    /// Remove all values associated with the key in the index.
+    ///
+    /// This only affects the index. The entry is not removed in the log.
+    Remove(Box<[u8]>),
 }
 
 /// What checksum function to use for an entry.
@@ -1141,6 +1146,9 @@ impl Log {
                         let key = InsertKey::Embed(&key);
                         index.insert_advanced(key, InsertValue::Prepend(offset))?;
                     }
+                    IndexOutput::Remove(key) => {
+                        index.remove(key)?;
+                    }
                 }
             }
         }
@@ -1200,6 +1208,9 @@ impl Log {
                     IndexOutput::Owned(key) => {
                         let key = InsertKey::Embed(&key);
                         index.insert_advanced(key, InsertValue::Prepend(offset))?;
+                    }
+                    IndexOutput::Remove(key) => {
+                        index.remove(key)?;
                     }
                 }
             }
@@ -2296,6 +2307,11 @@ impl IndexOutput {
                     })?,
             ),
             IndexOutput::Owned(key) => Cow::Owned(key.into_vec()),
+            IndexOutput::Remove(_) => {
+                return Err(crate::Error::programming(
+                    "into_cow does not support Remove",
+                ))
+            }
         })
     }
 }
@@ -2539,14 +2555,32 @@ mod tests {
     fn get_index_defs(lag_threshold: u64) -> Vec<IndexDef> {
         // Two index functions. First takes every 2 bytes as references. The second takes every 3
         // bytes as owned slices.
+        // Keys starting with '-' are considered as "deletion" requests.
         let index_func0 = |data: &[u8]| {
-            (0..(data.len().max(1) - 1))
-                .map(|i| IndexOutput::Reference(i as u64..i as u64 + 2))
+            let is_removal = data.first() == Some(&b'-');
+            let start = if is_removal { 1 } else { 0 };
+            (start..(data.len().max(1) - 1))
+                .map(|i| {
+                    if is_removal {
+                        IndexOutput::Remove(data[i..i + 2].to_vec().into_boxed_slice())
+                    } else {
+                        IndexOutput::Reference(i as u64..i as u64 + 2)
+                    }
+                })
                 .collect()
         };
         let index_func1 = |data: &[u8]| {
-            (0..(data.len().max(2) - 2))
-                .map(|i| IndexOutput::Owned(data[i..i + 3].to_vec().into_boxed_slice()))
+            let is_removal = data.first() == Some(&b'-');
+            let start = if is_removal { 1 } else { 0 };
+            (start..(data.len().max(2) - 2))
+                .map(|i| {
+                    let bytes = data[i..i + 3].to_vec().into_boxed_slice();
+                    if is_removal {
+                        IndexOutput::Remove(bytes)
+                    } else {
+                        IndexOutput::Owned(bytes)
+                    }
+                })
                 .collect()
         };
         vec![
@@ -2589,6 +2623,21 @@ mod tests {
                 log.lookup(1, b"345").unwrap().into_vec().unwrap(),
                 [b"3456", b"2345"]
             );
+
+            // Delete keys.
+            for bytes in entries.iter() {
+                let mut bytes = bytes.to_vec();
+                bytes.insert(0, b'-');
+                log.append(&bytes).unwrap();
+                if bytes.is_empty() {
+                    log.sync().expect("flush");
+                    log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
+                }
+            }
+            for key in [b"34", b"56", b"78"].iter() {
+                assert!(log.lookup(0, key).unwrap().into_vec().unwrap().is_empty());
+            }
+            assert_eq!(log.lookup(1, b"345").unwrap().count(), 0);
         }
     }
 
