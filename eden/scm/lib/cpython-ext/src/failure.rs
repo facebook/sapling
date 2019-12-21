@@ -8,7 +8,9 @@
 //! Integrate cpython with anyhow
 
 use anyhow::{Error, Result};
-use cpython::{ObjectProtocol, PyClone, PyResult, Python, PythonObjectWithTypeObject};
+use cpython::{
+    exc, py_exception, ObjectProtocol, PyClone, PyResult, Python, PythonObjectWithTypeObject,
+};
 use std::fmt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` by specifying a
@@ -68,14 +70,28 @@ pub trait FallibleExt<T> {
     fn into_fallible(self) -> Result<T>;
 }
 
+py_exception!(error, PyIndexedLogError);
+
 impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
     fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T> {
         self.map_err(|e| {
-            let e = e.into();
-            if let Some(e) = e.downcast_ref::<PyErr>() {
-                e.inner.clone_ref(py)
-            } else {
-                cpython::PyErr::new::<PE, _>(py, e.to_string())
+            let e: anyhow::Error = e.into();
+            let mut e = &e;
+            loop {
+                if let Some(e) = e.downcast_ref::<PyErr>() {
+                    break e.inner.clone_ref(py);
+                } else if let Some(inner) = e.downcast_ref::<anyhow::Error>() {
+                    e = inner;
+                } else if let Some(e) = e.downcast_ref::<indexedlog::Error>() {
+                    break cpython::PyErr::new::<PyIndexedLogError, _>(py, e.to_string());
+                } else if let Some(e) = e.downcast_ref::<std::io::Error>() {
+                    break cpython::PyErr::new::<exc::IOError, _>(
+                        py,
+                        (e.raw_os_error(), e.to_string()),
+                    );
+                } else {
+                    break cpython::PyErr::new::<PE, _>(py, e.to_string());
+                }
             }
         })
     }
