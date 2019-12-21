@@ -274,6 +274,10 @@ impl Offset {
     fn is_dirty(self) -> bool {
         self.0 >= DIRTY_OFFSET
     }
+
+    fn null() -> Self {
+        Self(0)
+    }
 }
 
 // Common methods shared by typed offset structs.
@@ -2399,6 +2403,18 @@ impl Index {
             .context(|| format!("  Index.path = {:?}", self.path))
     }
 
+    /// Remove all values associated with the given key.
+    pub fn remove(&mut self, key: impl AsRef<[u8]>) -> crate::Result<()> {
+        // NOTE: The implementation detail does not remove radix entries to
+        // reclaim space or improve lookup performance. For example, inserting
+        // "abcde" to an empty index, following by deleting it will still
+        // require O(5) jumps looking up "abcde".
+        let key = key.as_ref();
+        self.insert_advanced(InsertKey::Embed(key), InsertValue::Tombstone)
+            .context(|| format!("in Index::remove(key={:?})", key))
+            .context(|| format!("  Index.path = {:?}", self.path))
+    }
+
     /// Update the linked list for a given key.
     ///
     /// If `link` is None, behave like `insert`. Otherwise, ignore the existing
@@ -2445,12 +2461,15 @@ impl Index {
 
                     match iter.next() {
                         None => {
+                            // "key" is shorter than existing ones. No need to create a new key.
+                            // For example, insert "a", when root.radix is {'a': {'b': { ... }}}.
                             let old_link_offset = radix.link_offset(self)?;
                             let new_link_offset = match value {
                                 InsertValue::Prepend(value) => old_link_offset.create(self, value),
                                 InsertValue::PrependReplace(value, link_offset) => {
                                     link_offset.create(self, value)
                                 }
+                                InsertValue::Tombstone => LinkOffset::default(),
                             };
                             radix.set_link(self, new_link_offset);
                             return Ok(());
@@ -2459,12 +2478,18 @@ impl Index {
                             let next_offset = radix.child(self, x)?;
                             if next_offset.is_null() {
                                 // "key" is longer than existing ones. Create key and leaf entries.
+                                // For example, insert "abcd", when root.radix is {'a': {}}.
                                 let new_link_offset = match value {
                                     InsertValue::Prepend(value) => {
                                         LinkOffset::default().create(self, value)
                                     }
                                     InsertValue::PrependReplace(value, link_offset) => {
                                         link_offset.create(self, value)
+                                    }
+                                    InsertValue::Tombstone => {
+                                        // No need to create a key.
+                                        radix.set_child(self, x, Offset::null());
+                                        return Ok(());
                                     }
                                 };
                                 let key_offset = self.create_key(key, key_buf_offset);
@@ -2491,17 +2516,23 @@ impl Index {
                         (detached_key, link_offset)
                     };
                     if old_key == key.as_ref() {
-                        // Key matched. Need to copy leaf entry.
+                        // Key matched. Need to copy leaf entry for modification, except for
+                        // deletion.
                         let new_link_offset = match value {
                             InsertValue::Prepend(value) => old_link_offset.create(self, value),
                             InsertValue::PrependReplace(value, link_offset) => {
                                 link_offset.create(self, value)
                             }
+                            InsertValue::Tombstone => {
+                                // No need to copy the leaf entry.
+                                last_radix.set_child(self, last_child, Offset::null());
+                                return Ok(());
+                            }
                         };
                         let new_leaf_offset = leaf.set_link(self, new_link_offset)?;
                         last_radix.set_child(self, last_child, new_leaf_offset.into());
                     } else {
-                        // Key mismatch. Do a leaf split.
+                        // Key mismatch. Do a leaf split unless it's a deletion.
                         let new_link_offset = match value {
                             InsertValue::Prepend(value) => {
                                 LinkOffset::default().create(self, value)
@@ -2509,6 +2540,7 @@ impl Index {
                             InsertValue::PrependReplace(value, link_offset) => {
                                 link_offset.create(self, value)
                             }
+                            InsertValue::Tombstone => return Ok(()),
                         };
                         self.split_leaf(
                             leaf,
@@ -2739,6 +2771,9 @@ pub enum InsertValue {
 
     /// Replace the linked list. Then insert as a head.
     PrependReplace(u64, LinkOffset),
+
+    /// Effectively delete associated values for the specified key.
+    Tombstone,
 }
 
 //// Debug Formatter
@@ -2953,6 +2988,10 @@ mod tests {
         opts
     }
 
+    fn in_memory_index() -> Index {
+        OpenOptions::new().create_in_memory().unwrap()
+    }
+
     #[test]
     fn test_scan_prefix() {
         let dir = tempdir().unwrap();
@@ -2994,6 +3033,48 @@ mod tests {
         assert_eq!(index.scan_prefix_hex(b"30").unwrap().count(), keys.len());
         assert_eq!(index.scan_prefix_hex(b"3").unwrap().count(), keys.len());
         assert_eq!(index.scan_prefix_hex(b"31").unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_remove() {
+        let dir = tempdir().unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+
+        // Removing keys on an empty index should not create new entries.
+        let text = format!("{:?}", &index);
+        index.remove("").unwrap();
+        index.remove("a").unwrap();
+        assert_eq!(text, format!("{:?}", &index));
+
+        index.insert(b"abc", 42).unwrap();
+        index.insert(b"abc", 43).unwrap();
+        index.insert(b"abxyz", 44).unwrap();
+        index.flush().unwrap();
+
+        // Remove known keys.
+        assert_eq!(index.range(..).unwrap().count(), 2);
+        index.remove(b"abxyz").unwrap();
+        assert_eq!(index.range(..).unwrap().count(), 1);
+        index.remove(b"abc").unwrap();
+        assert_eq!(index.range(..).unwrap().count(), 0);
+
+        // Since all entries are "dirty" in memory, removing keys should not create new entries.
+        let text = format!("{:?}", &index);
+        index.remove("").unwrap();
+        index.remove("a").unwrap();
+        index.remove("ab").unwrap();
+        index.remove("abc").unwrap();
+        index.remove("abcd").unwrap();
+        index.remove("abcde").unwrap();
+        index.remove("abcx").unwrap();
+        index.remove("abcxyz").unwrap();
+        index.remove("abcxyzz").unwrap();
+        assert_eq!(text, format!("{:?}", &index));
+
+        // Removal state can be saved to disk.
+        index.flush().unwrap();
+        let index = open_opts().open(dir.path().join("a")).expect("open");
+        assert_eq!(index.range(..).unwrap().count(), 0);
     }
 
     #[test]
@@ -3799,5 +3880,27 @@ mod tests {
             test_range_against_btreeset(tree);
             true
         }
+
+        fn test_deletion(keys_deleted: Vec<(Vec<u8>, bool)>) -> bool {
+            // Compare Index with BTreeSet
+            let mut set = BTreeSet::<Vec<u8>>::new();
+            let mut index = in_memory_index();
+            keys_deleted.into_iter().all(|(key, deleted)| {
+                if deleted {
+                    set.remove(&key);
+                    index.remove(&key).unwrap();
+                } else {
+                    set.insert(key.clone());
+                    index.insert(&key, 1).unwrap();
+                }
+                index
+                    .range(..)
+                    .unwrap()
+                    .map(|s| s.unwrap().0.as_ref().to_vec())
+                    .collect::<Vec<_>>()
+                    == set.iter().cloned().collect::<Vec<_>>()
+            })
+        }
+
     }
 }
