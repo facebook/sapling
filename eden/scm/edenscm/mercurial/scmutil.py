@@ -192,7 +192,7 @@ def callcatch(ui, func):
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
         return inst.exitcode
-    except error.IndexedLogError as inst:
+    except (error.IndexedLogError, error.MetaLogError) as inst:
         ui.warn(_("internal storage is corrupted\n"), error=_("abort"))
         ui.warn(_("  %s\n\n") % str(inst).replace("\n", "\n  "))
         ui.warn(_("(this usually happens after hard reboot or system crash)\n"))

@@ -7,10 +7,11 @@
 
 //! Integrate cpython with anyhow
 
-use anyhow::{Error, Result};
-use cpython::{
-    exc, py_exception, FromPyObject, ObjectProtocol, PyClone, PyList, PyModule, PyResult, Python,
-};
+pub use anyhow::{Error, Result};
+use cpython::{exc, FromPyObject, ObjectProtocol, PyClone, PyList, PyModule, PyResult, Python};
+use lazy_static::lazy_static;
+use parking_lot::Mutex;
+use std::collections::BTreeMap;
 use std::fmt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
@@ -70,8 +71,22 @@ pub trait AnyhowResultExt<T> {
     fn into_anyhow_result(self) -> Result<T>;
 }
 
-py_exception!(error, PyIndexedLogError);
-py_exception!(error, PyRustError);
+pub type AnyhowErrorIntoPyErrFunc = fn(Python, &anyhow::Error) -> Option<cpython::PyErr>;
+
+lazy_static! {
+    static ref INTO_PYERR_FUNC_LIST: Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>> =
+        Default::default();
+}
+
+/// Register a function to convert [`anyhow::Error`] to [`PyErr`].
+/// For multiple functions, those with smaller name are executed first.
+/// Registering a function with an existing name will override that function.
+///
+/// This affects users of `map_pyerr`.
+pub fn register(name: &'static str, func: AnyhowErrorIntoPyErrFunc) {
+    let mut list = INTO_PYERR_FUNC_LIST.lock();
+    list.insert(name, func);
+}
 
 impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
     fn map_pyerr(self, py: Python<'_>) -> PyResult<T> {
@@ -80,19 +95,25 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
             let mut e = &e;
             loop {
                 if let Some(e) = e.downcast_ref::<PyErr>() {
-                    break e.inner.clone_ref(py);
+                    return e.inner.clone_ref(py);
                 } else if let Some(inner) = e.downcast_ref::<anyhow::Error>() {
                     e = inner;
-                } else if let Some(e) = e.downcast_ref::<indexedlog::Error>() {
-                    break cpython::PyErr::new::<PyIndexedLogError, _>(py, e.to_string());
+                    continue;
                 } else if let Some(e) = e.downcast_ref::<std::io::Error>() {
-                    break cpython::PyErr::new::<exc::IOError, _>(
+                    return cpython::PyErr::new::<exc::IOError, _>(
                         py,
                         (e.raw_os_error(), e.to_string()),
                     );
-                } else {
-                    break cpython::PyErr::new::<PyRustError, _>(py, e.to_string());
                 }
+
+                for func in INTO_PYERR_FUNC_LIST.lock().values() {
+                    if let Some(err) = (func)(py, e) {
+                        return err;
+                    }
+                }
+                // Nothing matches. Fallback to RuntimeError.
+                // Hopefully this is not really used.
+                return cpython::PyErr::new::<exc::RuntimeError, _>(py, e.to_string());
             }
         })
     }

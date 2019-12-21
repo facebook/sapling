@@ -6,3 +6,6 @@ edition = "2018"
 [dependencies]
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
+indexedlog = { path = "../../../../lib/indexedlog" }
+metalog = { path = "../../../../lib/metalog" }
+treestate = { path = "../../../../lib/treestate" }

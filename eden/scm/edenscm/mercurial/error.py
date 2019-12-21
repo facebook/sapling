@@ -26,6 +26,7 @@ from . import pycompat
 
 
 IndexedLogError = bindings.error.IndexedLogError
+MetaLogError = bindings.error.MetaLogError
 RustError = bindings.error.RustError
 
 
