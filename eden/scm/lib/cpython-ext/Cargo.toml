@@ -11,7 +11,7 @@ python3 = []
 [dependencies]
 anyhow = "1.0.20"
 lazy_static = "1"
-parking_lot = "0.10"
+parking_lot = "0.9"
 serde = "1"
 
 [dependencies.cpython]
