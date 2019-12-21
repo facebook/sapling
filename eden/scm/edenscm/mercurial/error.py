@@ -18,8 +18,14 @@ imports.
 
 from __future__ import absolute_import
 
+# pyre-fixme[21]: Could not find `bindings`.
+import bindings
+
 # Do not import anything but pycompat here, please
 from . import pycompat
+
+
+IndexedLogError = bindings.error.IndexedLogError
 
 
 def _tobytes(exc):

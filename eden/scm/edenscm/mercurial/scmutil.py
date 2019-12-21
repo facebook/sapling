@@ -192,6 +192,11 @@ def callcatch(ui, func):
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
         return inst.exitcode
+    except error.IndexedLogError as inst:
+        ui.warn(_("internal storage is corrupted\n"), error=_("abort"))
+        ui.warn(_("  %s\n\n") % str(inst).replace("\n", "\n  "))
+        ui.warn(_("(this usually happens after hard reboot or system crash)\n"))
+        ui.warn(_("(try '@prog@ doctor' to attempt to fix it)\n"))
     except ImportError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
         m = str(inst).split()[-1]
@@ -922,7 +927,7 @@ def _interestingfiles(repo, matcher):
 
     This is different from dirstate.status because it doesn't care about
     whether files are modified or clean."""
-    added, unknown, deleted, removed, forgotten = [], [], [], [], []
+    removed, forgotten = [], []
     audit_path = pathutil.pathauditor(repo.root, cached=True)
 
     dirstate = repo.dirstate
@@ -931,10 +936,7 @@ def _interestingfiles(repo, matcher):
 
     unknown = [file for file in status.unknown if audit_path.check(file)]
 
-    removed = []
-    forgotten = []
     for file in status.removed:
-        dstate = dirstate[file]
         if exists(file):
             if dirstate.normalize(file) == file:
                 forgotten.append(file)
