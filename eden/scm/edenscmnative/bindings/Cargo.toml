@@ -20,6 +20,7 @@ pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
 pyedenapi = { path = "modules/pyedenapi" }
+pyerror = { path = "modules/pyerror" }
 pylz4 = { path = "modules/pylz4" }
 pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }

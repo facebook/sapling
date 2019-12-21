@@ -26,6 +26,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     m.add(py, "configparser", pyconfigparser::init_module(py, &name)?)?;
     m.add(py, "dag", pydag::init_module(py, &name)?)?;
     m.add(py, "edenapi", pyedenapi::init_module(py, &name)?)?;
+    m.add(py, "error", pyerror::init_module(py, &name)?)?;
     m.add(py, "lz4", pylz4::init_module(py, &name)?)?;
     m.add(py, "manifest", pymanifest::init_module(py, &name)?)?;
     m.add(py, "metalog", pymetalog::init_module(py, &name)?)?;
