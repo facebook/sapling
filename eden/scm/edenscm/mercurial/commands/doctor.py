@@ -12,13 +12,14 @@ import typing
 # pyre-fixme[21]
 from bindings import metalog, mutationstore, nodemap, revisionstore, tracing
 
-from .. import progress, util
+from .. import error, hg, progress, util, vfs as vfsmod
 from ..i18n import _
 from .cmdtable import command
 
 
-@command("doctor")
-def doctor(ui, repo, **opts):
+# This command has to be norepo since loading a repo might just fail.
+@command("doctor", norepo=True)
+def doctor(ui, **opts):
     # type: (...) -> None
     """attempt to check and fix issues
 
@@ -26,19 +27,33 @@ def doctor(ui, repo, **opts):
     issues.
     """
 
-    if repo.ui.configbool("mutation", "enabled"):
-        repairsvfs(repo, "mutation", mutationstore.mutationstore)
+    from .. import dispatch  # avoid cycle
 
-    if repo.svfs.isdir("metalog"):
-        repairsvfs(repo, "metalog", metalog.metalog)
+    # Minimal logic to get key repo objects without actually constructing
+    # a real repo object.
+    repopath, ui = dispatch._getlocal(ui, "")
+    if not repopath:
+        raise error.Abort(_("doctor only works inside a repo"))
+    repohgpath = os.path.join(repopath, ".hg")
+    vfs = vfsmod.vfs(repohgpath)
+    sharedhgpath = vfs.tryread("sharedpath") or repohgpath
+    svfs = vfsmod.vfs(os.path.join(sharedhgpath, "store"))
 
-    if repo.svfs.isdir("allheads"):
-        repairsvfs(repo, "allheads", nodemap.nodeset)
+    if ui.configbool("mutation", "enabled"):
+        repairsvfs(ui, svfs, "mutation", mutationstore.mutationstore)
 
+    if svfs.isdir("metalog"):
+        repairsvfs(ui, svfs, "metalog", metalog.metalog)
+
+    if svfs.isdir("allheads"):
+        repairsvfs(ui, svfs, "allheads", nodemap.nodeset)
+
+    # Construct the real repo object as shallowutil requires it.
+    repo = hg.repository(ui, repopath)
     if "remotefilelog" in repo.requirements:
         from ...hgext.remotefilelog import shallowutil
 
-        if repo.ui.configbool("remotefilelog", "indexedlogdatastore"):
+        if ui.configbool("remotefilelog", "indexedlogdatastore"):
             path = shallowutil.getindexedlogdatastorepath(repo)
             repair(
                 ui,
@@ -47,7 +62,7 @@ def doctor(ui, repo, **opts):
                 revisionstore.indexedlogdatastore.repair,
             )
 
-        if repo.ui.configbool("remotefilelog", "indexedloghistorystore"):
+        if ui.configbool("remotefilelog", "indexedloghistorystore"):
             path = shallowutil.getindexedloghistorystorepath(repo)
             repair(
                 ui,
@@ -57,14 +72,14 @@ def doctor(ui, repo, **opts):
             )
 
 
-def repairsvfs(repo, name, fixobj):
-    # type: (..., str, ...) -> None
+def repairsvfs(ui, svfs, name, fixobj):
+    # type: (..., ..., str, ...) -> None
     """Attempt to repair path in repo.svfs"""
-    repair(repo.ui, name, repo.svfs.join(name), fixobj.repair)
+    repair(ui, name, svfs.join(name), fixobj.repair)
 
 
 def repair(ui, name, path, fixfunc):
-    # type: (..., str, str) -> None
+    # type: (..., str, str, ...) -> None
     """Attempt to repair path by using fixfunc"""
     with progress.spinner(ui, "checking %s" % name):
         oldmtime = mtime(path)
