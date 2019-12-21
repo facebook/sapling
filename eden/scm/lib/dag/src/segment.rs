@@ -23,6 +23,7 @@ use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use indexmap::set::IndexSet;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
@@ -80,22 +81,51 @@ impl Dag {
     const INDEX_PARENT: usize = 1;
     const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
+    /// Magic bytes in `Log` that indicates "remove all non-master segments".
+    /// A Segment entry has at least KEY_LEVEL_HEAD_LEN (9) bytes so it does
+    /// not conflict with this.
+    const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
+
     /// Open [`Dag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let log = log::OpenOptions::new()
             .create(true)
-            .index("level-head", |_| {
+            .index("level-head", |data| {
                 // (level, high)
-                vec![log::IndexOutput::Reference(
-                    Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
-                )]
+                assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < Segment::OFFSET_DELTA);
+                assert!(Group::BITS == 8);
+                if data.len() < Segment::OFFSET_DELTA {
+                    if data == Self::MAGIC_CLEAR_NON_MASTER {
+                        let max_level = 255;
+                        (0..=max_level)
+                            .map(|level| {
+                                log::IndexOutput::RemovePrefix(Box::new([
+                                    level,
+                                    Group::NON_MASTER.0 as u8,
+                                ]))
+                            })
+                            .collect()
+                    } else {
+                        panic!("bug: invalid segment {:?}", &data);
+                    }
+                } else {
+                    vec![log::IndexOutput::Reference(
+                        Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
+                    )]
+                }
             })
             .index("parent", |data| {
                 // parent -> child for flat segments
                 let seg = Segment(data);
                 let mut result = Vec::new();
                 if seg.level().ok() == Some(0) {
+                    // This should never pass since MAGIC_CLEAR_NON_MASTER[0] != 0.
+                    assert_ne!(
+                        data,
+                        Self::MAGIC_CLEAR_NON_MASTER,
+                        "bug: MAGIC_CLEAR_NON_MASTER conflicts with data"
+                    );
                     if let Ok(parents) = seg.parents() {
                         for id in parents {
                             let mut bytes = Vec::with_capacity(8);
@@ -561,6 +591,21 @@ impl Dag {
         self.log.sync()?;
         self.max_level = Self::max_level_from_log(&self.log)?;
         self.build_all_high_level_segments(false)?;
+        Ok(())
+    }
+}
+
+// Remove data.
+impl Dag {
+    /// Mark non-master ids as "removed".
+    pub fn remove_non_master(&mut self) -> Result<()> {
+        self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
+        for level in 0..=self.max_level {
+            ensure!(
+                self.next_free_id(level, Group::NON_MASTER)? == Group::NON_MASTER.min_id(),
+                "bug: remove_non_master did not take effect"
+            );
+        }
         Ok(())
     }
 }
@@ -1270,6 +1315,11 @@ impl SyncableDag {
         }
         let _lock_file = self.lock_file; // Make sure lock is not dropped until here.
         Ok(())
+    }
+
+    /// Mark non-master segments as "removed".
+    pub fn remove_non_master(&mut self) -> Result<()> {
+        self.dag.remove_non_master()
     }
 }
 

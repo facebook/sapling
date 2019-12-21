@@ -45,8 +45,8 @@ impl Group {
 
     pub(crate) const COUNT: usize = Self::ALL.len();
 
-    // Reserved 1 bit so u64 can be casted to i64 safely.
-    const BITS: u32 = 65 - ((Self::COUNT - 1) as u64).leading_zeros();
+    // 1 byte for Group so it's easier to remove everything in a group.
+    pub(crate) const BITS: u32 = 8;
 
     /// The first [`Id`] in this group.
     pub fn min_id(self) -> Id {

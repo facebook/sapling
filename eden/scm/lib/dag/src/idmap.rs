@@ -26,6 +26,7 @@ pub struct IdMap {
     log: log::Log,
     path: PathBuf,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
+    pub(crate) need_rebuild_non_master: bool,
 }
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
@@ -42,6 +43,11 @@ impl IdMap {
     const INDEX_ID_TO_SLICE: usize = 0;
     const INDEX_SLICE_TO_ID: usize = 1;
 
+    /// Magic bytes in `Log` that indicates "remove all non-master id->slice
+    /// mappings". A valid entry has at least 8 bytes so does not conflict
+    /// with this.
+    const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
+
     /// Create an [`IdMap`] backed by the given directory.
     ///
     /// By default, only read-only operations are allowed. For writing
@@ -50,9 +56,27 @@ impl IdMap {
         let path = path.as_ref();
         let log = log::OpenOptions::new()
             .create(true)
-            .index("id", |_| vec![log::IndexOutput::Reference(0..8)])
+            .index("id", |data| {
+                assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < 8);
+                assert!(Group::BITS == 8);
+                if data.len() < 8 {
+                    if data == Self::MAGIC_CLEAR_NON_MASTER {
+                        vec![log::IndexOutput::RemovePrefix(Box::new([
+                            Group::NON_MASTER.0 as u8,
+                        ]))]
+                    } else {
+                        panic!("bug: invalid segment {:?}", &data);
+                    }
+                } else {
+                    vec![log::IndexOutput::Reference(0..8)]
+                }
+            })
             .index("slice", |data| {
-                vec![log::IndexOutput::Reference(8..data.len() as u64)]
+                if data.len() >= 8 {
+                    vec![log::IndexOutput::Reference(8..data.len() as u64)]
+                } else {
+                    Vec::new()
+                }
             })
             .flush_filter(Some(|_, _| {
                 panic!("programming error: idmap changed by other process")
@@ -63,6 +87,7 @@ impl IdMap {
             log,
             path,
             cached_next_free_ids: Default::default(),
+            need_rebuild_non_master: false,
         })
     }
 
@@ -132,7 +157,17 @@ impl IdMap {
         match key {
             Some(Ok(mut entry)) => {
                 ensure!(entry.len() >= 8, "index key should have 8 bytes at least");
-                Ok(Some(Id(entry.read_u64::<BigEndian>().unwrap())))
+                let id = Id(entry.read_u64::<BigEndian>().unwrap());
+                // Double check. Id should <= next_free_id. This is useful for 'remove_non_master'
+                // and re-insert ids.
+                // This is because 'remove_non_master' can only (efficiently) affect the id->slice
+                // index, not the slice->id index.
+                let group = id.group();
+                if group != Group::MASTER && self.next_free_id(group)? <= id {
+                    Ok(None)
+                } else {
+                    Ok(Some(id))
+                }
             }
             None => Ok(None),
             Some(Err(err)) => Err(err.into()),
@@ -193,6 +228,10 @@ impl IdMap {
                     slice
                 );
             }
+            // Mark "need_rebuild_non_master". This prevents "sync" until
+            // the callsite uses "remove_non_master" to remove and re-insert
+            // non-master ids.
+            self.need_rebuild_non_master = true;
         }
 
         let mut data = Vec::with_capacity(8 + slice.len());
@@ -381,9 +420,29 @@ impl IdMap {
     }
 }
 
+// Remove data.
+impl IdMap {
+    /// Mark non-master ids as "removed".
+    pub fn remove_non_master(&mut self) -> Result<()> {
+        self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
+        self.need_rebuild_non_master = false;
+        // Invalidate the next free id cache.
+        self.cached_next_free_ids = Default::default();
+        ensure!(
+            self.next_free_id(Group::NON_MASTER)? == Group::NON_MASTER.min_id(),
+            "bug: remove_non_master did not take effect"
+        );
+        Ok(())
+    }
+}
+
 impl<'a> SyncableIdMap<'a> {
     /// Write pending changes to disk.
     pub fn sync(&mut self) -> Result<()> {
+        ensure!(
+            !self.need_rebuild_non_master,
+            "bug: cannot sync with re-assigned ids unresolved"
+        );
         self.map.log.sync()?;
         Ok(())
     }
@@ -489,6 +548,8 @@ mod tests {
             assert_eq!(map.find_id_by_slice(b"jkl").unwrap().unwrap(), id);
             assert_eq!(map.find_id_by_slice(b"jkl2").unwrap().unwrap().0, 15);
             assert!(map.find_id_by_slice(b"jkl3").unwrap().is_none());
+            // HACK: allow sync with re-assigned ids.
+            map.need_rebuild_non_master = false;
             map.sync().unwrap();
         }
 
