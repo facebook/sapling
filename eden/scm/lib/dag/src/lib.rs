@@ -13,12 +13,14 @@
 
 pub mod id;
 pub mod idmap;
+pub mod nameddag;
 pub mod protocol;
 pub mod segment;
 pub mod spanset;
 
 pub use id::{Group, Id};
 pub use idmap::IdMap;
+pub use nameddag::NamedDag;
 pub use segment::Dag;
 
 #[cfg(test)]
