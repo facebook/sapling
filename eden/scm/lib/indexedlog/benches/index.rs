@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use indexedlog::index::{InsertKey, OpenOptions};
+use indexedlog::index::{InsertKey, InsertValue, OpenOptions};
 use minibench::{bench, elapsed, measure, Measure};
 use rand::{ChaChaRng, Rng};
 use std::sync::Arc;
@@ -178,7 +178,7 @@ fn main() {
             .expect("open");
         for i in 0..N {
             let ext_key = InsertKey::Reference((i as u64 * 20, 20));
-            idx.insert_advanced(ext_key, i as u64, None)
+            idx.insert_advanced(ext_key, InsertValue::Prepend(i as u64))
                 .expect("insert");
         }
         measure::Bytes::measure(|| idx.flush().unwrap())

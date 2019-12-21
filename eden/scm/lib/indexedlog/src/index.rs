@@ -2394,7 +2394,7 @@ impl Index {
     /// That is, `get(key).values().first()` will return the newly inserted
     /// value.
     pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> crate::Result<()> {
-        self.insert_advanced(InsertKey::Embed(key.as_ref()), value.into(), None)
+        self.insert_advanced(InsertKey::Embed(key.as_ref()), InsertValue::Prepend(value))
             .context(|| format!("in Index::insert(key={:?}, value={})", key.as_ref(), value))
             .context(|| format!("  Index.path = {:?}", self.path))
     }
@@ -2409,12 +2409,7 @@ impl Index {
     /// details.
     ///
     /// This is a low-level API.
-    pub fn insert_advanced(
-        &mut self,
-        key: InsertKey,
-        value: u64,
-        link: Option<LinkOffset>,
-    ) -> crate::Result<()> {
+    pub fn insert_advanced(&mut self, key: InsertKey, value: InsertValue) -> crate::Result<()> {
         let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut step = 0;
         let (key, key_buf_offset) = match key {
@@ -2451,8 +2446,12 @@ impl Index {
                     match iter.next() {
                         None => {
                             let old_link_offset = radix.link_offset(self)?;
-                            let new_link_offset =
-                                link.unwrap_or(old_link_offset).create(self, value);
+                            let new_link_offset = match value {
+                                InsertValue::Prepend(value) => old_link_offset.create(self, value),
+                                InsertValue::PrependReplace(value, link_offset) => {
+                                    link_offset.create(self, value)
+                                }
+                            };
                             radix.set_link(self, new_link_offset);
                             return Ok(());
                         }
@@ -2460,11 +2459,17 @@ impl Index {
                             let next_offset = radix.child(self, x)?;
                             if next_offset.is_null() {
                                 // "key" is longer than existing ones. Create key and leaf entries.
-                                let link_offset =
-                                    link.unwrap_or(LinkOffset::default()).create(self, value);
+                                let new_link_offset = match value {
+                                    InsertValue::Prepend(value) => {
+                                        LinkOffset::default().create(self, value)
+                                    }
+                                    InsertValue::PrependReplace(value, link_offset) => {
+                                        link_offset.create(self, value)
+                                    }
+                                };
                                 let key_offset = self.create_key(key, key_buf_offset);
                                 let leaf_offset =
-                                    LeafOffset::create(self, link_offset, key_offset.into());
+                                    LeafOffset::create(self, new_link_offset, key_offset.into());
                                 radix.set_child(self, x, leaf_offset.into());
                                 return Ok(());
                             } else {
@@ -2475,7 +2480,7 @@ impl Index {
                     }
                 }
                 TypedOffset::Leaf(leaf) => {
-                    let (old_key, link_offset) = {
+                    let (old_key, old_link_offset) = {
                         let (old_key, link_offset) = leaf.key_and_link_offset(self)?;
                         // Detach "old_key" from "self".
                         // About safety: This is to avoid a memory copy / allocation.
@@ -2487,13 +2492,24 @@ impl Index {
                     };
                     if old_key == key.as_ref() {
                         // Key matched. Need to copy leaf entry.
-                        let new_link_offset = link.unwrap_or(link_offset).create(self, value);
+                        let new_link_offset = match value {
+                            InsertValue::Prepend(value) => old_link_offset.create(self, value),
+                            InsertValue::PrependReplace(value, link_offset) => {
+                                link_offset.create(self, value)
+                            }
+                        };
                         let new_leaf_offset = leaf.set_link(self, new_link_offset)?;
                         last_radix.set_child(self, last_child, new_leaf_offset.into());
                     } else {
                         // Key mismatch. Do a leaf split.
-                        let new_link_offset =
-                            link.unwrap_or(LinkOffset::default()).create(self, value);
+                        let new_link_offset = match value {
+                            InsertValue::Prepend(value) => {
+                                LinkOffset::default().create(self, value)
+                            }
+                            InsertValue::PrependReplace(value, link_offset) => {
+                                link_offset.create(self, value)
+                            }
+                        };
                         self.split_leaf(
                             leaf,
                             old_key,
@@ -2502,7 +2518,7 @@ impl Index {
                             step,
                             last_radix,
                             last_child,
-                            link_offset,
+                            old_link_offset,
                             new_link_offset,
                         )?;
                     }
@@ -2715,6 +2731,16 @@ impl Index {
     }
 }
 
+/// Specify value to insert. Used by `insert_advanced`.
+#[derive(Copy, Clone)]
+pub enum InsertValue {
+    /// Insert as a head of the existing linked list.
+    Prepend(u64),
+
+    /// Replace the linked list. Then insert as a head.
+    PrependReplace(u64, LinkOffset),
+}
+
 //// Debug Formatter
 
 impl Debug for Offset {
@@ -2918,6 +2944,8 @@ mod tests {
     use std::io::prelude::*;
     use tempfile::tempdir;
 
+    use super::InsertValue::PrependReplace;
+
     fn open_opts() -> OpenOptions {
         let mut opts = OpenOptions::new();
         // Use 1 as checksum chunk size to make sure checksum check covers necessary bytes.
@@ -2999,7 +3027,7 @@ mod tests {
 
         let link = index.get(&[0x12]).expect("get");
         index
-            .insert_advanced(InsertKey::Embed(&[0x34]), 99, link.into())
+            .insert_advanced(InsertKey::Embed(&[0x34]), PrependReplace(99, link))
             .expect("update");
         assert_eq!(
             format!("{:?}", index),
@@ -3047,7 +3075,7 @@ mod tests {
         // After 2nd flush. There are 2 roots.
         let link = index.get(&[0x12]).expect("get");
         index
-            .insert_advanced(InsertKey::Embed(&[0x34]), 99, link.into())
+            .insert_advanced(InsertKey::Embed(&[0x34]), PrependReplace(99, link))
             .expect("update");
         index.flush().expect("flush");
         assert_eq!(
@@ -3269,11 +3297,11 @@ mod tests {
             .open(dir.path().join("a"))
             .expect("open");
         index
-            .insert_advanced(InsertKey::Reference((1, 2)), 55, None)
+            .insert_advanced(InsertKey::Reference((1, 2)), InsertValue::Prepend(55))
             .expect("insert");
         index.flush().expect("flush");
         index
-            .insert_advanced(InsertKey::Reference((1, 3)), 77, None)
+            .insert_advanced(InsertKey::Reference((1, 3)), InsertValue::Prepend(77))
             .expect("insert");
         assert_eq!(
             format!("{:?}", index),
@@ -3305,29 +3333,29 @@ mod tests {
 
         // New entry. Should be inlined.
         index
-            .insert_advanced(InsertKey::Reference((1, 1)), 55, None)
+            .insert_advanced(InsertKey::Reference((1, 1)), InsertValue::Prepend(55))
             .unwrap();
         index.flush().expect("flush");
 
         // Independent leaf. Should also be inlined.
         index
-            .insert_advanced(InsertKey::Reference((2, 1)), 77, None)
+            .insert_advanced(InsertKey::Reference((2, 1)), InsertValue::Prepend(77))
             .unwrap();
         index.flush().expect("flush");
 
         // The link with 88 should refer to the inlined leaf 77.
         index
-            .insert_advanced(InsertKey::Reference((2, 1)), 88, None)
+            .insert_advanced(InsertKey::Reference((2, 1)), InsertValue::Prepend(88))
             .unwrap();
         index.flush().expect("flush");
 
         // Not inlined because dependent link was not written first.
         // (could be optimized in the future)
         index
-            .insert_advanced(InsertKey::Reference((3, 1)), 99, None)
+            .insert_advanced(InsertKey::Reference((3, 1)), InsertValue::Prepend(99))
             .unwrap();
         index
-            .insert_advanced(InsertKey::Reference((3, 1)), 100, None)
+            .insert_advanced(InsertKey::Reference((3, 1)), InsertValue::Prepend(100))
             .unwrap();
         index.flush().expect("flush");
 

@@ -35,7 +35,7 @@
 
 use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
-use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
+use crate::index::{self, Index, InsertKey, InsertValue, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
 use crate::repair::OpenOptionsRepair;
 use crate::utils::{self, atomic_write, mmap_empty, mmap_len, xxhash, xxhash32};
@@ -1135,11 +1135,11 @@ impl Log {
                         let start = range.start + data_offset;
                         let end = range.end + data_offset;
                         let key = InsertKey::Reference((start, end - start));
-                        index.insert_advanced(key, offset, None)?;
+                        index.insert_advanced(key, InsertValue::Prepend(offset))?;
                     }
                     IndexOutput::Owned(key) => {
                         let key = InsertKey::Embed(&key);
-                        index.insert_advanced(key, offset, None)?;
+                        index.insert_advanced(key, InsertValue::Prepend(offset))?;
                     }
                 }
             }
@@ -1195,11 +1195,11 @@ impl Log {
                         let end = range.end + entry_result.data_offset;
                         let key = InsertKey::Reference((start, end - start));
 
-                        index.insert_advanced(key, offset, None)?;
+                        index.insert_advanced(key, InsertValue::Prepend(offset))?;
                     }
                     IndexOutput::Owned(key) => {
                         let key = InsertKey::Embed(&key);
-                        index.insert_advanced(key, offset, None)?;
+                        index.insert_advanced(key, InsertValue::Prepend(offset))?;
                     }
                 }
             }
