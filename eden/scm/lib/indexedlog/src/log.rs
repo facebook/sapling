@@ -164,6 +164,11 @@ pub enum IndexOutput {
     ///
     /// This only affects the index. The entry is not removed in the log.
     Remove(Box<[u8]>),
+
+    /// Remove all values associated with all keys with the given prefix in the index.
+    ///
+    /// This only affects the index. The entry is not removed in the log.
+    RemovePrefix(Box<[u8]>),
 }
 
 /// What checksum function to use for an entry.
@@ -1149,6 +1154,9 @@ impl Log {
                     IndexOutput::Remove(key) => {
                         index.remove(key)?;
                     }
+                    IndexOutput::RemovePrefix(key) => {
+                        index.remove_prefix(key)?;
+                    }
                 }
             }
         }
@@ -1211,6 +1219,9 @@ impl Log {
                     }
                     IndexOutput::Remove(key) => {
                         index.remove(key)?;
+                    }
+                    IndexOutput::RemovePrefix(key) => {
+                        index.remove_prefix(key)?;
                     }
                 }
             }
@@ -2307,9 +2318,9 @@ impl IndexOutput {
                     })?,
             ),
             IndexOutput::Owned(key) => Cow::Owned(key.into_vec()),
-            IndexOutput::Remove(_) => {
+            IndexOutput::Remove(_) | IndexOutput::RemovePrefix(_) => {
                 return Err(crate::Error::programming(
-                    "into_cow does not support Remove",
+                    "into_cow does not support Remove or RemovePrefix",
                 ))
             }
         })
@@ -2556,7 +2567,13 @@ mod tests {
         // Two index functions. First takes every 2 bytes as references. The second takes every 3
         // bytes as owned slices.
         // Keys starting with '-' are considered as "deletion" requests.
+        // Keys starting with '=' are considered as "delete prefix" requests.
         let index_func0 = |data: &[u8]| {
+            if data.first() == Some(&b'=') {
+                return vec![IndexOutput::RemovePrefix(
+                    data[1..].to_vec().into_boxed_slice(),
+                )];
+            }
             let is_removal = data.first() == Some(&b'-');
             let start = if is_removal { 1 } else { 0 };
             (start..(data.len().max(1) - 1))
@@ -2570,6 +2587,11 @@ mod tests {
                 .collect()
         };
         let index_func1 = |data: &[u8]| {
+            if data.first() == Some(&b'=') {
+                return vec![IndexOutput::RemovePrefix(
+                    data[1..].to_vec().into_boxed_slice(),
+                )];
+            }
             let is_removal = data.first() == Some(&b'-');
             let start = if is_removal { 1 } else { 0 };
             (start..(data.len().max(2) - 2))
@@ -2598,7 +2620,7 @@ mod tests {
         for lag in [0u64, 20, 1000].iter().cloned() {
             let dir = tempdir().unwrap();
             let mut log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
-            let entries: [&[u8]; 6] = [b"1", b"", b"2345", b"", b"78", b"3456"];
+            let entries: [&[u8]; 7] = [b"1", b"", b"2345", b"", b"78", b"3456", b"35"];
             for bytes in entries.iter() {
                 log.append(bytes).expect("append");
                 // Flush and reload in the middle of entries. This exercises the code paths
@@ -2624,7 +2646,17 @@ mod tests {
                 [b"3456", b"2345"]
             );
 
+            log.sync().unwrap();
+
+            // Delete prefix.
+            log.append(b"=3").unwrap();
+            for key in [b"34", b"35"].iter() {
+                assert!(log.lookup(0, key).unwrap().into_vec().unwrap().is_empty());
+            }
+            assert_eq!(log.lookup(0, b"56").unwrap().into_vec().unwrap(), [b"3456"]);
+
             // Delete keys.
+            let mut log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
             for bytes in entries.iter() {
                 let mut bytes = bytes.to_vec();
                 bytes.insert(0, b'-');

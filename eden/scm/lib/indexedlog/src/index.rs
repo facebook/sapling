@@ -431,6 +431,16 @@ impl RadixOffset {
         }
     }
 
+    /// Change all children and link offset to null.
+    /// Panic if the offset points to an on-disk entry.
+    fn set_all_to_null(self, index: &mut Index) {
+        if self.is_dirty() {
+            index.dirty_radixes[self.dirty_index()] = MemRadix::default();
+        } else {
+            panic!("bug: set_all_to_null called on immutable radix entry");
+        }
+    }
+
     /// Create a new in-memory radix entry.
     #[inline]
     fn create(index: &mut Index, radix: MemRadix) -> RadixOffset {
@@ -2415,6 +2425,16 @@ impl Index {
             .context(|| format!("  Index.path = {:?}", self.path))
     }
 
+    /// Remove all values associated with all keys with the given prefix.
+    pub fn remove_prefix(&mut self, prefix: impl AsRef<[u8]>) -> crate::Result<()> {
+        // NOTE: See "remove". The implementation detail does not optimize
+        // for space or lookup performance.
+        let prefix = prefix.as_ref();
+        self.insert_advanced(InsertKey::Embed(prefix), InsertValue::TombstonePrefix)
+            .context(|| format!("in Index::remove_prefix(prefix={:?})", prefix))
+            .context(|| format!("  Index.path = {:?}", self.path))
+    }
+
     /// Update the linked list for a given key.
     ///
     /// If `link` is None, behave like `insert`. Otherwise, ignore the existing
@@ -2470,6 +2490,10 @@ impl Index {
                                     link_offset.create(self, value)
                                 }
                                 InsertValue::Tombstone => LinkOffset::default(),
+                                InsertValue::TombstonePrefix => {
+                                    radix.set_all_to_null(self);
+                                    return Ok(());
+                                }
                             };
                             radix.set_link(self, new_link_offset);
                             return Ok(());
@@ -2486,7 +2510,7 @@ impl Index {
                                     InsertValue::PrependReplace(value, link_offset) => {
                                         link_offset.create(self, value)
                                     }
-                                    InsertValue::Tombstone => {
+                                    InsertValue::Tombstone | InsertValue::TombstonePrefix => {
                                         // No need to create a key.
                                         radix.set_child(self, x, Offset::null());
                                         return Ok(());
@@ -2515,7 +2539,13 @@ impl Index {
                         let detached_key = unsafe { &*(old_key as (*const [u8])) };
                         (detached_key, link_offset)
                     };
-                    if old_key == key.as_ref() {
+                    let matched = if let InsertValue::TombstonePrefix = value {
+                        // Only test the prefix of old_key.
+                        old_key.get(..key.as_ref().len()) == Some(key.as_ref())
+                    } else {
+                        old_key == key.as_ref()
+                    };
+                    if matched {
                         // Key matched. Need to copy leaf entry for modification, except for
                         // deletion.
                         let new_link_offset = match value {
@@ -2523,7 +2553,7 @@ impl Index {
                             InsertValue::PrependReplace(value, link_offset) => {
                                 link_offset.create(self, value)
                             }
-                            InsertValue::Tombstone => {
+                            InsertValue::Tombstone | InsertValue::TombstonePrefix => {
                                 // No need to copy the leaf entry.
                                 last_radix.set_child(self, last_child, Offset::null());
                                 return Ok(());
@@ -2540,7 +2570,7 @@ impl Index {
                             InsertValue::PrependReplace(value, link_offset) => {
                                 link_offset.create(self, value)
                             }
-                            InsertValue::Tombstone => return Ok(()),
+                            InsertValue::Tombstone | InsertValue::TombstonePrefix => return Ok(()),
                         };
                         self.split_leaf(
                             leaf,
@@ -2774,6 +2804,10 @@ pub enum InsertValue {
 
     /// Effectively delete associated values for the specified key.
     Tombstone,
+
+    /// Effectively delete associated values for all keys starting with the
+    /// prefix.
+    TombstonePrefix,
 }
 
 //// Debug Formatter
@@ -3074,6 +3108,41 @@ mod tests {
         // Removal state can be saved to disk.
         index.flush().unwrap();
         let index = open_opts().open(dir.path().join("a")).expect("open");
+        assert_eq!(index.range(..).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_remove_recursive() {
+        let dir = tempdir().unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        index.insert(b"abc", 42).unwrap();
+        index.insert(b"abc", 42).unwrap();
+        index.insert(b"abxyz1", 42).unwrap();
+        index.insert(b"abxyz2", 42).unwrap();
+        index.insert(b"abxyz33333", 42).unwrap();
+        index.insert(b"abxyz44444", 42).unwrap();
+        index.insert(b"aby", 42).unwrap();
+        index.flush().unwrap();
+
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        let mut n = index.range(..).unwrap().count();
+        index.remove_prefix(b"abxyz33333333333").unwrap(); // nothing removed
+        assert_eq!(index.range(..).unwrap().count(), n);
+
+        index.remove_prefix(b"abxyz33333").unwrap(); // exact match
+        n -= 1; // abxyz33333 removed
+        assert_eq!(index.range(..).unwrap().count(), n);
+
+        index.remove_prefix(b"abxyz4").unwrap(); // prefix exact match
+        n -= 1; // abxyz44444 removed
+        assert_eq!(index.range(..).unwrap().count(), n);
+
+        index.remove_prefix(b"ab").unwrap(); // prefix match
+        n -= 4; // abc, aby, abxyz1, abxyz2 removed
+        assert_eq!(index.range(..).unwrap().count(), n);
+
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
+        index.remove_prefix(b"").unwrap(); // remove everything
         assert_eq!(index.range(..).unwrap().count(), 0);
     }
 
@@ -3902,5 +3971,32 @@ mod tests {
             })
         }
 
+        fn test_deletion_prefix(keys_deleted: Vec<(Vec<u8>, bool)>) -> bool {
+            let mut set = BTreeSet::<Vec<u8>>::new();
+            let mut index = in_memory_index();
+            keys_deleted.into_iter().all(|(key, deleted)| {
+                if deleted {
+                    // BTreeSet does not have remove_prefix. Emulate it.
+                    let to_delete = set
+                        .iter()
+                        .filter(|k| k.starts_with(&key))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    for key in to_delete {
+                        set.remove(&key);
+                    }
+                    index.remove_prefix(&key).unwrap();
+                } else {
+                    set.insert(key.clone());
+                    index.insert(&key, 1).unwrap();
+                }
+                index
+                    .range(..)
+                    .unwrap()
+                    .map(|s| s.unwrap().0.as_ref().to_vec())
+                    .collect::<Vec<_>>()
+                    == set.iter().cloned().collect::<Vec<_>>()
+            })
+        }
     }
 }
