@@ -118,6 +118,10 @@ impl HgTime {
     /// - > START
     /// - < END
     pub fn parse_range(date: &str) -> Option<Range<Self>> {
+        Self::parse_range_internal(date, true)
+    }
+
+    fn parse_range_internal(date: &str, support_to: bool) -> Option<Range<Self>> {
         match date {
             "now" => Self::now().and_then(|n| (n + 1).map(|m| n..m)),
             "today" => {
@@ -159,13 +163,14 @@ impl HgTime {
             date if date.starts_with("before ") => {
                 Self::parse(&date[7..]).map(|end| Self::min_value()..end)
             }
-            date if date.contains(" to ") => {
+            date if support_to && date.contains(" to ") => {
                 let phrases: Vec<_> = date.split(" to ").collect();
                 if phrases.len() == 2 {
-                    if let (Some(start), Some(end)) =
-                        (Self::parse(&phrases[0]), Self::parse(&phrases[1]))
-                    {
-                        Some(start..end)
+                    if let (Some(start), Some(end)) = (
+                        Self::parse_range_internal(&phrases[0], false),
+                        Self::parse_range_internal(&phrases[1], false),
+                    ) {
+                        Some(start.start..end.end)
                     } else {
                         None
                     }
@@ -552,6 +557,14 @@ mod tests {
         assert_eq!(c("2018-5-1 to 2018-6-2", "2018-4-30"), "does not contain");
         assert_eq!(c("2018-5-1 to 2018-6-2", "2018-5-30"), "contains");
         assert_eq!(c("2018-5-1 to 2018-6-2", "2018-6-30"), "does not contain");
+        assert_eq!(c("2018-5 to 2018-6", "2018-5-1 0:0:0"), "contains");
+        assert_eq!(c("2018-5 to 2018-6", "2018-6-30 23:59:59"), "contains");
+        assert_eq!(c("2018-5 to 2018-6 to 2018-7", "2018-6-30"), "fail");
+
+        // 0:0:0 yesterday to 23:59:59 today
+        // Usually it's 48 hours. However it might be affected by DST.
+        let range = HgTime::parse_range("yesterday to today").unwrap();
+        assert!(range.end.unixtime - range.start.unixtime >= (24 + 20) * 3600);
     }
 
     /// String representation of parse result.
