@@ -356,7 +356,10 @@ def _runuisetup(name, ui):
         except Exception as inst:
             ui.traceback(force=True)
             msg = util.forcebytestr(inst)
-            ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
+            ui.warn(
+                _("failed to set up extension %s: %s\n") % (name, msg),
+                notice=_("warning"),
+            )
             return False
     return True
 
@@ -379,7 +382,10 @@ def _runextsetup(name, ui):
         except Exception as inst:
             ui.traceback(force=True)
             msg = util.forcebytestr(inst)
-            ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
+            ui.warn(
+                _("failed to set up extension %s: %s\n") % (name, msg),
+                notice=_("warning"),
+            )
             return False
     return True
 
@@ -415,13 +421,20 @@ def loadall(ui, whitelist=None):
             msg = util.forcebytestr(inst)
             if path:
                 ui.warn(
-                    _("*** failed to import extension %s from %s: %s\n")
-                    % (name, path, msg)
+                    _(
+                        "extension %s is disabled because it cannot be imported from %s: %s\n"
+                    )
+                    % (name, path, msg),
+                    notice=_("warning"),
                 )
             else:
-                ui.warn(_("*** failed to import extension %s: %s\n") % (name, msg))
+                ui.warn(
+                    _("extension %s is disabled because it cannot be imported: %s\n")
+                    % (name, msg),
+                    notice=_("warning"),
+                )
             if isinstance(inst, error.Hint) and inst.hint:
-                ui.warn(_("*** (%s)\n") % inst.hint)
+                ui.warn(_("(%s)\n") % inst.hint)
             ui.traceback()
     # list of (objname, loadermod, loadername) tuple:
     # - objname is the name of an object in extension module,
@@ -878,7 +891,7 @@ def disabledcmd(ui, cmd):
         except (error.AmbiguousCommand, error.UnknownCommand):
             return
         except Exception:
-            ui.warn(_("warning: error finding commands in %s\n") % path)
+            ui.warn(_("error finding commands in %s\n") % path, notice=_("warning"))
             ui.traceback()
             return
         for c in aliases:

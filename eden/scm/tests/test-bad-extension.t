@@ -45,16 +45,16 @@ another bad extension
   > EOF
 
   $ hg -q help help 2>&1 |grep extension
-  *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
-  *** failed to import extension badext2: No module named badext2
+  warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
+  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
 
 show traceback
 
   $ hg -q help help --traceback 2>&1 | egrep ' extension|^Exception|Traceback|ImportError'
-  *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
+  warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  *** failed to import extension badext2: No module named badext2
+  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
   Traceback (most recent call last):
   ImportError: No module named badext2
 
@@ -77,18 +77,18 @@ show traceback for ImportError of hgext.name if debug is set
   $ (hg -q help help --traceback --config ui.debug=True 2>&1) \
   > | grep -v '^ ' \
   > | egrep 'extension..[^p]|^Exception|Traceback|ImportError|not import'
-  *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
+  warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  *** failed to import extension badext2: No module named badext2
+  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
   Traceback (most recent call last):
   ImportError: No module named *badext2 (glob)
 
 confirm that there's no crash when an extension's documentation is bad
 
   $ hg help --keyword baddocext
-  *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
-  *** failed to import extension badext2: No module named badext2
+  warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
+  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
   Topics:
   
    extensions Using Additional Features

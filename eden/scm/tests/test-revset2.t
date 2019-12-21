@@ -1599,7 +1599,7 @@ loading it
   > EOF
 
   $ hg debugrevspec "custom1()"
-  *** failed to import extension custompredicate from $TESTTMP/custompredicate.py: intentional failure of loading extension
+  warning: extension custompredicate is disabled because it cannot be imported from $TESTTMP/custompredicate.py: intentional failure of loading extension
   hg: parse error: unknown identifier: custom1
   [255]
 

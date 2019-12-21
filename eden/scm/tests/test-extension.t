@@ -498,7 +498,7 @@ Even though the extension fails during uisetup, hg is still basically usable:
     File "$TESTTMP/baduisetup.py", line 2, in uisetup
       1/0
   ZeroDivisionError: integer division or modulo by zero
-  *** failed to set up extension baduisetup: integer division or modulo by zero
+  warning: failed to set up extension baduisetup: integer division or modulo by zero
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
@@ -1268,8 +1268,8 @@ Prohibit registration of commands that don't use @command (issue5137)
   > EOF
 
   $ hg deprecatedcmd > /dev/null
-  *** failed to import extension deprecatedcmd from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
-  *** (use @command decorator to register 'deprecatedcmd')
+  warning: extension deprecatedcmd is disabled because it cannot be imported from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
+  (use @command decorator to register 'deprecatedcmd')
   unknown command 'deprecatedcmd'
   (use 'hg help' to get help)
   [255]
@@ -1277,8 +1277,8 @@ Prohibit registration of commands that don't use @command (issue5137)
  the extension shouldn't be loaded at all so the mq works:
 
   $ hg log -r null --config extensions.mq= > /dev/null
-  *** failed to import extension deprecatedcmd from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
-  *** (use @command decorator to register 'deprecatedcmd')
+  warning: extension deprecatedcmd is disabled because it cannot be imported from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
+  (use @command decorator to register 'deprecatedcmd')
 
   $ cd ..
 
@@ -1338,8 +1338,8 @@ Prohibit the use of unicode strings as the default value of options
   > test_unicode_default_value = $TESTTMP/test_unicode_default_value.py
   > EOF
   $ hg -R $TESTTMP/opt-unicode-default dummy
-  *** failed to import extension test_unicode_default_value from $TESTTMP/test_unicode_default_value.py: option 'dummy.opt' has a unicode default value
-  *** (change the dummy.opt default value to a non-unicode string)
+  warning: extension test_unicode_default_value is disabled because it cannot be imported from $TESTTMP/test_unicode_default_value.py: option 'dummy.opt' has a unicode default value
+  (change the dummy.opt default value to a non-unicode string)
   unknown command 'dummy'
   (use 'hg help' to get help)
   [255]

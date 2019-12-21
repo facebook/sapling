@@ -73,7 +73,7 @@ However, we can't prevent it from loading extensions and configs:
   > raise Exception('bad')
   > EOF
   $ hg log -b '--config=extensions.bad=bad.py' default
-  *** failed to import extension bad from bad.py: bad
+  warning: extension bad is disabled because it cannot be imported from bad.py: bad
   abort: option --config may not be abbreviated!
   [255]
 
