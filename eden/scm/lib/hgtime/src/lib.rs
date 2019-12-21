@@ -13,7 +13,7 @@ use chrono::prelude::*;
 use chrono::Duration;
 use std::convert::{TryFrom, TryInto};
 use std::ops::{Add, Range, RangeInclusive, Sub};
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
 /// A simple time structure that matches hg's time representation.
 ///
@@ -65,6 +65,7 @@ const DEFAULT_FORMATS: [&str; 35] = [
 
 const INVALID_OFFSET: i32 = i32::max_value();
 static DEFAULT_OFFSET: AtomicI32 = AtomicI32::new(INVALID_OFFSET);
+static FORCED_NOW: AtomicU64 = AtomicU64::new(0); // test only
 
 impl HgTime {
     /// Supported Range. This is to be compatible with Python stdlib.
@@ -77,11 +78,35 @@ impl HgTime {
     /// Return the current time, or `None` if the timestamp is outside
     /// [`HgTime::RANGE`].
     pub fn now() -> Option<Self> {
-        Local::now()
-            .try_into()
-            .ok()
-            .map(|t: HgTime| t.use_default_offset())
-            .and_then(|t| t.bounded())
+        let forced_now = FORCED_NOW.load(Ordering::SeqCst);
+        if forced_now == 0 {
+            Local::now()
+                .try_into()
+                .ok()
+                .map(|t: HgTime| t.use_default_offset())
+                .and_then(|t| t.bounded())
+        } else {
+            Some(Self::from_compact_u64(forced_now))
+        }
+    }
+
+    pub fn to_local(self) -> DateTime<Local> {
+        DateTime::from(self.to_utc())
+    }
+
+    pub fn to_utc(self) -> DateTime<Utc> {
+        DateTime::from_utc(self.to_naive(), Utc)
+    }
+
+    fn to_naive(self) -> NaiveDateTime {
+        NaiveDateTime::from_timestamp(self.unixtime, 0)
+    }
+
+    /// Set as the faked "now". Useful for testing.
+    ///
+    /// This should only be used for testing.
+    pub fn set_as_now_for_testing(self) {
+        FORCED_NOW.store(self.to_lossy_compact_u64(), Ordering::SeqCst);
     }
 
     /// Parse a date string.
@@ -93,12 +118,16 @@ impl HgTime {
     pub fn parse(date: &str) -> Option<Self> {
         match date {
             "now" => Self::now(),
-            "today" => Self::try_from(Local::today().and_hms(0, 0, 0))
-                .ok()
-                .map(|t| t.use_default_offset()),
-            "yesterday" => Self::try_from(Local::today().and_hms(0, 0, 0) - Duration::days(1))
-                .ok()
-                .map(|t| t.use_default_offset()),
+            "today" => Self::now().and_then(|now| {
+                Self::try_from(now.to_local().date().and_hms(0, 0, 0))
+                    .ok()
+                    .map(|t| t.use_default_offset())
+            }),
+            "yesterday" => Self::now().and_then(|now| {
+                Self::try_from(now.to_local().date().and_hms(0, 0, 0) - Duration::days(1))
+                    .ok()
+                    .map(|t| t.use_default_offset())
+            }),
             date if date.ends_with(" ago") => {
                 let duration_str = &date[..date.len() - 4];
                 duration_str
@@ -124,8 +153,8 @@ impl HgTime {
     fn parse_range_internal(date: &str, support_to: bool) -> Option<Range<Self>> {
         match date {
             "now" => Self::now().and_then(|n| (n + 1).map(|m| n..m)),
-            "today" => {
-                let date = Local::today();
+            "today" => Self::now().and_then(|now| {
+                let date = now.to_local().date();
                 let start = Self::try_from(date.and_hms(0, 0, 0)).map(|t| t.use_default_offset());
                 let end =
                     Self::try_from(date.and_hms(23, 59, 59)).map(|t| t.use_default_offset() + 1);
@@ -134,9 +163,9 @@ impl HgTime {
                 } else {
                     None
                 }
-            }
-            "yesterday" => {
-                let date = Local::today() - Duration::days(1);
+            }),
+            "yesterday" => Self::now().and_then(|now| {
+                let date = now.to_local().date() - Duration::days(1);
                 let start = Self::try_from(date.and_hms(0, 0, 0)).map(|t| t.use_default_offset());
                 let end =
                     Self::try_from(date.and_hms(23, 59, 59)).map(|t| t.use_default_offset() + 1);
@@ -145,7 +174,7 @@ impl HgTime {
                 } else {
                     None
                 }
-            }
+            }),
             date if date.starts_with(">") => {
                 Self::parse(&date[1..]).map(|start| start..Self::max_value())
             }
@@ -248,9 +277,14 @@ impl HgTime {
                         // For example, if the user only specified "month/day",
                         // then we should use the current "year", instead of
                         // year 0.
-                        let now = now.get_or_insert_with(|| Local::now());
-                        date_with_defaults +=
-                            &format!(" @{}", now.format(&format!("%{}", format_char)));
+                        now = now.or_else(|| Self::now().map(|n| n.to_local()));
+                        match now {
+                            Some(now) => {
+                                date_with_defaults +=
+                                    &format!(" @{}", now.format(&format!("%{}", format_char)))
+                            }
+                            None => return None,
+                        }
                     } else {
                         // For example, if the user only specified
                         // "hour:minute", then we should use "second 0", instead
@@ -315,6 +349,38 @@ impl HgTime {
         } else {
             Some(self)
         }
+    }
+}
+
+// Convert to compact u64.  Used by FORCED_NOW.
+// For testing purpose only (no overflow checking).
+impl HgTime {
+    fn to_lossy_compact_u64(self) -> u64 {
+        ((self.unixtime as u64) << 17) + (self.offset + 50401) as u64
+    }
+
+    fn from_compact_u64(value: u64) -> Self {
+        let unixtime = (value as i64) >> 17;
+        let offset = (((value & 0x1ffff) as i64) - 50401) as i32;
+        Self { unixtime, offset }
+    }
+}
+
+impl From<HgTime> for NaiveDateTime {
+    fn from(time: HgTime) -> Self {
+        time.to_naive()
+    }
+}
+
+impl From<HgTime> for DateTime<Utc> {
+    fn from(time: HgTime) -> Self {
+        time.to_utc()
+    }
+}
+
+impl From<HgTime> for DateTime<Local> {
+    fn from(time: HgTime) -> Self {
+        time.to_local()
     }
 }
 
@@ -453,6 +519,14 @@ fn default_date_upper<N: ToStaticStr>(format_char: char) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_local_roundtrip() {
+        let now = Local::now().with_nanosecond(0).unwrap();
+        let hgtime: HgTime = now.try_into().unwrap();
+        let now_again = DateTime::<Local>::from(hgtime);
+        assert_eq!(now, now_again);
+    }
 
     #[test]
     fn test_parse_date() {
