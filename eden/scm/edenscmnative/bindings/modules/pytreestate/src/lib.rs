@@ -90,7 +90,7 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .open(self.repodir(py).join(name), BlockId(root_id))
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(None)
     }
 
@@ -111,13 +111,13 @@ py_class!(class treedirstatemap |py| {
             if state == b'r' {
                 dirstate
                     .remove_file(filename.data(py), &FileState::new(b'r', 0, size, 0))
-                    .map_pyerr::<exc::IOError>(py)?;
+                    .map_pyerr(py)?;
             } else if state != b'?' {
                 // Drop "?" entries - treedirstate does not store untracked files.
                 dirstate
                     .add_file(filename.data(py),
                               &FileState::new(state, mode, size, mtime))
-                    .map_pyerr::<exc::IOError>(py)?;
+                    .map_pyerr(py)?;
             }
 
         }
@@ -140,10 +140,10 @@ py_class!(class treedirstatemap |py| {
         };
         dirstate
             .visit_tracked(&mut filter)
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         dirstate
             .write_full(self.repodir(py).join(name))
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(None)
     }
 
@@ -163,10 +163,10 @@ py_class!(class treedirstatemap |py| {
         };
         dirstate
             .visit_changed_tracked(&mut filter)
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         dirstate
             .write_delta()
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(None)
     }
 
@@ -185,7 +185,7 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let value = dirstate
                 .get_tracked(filename.data(py))
-                .map_pyerr::<exc::IOError>(py)?;
+                .map_pyerr(py)?;
 
         Ok(value.is_some())
     }
@@ -194,7 +194,7 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let value = dirstate
                 .get_removed(filename.data(py))
-                .map_pyerr::<exc::IOError>(py)?;
+                .map_pyerr(py)?;
         Ok(value.is_some())
     }
 
@@ -203,7 +203,7 @@ py_class!(class treedirstatemap |py| {
         let res = if let Ok(filename) = filename.extract::<PyBytes>(py) {
             let value = dirstate
                     .get_tracked(filename.data(py))
-                    .map_pyerr::<exc::IOError>(py)?;
+                    .map_pyerr(py)?;
             match value {
                 Some(ref file) =>
                     PyTuple::new(py, &[
@@ -224,7 +224,7 @@ py_class!(class treedirstatemap |py| {
         let res = if let Ok(filename) = filename.extract::<PyBytes>(py) {
             let value = dirstate
                     .get_removed(filename.data(py))
-                    .map_pyerr::<exc::IOError>(py)?;
+                    .map_pyerr(py)?;
             match value {
                 Some(ref file) =>
                     PyTuple::new(py, &[
@@ -244,14 +244,14 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .has_tracked_dir(dirname.data(py))
-            .map_pyerr::<exc::IOError>(py)
+            .map_pyerr(py)
     }
 
     def hasremoveddir(&self, dirname: PyBytes) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .has_removed_dir(dirname.data(py))
-            .map_pyerr::<exc::IOError>(py)
+            .map_pyerr(py)
     }
 
     def visittrackedfiles(&self, target: PyObject) -> PyResult<PyObject> {
@@ -263,7 +263,7 @@ py_class!(class treedirstatemap |py| {
         };
         dirstate
             .visit_tracked(&mut visitor)
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -276,7 +276,7 @@ py_class!(class treedirstatemap |py| {
         };
         dirstate
             .visit_removed(&mut visitor)
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -290,12 +290,12 @@ py_class!(class treedirstatemap |py| {
                 Some(filename) => {
                     dirstate
                         .get_next_removed(filename.data(py))
-                        .map_pyerr::<exc::IOError>(py)?
+                        .map_pyerr(py)?
                 }
                 None => {
                     dirstate
                         .get_first_removed()
-                        .map_pyerr::<exc::IOError>(py)?
+                        .map_pyerr(py)?
                 }
             }
         } else {
@@ -303,11 +303,11 @@ py_class!(class treedirstatemap |py| {
                 Some(filename) => {
                     dirstate
                         .get_next_tracked(filename.data(py))
-                        .map_pyerr::<exc::IOError>(py)?
+                        .map_pyerr(py)?
                 }
                 None => {
                     dirstate.get_first_tracked()
-                        .map_pyerr::<exc::IOError>(py)?
+                        .map_pyerr(py)?
                 }
             }
         };
@@ -339,7 +339,7 @@ py_class!(class treedirstatemap |py| {
         let state = *state.data(py).first().unwrap_or(&b'?');
         dirstate
             .add_file(filename.data(py), &FileState::new(state, mode, size, mtime))
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -347,7 +347,7 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .remove_file(filename.data(py), &FileState::new(b'r', 0, size, 0))
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -355,14 +355,14 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .drop_file(filename.data(py))
-            .map_pyerr::<exc::IOError>(py)
+            .map_pyerr(py)
     }
 
     def untrackfile(&self, filename: PyBytes) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .drop_file(filename.data(py))
-            .map_pyerr::<exc::IOError>(py)
+            .map_pyerr(py)
     }
 
     // Returns the ID of the root node.
@@ -385,7 +385,7 @@ py_class!(class treedirstatemap |py| {
         };
         dirstate
             .visit_tracked(&mut tracked_visitor)
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
 
         let mut removed_visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
@@ -394,7 +394,7 @@ py_class!(class treedirstatemap |py| {
         };
         dirstate
             .visit_removed(&mut removed_visitor)
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
 
         Ok(py.None())
     }
@@ -418,7 +418,7 @@ py_class!(class treedirstatemap |py| {
         dirstate
             .get_tracked_filtered_key(filename.data(py), &mut filter, casefolderid)
             .map(|o| o.map(|k| PyBytes::new(py, &k).into_object()))
-            .map_pyerr::<exc::IOError>(py)
+            .map_pyerr(py)
     }
 
     def pathcomplete(
@@ -445,14 +445,14 @@ py_class!(class treedirstatemap |py| {
         if b"anm".iter().any(|x| acceptablestates.contains(x)) {
             dirstate
                 .path_complete_tracked(spec.data(py), fullpaths, &acceptable, &mut visitor)
-                .map_pyerr::<exc::IOError>(py)?;
+                .map_pyerr(py)?;
         }
 
         // Files in state r are in the removed tree.
         if acceptablestates.contains(&b'r') {
             dirstate
                 .path_complete_removed(spec.data(py), fullpaths, &acceptable, &mut visitor)
-                .map_pyerr::<exc::IOError>(py)?;
+                .map_pyerr(py)?;
         }
 
         Ok(py.None())
@@ -831,7 +831,7 @@ fn flags_to_hg_state(_py: Python, flags: u16) -> PyResult<&'static str> {
 
 /// Convert a Result to PyResult
 fn convert_result<T>(py: Python, result: Result<T>) -> PyResult<T> {
-    result.map_pyerr::<exc::IOError>(py)
+    result.map_pyerr(py)
 }
 
 fn encoding_error(py: Python) -> PyErr {

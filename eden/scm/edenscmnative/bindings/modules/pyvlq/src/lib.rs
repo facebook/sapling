@@ -24,15 +24,12 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 fn decodeat(py: Python, data: PyBytes, offset: usize) -> PyResult<(u64, usize)> {
-    let (value, len) = data
-        .data(py)
-        .read_vlq_at(offset)
-        .map_pyerr::<exc::ValueError>(py)?;
+    let (value, len) = data.data(py).read_vlq_at(offset).map_pyerr(py)?;
     Ok((value, len))
 }
 
 fn decode(py: Python, data: PyBytes) -> PyResult<u64> {
-    let value = data.data(py).read_vlq().map_pyerr::<exc::ValueError>(py)?;
+    let value = data.data(py).read_vlq().map_pyerr(py)?;
     Ok(value)
 }
 
@@ -44,6 +41,6 @@ fn encode(py: Python, value: u64) -> PyResult<PyBytes> {
 
 fn read(py: Python, io: PyObject) -> PyResult<u64> {
     let mut io = cpython_ext::wrap_pyio(io);
-    let value = io.read_vlq().map_pyerr::<exc::ValueError>(py)?;
+    let value = io.read_vlq().map_pyerr(py)?;
     Ok(value)
 }

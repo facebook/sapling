@@ -26,34 +26,34 @@ py_class!(class metalog |py| {
 
     def __new__(_cls, path: String, root: Option<Bytes> = None) -> PyResult<Self> {
         let root = root.and_then(|s| Id20::from_slice(s.as_ref()).ok());
-        let log = MetaLog::open(&path, root).map_pyerr::<exc::IOError>(py)?;
+        let log = MetaLog::open(&path, root).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(log))
     }
 
     @staticmethod
     def listroots(path: String) -> PyResult<Vec<Bytes>> {
-        let root_ids = MetaLog::list_roots(&path).map_pyerr::<exc::IOError>(py)?;
+        let root_ids = MetaLog::list_roots(&path).map_pyerr(py)?;
         Ok(root_ids.into_iter().map(|id| Bytes::from(id.as_ref().to_vec())).collect())
     }
 
     /// Lookup an item by key. Return None if the key does not exist.
     def get(&self, key: &str) -> PyResult<Option<Bytes>> {
         let log = self.log(py).borrow();
-        let data = log.get(key).map_pyerr::<exc::IOError>(py)?;
+        let data = log.get(key).map_pyerr(py)?;
         Ok(data.map(Bytes::from))
     }
 
     /// Set an item. Return the Id of value.
     def set(&self, key: &str, value: Bytes) -> PyResult<Bytes> {
         let mut log = self.log(py).borrow_mut();
-        let id = log.set(key, value.as_ref()).map_pyerr::<exc::IOError>(py)?;
+        let id = log.set(key, value.as_ref()).map_pyerr(py)?;
         Ok(Bytes::from(id.as_ref().to_vec()))
     }
 
     /// Remove an item. Does not raise if the key does not exist.
     def remove(&self, key: &str) -> PyResult<PyObject> {
         let mut log = self.log(py).borrow_mut();
-        log.remove(key).map_pyerr::<exc::IOError>(py)?;
+        log.remove(key).map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -74,7 +74,7 @@ py_class!(class metalog |py| {
                 .map(|d| d.as_secs()).unwrap_or(0)
         });
         opts.message = message;
-        let id = self.log(py).borrow_mut().commit(opts).map_pyerr::<exc::IOError>(py)?;
+        let id = self.log(py).borrow_mut().commit(opts).map_pyerr(py)?;
         Ok(Bytes::from(id.as_ref().to_vec()))
     }
 
@@ -109,6 +109,6 @@ py_class!(class metalog |py| {
 
     @staticmethod
     def repair(path: &str) -> PyResult<PyUnicode> {
-        py.allow_threads(|| MetaLog::repair(path)).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 });

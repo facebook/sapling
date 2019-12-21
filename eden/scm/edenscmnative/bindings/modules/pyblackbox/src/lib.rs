@@ -57,12 +57,12 @@ def log(value, _dumps=_json.dumps, _logjson=_logjson):
 
 /// Initialize the blackbox at the given path.
 fn init_blackbox(py: Python, path: &PyBytes, count: u8, size: u64) -> PyResult<PyObject> {
-    let path = local_bytes_to_path(path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
+    let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
     let blackbox = BlackboxOptions::new()
         .max_bytes_per_log(size)
         .max_log_count(count)
         .open(path)
-        .map_pyerr::<exc::IOError>(py)?;
+        .map_pyerr(py)?;
     init(blackbox);
     Ok(py.None())
 }
@@ -70,7 +70,7 @@ fn init_blackbox(py: Python, path: &PyBytes, count: u8, size: u64) -> PyResult<P
 /// Log a JSON-serialized event. The JSON string must be deserializable
 /// to the Rust Event type, defined in blackbox/src/event.rs.
 fn log_json(py: Python, json: String) -> PyResult<PyObject> {
-    let event = Event::from_json(&json).map_pyerr::<exc::RuntimeError>(py)?;
+    let event = Event::from_json(&json).map_pyerr(py)?;
     log(&event);
     Ok(py.None())
 }
@@ -84,8 +84,7 @@ fn sync(py: Python) -> PyResult<PyObject> {
 /// Read events in the given time span. Return `[(session_id, timestamp, message, json)]`.
 /// Timestamps are in seconds.
 fn session_ids_by_pattern(py: Python, pattern: &str) -> PyResult<Vec<u64>> {
-    let pattern: serde_json::Value =
-        serde_json::from_str(pattern).map_pyerr::<exc::ValueError>(py)?;
+    let pattern: serde_json::Value = serde_json::from_str(pattern).map_pyerr(py)?;
     let blackbox = blackbox::SINGLETON.lock();
     let blackbox = blackbox.deref();
     Ok(blackbox
@@ -102,8 +101,7 @@ fn events_by_session_ids(
     session_ids: Vec<u64>,
     pattern: &str,
 ) -> PyResult<Vec<(u64, f64, String, String)>> {
-    let pattern: serde_json::Value =
-        serde_json::from_str(pattern).map_pyerr::<exc::ValueError>(py)?;
+    let pattern: serde_json::Value = serde_json::from_str(pattern).map_pyerr(py)?;
     let blackbox = blackbox::SINGLETON.lock();
     let blackbox = blackbox.deref();
     let mut result = Vec::new();

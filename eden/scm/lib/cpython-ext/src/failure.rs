@@ -8,13 +8,11 @@
 //! Integrate cpython with anyhow
 
 use anyhow::{Error, Result};
-use cpython::{
-    exc, py_exception, ObjectProtocol, PyClone, PyResult, Python, PythonObjectWithTypeObject,
-};
+use cpython::{exc, py_exception, ObjectProtocol, PyClone, PyResult, Python};
 use std::fmt;
 
-/// Extends the `Result` type to allow conversion to `PyResult` by specifying a
-/// Python Exception class to convert to.
+/// Extends the `Result` type to allow conversion to `PyResult` from a native
+/// Rust result.
 ///
 /// If the error is created via [`FallibleExt`], the original Python error
 /// will be returned.
@@ -35,11 +33,11 @@ use std::fmt;
 /// }
 ///
 /// fn py_fail_if_negative(py: Python, i: i32) -> PyResult<i32> {
-///    fail_if_negative(i).map_pyerr::<exc::ValueError>(py)
+///    fail_if_negative(i).map_pyerr(py)
 /// }
 /// ```
 pub trait ResultPyErrExt<T> {
-    fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T>;
+    fn map_pyerr(self, py: Python<'_>) -> PyResult<T>;
 }
 
 /// Extends the `PyResult` type to allow conversion to `Result`.
@@ -62,7 +60,7 @@ pub trait ResultPyErrExt<T> {
 ///     let py = gil.python();
 ///     let res = py.eval("1 + 2", None, None).into_fallible();
 ///     use cpython_ext::failure::ResultPyErrExt;
-///     res.map(|_| ()).map_pyerr::<cpython::exc::ValueError>(py)
+///     res.map(|_| ()).map_pyerr(py)
 /// }
 /// ```
 ///
@@ -71,9 +69,10 @@ pub trait FallibleExt<T> {
 }
 
 py_exception!(error, PyIndexedLogError);
+py_exception!(error, PyRustError);
 
 impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
-    fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T> {
+    fn map_pyerr(self, py: Python<'_>) -> PyResult<T> {
         self.map_err(|e| {
             let e: anyhow::Error = e.into();
             let mut e = &e;
@@ -90,7 +89,7 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
                         (e.raw_os_error(), e.to_string()),
                     );
                 } else {
-                    break cpython::PyErr::new::<PE, _>(py, e.to_string());
+                    break cpython::PyErr::new::<PyRustError, _>(py, e.to_string());
                 }
             }
         })

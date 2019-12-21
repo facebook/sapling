@@ -58,9 +58,9 @@ py_class!(class tracingdata |py| {
     def deserialize(bytes: PyBytes, binary: bool = true) -> PyResult<tracingdata> {
         let bytes = bytes.data(py);
         let data: TracingData = if binary {
-            mincode::deserialize(bytes).map_pyerr::<exc::ValueError>(py)?
+            mincode::deserialize(bytes).map_pyerr(py)?
         } else {
-            serde_json::from_slice(bytes).map_pyerr::<exc::ValueError>(py)?
+            serde_json::from_slice(bytes).map_pyerr(py)?
         };
         Self::create_instance(py, Arc::new(Mutex::new(data)))
     }
@@ -69,10 +69,10 @@ py_class!(class tracingdata |py| {
     def serialize(&self, binary: bool = true) -> PyResult<Bytes> {
         let data = self.data(py).lock();
         if binary {
-            let bytes = mincode::serialize(data.deref()).map_pyerr::<exc::ValueError>(py)?;
+            let bytes = mincode::serialize(data.deref()).map_pyerr(py)?;
             Ok(Bytes::from(bytes))
         } else {
-            let json = serde_json::to_string(data.deref()).map_pyerr::<exc::ValueError>(py)?;
+            let json = serde_json::to_string(data.deref()).map_pyerr(py)?;
             Ok(Bytes::from(json))
         }
     }
@@ -126,7 +126,7 @@ py_class!(class tracingdata |py| {
     def traceeventjson(&self) -> PyResult<Bytes> {
         let data = self.data(py).lock();
         let mut buf = Vec::new();
-        data.write_trace_event_json(&mut buf, Default::default()).map_pyerr::<exc::ValueError>(py)?;
+        data.write_trace_event_json(&mut buf, Default::default()).map_pyerr(py)?;
         Ok(Bytes::from(buf))
     }
 

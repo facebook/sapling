@@ -24,15 +24,15 @@ py_class!(class zstore |py| {
     data store: RefCell<Zstore>;
 
     def __new__(_cls, path: String) -> PyResult<Self> {
-        let log = Zstore::open(&path).map_pyerr::<exc::IOError>(py)?;
+        let log = Zstore::open(&path).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(log))
     }
 
     /// Lookup a blob by id. Return None if the id is unknown.
     def get(&self, id: Bytes) -> PyResult<Option<Bytes>> {
-        let id = Id20::from_slice(id.as_ref()).map_pyerr::<exc::TypeError>(py)?;
+        let id = Id20::from_slice(id.as_ref()).map_pyerr(py)?;
         let store = self.store(py).borrow();
-        let data = store.get(id).map_pyerr::<exc::IOError>(py)?;
+        let data = store.get(id).map_pyerr(py)?;
         Ok(data.map(Bytes::from))
     }
 
@@ -42,21 +42,21 @@ py_class!(class zstore |py| {
         let delta_bases = delta_bases.into_iter()
             .map(|id| Id20::from_slice(id.as_ref()))
             .collect::<Result<Vec<_>, _>>()
-            .map_pyerr::<exc::TypeError>(py)?;
-        let id = store.insert(data.as_ref(), &delta_bases).map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
+        let id = store.insert(data.as_ref(), &delta_bases).map_pyerr(py)?;
         Ok(Bytes::from(id.as_ref().to_vec()))
     }
 
     /// Test if the store contains an id.
     def contains(&self, id: Bytes) -> PyResult<bool> {
-        let id = Id20::from_slice(id.as_ref()).map_pyerr::<exc::TypeError>(py)?;
+        let id = Id20::from_slice(id.as_ref()).map_pyerr(py)?;
         let store = self.store(py).borrow();
-        store.contains(id).map_pyerr::<exc::IOError>(py)
+        store.contains(id).map_pyerr(py)
     }
 
     /// Write pending data to disk. Raise if race condition is detected.
     def flush(&self) -> PyResult<u64> {
-        self.store(py).borrow_mut().flush().map_pyerr::<exc::IOError>(py)
+        self.store(py).borrow_mut().flush().map_pyerr(py)
     }
 
     def __getitem__(&self, id: Bytes) -> PyResult<Option<Bytes>> {
@@ -69,6 +69,6 @@ py_class!(class zstore |py| {
 
     @staticmethod
     def repair(path: &str) -> PyResult<PyUnicode> {
-        py.allow_threads(|| Zstore::repair(path)).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        py.allow_threads(|| Zstore::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 });

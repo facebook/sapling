@@ -129,7 +129,7 @@ py_class!(class treemanifest |py| {
             }
         };
         let tree = self.underlying(py).borrow();
-        match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        match tree.get_file(&repo_path).map_pyerr(py)? {
             None => {
                 let msg = format!("cannot find file '{}' in manifest", repo_path);
                 Err(PyErr::new::<exc::KeyError, _>(py, msg))
@@ -141,7 +141,7 @@ py_class!(class treemanifest |py| {
     def get(&self, path: &PyBytes, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.get_file(&repo_path).map_pyerr(py)? {
             None => None,
             Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.hgid)),
         };
@@ -151,7 +151,7 @@ py_class!(class treemanifest |py| {
     def flags(&self, path: &PyBytes, default: Option<PyString> = None) -> PyResult<PyString> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.get_file(&repo_path).map_pyerr(py)? {
             None => None,
             Some(file_metadata) => Some(file_type_to_pystring(py, file_metadata.file_type)),
         };
@@ -161,7 +161,7 @@ py_class!(class treemanifest |py| {
     def hasdir(&self, path: &PyBytes) -> PyResult<bool> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.get(&repo_path).map_pyerr(py)? {
             Some(FsNodeMetadata::Directory(_)) => true,
             _ => false
         };
@@ -173,7 +173,7 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr(py)?;
             result.push(path_to_pybytes(py, &file.path));
         }
         Ok(result)
@@ -184,7 +184,7 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.dirs(&PythonMatcher::new(py, pymatcher)) {
-            let dir = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let dir = entry.map_pyerr(py)?;
             result.push((
                 path_to_pybytes(py, &dir.path),
                 dir.hgid.map(|id| PyBytes::new(py, id.as_ref())),
@@ -196,7 +196,7 @@ py_class!(class treemanifest |py| {
     def listdir(&self, path: &PyBytes) -> PyResult<Vec<PyBytes>> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.list(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.list(&repo_path).map_pyerr(py)? {
             manifest::List::NotFound | manifest::List::File => vec![],
             manifest::List::Directory(components) =>
                 components.into_iter().map(|(component, _)|
@@ -214,7 +214,7 @@ py_class!(class treemanifest |py| {
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
         for entry in tree.files(&matcher) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr(py)?;
             lines.push(format!(
                 "{}\0{}{}\n",
                 file.path,
@@ -235,7 +235,7 @@ py_class!(class treemanifest |py| {
         let file_type = pystring_to_file_type(py, flag)?;
         let file_metadata = FileMetadata::new(node, file_type);
         insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path, file_metadata)
-            .map_pyerr::<exc::RuntimeError>(py)?;
+            .map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -243,7 +243,7 @@ py_class!(class treemanifest |py| {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
         let file_type = pystring_to_file_type(py, flag)?;
-        let file_metadata = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let file_metadata = match tree.get_file(&repo_path).map_pyerr(py)? {
             None => {
                 let msg = "cannot setflag on file that is not in manifest";
                 return Err(PyErr::new::<exc::KeyError, _>(py, msg));
@@ -254,7 +254,7 @@ py_class!(class treemanifest |py| {
             }
         };
         insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path, file_metadata)
-            .map_pyerr::<exc::RuntimeError>(py)?;
+            .map_pyerr(py)?;
         Ok(Python::None(py))
     }
 
@@ -281,7 +281,7 @@ py_class!(class treemanifest |py| {
         };
 
         for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
-            let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let entry = entry.map_pyerr(py)?;
             let path = path_to_pybytes(py, &entry.path);
             let diff_left = convert_side_diff(py, entry.diff_type.left());
             let diff_right = convert_side_diff(py, entry.diff_type.right());
@@ -304,7 +304,7 @@ py_class!(class treemanifest |py| {
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
         for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
-            let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let entry = entry.map_pyerr(py)?;
             match entry.diff_type {
                 DiffType::LeftOnly(_) => {
                     pyset_add(py, &mut result, path_to_pybytes(py, &entry.path))?;
@@ -326,7 +326,7 @@ py_class!(class treemanifest |py| {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
         let node = pybytes_to_node(py, binnode)?;
-        let file_metadata = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let file_metadata = match tree.get_file(&repo_path).map_pyerr(py)? {
             None => FileMetadata::new(node, FileType::Regular),
             Some(mut file_metadata) => {
                 file_metadata.hgid = node;
@@ -334,14 +334,14 @@ py_class!(class treemanifest |py| {
             }
         };
         insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path, file_metadata)
-            .map_pyerr::<exc::RuntimeError>(py)?;
+            .map_pyerr(py)?;
         Ok(())
     }
 
     def __delitem__(&self, path: &PyBytes) -> PyResult<()> {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
-        tree.remove(&repo_path).map_pyerr::<exc::RuntimeError>(py)?;
+        tree.remove(&repo_path).map_pyerr(py)?;
         let mut pending_delete = self.pending_delete(py).borrow_mut();
         pending_delete.remove(&repo_path);
         Ok(())
@@ -350,7 +350,7 @@ py_class!(class treemanifest |py| {
     def __getitem__(&self, key: &PyBytes) -> PyResult<PyBytes> {
         let path = pybytes_to_path(py, key);
         let tree = self.underlying(py).borrow();
-        match tree.get_file(&path).map_pyerr::<exc::RuntimeError>(py)? {
+        match tree.get_file(&path).map_pyerr(py)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.hgid)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
         }
@@ -360,7 +360,7 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr(py)?;
             result.push(path_to_pybytes(py, &file.path));
         }
         Ok(result)
@@ -371,7 +371,7 @@ py_class!(class treemanifest |py| {
     def __contains__(&self, key: &PyBytes) -> PyResult<bool> {
         let path = pybytes_to_path(py, key);
         let tree = self.underlying(py).borrow();
-        match tree.get_file(&path).map_pyerr::<exc::RuntimeError>(py)? {
+        match tree.get_file(&path).map_pyerr(py)? {
             Some(_) => Ok(true),
             None => Ok(false),
         }
@@ -381,7 +381,7 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr(py)?;
             result.push(path_to_pybytes(py, &file.path));
         }
         vec_to_iter(py, result)
@@ -391,7 +391,7 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr(py)?;
             let tuple = (
                 path_to_pybytes(py, &file.path),
                 node_to_pybytes(py, file.meta.hgid),
@@ -405,7 +405,7 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr(py)?;
             result.push(path_to_pybytes(py, &file.path));
         }
         vec_to_iter(py, result)
@@ -438,7 +438,7 @@ py_class!(class treemanifest |py| {
         }
         let entries = tree.finalize(
             parents.iter().map(|x| x.deref()).collect()
-        ).map_pyerr::<exc::RuntimeError>(py)?;
+        ).map_pyerr(py)?;
         for entry in entries {
             let (repo_path, node, raw, p1node, p2node) = entry;
             let tuple = PyTuple::new(
@@ -479,7 +479,7 @@ pub fn subdir_diff(
         others,
         depth,
     )
-    .map_pyerr::<exc::RuntimeError>(py)?;
+    .map_pyerr(py)?;
     let mut result = vec![];
     for (path, node, bytes) in diff {
         let tuple = PyTuple::new(
@@ -509,7 +509,7 @@ pub fn prefetch(
     let node = pybytes_to_node(py, node)?;
     let path = pybytes_to_path(py, path);
     let key = Key::new(path, node);
-    manifest_tree::prefetch(store, key, depth).map_pyerr::<exc::RuntimeError>(py)?;
+    manifest_tree::prefetch(store, key, depth).map_pyerr(py)?;
     Ok(py.None())
 }
 
@@ -568,7 +568,7 @@ fn file_metadata_to_py_tuple(
 }
 
 fn pybytes_to_node(py: Python, pybytes: &PyBytes) -> PyResult<Node> {
-    Node::from_slice(pybytes.data(py)).map_pyerr::<exc::ValueError>(py)
+    Node::from_slice(pybytes.data(py)).map_pyerr(py)
 }
 
 fn node_to_pybytes(py: Python, node: Node) -> PyBytes {

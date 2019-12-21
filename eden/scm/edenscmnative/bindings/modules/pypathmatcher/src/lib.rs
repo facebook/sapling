@@ -64,7 +64,7 @@ py_class!(class treematcher |py| {
     data matcher: TreeMatcher;
 
     def __new__(_cls, rules: Vec<String>) -> PyResult<Self> {
-        let matcher = TreeMatcher::from_rules(rules.into_iter()).map_pyerr::<exc::ValueError>(py)?;
+        let matcher = TreeMatcher::from_rules(rules.into_iter()).map_pyerr(py)?;
         Self::create_instance(py, matcher)
     }
 

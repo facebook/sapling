@@ -170,9 +170,9 @@ py_class!(class dagindex |py| {
     data map: RefCell<IdMap>;
 
     def __new__(_cls, path: &PyBytes, segment_size: usize = 16) -> PyResult<dagindex> {
-        let path = local_bytes_to_path(path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-        let mut dag = Dag::open(path.join("segment")).map_pyerr::<exc::IOError>(py)?;
-        let map = IdMap::open(path.join("idmap")).map_pyerr::<exc::IOError>(py)?;
+        let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+        let mut dag = Dag::open(path.join("segment")).map_pyerr(py)?;
+        let map = IdMap::open(path.join("idmap")).map_pyerr(py)?;
         dag.set_new_segment_size(segment_size);
         Self::create_instance(py, RefCell::new(dag), RefCell::new(map))
     }
@@ -188,34 +188,34 @@ py_class!(class dagindex |py| {
         drop(map);
         let get_parents = translate_get_parents(py, parentfunc);
         let mut map = self.map(py).borrow_mut();
-        let mut map = map.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
+        let mut map = map.prepare_filesystem_sync().map_pyerr(py)?;
         for (nodes, group) in [(masternodes, Group::MASTER), (othernodes, Group::NON_MASTER)].iter() {
             for node in nodes {
                 let node = node.data(py);
-                map.assign_head(&node, &get_parents, *group).map_pyerr::<exc::RuntimeError>(py)?;
+                map.assign_head(&node, &get_parents, *group).map_pyerr(py)?;
             }
         }
-        map.sync().map_pyerr::<exc::IOError>(py)?;
+        map.sync().map_pyerr(py)?;
 
         let get_parents = map.build_get_parents_by_id(&get_parents);
         let mut dag = self.dag(py).borrow_mut();
         use std::ops::DerefMut;
-        let mut syncable = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
+        let mut syncable = dag.prepare_filesystem_sync().map_pyerr(py)?;
         for &group in Group::ALL.iter() {
-            let id = map.next_free_id(group).map_pyerr::<exc::IOError>(py)?;
+            let id = map.next_free_id(group).map_pyerr(py)?;
             if id > group.min_id() {
-                syncable.build_segments_persistent(id - 1, &get_parents).map_pyerr::<exc::IOError>(py)?;
+                syncable.build_segments_persistent(id - 1, &get_parents).map_pyerr(py)?;
             }
         }
-        syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr::<exc::IOError>(py)?;
+        syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr(py)?;
 
         Ok(py.None())
     }
 
     /// Reload segments. Get changes on disk.
     def reload(&self) -> PyResult<PyObject> {
-        self.map(py).borrow_mut().reload().map_pyerr::<exc::IOError>(py)?;
-        self.dag(py).borrow_mut().reload().map_pyerr::<exc::IOError>(py)?;
+        self.map(py).borrow_mut().reload().map_pyerr(py)?;
+        self.dag(py).borrow_mut().reload().map_pyerr(py)?;
         Ok(py.None())
     }
 
@@ -224,7 +224,7 @@ py_class!(class dagindex |py| {
         let map = self.map(py).borrow();
         Ok(map
             .find_slice_by_id(Id(id))
-            .map_pyerr::<exc::IOError>(py)?
+            .map_pyerr(py)?
             .map(|node| PyBytes::new(py, node)))
     }
 
@@ -234,92 +234,92 @@ py_class!(class dagindex |py| {
         let map = self.map(py).borrow();
         Ok(map
             .find_id_by_slice(&node)
-            .map_pyerr::<exc::IOError>(py)?.map(|id| id.0))
+            .map_pyerr(py)?.map(|id| id.0))
     }
 
     def all(&self) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.all().map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.all().map_pyerr(py)?))
     }
 
     /// Calculate all ancestors reachable from the set.
     def ancestors(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.ancestors(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.ancestors(set).map_pyerr(py)?))
     }
 
     /// Calculate parents of the given set.
     def parents(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.parents(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.parents(set).map_pyerr(py)?))
     }
 
     /// Get parents of a single `id`. Preserve the order.
     def parentids(&self, id: u64) -> PyResult<Vec<u64>> {
         let dag = self.dag(py).borrow();
-        Ok(dag.parent_ids(Id(id)).map_pyerr::<exc::IOError>(py)?.into_iter().map(|id| id.0).collect())
+        Ok(dag.parent_ids(Id(id)).map_pyerr(py)?.into_iter().map(|id| id.0).collect())
     }
 
     /// Calculate parents of the given set.
     def heads(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.heads(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.heads(set).map_pyerr(py)?))
     }
 
     /// Calculate children of the given set.
     def children(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.children(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.children(set).map_pyerr(py)?))
     }
 
     /// Calculate roots of the given set.
     def roots(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.roots(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.roots(set).map_pyerr(py)?))
     }
 
     /// Calculate one greatest common ancestor of a set.
     /// If there are multiple greatest common ancestors, pick an arbitrary one.
     def gcaone(&self, set: Spans) -> PyResult<Option<u64>> {
         let dag = self.dag(py).borrow();
-        Ok(dag.gca_one(set).map_pyerr::<exc::IOError>(py)?.map(|id| id.0))
+        Ok(dag.gca_one(set).map_pyerr(py)?.map(|id| id.0))
     }
 
     /// Calculate all greatest common ancestors of a set.
     def gcaall(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.gca_all(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.gca_all(set).map_pyerr(py)?))
     }
 
     /// Calculate all common ancestors of a set.
     def commonancestors(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.common_ancestors(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.common_ancestors(set).map_pyerr(py)?))
     }
 
     /// Check if `ancestor` is an ancestor of `descendant`.
     def isancestor(&self, ancestor: u64, descendant: u64) -> PyResult<bool> {
         let dag = self.dag(py).borrow();
-        dag.is_ancestor(Id(ancestor), Id(descendant)).map_pyerr::<exc::IOError>(py)
+        dag.is_ancestor(Id(ancestor), Id(descendant)).map_pyerr(py)
     }
 
     /// Calculate `heads(ancestors(set))`.
     /// This is faster than calling `heads` and `ancestors` individually.
     def headsancestors(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.heads_ancestors(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.heads_ancestors(set).map_pyerr(py)?))
     }
 
     /// Calculate `roots::heads`.
     def range(&self, roots: Spans, heads: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.range(roots, heads).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.range(roots, heads).map_pyerr(py)?))
     }
 
     /// Calculate descendants of the given set.
     def descendants(&self, set: Spans) -> PyResult<Spans> {
         let dag = self.dag(py).borrow();
-        Ok(Spans(dag.descendants(set).map_pyerr::<exc::IOError>(py)?))
+        Ok(Spans(dag.descendants(set).map_pyerr(py)?))
     }
 
     def debugsegments(&self) -> PyResult<String> {

@@ -89,7 +89,7 @@ py_class!(class nodemap |py| {
 
     @staticmethod
     def repair(path: &str) -> PyResult<PyUnicode> {
-        py.allow_threads(|| NodeMap::repair(path)).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        py.allow_threads(|| NodeMap::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 });
 
@@ -97,27 +97,27 @@ py_class!(class nodeset |py| {
     data set: RefCell<NodeSet>;
 
     def __new__(_cls, path: &PyBytes) -> PyResult<Self> {
-        let path = local_bytes_to_path(path.data(py)).map_pyerr::<exc::ValueError>(py)?;
-        let nodeset = NodeSet::open(path).map_pyerr::<exc::IOError>(py)?;
+        let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+        let nodeset = NodeSet::open(path).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(nodeset))
     }
 
     def add(&self, node: &PyBytes) -> PyResult<PyObject> {
-        let node = Node::from_slice(node.data(py)).map_pyerr::<exc::ValueError>(py)?;
+        let node = Node::from_slice(node.data(py)).map_pyerr(py)?;
         let set = self.set(py);
         let mut set = set.borrow_mut();
-        set.add(&node).map_pyerr::<exc::IOError>(py)?;
+        set.add(&node).map_pyerr(py)?;
         Ok(py.None())
     }
 
     def flush(&self) -> PyResult<PyObject> {
-        self.set(py).borrow_mut().flush().map_pyerr::<exc::IOError>(py)?;
+        self.set(py).borrow_mut().flush().map_pyerr(py)?;
         Ok(py.None())
     }
 
     def __contains__(&self, node: &PyBytes) -> PyResult<bool> {
-        let node = Node::from_slice(node.data(py)).map_pyerr::<exc::ValueError>(py)?;
-        Ok(self.set(py).borrow().contains(&node).map_pyerr::<exc::IOError>(py)?)
+        let node = Node::from_slice(node.data(py)).map_pyerr(py)?;
+        Ok(self.set(py).borrow().contains(&node).map_pyerr(py)?)
     }
 
     def items(&self) -> PyResult<Vec<Bytes>> {
@@ -125,12 +125,12 @@ py_class!(class nodeset |py| {
         let nodes = set.iter()
             .map(|node| node.map(|node| Bytes::from(node.as_ref().to_vec())))
             .collect::<Result<Vec<Bytes>, _>>()
-            .map_pyerr::<exc::IOError>(py)?;
+            .map_pyerr(py)?;
         Ok(nodes)
     }
 
     @staticmethod
     def repair(path: &str) -> PyResult<PyUnicode> {
-        NodeSet::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        NodeSet::repair(path).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 });

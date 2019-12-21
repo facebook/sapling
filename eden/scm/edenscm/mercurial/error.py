@@ -26,6 +26,7 @@ from . import pycompat
 
 
 IndexedLogError = bindings.error.IndexedLogError
+RustError = bindings.error.RustError
 
 
 def _tobytes(exc):

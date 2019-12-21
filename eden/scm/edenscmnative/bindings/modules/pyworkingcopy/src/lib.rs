@@ -27,7 +27,7 @@ py_class!(class walker |py| {
     data walker: RefCell<Walker<UnsafePythonMatcher>>;
     def __new__(_cls, root: PyBytes, pymatcher: PyObject) -> PyResult<walker> {
         let root = local_bytes_to_path(root.data(py))
-            .map_pyerr::<exc::RuntimeError>(py)?
+            .map_pyerr(py)?
             .to_path_buf();
         let matcher = UnsafePythonMatcher::new(pymatcher);
         walker::create_instance(py, RefCell::new(Walker::new(root, matcher)))
@@ -39,7 +39,7 @@ py_class!(class walker |py| {
 
     def __next__(&self) -> PyResult<Option<PyBytes>> {
         let item = match self.walker(py).borrow_mut().next() {
-            Some(path) => Some(PyBytes::new(py, repo_path_to_local_bytes(path.map_pyerr::<exc::RuntimeError>(py)?.as_ref()))),
+            Some(path) => Some(PyBytes::new(py, repo_path_to_local_bytes(path.map_pyerr(py)?.as_ref()))),
             None => None,
         };
         Ok(item)

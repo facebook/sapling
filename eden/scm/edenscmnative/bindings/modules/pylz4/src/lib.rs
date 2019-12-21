@@ -24,23 +24,21 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 fn compress_py(py: Python, data: PyObject) -> PyResult<PyObject> {
     let data = SimplePyBuf::new(py, &data);
     compress(data.as_ref())
-        .map_pyerr::<exc::RuntimeError>(py)
+        .map_pyerr(py)
         .map(|bytes| vec_to_pyobj(py, bytes))
 }
 
 fn compresshc_py(py: Python, data: PyObject) -> PyResult<PyObject> {
     let data = SimplePyBuf::new(py, &data);
     compresshc(data.as_ref())
-        .map_pyerr::<exc::RuntimeError>(py)
+        .map_pyerr(py)
         .map(|bytes| vec_to_pyobj(py, bytes))
 }
 
 fn decompress_py(py: Python, data: PyObject) -> PyResult<PyObject> {
     let data = SimplePyBuf::new(py, &data);
     let data = data.as_ref();
-    let size = decompress_size(data).map_pyerr::<exc::RuntimeError>(py)?;
+    let size = decompress_size(data).map_pyerr(py)?;
     let (obj, slice) = allocate_pybytes(py, size);
-    decompress_into(data, slice)
-        .map_pyerr::<exc::RuntimeError>(py)
-        .map(move |_| obj)
+    decompress_into(data, slice).map_pyerr(py).map(move |_| obj)
 }

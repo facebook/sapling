@@ -126,12 +126,12 @@ py_class!(class client |py| {
         streamhistory: bool = false,
         streamtrees: bool = false
     ) -> PyResult<client> {
-        let url = str::from_utf8(url.data(py)).map_pyerr::<exc::UnicodeDecodeError>(py)?;
-        let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::UnicodeDecodeError>(py)?;
+        let url = str::from_utf8(url.data(py)).map_pyerr(py)?;
+        let repo = str::from_utf8(repo.data(py)).map_pyerr(py)?;
 
         let mut config = Config::new()
             .base_url_str(url)
-            .map_pyerr::<exc::RuntimeError>(py)?
+            .map_pyerr(py)?
             .repo(repo)
             .data_batch_size(databatchsize)
             .history_batch_size(historybatchsize)
@@ -141,8 +141,8 @@ py_class!(class client |py| {
             .stream_trees(streamtrees);
 
         if let Some((cert, key)) = creds {
-            let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::ValueError>(py)?;
-            let key = local_bytes_to_path(key.data(py)).map_pyerr::<exc::ValueError>(py)?;
+            let cert = local_bytes_to_path(cert.data(py)).map_pyerr(py)?;
+            let key = local_bytes_to_path(key.data(py)).map_pyerr(py)?;
             config = config.client_creds(cert, key).map_err(|e| into_exception(py, e))?;
         }
 
@@ -306,18 +306,16 @@ fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
 }
 
 fn make_node_from_utf8(py: Python, node: &PyBytes) -> PyResult<Node> {
-    let node = str::from_utf8(node.data(py)).map_pyerr::<exc::UnicodeDecodeError>(py)?;
-    Ok(Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?)
+    let node = str::from_utf8(node.data(py)).map_pyerr(py)?;
+    Ok(Node::from_str(node).map_pyerr(py)?)
 }
 
 fn make_node_from_bytes(py: Python, node: &PyBytes) -> PyResult<Node> {
-    Ok(Node::from_slice(node.data(py)).map_pyerr::<exc::ValueError>(py)?)
+    Ok(Node::from_slice(node.data(py)).map_pyerr(py)?)
 }
 
 fn make_path(py: Python, path: &PyBytes) -> PyResult<RepoPathBuf> {
-    Ok(RepoPath::from_utf8(path.data(py))
-        .map_pyerr::<exc::ValueError>(py)?
-        .to_owned())
+    Ok(RepoPath::from_utf8(path.data(py)).map_pyerr(py)?.to_owned())
 }
 
 fn wrap_callback(callback: PyObject) -> ProgressFn {

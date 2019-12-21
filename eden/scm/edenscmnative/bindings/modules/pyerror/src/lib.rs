@@ -16,5 +16,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "IndexedLogError",
         py.get_type::<error::PyIndexedLogError>(),
     )?;
+    m.add(py, "RustError", py.get_type::<error::PyRustError>())?;
     Ok(m)
 }

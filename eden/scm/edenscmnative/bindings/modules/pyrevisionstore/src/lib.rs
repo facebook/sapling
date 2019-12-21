@@ -411,8 +411,8 @@ py_class!(class indexedlogdatastore |py| {
 
     @staticmethod
     def repair(path: &PyBytes) -> PyResult<PyUnicode> {
-        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
-        py.allow_threads(|| IndexedLogDataStore::repair(path)).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+        py.allow_threads(|| IndexedLogDataStore::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
@@ -464,8 +464,8 @@ py_class!(class indexedloghistorystore |py| {
 
     @staticmethod
     def repair(path: &PyBytes) -> PyResult<PyUnicode> {
-        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
-        IndexedLogHistoryStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| PyUnicode::new(py, &s))
+        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+        IndexedLogHistoryStore::repair(path).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
