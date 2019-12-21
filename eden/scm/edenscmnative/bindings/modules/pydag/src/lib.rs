@@ -9,7 +9,7 @@
 
 use anyhow::Error;
 use cpython::*;
-use cpython_ext::{FallibleExt, ResultPyErrExt};
+use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::{
     id::{Group, Id},
     idmap::IdMap,
@@ -343,13 +343,13 @@ fn translate_get_parents<'a>(
     move |node: &[u8]| -> Result<Vec<Box<[u8]>>> {
         let mut result = Vec::new();
         let node = PyBytes::new(py, node);
-        let parents = get_parents.call(py, (node,), None).into_fallible()?;
-        for parent in parents.iter(py).into_fallible()? {
+        let parents = get_parents.call(py, (node,), None).into_anyhow_result()?;
+        for parent in parents.iter(py).into_anyhow_result()? {
             let parent = parent
-                .into_fallible()?
+                .into_anyhow_result()?
                 .cast_as::<PyBytes>(py)
                 .map_err(PyErr::from)
-                .into_fallible()?
+                .into_anyhow_result()?
                 .data(py)
                 .to_vec()
                 .into_boxed_slice();

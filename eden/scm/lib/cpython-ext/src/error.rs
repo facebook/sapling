@@ -16,7 +16,7 @@ use std::fmt;
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
 /// Rust result.
 ///
-/// If the error is created via [`FallibleExt`], the original Python error
+/// If the error is created via [`AnyhowResultExt`], the original Python error
 /// will be returned.
 ///
 /// # Examples
@@ -48,26 +48,26 @@ pub trait ResultPyErrExt<T> {
 ///
 /// ```
 /// use anyhow::Result;
-/// use cpython_ext::error::{FallibleExt, PyErr};
+/// use cpython_ext::error::{AnyhowResultExt, PyErr};
 ///
 /// fn eval_py() -> Result<i32> {
 ///     let gil = cpython::Python::acquire_gil();
 ///     let py = gil.python();
-///     let obj = py.eval("1 + 2", None, None).into_fallible()?;
-///     obj.extract(py).into_fallible()
+///     let obj = py.eval("1 + 2", None, None).into_anyhow_result()?;
+///     obj.extract(py).into_anyhow_result()
 /// }
 ///
 /// fn round_trip() -> cpython::PyResult<()> {
 ///     let gil = cpython::Python::acquire_gil();
 ///     let py = gil.python();
-///     let res = py.eval("1 + 2", None, None).into_fallible();
+///     let res = py.eval("1 + 2", None, None).into_anyhow_result();
 ///     use cpython_ext::error::ResultPyErrExt;
 ///     res.map(|_| ()).map_pyerr(py)
 /// }
 /// ```
 ///
-pub trait FallibleExt<T> {
-    fn into_fallible(self) -> Result<T>;
+pub trait AnyhowResultExt<T> {
+    fn into_anyhow_result(self) -> Result<T>;
 }
 
 py_exception!(error, PyIndexedLogError);
@@ -98,8 +98,8 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
     }
 }
 
-impl<T> FallibleExt<T> for PyResult<T> {
-    fn into_fallible(self) -> Result<T> {
+impl<T> AnyhowResultExt<T> for PyResult<T> {
+    fn into_anyhow_result(self) -> Result<T> {
         self.map_err(|e| Error::new(PyErr::from(e)))
     }
 }
