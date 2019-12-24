@@ -869,7 +869,7 @@ class dirstate(object):
         # "M" files.
         mtolog = self._ui.configint("experimental", "samplestatus")
 
-        if "treestate" in self._repo.requirements:
+        if util.safehasattr(dmap, "nonnormalsetfiltered"):
             # treestate has a fast path to filter out ignored directories.
             ignorevisitdir = ignore.visitdir
 
