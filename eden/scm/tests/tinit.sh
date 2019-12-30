@@ -141,7 +141,10 @@ EOF
 drawdag() {
   hg debugdrawdag "$@"
   eval `hg bookmarks -T '{bookmark}={node}\n'`
-  hg book -fd `hg book -T '{bookmark} '`
+  BOOKMARKS=$(hg book -T '{bookmark} ')
+  if [[ -n "${BOOKMARKS}" ]]; then
+    hg book -fd ${BOOKMARKS}
+  fi
 }
 
 # Simplify error reporting so crash does not show a traceback.
