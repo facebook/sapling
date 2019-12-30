@@ -138,11 +138,16 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
 }
 
 /// Check if no element of this vector is a prefix of another element
-fn fail_if_not_prefix_free<'a>(paths: Vec<&'a MPath>) -> Result<()> {
-    let r: Result<Vec<_>> = paths
+fn fail_if_not_prefix_free<'a, I>(paths: I) -> Result<()>
+where
+    I: IntoIterator<Item = &'a MPath>,
+    <I as IntoIterator>::IntoIter: Itertools + Clone,
+    <<I as IntoIterator>::IntoIter as Iterator>::Item: Clone,
+{
+    let r: Result<Vec<()>> = paths
         .into_iter()
         .tuple_combinations::<(_, _)>()
-        .map(|(p1, p2)| {
+        .map(|(p1, p2): (&MPath, &MPath)| {
             if p1.is_prefix_of(p2) || p2.is_prefix_of(p1) {
                 Err(Error::from(ErrorKind::NonPrefixFreeMap(
                     p1.clone(),
@@ -161,8 +166,16 @@ fn mover_factory(
     prefix_map: HashMap<MPath, PrefixAction>,
     default_action: DefaultAction,
 ) -> Result<Mover> {
-    let keys: Vec<&MPath> = prefix_map.iter().map(|(k, _)| k).collect();
-    fail_if_not_prefix_free(keys)?;
+    // We want `prefix_map` to be ordered longest-to-shortest
+    // to allow non-prefix-free maps in the future. For these kinds
+    // of maps, we need to ensure we always try to match the longest
+    // prefix first, as it's more specific.
+    let prefix_map: Vec<(MPath, PrefixAction)> = {
+        let mut v: Vec<(MPath, PrefixAction)> = prefix_map.into_iter().collect();
+        v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
+        v.reverse();
+        v
+    };
 
     Ok(Arc::new(move |source_path: &MPath| {
         let path_and_prefix_action = prefix_map
@@ -231,6 +244,10 @@ pub fn get_small_to_large_mover(
         .into_iter()
         .map(|(k, v)| (k, PrefixAction::Change(v)))
         .collect();
+
+    // Note: once we allow non-prefix free prefix maps, this can be removed
+    fail_if_not_prefix_free(prefix_map.iter().map(|(k, _)| k))?;
+
     mover_factory(prefix_map, default_action)
 }
 
@@ -295,6 +312,10 @@ pub fn get_large_to_small_mover(
             DefaultAction::DoNotSync
         }
     };
+
+    // Note: once we allow non-prefix free prefix maps, this can be removed
+    fail_if_not_prefix_free(prefix_map.iter().map(|(k, _)| k))?;
+
     mover_factory(prefix_map, default_action)
 }
 
@@ -339,6 +360,36 @@ mod test {
         assert_eq!(
             get_path_action(foo_el.iter(), &PrefixAction::Change(mp("bar"))).unwrap(),
             PathAction::Change(mp("bar/foo"))
+        );
+    }
+
+    #[test]
+    fn test_non_prefix_free_mover() {
+        let hm = hashmap! {
+            mp("path/") => PrefixAction::Change(mp("shortest/renamed")),
+            mp("path/which/is/longest") => PrefixAction::Change(mp("longest/renamed")),
+            mp("path/which/") => PrefixAction::Change(mp("middle/renamed")),
+        };
+        let mover = mover_factory(hm.clone(), DefaultAction::DoNotSync).unwrap();
+        assert_eq!(
+            mover(&mp("path/which/is/longest/1.txt")).unwrap(),
+            Some(mp("longest/renamed/1.txt"))
+        );
+        assert_eq!(
+            mover(&mp("path/1.txt")).unwrap(),
+            Some(mp("shortest/renamed/1.txt"))
+        );
+        assert_eq!(
+            mover(&mp("path/which/2.txt")).unwrap(),
+            Some(mp("middle/renamed/2.txt"))
+        );
+        assert_eq!(
+            mover(&mp("path/which/subdir/2.txt")).unwrap(),
+            Some(mp("middle/renamed/subdir/2.txt"))
+        );
+        assert_eq!(
+            mover(&mp("path/subdir/1.txt")).unwrap(),
+            Some(mp("shortest/renamed/subdir/1.txt"))
         );
     }
 
