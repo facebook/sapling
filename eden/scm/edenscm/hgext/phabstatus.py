@@ -100,6 +100,13 @@ def getdiffstatus(repo, *diffid):
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
+    except ValueError as ex:
+        msg = _(
+            "Error decoding GraphQL response. No diff information can be provided.\n"
+        )
+        hint = _("Error info: %s\n") % str(ex)
+        ret = _fail(repo, diffid, msg, hint)
+        return ret
 
     # This makes the code more robust in case we don't learn about any
     # particular revision
