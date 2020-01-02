@@ -42,6 +42,8 @@ use synced_commit_mapping::{
 };
 use thiserror::Error;
 
+pub mod validation;
+
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("Pushrebase of synced commit failed - check config for overlaps: {0:?}")]
