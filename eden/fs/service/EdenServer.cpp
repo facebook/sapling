@@ -1231,7 +1231,6 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setMinCompressBytes(FLAGS_thrift_min_compress_bytes);
   server_->addRoutingHandler(
       std::make_unique<apache::thrift::RSRoutingHandler>());
-  server_->enableRocketServer(false);
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
