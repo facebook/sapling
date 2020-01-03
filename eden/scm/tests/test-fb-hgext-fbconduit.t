@@ -267,7 +267,7 @@ the globalrev 5000.
 
 - Setup the `globalrev->hash` mapping for commit with globalrev 5000.
 
-  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/globalrev/basic/hg/5000/b5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/GLOBAL_REV/basic/hg/5000/b5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
 
 - Test that the lookup succeeds now.
 

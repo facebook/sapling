@@ -213,7 +213,7 @@ def _scmquerylookupglobalrev(orig, repo, rev):
         try:
             client = graphql.Client(repo=repo)
             hghash = str(
-                client.getmirroredrev(reponame, "globalrev", reponame, "hg", str(rev))
+                client.getmirroredrev(reponame, "GLOBAL_REV", reponame, "hg", str(rev))
             )
             matchedrevs = []
             if hghash:
