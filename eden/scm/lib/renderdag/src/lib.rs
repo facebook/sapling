@@ -9,6 +9,7 @@ mod ascii;
 mod ascii_large;
 mod box_drawing;
 mod column;
+mod output;
 mod render;
 
 #[cfg(test)]

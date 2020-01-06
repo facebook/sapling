@@ -5,29 +5,41 @@
  * GNU General Public License version 2.
  */
 
+use std::marker::PhantomData;
+
 use itertools::Itertools;
 
-use crate::render::{Ancestor, GraphRowRenderer, LinkLine, NodeLine, PadLine, Renderer};
+use crate::output::OutputRendererOptions;
+use crate::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
 
-pub struct BoxDrawingRenderer<N> {
-    inner: GraphRowRenderer<N>,
-    min_height: usize,
+pub struct BoxDrawingRenderer<N, R>
+where
+    R: Renderer<N, Output = GraphRow<N>> + Sized,
+{
+    inner: R,
+    options: OutputRendererOptions,
     extra_pad_line: Option<String>,
+    _phantom: PhantomData<N>,
 }
 
-impl<N> BoxDrawingRenderer<N> {
-    pub(crate) fn new(inner: GraphRowRenderer<N>, min_height: usize) -> Self {
+impl<N, R> BoxDrawingRenderer<N, R>
+where
+    R: Renderer<N, Output = GraphRow<N>> + Sized,
+{
+    pub(crate) fn new(inner: R, options: OutputRendererOptions) -> Self {
         BoxDrawingRenderer {
             inner,
-            min_height,
+            options,
             extra_pad_line: None,
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<N> Renderer<N> for BoxDrawingRenderer<N>
+impl<N, R> Renderer<N> for BoxDrawingRenderer<N, R>
 where
     N: Clone + Eq,
+    R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     type Output = String;
 
@@ -51,7 +63,10 @@ where
     ) -> String {
         let line = self.inner.next_row(node, parents, glyph, message);
         let mut out = String::new();
-        let mut message_lines = line.message.lines().pad_using(self.min_height, |_| "");
+        let mut message_lines = line
+            .message
+            .lines()
+            .pad_using(self.options.min_row_height, |_| "");
         let mut need_extra_pad_line = false;
 
         // Render the previous extra pad line
@@ -218,7 +233,7 @@ mod tests {
             reserve,
             ancestors,
             missing,
-            &mut GraphRowRenderer::new().box_drawing(2),
+            &mut GraphRowRenderer::new().output().build_box_drawing(),
         )
     }
 

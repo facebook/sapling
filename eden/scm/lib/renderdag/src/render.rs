@@ -10,10 +10,8 @@ use std::collections::BTreeMap;
 
 use bitflags::bitflags;
 
-use crate::ascii::AsciiRenderer;
-use crate::ascii_large::AsciiLargeRenderer;
-use crate::box_drawing::BoxDrawingRenderer;
 use crate::column::{Column, ColumnsExt};
+use crate::output::OutputRendererBuilder;
 
 pub trait Renderer<N> {
     type Output;
@@ -211,19 +209,9 @@ where
         }
     }
 
-    /// Render each graph row as an ASCII diagram.
-    pub fn ascii(self, min_height: usize) -> AsciiRenderer<N> {
-        AsciiRenderer::new(self, min_height)
-    }
-
-    /// Render each graph row as a large ASCII diagram.
-    pub fn ascii_large(self, min_height: usize) -> AsciiLargeRenderer<N> {
-        AsciiLargeRenderer::new(self, min_height)
-    }
-
-    /// Render each graph row as a Unicode box-drawing diagram.
-    pub fn box_drawing(self, min_height: usize) -> BoxDrawingRenderer<N> {
-        BoxDrawingRenderer::new(self, min_height)
+    /// Build an output renderer from this renderer.
+    pub fn output(self) -> OutputRendererBuilder<N, Self> {
+        OutputRendererBuilder::new(self)
     }
 }
 
