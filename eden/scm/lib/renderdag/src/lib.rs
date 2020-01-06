@@ -13,6 +13,9 @@ mod output;
 mod render;
 
 #[cfg(test)]
+mod test_fixtures;
+
+#[cfg(test)]
 mod test_utils;
 
 pub use crate::ascii::AsciiRenderer;

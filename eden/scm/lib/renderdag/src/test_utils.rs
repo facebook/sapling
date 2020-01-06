@@ -12,16 +12,20 @@ use dag::{Group, Id, IdMap};
 use tempfile::tempdir;
 
 use crate::render::{Ancestor, Renderer};
+use crate::test_fixtures::TestFixture;
 
 pub(crate) fn render_string(
-    dag: &str,
-    messages: &[(&str, &str)],
-    heads: &[&str],
-    reserve: &[&str],
-    ancestors: &[(&str, &str)],
-    missing: &[&str],
+    fixture: &TestFixture,
     renderer: &mut dyn Renderer<Id, Output = String>,
 ) -> String {
+    let TestFixture {
+        dag,
+        messages,
+        heads,
+        reserve,
+        ancestors,
+        missing,
+    } = fixture;
     let dir = tempdir().unwrap();
     let mut id_map = IdMap::open(dir.path().join("id")).unwrap();
     let parents = drawdag::parse(dag);
@@ -87,7 +91,6 @@ pub(crate) fn render_string(
             .collect();
         let name =
             String::from_utf8(id_map.find_slice_by_id(node).unwrap().unwrap().to_vec()).unwrap();
-
         let message = match messages.get(name.as_str()) {
             Some(message) => format!("{}\n{}", name, message),
             None => name.clone(),

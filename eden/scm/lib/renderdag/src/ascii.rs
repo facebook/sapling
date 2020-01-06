@@ -215,31 +215,18 @@ where
 #[cfg(test)]
 mod tests {
     use crate::render::GraphRowRenderer;
+    use crate::test_fixtures::{self, TestFixture};
     use crate::test_utils::render_string;
 
-    fn render(
-        dag: &str,
-        messages: &[(&str, &str)],
-        heads: &[&str],
-        reserve: &[&str],
-        ancestors: &[(&str, &str)],
-        missing: &[&str],
-    ) -> String {
-        render_string(
-            dag,
-            messages,
-            heads,
-            reserve,
-            ancestors,
-            missing,
-            &mut GraphRowRenderer::new().output().build_ascii(),
-        )
+    fn render(fixture: &TestFixture) -> String {
+        let mut renderer = GraphRowRenderer::new().output().build_ascii();
+        render_string(fixture, &mut renderer)
     }
 
     #[test]
     fn basic() {
         assert_eq!(
-            render("A-B-C", &[], &["C"], &[], &[], &[]),
+            render(&test_fixtures::BASIC),
             r#"
             o  C
             |
@@ -252,20 +239,7 @@ mod tests {
     #[test]
     fn branches_and_merges() {
         assert_eq!(
-            render(
-                r#"
-                      T /---------------N--O---\           T
-                     / /                        \           \
-               /----E-F-\    /-------L--M--------P--\     S--U---\
-            A-B-C-D------G--H--I--J--K---------------Q--R---------V--W
-                                   \--N
-            "#,
-                &[],
-                &["W"],
-                &[],
-                &[],
-                &[],
-            ),
+            render(&test_fixtures::BRANCHES_AND_MERGES),
             r#"
             o  W
             |
@@ -318,22 +292,7 @@ mod tests {
     #[test]
     fn octopus_branch_and_merge() {
         assert_eq!(
-            render(
-                r#"
-                        /-----\
-                       /       \
-                      D /--C--\ I
-                     / /---D---\ \
-                    A-B----E----H-J
-                       \---F---/ /
-                        \--G--/ F
-                "#,
-                &[],
-                &["J"],
-                &[],
-                &[],
-                &[],
-            ),
+            render(&test_fixtures::OCTOPUS_BRANCH_AND_MERGE),
             r#"
             o      J
             +-+-.
@@ -360,17 +319,7 @@ mod tests {
     #[test]
     fn reserved_column() {
         assert_eq!(
-            render(
-                r#"
-                   A-B-C-F-G----\
-                    D-E-/   \-W  \-X-Y-Z
-                "#,
-                &[],
-                &["W", "Z"],
-                &["G"],
-                &[],
-                &[],
-            ),
+            render(&test_fixtures::RESERVED_COLUMN),
             r#"
               o  Z
               |
@@ -399,17 +348,7 @@ mod tests {
     #[test]
     fn ancestors() {
         assert_eq!(
-            render(
-                r#"
-                   A----B-D-----E----------F-\
-                    \-C--/       \-W  \-X     \-Y-Z
-                "#,
-                &[],
-                &["W", "X", "Z"],
-                &["F"],
-                &[("C", "A"), ("D", "C"), ("E", "D"), ("F", "E")],
-                &[],
-            ),
+            render(&test_fixtures::ANCESTORS),
             r#"
               o  Z
               |
@@ -436,18 +375,7 @@ mod tests {
     #[test]
     fn split_parents() {
         assert_eq!(
-            render(
-                r#"
-                    /-B-\     A-\
-                   A     D-E  B--E
-                    \-C-/     C-/
-                "#,
-                &[],
-                &["E"],
-                &["B", "D", "C"],
-                &[("E", "A"), ("E", "B")],
-                &[],
-            ),
+            render(&test_fixtures::SPLIT_PARENTS),
             r#"
                   o  E
             .-+-+-+
@@ -464,18 +392,7 @@ mod tests {
     #[test]
     fn terminations() {
         assert_eq!(
-            render(
-                r#"
-                   A-B-C  D-E-\
-                            F---I--J
-                        X-D-H-/  \-K
-                "#,
-                &[],
-                &["C", "J", "K"],
-                &["E"],
-                &[("B", "A")],
-                &["A", "F", "X"],
-            ),
+            render(&test_fixtures::TERMINATIONS),
             r#"
               o  K
               |
@@ -504,28 +421,8 @@ mod tests {
 
     #[test]
     fn long_messages() {
-        let long_message = "long message 1\nlong message 2\nlong message 3\n\n";
-        let very_long_message = concat!(
-            "very long message 1\nvery long message 2\nvery long message 3\n\n",
-            "very long message 4\nvery long message 5\nvery long message 6\n\n"
-        );
         assert_eq!(
-            render(
-                r#"
-                         Y-\
-                  Z-A-B-D-E-F
-                       \-C-/
-                "#,
-                &[
-                    ("A", long_message),
-                    ("C", long_message),
-                    ("F", very_long_message)
-                ],
-                &["F"],
-                &[],
-                &[],
-                &["Y", "Z"]
-            ),
+            render(&test_fixtures::LONG_MESSAGES),
             r#"
             o      F
             +-+-.  very long message 1
