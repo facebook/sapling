@@ -262,6 +262,7 @@ mod tests {
 
     fn render(
         dag: &str,
+        messages: &[(&str, &str)],
         heads: &[&str],
         reserve: &[&str],
         ancestors: &[(&str, &str)],
@@ -269,6 +270,7 @@ mod tests {
     ) -> String {
         render_string(
             dag,
+            messages,
             heads,
             reserve,
             ancestors,
@@ -283,7 +285,7 @@ mod tests {
     #[test]
     fn basic() {
         assert_eq!(
-            render("A-B-C", &["C"], &[], &[], &[]),
+            render("A-B-C", &[], &["C"], &[], &[], &[]),
             r#"
             o  C
             |
@@ -306,6 +308,7 @@ mod tests {
             A-B-C-D------G--H--I--J--K---------------Q--R---------V--W
                                    \--N
             "#,
+                &[],
                 &["W"],
                 &[],
                 &[],
@@ -395,6 +398,7 @@ mod tests {
                        \---F---/ /
                         \--G--/ F
                 "#,
+                &[],
                 &["J"],
                 &[],
                 &[],
@@ -440,6 +444,7 @@ mod tests {
                    A-B-C-F-G----\
                     D-E-/   \-W  \-X-Y-Z
                 "#,
+                &[],
                 &["W", "Z"],
                 &["G"],
                 &[],
@@ -488,6 +493,7 @@ mod tests {
                    A----B-D-----E----------F-\
                     \-C--/       \-W  \-X     \-Y-Z
                 "#,
+                &[],
                 &["W", "X", "Z"],
                 &["F"],
                 &[("C", "A"), ("D", "C"), ("E", "D"), ("F", "E")],
@@ -534,6 +540,7 @@ mod tests {
                    A     D-E  B--E
                     \-C-/     C-/
                 "#,
+                &[],
                 &["E"],
                 &["B", "D", "C"],
                 &[("E", "A"), ("E", "B")],
@@ -565,6 +572,7 @@ mod tests {
                             F---I--J
                         X-D-H-/  \-K
                 "#,
+                &[],
                 &["C", "J", "K"],
                 &["E"],
                 &[("B", "A")],
@@ -601,4 +609,60 @@ mod tests {
             ~"#
         );
     }
+
+    #[test]
+    fn long_messages() {
+        let long_message = "long message 1\nlong message 2\nlong message 3\n\n";
+        let very_long_message = concat!(
+            "very long message 1\nvery long message 2\nvery long message 3\n\n",
+            "very long message 4\nvery long message 5\nvery long message 6\n\n"
+        );
+        assert_eq!(
+            render(
+                r#"
+                         Y-\
+                  Z-A-B-D-E-F
+                       \-C-/
+                "#,
+                &[
+                    ("A", long_message),
+                    ("C", long_message),
+                    ("F", very_long_message)
+                ],
+                &["F"],
+                &[],
+                &[],
+                &["Y", "Z"]
+            ),
+            r#"
+            o        F
+            |\___    very long message 1
+            | \  \   very long message 2
+            |  |  |  very long message 3
+            |  |  ~
+            |  |     very long message 4
+            |  |     very long message 5
+            |  |     very long message 6
+            |  |
+            |  o  E
+            |  |
+            |  |
+            |  o  D
+            |  |
+            |  |
+            o  |  C
+            | /   long message 1
+            |/    long message 2
+            |     long message 3
+            |
+            o  B
+            |
+            |
+            o  A
+            |  long message 1
+            ~  long message 2
+               long message 3"#
+        );
+    }
+
 }

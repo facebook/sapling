@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use dag::{Group, Id, IdMap};
@@ -15,6 +15,7 @@ use crate::render::{Ancestor, Renderer};
 
 pub(crate) fn render_string(
     dag: &str,
+    messages: &[(&str, &str)],
     heads: &[&str],
     reserve: &[&str],
     ancestors: &[(&str, &str)],
@@ -63,6 +64,7 @@ pub(crate) fn render_string(
     }
 
     let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
+    let messages: HashMap<_, _> = messages.iter().cloned().collect();
 
     let mut out = String::new();
     for id in (0..=last_head).rev() {
@@ -86,7 +88,11 @@ pub(crate) fn render_string(
         let name =
             String::from_utf8(id_map.find_slice_by_id(node).unwrap().unwrap().to_vec()).unwrap();
 
-        let row = renderer.next_row(node, parents, String::from("o"), name.clone());
+        let message = match messages.get(name.as_str()) {
+            Some(message) => format!("{}\n{}", name, message),
+            None => name.clone(),
+        };
+        let row = renderer.next_row(node, parents, String::from("o"), message);
         out.push_str(&row);
     }
 
