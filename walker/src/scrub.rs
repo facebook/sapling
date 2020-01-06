@@ -34,6 +34,7 @@ const PROGRESS_SAMPLE_DURATION_S: u64 = 1;
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream, SS>(
     limit_data_fetch: bool,
+    scheduled_max: usize,
     s: InStream,
 ) -> impl Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>
 where
@@ -58,7 +59,7 @@ where
         }
         _ => future::ok((n, nd, ss)).right_future(),
     })
-    .buffered(100)
+    .buffer_unordered(scheduled_max)
 }
 
 // Starts from the graph, (as opposed to walking from blobstore enumeration)
@@ -84,10 +85,10 @@ pub fn scrub_objects(
     let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
 
     let make_sink = {
-        cloned!(ctx, walk_params.quiet);
+        cloned!(ctx, walk_params.quiet, walk_params.scheduled_max);
         move |walk_output| {
             cloned!(ctx, progress_state);
-            let loading = loading_stream(limit_data_fetch, walk_output);
+            let loading = loading_stream(limit_data_fetch, scheduled_max, walk_output);
             let show_progress = progress_stream(quiet, progress_state.clone(), loading);
             let one_fut = report_state(ctx, progress_state.clone(), show_progress);
             one_fut
