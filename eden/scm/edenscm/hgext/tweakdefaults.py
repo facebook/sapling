@@ -539,8 +539,9 @@ def _rebase(orig, ui, repo, *pats, **opts):
         dest = scmutil.revsingle(repo, opts.get("dest"))
         common = dest.ancestor(prev)
         if prev == common:
-            result = hg.update(repo, dest.node())
-            if repo._activebookmark:
+            activebookmark = repo._activebookmark
+            result = hg.updatetotally(ui, repo, dest.node(), activebookmark)
+            if activebookmark:
                 with repo.wlock():
                     bookmarks.update(repo, [prev.node()], dest.node())
             return result

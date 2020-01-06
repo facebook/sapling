@@ -139,6 +139,19 @@ Rebase works with hyphens
   |
   o  0 a
   
+Rebase is blocked if you have conflicting changes
+
+  $ hg up -q 0
+  $ echo y > a
+  $ hg rebase -d tip
+  abort: 1 conflicting file changes:
+   a
+  (commit, shelve, update --clean to discard them, or update --merge to merge them)
+  [255]
+  $ hg revert -q --all
+  $ hg up -qC hyphen-book
+  $ rm a.orig
+
 Grep options work
 
   $ mkdir -p dir1/subdir1
