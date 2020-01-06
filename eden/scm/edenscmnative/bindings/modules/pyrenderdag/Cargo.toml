@@ -1,0 +1,9 @@
+[package]
+name = "pyrenderdag"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+renderdag = { path = "../../../../lib/renderdag" }
+parking_lot = "0.9"

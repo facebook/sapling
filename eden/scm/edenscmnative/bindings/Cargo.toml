@@ -28,6 +28,7 @@ pymetalog = { path = "modules/pymetalog" }
 pymutationstore = { path = "modules/pymutationstore" }
 pynodemap = { path = "modules/pynodemap" }
 pypathmatcher = { path = "modules/pypathmatcher" }
+pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
 pyrevlogindex = { path = "modules/pyrevlogindex" }
 pystackdesc = { path = "modules/pystackdesc" }

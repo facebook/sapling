@@ -38,6 +38,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     )?;
     m.add(py, "nodemap", pynodemap::init_module(py, &name)?)?;
     m.add(py, "pathmatcher", pypathmatcher::init_module(py, &name)?)?;
+    m.add(py, "renderdag", pyrenderdag::init_module(py, &name)?)?;
     m.add(
         py,
         "revisionstore",
