@@ -1,0 +1,586 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use itertools::Itertools;
+
+use crate::render::{Ancestor, GraphRowRenderer, LinkLine, NodeLine, PadLine, Renderer};
+
+pub struct AsciiLargeRenderer<N> {
+    inner: GraphRowRenderer<N>,
+    min_height: usize,
+    extra_pad_line: Option<String>,
+}
+
+impl<N> AsciiLargeRenderer<N> {
+    pub(crate) fn new(inner: GraphRowRenderer<N>, min_height: usize) -> Self {
+        AsciiLargeRenderer {
+            inner,
+            min_height,
+            extra_pad_line: None,
+        }
+    }
+}
+
+impl<N> Renderer<N> for AsciiLargeRenderer<N>
+where
+    N: Clone + Eq,
+{
+    type Output = String;
+
+    fn width(&self, node: Option<&N>, parents: Option<&Vec<Ancestor<N>>>) -> u64 {
+        // The first column is only 2 characters wide.
+        self.inner
+            .width(node, parents)
+            .saturating_mul(3)
+            .saturating_sub(1)
+            .saturating_add(1)
+    }
+
+    fn reserve(&mut self, node: N) {
+        self.inner.reserve(node);
+    }
+
+    fn next_row(
+        &mut self,
+        node: N,
+        parents: Vec<Ancestor<N>>,
+        glyph: String,
+        message: String,
+    ) -> String {
+        let line = self.inner.next_row(node, parents, glyph, message);
+        let mut out = String::new();
+        let mut message_lines = line.message.lines().pad_using(self.min_height, |_| "");
+        let mut need_extra_pad_line = false;
+
+        // Render the previous extra pad line
+        if let Some(extra_pad_line) = self.extra_pad_line.take() {
+            out.push_str(extra_pad_line.trim_end());
+            out.push_str("\n");
+        }
+
+        // Render the nodeline
+        let mut node_line = String::new();
+        for (i, entry) in line.node_line.iter().enumerate() {
+            match entry {
+                NodeLine::Node => {
+                    if i > 0 {
+                        node_line.push_str(" ");
+                    }
+                    node_line.push_str(&line.glyph);
+                    node_line.push_str(" ");
+                }
+                NodeLine::Parent => node_line.push_str(if i > 0 { " | " } else { "| " }),
+                NodeLine::Ancestor => node_line.push_str(if i > 0 { " : " } else { ": " }),
+                NodeLine::Blank => node_line.push_str(if i > 0 { "   " } else { "  " }),
+            }
+        }
+        if let Some(msg) = message_lines.next() {
+            node_line.push_str(" ");
+            node_line.push_str(msg);
+        }
+        out.push_str(node_line.trim_end());
+        out.push_str("\n");
+
+        // Render the link line
+        if let Some(link_row) = line.link_line {
+            let mut top_link_line = String::new();
+            let mut bot_link_line = String::new();
+            for (i, cur) in link_row.iter().enumerate() {
+                // Top left
+                if i > 0 {
+                    if cur.contains(LinkLine::LEFT_MERGE) {
+                        top_link_line.push_str("/");
+                    } else if cur.contains(LinkLine::HORIZONTAL) {
+                        top_link_line.push_str("_");
+                    } else {
+                        top_link_line.push_str(" ");
+                    }
+                }
+
+                // Top center
+                if cur.contains(LinkLine::CHILD | LinkLine::PARENT) {
+                    top_link_line.push_str("|");
+                } else if cur.contains(LinkLine::CHILD | LinkLine::ANCESTOR) {
+                    top_link_line.push_str(":");
+                } else if cur.contains(LinkLine::ANY_MERGE) {
+                    top_link_line.push_str(" ");
+                } else if cur.contains(LinkLine::HORIZONTAL) {
+                    top_link_line.push_str("_");
+                } else if cur.contains(LinkLine::PARENT) {
+                    top_link_line.push_str("|");
+                } else if cur.contains(LinkLine::ANCESTOR) {
+                    top_link_line.push_str(":");
+                } else {
+                    top_link_line.push_str(" ");
+                }
+
+                // Top right
+                if cur.contains(LinkLine::RIGHT_MERGE) {
+                    top_link_line.push_str("\\");
+                } else if cur.contains(LinkLine::HORIZONTAL) {
+                    top_link_line.push_str("_");
+                } else {
+                    top_link_line.push_str(" ");
+                }
+
+                // Bottom left
+                if i > 0 {
+                    if cur.contains(LinkLine::LEFT_FORK) {
+                        bot_link_line.push_str("\\");
+                    } else {
+                        bot_link_line.push_str(" ");
+                    }
+                }
+
+                // Bottom center
+                if cur.contains(LinkLine::PARENT) {
+                    bot_link_line.push_str("|");
+                } else if cur.contains(LinkLine::ANCESTOR) {
+                    bot_link_line.push_str(":");
+                } else {
+                    bot_link_line.push_str(" ");
+                }
+
+                // Bottom Right
+                if cur.contains(LinkLine::RIGHT_FORK) {
+                    bot_link_line.push_str("/");
+                } else {
+                    bot_link_line.push_str(" ");
+                }
+            }
+            if let Some(msg) = message_lines.next() {
+                top_link_line.push_str(" ");
+                top_link_line.push_str(msg);
+            }
+            if let Some(msg) = message_lines.next() {
+                bot_link_line.push_str(" ");
+                bot_link_line.push_str(msg);
+            }
+            out.push_str(top_link_line.trim_end());
+            out.push_str("\n");
+            out.push_str(bot_link_line.trim_end());
+            out.push_str("\n");
+        }
+
+        // Render the term line
+        if let Some(term_row) = line.term_line {
+            let term_strs = ["| ", "~ "];
+            for term_str in term_strs.iter() {
+                let mut term_line = String::new();
+                for (i, term) in term_row.iter().enumerate() {
+                    if i > 0 {
+                        term_line.push_str(" ");
+                    }
+                    if *term {
+                        term_line.push_str(term_str);
+                    } else {
+                        term_line.push_str(match line.pad_lines[i] {
+                            PadLine::Parent => "| ",
+                            PadLine::Ancestor => ": ",
+                            PadLine::Blank => "  ",
+                        });
+                    }
+                }
+                if let Some(msg) = message_lines.next() {
+                    term_line.push_str(" ");
+                    term_line.push_str(msg);
+                }
+                out.push_str(term_line.trim_end());
+                out.push_str("\n");
+            }
+            need_extra_pad_line = true;
+        }
+
+        let mut base_pad_line = String::new();
+        for (i, entry) in line.pad_lines.iter().enumerate() {
+            base_pad_line.push_str(match entry {
+                PadLine::Parent => {
+                    if i > 0 {
+                        " | "
+                    } else {
+                        "| "
+                    }
+                }
+                PadLine::Ancestor => {
+                    if i > 0 {
+                        " : "
+                    } else {
+                        ": "
+                    }
+                }
+                PadLine::Blank => {
+                    if i > 0 {
+                        "   "
+                    } else {
+                        "  "
+                    }
+                }
+            });
+        }
+
+        // Render any pad lines
+        for msg in message_lines {
+            let mut pad_line = base_pad_line.clone();
+            pad_line.push_str(" ");
+            pad_line.push_str(msg);
+            out.push_str(pad_line.trim_end());
+            out.push_str("\n");
+            need_extra_pad_line = false;
+        }
+
+        if need_extra_pad_line {
+            self.extra_pad_line = Some(base_pad_line);
+        }
+
+        out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::render::GraphRowRenderer;
+    use crate::test_utils::render_string;
+
+    fn render(
+        dag: &str,
+        heads: &[&str],
+        reserve: &[&str],
+        ancestors: &[(&str, &str)],
+        missing: &[&str],
+    ) -> String {
+        render_string(
+            dag,
+            heads,
+            reserve,
+            ancestors,
+            missing,
+            &mut GraphRowRenderer::new().ascii_large(3),
+        )
+    }
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            render("A-B-C", &["C"], &[], &[], &[]),
+            r#"
+            o  C
+            |
+            |
+            o  B
+            |
+            |
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn branches_and_merges() {
+        assert_eq!(
+            render(
+                r#"
+                      T /---------------N--O---\           T
+                     / /                        \           \
+               /----E-F-\    /-------L--M--------P--\     S--U---\
+            A-B-C-D------G--H--I--J--K---------------Q--R---------V--W
+                                   \--N
+            "#,
+                &["W"],
+                &[],
+                &[],
+                &[],
+            ),
+            r#"
+            o  W
+            |
+            |
+            o     V
+            |\
+            | \
+            |  o     U
+            |  |\
+            |  | \
+            |  |  o  T
+            |  |  |
+            |  |  |
+            |  o  |  S
+            |     |
+            |     |
+            o     |  R
+            |     |
+            |     |
+            o     |  Q
+            |\    |
+            | \   |
+            |  o  |     P
+            |  |\___
+            |  |  | \
+            |  |  |  o  O
+            |  |  |  |
+            |  |  |  |
+            |  |  |  o     N
+            |  |  |  |\
+            |  |  |  | \
+            |  o  |  |  |  M
+            |  |  |  |  |
+            |  |  |  |  |
+            |  o  |  |  |  L
+            |  |  |  |  |
+            |  |  |  |  |
+            o  |  |  |  |  K
+            | _________/
+            |/ |  |  |
+            o  |  |  |  J
+            |  |  |  |
+            |  |  |  |
+            o  |  |  |  I
+            | /   |  |
+            |/    |  |
+            o     |  |  H
+            |     |  |
+            |     |  |
+            o     |  |  G
+            |\______ |
+            |     | \|
+            |     |  o  F
+            |     | /
+            |     |/
+            |     o  E
+            |     |
+            |     |
+            o     |  D
+            |     |
+            |     |
+            o     |  C
+            | ___/
+            |/
+            o  B
+            |
+            |
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn octopus_branch_and_merge() {
+        assert_eq!(
+            render(
+                r#"
+                        /-----\
+                       /       \
+                      D /--C--\ I
+                     / /---D---\ \
+                    A-B----E----H-J
+                       \---F---/ /
+                        \--G--/ F
+                "#,
+                &["J"],
+                &[],
+                &[],
+                &[],
+            ),
+            r#"
+            o        J
+            |\___
+            | \  \
+            |  |  o  I
+            |  |  |
+            |  |  |
+            |  o  |        H
+            | /|\______
+            |/ | \| \  \
+            |  |  |  |  o  G
+            |  |  |  |  |
+            |  |  |  |  |
+            |  |  |  o  |  E
+            |  |  |  | /
+            |  |  |  |/
+            |  |  o  |  D
+            |  |  |\ |
+            |  |  | \|
+            |  o  |  |  C
+            |  | ___/
+            |  |/ |
+            o  |  |  F
+            | /   |
+            |/    |
+            o     |  B
+            | ___/
+            |/
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn reserved_column() {
+        assert_eq!(
+            render(
+                r#"
+                   A-B-C-F-G----\
+                    D-E-/   \-W  \-X-Y-Z
+                "#,
+                &["W", "Z"],
+                &["G"],
+                &[],
+                &[],
+            ),
+            r#"
+               o  Z
+               |
+               |
+               o  Y
+               |
+               |
+               o  X
+              /
+             /
+            |  o  W
+            | /
+            |/
+            o  G
+            |
+            |
+            o     F
+            |\
+            | \
+            |  o  E
+            |  |
+            |  |
+            |  o  D
+            |
+            |
+            o  C
+            |
+            |
+            o  B
+            |
+            |
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn ancestors() {
+        assert_eq!(
+            render(
+                r#"
+                   A----B-D-----E----------F-\
+                    \-C--/       \-W  \-X     \-Y-Z
+                "#,
+                &["W", "X", "Z"],
+                &["F"],
+                &[("C", "A"), ("D", "C"), ("E", "D"), ("F", "E")],
+                &[],
+            ),
+            r#"
+               o  Z
+               |
+               |
+               o  Y
+              /
+             /
+            o  F
+            :
+            :
+            :  o  X
+            : /
+            :/
+            |  o  W
+            | /
+            |/
+            o  E
+            :
+            :
+            o     D
+            |\
+            | \
+            |  o  C
+            |  :
+            |  :
+            o  :  B
+            | /
+            |/
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn split_parents() {
+        assert_eq!(
+            render(
+                r#"
+                    /-B-\     A-\
+                   A     D-E  B--E
+                    \-C-/     C-/
+                "#,
+                &["E"],
+                &["B", "D", "C"],
+                &[("E", "A"), ("E", "B")],
+                &[],
+            ),
+            r#"
+                     o  E
+              ______/:
+             /  /  / :
+            :  o  |  :  D
+            : / \ |  :
+            :/   \|  :
+            |     o  :  C
+            |     | /
+            |     |/
+            o     |  B
+            | ___/
+            |/
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn terminations() {
+        assert_eq!(
+            render(
+                r#"
+                   A-B-C  D-E-\
+                            F---I--J
+                        X-D-H-/  \-K
+                "#,
+                &["C", "J", "K"],
+                &["E"],
+                &[("B", "A")],
+                &["A", "F", "X"],
+            ),
+            r#"
+               o  K
+               |
+               |
+               |  o  J
+               | /
+               |/
+               o     I
+              /|\
+             / | \
+            |  |  |
+            |  ~  |
+            |     |
+            |     o  H
+            |     |
+            |     |
+            o     |  E
+            | ___/
+            |/
+            o  D
+            |
+            ~
+            
+            o  C
+            |
+            |
+            o  B
+            |
+            ~"#
+        );
+    }
+}

@@ -1,0 +1,14 @@
+[package]
+name = "renderdag"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.20"
+bitflags = "1"
+tempfile = "3.0.7"
+itertools = "0.8"
+
+[dev-dependencies]
+drawdag = { path = "../drawdag" }
+dag = { path = "../dag" }
