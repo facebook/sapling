@@ -313,7 +313,9 @@ class Client(object):
 
                 info["signal_status"] = None
                 if (
-                    "signal_summary" in node
+                    # signal_summary can be:
+                    # 1. missing; 2. present, "None" (ex. D17868094)
+                    node.get("signal_summary")
                     and "signals_status" in node["signal_summary"]
                 ):
                     info["signal_status"] = (
