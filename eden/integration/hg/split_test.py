@@ -57,10 +57,6 @@ class SplitTest(EdenHgTestCase):
         files = self.repo.log(template="{files}")
         self.assertEqual(["letters", "numbers"], files)
 
-    @unittest.skip(
-        "This doesn't work when enforcing parents with getScmStatusV2(). Skip this "
-        "until the bug where Mercurial and Eden get out of sync is fixed."
-    )
     def test_abort_split_with_pending_add(self) -> None:
         self.write_file("letters", "abcd\n")
         self.write_file("new.txt", "new!\n")
@@ -95,3 +91,9 @@ class SplitTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assertListEqual(commits, self.repo.log())
         self.assertEqual(255, context.exception.returncode)
+
+        eden_parent = self.eden.run_cmd("debug", "parents", cwd=self.mount).strip("\n")
+        hg_parent = self.hg("log", "-r.", "-T{node}")
+
+        # Ensure that EdenFS and Mercurial are in sync
+        self.assertEqual(eden_parent, hg_parent)
