@@ -94,6 +94,46 @@ def parse_object_id(value: str) -> bytes:
     return binary
 
 
+@debug_cmd("parents", "Show Eden's current working copy parent")
+class ParentsCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "path",
+            nargs="?",
+            help="The path to an Eden mount point. Uses `pwd` by default.",
+        )
+
+        parser.add_argument(
+            "--hg", action="store_true", help="Include Mercurial's parents in output"
+        )
+
+    def _commit_hex(self, commit: bytes) -> str:
+        return binascii.hexlify(commit).decode("utf-8")
+
+    def run(self, args: argparse.Namespace) -> int:
+        null_commit_id = 20 * b"\x00"
+
+        path = args.path or os.getcwd()
+        _, checkout, _ = cmd_util.require_checkout(args, path)
+        try:
+            snapshot_hex = checkout.get_snapshot()
+        except Exception as ex:
+            print(f"error parsing Eden snapshot : {ex}")
+            return 1
+
+        if args.hg:
+            hg_parents, _, _ = _get_dirstate_data(checkout)
+
+            print("Mercurial p0: {}".format(self._commit_hex(hg_parents[0])))
+            if hg_parents[1] != null_commit_id:
+                print("Mercurial p1: {}".format(self._commit_hex(hg_parents[1])))
+            print("Eden snapshot: {}".format(snapshot_hex))
+        else:
+            print(snapshot_hex)
+
+        return 0
+
+
 @debug_cmd("tree", "Show eden's data for a source control tree")
 class TreeCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
