@@ -19,6 +19,9 @@ import re
 import stat
 import tempfile
 
+# pyre-fixme[21]: Could not find `bindings`.
+from bindings import renderdag
+
 from . import (
     bookmarks,
     changelog,
@@ -3026,6 +3029,10 @@ def _graphnodeformatter(ui, displayer):
 def displaygraph(
     ui, repo, dag, displayer, edgefn, getrenamed=None, filematcher=None, props=None
 ):
+    if ui.config("experimental", "graph.renderer") != "legacy":
+        rustdisplaygraph(ui, repo, dag, displayer, getrenamed, filematcher, props)
+        return
+
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
     state = graphmod.asciistate()
@@ -3079,6 +3086,62 @@ def displaygraph(
         for type, char, width, coldata in itertools.chain([firstedge], edges):
             graphmod.ascii(ui, state, type, char, lines, coldata)
             lines = []
+    displayer.close()
+
+
+def rustdisplaygraph(
+    ui,
+    repo,
+    dag,
+    displayer,
+    getrenamed=None,
+    filematcher=None,
+    props=None,
+    reserved=None,
+):
+    props = props or {}
+    formatnode = _graphnodeformatter(ui, displayer)
+    renderers = {
+        "ascii": (renderdag.ascii, 2),
+        "ascii-large": (renderdag.asciilarge, 2),
+        "lines": (renderdag.boxdrawing, 2),
+    }
+    renderer, minheight = renderers.get(
+        ui.config("experimental", "graph.renderer"), (renderdag.ascii, 2)
+    )
+    if ui.configbool("experimental", "graphshorten"):
+        minheight = 1
+    minheight = ui.configint("experimental", "graph.min-row-height", minheight)
+    renderer = renderer(minheight)
+
+    if reserved:
+        for rev in reserved:
+            renderer.reserve(rev)
+
+    for (rev, _type, ctx, parents) in dag:
+        char = formatnode(repo, ctx)
+        copies = None
+        if getrenamed and ctx.rev():
+            copies = []
+            for fn in ctx.files():
+                rename = getrenamed(fn, ctx.rev())
+                if rename:
+                    copies.append((fn, rename[0]))
+        revmatchfn = None
+        if filematcher is not None:
+            revmatchfn = filematcher(ctx.rev())
+        width = renderer.width(rev, parents)
+        displayer.show(
+            ctx,
+            copies=copies,
+            matchfn=revmatchfn,
+            _graphwidth=width,
+            **pycompat.strkwargs(props)
+        )
+        msg = displayer.hunk.pop(rev)
+        ui.write(renderer.nextrow(rev, parents, char, msg).encode("utf-8"))
+        displayer.flush(ctx)
+
     displayer.close()
 
 
