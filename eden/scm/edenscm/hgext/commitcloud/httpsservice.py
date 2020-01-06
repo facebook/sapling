@@ -410,8 +410,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         nodes = self._makenodes(smartlog)
         try:
+            firstbranch, dag = self._makefakedag(nodes, repo)
             return (
-                self._makefakedag(nodes, repo),
+                firstbranch,
+                dag,
                 response["smartlog"]["version"],
                 response["smartlog"]["timestamp"],
             )

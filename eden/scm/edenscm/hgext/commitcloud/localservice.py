@@ -161,7 +161,8 @@ class LocalService(baseservice.BaseService):
                 data = json.load(f)
                 nodes = self._makenodes(data["smartlog"])
         try:
-            return self._makefakedag(nodes, repo), 42, 1562690787
+            firstbranch, dag = self._makefakedag(nodes, repo)
+            return firstbranch, dag, 42, 1562690787
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 

@@ -252,7 +252,7 @@ class BaseService(object):
         """
 
         if not nodeinfos:
-            return []
+            return [], []
 
         DRAFTPHASE = "draft"
 
@@ -438,7 +438,7 @@ class BaseService(object):
 
                 yield (ctx.rev(), CHANGESET, ctx, parents)
 
-        return dagwalker(repo, sortedrevs)
+        return firstbranch, dagwalker(repo, sortedrevs)
 
     def _makenodes(self, data):
         nodes = {}

@@ -273,10 +273,10 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
     if parseddate is None and not version:
         with progress.spinner(ui, _("fetching")):
-            revdag = serv.getsmartlog(reponame, workspacename, repo, 0)
+            firstpublic, revdag = serv.getsmartlog(reponame, workspacename, repo, 0)
     else:
         with progress.spinner(ui, _("fetching")):
-            revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
+            firstpublic, revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
                 reponame, workspacename, repo, parseddate, version, 0
             )
     if parseddate or version:
@@ -301,7 +301,10 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
 
     # show all the nodes
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+    if ui.config("experimental", "graph.renderer") == "legacy":
+        cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+    else:
+        cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
 
 
 @subcmd("supersmartlog|ssl", workspace.workspaceopts)

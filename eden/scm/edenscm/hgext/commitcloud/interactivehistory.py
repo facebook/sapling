@@ -42,11 +42,13 @@ def showhistory(ui, repo, **opts):
                 self.index = len(self.versions) - 1
             if self.index == -1:
                 with progress.spinner(ui, _("fetching")):
-                    revdag = serv.getsmartlog(reponame, workspacename, repo, limit)
+                    firstpublic, revdag = serv.getsmartlog(
+                        reponame, workspacename, repo, limit
+                    )
                 ui.status(_("Current Smartlog:\n\n"))
             else:
                 with progress.spinner(ui, _("fetching")):
-                    revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
+                    firstpublic, revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
                         reponame,
                         workspacename,
                         repo,
@@ -72,7 +74,12 @@ def showhistory(ui, repo, **opts):
                 )
 
             displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-            cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+            if ui.config("experimental", "graph.renderer") == "legacy":
+                cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+            else:
+                cmdutil.rustdisplaygraph(
+                    ui, repo, revdag, displayer, reserved=firstpublic
+                )
             repo.ui.status(
                 _(
                     "<-: newer  "
