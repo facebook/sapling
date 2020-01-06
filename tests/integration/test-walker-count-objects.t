@@ -43,7 +43,7 @@ check blobstore numbers, walk will do some more steps for mappings
   21
 
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
-  $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I bonsai 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I bonsai 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [BonsaiChangesetToBonsaiParent, BonsaiChangesetToFileContent, BookmarkToBonsaiChangeset]
   Walking node types [BonsaiChangeset, Bookmark, FileContent]
@@ -52,7 +52,7 @@ count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the ro
   Exiting...
 
 count-objects, shallow, bonsai only.  No parents, expect just one of each node type
-  $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I shallow -X hg -x BonsaiHgMapping 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -X hg -x BonsaiHgMapping 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToFileContent, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata]
   Walking node types [AliasContentMapping, BonsaiChangeset, Bookmark, FileContent, FileContentMetadata]
@@ -61,7 +61,7 @@ count-objects, shallow, bonsai only.  No parents, expect just one of each node t
   Exiting...
 
 count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step, plus 1 for mapping from bookmark to hg. plus 3 for filenode (same blob as envelope)
-  $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I hg 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I hg 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [BonsaiHgMapping, Bookmark, FileContent, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
@@ -70,7 +70,7 @@ count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step
   Exiting...
 
 count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mappings and root.
-  $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I deep 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiParent, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgBonsaiMappingToBonsaiChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgLinkNodeToHgBonsaiMapping, HgLinkNodeToHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiHgMapping, Bookmark, FileContent, FileContentMetadata, HgBonsaiMapping, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
@@ -79,7 +79,7 @@ count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mapp
   Exiting...
 
 count-objects, default shallow walk across bonsai and hg data
-  $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I shallow 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiHgMapping, Bookmark, FileContent, FileContentMetadata, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
@@ -88,7 +88,7 @@ count-objects, default shallow walk across bonsai and hg data
   Exiting...
 
 count-objects, default shallow walk across bonsai and hg data, including mutable
-  $ mononoke_walker --storage-id=blobstore --readonly-storage count-objects -q --bookmark master_bookmark -I shallow -I marker 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -I marker 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiPhaseMapping, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiHgMapping, BonsaiPhaseMapping, Bookmark, FileContent, FileContentMetadata, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]

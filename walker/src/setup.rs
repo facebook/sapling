@@ -53,8 +53,7 @@ impl RepoWalkParams {
 }
 
 // Sub commands
-pub const COUNT_OBJECTS: &'static str = "count-objects";
-pub const SCRUB_OBJECTS: &'static str = "scrub-objects";
+pub const SCRUB: &'static str = "scrub";
 pub const COMPRESSION_BENEFIT: &'static str = "compression-benefit";
 pub const VALIDATE: &'static str = "validate";
 
@@ -70,6 +69,7 @@ const INCLUDE_EDGE_TYPE_ARG: &'static str = "include-edge-type";
 const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
 const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
+pub const LIMIT_DATA_FETCH_ARG: &'static str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
 pub const EXCLUDE_CHECK_TYPE_ARG: &'static str = "exclude-check-type";
@@ -219,11 +219,15 @@ lazy_static! {
 pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app_template = args::MononokeApp::new(app_name);
 
-    let count_objects =
-        setup_subcommand_args(SubCommand::with_name(COUNT_OBJECTS).about("count objects"));
-
     let scrub_objects =
-        setup_subcommand_args(SubCommand::with_name(SCRUB_OBJECTS).about("scrub objects"));
+        setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, aka copy any missing data from stores where it is found to stores where it is missing"))
+        .arg(
+            Arg::with_name(LIMIT_DATA_FETCH_ARG)
+                .long(LIMIT_DATA_FETCH_ARG)
+                .takes_value(false)
+                .required(false)
+                .help("Limit the amount of data fetched from stores, by not streaming large files to the end."),
+        );
 
     let compression_benefit = setup_subcommand_args(
         SubCommand::with_name(COMPRESSION_BENEFIT).about("estimate compression benefit"),
@@ -286,7 +290,6 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .help("id of storage group to operate over, e.g. manifold_xdb_multiplex"),
         )
         .subcommand(compression_benefit)
-        .subcommand(count_objects)
         .subcommand(scrub_objects)
         .subcommand(validate);
     let app = args::add_fb303_args(app);

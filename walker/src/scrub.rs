@@ -10,7 +10,7 @@ use crate::graph::{FileContentData, Node, NodeData};
 use crate::progress::{
     progress_stream, report_state, ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::setup::setup_common;
+use crate::setup::{setup_common, LIMIT_DATA_FETCH_ARG};
 use crate::state::{WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 
@@ -33,13 +33,16 @@ const PROGRESS_SAMPLE_DURATION_S: u64 = 1;
 
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream, SS>(
+    limit_data_fetch: bool,
     s: InStream,
 ) -> impl Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>
 where
     InStream: Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>,
 {
     s.map(move |(n, nd, ss)| match nd {
-        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
+        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
+            if !limit_data_fetch =>
+        {
             file_bytes_stream
                 .fold(0, |acc, file_bytes| {
                     future::ok::<_, Error>(acc + file_bytes.size())
@@ -78,11 +81,13 @@ pub fn scrub_objects(
         Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
     ));
 
+    let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
+
     let make_sink = {
         cloned!(ctx, walk_params.quiet);
         move |walk_output| {
             cloned!(ctx, progress_state);
-            let loading = loading_stream(walk_output);
+            let loading = loading_stream(limit_data_fetch, walk_output);
             let show_progress = progress_stream(quiet, progress_state.clone(), loading);
             let one_fut = report_state(ctx, progress_state.clone(), show_progress);
             one_fut

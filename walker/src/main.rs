@@ -18,7 +18,6 @@ use cmdlib::{args, helpers::create_runtime, monitoring};
 use slog::{error, info};
 
 mod blobstore;
-mod count_objects;
 #[macro_use]
 mod graph;
 mod progress;
@@ -37,12 +36,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = args::init_logging(fb, &matches);
 
     let future = match matches.subcommand() {
-        (setup::COUNT_OBJECTS, Some(sub_m)) => {
-            count_objects::count_objects(fb, logger.clone(), &matches, sub_m)
-        }
-        (setup::SCRUB_OBJECTS, Some(sub_m)) => {
-            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m)
-        }
+        (setup::SCRUB, Some(sub_m)) => scrub::scrub_objects(fb, logger.clone(), &matches, sub_m),
         (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
             sizing::compression_benefit(fb, logger.clone(), &matches, sub_m)
         }
