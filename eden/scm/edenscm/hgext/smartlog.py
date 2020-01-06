@@ -294,38 +294,10 @@ def sortnodes(nodes, parentfunc, masters):
 
 def getdag(ui, repo, revs, master):
 
-    # Fake ctx that we stick in the dag so we can special case it later
-    class fakectx(object):
-        def __init__(self, rev):
-            self._rev = rev
-
-        def node(self):
-            return "..."
-
-        def obsolete(self):
-            return False
-
-        def invisible(self):
-            return False
-
-        def phase(self):
-            return None
-
-        def rev(self):
-            return self._rev
-
-        def files(self):
-            return []
-
-        def extra(self):
-            return {}
-
-        def closesbranch(self):
-            return False
-
     knownrevs = set(revs)
     gpcache = {}
     results = []
+    reserved = []
 
     # we store parents together with the parent type information
     # but sometimes we need just a list of parents
@@ -417,12 +389,46 @@ def getdag(ui, repo, revs, master):
                 if pctx.phase() == phases.public:
                     prev = results[i][0]
                     break
-            # append the fake node to occupy the first column
             if prev:
-                fakerev = rev + 1
-                results.insert(0, (fakerev, "F", fakectx(fakerev), [("P", prev)]))
+                reserved.append(prev)
 
-    return results
+    return results, reserved
+
+
+def addfakerev(results, prev):
+    # Fake ctx that we stick in the dag so we can special case it later
+    class fakectx(object):
+        def __init__(self, rev):
+            self._rev = rev
+
+        def node(self):
+            return "..."
+
+        def obsolete(self):
+            return False
+
+        def invisible(self):
+            return False
+
+        def phase(self):
+            return None
+
+        def rev(self):
+            return self._rev
+
+        def files(self):
+            return []
+
+        def extra(self):
+            return {}
+
+        def closesbranch(self):
+            return False
+
+    # append the fake node to occupy the first column
+    rev = results[0][0]
+    fakerev = rev + 1
+    results.insert(0, (fakerev, "F", fakectx(fakerev), [("P", prev)]))
 
 
 def _reposnames(ui):
@@ -664,16 +670,24 @@ def _smartlog(ui, repo, *pats, **opts):
         return
 
     # Print it!
-    overrides = {}
-    if ui.config("experimental", "graphstyle.grandparent", "2.") == "|":
-        overrides[("experimental", "graphstyle.grandparent")] = "2."
-    with ui.configoverride(overrides, "smartlog"):
-        revdag = getdag(ui, repo.unfiltered(), sorted(revs, reverse=True), masterrev)
-        displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-        ui.pager("smartlog")
-        cmdutil.displaygraph(
-            ui, repo, revdag, displayer, graphmod.asciiedges, None, None
-        )
+    revdag, reserved = getdag(
+        ui, repo.unfiltered(), sorted(revs, reverse=True), masterrev
+    )
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+    ui.pager("smartlog")
+    if ui.config("experimental", "graph.renderer") == "legacy":
+        overrides = {}
+        if ui.config("experimental", "graphstyle.grandparent", "2.") == "|":
+            overrides[("experimental", "graphstyle.grandparent")] = "2."
+        with ui.configoverride(overrides, "smartlog"):
+            if reserved:
+                for prev in reserved:
+                    addfakerev(revdag, prev)
+            cmdutil.displaygraph(
+                ui, repo, revdag, displayer, graphmod.asciiedges, None, None
+            )
+    else:
+        cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=reserved)
 
     try:
         with open(repo.localvfs.join("completionhints"), "w+") as f:
