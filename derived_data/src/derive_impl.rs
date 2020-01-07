@@ -43,8 +43,29 @@ const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
-/// nothing will be generated. Otherwise this function will generate data for this commit and for
-/// all it's ancestors that didn't have this derived data.
+/// nothing will be generated. Otherwise this function will try to find set of commits that's
+/// bounded by commits which have derived_mapping entry i.e. in the case below
+///
+/// A <- no mapping
+/// |
+/// B <- no mapping
+/// |
+/// C <- mapping exists
+/// ...
+///
+/// the data will be first generated for commit B, then for commit A.
+///
+/// NOTE: One important caveat about derived_mapping - it's NOT guaranteed that ancestor
+/// changeset has a mapping entry if descendant changeset has a mapping entry.
+/// For example, case like
+///
+/// A <- no mapping
+/// |
+/// B <- mapping exists
+/// |
+/// C <- no mapping
+///
+/// is possible and valid (but only if the data for commit C is derived).
 pub(crate) fn derive_impl<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
@@ -94,8 +115,9 @@ pub(crate) fn derive_impl<
     .collect_to()
     .map({
         cloned!(ctx);
-        move |v| {
-            let topo_sorted_commit_graph = sort_topological(&v).expect("commit graph has cycles!");
+        move |commits_not_derived_to_parents| {
+            let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
+                .expect("commit graph has cycles!");
             let sz = topo_sorted_commit_graph.len();
             if sz > 100 {
                 warn!(
@@ -103,7 +125,15 @@ pub(crate) fn derive_impl<
                     "derive_impl is called on a graph of size {}", sz
                 );
             }
-            stream::iter_ok(topo_sorted_commit_graph.into_iter().rev())
+            stream::iter_ok(
+                topo_sorted_commit_graph
+                    .into_iter()
+                    // Note - sort_topological returns all nodes including commits which were already
+                    // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
+                    // The '.filter()' below removes ["b"]
+                    .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id))
+                    .rev(),
+            )
         }
     })
     .flatten_stream()
@@ -448,6 +478,8 @@ mod test {
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use futures_ext::BoxFuture;
+    use futures_preview::compat::Future01CompatExt;
+    use futures_util::future::{FutureExt as NewFutureExt, TryFutureExt};
     use lock_ext::LockExt;
     use maplit::hashmap;
     use mercurial_types::HgChangesetId;
@@ -459,6 +491,7 @@ mod test {
         sync::{Arc, Mutex},
         time::Duration,
     };
+    use tests_utils::resolve_cs_id;
     use tokio::runtime::Runtime;
 
     #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Debug)]
@@ -494,6 +527,11 @@ mod test {
             Self {
                 mapping: Arc::new(Mutex::new(hashmap! {})),
             }
+        }
+
+        fn remove(&self, cs_id: &ChangesetId) {
+            let mut mapping = self.mapping.lock().unwrap();
+            mapping.remove(cs_id);
         }
     }
 
@@ -579,7 +617,50 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_derive_linear(fb: FacebookInit) -> Result<(), Error> {
+    fn test_incomplete_maping(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut runtime = Runtime::new()?;
+
+        let repo = linear::getrepo(fb);
+        runtime.block_on(
+            async move {
+                // This is the parent of the root commit
+                // ...
+                //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
+                //  |
+                //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+                let after_root_cs_id =
+                    resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+                let root_cs_id =
+                    resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+
+                let mapping = Arc::new(TestMapping::new());
+                TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), after_root_cs_id)
+                    .compat()
+                    .await?;
+
+                // Delete root entry, and derive descendant of after_root changeset, make sure
+                // it doesn't fail
+                mapping.remove(&root_cs_id);
+                TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), after_root_cs_id)
+                    .compat()
+                    .await?;
+
+                let third_cs_id =
+                    resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
+                TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), third_cs_id)
+                    .compat()
+                    .await?;
+
+                Ok(())
+            }
+                .boxed()
+                .compat(),
+        )
+    }
+
+    #[fbinit::test]
+    fn test_derive_for_fixture_repos(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
