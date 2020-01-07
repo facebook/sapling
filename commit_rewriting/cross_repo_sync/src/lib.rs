@@ -1271,10 +1271,15 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     mapped: HashMap<ChangesetId, ChangesetId>,
     syncer: &'a CommitSyncer<M>,
 ) -> Result<(), Error> {
-    for (from, to) in mapped {
-        let entry = create_synced_commit_mapping_entry(from, to, syncer);
-        syncer.mapping.add(ctx.clone(), entry).compat().await?;
-    }
+    let entries: Vec<_> = mapped
+        .into_iter()
+        .map(|(from, to)| create_synced_commit_mapping_entry(from, to, syncer))
+        .collect();
+    syncer
+        .mapping
+        .add_bulk(ctx.clone(), entries)
+        .compat()
+        .await?;
     Ok(())
 }
 
