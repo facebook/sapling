@@ -69,7 +69,7 @@ Create new commits
   48d4d2fa17e54179e24de7fcb4a8ced38738ca4e
   sending unbundle command
   bundle2-output-bundle: "HG20", 4 parts total
-  bundle2-output-part: "replycaps" 232 bytes payload
+  bundle2-output-part: "replycaps" 219 bytes payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
