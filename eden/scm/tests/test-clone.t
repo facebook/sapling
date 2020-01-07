@@ -558,13 +558,13 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
   $ mkdir -p src/.hg
   $ echo foo > src/foo
   $ hg -R src add src/foo
-  abort: repo is corrupted: 00changelog.i
+  abort: legacy dirstate implementations are no longer supported!
   [255]
   $ hg -R src commit -m '#0'
-  abort: repo is corrupted: 00changelog.i
+  abort: legacy dirstate implementations are no longer supported!
   [255]
   $ hg -R src log -q
-  abort: repo is corrupted: 00changelog.i
+  abort: legacy dirstate implementations are no longer supported!
   [255]
   $ hg clone -U -q src dst
   abort: repo is corrupted: 00changelog.i

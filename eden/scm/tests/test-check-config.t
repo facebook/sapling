@@ -127,6 +127,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: ssl.signal_status (bool) [True]
   undocumented: ssl.timeout (int) [10]
   undocumented: treemanifest.verifyautocreate (bool)
+  undocumented: treestate.required (bool) [True]
   undocumented: ui.editor.chunkselector (str)
   undocumented: ui.hyperlink (bool)
   undocumented: workingcopy.enablerustwalker (bool)

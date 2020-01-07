@@ -457,7 +457,7 @@ test revlog format 0
   $ revlog-formatv0.py
   $ cd formatv0
   $ hg verify
-  abort: repo is corrupted: 00changelog.i
+  abort: legacy dirstate implementations are no longer supported!
   [255]
   $ cd ..
 

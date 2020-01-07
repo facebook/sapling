@@ -903,6 +903,12 @@ class localrepository(object):
             return self._eden_dirstate
 
         istreestate = "treestate" in self.requirements
+        # Block nontreestate repos entirely. Add a config to bypass in case we
+        # break something.
+        if not istreestate and self.ui.configbool("treestate", "required", True):
+            raise errormod.RequirementError(
+                "legacy dirstate implementations are no longer supported"
+            )
         istreedirstate = "treedirstate" in self.requirements
 
         return dirstate.dirstate(
@@ -2805,11 +2811,8 @@ def newreporequirements(repo):
             % compengine,
             hint=_('run "hg debuginstall" to list available ' "compression engines"),
         )
-    dirstateversion = ui.configint("format", "dirstate")
-    if dirstateversion == 1:
-        requirements.add("treedirstate")
-    elif dirstateversion == 2:
-        requirements.add("treestate")
+
+    requirements.add("treestate")
 
     # zlib is the historical default and doesn't need an explicit requirement.
     if compengine != "zlib":
