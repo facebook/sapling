@@ -12,17 +12,21 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobimport_lib;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
+use bytes::Bytes;
 use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers::create_runtime, helpers::upload_and_show_trace};
 use context::CoreContext;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::Future;
+use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
+use manifold::{ObjectMeta, PayloadDesc, StoredObject};
+use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
+use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use phases::SqlPhases;
-use slog::{error, warn, Logger};
+use slog::{error, info, warn, Logger};
 use std::collections::HashMap;
 use std::fs::read;
 use std::path::Path;
@@ -50,6 +54,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --concurrent-blobs [LIMIT]       'if provided, max number of blobs to process concurrently'
             --concurrent-lfs-imports [LIMIT] 'if provided, max number of LFS files to import concurrently'
             --has-globalrev                  'if provided will update globalrev'
+            --manifold-next-rev-to-import [KEY] 'if provided then this manifold key will be updated with the next revision to import'
+            --manifold-bucket [BUCKET]        'can only be used if --manifold-next-rev-to-import is set'
         "#,
         )
         .arg(
@@ -127,6 +133,35 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
     Ok(res)
 }
 
+fn update_manifold_key(
+    fb: FacebookInit,
+    latest_imported_rev: RevIdx,
+    manifold_key: String,
+    manifold_bucket: String,
+) -> impl Future<Item = (), Error = Error> {
+    let next_revision_to_import = latest_imported_rev.as_u32() + 1;
+    let context = RequestContext {
+        bucketName: manifold_bucket,
+        apiKey: "".to_string(),
+        timeoutMsec: 10000,
+        ..Default::default()
+    };
+    let object_meta = ObjectMeta {
+        ..Default::default()
+    };
+    let bytes = Bytes::from(format!("{}", next_revision_to_import));
+    let object = thrift::StoredObject::from(StoredObject {
+        meta: object_meta,
+        payload: PayloadDesc::from(bytes),
+    });
+
+    manifold_thrift_new(fb)
+        .into_future()
+        .and_then(move |client| {
+            thrift::write_chunked(Arc::new(client), context, manifold_key, object)
+        })
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
@@ -155,6 +190,22 @@ fn main(fb: FacebookInit) -> Result<()> {
         None
     } else {
         Some(args::get_usize(&matches, "commits-limit", 0))
+    };
+
+    let manifold_key = matches
+        .value_of("manifold-next-rev-to-import")
+        .map(|s| s.to_string());
+
+    let manifold_bucket = matches.value_of("manifold-bucket").map(|s| s.to_string());
+
+    let manifold_key_bucket = match (manifold_key, manifold_bucket) {
+        (Some(key), Some(bucket)) => Some((key, bucket)),
+        (None, None) => None,
+        _ => {
+            return Err(format_err!(
+                "invalid manifold parameters: bucket and key should either both be specified or none"
+            ));
+        }
     };
 
     let no_bookmark = matches.is_present("no-bookmark");
@@ -231,6 +282,28 @@ fn main(fb: FacebookInit) -> Result<()> {
                     small_repo_id,
                 }
                 .import()
+                .and_then({
+                    cloned!(ctx);
+                    move |maybe_latest_imported_rev| match maybe_latest_imported_rev {
+                        Some(latest_imported_rev) => {
+                            info!(
+                                ctx.logger(),
+                                "latest imported revision {}",
+                                latest_imported_rev.as_u32()
+                            );
+                            if let Some((manifold_key, bucket)) = manifold_key_bucket {
+                                update_manifold_key(fb, latest_imported_rev, manifold_key, bucket)
+                                    .left_future()
+                            } else {
+                                future::ok(()).right_future()
+                            }
+                        }
+                        None => {
+                            info!(ctx.logger(), "didn't import any commits");
+                            future::ok(()).right_future()
+                        }
+                    }
+                })
                 .traced(ctx.trace(), "blobimport", trace_args!())
                 .map_err({
                     cloned!(ctx);

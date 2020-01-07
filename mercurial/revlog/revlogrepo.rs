@@ -29,7 +29,7 @@ use mercurial_types::{
 
 use crate::errors::ErrorKind;
 pub use crate::manifest::RevlogManifest;
-use crate::revlog::{Revlog, RevlogIter};
+use crate::revlog::{RevIdx, Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 
@@ -245,6 +245,11 @@ impl RevlogRepo {
         ChangesetStream::new(&self.changelog)
     }
 
+    pub fn get_rev_idx_for_changeset(&self, changesetid: HgChangesetId) -> Result<RevIdx, Error> {
+        let nodeid = changesetid.clone().into_nodehash();
+        self.changelog.get_idx_by_nodeid(nodeid)
+    }
+
     pub fn get_changeset(&self, changesetid: HgChangesetId) -> BoxFuture<RevlogChangeset, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         let nodeid = changesetid.clone().into_nodehash();
@@ -376,12 +381,12 @@ impl ChangesetStream {
 }
 
 impl Stream for ChangesetStream {
-    type Item = HgNodeHash;
+    type Item = (RevIdx, HgNodeHash);
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<Option<HgNodeHash>, Error> {
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
         match self.0.next() {
-            Some((_, e)) => Ok(Async::Ready(Some(e.nodeid))),
+            Some((revidx, e)) => Ok(Async::Ready(Some((revidx, e.nodeid)))),
             None => Ok(Async::Ready(None)),
         }
     }

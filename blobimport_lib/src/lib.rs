@@ -29,7 +29,7 @@ use slog::{debug, error, info, Logger};
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::{upload_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
-use mercurial_revlog::RevlogRepo;
+use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::RepositoryId;
 use phases::Phases;
@@ -67,7 +67,7 @@ pub struct Blobimport {
 }
 
 impl Blobimport {
-    pub fn import(self) -> BoxFuture<(), Error> {
+    pub fn import(self) -> BoxFuture<Option<RevIdx>, Error> {
         let Self {
             ctx,
             logger,
@@ -123,12 +123,12 @@ impl Blobimport {
         .enumerate()
         .map({
             let logger = logger.clone();
-            move |(cs_count, cs)| {
+            move |(cs_count, (revidx, cs))| {
                 debug!(logger, "{} inserted: {}", cs_count, cs.1.get_changeset_id());
                 if cs_count % log_step == 0 {
                     info!(logger, "inserted commits # {}", cs_count);
                 }
-                cs.0.clone()
+                (revidx, cs.0.clone())
             }
         })
         .map_err({
@@ -164,11 +164,12 @@ impl Blobimport {
                         .and_then({
                             cloned!(ctx, globalrevs_store, synced_commit_mapping);
                             move |chunk| {
+                                let max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
                                 let synced_commit_mapping_work =
                                     if let Some(small_repo_id) = small_repo_id {
                                         let entries = chunk
                                             .iter()
-                                            .map(|cs| SyncedCommitMappingEntry {
+                                            .map(|(_, cs)| SyncedCommitMappingEntry {
                                                 large_repo_id: repo_id,
                                                 large_bcs_id: cs.get_changeset_id(),
                                                 small_repo_id,
@@ -188,23 +189,31 @@ impl Blobimport {
                                         ctx.clone(),
                                         repo_id,
                                         globalrevs_store.clone(),
-                                        chunk,
+                                        chunk.into_iter().map(|(_, cs)| cs).collect(),
                                     )
                                     .left_future()
                                 } else {
                                     future::ok(()).right_future()
                                 };
 
-                                globalrevs_work.join(synced_commit_mapping_work)
+                                globalrevs_work
+                                    .join(synced_commit_mapping_work)
+                                    .map(move |_| max_rev)
                             }
                         })
-                        .for_each(|_| Ok(()))
-                        .map(move |()| (stale_bookmarks, mononoke_bookmarks))
+                        .fold(None, |mut acc, rev| {
+                            if let Some(rev) = rev {
+                                acc = Some(::std::cmp::max(acc.unwrap_or(RevIdx::zero()), rev));
+                            }
+                            let res: Result<_, Error> = Ok(acc);
+                            res
+                        })
+                        .map(move |max_rev| (max_rev, stale_bookmarks, mononoke_bookmarks))
                 }
             })
-            .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
+            .and_then(move |(max_rev, stale_bookmarks, mononoke_bookmarks)| {
                 info!(logger, "finished uploading changesets and globalrevs");
-                match bookmark_import_policy {
+                let f = match bookmark_import_policy {
                     BookmarkImportPolicy::Ignore => {
                         info!(
                             logger,
@@ -221,7 +230,8 @@ impl Blobimport {
                         mononoke_bookmarks,
                         bookmark::get_bookmark_prefixer(prefix),
                     ),
-                }
+                };
+                f.map(move |()| max_rev)
             })
             .boxify()
     }

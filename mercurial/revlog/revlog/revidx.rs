@@ -43,6 +43,10 @@ impl RevIdx {
     pub fn range(&self) -> RevIdxRange {
         RevIdxRange(self.0, u32::MAX)
     }
+
+    pub fn as_u32(&self) -> u32 {
+        self.0
+    }
 }
 
 // Construct a `RevIdx` from a `u32`

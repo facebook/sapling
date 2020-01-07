@@ -38,6 +38,7 @@ blobimport, succeeding, creates directory if not existing
   * inserted commits # 0 (glob)
   * finished uploading changesets and globalrevs (glob)
   * uploaded chunk of 1 bookmarks (glob)
+  * latest imported revision 2 (glob)
 
 check the bookmark is there after import
   $ mononoke_admin --readonly-storage bookmarks log master_bookmark 2>&1 | grep master_bookmark
@@ -49,3 +50,4 @@ blobimport --no-create after successful import, should be fine as storage shared
   * inserted commits # 0 (glob)
   * finished uploading changesets and globalrevs (glob)
   * uploaded chunk of 0 bookmarks (glob)
+  * latest imported revision 2 (glob)

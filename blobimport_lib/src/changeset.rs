@@ -9,7 +9,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Error};
+use anyhow::{bail, format_err, Context, Error};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -29,7 +29,7 @@ use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
 use lfs_import_lib::lfs_upload;
-use mercurial_revlog::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial_revlog::{manifest, revlog::RevIdx, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
     blobs::{
         ChangesetMetadata, ContentBlobMeta, File, HgBlobChangeset, HgBlobEntry, LFSContent,
@@ -271,7 +271,9 @@ pub struct UploadChangesets {
 }
 
 impl UploadChangesets {
-    pub fn upload(self) -> BoxStream<SharedItem<(BonsaiChangeset, HgBlobChangeset)>, Error> {
+    pub fn upload(
+        self,
+    ) -> BoxStream<(RevIdx, SharedItem<(BonsaiChangeset, HgBlobChangeset)>), Error> {
         let Self {
             ctx,
             blobrepo,
@@ -288,7 +290,15 @@ impl UploadChangesets {
         } = self;
 
         let changesets = match changeset {
-            Some(hash) => future::ok(hash).into_stream().boxify(),
+            Some(hash) => match revlogrepo.get_rev_idx_for_changeset(HgChangesetId::new(hash)) {
+                Ok(idx) => future::ok((idx, hash)).into_stream().boxify(),
+                Err(err) => stream::once(Err(format_err!(
+                    "{} not found in revlog repo: {}",
+                    hash,
+                    err
+                )))
+                .boxify(),
+            },
             None => revlogrepo.changesets().boxify(),
         };
 
@@ -343,7 +353,7 @@ impl UploadChangesets {
         changesets
             .and_then({
                 cloned!(ctx, revlogrepo, blobrepo);
-                move |csid| {
+                move |(revidx, csid)| {
                     let ParseChangeset {
                         revlogcs,
                         rootmf,
@@ -388,13 +398,13 @@ impl UploadChangesets {
 
                     revlogcs
                         .join3(rootmf, entries.collect())
-                        .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
+                        .map(move |(cs, rootmf, entries)| (revidx, csid, cs, rootmf, entries))
                         .traced_with_id(&ctx.trace(), "parse changeset from revlog", trace_args!(), event_id)
                 }
             })
             .and_then({
                 cloned!(ctx);
-                move |(csid, cs, rootmf, entries)| {
+                move |(revidx, csid, cs, rootmf, entries)| {
                 let parents_from_revlog: Vec<_> = cs.parents().into_iter().map(HgChangesetId::new).collect();
 
                 if let Some(parent_order) = fixed_parent_order.get(&HgChangesetId::new(csid.clone())) {
@@ -410,13 +420,13 @@ impl UploadChangesets {
                     }
 
                     info!(ctx.logger(), "fixing parent order for {}: {:?}", csid, parent_order);
-                    Ok((csid, cs, rootmf, entries, parent_order.clone()))
+                    Ok((revidx, csid, cs, rootmf, entries, parent_order.clone()))
                 } else {
-                    Ok((csid, cs, rootmf, entries, parents_from_revlog))
+                    Ok((revidx, csid, cs, rootmf, entries, parents_from_revlog))
                 }
 
             }})
-            .map(move |(csid, cs, rootmf, entries, parents)| {
+            .map(move |(revidx, csid, cs, rootmf, entries, parents)| {
                 let entries = stream::futures_unordered(entries).boxify();
 
                 let (p1handle, p2handle) = {
@@ -473,7 +483,7 @@ impl UploadChangesets {
                     .get_completed_changeset()
                     .with_context(move || format!("While uploading changeset: {}", csid))
                     .from_err(), &executor)
-                    .and_then(move |shared| phases_store.add_reachable_as_public(ctx, blobrepo, vec![shared.0.get_changeset_id()]).map(move |_| shared))
+                    .and_then(move |shared| phases_store.add_reachable_as_public(ctx, blobrepo, vec![shared.0.get_changeset_id()]).map(move |_| (revidx, shared)))
                     .boxify()
             })
             // This is the number of changesets to upload in parallel. Keep it small to keep the database
