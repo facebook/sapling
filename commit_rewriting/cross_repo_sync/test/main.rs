@@ -38,6 +38,7 @@ use synced_commit_mapping::{
 };
 
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use sql::rusqlite::Connection as SqliteConnection;
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
@@ -205,8 +206,9 @@ fn check_mapping<M>(
 
 fn sync_parentage(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
-    let linear = linear::getrepo(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    linear::initrepo(fb, &small_repo);
+    let linear = small_repo;
     let linear_path_in_megarepo = mpath("linear");
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
@@ -214,8 +216,6 @@ fn sync_parentage(fb: FacebookInit) {
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
     let config = CommitSyncer::new(mapping, repos);
 
@@ -373,10 +373,25 @@ fn test_sync_causes_conflict(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || sync_causes_conflict(fb))
 }
 
+fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
+    let sqlite_con = SqliteConnection::open_in_memory()?;
+    sqlite_con.execute_batch(SqlSyncedCommitMapping::get_up_query())?;
+    let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+        sqlite_con,
+        RepositoryId::new(1),
+    )?;
+
+    let (small_repo, _) =
+        blobrepo_factory::new_memblob_with_connection_with_id(con.clone(), RepositoryId::new(0))?;
+    let mapping = SqlSyncedCommitMapping::from_connections(con.clone(), con.clone(), con.clone());
+    Ok((small_repo, megarepo, mapping))
+}
+
 fn sync_empty_commit(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
-    let linear = linear::getrepo(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    linear::initrepo(fb, &small_repo);
+    let linear = small_repo;
     let linear_path_in_megarepo = mpath("linear");
     let lts_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
@@ -393,8 +408,6 @@ fn sync_empty_commit(fb: FacebookInit) {
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
     let lts_config = CommitSyncer::new(mapping.clone(), lts_repos);
     let stl_config = CommitSyncer::new(mapping, stl_repos);
@@ -490,8 +503,9 @@ fn megarepo_copy_file(
 
 fn sync_copyinfo(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
-    let linear = linear::getrepo(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    linear::initrepo(fb, &small_repo);
+    let linear = small_repo;
     let linear_path_in_megarepo = mpath("linear");
     let lts_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
@@ -509,7 +523,6 @@ fn sync_copyinfo(fb: FacebookInit) {
         bookmark_renamer: Arc::new(identity_renamer),
     };
 
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let stl_config = CommitSyncer::new(mapping.clone(), stl_repos);
     let lts_config = CommitSyncer::new(mapping, lts_repos);
 
@@ -652,8 +665,9 @@ fn maybe_replace_prefix(
 
 fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
-    let repo = many_files_dirs::getrepo(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    many_files_dirs::initrepo(fb, &small_repo);
+    let repo = small_repo;
 
     // Note: this mover relies on non-prefix-free path map, which may
     // or may not be allowed in repo configs. We want commit syncing to work
@@ -679,7 +693,6 @@ fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         bookmark_renamer: Arc::new(identity_renamer),
     };
 
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let commit_syncer = CommitSyncer::new(mapping.clone(), commit_sync_repos);
 
     let megarepo_initial_bcs_id = create_initial_commit(ctx.clone(), &megarepo);
@@ -803,8 +816,9 @@ fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
 
 fn sync_parent_search(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
-    let linear = linear::getrepo(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    linear::initrepo(fb, &small_repo);
+    let linear = small_repo;
     let linear_path_in_megarepo = mpath("linear");
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
@@ -821,7 +835,6 @@ fn sync_parent_search(fb: FacebookInit) {
         }),
         bookmark_renamer: Arc::new(identity_renamer),
     };
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let config = CommitSyncer::new(mapping.clone(), repos);
     let reverse_config = CommitSyncer::new(mapping, reverse_repos);
 

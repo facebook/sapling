@@ -68,6 +68,7 @@ use mononoke_types::{
 };
 use revset::RangeNodeStream;
 use slog::info;
+use sql_ext::TransactionResult;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
@@ -203,6 +204,32 @@ pub struct PushrebaseSuccessResult {
 #[derive(Clone)]
 pub struct OntoBookmarkParams {
     pub bookmark: BookmarkName,
+
+    // Factory that creates a transaction that will be used to update the bookmark.
+    // It allows updating the bookmark atomically with some other update
+    pub sql_txn_factory:
+        Option<Arc<dyn Fn(RebasedChangesets) -> BoxFuture<TransactionResult, Error> + Sync + Send>>,
+}
+
+impl OntoBookmarkParams {
+    pub fn new(bookmark: BookmarkName) -> Self {
+        Self {
+            bookmark,
+            sql_txn_factory: None,
+        }
+    }
+
+    pub fn new_with_factory(
+        bookmark: BookmarkName,
+        sql_txn_factory: Arc<
+            dyn Fn(RebasedChangesets) -> BoxFuture<TransactionResult, Error> + Sync + Send,
+        >,
+    ) -> Self {
+        Self {
+            bookmark,
+            sql_txn_factory: Some(sql_txn_factory),
+        }
+    }
 }
 
 /// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
@@ -454,7 +481,7 @@ fn rebase_in_loop(
                             root.clone(),
                             head,
                             bookmark_val,
-                            onto_bookmark.bookmark,
+                            onto_bookmark,
                             maybe_hg_replay_data.clone(),
                         )
                         .and_then(move |update_res| match update_res {
@@ -491,7 +518,7 @@ fn do_rebase(
     root: ChangesetId,
     head: ChangesetId,
     bookmark_val: Option<ChangesetId>,
-    onto_bookmark: BookmarkName,
+    onto_bookmark: OntoBookmarkParams,
     maybe_hg_replay_data: Option<HgReplayData>,
 ) -> impl Future<Item = Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, Error = PushrebaseError>
 {
@@ -1218,12 +1245,14 @@ fn find_rebased_set(
 fn try_update_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark_name: &BookmarkName,
+    bookmark: &OntoBookmarkParams,
     old_value: ChangesetId,
     new_value: ChangesetId,
     maybe_hg_replay_data: Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+    let bookmark_name = &bookmark.bookmark;
+    let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     let bookmark_update_reason =
@@ -1234,7 +1263,18 @@ fn try_update_bookmark(
             cloned!(bookmark_name);
             move |reason| {
                 try_boxfuture!(txn.update(&bookmark_name, new_value, old_value, reason));
-                txn.commit()
+                let commit_fut = match maybe_sql_txn_factory {
+                    Some(sql_txn_factory) => {
+                        let factory = Arc::new({
+                            cloned!(rebased_changesets);
+                            move || sql_txn_factory(rebased_changesets.clone())
+                        });
+                        txn.commit_into_txn(factory).boxify()
+                    }
+                    None => txn.commit().boxify(),
+                };
+
+                commit_fut
                     .map(move |success| {
                         if success {
                             Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
@@ -1252,11 +1292,13 @@ fn try_update_bookmark(
 fn try_create_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark_name: &BookmarkName,
+    bookmark: &OntoBookmarkParams,
     new_value: ChangesetId,
     maybe_hg_replay_data: Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+    let bookmark_name = &bookmark.bookmark;
+    let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     let bookmark_update_reason =
@@ -1268,7 +1310,18 @@ fn try_create_bookmark(
             cloned!(bookmark_name);
             move |reason| {
                 try_boxfuture!(txn.create(&bookmark_name, new_value, reason));
-                txn.commit()
+                let commit_fut = match maybe_sql_txn_factory {
+                    Some(sql_txn_factory) => {
+                        let factory = Arc::new({
+                            cloned!(rebased_changesets);
+                            move || sql_txn_factory(rebased_changesets.clone())
+                        });
+                        txn.commit_into_txn(factory).boxify()
+                    }
+                    None => txn.commit().boxify(),
+                };
+
+                commit_fut
                     .map(move |success| {
                         if success {
                             Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
@@ -1322,7 +1375,10 @@ mod tests {
 
     use super::*;
     use anyhow::format_err;
+    use blobrepo::DangerousOverride;
+    use bookmarks::Bookmarks;
     use cmdlib::helpers::create_runtime;
+    use dbbookmarks::SqlBookmarks;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
@@ -1331,9 +1387,12 @@ mod tests {
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
+    use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use sql::{rusqlite::Connection as SqliteConnection, Connection};
+    use sql_ext::SqlConstructors;
     use std::{collections::BTreeMap, str::FromStr};
     use tests_utils::{
-        bookmark, create_commit, create_commit_with_date, store_files, store_rename,
+        bookmark, create_commit, create_commit_with_date, resolve_cs_id, store_files, store_rename,
         CreateCommitContext,
     };
 
@@ -1363,7 +1422,7 @@ mod tests {
 
     fn master_bookmark() -> OntoBookmarkParams {
         let book = BookmarkName::new("master").unwrap();
-        let book = OntoBookmarkParams { bookmark: book };
+        let book = OntoBookmarkParams::new(book);
         book
     }
 
@@ -1394,6 +1453,131 @@ mod tests {
                     .map_err(|err| format_err!("{:?}", err))
                     .compat()
                     .await?;
+                Ok(())
+            }
+                .boxed()
+                .compat(),
+        )
+    }
+
+    // Initializes bookmarks and mutable_counters on the "same db" i.e. on the same
+    // sqlite connection
+    async fn init_bookmarks_mutable_counters(
+    ) -> Result<(Arc<dyn Bookmarks>, Arc<SqlMutableCounters>, Connection), Error> {
+        let con = SqliteConnection::open_in_memory()?;
+        con.execute_batch(SqlMutableCounters::get_up_query())?;
+        con.execute_batch(SqlBookmarks::get_up_query())?;
+
+        let con = Connection::with_sqlite(con);
+        let bookmarks = Arc::new(SqlBookmarks::from_connections(
+            con.clone(),
+            con.clone(),
+            con.clone(),
+        )) as Arc<dyn Bookmarks>;
+        let mutable_counters = Arc::new(SqlMutableCounters::from_connections(
+            con.clone(),
+            con.clone(),
+            con.clone(),
+        ));
+
+        Ok((bookmarks, mutable_counters, con))
+    }
+
+    #[fbinit::test]
+    fn pushrebase_one_commit_with_txn(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(
+            async move {
+                let ctx = CoreContext::test_mock(fb);
+                let repo = linear::getrepo(fb);
+                // Bottom commit of the repo
+                let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
+                let bcs_id = CreateCommitContext::new(ctx.clone(), repo.clone(), parents)
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
+                let hg_cs = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                    .compat()
+                    .await?;
+
+                let (bookmarks, mutable_counters, con) = init_bookmarks_mutable_counters().await?;
+                let repo = repo.dangerous_override(|_| bookmarks);
+
+                let repoid = repo.get_repoid();
+                let mut book = OntoBookmarkParams::new_with_factory(
+                    BookmarkName::new("master")?,
+                    Arc::new({
+                        cloned!(ctx);
+                        move |rebased_changesets| {
+                            let (_, (rebased, _)) = rebased_changesets.into_iter().next().unwrap();
+                            con.start_transaction()
+                                .and_then({
+                                    cloned!(ctx);
+                                    move |txn| {
+                                        SqlMutableCounters::set_counter_on_txn(
+                                            ctx.clone(),
+                                            repoid,
+                                            &format!("{}", rebased),
+                                            1,
+                                            None,
+                                            txn,
+                                        )
+                                    }
+                                })
+                                .boxify()
+                        }
+                    }),
+                );
+                bookmark(&ctx, &repo, book.bookmark.clone())
+                    .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
+                    .await?;
+
+                do_pushrebase(
+                    ctx.clone(),
+                    repo.clone(),
+                    Default::default(),
+                    book.clone(),
+                    hashset![hg_cs],
+                    None,
+                )
+                .map_err(|err| format_err!("{:?}", err))
+                .compat()
+                .await?;
+
+                let master_val = resolve_cs_id(&ctx, &repo, "master").await?;
+                let key = format!("{}", master_val);
+                assert_eq!(
+                    mutable_counters
+                        .get_counter(ctx.clone(), repoid, &key)
+                        .compat()
+                        .await?,
+                    Some(1),
+                );
+
+                // Now do the same with another non-existent bookmark,
+                // make sure cs id is created.
+                book.bookmark = BookmarkName::new("newbook")?;
+                do_pushrebase(
+                    ctx.clone(),
+                    repo.clone(),
+                    Default::default(),
+                    book,
+                    hashset![hg_cs],
+                    None,
+                )
+                .map_err(|err| format_err!("{:?}", err))
+                .compat()
+                .await?;
+
+                let key = format!("{}", resolve_cs_id(&ctx, &repo, "newbook").await?);
+                assert_eq!(
+                    mutable_counters
+                        .get_counter(ctx.clone(), repoid, &key)
+                        .compat()
+                        .await?,
+                    Some(1),
+                );
                 Ok(())
             }
                 .boxed()
@@ -2418,7 +2602,7 @@ mod tests {
         .unwrap();
 
         let book = BookmarkName::new("newbook").unwrap();
-        let book = OntoBookmarkParams { bookmark: book };
+        let book = OntoBookmarkParams::new(book);
         assert!(run_future(
             &mut runtime,
             do_pushrebase(ctx, repo, Default::default(), book, hashset![hg_cs], None),
@@ -2441,7 +2625,7 @@ mod tests {
             let parents = vec![p];
 
             let book = BookmarkName::new("newbook").unwrap();
-            let book = OntoBookmarkParams { bookmark: book };
+            let book = OntoBookmarkParams::new(book);
 
             let num_pushes = 10;
             let mut futs = vec![];

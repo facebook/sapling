@@ -35,6 +35,7 @@ use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
+use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::MysqlOptions;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
@@ -236,6 +237,66 @@ pub fn new_memblob_empty_with_id(
         ),
         Arc::new(InProcessLease::new()),
         FilestoreConfig::default(),
+    ))
+}
+
+// Creates all db tables except for filenodes on the same sqlite connection
+pub fn new_memblob_with_sqlite_connection_with_id(
+    con: SqliteConnection,
+    repo_id: RepositoryId,
+) -> Result<(BlobRepo, Connection)> {
+    con.execute_batch(SqlBookmarks::get_up_query())?;
+    con.execute_batch(SqlChangesets::get_up_query())?;
+    con.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
+    con.execute_batch(SqlBonsaiHgMapping::get_up_query())?;
+    let con = Connection::with_sqlite(con);
+
+    new_memblob_with_connection_with_id(con.clone(), repo_id)
+}
+
+pub fn new_memblob_with_connection_with_id(
+    con: Connection,
+    repo_id: RepositoryId,
+) -> Result<(BlobRepo, Connection)> {
+    let repo_blobstore_args = RepoBlobstoreArgs::new(
+        Arc::new(EagerMemblob::new()),
+        None,
+        repo_id,
+        ScubaSampleBuilder::with_discard(),
+    );
+
+    Ok((
+        BlobRepo::new(
+            Arc::new(SqlBookmarks::from_connections(
+                con.clone(),
+                con.clone(),
+                con.clone(),
+            )),
+            repo_blobstore_args,
+            // Filenodes are intentionally created on another connection
+            Arc::new(
+                SqlFilenodes::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
+            ),
+            Arc::new(SqlChangesets::from_connections(
+                con.clone(),
+                con.clone(),
+                con.clone(),
+            )),
+            Arc::new(SqlBonsaiGlobalrevMapping::from_connections(
+                con.clone(),
+                con.clone(),
+                con.clone(),
+            )),
+            Arc::new(SqlBonsaiHgMapping::from_connections(
+                con.clone(),
+                con.clone(),
+                con.clone(),
+            )),
+            Arc::new(InProcessLease::new()),
+            FilestoreConfig::default(),
+        ),
+        con,
     ))
 }
 

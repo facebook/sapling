@@ -593,7 +593,7 @@ impl PushRedirector {
     ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
         match pushrebase_bookmark_spec {
             PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
-                let OntoBookmarkParams { bookmark } = onto_params;
+                let bookmark = onto_params.bookmark;
                 let bookmark = self
                     .small_to_large_commit_syncer
                     .rename_bookmark(&bookmark)
@@ -604,7 +604,7 @@ impl PushRedirector {
                     ))?;
 
                 Ok(PushrebaseBookmarkSpec::NormalPushrebase(
-                    OntoBookmarkParams { bookmark },
+                    OntoBookmarkParams::new(bookmark),
                 ))
             }
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {

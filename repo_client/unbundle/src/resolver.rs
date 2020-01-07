@@ -480,9 +480,7 @@ fn resolve_pushrebase(
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
                     let onto_bookmark = BookmarkName::new(onto_bookmark)?;
-                    let onto_bookmark = pushrebase::OntoBookmarkParams {
-                        bookmark: onto_bookmark,
-                    };
+                    let onto_bookmark = pushrebase::OntoBookmarkParams::new(onto_bookmark);
                     Ok((onto_bookmark, cg_push, manifests, bundle2))
                 }
                 None => bail!("onto is not specified"),
