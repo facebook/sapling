@@ -192,7 +192,6 @@ With --template.
     "date": [0, 0],
     "desc": "foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+",
     "bookmarks": [],
-    "tags": [],
     "parents": ["eaec41c1a0c9ad0a5e999611d0149d171beffb8c"]
    },
    {
@@ -204,7 +203,6 @@ With --template.
     "date": [0, 0],
     "desc": "11 -> 11+; leading space before \"1\"",
     "bookmarks": [],
-    "tags": [],
     "parents": ["730a61fbaecf426c17c2c66bc42d195b5d5b0ba8"]
    },
    {
@@ -216,7 +214,6 @@ With --template.
     "date": [0, 0],
     "desc": "2 -> 2+; added bar",
     "bookmarks": [],
-    "tags": [],
     "parents": ["29a1e7c6b80024f63f310a2d71de979e9d2996d7"]
    },
    {
@@ -228,7 +225,6 @@ With --template.
     "date": [0, 0],
     "desc": "init",
     "bookmarks": [],
-    "tags": [],
     "parents": ["0000000000000000000000000000000000000000"]
    }
   ]

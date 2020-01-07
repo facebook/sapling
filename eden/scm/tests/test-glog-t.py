@@ -1883,7 +1883,9 @@ sh % "hg log -G --git --patch --follow-first e" == r"""
 
 # Test old-style --rev
 
-sh % "hg tag foo-bar"
+sh % "echo 'fc281d8ff18d999ad6497b3d27390bcd695dcc73 foo-bar'" >> ".hgtags"
+sh % "hg commit -Aqm 'Added tag foo-bar for changeset fc281d8ff18d'"
+sh % "hg book foo-bar"
 sh % "hg log -G --print-revset -r foo-bar" == r"""
     ['foo-bar']
     []"""
@@ -2276,18 +2278,6 @@ sh % "hg log -Gqr '5:7' --config 'ui.graphnodetemplate=\"{rev}\"'" == r"""
     |\
     | ~
     5  5:99b31f1c2782
-    |
-    ~"""
-
-# node template with changeset_templater (shared cache variable):
-
-sh % "hg log -Gr '5:7' -T '{latesttag % \"{rev} {tag}+{distance}\"}\\n' --config 'ui.graphnodetemplate={ifeq(latesttagdistance, 0, \"#\", graphnode)}'" == r"""
-    o  7 foo-bar+1
-    |
-    #    6 foo-bar+0
-    |\
-    | ~
-    o  5 null+5
     |
     ~"""
 

@@ -268,7 +268,8 @@ Don't break automation
   A dir1/subdir1/subf1
 
 This tag is kept to keep the rest of the test consistent:
-  $ hg tag foo
+  $ echo >> ../.hgtags
+  $ hg commit -Aqm "add foo tag"
 
 Test graft date when tweakdefaults.graftkeepdate is not set
   $ hg revert -a -q
@@ -392,7 +393,7 @@ Test non-remotenames use of pull --rebase and --update requires --dest
   $ cd $TESTTMP
   $ hg clone repo clone
   updating to branch default
-  12 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone
   $ hg pull --rebase
   abort: you must use a bookmark with tracking or manually specify a destination for the rebase

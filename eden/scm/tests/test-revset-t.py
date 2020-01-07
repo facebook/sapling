@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import
 
+import os
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
@@ -58,15 +59,14 @@ _currentbranch = None
 def setbranch(branch):
     global _currentbranch
     _currentbranch = branch
-    # "hg tag" reads this file. Ideally the in-repo tag feature goes way too.
-    open(".hg/branch", "wb").write("%s\n" % branch)
 
 
 def commit(*args):
     if _currentbranch:
+        sh.hg("bookmark", "-i")
         sh.hg("commit", "--extra=branch=%s" % _currentbranch, *args)
-        # silent warnings about conflicted names
-        sh.hg("tag", "-q", "--local", "--", _currentbranch)
+        sh.hg("bookmark", "-f", "--", _currentbranch)
+        os.environ[_currentbranch] = sh.hg("log", "-r", ".", "-T", "{node}")
     else:
         sh.hg("commit", *args)
 
@@ -145,16 +145,22 @@ sh % "hg log -r 'extra('\\''branch'\\'', '\\''re:a'\\'')' --template '{rev} {bra
     0 a
     2 a-b-c-"""
 
-sh % "hg co 1" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg co 1" == """
+    1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+    (leaving bookmark a-b-c-)"""
 sh % "setbranch +a+b+c+"
 sh % "commit -Aqm3"
 
-sh % "hg co -C 2" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
+sh % "hg co -C 2" == """
+    0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+    (leaving bookmark +a+b+c+)"""
 sh % "echo bb" > "b"
 sh % "setbranch -a-b-c-"
 sh % "commit -Aqm4 -d 'May 12 2005 UTC'"
 
-sh % "hg co -C 3" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg co -C 3" == """
+    2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+    (leaving bookmark -a-b-c-)"""
 sh % "setbranch '!a/b/c/'"
 sh % "commit '-Aqm5 bug'"
 
@@ -169,11 +175,16 @@ sh % "commit -Aqm7"
 
 sh % "setbranch all"
 
-sh % "hg co 4" == "0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg co 4" == """
+    0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+    (leaving bookmark .a.b.c.)"""
 sh % "setbranch '\xc3\xa9'"
 sh % "commit -Aqm9"
 
-sh % "hg tag -fr6 1.0"
+sh % "hg book -fr 6 1.0"
+sh % "echo 'e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0'" >> ".hgtags"
+sh % "hg book -i"
+sh % "hg commit -Aqm 'add 1.0 tag'"
 sh % "hg bookmark -r6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 sh % "hg clone --quiet -U -r 7 . ../remote1"
@@ -1867,30 +1878,6 @@ sh % "log 'sort(2 or 3 or 4 or 5, date)'" == r"""
     3
     5
     4"""
-sh % "log 'tagged()'" == r"""
-    0
-    1
-    2
-    3
-    4
-    5
-    6
-    7
-    8"""
-sh % "log 'tag()'" == r"""
-    0
-    1
-    2
-    3
-    4
-    5
-    6
-    7
-    8"""
-sh % "log 'tag(1.0)'" == "6"
-sh % "log 'tag(tip)'" == r"""
-    abort: tag 'tip' does not exist!
-    [255]"""
 
 # Test order of revisions in compound expression
 # ----------------------------------------------
@@ -2616,7 +2603,9 @@ sh % "hg log -r 'sort(all(), \"user -branch date rev\")'" == r"""
 
 #  toposort prioritises graph branches
 
-sh % "hg up 2" == "0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg up 2" == """
+    0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+    (leaving bookmark b112)"""
 sh % "touch a"
 sh % "hg addremove" == "adding a"
 sh % "hg ci -m t1 -u tu -d '130 0'"

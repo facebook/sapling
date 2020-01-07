@@ -25,8 +25,6 @@ clone a tag
   $ hg -R hgrepo-a log --graph
   @  changeset:   0:69982ec78c6d
      bookmark:    master
-     tag:         alpha
-     tag:         default/master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -38,15 +36,12 @@ clone a branch
   $ hg -R hgrepo-b log --graph
   @  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
-  |  tag:         default/beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
   o  changeset:   0:69982ec78c6d
      bookmark:    master
-     tag:         alpha
-     tag:         default/master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -75,7 +70,6 @@ pull works after 'hg git-cleanup'
   $ hg log --graph
   o  changeset:   2:3db9bf9073b5
   |  bookmark:    beta
-  |  tag:         default/beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add to beta
@@ -87,8 +81,6 @@ pull works after 'hg git-cleanup'
   |
   @  changeset:   0:69982ec78c6d
      bookmark:    master
-     tag:         alpha
-     tag:         default/master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha

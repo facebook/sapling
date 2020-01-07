@@ -8,7 +8,8 @@ This runs with TZ="GMT"
   $ hg ci -d "2006-02-01 13:00:30" -m "rev 0"
   $ echo "hi!" >> a
   $ hg ci -d "2006-02-01 13:00:30 -0500" -m "rev 1"
-  $ hg tag -d "2006-04-15 13:30" "Hi"
+  $ echo >> .hgtags
+  $ hg ci -Aq -d "2006-04-15 13:30" -m "Hi"
   $ hg backout --merge -d "2006-04-15 13:30 +0200" -m "rev 3" 1
   reverting a
   changeset 3:cac74e007661 backs out changeset 1:25a1420a55f8

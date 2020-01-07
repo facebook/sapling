@@ -90,14 +90,6 @@ def buildmetadata(ctx):
         r'node: {ifcontains(rev, revset("wdir()"),'
         r'"{p1node}{dirty}", "{node}")}\n'
         r"branch: {branch|utf8}\n"
-        # {tags} on ctx includes local tags and 'tip', with no current way to
-        # limit that to global tags.  Therefore, use {latesttag} as a substitute
-        # when the distance is 0, since that will be the list of global tags on
-        # ctx.
-        r'{ifeq(latesttagdistance, 0, latesttag % "tag: {tag}\n",'
-        r'"{latesttag % "latesttag: {tag}\n"}'
-        r"latesttagdistance: {latesttagdistance}\n"
-        r'changessincelatesttag: {changessincelatesttag}\n")}'
     )
 
     opts = {"template": repo.ui.config("experimental", "archivemetatemplate", default)}

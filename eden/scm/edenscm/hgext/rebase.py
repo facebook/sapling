@@ -760,9 +760,6 @@ class rebaseruntime(object):
                 for oldrev in self.state.iterkeys():
                     self.state[oldrev] = newrev
 
-        if "qtip" in repo.tags():
-            updatemq(repo, self.state, self.skipped, **opts)
-
         # restore original working directory
         # (we do this before stripping)
         newwd = self.state.get(self.originalwd, self.originalwd)
@@ -1998,14 +1995,6 @@ def buildstate(repo, destmap, collapse):
     """
     rebaseset = destmap.keys()
     originalwd = repo["."].rev()
-
-    # This check isn't strictly necessary, since mq detects commits over an
-    # applied patch. But it prevents messing up the working directory when
-    # a partially completed rebase is blocked by mq.
-    if "qtip" in repo.tags():
-        mqapplied = set(repo[s.node].rev() for s in repo.mq.applied)
-        if set(destmap.values()) & mqapplied:
-            raise error.Abort(_("cannot rebase onto an applied mq patch"))
 
     # Get "cycle" error early by exhausting the generator.
     sortedsrc = list(sortsource(destmap))  # a list of sorted revs

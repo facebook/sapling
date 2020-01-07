@@ -76,15 +76,6 @@ def generate_repo_subclass(baseclass):
             return GitHandler(self, self.ui)
 
         def tags(self):
-            # TODO consider using self._tagscache
-            tagscache = super(hgrepo, self).tags()
-            tagscache.update(self.githandler.remote_refs)
-            for tag, rev in self.githandler.tags.iteritems():
-                if tag in tagscache:
-                    continue
-
-                tagscache[tag] = bin(rev)
-
-            return tagscache
+            return {}
 
     return hgrepo

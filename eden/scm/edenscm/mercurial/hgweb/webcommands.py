@@ -613,44 +613,6 @@ def manifest(web, req, tmpl):
     )
 
 
-@webcommand("tags")
-def tags(web, req, tmpl):
-    """
-    /tags
-    -----
-
-    Show information about tags.
-
-    No arguments are accepted.
-
-    The ``tags`` template is rendered.
-    """
-    i = list(reversed(web.repo.tagslist()))
-    parity = paritygen(web.stripecount)
-
-    def entries(notip, latestonly, **map):
-        t = i
-        if notip:
-            t = [(k, n) for k, n in i if k != "tip"]
-        if latestonly:
-            t = t[:1]
-        for k, n in t:
-            yield {
-                "parity": next(parity),
-                "tag": k,
-                "date": web.repo[n].date(),
-                "node": hex(n),
-            }
-
-    return tmpl(
-        "tags",
-        node=hex(web.repo.changelog.tip()),
-        entries=lambda **x: entries(False, False, **x),
-        entriesnotip=lambda **x: entries(True, False, **x),
-        latestentry=lambda **x: entries(True, True, **x),
-    )
-
-
 @webcommand("bookmarks")
 def bookmarks(web, req, tmpl):
     """

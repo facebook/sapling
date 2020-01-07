@@ -62,7 +62,6 @@ from .. import (
     server,
     sshserver,
     streamclone,
-    tags as tagsmod,
     templatekw,
     ui as uimod,
     util,
@@ -1485,7 +1484,7 @@ def cat(ui, repo, file1, *pats, **opts):
                 "directory (only a repository)"
             ),
         ),
-        ("u", "updaterev", "", _("revision, tag, or branch to check out"), _("REV")),
+        ("u", "updaterev", "", _("revision or branch to check out"), _("REV")),
         ("r", "rev", [], _("include the specified changeset"), _("REV")),
         ("", "pull", None, _("use pull protocol to copy metadata")),
         ("", "uncompressed", None, _("an alias to --stream (DEPRECATED)")),
@@ -1533,11 +1532,6 @@ def clone(ui, source, dest=None, **opts):
     a modern client may inherit legacy or inefficient storage used by the
     remote or a legacy Mercurial client may not be able to clone from a
     modern Mercurial remote.
-
-    .. note::
-
-       Specifying a tag will include the tagged changeset but not the
-       changeset containing the tag.
 
     .. container:: verbose
 
@@ -2532,7 +2526,7 @@ def _dograft(ui, repo, *revs, **opts):
 
     for pos, ctx in enumerate(repo.set("%ld", revs)):
         desc = '%d:%s "%s"' % (ctx.rev(), ctx, ctx.description().split("\n", 1)[0])
-        names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+        names = repo.nodebookmarks(ctx.node())
         if names:
             desc += " (%s)" % " ".join(names)
         ui.status(_("grafting %s\n") % desc)
@@ -3381,7 +3375,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
         ("n", "num", None, _("show local revision number")),
         ("i", "id", None, _("show global revision id")),
         ("b", "branch", None, _("print 'default' (DEPRECATED)")),
-        ("t", "tags", None, _("show tags")),
+        ("t", "tags", None, _("show tags (DEPRECATED)")),
         ("B", "bookmarks", None, _("show bookmarks")),
     ]
     + remoteopts
@@ -3406,7 +3400,7 @@ def identify(
 
     Print a summary identifying the repository state at REV using one or
     two parent hash identifiers, followed by a "+" if the working
-    directory has uncommitted changes, a list of tags, and a list of bookmarks.
+    directory has uncommitted changes and a list of bookmarks.
 
     When REV is not given, print a summary of the current state of the
     repository.
@@ -3421,10 +3415,6 @@ def identify(
       - generate a build identifier for the working directory::
 
           hg id --id > build-id.dat
-
-      - find the revision corresponding to a tag::
-
-          hg id -n -r 1.3
 
       - check the most recent revision of a remote repository::
 
@@ -3444,7 +3434,7 @@ def identify(
         hexfunc = hex
     else:
         hexfunc = short
-    default = not (num or id or branch or tags or bookmarks)
+    default = not (num or id or branch or bookmarks)
     output = []
     revs = []
 
@@ -3458,8 +3448,8 @@ def identify(
     fm.startitem()
 
     if not repo:
-        if num or branch or tags:
-            raise error.Abort(_("can't query remote revision number, branch, or tags"))
+        if num or branch:
+            raise error.Abort(_("can't query remote revision number or branch"))
         if not rev and revs:
             rev = revs[0]
         if not rev:
@@ -3501,9 +3491,6 @@ def identify(
         if ctx.rev() is None:
             ctx = repo[None]
             parents = ctx.parents()
-            taglist = []
-            for p in parents:
-                taglist.extend(p.tags())
 
             dirty = ""
             if ctx.dirty(missing=True, merge=False, branch=False):
@@ -3534,14 +3521,8 @@ def identify(
 
             if num:
                 output.append(pycompat.bytestr(ctx.rev()))
-            taglist = ctx.tags()
 
         if default and not ui.quiet:
-            # multiple tags for a single parent separated by '/'
-            t = "/".join(taglist)
-            if t:
-                output.append(t)
-
             # multiple bookmarks for a single parent separated by '/'
             bm = "/".join(ctx.bookmarks())
             if bm:
@@ -3550,14 +3531,10 @@ def identify(
             if branch:
                 output.append(ctx.branch())
 
-            if tags:
-                output.extend(taglist)
-
             if bookmarks:
                 output.extend(ctx.bookmarks())
 
         fm.data(node=ctx.hex())
-        fm.data(tags=fm.formatlist(taglist, name="tag", sep=":"))
         fm.data(bookmarks=fm.formatlist(ctx.bookmarks(), name="bookmark"))
         fm.context(ctx=ctx)
 
@@ -4033,7 +4010,7 @@ def log(ui, repo, *pats, **opts):
     ancestors or descendants of the starting revision.
 
     By default this command prints revision number and changeset id,
-    tags, non-trivial parents, user, date and time, and a summary for
+    non-trivial parents, user, date and time, and a summary for
     each commit. When the -v/--verbose switch is used, the list of
     changed files and full commit message are shown.
 
@@ -4110,17 +4087,13 @@ def log(ui, repo, *pats, **opts):
 
           hg log -T list
 
-      - check if a given changeset is included in a tagged release::
+      - check if a given changeset is included in a bookmarked release::
 
-          hg log -r "a21ccf and ancestor(1.9)"
+          hg log -r "a21ccf and ancestor(release_1.9)"
 
       - find all changesets by some user in a date range::
 
           hg log -k alice -d "may 2008 to jul 2008"
-
-      - summary of all changesets after the last tag::
-
-          hg log -r "last(tagged())::" --template "{desc|firstline}\\n"
 
       - changesets touching lines 13 to 23 for file.c::
 
@@ -5966,7 +5939,6 @@ def summary(ui, repo, **opts):
         # shows a working directory parent *changeset*:
         # i18n: column positioning for "hg summary"
         ui.write(_("parent: %d:%s ") % (p.rev(), p), label=cmdutil._changesetlabels(p))
-        ui.write(" ".join(p.tags()), label="log.tag")
         if p.bookmarks():
             marks.extend(p.bookmarks())
         if p.rev() == -1:
@@ -6203,164 +6175,20 @@ def summary(ui, repo, **opts):
 def tag(ui, repo, name1, *names, **opts):
     """add one or more tags for the current or given revision
 
-    Name a particular revision using <name>.
-
-    Tags are used to name particular revisions of the repository and are
-    very useful to compare different revisions, to go back to significant
-    earlier versions or to mark branch points as releases, etc. Changing
-    an existing tag is normally disallowed; use -f/--force to override.
-
-    If no revision is given, the parent of the working directory is
-    used.
-
-    To facilitate version control, distribution, and merging of tags,
-    they are stored as a file named ".hgtags" which is managed similarly
-    to other project files and can be hand-edited if necessary. This
-    also means that tagging creates a new commit. The file
-    ".hg/localtags" is used for local tags (not shared among
-    repositories).
-
-    Tag commits are usually made at the head of a branch. If the parent
-    of the working directory is not a branch head, :hg:`tag` aborts; use
-    -f/--force to force the tag commit to be based on a non-head
-    changeset.
-
-    See :hg:`help dates` for a list of formats valid for -d/--date.
-
-    Since tag names have priority over branch names during revision
-    lookup, using an existing branch name as a tag name is discouraged.
-
-    .. container:: verbose
-
-      The tag commands can be entirely disabled by setting the
-      ``ui.allowtags`` configuration setting to false.
-
-    Returns 0 on success.
+    This command is deprecated.
     """
-    if not ui.configbool("ui", "allowtags", default=True):
-        raise error.Abort(_("new tags are disabled in this repository"))
-    opts = pycompat.byteskwargs(opts)
-    wlock = lock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-        rev_ = "."
-        names = [t.strip() for t in (name1,) + names]
-        if len(names) != len(set(names)):
-            raise error.Abort(_("tag names must be unique"))
-        for n in names:
-            scmutil.checknewlabel(repo, n, "tag")
-            if not n:
-                raise error.Abort(
-                    _("tag names cannot consist entirely of " "whitespace")
-                )
-        if opts.get("rev") and opts.get("remove"):
-            raise error.Abort(_("--rev and --remove are incompatible"))
-        if opts.get("rev"):
-            rev_ = opts["rev"]
-        message = opts.get("message")
-        if opts.get("remove"):
-            if opts.get("local"):
-                expectedtype = "local"
-            else:
-                expectedtype = "global"
-
-            for n in names:
-                if not repo.tagtype(n):
-                    raise error.Abort(_("tag '%s' does not exist") % n)
-                if repo.tagtype(n) != expectedtype:
-                    if expectedtype == "global":
-                        raise error.Abort(_("tag '%s' is not a global tag") % n)
-                    else:
-                        raise error.Abort(_("tag '%s' is not a local tag") % n)
-            rev_ = "null"
-            if not message:
-                # we don't translate commit messages
-                message = "Removed tag %s" % ", ".join(names)
-        elif not opts.get("force"):
-            for n in names:
-                if n in repo.tags():
-                    raise error.Abort(
-                        _("tag '%s' already exists " "(use -f to force)") % n
-                    )
-        if not opts.get("local"):
-            p1, p2 = repo.dirstate.parents()
-            if p2 != nullid:
-                raise error.Abort(_("uncommitted merge"))
-            bheads = repo.branchheads()
-            if not opts.get("force") and bheads and p1 not in bheads:
-                raise error.Abort(
-                    _("working directory is not at a branch head " "(use -f to force)")
-                )
-        r = scmutil.revsingle(repo, rev_).node()
-
-        if not message:
-            # we don't translate commit messages
-            message = "Added tag %s for changeset %s" % (", ".join(names), short(r))
-
-        date = opts.get("date")
-        if date:
-            date = util.parsedate(date)
-
-        if opts.get("remove"):
-            editform = "tag.remove"
-        else:
-            editform = "tag.add"
-        editor = cmdutil.getcommiteditor(editform=editform, **pycompat.strkwargs(opts))
-
-        # don't allow tagging the null rev
-        if not opts.get("remove") and scmutil.revsingle(repo, rev_).rev() == nullrev:
-            raise error.Abort(_("cannot tag null revision"))
-
-        tagsmod.tag(
-            repo,
-            names,
-            r,
-            message,
-            opts.get("local"),
-            opts.get("user"),
-            date,
-            editor=editor,
-        )
-    finally:
-        release(lock, wlock)
+    ui.warn(_("error: the tag command has been deprecated - it is now a no-op\n"))
+    return 1
 
 
 @command("tags", formatteropts, "", cmdtype=readonly)
 def tags(ui, repo, **opts):
     """list repository tags
 
-    This lists both regular and local tags. When the -v/--verbose
-    switch is used, a third column "local" is printed for local tags.
-    When the -q/--quiet switch is used, only the tag name is printed.
-
-    Returns 0 on success.
+    This command is deprecated.
     """
-    if not ui.configbool("ui", "allowtags", default=True):
-        raise error.Abort(_("tags are disabled in this repository"))
-    opts = pycompat.byteskwargs(opts)
-    ui.pager("tags")
-    fm = ui.formatter("tags", opts)
-    hexfunc = fm.hexfunc
-    tagtype = ""
-
-    for t, n in reversed(repo.tagslist()):
-        hn = hexfunc(n)
-        label = "tags.normal"
-        tagtype = ""
-        if repo.tagtype(t) == "local":
-            label = "tags.local"
-            tagtype = "local"
-
-        fm.startitem()
-        fm.write("tag", "%s", t, label=label)
-        fmt = " " * (30 - encoding.colwidth(t)) + " %5d:%s"
-        fm.condwrite(
-            not ui.quiet, "rev node", fmt, repo.changelog.rev(n), hn, label=label
-        )
-        fm.condwrite(ui.verbose and tagtype, "type", " %s", tagtype, label=label)
-        fm.plain("\n")
-    fm.end()
+    ui.warn(_("error: the tags command has been deprecated - it is now a no-op\n"))
+    return 1
 
 
 @command(

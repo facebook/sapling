@@ -37,8 +37,6 @@ with options
   cb9a9f314b8b
   $ hg id -n
   0
-  $ hg id -t
-  
   $ hg id -b
   default
   $ hg id -i
@@ -52,8 +50,7 @@ with options
     "dirty": "",
     "id": "cb9a9f314b8b",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
-    "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
-    "tags": []
+    "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}]
    }
   ]
 
@@ -76,8 +73,7 @@ with modifications
     "dirty": "+",
     "id": "cb9a9f314b8b+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
-    "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
-    "tags": []
+    "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}]
    }
   ]
 
@@ -103,19 +99,13 @@ with remote http repo
 remote with rev number?
 
   $ hg id -n http://localhost:$HGPORT1/
-  abort: can't query remote revision number, branch, or tags
-  [255]
-
-remote with tags?
-
-  $ hg id -t http://localhost:$HGPORT1/
-  abort: can't query remote revision number, branch, or tags
+  abort: can't query remote revision number or branch
   [255]
 
 remote with branch?
 
   $ hg id -b http://localhost:$HGPORT1/
-  abort: can't query remote revision number, branch, or tags
+  abort: can't query remote revision number or branch
   [255]
 
 test bookmark support

@@ -369,16 +369,14 @@ and now for something completely different
 
 Trigger deprecation warning:
 
-  $ hg id -t
+  $ hg id -i >/dev/null
   win32text is deprecated: https://mercurial-scm.org/wiki/Win32TextExtension
-  
 
 Disable warning:
 
   $ echo '[win32text]' >> .hg/hgrc
   $ echo 'warn = no' >> .hg/hgrc
-  $ hg id -t
-  
+  $ hg id -i >/dev/null
 
   $ rm f3 f4.bat bin
   $ hg co -C

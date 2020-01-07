@@ -1677,9 +1677,6 @@ Test dynamic list of merge tools only shows up once
         Asks the user which of the local 'p1()' or the other 'p2()' version to
         keep as the merged version.
   
-      ":tagmerge"
-        Uses the internal tag merge algorithm (experimental).
-  
       ":union"
         Uses the internal non-interactive simple merge algorithm for merging
         files. It will use both left and right sides for conflict regions. No

@@ -35,7 +35,6 @@ The warning message changed in Git 1.8.0
   $ HGENCODING=utf-8 hg log --graph --debug | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
   @  changeset:   3:3c284d9743de7c02ac66b8b5ce10d39efd38d7bc
   |  bookmark:    master
-  |  tag:         default/master
   |  parent:      2:727e37c486803fce561d97a80721324febade37e
   |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    ea49f93388380ead5601c8fcbfa187516e7c2ed8

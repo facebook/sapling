@@ -155,8 +155,6 @@ _defaultstyles = {
     "status.modified": "blue bold",
     "status.removed": "red bold",
     "status.unknown": "magenta bold underline",
-    "tags.normal": "green",
-    "tags.local": "black bold",
     "ui.metrics": "#777:color242:dim",
     "ui.prefix.component": "cyan",
     "ui.prefix.error": "brightred:red",

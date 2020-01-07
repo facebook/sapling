@@ -47,22 +47,6 @@ def bookmarks(repo):
     )
 
 
-@builtinnamespace("tags", priority=20)
-def tags(repo):
-    tagnames = lambda repo: [t for t, n in repo.tagslist()]
-    tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
-    tagnodemap = lambda repo, node: repo.nodetags(node)
-    return namespace(
-        templatename="tag",
-        logfmt=templatekw.getlogcolumns()["tag"],
-        listnames=tagnames,
-        namemap=tagnamemap,
-        nodemap=tagnodemap,
-        deprecated={"tip"},
-        builtin=True,
-    )
-
-
 @builtinnamespace("branches", priority=30)
 def branches(repo):
     bnames = lambda repo: repo.branchmap().keys()
@@ -157,7 +141,7 @@ class namespace(object):
 
     Namespaces are basically generic many-to-many mapping between some
     (namespaced) names and nodes. The goal here is to control the pollution of
-    jamming things into tags or bookmarks (in extension-land) and to simplify
+    jamming things into bookmarks (in extension-land) and to simplify
     internal bits of mercurial: log output, tab completion, etc.
 
     More precisely, we define a mapping of names to nodes, and a mapping from

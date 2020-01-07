@@ -7,7 +7,7 @@ set up a git repo with some commits, branches and a tag
   $ echo alpha > alpha
   $ git add alpha
   $ fn_git_commit -m 'add alpha'
-  $ git tag t_alpha
+  $ git checkout -qB t_alpha
   $ git checkout -qb beta
   $ echo beta > beta
   $ git add beta
@@ -27,11 +27,11 @@ pull a tag
   importing git objects into hg
   $ hg -R hgrepo update t_alpha
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark t_alpha)
   $ hg -R hgrepo log --graph
   @  changeset:   0:69982ec78c6d
      bookmark:    master
-     tag:         default/master
-     tag:         t_alpha
+     bookmark:    t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -56,7 +56,6 @@ pull a branch
   $ hg -R hgrepo log --graph
   o  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
-  |  tag:         default/beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
@@ -64,9 +63,7 @@ pull a branch
   @  changeset:   0:69982ec78c6d
      bookmark:    epsilon
      bookmark:    master
-     tag:         default/epsilon
-     tag:         default/master
-     tag:         t_alpha
+     bookmark:    t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -88,7 +85,6 @@ pull everything else
   $ hg -R hgrepo log --graph
   o  changeset:   3:78f47553e70d
   |  bookmark:    master
-  |  tag:         default/master
   |  parent:      0:69982ec78c6d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
@@ -96,7 +92,6 @@ pull everything else
   |
   | o  changeset:   2:0a22250873dd
   |/   bookmark:    delta
-  |    tag:         default/delta
   |    parent:      0:69982ec78c6d
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:12 2007 +0000
@@ -104,16 +99,13 @@ pull everything else
   |
   | o  changeset:   1:3bb02b6794dd
   |/   bookmark:    beta
-  |    tag:         default/beta
-  |    tag:         t_beta
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
   @  changeset:   0:69982ec78c6d
      bookmark:    epsilon
-     tag:         default/epsilon
-     tag:         t_alpha
+     bookmark:    t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -134,7 +126,6 @@ pull the merge
   $ hg -R hgrepo log --graph
   o    changeset:   4:10c1db28cc89
   |\   bookmark:    master
-  | |  tag:         default/master
   | |  parent:      3:78f47553e70d
   | |  parent:      1:3bb02b6794dd
   | |  user:        test <test@example.org>
@@ -149,7 +140,6 @@ pull the merge
   | |
   | | o  changeset:   2:0a22250873dd
   | |/   bookmark:    delta
-  | |    tag:         default/delta
   | |    parent:      0:69982ec78c6d
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
@@ -157,16 +147,13 @@ pull the merge
   | |
   o |  changeset:   1:3bb02b6794dd
   |/   bookmark:    beta
-  |    tag:         default/beta
-  |    tag:         t_beta
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
   @  changeset:   0:69982ec78c6d
      bookmark:    epsilon
-     tag:         default/epsilon
-     tag:         t_alpha
+     bookmark:    t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -194,7 +181,6 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   $ hg -R hgrepo log --graph
   o  changeset:   6:47d709856ce8
   |  bookmark:    releases/v2
-  |  tag:         default/releases/v2
   |  parent:      4:10c1db28cc89
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
@@ -202,14 +188,12 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   |
   | o  changeset:   5:e09a50abb1b1
   |/   bookmark:    releases/v1
-  |    tag:         default/releases/v1
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:14 2007 +0000
   |    summary:     add zeta
   |
   o    changeset:   4:10c1db28cc89
   |\   bookmark:    master
-  | |  tag:         default/master
   | |  parent:      3:78f47553e70d
   | |  parent:      1:3bb02b6794dd
   | |  user:        test <test@example.org>
@@ -224,7 +208,6 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   | |
   | | o  changeset:   2:0a22250873dd
   | |/   bookmark:    delta
-  | |    tag:         default/delta
   | |    parent:      0:69982ec78c6d
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
@@ -232,16 +215,13 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   | |
   o |  changeset:   1:3bb02b6794dd
   |/   bookmark:    beta
-  |    tag:         default/beta
-  |    tag:         t_beta
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
   @  changeset:   0:69982ec78c6d
      bookmark:    epsilon
-     tag:         default/epsilon
-     tag:         t_alpha
+     bookmark:    t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -276,7 +256,6 @@ also add an annotated tag
   $ hg -R hgrepo log -r master
   changeset:   4:10c1db28cc89
   bookmark:    master
-  tag:         default/master
   parent:      3:78f47553e70d
   parent:      1:3bb02b6794dd
   user:        test <test@example.org>
@@ -301,14 +280,11 @@ also add an annotated tag
   $ hg -R hgrepo heads
   changeset:   9:497a89953f7c
   bookmark:    master
-  tag:         default/master
   user:        test <test@example.org>
   date:        Wed Jan 01 00:00:00 2014 +0000
   summary:     newcommit
   
   changeset:   7:6809e41e5128
-  tag:         newtag
-  tag:         oldtag
   parent:      4:10c1db28cc89
   user:        test <test@example.org>
   date:        Sat Mar 01 00:00:00 2014 +0000
@@ -316,7 +292,6 @@ also add an annotated tag
   
   changeset:   6:47d709856ce8
   bookmark:    releases/v2
-  tag:         default/releases/v2
   parent:      4:10c1db28cc89
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:15 2007 +0000
@@ -324,14 +299,12 @@ also add an annotated tag
   
   changeset:   5:e09a50abb1b1
   bookmark:    releases/v1
-  tag:         default/releases/v1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:14 2007 +0000
   summary:     add zeta
   
   changeset:   2:0a22250873dd
   bookmark:    delta
-  tag:         default/delta
   parent:      0:69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000

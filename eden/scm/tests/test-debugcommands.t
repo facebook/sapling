@@ -198,7 +198,6 @@ Test debugcapabilities command:
       unsupportedcontent
       pushraced
       pushkey
-    hgtagsfnodes
     listkeys
     phases
       heads

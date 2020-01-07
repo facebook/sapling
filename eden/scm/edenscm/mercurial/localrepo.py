@@ -59,7 +59,6 @@ from . import (
     revsetlang,
     scmutil,
     store,
-    tags as tagsmod,
     transaction,
     treestate,
     txnutil,
@@ -1047,111 +1046,6 @@ class localrepository(object):
     def _mutationstore(self):
         return mutation.makemutationstore(self)
 
-    @filteredpropertycache
-    def _tagscache(self):
-        """Returns a tagscache object that contains various tags related
-        caches."""
-
-        # This simplifies its cache management by having one decorated
-        # function (this one) and the rest simply fetch things from it.
-        class tagscache(object):
-            def __init__(self):
-                # These two define the set of tags for this repository. tags
-                # maps tag name to node; tagtypes maps tag name to 'global' or
-                # 'local'. (Global tags are defined by .hgtags across all
-                # heads, and local tags are defined in .hg/localtags.)
-                # They constitute the in-memory cache of tags.
-                self.tags = self.tagtypes = None
-
-                self.nodetagscache = self.tagslist = None
-
-        cache = tagscache()
-        cache.tags, cache.tagtypes = self._findtags()
-
-        return cache
-
-    def tags(self):
-        """return a mapping of tag to node"""
-        t = {}
-        if self.changelog.filteredrevs:
-            tags, tt = self._findtags()
-        else:
-            tags = self._tagscache.tags
-        for k, v in tags.iteritems():
-            try:
-                # ignore tags to unknown nodes
-                self.changelog.rev(v)
-                t[k] = v
-            except (errormod.LookupError, ValueError):
-                pass
-        return t
-
-    def _findtags(self):
-        """Do the hard work of finding tags.  Return a pair of dicts
-        (tags, tagtypes) where tags maps tag name to node, and tagtypes
-        maps tag name to a string like \'global\' or \'local\'.
-        Subclasses or extensions are free to add their own tags, but
-        should be aware that the returned dicts will be retained for the
-        duration of the localrepo object."""
-
-        # XXX what tagtype should subclasses/extensions use?  Currently
-        # mq and bookmarks add tags, but do not set the tagtype at all.
-        # Should each extension invent its own tag type?  Should there
-        # be one tagtype for all such "virtual" tags?  Or is the status
-        # quo fine?
-
-        # map tag name to (node, hist)
-        alltags = tagsmod.findglobaltags(self.ui, self)
-        # map tag name to tag type
-        tagtypes = dict((tag, "global") for tag in alltags)
-
-        tagsmod.readlocaltags(self.ui, self, alltags, tagtypes)
-
-        # Build the return dicts.  Have to re-encode tag names because
-        # the tags module always uses UTF-8 (in order not to lose info
-        # writing to the cache), but the rest of Mercurial wants them in
-        # local encoding.
-        tags = {}
-        for (name, (node, hist)) in alltags.iteritems():
-            if node != nullid:
-                tags[encoding.tolocal(name)] = node
-        tagtypes = dict(
-            [(encoding.tolocal(name), value) for (name, value) in tagtypes.iteritems()]
-        )
-        return (tags, tagtypes)
-
-    def tagtype(self, tagname):
-        """
-        return the type of the given tag. result can be:
-
-        'local'  : a local tag
-        'global' : a global tag
-        None     : tag does not exist
-        """
-
-        return self._tagscache.tagtypes.get(tagname)
-
-    def tagslist(self):
-        """return a list of tags ordered by revision"""
-        if not self._tagscache.tagslist:
-            l = []
-            for t, n in self.tags().iteritems():
-                l.append((self.changelog.rev(n), t, n))
-            self._tagscache.tagslist = [(t, n) for r, t, n in sorted(l)]
-
-        return self._tagscache.tagslist
-
-    def nodetags(self, node):
-        """return the tags associated with a node"""
-        if not self._tagscache.nodetagscache:
-            nodetagscache = {}
-            for t, n in self._tagscache.tags.iteritems():
-                nodetagscache.setdefault(n, []).append(t)
-            for tags in nodetagscache.itervalues():
-                tags.sort()
-            self._tagscache.nodetagscache = nodetagscache
-        return self._tagscache.nodetagscache.get(node, [])
-
     def nodebookmarks(self, node):
         """return the list of bookmarks pointing to the specified node"""
         marks = []
@@ -1254,7 +1148,7 @@ class localrepository(object):
                         self.dirstate.copy(None, f)
 
     def filectx(self, path, changeid=None, fileid=None):
-        """changeid can be a changeset revision, node, or tag.
+        """changeid can be a changeset revision or node.
            fileid can be a file revision or node."""
         return context.filectx(self, path, changeid, fileid)
 
@@ -1375,62 +1269,6 @@ class localrepository(object):
         vfsmap = {"shared": self.sharedvfs, "local": self.localvfs}
         # we must avoid cyclic reference between repo and transaction.
         reporef = weakref.ref(self)
-        # Code to track tag movement
-        #
-        # Since tags are all handled as file content, it is actually quite hard
-        # to track these movement from a code perspective. So we fallback to a
-        # tracking at the repository level. One could envision to track changes
-        # to the '.hgtags' file through changegroup apply but that fails to
-        # cope with case where transaction expose new heads without changegroup
-        # being involved (eg: phase movement).
-        #
-        # For now, We gate the feature behind a flag since this likely comes
-        # with performance impacts. The current code run more often than needed
-        # and do not use caches as much as it could.  The current focus is on
-        # the behavior of the feature so we disable it by default. The flag
-        # will be removed when we are happy with the performance impact.
-        #
-        # Once this feature is no longer experimental move the following
-        # documentation to the appropriate help section:
-        #
-        # The ``HG_TAG_MOVED`` variable will be set if the transaction touched
-        # tags (new or changed or deleted tags). In addition the details of
-        # these changes are made available in a file at:
-        #     ``REPOROOT/.hg/changes/tags.changes``.
-        # Make sure you check for HG_TAG_MOVED before reading that file as it
-        # might exist from a previous transaction even if no tag were touched
-        # in this one. Changes are recorded in a line base format::
-        #
-        #     <action> <hex-node> <tag-name>\n
-        #
-        # Actions are defined as follow:
-        #   "-R": tag is removed,
-        #   "+A": tag is added,
-        #   "-M": tag is moved (old value),
-        #   "+M": tag is moved (new value),
-        tracktags = lambda x: None
-        # experimental config: experimental.hook-track-tags
-        shouldtracktags = self.ui.configbool("experimental", "hook-track-tags")
-        if desc != "strip" and shouldtracktags:
-            oldheads = self.headrevs(reverse=False)
-
-            def tracktags(tr2):
-                repo = reporef()
-                oldfnodes = tagsmod.fnoderevs(repo.ui, repo, oldheads)
-                newheads = repo.headrevs(reverse=False)
-                newfnodes = tagsmod.fnoderevs(repo.ui, repo, newheads)
-                # notes: we compare lists here.
-                # As we do it only once buiding set would not be cheaper
-                changes = tagsmod.difftags(repo.ui, repo, oldfnodes, newfnodes)
-                if changes:
-                    tr2.hookargs["tag_moved"] = "1"
-                    with repo.localvfs(
-                        "changes/tags.changes", "w", atomictemp=True
-                    ) as changesfile:
-                        # note: we do not register the file to the transaction
-                        # because we needs it to still exist on the transaction
-                        # is close (for txnclose hooks)
-                        tagsmod.writediff(changesfile, changes)
 
         def validate(tr2):
             """will run pre-closing hooks"""
@@ -1450,7 +1288,6 @@ class localrepository(object):
             #
             # This will have to be fixed before we remove the experimental
             # gating.
-            tracktags(tr2)
             repo = reporef()
             if hook.hashook(repo.ui, "pretxnclose-bookmark"):
                 for name, (old, new) in sorted(tr.changes["bookmarks"].items()):
@@ -1785,11 +1622,6 @@ class localrepository(object):
             return
 
     def invalidatecaches(self):
-
-        if "_tagscache" in vars(self):
-            # can't use delattr on proxy
-            del self.__dict__["_tagscache"]
-
         self.unfiltered()._branchcaches.clear()
         self.invalidatevolatilesets()
 
@@ -2523,17 +2355,6 @@ class localrepository(object):
 
         # refresh all repository caches
         self.updatecaches()
-
-        # Ensure the persistent tag cache is updated.  Doing it now
-        # means that the tag cache only has to worry about destroyed
-        # heads immediately after a strip/rollback.  That in turn
-        # guarantees that "cachetip == currenttip" (comparing both rev
-        # and node) always means no nodes have been added or destroyed.
-
-        # XXX this is suboptimal when qrefresh'ing: we strip the current
-        # head, refresh the tag cache, then immediately add a new head.
-        # But I think doing it this way is necessary for the "instant
-        # tag cache retrieval" case to work.
         self.invalidate()
 
     def walk(self, match, node=None):

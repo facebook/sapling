@@ -2324,41 +2324,6 @@ def _substringmatcher(pattern, casesensitive=True):
     return kind, pattern, matcher
 
 
-@predicate("tag([name])", safe=True)
-def tag(repo, subset, x):
-    """The specified tag by name, or all tagged revisions if no name is given.
-
-    Pattern matching is supported for `name`. See
-    :hg:`help revisions.patterns`.
-    """
-    # i18n: "tag" is a keyword
-    args = getargs(x, 0, 1, _("tag takes one or no arguments"))
-    cl = repo.changelog
-    if args:
-        pattern = getstring(
-            args[0],
-            # i18n: "tag" is a keyword
-            _("the argument to tag must be a string"),
-        )
-        kind, pattern, matcher = util.stringmatcher(pattern)
-        if kind == "literal":
-            # avoid resolving all tags
-            tn = repo._tagscache.tags.get(pattern, None)
-            if tn is None:
-                raise error.RepoLookupError(_("tag '%s' does not exist") % pattern)
-            s = {repo[tn].rev()}
-        else:
-            s = {cl.rev(n) for t, n in repo.tagslist() if matcher(t)}
-    else:
-        s = {cl.rev(n) for t, n in repo.tagslist() if t != "tip"}
-    return subset & s
-
-
-@predicate("tagged", safe=True)
-def tagged(repo, subset, x):
-    return tag(repo, subset, x)
-
-
 @predicate("unstable()", safe=True)
 def unstable(repo, subset, x):
     msg = "'unstable()' is deprecated, " "use 'orphan()'"

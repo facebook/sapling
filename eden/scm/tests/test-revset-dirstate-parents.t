@@ -53,11 +53,9 @@ working dir with a single parent
   $ hg ci -Aqm0
   $ log 'p1()'
   0
-  $ log 'tag() and p1()'
   $ log 'p2()'
   $ log 'parents()'
   0
-  $ log 'tag() and parents()'
 
 merge in progress
   $ echo b > b
@@ -70,7 +68,6 @@ merge in progress
   2
   $ log 'p2()'
   1
-  $ log 'tag() and p2()'
   $ log 'parents()'
   1
   2

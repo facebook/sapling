@@ -257,66 +257,6 @@ def getfiles(repo, ctx, revcache):
     return revcache["files"]
 
 
-def getlatesttags(repo, ctx, cache, pattern=None):
-    """return date, distance and name for the latest tag of rev"""
-
-    cachename = "latesttags"
-    if pattern is not None:
-        cachename += "-" + pattern
-        match = util.stringmatcher(pattern)[2]
-    else:
-        match = util.always
-
-    if cachename not in cache:
-        # Cache mapping from rev to a tuple with tag date, tag
-        # distance and tag name
-        cache[cachename] = {-1: (0, 0, ["null"])}
-    latesttags = cache[cachename]
-
-    rev = ctx.rev()
-    todo = [rev]
-    while todo:
-        rev = todo.pop()
-        if rev in latesttags:
-            continue
-        ctx = repo[rev]
-        tags = [
-            t
-            for t in ctx.tags()
-            if (repo.tagtype(t) and repo.tagtype(t) != "local" and match(t))
-        ]
-        if tags:
-            latesttags[rev] = ctx.date()[0], 0, [t for t in sorted(tags)]
-            continue
-        try:
-            ptags = [latesttags[p.rev()] for p in ctx.parents()]
-            if len(ptags) > 1:
-                if ptags[0][2] == ptags[1][2]:
-                    # The tuples are laid out so the right one can be found by
-                    # comparison in this case.
-                    pdate, pdist, ptag = max(ptags)
-                else:
-
-                    def key(x):
-                        changessincetag = len(
-                            repo.revs("only(%d, %s)", ctx.rev(), x[2][0])
-                        )
-                        # Smallest number of changes since tag wins. Date is
-                        # used as tiebreaker.
-                        return [-changessincetag, x[0]]
-
-                    pdate, pdist, ptag = max(ptags, key=key)
-            else:
-                pdate, pdist, ptag = ptags[0]
-        except KeyError:
-            # Cache miss - recurse
-            todo.append(rev)
-            todo.extend(p.rev() for p in ctx.parents())
-            continue
-        latesttags[rev] = pdate, pdist + 1, ptag
-    return latesttags[rev]
-
-
 def getrenamedfn(repo, endrev=None):
     rcache = {}
     if endrev is None:
@@ -369,7 +309,6 @@ def getlogcolumns():
         "parent:      %s\n"
         "phase:       %s\n"
         "summary:     %s\n"
-        "tag:         %s\n"
         "user:        %s\n"
     )
     return dict(
@@ -680,64 +619,6 @@ def showindex(**args):
     """Integer. The current iteration of the loop. (0 indexed)"""
     # just hosts documentation; should be overridden by template mapping
     raise error.Abort(_("can't use index in this context"))
-
-
-@templatekeyword("latesttag")
-def showlatesttag(**args):
-    """List of strings. The global tags on the most recent globally
-    tagged ancestor of this changeset.  If no such tags exist, the list
-    consists of the single string "null".
-    """
-    return showlatesttags(None, **args)
-
-
-def showlatesttags(pattern, **args):
-    """helper method for the latesttag keyword and function"""
-    args = pycompat.byteskwargs(args)
-    repo, ctx = args["repo"], args["ctx"]
-    cache = args["cache"]
-    latesttags = getlatesttags(repo, ctx, cache, pattern)
-
-    # latesttag[0] is an implementation detail for sorting csets on different
-    # branches in a stable manner- it is the date the tagged cset was created,
-    # not the date the tag was created.  Therefore it isn't made visible here.
-    makemap = lambda v: {
-        "changes": _showchangessincetag,
-        "distance": latesttags[1],
-        "latesttag": v,  # BC with {latesttag % '{latesttag}'}
-        "tag": v,
-    }
-
-    tags = latesttags[2]
-    f = _showlist("latesttag", tags, args, separator=":")
-    return _hybrid(f, tags, makemap, pycompat.identity)
-
-
-@templatekeyword("latesttagdistance")
-def showlatesttagdistance(repo, ctx, templ, cache, **args):
-    """Integer. Longest path to the latest tag."""
-    return getlatesttags(repo, ctx, cache)[1]
-
-
-@templatekeyword("changessincelatesttag")
-def showchangessincelatesttag(repo, ctx, templ, cache, **args):
-    """Integer. All ancestors not in the latest tag."""
-    latesttag = getlatesttags(repo, ctx, cache)[2][0]
-
-    return _showchangessincetag(repo, ctx, tag=latesttag, **args)
-
-
-def _showchangessincetag(repo, ctx, **args):
-    offset = 0
-    revs = [ctx.rev()]
-    tag = args[r"tag"]
-
-    # The only() revset doesn't currently support wdir()
-    if ctx.rev() is None:
-        offset = 1
-        revs = [p.rev() for p in ctx.parents()]
-
-    return len(repo.revs("only(%ld, %s)", revs, tag)) + offset
 
 
 @templatekeyword("manifest")
@@ -1082,15 +963,6 @@ def showrevslist(name, revs, **args):
         pycompat.identity,
         keytype=int,
     )
-
-
-# don't remove "showtags" definition, even though namespaces will put
-# a helper function for "tags" keyword into "keywords" map automatically,
-# because online help text is built without namespaces initialization
-@templatekeyword("tags")
-def showtags(**args):
-    """List of strings. Any tags associated with the changeset."""
-    return shownames("tags", **args)
 
 
 @templatekeyword("termwidth")

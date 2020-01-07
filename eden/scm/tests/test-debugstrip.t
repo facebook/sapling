@@ -512,6 +512,7 @@ test hg debugstrip -B bookmark
   $ hg bookmark -r 'e' 'multipledelete2'
   $ hg bookmark -r 'f' 'singlenode1'
   $ hg bookmark -r 'f' 'singlenode2'
+  $ hg book -d a b c d e f m
   $ hg up -C todelete
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark todelete)

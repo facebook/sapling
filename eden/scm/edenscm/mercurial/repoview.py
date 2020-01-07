@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import copy
 import weakref
 
-from . import obsolete, phases, pycompat, tags as tagsmod, visibility
+from . import obsolete, phases, pycompat, visibility
 from .node import nullrev
 from .pycompat import range
 
@@ -43,11 +43,6 @@ def pinnedrevs(repo):
     pinned.update([par.rev() for par in repo[None].parents()])
     pinned.update([cl.rev(bm) for bm in repo._bookmarks.values()])
 
-    tags = {}
-    tagsmod.readlocaltags(repo.ui, repo, tags, {})
-    if tags:
-        rev, nodemap = cl.rev, cl.nodemap
-        pinned.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return pinned
 
 

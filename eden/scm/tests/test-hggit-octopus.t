@@ -67,7 +67,7 @@ Load commonly used test logic
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph --style compact
-  @    9[default/master][master]:7,8   49ab838a9c6d   2007-01-01 00:00 +0000   test
+  @    9[master]:7,8   49ab838a9c6d   2007-01-01 00:00 +0000   test
   |\     Merge branches 'branch3' and 'branch4'
   | |
   | o    8:3,4   772137582d44   2007-01-01 00:00 +0000   test
@@ -82,16 +82,16 @@ Load commonly used test logic
   o | | | |  5:0   e70767a0294a   2007-01-01 00:00 +0000   test
   | | | | |    add delta
   | | | | |
-  +-------o  4[default/branch4][branch4]:0   8b150650bbba   2007-01-01 00:00 +0000   test
+  +-------o  4[branch4]:0   8b150650bbba   2007-01-01 00:00 +0000   test
   | | | |      add zeta
   | | | |
-  +-----o  3[default/branch3][branch3]:0   b869fdf3e852   2007-01-01 00:00 +0000   test
+  +-----o  3[branch3]:0   b869fdf3e852   2007-01-01 00:00 +0000   test
   | | |      add epsilon
   | | |
-  +---o  2[default/branch2][branch2]:0   328de8a94600   2007-01-01 00:00 +0000   test
+  +---o  2[branch2]:0   328de8a94600   2007-01-01 00:00 +0000   test
   | |      add gamma
   | |
-  | o  1[default/branch1][branch1]   3bb02b6794dd   2007-01-01 00:00 +0000   test
+  | o  1[branch1]   3bb02b6794dd   2007-01-01 00:00 +0000   test
   |/     add beta
   |
   o  0   69982ec78c6d   2007-01-01 00:00 +0000   test

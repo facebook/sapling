@@ -25,7 +25,6 @@ from . import (
     registrar,
     scmutil,
     simplemerge,
-    tagmerge,
     templatefilters,
     templatekw,
     templater,
@@ -586,23 +585,6 @@ def _imergeother(*args, **kwargs):
     Like :merge, but resolve all conflicts non-interactively in favor
     of the other `p2()` changes."""
     success, status = _imergeauto(localorother="other", *args, **kwargs)
-    return success, status, False
-
-
-@internaltool(
-    "tagmerge",
-    mergeonly,
-    _(
-        "automatic tag merging of %s failed! "
-        "(use 'hg resolve --tool :merge' or another merge "
-        "tool of your choice)\n"
-    ),
-)
-def _itagmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
-    """
-    Uses the internal tag merge algorithm (experimental).
-    """
-    success, status = tagmerge.merge(repo, fcd, fco, fca)
     return success, status, False
 
 

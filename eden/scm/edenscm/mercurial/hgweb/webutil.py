@@ -215,10 +215,6 @@ def renamelink(fctx):
     return []
 
 
-def nodetagsdict(repo, node):
-    return [{"name": i} for i in repo.nodetags(node)]
-
-
 def nodebookmarksdict(repo, node):
     return [{"name": i} for i in repo.nodebookmarks(node)]
 
@@ -391,7 +387,6 @@ def commonentry(repo, ctx):
         "branch": nodebranchnodefault(ctx),
         "inbranch": nodeinbranch(repo, ctx),
         "branches": nodebranchdict(repo, ctx),
-        "tags": nodetagsdict(repo, node),
         "bookmarks": nodebookmarksdict(repo, node),
         "parent": lambda **x: parents(ctx),
         "child": lambda **x: children(ctx),

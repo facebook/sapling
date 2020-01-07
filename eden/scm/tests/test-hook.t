@@ -114,43 +114,17 @@ test generic hooks
   new changesets ab228980c14d:07f3376c1e65
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_NODE_LAST=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
 
-tag hooks can see env vars
-
   $ cd ../a
-  $ cat >> .hg/hgrc <<EOF
-  > pretag = sh -c "printenv.py pretag"
-  > tag = sh -c "HG_PARENT1= HG_PARENT2= printenv.py tag"
-  > EOF
-  $ hg tag -d '3 0' a
-  pretag hook: HG_HOOKNAME=pretag HG_HOOKTYPE=pretag HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
+  $ echo >> .hgtags
+  $ hg commit -Aqm "add fake tag for test compatibility"
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
-  4:539e4b31b6dc
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  4:dbd0abf46c19
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  tag hook: HG_HOOKNAME=tag HG_HOOKTYPE=tag HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
-  commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
-  $ hg tag -l la
-  pretag hook: HG_HOOKNAME=pretag HG_HOOKTYPE=pretag HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=la
-  tag hook: HG_HOOKNAME=tag HG_HOOKTYPE=tag HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=la
-
-pretag hook can forbid tagging
-
-  $ cat >> .hg/hgrc <<EOF
-  > pretag.forbid = sh -c "printenv.py pretag.forbid 1"
-  > EOF
-  $ hg tag -d '4 0' fa
-  pretag hook: HG_HOOKNAME=pretag HG_HOOKTYPE=pretag HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa
-  pretag.forbid hook: HG_HOOKNAME=pretag.forbid HG_HOOKTYPE=pretag HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa
-  abort: pretag.forbid hook exited with status 1
-  [255]
-  $ hg tag -l fla
-  pretag hook: HG_HOOKNAME=pretag HG_HOOKTYPE=pretag HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fla
-  pretag.forbid hook: HG_HOOKNAME=pretag.forbid HG_HOOKTYPE=pretag HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fla
-  abort: pretag.forbid hook exited with status 1
-  [255]
+  commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
+  commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
 
 pretxncommit hook can see changeset, can roll back txn, changeset no
 more there after
@@ -162,14 +136,14 @@ more there after
   $ echo z > z
   $ hg add z
   $ hg -q tip
-  4:539e4b31b6dc
+  4:dbd0abf46c19
   $ hg commit -m 'fail' -d '4 0'
-  precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
+  precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
-  5:6f611f8018c1
-  5:6f611f8018c1
-  pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=be45546c4e597cf3f586e4f844961b0f9f7e66e8 HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  5:be45546c4e59
+  5:be45546c4e59
+  pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=be45546c4e597cf3f586e4f844961b0f9f7e66e8 HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   transaction abort!
   txnabort Python hook: txnid,txnname
   txnabort hook: HG_HOOKNAME=txnabort.1 HG_HOOKTYPE=txnabort HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -177,7 +151,7 @@ more there after
   abort: pretxncommit.forbid1 hook exited with status 1
   [255]
   $ hg -q tip
-  4:539e4b31b6dc
+  4:dbd0abf46c19
 
 (Check that no 'changelog.i.a' file were left behind)
 
@@ -206,12 +180,12 @@ precommit hook can prevent commit
   > precommit.forbid = sh -c "printenv.py precommit.forbid 1"
   > EOF
   $ hg commit -m 'fail' -d '4 0'
-  precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
-  precommit.forbid hook: HG_HOOKNAME=precommit.forbid HG_HOOKTYPE=precommit HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
+  precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da
+  precommit.forbid hook: HG_HOOKNAME=precommit.forbid HG_HOOKTYPE=precommit HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da
   abort: precommit.forbid hook exited with status 1
   [255]
   $ hg -q tip
-  4:539e4b31b6dc
+  4:dbd0abf46c19
 
 preupdate hook can prevent update
 
@@ -228,8 +202,8 @@ update hook
   > update = sh -c "printenv.py update"
   > EOF
   $ hg update
-  preupdate hook: HG_HOOKNAME=preupdate HG_HOOKTYPE=preupdate HG_PARENT1=539e4b31b6dc
-  update hook: HG_ERROR=0 HG_HOOKNAME=update HG_HOOKTYPE=update HG_PARENT1=539e4b31b6dc
+  preupdate hook: HG_HOOKNAME=preupdate HG_HOOKTYPE=preupdate HG_PARENT1=dbd0abf46c19
+  update hook: HG_ERROR=0 HG_HOOKNAME=update HG_HOOKTYPE=update HG_PARENT1=dbd0abf46c19
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 pushkey hook
@@ -335,8 +309,8 @@ incoming changes no longer there after
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  4:539e4b31b6dc
-  pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_NODE_LAST=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SHAREDPENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
+  4:dbd0abf46c19
+  pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_NODE_LAST=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PENDING=$TESTTMP/b HG_SHAREDPENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   transaction abort!
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
@@ -356,13 +330,13 @@ outgoing hooks can see env vars
   pulling from ../a
   searching for changes
   preoutgoing hook: HG_HOOKNAME=preoutgoing HG_HOOKTYPE=preoutgoing HG_SOURCE=pull
-  outgoing hook: HG_HOOKNAME=outgoing HG_HOOKTYPE=outgoing HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_SOURCE=pull
+  outgoing hook: HG_HOOKNAME=outgoing HG_HOOKTYPE=outgoing HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_SOURCE=pull
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark quux
-  new changesets 539e4b31b6dc
+  new changesets dbd0abf46c19
   $ hg rollback
   repository tip rolled back to revision 3 (undo pull)
 
@@ -570,7 +544,7 @@ different between Python 2.6 and Python 2.7.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 539e4b31b6dc
+  new changesets dbd0abf46c19
 
 post- python hooks that fail to *run* don't cause an abort
   $ rm ../a/.hg/hgrc
@@ -753,12 +727,6 @@ Ensure hooks can be prioritized
   verbose output from hook
   cb9a9f314b8b
 
-new tags must be visible in pretxncommit (issue3210)
-
-  $ echo 'pretxncommit.printtags = python:hooktests.printtags' >> .hg/hgrc
-  $ hg tag -f foo
-  ['a', 'foo']
-
 post-init hooks must not crash (issue4983)
 This also creates the `to` repo for the next test block.
 
@@ -835,7 +803,7 @@ repositories visible to an external hook.
   > EOF
   $ cd a
   $ hg tip -q
-  4:539e4b31b6dc
+  4:dbd0abf46c19
   $ hg --config hooks.pretxnclose="sh $TESTTMP/savepending.sh" commit -m "invisible"
   transaction abort!
   rollback completed
@@ -859,7 +827,7 @@ repo)
   $ hg add a
   $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" commit -m '#0'
   @a
-  4:539e4b31b6dc
+  4:dbd0abf46c19
   @a/nested
   0:bf5e395ced2c
   transaction abort!

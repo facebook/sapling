@@ -729,7 +729,6 @@ sh % "hg log -vpr . -Tjson --stat" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "files": ["fourth", "second", "third"],
       "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n",
@@ -749,7 +748,6 @@ sh % "hg --config 'diff.noprefix=True' log --git -vpr . -Tjson" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "files": ["fourth", "second", "third"],
       "diff": "diff --git a/second b/fourth\nrename from second\nrename to fourth\ndiff --git a/third b/third\nnew file mode 100644\n--- /dev/null\n+++ b/third\n@@ -0,0 +1,1 @@\n+third\n"
@@ -767,7 +765,6 @@ sh % "hg log -T json" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"]
      },
      {
@@ -779,7 +776,6 @@ sh % "hg log -T json" == r"""
       "date": [1000000, 0],
       "desc": "second",
       "bookmarks": [],
-      "tags": [],
       "parents": ["0000000000000000000000000000000000000000"]
      },
      {
@@ -791,7 +787,6 @@ sh % "hg log -T json" == r"""
       "date": [1500001, 0],
       "desc": "merge",
       "bookmarks": [],
-      "tags": [],
       "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "07fa1db1064879a32157227401eb44b322ae53ce"]
      },
      {
@@ -803,7 +798,6 @@ sh % "hg log -T json" == r"""
       "date": [1500000, 0],
       "desc": "new head",
       "bookmarks": [],
-      "tags": [],
       "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"]
      },
      {
@@ -815,7 +809,6 @@ sh % "hg log -T json" == r"""
       "date": [1400000, 0],
       "desc": "new branch",
       "bookmarks": ["foo"],
-      "tags": [],
       "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"]
      },
      {
@@ -827,7 +820,6 @@ sh % "hg log -T json" == r"""
       "date": [1300000, 0],
       "desc": "no user, no domain",
       "bookmarks": [],
-      "tags": [],
       "parents": ["97054abb4ab824450e9164180baf491ae0078465"]
      },
      {
@@ -839,7 +831,6 @@ sh % "hg log -T json" == r"""
       "date": [1200000, 0],
       "desc": "no person",
       "bookmarks": [],
-      "tags": [],
       "parents": ["b608e9d1a3f0273ccf70fb85fd6866b3482bf965"]
      },
      {
@@ -851,7 +842,6 @@ sh % "hg log -T json" == r"""
       "date": [1100000, 0],
       "desc": "other 1\nother 2\n\nother 3",
       "bookmarks": [],
-      "tags": [],
       "parents": ["1e4e1b8f71e05681d422154f5421e385fec3454f"]
      },
      {
@@ -863,7 +853,6 @@ sh % "hg log -T json" == r"""
       "date": [1000000, 0],
       "desc": "line 1\nline 2",
       "bookmarks": [],
-      "tags": [],
       "parents": ["0000000000000000000000000000000000000000"]
      }
     ]"""
@@ -879,7 +868,6 @@ sh % "hg heads -v -Tjson" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "files": ["fourth", "second", "third"]
      },
@@ -892,7 +880,6 @@ sh % "hg heads -v -Tjson" == r"""
       "date": [1500001, 0],
       "desc": "merge",
       "bookmarks": [],
-      "tags": [],
       "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "07fa1db1064879a32157227401eb44b322ae53ce"],
       "files": []
      }
@@ -909,7 +896,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "tags": [],
       "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
       "manifest": "94961b75a2da554b4df6fb599e5bfc7d48de0c64",
       "extra": {"branch": "default"},
@@ -926,7 +912,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1000000, 0],
       "desc": "second",
       "bookmarks": [],
-      "tags": [],
       "parents": ["0000000000000000000000000000000000000000"],
       "manifest": "f2dbc354b94e5ec0b4f10680ee0cee816101d0bf",
       "extra": {"branch": "default"},
@@ -943,7 +928,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1500001, 0],
       "desc": "merge",
       "bookmarks": [],
-      "tags": [],
       "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "07fa1db1064879a32157227401eb44b322ae53ce"],
       "manifest": "4dc3def4f9b4c6e8de820f6ee74737f91e96a216",
       "extra": {"branch": "default"},
@@ -960,7 +944,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1500000, 0],
       "desc": "new head",
       "bookmarks": [],
-      "tags": [],
       "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
       "manifest": "4dc3def4f9b4c6e8de820f6ee74737f91e96a216",
       "extra": {"branch": "default"},
@@ -977,7 +960,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1400000, 0],
       "desc": "new branch",
       "bookmarks": ["foo"],
-      "tags": [],
       "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
       "manifest": "cb5a1327723bada42f117e4c55a303246eaf9ccc",
       "extra": {"branch": "default"},
@@ -994,7 +976,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1300000, 0],
       "desc": "no user, no domain",
       "bookmarks": [],
-      "tags": [],
       "parents": ["97054abb4ab824450e9164180baf491ae0078465"],
       "manifest": "cb5a1327723bada42f117e4c55a303246eaf9ccc",
       "extra": {"branch": "default"},
@@ -1011,7 +992,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1200000, 0],
       "desc": "no person",
       "bookmarks": [],
-      "tags": [],
       "parents": ["b608e9d1a3f0273ccf70fb85fd6866b3482bf965"],
       "manifest": "6e0e82995c35d0d57a52aca8da4e56139e06b4b1",
       "extra": {"branch": "default"},
@@ -1028,7 +1008,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1100000, 0],
       "desc": "other 1\nother 2\n\nother 3",
       "bookmarks": [],
-      "tags": [],
       "parents": ["1e4e1b8f71e05681d422154f5421e385fec3454f"],
       "manifest": "4e8d705b1e53e3f9375e0e60dc7b525d8211fe55",
       "extra": {"branch": "default"},
@@ -1045,7 +1024,6 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1000000, 0],
       "desc": "line 1\nline 2",
       "bookmarks": [],
-      "tags": [],
       "parents": ["0000000000000000000000000000000000000000"],
       "manifest": "a0c8bcbbb45c63b90b70ad007bf38961f64f2af0",
       "extra": {"branch": "default"},
@@ -1151,8 +1129,8 @@ sh % "hg log --style ./issue4758" == r"""
 #  not a recursion if a keyword of the same name exists:
 
 sh % "cat" << r"""
-changeset = '{tags % rev}'
-rev = '{rev} {tag}\n'
+changeset = '{bookmarks % rev}'
+rev = '{rev} {bookmark}\n'
 """ > "issue4758"
 sh % "hg log --style ./issue4758 -r tip" == ""
 
@@ -1297,7 +1275,7 @@ sh % "hg heads --style changelog" == r"""
 out = []
 for (
     key
-) in "author branch branches date desc file_adds file_dels file_mods file_copies file_copies_switch files manifest node parents rev tags diffstat extras p1rev p2rev p1node p2node".split():
+) in "author branch branches date desc file_adds file_dels file_mods file_copies file_copies_switch files manifest node parents rev diffstat extras p1rev p2rev p1node p2node".split():
     for mode in ["", "--verbose", "--debug"]:
         args = ["log", mode, "-T", "%s%s: {%s}\\n" % (key, mode, key)]
         out += [l.strip() for l in sh.hg(*args).splitlines()]
@@ -1722,33 +1700,6 @@ eq(
     rev--debug: 2
     rev--debug: 1
     rev--debug: 0
-    tags:
-    tags:
-    tags:
-    tags:
-    tags:
-    tags:
-    tags:
-    tags:
-    tags:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--verbose:
-    tags--debug:
-    tags--debug:
-    tags--debug:
-    tags--debug:
-    tags--debug:
-    tags--debug:
-    tags--debug:
-    tags--debug:
-    tags--debug:
     diffstat: 3: +2/-1
     diffstat: 1: +1/-0
     diffstat: 0: +0/-0
@@ -2080,26 +2031,26 @@ sh % "hg log -l1 --template '{node|count} {node|short|count}\\n'" == "40 12"
 
 sh % 'hg log -l1 --template \'{revset("null^")|count} {revset(".")|count} {revset("0::3")|count}\\n\'' == "0 1 4"
 
-sh % "hg log -G --template '{rev}: children: {children|count}, tags: {tags|count}, file_adds: {file_adds|count}, ancestors: {revset(\"ancestors(%s)\", rev)|count}'" == r"""
-    @  9: children: 0, tags: 0, file_adds: 1, ancestors: 3
+sh % "hg log -G --template '{rev}: children: {children|count}, file_adds: {file_adds|count}, ancestors: {revset(\"ancestors(%s)\", rev)|count}'" == r"""
+    @  9: children: 0, file_adds: 1, ancestors: 3
     |
-    o  8: children: 1, tags: 0, file_adds: 2, ancestors: 2
+    o  8: children: 1, file_adds: 2, ancestors: 2
     |
-    o  7: children: 1, tags: 0, file_adds: 1, ancestors: 1
+    o  7: children: 1, file_adds: 1, ancestors: 1
 
-    o    6: children: 0, tags: 0, file_adds: 0, ancestors: 7
+    o    6: children: 0, file_adds: 0, ancestors: 7
     |\
-    | o  5: children: 1, tags: 0, file_adds: 1, ancestors: 5
+    | o  5: children: 1, file_adds: 1, ancestors: 5
     | |
-    o |  4: children: 1, tags: 0, file_adds: 0, ancestors: 5
+    o |  4: children: 1, file_adds: 0, ancestors: 5
     |/
-    o  3: children: 2, tags: 0, file_adds: 0, ancestors: 4
+    o  3: children: 2, file_adds: 0, ancestors: 4
     |
-    o  2: children: 1, tags: 0, file_adds: 1, ancestors: 3
+    o  2: children: 1, file_adds: 1, ancestors: 3
     |
-    o  1: children: 1, tags: 0, file_adds: 1, ancestors: 2
+    o  1: children: 1, file_adds: 1, ancestors: 2
     |
-    o  0: children: 1, tags: 0, file_adds: 1, ancestors: 1"""
+    o  0: children: 1, file_adds: 1, ancestors: 1"""
 
 # Upper/lower filters:
 
@@ -2725,184 +2676,6 @@ sh % "hg ci -m h2e -d '4 0'"
 sh % "hg merge -q"
 sh % "hg ci -m merge -d '5 -3600'"
 
-# No tag set:
-
-sh % "hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\\n'" == r"""
-    @    5: null+5
-    |\
-    | o  4: null+4
-    | |
-    | o  3: null+3
-    | |
-    o |  2: null+3
-    |/
-    o  1: null+2
-    |
-    o  0: null+1"""
-
-# One common tag: longest path wins for {latesttagdistance}:
-
-sh % "hg tag -r 1 -m t1 -d '6 0' t1"
-sh % "hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\\n'" == r"""
-    @  6: t1+4
-    |
-    o    5: t1+3
-    |\
-    | o  4: t1+2
-    | |
-    | o  3: t1+1
-    | |
-    o |  2: t1+1
-    |/
-    o  1: t1+0
-    |
-    o  0: null+1"""
-
-# One ancestor tag: closest wins:
-
-sh % "hg tag -r 2 -m t2 -d '7 0' t2"
-sh % "hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\\n'" == r"""
-    @  7: t2+3
-    |
-    o  6: t2+2
-    |
-    o    5: t2+1
-    |\
-    | o  4: t1+2
-    | |
-    | o  3: t1+1
-    | |
-    o |  2: t2+0
-    |/
-    o  1: t1+0
-    |
-    o  0: null+1"""
-
-# Two branch tags: more recent wins if same number of changes:
-
-sh % "hg tag -r 3 -m t3 -d '8 0' t3"
-sh % "hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\\n'" == r"""
-    @  8: t3+5
-    |
-    o  7: t3+4
-    |
-    o  6: t3+3
-    |
-    o    5: t3+2
-    |\
-    | o  4: t3+1
-    | |
-    | o  3: t3+0
-    | |
-    o |  2: t2+0
-    |/
-    o  1: t1+0
-    |
-    o  0: null+1"""
-
-# Two branch tags: fewest changes wins:
-
-sh % "hg tag -r 4 -m t4 -d '4 0' t4"
-sh % "hg log -G --template '{rev}: {latesttag % '\\''{tag}+{distance},{changes} '\\''}\\n'" == r"""
-    @  9: t4+5,6
-    |
-    o  8: t4+4,5
-    |
-    o  7: t4+3,4
-    |
-    o  6: t4+2,3
-    |
-    o    5: t4+1,2
-    |\
-    | o  4: t4+0,0
-    | |
-    | o  3: t3+0,0
-    | |
-    o |  2: t2+0,0
-    |/
-    o  1: t1+0,0
-    |
-    o  0: null+1,1"""
-
-# Merged tag overrides:
-
-sh % "hg tag -r 5 -m t5 -d '9 0' t5"
-sh % "hg tag -r 3 -m at3 -d '10 0' at3"
-sh % "hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\\n'" == r"""
-    @  11: t5+6
-    |
-    o  10: t5+5
-    |
-    o  9: t5+4
-    |
-    o  8: t5+3
-    |
-    o  7: t5+2
-    |
-    o  6: t5+1
-    |
-    o    5: t5+0
-    |\
-    | o  4: t4+0
-    | |
-    | o  3: at3:t3+0
-    | |
-    o |  2: t2+0
-    |/
-    o  1: t1+0
-    |
-    o  0: null+1"""
-
-sh % "hg log -G --template '{rev}: {latesttag % '\\''{tag}+{distance},{changes} '\\''}\\n'" == r"""
-    @  11: t5+6,6
-    |
-    o  10: t5+5,5
-    |
-    o  9: t5+4,4
-    |
-    o  8: t5+3,3
-    |
-    o  7: t5+2,2
-    |
-    o  6: t5+1,1
-    |
-    o    5: t5+0,0
-    |\
-    | o  4: t4+0,0
-    | |
-    | o  3: at3+0,0 t3+0,0
-    | |
-    o |  2: t2+0,0
-    |/
-    o  1: t1+0,0
-    |
-    o  0: null+1,1"""
-
-sh % "hg log -G --template '{rev}: {latesttag('\\'\"re:^t[13]$\"\\'') % '\\''{tag}, C: {changes}, D: {distance}'\\''}\\n'" == r"""
-    @  11: t3, C: 9, D: 8
-    |
-    o  10: t3, C: 8, D: 7
-    |
-    o  9: t3, C: 7, D: 6
-    |
-    o  8: t3, C: 6, D: 5
-    |
-    o  7: t3, C: 5, D: 4
-    |
-    o  6: t3, C: 4, D: 3
-    |
-    o    5: t3, C: 3, D: 2
-    |\
-    | o  4: t3, C: 1, D: 1
-    | |
-    | o  3: t3, C: 0, D: 0
-    | |
-    o |  2: t1, C: 1, D: 1
-    |/
-    o  1: t1, C: 0, D: 0
-    |
-    o  0: null, C: 1, D: 1"""
-
 sh % "cd .."
 
 
@@ -2920,7 +2693,7 @@ sh % "cat" << r"""
 style = $TESTTMP/home/styles/teststyle
 """ > "latesttag/.hg/hgrc"
 
-sh % "hg -R latesttag tip" == "test 11:97e5943b523a"
+sh % "hg -R latesttag tip" == "test 5:888bdaa97ddd"
 
 # Test recursive showlist template (issue1989):
 
@@ -2931,45 +2704,45 @@ manifest = '{rev},{author}\n'
 extra = '{key}: {author}\n'
 """ > "style1989"
 
-sh % "hg -R latesttag log -r tip '--style=style1989'" == r"""
+sh % "hg -R latesttag log -r tip^ '--style=style1989'" == r"""
     M|test
-    11,test
+    4,test
     branch: test"""
 
 # Test new-style inline templating:
 
-sh % "hg log -R latesttag -r tip --template 'modified files: {file_mods % \" {file}\\n\"}\\n'" == "modified files:  .hgtags"
+sh % "hg log -R latesttag -r tip^ --template 'modified files: {file_mods % \" {file}\\n\"}\\n'" == "modified files:  head2"
 
-sh % "hg log -R latesttag -r tip -T '{rev % \"a\"}\\n'" == r"""
+sh % "hg log -R latesttag -r tip^ -T '{rev % \"a\"}\\n'" == r"""
     hg: parse error: keyword 'rev' is not iterable
     [255]"""
-sh % 'hg log -R latesttag -r tip -T \'{get(extras, "unknown") % "a"}\\n\'' == r"""
+sh % 'hg log -R latesttag -r tip^ -T \'{get(extras, "unknown") % "a"}\\n\'' == r"""
     hg: parse error: None is not iterable
     [255]"""
 
 # Test new-style inline templating of non-list/dict type:
 
-sh % "hg log -R latesttag -r tip -T '{manifest}\\n'" == "11:2bc6e9006ce2"
-sh % "hg log -R latesttag -r tip -T 'string length: {manifest|count}\\n'" == "string length: 15"
-sh % "hg log -R latesttag -r tip -T '{manifest % \"{rev}:{node}\"}\\n'" == "11:2bc6e9006ce29882383a22d39fd1f4e66dd3e2fc"
+sh % "hg log -R latesttag -r tip -T '{manifest}\\n'" == "5:ed2d5d416a51"
+sh % "hg log -R latesttag -r tip -T 'string length: {manifest|count}\\n'" == "string length: 14"
+sh % "hg log -R latesttag -r tip -T '{manifest % \"{rev}:{node}\"}\\n'" == "5:ed2d5d416a513f3f19ab4cd41c793dcd8272a497"
 
 sh % 'hg log -R latesttag -r tip -T \'{get(extras, "branch") % "{key}: {value}\\n"}\'' == "branch: default"
 sh % 'hg log -R latesttag -r tip -T \'{get(extras, "unknown") % "{key}\\n"}\'' == r"""
     hg: parse error: None is not iterable
     [255]"""
 sh % "hg log -R latesttag -r tip -T '{min(extras) % \"{key}: {value}\\n\"}'" == "branch: default"
-sh % 'hg log -R latesttag -l1 -T \'{min(revset("0:9")) % "{rev}:{node|short}\\n"}\'' == "0:ce3cec86e6c2"
-sh % 'hg log -R latesttag -l1 -T \'{max(revset("0:9")) % "{rev}:{node|short}\\n"}\'' == "9:fbc7cd862e9c"
+sh % 'hg log -R latesttag -l1 -T \'{min(revset("0:5")) % "{rev}:{node|short}\\n"}\'' == "0:ce3cec86e6c2"
+sh % 'hg log -R latesttag -l1 -T \'{max(revset("0:5")) % "{rev}:{node|short}\\n"}\'' == "5:888bdaa97ddd"
 
 # Test manifest/get() can be join()-ed as before, though it's silly:
 
-sh % "hg log -R latesttag -r tip -T '{join(manifest, \"\")}\\n'" == "11:2bc6e9006ce2"
+sh % "hg log -R latesttag -r tip -T '{join(manifest, \"\")}\\n'" == "5:ed2d5d416a51"
 sh % 'hg log -R latesttag -r tip -T \'{join(get(extras, "branch"), "")}\\n\'' == "default"
 
 # Test min/max of integers
 
-sh % "hg log -R latesttag -l1 -T '{min(revset(\"9:10\"))}\\n'" == "9"
-sh % "hg log -R latesttag -l1 -T '{max(revset(\"9:10\"))}\\n'" == "10"
+sh % "hg log -R latesttag -l1 -T '{min(revset(\"4:5\"))}\\n'" == "4"
+sh % "hg log -R latesttag -l1 -T '{max(revset(\"4:5\"))}\\n'" == "5"
 
 # Test dot operator precedence:
 
@@ -3020,24 +2793,18 @@ sh % "hg log -R latesttag -l1 -T '{min(\"abc\").invalid}\\n'" == r"""
 
 # Test the sub function of templating for expansion:
 
-sh % 'hg log -R latesttag -r 10 --template \'{sub("[0-9]", "x", "{rev}")}\\n\'' == "xx"
+sh % 'hg log -R latesttag -r 5 --template \'{sub("[0-9]", "x", "{rev}")}\\n\'' == "x"
 
-sh % 'hg log -R latesttag -r 10 -T \'{sub("[", "x", rev)}\\n\'' == r"""
+sh % 'hg log -R latesttag -r 5 -T \'{sub("[", "x", rev)}\\n\'' == r"""
     hg: parse error: sub got an invalid pattern: [
     [255]"""
-sh % 'hg log -R latesttag -r 10 -T \'{sub("[0-9]", r"\\1", rev)}\\n\'' == r"""
+sh % 'hg log -R latesttag -r 5 -T \'{sub("[0-9]", r"\\1", rev)}\\n\'' == r"""
     hg: parse error: sub got an invalid replacement: \1
     [255]"""
 
 # Test the strip function with chars specified:
 
 sh % "hg log -R latesttag --template '{desc}\\n'" == r"""
-    at3
-    t5
-    t4
-    t3
-    t2
-    t1
     merge
     h2e
     h2d
@@ -3046,12 +2813,6 @@ sh % "hg log -R latesttag --template '{desc}\\n'" == r"""
     a"""
 
 sh % "hg log -R latesttag --template '{strip(desc, \"te\")}\\n'" == r"""
-    at3
-    5
-    4
-    3
-    2
-    1
     merg
     h2
     h2d
@@ -3062,12 +2823,6 @@ sh % "hg log -R latesttag --template '{strip(desc, \"te\")}\\n'" == r"""
 # Test date format:
 
 sh % "hg log -R latesttag --template 'date: {date(date, \"%y %m %d %S %z\")}\\n'" == r"""
-    date: 70 01 01 10 +0000
-    date: 70 01 01 09 +0000
-    date: 70 01 01 04 +0000
-    date: 70 01 01 08 +0000
-    date: 70 01 01 07 +0000
-    date: 70 01 01 06 +0000
     date: 70 01 01 05 +0100
     date: 70 01 01 04 +0000
     date: 70 01 01 03 +0000
@@ -3801,8 +3556,6 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
     2
      bookmarks color=bookmark builtin=True
       bar,foo,text.{rev}
-     tags color=tag builtin=True
-      
      branches color=branch builtin=True
       default
      revnames color=revname builtin=False
@@ -3811,8 +3564,6 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
     1
      bookmarks color=bookmark builtin=True
       baz
-     tags color=tag builtin=True
-      
      branches color=branch builtin=True
       default
      revnames color=revname builtin=False
@@ -3820,8 +3571,6 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
 
     0
      bookmarks color=bookmark builtin=True
-      
-     tags color=tag builtin=True
       
      branches color=branch builtin=True
       default
@@ -3835,14 +3584,12 @@ del namespaces.namespacetable["revnames"]
 
 sh % "hg log -r2 -T '{namespaces % \"{namespace}: {names}\\n\"}'" == r"""
     bookmarks: bar foo text.{rev}
-    tags: 
     branches: default"""
 sh % 'hg log -r2 -T \'{namespaces % "{namespace}:\\n{names % " {name}\\n"}"}\'' == r"""
     bookmarks:
      bar
      foo
      text.{rev}
-    tags:
     branches:
      default"""
 sh % 'hg log -r2 -T \'{get(namespaces, "bookmarks") % "{name}\\n"}\'' == r"""

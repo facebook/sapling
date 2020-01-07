@@ -112,7 +112,6 @@ perfstatus
    perfrevset    benchmark the execution time of a revset
    perfstartup   (no help text available)
    perfstatus    (no help text available)
-   perftags      (no help text available)
    perftemplating
                  (no help text available)
    perfvolatilesets
@@ -160,7 +159,6 @@ perfstatus
   $ hg perfrevset 'all()'
   $ hg perfstartup
   $ hg perfstatus
-  $ hg perftags
   $ hg perftemplating
   $ hg perfvolatilesets
   $ hg perfwalk

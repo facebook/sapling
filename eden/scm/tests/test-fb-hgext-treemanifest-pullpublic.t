@@ -29,8 +29,8 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2414},
-                        write : { bytes : 1018}}}}
+                        read : { bytes : 2384},
+                        write : { bytes : 1003}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -77,6 +77,6 @@ Pull exactly up to d into the client
   added 2 changesets with 0 changes to 0 files
   new changesets 177f92b77385:055a42cdd887
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1170},
-                        write : { bytes : 708}}}}
+                        read : { bytes : 1155},
+                        write : { bytes : 693}}}}
 

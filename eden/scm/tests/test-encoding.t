@@ -112,24 +112,6 @@ hg log (utf-8)
   summary:     latin-1 e': \xc3\xa9 = u'\\xe9' (esc)
   
 
-hg tags (ascii)
-
-  $ HGENCODING=ascii hg tags
-
-hg tags (latin-1)
-
-  $ HGENCODING=latin-1 hg tags
-
-hg tags (utf-8)
-
-  $ HGENCODING=utf-8 hg tags
-
-hg tags (JSON)
-
-  $ hg tags -Tjson
-  [
-  ]
-
 hg log (utf-8)
 
   $ HGENCODING=utf-8 hg log

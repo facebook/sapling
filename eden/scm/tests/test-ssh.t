@@ -321,9 +321,8 @@ Test remote paths with spaces (issue2983):
   $ touch "$TESTTMP/a repo/test"
   $ hg -R 'a repo' commit -A -m "test"
   adding test
-  $ hg -R 'a repo' tag tag
   $ hg id --ssh "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
-  73649e48688a
+  be090ea66256
 
   $ hg id --ssh "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo#noNoNO"
   abort: unknown revision 'noNoNO'!
@@ -363,7 +362,7 @@ parameters:
   > EOF
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a repo"
-  73649e48688a
+  be090ea66256
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a'repo"
   remote: Illegal repository "$TESTTMP/a'repo"
@@ -460,7 +459,7 @@ debug output
   running .* ".*/dummyssh" ['"]user@dummy['"] ('|")hg -R remote serve --stdio('|") (re)
   sending hello command
   sending between command
-  remote: 413
+  remote: 398
   remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$ unbundle=HG10GZ,HG10BZ,HG10UN
   remote: 1
   query 1; heads

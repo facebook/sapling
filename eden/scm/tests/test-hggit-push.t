@@ -72,25 +72,6 @@ this should fail
   $ hg pull 2>&1 | grep -v 'divergent bookmark'
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-TODO shouldn't need to do this since we're (in theory) pushing master explicitly,
-which should not implicitly also push the not-master ref.
-  $ hg book not-master -r default/not-master --force
-master and default/master should be diferent
-  $ hg log -r master
-  changeset:   2:49480a0fbf45
-  bookmark:    master
-  user:        test
-  date:        Mon Jan 01 00:00:12 2007 +0000
-  summary:     add gamma
-  
-  $ hg log -r default/master
-  changeset:   3:59db0d26c08d
-  tag:         default/master
-  parent:      0:69982ec78c6d
-  user:        test <test@example.org>
-  date:        Mon Jan 01 00:00:13 2007 +0000
-  summary:     add delta
-  
 
 this should also fail
   $ hg push -r master
@@ -141,7 +122,6 @@ hg-git issue103 -- directories can lose information at hg-git export time
   $ hg log -r master
   changeset:   5:e4281e9db8f8
   bookmark:    master
-  tag:         default/master
   user:        test
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add dir1/beta
@@ -156,7 +136,6 @@ hg-git issue103 -- directories can lose information at hg-git export time
   $ hg -R hgrepo-test log -r master
   changeset:   4:8df619e46009
   bookmark:    master
-  tag:         default/master
   user:        test
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add dir1/beta

@@ -58,8 +58,7 @@ Should succeed:
     "dirty": "+",
     "id": "f25cbe84d8b3+2d95304fed5d+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
-    "parents": [{"node": "f25cbe84d8b320e298e7703f18a25a3959518c23", "rev": 4}, {"node": "2d95304fed5d89bc9d70b2a0d02f0d567469c3ab", "rev": 2}],
-    "tags": []
+    "parents": [{"node": "f25cbe84d8b320e298e7703f18a25a3959518c23", "rev": 4}, {"node": "2d95304fed5d89bc9d70b2a0d02f0d567469c3ab", "rev": 2}]
    }
   ]
   $ hg commit -mm1
@@ -83,8 +82,7 @@ Should succeed - 2 heads:
    {
     "bookmarks": [],
     "id": "1846eede8b68",
-    "node": "1846eede8b6886d8cc8a88c96a687b7fe8f3b9d1",
-    "tags": []
+    "node": "1846eede8b6886d8cc8a88c96a687b7fe8f3b9d1"
    }
   ]
 

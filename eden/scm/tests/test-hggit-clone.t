@@ -8,8 +8,6 @@ Load commonly used test logic
   $ git add alpha
   $ fn_git_commit -m 'add alpha'
 
-  $ git tag alpha
-
   $ git checkout -b beta
   Switched to a new branch 'beta'
   $ echo beta > beta
@@ -18,22 +16,6 @@ Load commonly used test logic
 
 
   $ cd ..
-clone a tag
-  $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
-  importing git objects into hg
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgrepo-a log --graph
-  @  changeset:   0:69982ec78c6d
-     bookmark:    master
-     tag:         alpha
-     tag:         default/master
-     user:        test <test@example.org>
-     date:        Mon Jan 01 00:00:10 2007 +0000
-     summary:     add alpha
-  
-Make sure this is still draft since we didn't pull remote's HEAD
-  $ hg -R hgrepo-a phase -r alpha
-  69982ec78c6dd2f24b3b62f3e2baaa79ab48ed93: draft
 
 clone a branch
   $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
@@ -42,19 +24,19 @@ clone a branch
   $ hg -R hgrepo-b log --graph
   @  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
-  |  tag:         default/beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
   o  changeset:   0:69982ec78c6d
      bookmark:    master
-     tag:         alpha
-     tag:         default/master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
+Make sure this is still draft since we didn't pull remote's HEAD
+  $ hg -R hgrepo-b phase -r beta
+  3bb02b6794ddc0b498cdc15f59f2e6724cabfa2f: draft
 
 clone with mapsavefreq set
   $ rm -rf hgrepo-b

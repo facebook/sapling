@@ -524,7 +524,6 @@ sh % "hg log -vC -r4 -Tjson" == r"""
       "date": [5, 0],
       "desc": "e",
       "bookmarks": [],
-      "tags": [],
       "parents": ["2ca5ba7019804f1f597249caddf22a64d34df0ba"],
       "files": ["dir/b", "e"],
       "copies": {"e": "dir/b"}
@@ -1190,7 +1189,7 @@ sh % "hg ci -A -m 'commit on test'" == "adding c"
 # This test is skipped - LANGUAGE side effect is not applied in t.py tests.
 if feature.check("false"):
 
-    # Test that all log names are translated (e.g. branches, bookmarks, tags):
+    # Test that all log names are translated (e.g. branches, bookmarks):
 
     sh % "hg bookmark babar -r tip"
 
@@ -1736,7 +1735,6 @@ sh % "hg log -r 'wdir()' -Tjson" == r"""
       "date": [*, 0], (glob)
       "desc": "",
       "bookmarks": [],
-      "tags": [],
       "parents": ["65624cd9070a035fa7191a54f2b8af39f16b0c08"]
      }
     ]"""
@@ -1760,7 +1758,6 @@ sh % "hg log -r 'wdir()' -Tjson --debug" == r"""
       "date": [*, 0], (glob)
       "desc": "",
       "bookmarks": [],
-      "tags": [],
       "parents": ["65624cd9070a035fa7191a54f2b8af39f16b0c08"],
       "manifest": null,
       "extra": {"branch": "default"},

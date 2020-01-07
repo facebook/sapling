@@ -111,18 +111,11 @@ test .hg_archival.txt
   repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
   node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
   branch: default
-  latesttag: null
-  latesttagdistance: 3
-  changessincelatesttag: 3
-  $ hg tag -r 2 mytag
-  $ hg tag -r 2 anothertag
   $ hg archive -r 2 ../test-lasttag
   $ cat ../test-lasttag/.hg_archival.txt
   repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
   node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
   branch: default
-  tag: anothertag
-  tag: mytag
 
   $ hg archive -t bogus test.bogus
   abort: unknown archive type 'bogus'
@@ -145,7 +138,7 @@ old file -- date clamped to 1980
   $ unzip -l ../old.zip | grep -v -- ----- | egrep -v files$
   Archive:  ../old.zip
   \s*Length.* (re)
-  *172*80*00:00*old/.hg_archival.txt (glob)
+  *110*80*00:00*old/.hg_archival.txt (glob)
   *0*80*00:00*old/old (glob)
 
 show an error when a provided pattern matches no files

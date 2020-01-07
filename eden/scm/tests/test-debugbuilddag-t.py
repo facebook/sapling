@@ -31,12 +31,8 @@ sh % "hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' --config 'extensi
     progress: building: 11/12 revisions (91.67%)
     progress: building (end)"""
 
-# tags
-sh % "cat .hg/localtags" == r"""
-    66f7d451a68b85ed82ff5fcc254daf50c74144bd f
-    bebd167eb94d257ace0e814aeb98e6972ed2970d p2"""
 # dag
-sh % "hg debugdag -t -b" == r"""
+sh % "hg debugdag --bookmarks -b" == r"""
     +2:f
     +3:p2
     @temp*f+3
@@ -74,12 +70,8 @@ sh % "hg log -G --template '{rev}: {desc} [{branches}] @ {date}\\n'" == r"""
 sh % "rm -r .hg"
 sh % "hg init"
 sh % "hg debugbuilddag '@start.@default.:f +3:p2 @temp <f+4 @default /p2 +2' -q -o"
-# tags
-sh % "cat .hg/localtags" == r"""
-    f778700ebd50fcf282b23a4446bd155da6453eb6 f
-    bbccf169769006e2490efd2a02f11c3d38d462bd p2"""
 # dag
-sh % "hg debugdag -t -b" == r"""
+sh % "hg debugdag --bookmarks -b" == r"""
     @start+1
     @default+1:f
     +3:p2
@@ -137,10 +129,6 @@ sh % "hg log -G --template '{rev}: {desc} [{branches}]\\n' of" == r"""
     o  1: r1 []
     |
     o  0: r0 [start]"""
-# tags
-sh % "hg tags -v" == r"""
-    p2                                 4:bbccf1697690 local
-    f                                  1:f778700ebd50 local"""
 # cat of
 sh % "hg cat of --rev tip" == "r11"
 
@@ -151,7 +139,7 @@ sh % "rm -r .hg"
 sh % "hg init"
 sh % "hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -mn"
 # dag
-sh % "hg debugdag -t -b" == r"""
+sh % "hg debugdag --bookmarks -b" == r"""
     +2:f
     +3:p2
     @temp*f+3

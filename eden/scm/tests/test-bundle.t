@@ -211,7 +211,6 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
   $ ls .hg
   00changelog.i
   blackbox
-  cache
   requires
   store
   treestate
@@ -631,7 +630,6 @@ test for 540d1059c802
   $ hg clone . ../copy
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg tag foo
 
   $ cd ../copy
   $ echo >> foo
@@ -644,8 +642,7 @@ test for 540d1059c802
   $ hg incoming ../bundle.hg
   comparing with ../bundle.hg
   searching for changes
-  changeset:   2:ed1b79f46b9a
-  parent:      0:bbd179dfa0a7
+  changeset:   1:ed1b79f46b9a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change foo
@@ -692,7 +689,7 @@ but, regular verify must continue to work
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 2 changesets, 2 total revisions
+  1 files, 1 changesets, 1 total revisions
 
 diff against bundle
 

@@ -156,23 +156,20 @@ Clone to '.':
 Adding some more history to repo a:
 
   $ cd a
-  $ hg tag ref1
   $ echo the quick brown fox >a
   $ hg ci -m "hacked default"
-  $ hg up ref1
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark stable
   $ echo some text >a
   $ hg ci -m "starting branch stable"
-  $ hg tag ref2
   $ echo some more text >a
   $ hg ci -m "another change for branch stable"
-  $ hg up ref2
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark stable)
   $ hg parents
-  changeset:   13:7bc8ee83a26f
-  tag:         ref2
+  changeset:   12:7bc8ee83a26f
   parent:      10:a7949464abda
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -182,13 +179,13 @@ Adding some more history to repo a:
 Repo a has two heads:
 
   $ hg heads
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   12:f21241060d6a
+  changeset:   11:3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -213,13 +210,13 @@ Testing clone -u:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   12:f21241060d6a
+  changeset:   11:3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -242,21 +239,21 @@ Testing clone --pull -u:
   adding changesets
   adding manifests
   adding file changes
-  added 16 changesets with 16 changes to 3 files
-  new changesets acb14030fe0a:7b0a8591eda2
+  added 14 changesets with 14 changes to 2 files
+  new changesets acb14030fe0a:4f44d5743f52
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   12:f21241060d6a
+  changeset:   11:3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -276,18 +273,18 @@ Testing clone -u <branch>:
 
   $ hg clone -u stable a ua
   updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   12:f21241060d6a
+  changeset:   11:3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -296,7 +293,7 @@ Repo ua has both heads:
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -310,18 +307,18 @@ Testing default checkout:
 
   $ hg clone a ua
   updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   12:f21241060d6a
+  changeset:   11:3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -339,13 +336,13 @@ Testing #<bookmark> (no longer works):
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   15:7b0a8591eda2
+  changeset:   13:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   12:f21241060d6a
+  changeset:   11:3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -367,15 +364,15 @@ Testing -u -r <branch>:
   adding changesets
   adding manifests
   adding file changes
-  added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:7b0a8591eda2
+  added 13 changesets with 13 changes to 2 files
+  new changesets acb14030fe0a:4f44d5743f52
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:7b0a8591eda2
+  changeset:   12:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -398,15 +395,15 @@ Testing -r <branch>:
   adding changesets
   adding manifests
   adding file changes
-  added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:7b0a8591eda2
+  added 13 changesets with 13 changes to 2 files
+  new changesets acb14030fe0a:4f44d5743f52
   updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:7b0a8591eda2
+  changeset:   12:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -416,7 +413,7 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
-  changeset:   13:7b0a8591eda2
+  changeset:   12:4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -438,13 +435,13 @@ Test clone with special '@' bookmark:
 
   $ hg bookmark -f -r stable @
   $ hg bookmarks
-     @                         15:7b0a8591eda2
-     stable                    15:7b0a8591eda2
+     @                         13:4f44d5743f52
+     stable                    13:4f44d5743f52
   $ hg clone . ../i
   updating to bookmark @
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -i ../i
-  7b0a8591eda2
+  4f44d5743f52
   $ cd "$TESTTMP"
 
 
@@ -991,7 +988,7 @@ Cloning without fsmonitor enabled does not print a warning for small repos
 
   $ hg clone a fsmonitor-default
   updating to bookmark @
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Lower the warning threshold to simulate a large repo
 
@@ -1006,11 +1003,11 @@ We should see a warning about no fsmonitor on supported platforms
   $ hg clone a nofsmonitor
   updating to bookmark @
   (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor")
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #else
   $ hg clone a nofsmonitor
   updating to bookmark @
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
 
 We should not see warning about fsmonitor when it is enabled
@@ -1018,14 +1015,14 @@ We should not see warning about fsmonitor when it is enabled
 #if fsmonitor
   $ hg clone a fsmonitor-enabled
   updating to bookmark @
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
 
 We can disable the fsmonitor warning
 
   $ hg --config fsmonitor.warn_when_unused=false clone a fsmonitor-disable-warning
   updating to bookmark @
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Loaded fsmonitor but disabled in config should still print warning
 
@@ -1033,7 +1030,7 @@ Loaded fsmonitor but disabled in config should still print warning
   $ hg --config fsmonitor.mode=off clone a fsmonitor-mode-off
   updating to bookmark @
   (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (fsmonitor !)
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
 
 Warning not printed if working directory isn't empty
@@ -1042,7 +1039,7 @@ Warning not printed if working directory isn't empty
   (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (?)
   $ cd fsmonitor-update
   $ hg up acb14030fe0a
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark @)
   $ hg up cf0fe1914066
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

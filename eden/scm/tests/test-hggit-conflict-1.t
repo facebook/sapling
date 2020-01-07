@@ -59,7 +59,7 @@ resolve using first parent
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
-  @    3[default/master][master]:1,2   b70d5f2ec3c4   1970-01-01 00:00 +0000   test
+  @    3[master]:1,2   b70d5f2ec3c4   1970-01-01 00:00 +0000   test
   |\     merge to C
   | |
   | o  2:0   47fc555571b8   1970-01-01 00:00 +0000   test

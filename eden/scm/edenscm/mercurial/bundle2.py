@@ -169,7 +169,6 @@ from . import (
     phases,
     pushkey,
     pycompat,
-    tags,
     url,
     util,
 )
@@ -1563,7 +1562,6 @@ capabilities = {
     "pushkey": (),
     "digests": tuple(sorted(util.DIGESTS.keys())),
     "remote-changegroup": ("http", "https"),
-    "hgtagsfnodes": (),
     "phases": ("heads",),
 }
 
@@ -1658,8 +1656,6 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts, caps):
     if opts.get("phases") and repo.revs("%ln and secret()", outgoing.missingheads):
         part.addparam("targetphase", "%d" % phases.secret, mandatory=False)
 
-    addparttagsfnodescache(repo, bundler, outgoing)
-
     if opts.get("obsolescence", False):
         obsmarkers = repo.obsstore.relevantmarkers(outgoing.missing)
         buildobsmarkerspart(bundler, obsmarkers)
@@ -1668,31 +1664,6 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts, caps):
         headsbyphase = phases.subsetphaseheads(repo, outgoing.missing)
         phasedata = phases.binaryencode(headsbyphase)
         bundler.newpart("phase-heads", data=phasedata)
-
-
-def addparttagsfnodescache(repo, bundler, outgoing):
-    # we include the tags fnode cache for the bundle changeset
-    # (as an optional parts)
-    cache = tags.hgtagsfnodescache(repo.unfiltered())
-    chunks = []
-
-    # .hgtags fnodes are only relevant for head changesets. While we could
-    # transfer values for all known nodes, there will likely be little to
-    # no benefit.
-    #
-    # We don't bother using a generator to produce output data because
-    # a) we only have 40 bytes per head and even esoteric numbers of heads
-    # consume little memory (1M heads is 40MB) b) we don't want to send the
-    # part if we don't have entries and knowing if we have entries requires
-    # cache lookups.
-    for node in outgoing.missingheads:
-        # Don't compute missing, as this may slow down serving.
-        fnode = cache.getfnode(node, computemissing=False)
-        if fnode is not None:
-            chunks.extend([node, fnode])
-
-    if chunks:
-        bundler.newpart("hgtagsfnodes", data="".join(chunks))
 
 
 def buildobsmarkerspart(bundler, markers):
@@ -2176,31 +2147,6 @@ def handleobsmarkerreply(op, inpart):
     ret = int(inpart.params["new"])
     partid = int(inpart.params["in-reply-to"])
     op.records.add("obsmarkers", {"new": ret}, partid)
-
-
-@parthandler("hgtagsfnodes")
-def handlehgtagsfnodes(op, inpart):
-    """Applies .hgtags fnodes cache entries to the local repo.
-
-    Payload is pairs of 20 byte changeset nodes and filenodes.
-    """
-    # Grab the transaction so we ensure that we have the lock at this point.
-    if op.ui.configbool("experimental", "bundle2lazylocking"):
-        op.gettransaction()
-    cache = tags.hgtagsfnodescache(op.repo.unfiltered())
-
-    count = 0
-    while True:
-        node = inpart.read(20)
-        fnode = inpart.read(20)
-        if len(node) < 20 or len(fnode) < 20:
-            op.ui.debug("ignoring incomplete received .hgtags fnodes data\n")
-            break
-        cache.setfnode(node, fnode)
-        count += 1
-
-    cache.write()
-    op.ui.debug("applied %i hgtags fnodes cache entries\n" % count)
 
 
 @parthandler("pushvars")

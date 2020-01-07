@@ -227,7 +227,6 @@ def _preimportmodules():
         "statprof",
         "store",
         "streamclone",
-        "tags",
         "templatefilters",
         "templatekw",
         "templater",

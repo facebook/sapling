@@ -311,7 +311,6 @@ class GitHandler(object):
         if refs:
             filteredrefs = self.filter_min_date(self.filter_refs(refs, heads))
             imported = self.import_git_objects(remote_name, filteredrefs)
-            self.import_tags(refs)
             self.update_hg_bookmarks(refs)
 
             try:
@@ -398,7 +397,6 @@ class GitHandler(object):
     def export_commits(self):
         try:
             self.export_git_objects()
-            self.export_hg_tags()
             self.update_references()
         finally:
             self.save_map(self.map_file)
@@ -1169,9 +1167,7 @@ class GitHandler(object):
             genpack = getattr(self.git.object_store, "generate_pack_data", None)
             if genpack is not None:
                 # dulwich >= 0.19 has generate_pack_data
-                return genpack(
-                    have, want, progress=None, ofs_delta=True
-                )
+                return genpack(have, want, progress=None, ofs_delta=True)
             else:
                 # dulwich < 0.19 has generate_pack_contents
                 return self.git.object_store.generate_pack_contents(have, want)
@@ -1405,34 +1401,6 @@ class GitHandler(object):
                 if git_sha:
                     self.git.refs[git_ref] = git_sha
 
-    def export_hg_tags(self):
-        for tag, sha in self.repo.tags().iteritems():
-            if self.repo.tagtype(tag) in ("global", "git"):
-                tag = tag.replace(" ", "_")
-                target = self.map_git_get(hex(sha))
-                if target is not None:
-                    tag_refname = "refs/tags/" + tag
-                    if check_ref_format(tag_refname):
-                        self.git.refs[tag_refname] = target
-                        self.tags[tag] = hex(sha)
-                    else:
-                        self.repo.ui.warn(
-                            _(
-                                "Skipping export of tag %s because "
-                                "it has invalid name as a git "
-                                "refname.\n"
-                            )
-                            % tag
-                        )
-                else:
-                    self.repo.ui.warn(
-                        _(
-                            "Skipping export of tag %s because it "
-                            "has no matching git revision.\n"
-                        )
-                        % tag
-                    )
-
     def _filter_for_bookmarks(self, bms):
         if not self.branch_bookmark_suffix:
             return [(bm, bm) for bm in bms]
@@ -1466,39 +1434,6 @@ class GitHandler(object):
         for tag, sha in self.tags.iteritems():
             res[sha].tags.add("refs/tags/" + tag)
         return res
-
-    def import_tags(self, refs):
-        keys = refs.keys()
-        if not keys:
-            return
-        repotags = self.repo.tags()
-        for k in keys[:]:
-            ref_name = k
-            parts = k.split("/")
-            if parts[0] == "refs" and parts[1] == "tags":
-                ref_name = "/".join([v for v in parts[2:]])
-                # refs contains all the refs in the server, not just
-                # the ones we are pulling
-                if refs[k] not in self.git.object_store:
-                    continue
-                if ref_name[-3:] == "^{}":
-                    ref_name = ref_name[:-3]
-                if ref_name not in repotags:
-                    obj = self.git.get_object(refs[k])
-                    sha = None
-                    if isinstance(obj, Commit):  # lightweight
-                        sha = self.map_hg_get(refs[k])
-                        if sha is not None:
-                            self.tags[ref_name] = sha
-                    elif isinstance(obj, Tag):  # annotated
-                        (obj_type, obj_sha) = obj.object
-                        obj = self.git.get_object(obj_sha)
-                        if isinstance(obj, Commit):
-                            sha = self.map_hg_get(obj_sha)
-                            # TODO: better handling for annotated tags
-                            if sha is not None:
-                                self.tags[ref_name] = sha
-        self.save_tags()
 
     def update_hg_bookmarks(self, refs):
         try:

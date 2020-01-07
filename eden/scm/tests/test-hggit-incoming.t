@@ -70,7 +70,6 @@ Load commonly used test logic
   +beta
   
   changeset:   2:9865e289be73
-  tag:         t1
   parent:      0:69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
@@ -108,7 +107,6 @@ incoming -r
   $ hg incoming -r b1 | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9865e289be73
-  tag:         t1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma
@@ -122,7 +120,6 @@ incoming -r
   $ hg incoming -r t1 | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9865e289be73
-  tag:         t1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma

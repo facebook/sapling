@@ -20,7 +20,6 @@ Create server repo
   $ hg init repo
   $ cd repo
   $ mkcommit servercommit
-  $ hg tag --local scratch/serverbranch
   $ cat >> .hg/hgrc << EOF
   > [infinitepush]
   > server=yes
@@ -33,7 +32,6 @@ Create second server repo
   $ hg init repo2
   $ cd repo2
   $ mkcommit servercommit2
-  $ hg tag --local scratch/serverbranch2
   $ cat >> .hg/hgrc << EOF
   > [infinitepush]
   > server=yes

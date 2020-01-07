@@ -1976,34 +1976,6 @@ def _getbundlephasespart(
         bundler.newpart("phase-heads", data=phasedata)
 
 
-@getbundle2partsgenerator("hgtagsfnodes")
-def _getbundletagsfnodes(
-    bundler,
-    repo,
-    source,
-    bundlecaps=None,
-    b2caps=None,
-    heads=None,
-    common=None,
-    **kwargs
-):
-    """Transfer the .hgtags filenodes mapping.
-
-    Only values for heads in this bundle will be transferred.
-
-    The part data consists of pairs of 20 byte changeset node and .hgtags
-    filenodes raw values.
-    """
-    # Don't send unless:
-    # - changeset are being exchanged,
-    # - the client supports it.
-    if not (kwargs.get(r"cg", True) and "hgtagsfnodes" in b2caps):
-        return
-
-    outgoing = _computeoutgoing(repo, heads, common)
-    bundle2.addparttagsfnodescache(repo, bundler, outgoing)
-
-
 def check_heads(repo, their_heads, context):
     """check if the heads of a repo have been modified
 

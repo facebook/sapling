@@ -295,7 +295,7 @@ Show all commands + options
   debugcommands: 
   debugcomplete: options
   debugcreatestreamclonebundle: 
-  debugdag: tags, branches, dots, spaces
+  debugdag: bookmarks, branches, dots, spaces
   debugdata: changelog, manifest, dir
   debugdate: extended
   debugdeltachain: changelog, manifest, dir, template
@@ -410,7 +410,7 @@ Show all commands + options
   $ cd a
   $ echo fee > fee
   $ hg ci -q -Amfee
-  $ hg tag fee
+  $ hg book fee
   $ mkdir fie
   $ echo dead > fie/dead
   $ echo live > fie/live

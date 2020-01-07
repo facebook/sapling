@@ -2035,9 +2035,6 @@ class jsonchangeset(changeset_printer):
             % ", ".join('"%s"' % j(b) for b in ctx.bookmarks())
         )
         self.ui.write(
-            (',\n  "tags": [%s]') % ", ".join('"%s"' % j(t) for t in ctx.tags())
-        )
-        self.ui.write(
             (',\n  "parents": [%s]')
             % ", ".join('"%s"' % c.hex() for c in ctx.parents())
         )

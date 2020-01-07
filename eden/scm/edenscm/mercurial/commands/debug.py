@@ -29,6 +29,7 @@ import tempfile
 import time
 
 from .. import (
+    bookmarks,
     bundle2,
     changegroup,
     cmdutil,
@@ -166,7 +167,6 @@ def debugbuilddag(
      - "*p" is a fork at parent p, which is a backref
      - "*p1/p2" is a merge of parents p1 and p2, which are backrefs
      - "/p2" is a merge of the preceding node and p2
-     - ":tag" defines a local tag for the preceding node
      - "@branch" sets the named branch for subsequent nodes
      - "#...\\n" is a comment up to the end of the line
 
@@ -176,7 +176,6 @@ def debugbuilddag(
 
      - a number n, which references the node curr-n, where curr is the current
        node, or
-     - the name of a local tag you placed earlier using ":tag", or
      - empty to denote the default parent.
 
     All string valued-elements are either strictly alphanumeric, or must
@@ -202,8 +201,6 @@ def debugbuilddag(
         # make a file with k lines per rev
         initialmergedlines = [str(i) for i in range(0, total * linesperrev)]
         initialmergedlines.append("")
-
-    tags = []
 
     wlock = lock = tr = None
     try:
@@ -287,16 +284,20 @@ def debugbuilddag(
                     at = id
                 elif type == "l":
                     id, name = data
-                    ui.note(("tag %s\n" % name))
-                    tags.append("%s %s\n" % (hex(repo.changelog.node(id)), name))
+                    ui.note(("bookmark %s\n" % name))
+                    bookmarks.addbookmarks(
+                        repo,
+                        tr,
+                        [name],
+                        rev=hex(repo.changelog.node(id)),
+                        force=True,
+                        inactive=True,
+                    )
                 elif type == "a":
                     ui.note(("branch %s\n" % data))
                     atbranch = data
                 prog.value = id
         tr.close()
-
-        if tags:
-            repo.localvfs.write("localtags", "".join(tags))
     finally:
         release(tr, lock, wlock)
 
@@ -549,7 +550,7 @@ def debugcreatestreamclonebundle(ui, repo, fname):
 @command(
     "debugdag",
     [
-        ("t", "tags", None, _("use tags as labels")),
+        ("", "bookmarks", None, _("use bookmarks as labels")),
         ("b", "branches", None, _("annotate with branch names")),
         ("", "dots", None, _("use dots for runs")),
         ("s", "spaces", None, _("separate elements by spaces")),
@@ -579,11 +580,11 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 
     elif repo:
         cl = repo.changelog
-        tags = opts.get(r"tags")
+        bookmarks = opts.get(r"bookmarks")
         branches = opts.get(r"branches")
-        if tags:
+        if bookmarks:
             labels = {}
-            for l, n in repo.tags().items():
+            for l, n in repo._bookmarks.items():
                 labels.setdefault(cl.rev(n), []).append(l)
 
         def events():
@@ -595,7 +596,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
                         yield "a", newb
                         b = newb
                 yield "n", (r, list(p for p in cl.parentrevs(r) if p != -1))
-                if tags:
+                if bookmarks:
                     ls = labels.get(r)
                     if ls:
                         for l in ls:

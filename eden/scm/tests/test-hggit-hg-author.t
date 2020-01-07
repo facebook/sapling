@@ -99,7 +99,6 @@ Load commonly used test logic
   $ hg log --graph
   @  changeset:   8:de0c236bcd02
   |  bookmark:    master
-  |  tag:         default/master
   |  user:        test >test@example.com>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
@@ -141,7 +140,6 @@ Load commonly used test logic
   |
   o  changeset:   0:69982ec78c6d
      bookmark:    not-master
-     tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -154,7 +152,6 @@ Load commonly used test logic
   $ hg -R hgrepo2 log --graph
   @  changeset:   8:0e82f70d8365
   |  bookmark:    master
-  |  tag:         default/master
   |  user:        test ?test@example.com <test ?test@example.com>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
@@ -196,7 +193,6 @@ Load commonly used test logic
   |
   o  changeset:   0:69982ec78c6d
      bookmark:    not-master
-     tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha

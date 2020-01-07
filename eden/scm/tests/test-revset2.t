@@ -41,16 +41,14 @@
 
   $ setbranch() {
   >   BRANCH="$1"
-  >   # "hg tag" reads this file. Ideally the in-repo tag feature goes way too.
-  >   echo "$1" > .hg/branch
   > }
 
   $ commit() {
   >   if [ -n "$BRANCH" ]; then
   >     hg commit --extra "branch=$BRANCH" "$@"
-  >     # silent warnings about conflicted names
-  >     hg tag -q --local --remove -- "$BRANCH" 2>/dev/null
-  >     hg tag -q --local -- "$BRANCH" 2>/dev/null
+  >     if [[ $BRANCH =~ '^[0-9a-zA-Z]+$' ]]; then
+  >         eval "export $BRANCH=`hg log -r . -T '{node}'`"
+  >     fi
   >   else
   >     hg commit "$@"
   >   fi
@@ -156,7 +154,10 @@ these predicates use '\0' as a separator:
   $ setbranch é
   $ commit -Aqm9
 
-  $ hg tag -fr6 1.0
+  $ hg book -fr 6 1.0
+  $ echo "e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0" >> .hgtags
+  $ hg add .hgtags
+  $ hg commit -Aqm "add 1.0 tag"
   $ hg bookmark -r6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
   $ hg clone --quiet -U -r 7 . ../remote1
@@ -653,25 +654,6 @@ invalid function call should not be optimized to only()
   hg: parse error: not a symbol
   [255]
 
-we can use patterns when searching for tags
-
-  $ log 'tag("1..*")'
-  abort: tag '1..*' does not exist!
-  [255]
-  $ log 'tag("re:1..*")'
-  6
-  $ log 'tag("re:[0-9].[0-9]")'
-  6
-  $ log 'tag("literal:1.0")'
-  6
-  $ log 'tag("re:0..*")'
-
-  $ log 'tag(unknown)'
-  abort: tag 'unknown' does not exist!
-  [255]
-  $ log 'tag("re:unknown")'
-  $ log 'present(tag("unknown"))'
-  $ log 'present(tag("re:unknown"))'
   $ log 'user(bob)'
   2
 
@@ -848,13 +830,13 @@ test usage in revpair (with "+")
 (real pair)
 
   $ hg diff -r 'tip^^' -r 'tip'
-  diff -r 2326846efdab -r 24286f4ae135 .hgtags
+  diff -r 2326846efdab -r 6a4f54cc779b .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0
   $ hg diff -r 'tip^^::tip'
-  diff -r 2326846efdab -r 24286f4ae135 .hgtags
+  diff -r 2326846efdab -r 6a4f54cc779b .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
@@ -1289,7 +1271,7 @@ issue4553: check that revset aliases override existing hash prefix
   6:e0cc66ef77e8
   7:013af1973af4
   8:d5d0dcbdc4d9
-  9:24286f4ae135
+  9:6a4f54cc779b
 
   $ hg log -qr e: --config revsetalias.e="0"
   0:2785f51eece5
@@ -1301,7 +1283,7 @@ issue4553: check that revset aliases override existing hash prefix
   6:e0cc66ef77e8
   7:013af1973af4
   8:d5d0dcbdc4d9
-  9:24286f4ae135
+  9:6a4f54cc779b
 
   $ hg log -qr :e --config revsetalias.e="9"
   0:2785f51eece5
@@ -1313,13 +1295,13 @@ issue4553: check that revset aliases override existing hash prefix
   6:e0cc66ef77e8
   7:013af1973af4
   8:d5d0dcbdc4d9
-  9:24286f4ae135
+  9:6a4f54cc779b
 
   $ hg log -qr e:
   6:e0cc66ef77e8
   7:013af1973af4
   8:d5d0dcbdc4d9
-  9:24286f4ae135
+  9:6a4f54cc779b
 
   $ hg log -qr :e
   0:2785f51eece5
@@ -1456,6 +1438,8 @@ tests for 'remote()' predicate:
 3.  more than local   specified       specified
 
   $ hg clone --quiet -U . ../remote3
+  $ hg book -r 7 ".a.b.c."
+  $ hg book -r 2 "a-b-c-"
   $ cd ../remote3
   $ hg update -q 7
   $ echo r > r
@@ -1515,7 +1499,7 @@ tests for concatenation of strings/symbols by "##"
 (check operator priority)
 
   $ echo 'cat2n2($1, $2, $3, $4) = $1 ## $2 or $3 ## $4~2' >> .hg/hgrc
-  $ log "cat2n2(2785f5, 1eece5, 24286f, 4ae135)"
+  $ log "cat2n2(2785f5, 1eece5, 6a4f54, cc779b)"
   0
   4
 
@@ -1815,30 +1799,6 @@ Test `draft() & ::x` optimization
     (list
       (symbol 'secret')
       (symbol '9')))
-  $ hg debugrevspec --verify -p analyzed -p optimized '7 & ( (not public()) & ::(tag()) )'
-  * analyzed:
-  (and
-    (symbol '7')
-    (and
-      (not
-        (func
-          (symbol 'public')
-          None))
-      (func
-        (symbol 'ancestors')
-        (func
-          (symbol 'tag')
-          None))))
-  * optimized:
-  (and
-    (symbol '7')
-    (func
-      (symbol '_phaseandancestors')
-      (list
-        (symbol '_notpublic')
-        (func
-          (symbol 'tag')
-          None))))
   $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, 1)'
   * optimized:
   (and

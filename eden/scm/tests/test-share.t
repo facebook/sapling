@@ -27,14 +27,6 @@ share shouldn't have a store dir
   $ test -d .hg/store
   [1]
 
-share shouldn't have a cache dir, original repo should
-
-  $ hg tags
-  $ test -d .hg/cache
-  [1]
-  $ ls -1 ../repo1/.hg/cache
-  tags2-visible
-
 Some sed versions appends newline, some don't, and some just fails
 
   $ cat .hg/sharedpath; echo

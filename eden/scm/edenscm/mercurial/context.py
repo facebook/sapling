@@ -470,7 +470,7 @@ class changectx(basectx):
     the repo."""
 
     def __init__(self, repo, changeid=""):
-        """changeid is a revision number, node, or tag"""
+        """changeid is a revision number or node"""
 
         # since basectx.__new__ already took care of copying the object, we
         # don't need to do anything in __init__, so we just exit here
@@ -652,10 +652,6 @@ class changectx(basectx):
     def extra(self):
         """Return a dict of extra information."""
         return self._changeset.extra
-
-    def tags(self):
-        """Return a list of byte tag names"""
-        return self._repo.nodetags(self._node)
 
     def bookmarks(self):
         """Return a list of byte bookmark names."""
@@ -1326,7 +1322,7 @@ class filectx(basefilectx):
     def __init__(
         self, repo, path, changeid=None, fileid=None, filelog=None, changectx=None
     ):
-        """changeid can be a changeset revision, node, or tag.
+        """changeid can be a changeset revision or node.
            fileid can be a file revision or node."""
         self._repo = repo
         self._path = path
@@ -1575,9 +1571,6 @@ class committablectx(basectx):
 
     def isinmemory(self):
         return False
-
-    def tags(self):
-        return []
 
     def bookmarks(self):
         b = []

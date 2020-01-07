@@ -779,7 +779,7 @@ documented aliases
   
       Print a summary identifying the repository state at REV using one or two
       parent hash identifiers, followed by a "+" if the working directory has
-      uncommitted changes, a list of tags, and a list of bookmarks.
+      uncommitted changes and a list of bookmarks.
   
       When REV is not given, print a summary of the current state of the
       repository.
@@ -797,7 +797,6 @@ documented aliases
    -r --rev REV       identify the specified revision
    -n --num           show local revision number
    -i --id            show global revision id
-   -t --tags          show tags
    -B --bookmarks     show bookmarks
    -e --ssh CMD       specify ssh command to use
       --remotecmd CMD specify hg command to run on the remote side
