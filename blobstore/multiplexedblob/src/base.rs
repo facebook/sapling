@@ -216,6 +216,54 @@ fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
     }
 }
 
+pub fn inner_put(
+    ctx: CoreContext,
+    mut scuba: ScubaSampleBuilder,
+    should_log: bool,
+    write_order: Arc<AtomicUsize>,
+    blobstore_id: BlobstoreId,
+    blobstore: Arc<dyn Blobstore>,
+    key: String,
+    value: BlobstoreBytes,
+) -> impl Future<Item = BlobstoreId, Error = Error> {
+    let size = value.len();
+    let session = ctx.session_id().clone();
+    blobstore
+        .put(ctx, key.clone(), value.clone())
+        .timeout(REQUEST_TIMEOUT)
+        .map({ move |_| blobstore_id })
+        .map_err(remap_timeout_error)
+        .timed({
+            move |stats, result| {
+                if should_log {
+                    scuba
+                        .add("key", key.clone())
+                        .add("operation", "put")
+                        .add("blobstore_id", blobstore_id)
+                        .add("size", size)
+                        .add(
+                            "completion_time",
+                            stats.completion_time.as_micros_unchecked(),
+                        );
+
+                    match result {
+                        Ok(_) => {
+                            scuba.add("write_order", write_order.fetch_add(1, Ordering::SeqCst))
+                        }
+                        Err(error) => scuba.add("error", error.to_string()),
+                    };
+
+                    // log session uuid only for slow requests
+                    if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                        scuba.add("session", session.to_string());
+                    }
+                    scuba.log();
+                }
+                Ok(())
+            }
+        })
+}
+
 impl Blobstore for MultiplexedBlobstoreBase {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         ctx.perf_counters()
@@ -280,55 +328,24 @@ impl Blobstore for MultiplexedBlobstoreBase {
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
-        let size = value.len();
         let write_order = Arc::new(AtomicUsize::new(0));
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-        let session = ctx.session_id();
-
         let puts = self
             .blobstores
             .iter()
-            .map(|(blobstore_id, blobstore)| {
-                blobstore
-                    .put(ctx.clone(), key.clone(), value.clone())
-                    .timeout(REQUEST_TIMEOUT)
-                    .map({
-                        cloned!(blobstore_id);
-                        move |_| blobstore_id
-                    })
-                    .map_err(remap_timeout_error)
-                    .timed({
-                        cloned!(blobstore_id, key, write_order, size, session, mut self.scuba);
-                        move |stats, result| {
-                            if should_log {
-                                scuba
-                                    .add("key", key.clone())
-                                    .add("operation", "put")
-                                    .add("blobstore_id", blobstore_id)
-                                    .add("size", size)
-                                    .add(
-                                        "completion_time",
-                                        stats.completion_time.as_micros_unchecked(),
-                                    );
-
-                                match result {
-                                    Ok(_) => scuba.add(
-                                        "write_order",
-                                        write_order.fetch_add(1, Ordering::SeqCst),
-                                    ),
-                                    Err(error) => scuba.add("error", error.to_string()),
-                                };
-
-                                // log session uuid only for slow requests
-                                if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                                    scuba.add("session", session.to_string());
-                                }
-                                scuba.log();
-                            }
-
-                            Ok(())
-                        }
-                    })
+            .map({
+                |(blobstore_id, blobstore)| {
+                    inner_put(
+                        ctx.clone(),
+                        self.scuba.clone(),
+                        should_log,
+                        write_order.clone(),
+                        *blobstore_id,
+                        blobstore.clone(),
+                        key.clone(),
+                        value.clone(),
+                    )
+                }
             })
             .collect();
 
