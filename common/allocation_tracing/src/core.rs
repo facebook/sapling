@@ -27,19 +27,50 @@ struct TracingAllocator;
 // if it did allocate, any allocation with TracingAllocator would hang forever.
 unsafe impl GlobalAlloc for TracingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        ALLOCATION_STATS.with(|cell| {
-            (*cell.get()).allocated += layout.size() as u64;
-        });
+        let ret = System.alloc(layout);
 
-        System.alloc(layout)
+        if !ret.is_null() {
+            ALLOCATION_STATS.with(|cell| {
+                (*cell.get()).allocated += layout.size() as u64;
+            });
+        }
+
+        ret
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        let ret = System.alloc_zeroed(layout);
+
+        if !ret.is_null() {
+            ALLOCATION_STATS.with(|cell| {
+                (*cell.get()).allocated += layout.size() as u64;
+            });
+        }
+
+        ret
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        let ret = System.realloc(ptr, layout, new_size);
+
+        if !ret.is_null() {
+            ALLOCATION_STATS.with(|cell| {
+                (*cell.get()).freed += layout.size() as u64;
+                (*cell.get()).allocated += new_size as u64;
+            });
+        }
+
+        ret
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        let ret = System.dealloc(ptr, layout);
+
         ALLOCATION_STATS.with(|cell| {
             (*cell.get()).freed += layout.size() as u64;
         });
 
-        System.dealloc(ptr, layout)
+        ret
     }
 }
 
@@ -169,6 +200,33 @@ mod test {
             mem::drop(b);
             let delta = stats1.delta()? + stats2.delta()?;
             assert_eq!(delta, mem::size_of::<T>() as i64);
+            Ok(())
+        }
+
+        run_test::<TestStruct1>()?;
+        run_test::<TestStruct2>()?;
+        run_test::<TestStruct3>()?;
+        run_test::<TestStruct4>()?;
+        run_test::<TestStruct5>()?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_realloc() -> Result<(), Error> {
+        fn run_test<T: Default>() -> Result<(), Error> {
+            let (_, stats) = trace_allocations(|| {
+                let mut v = Vec::<T>::with_capacity(2);
+                v.push(T::default());
+                v.push(T::default());
+                v.push(T::default());
+                v.push(T::default());
+                v.push(T::default());
+                v.pop();
+                v.shrink_to_fit();
+                v
+            });
+
+            assert_eq!(stats.delta()?, (mem::size_of::<T>() * 4) as i64);
             Ok(())
         }
 
