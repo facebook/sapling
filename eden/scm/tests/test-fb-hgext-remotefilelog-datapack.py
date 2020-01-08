@@ -16,6 +16,7 @@ import silenttestrunner
 from bindings import revisionstore
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.datapack import datapackstore
+from edenscm.mercurial import error
 from edenscm.mercurial.node import nullid
 
 
@@ -222,7 +223,7 @@ class datapacktestsbase(object):
         try:
             pack = self.datapackreader(pack.path())
             self.assertTrue(False, "bad version number should have thrown")
-        except (RuntimeError, MemoryError):
+        except error.RustError:
             pass
 
     def testMissingDeltabase(self):

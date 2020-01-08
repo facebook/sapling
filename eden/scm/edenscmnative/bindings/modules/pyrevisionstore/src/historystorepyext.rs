@@ -10,11 +10,12 @@ use cpython::{
     PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
 };
 
+use cpython_ext::ResultPyErrExt;
 use revisionstore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{
-    from_key, from_key_to_tuple, from_tuple_to_key, key_error, to_key, to_node, to_path, to_pyerr,
+    from_key, from_key_to_tuple, from_tuple_to_key, key_error, to_key, to_node, to_path,
 };
 
 pub trait HistoryStorePyExt {
@@ -51,7 +52,7 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
         let keys = keys
             .map(|k| k.and_then(|k| from_tuple_to_key(py, &k)))
             .collect::<PyResult<Vec<Key>>>()?;
-        let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
+        let missing = self.get_missing(&keys[..]).map_pyerr(py)?;
 
         let results = PyList::new(py, &[]);
         for key in missing {
@@ -66,7 +67,7 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
         let key = to_key(py, name, node)?;
         let info = self
             .get_node_info(&key)
-            .map_err(|e| to_pyerr(py, &e))?
+            .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
         Ok(from_node_info(py, &key, &info))
@@ -152,8 +153,7 @@ impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
                 .into_py_object(py);
             Ok(tuple)
         });
-        iter.collect::<Result<Vec<PyTuple>>>()
-            .map_err(|e| to_pyerr(py, &e.into()))
+        iter.collect::<Result<Vec<PyTuple>>>().map_pyerr(py)
     }
 }
 
@@ -170,17 +170,17 @@ impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
     ) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let nodeinfo = to_node_info(py, name, p1, p2, linknode, copyfrom)?;
-        self.add(&key, &nodeinfo).map_err(|e| to_pyerr(py, &e))?;
+        self.add(&key, &nodeinfo).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 
     fn flush_py(&self, py: Python) -> PyResult<PyObject> {
-        let opt = self.flush().map_err(|e| to_pyerr(py, &e))?;
+        let opt = self.flush().map_pyerr(py)?;
         let opt = opt
             .as_ref()
             .map(|path| encoding::path_to_local_bytes(path))
             .transpose()
-            .map_err(|e| to_pyerr(py, &e.into()))?;
+            .map_pyerr(py)?;
         let opt = opt.map(|path| PyBytes::new(py, &path));
         Ok(opt.into_py_object(py))
     }
@@ -192,7 +192,7 @@ impl<T: RemoteHistoryStore + ?Sized> RemoteHistoryStorePyExt for T {
             .iter(py)
             .map(|tuple| from_tuple_to_key(py, &tuple))
             .collect::<PyResult<Vec<Key>>>()?;
-        self.prefetch(keys).map_err(|e| to_pyerr(py, &e))?;
+        self.prefetch(keys).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 }

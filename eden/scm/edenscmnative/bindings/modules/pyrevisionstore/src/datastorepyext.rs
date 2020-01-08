@@ -11,12 +11,13 @@ use cpython::{
     ToPyObject,
 };
 
+use cpython_ext::ResultPyErrExt;
 use revisionstore::{DataStore, MutableDeltaStore, RemoteDataStore, ToKeys};
 use types::{Key, Node};
 
 use crate::pythonutil::{
     from_base, from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, key_error,
-    to_delta, to_key, to_metadata, to_pyerr,
+    to_delta, to_key, to_metadata,
 };
 
 pub trait DataStorePyExt {
@@ -53,7 +54,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         let key = to_key(py, name, node)?;
         let result = self
             .get(&key)
-            .map_err(|e| to_pyerr(py, &e))?
+            .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
         Ok(PyBytes::new(py, &result[..]))
@@ -63,7 +64,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         let key = to_key(py, name, node)?;
         let delta = self
             .get_delta(&key)
-            .map_err(|e| to_pyerr(py, &e))?
+            .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
         let (base_name, base_node) = if let Some(key) = delta.base {
@@ -91,7 +92,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         let key = to_key(py, name, node)?;
         let deltachain = self
             .get_delta_chain(&key)
-            .map_err(|e| to_pyerr(py, &e))?
+            .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
         let pychain = deltachain
@@ -105,7 +106,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         let key = to_key(py, name, node)?;
         let metadata = self
             .get_meta(&key)
-            .map_err(|e| to_pyerr(py, &e))?
+            .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
         let metadict = PyDict::new(py);
@@ -128,7 +129,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
                 Err(e) => Err(e),
             })
             .collect::<PyResult<Vec<Key>>>()?;
-        let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
+        let missing = self.get_missing(&keys[..]).map_pyerr(py)?;
 
         let results = PyList::new(py, &[]);
         for key in missing {
@@ -156,8 +157,7 @@ impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
                 .into_py_object(py);
             Ok(tuple)
         });
-        iter.collect::<Result<Vec<PyTuple>>>()
-            .map_err(|e| to_pyerr(py, &e.into()))
+        iter.collect::<Result<Vec<PyTuple>>>().map_pyerr(py)
     }
 }
 
@@ -178,17 +178,17 @@ impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
             metadata = to_metadata(py, &meta)?;
         }
 
-        self.add(&delta, &metadata).map_err(|e| to_pyerr(py, &e))?;
+        self.add(&delta, &metadata).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 
     fn flush_py(&self, py: Python) -> PyResult<PyObject> {
-        let opt = self.flush().map_err(|e| to_pyerr(py, &e))?;
+        let opt = self.flush().map_pyerr(py)?;
         let opt = opt
             .as_ref()
             .map(|path| encoding::path_to_local_bytes(path))
             .transpose()
-            .map_err(|e| to_pyerr(py, &e.into()))?;
+            .map_pyerr(py)?;
         let opt = opt.map(|path| PyBytes::new(py, &path));
         Ok(opt.into_py_object(py))
     }
@@ -200,7 +200,7 @@ impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
             .iter(py)
             .map(|tuple| from_tuple_to_key(py, &tuple))
             .collect::<PyResult<Vec<Key>>>()?;
-        self.prefetch(keys).map_err(|e| to_pyerr(py, &e))?;
+        self.prefetch(keys).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 }

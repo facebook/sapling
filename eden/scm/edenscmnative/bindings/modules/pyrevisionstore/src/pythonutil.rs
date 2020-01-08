@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::io;
-
-use anyhow::{Error, Result};
+use anyhow::Result;
 use cpython::{
     exc, FromPyObject, PyBytes, PyDict, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
@@ -16,14 +14,6 @@ use cpython::{
 use cpython_ext::PyErr as ExtPyErr;
 use revisionstore::datastore::{Delta, Metadata};
 use types::{Key, Node, RepoPath, RepoPathBuf};
-
-pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
-    if let Some(io_error) = error.downcast_ref::<io::Error>() {
-        PyErr::new::<exc::OSError, _>(py, (io_error.raw_os_error(), format!("{}", error)))
-    } else {
-        PyErr::new::<exc::RuntimeError, _>(py, format!("{}", error))
-    }
-}
 
 pub fn to_node(py: Python, node: &PyBytes) -> Node {
     let mut bytes: [u8; 20] = Default::default();

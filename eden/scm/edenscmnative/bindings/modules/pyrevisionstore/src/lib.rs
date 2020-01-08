@@ -32,13 +32,16 @@ use revisionstore::{
 };
 use types::{Key, NodeInfo};
 
-use crate::datastorepyext::{
-    DataStorePyExt, IterableDataStorePyExt, MutableDeltaStorePyExt, RemoteDataStorePyExt,
+use crate::{
+    datastorepyext::{
+        DataStorePyExt, IterableDataStorePyExt, MutableDeltaStorePyExt, RemoteDataStorePyExt,
+    },
+    historystorepyext::{
+        HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt,
+        RemoteHistoryStorePyExt,
+    },
+    pythonutil::from_key,
 };
-use crate::historystorepyext::{
-    HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt, RemoteHistoryStorePyExt,
-};
-use crate::pythonutil::{from_key, to_pyerr};
 
 mod datastorepyext;
 mod historystorepyext;
@@ -99,14 +102,12 @@ fn repack_pywrapper(
     outdir_py: PyBytes,
     repacker: impl FnOnce(PathBuf, PathBuf) -> Result<PathBuf>,
 ) -> PyResult<PyBytes> {
-    let path =
-        encoding::local_bytes_to_path(packpath.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+    let path = encoding::local_bytes_to_path(packpath.data(py)).map_pyerr(py)?;
 
-    let outdir =
-        encoding::local_bytes_to_path(outdir_py.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+    let outdir = encoding::local_bytes_to_path(outdir_py.data(py)).map_pyerr(py)?;
     repacker(path.to_path_buf(), outdir.to_path_buf())
         .and_then(|p| Ok(PyBytes::new(py, &encoding::path_to_local_bytes(&p)?)))
-        .map_err(|e| to_pyerr(py, &e.into()))
+        .map_pyerr(py)
 }
 
 /// Merge all the datapacks into one big datapack. Returns the fullpath of the resulting datapack.
@@ -152,31 +153,28 @@ py_class!(class datapack |py| {
         path: &PyBytes
     ) -> PyResult<datapack> {
         let path = encoding::local_bytes_to_path(path.data(py))
-                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+                                 .map_pyerr(py)?;
         datapack::create_instance(
             py,
-            Box::new(match DataPack::new(&path) {
-                Ok(pack) => pack,
-                Err(e) => return Err(to_pyerr(py, &e)),
-            }),
+            Box::new(DataPack::new(&path).map_pyerr(py)?),
         )
     }
 
     def path(&self) -> PyResult<PyBytes> {
         let store = self.store(py);
-        let path = encoding::path_to_local_bytes(store.base_path()).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::path_to_local_bytes(store.base_path()).map_pyerr(py)?;
         Ok(PyBytes::new(py, &path))
     }
 
     def packpath(&self) -> PyResult<PyBytes> {
         let store = self.store(py);
-        let path = encoding::path_to_local_bytes(store.pack_path()).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::path_to_local_bytes(store.pack_path()).map_pyerr(py)?;
         Ok(PyBytes::new(py, &path))
     }
 
     def indexpath(&self) -> PyResult<PyBytes> {
         let store = self.store(py);
-        let path = encoding::path_to_local_bytes(store.index_path()).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::path_to_local_bytes(store.index_path()).map_pyerr(py)?;
         Ok(PyBytes::new(py, &path))
     }
 
@@ -249,7 +247,7 @@ py_class!(class datapackstore |py| {
     data path: PathBuf;
 
     def __new__(_cls, directory: &PyBytes, deletecorruptpacks: bool = false) -> PyResult<datapackstore> {
-        let directory = encoding::local_bytes_to_path(directory.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let directory = encoding::local_bytes_to_path(directory.data(py)).map_pyerr(py)?;
         let path = directory.into();
 
         let corruption_policy = if deletecorruptpacks {
@@ -307,31 +305,28 @@ py_class!(class historypack |py| {
         path: &PyBytes
     ) -> PyResult<historypack> {
         let path = encoding::local_bytes_to_path(path.data(py))
-                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+                                 .map_pyerr(py)?;
         historypack::create_instance(
             py,
-            Box::new(match HistoryPack::new(&path) {
-                Ok(pack) => pack,
-                Err(e) => return Err(to_pyerr(py, &e)),
-            }),
+            Box::new(HistoryPack::new(&path).map_pyerr(py)?),
         )
     }
 
     def path(&self) -> PyResult<PyBytes> {
         let store = self.store(py);
-        let path = encoding::path_to_local_bytes(store.base_path()).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::path_to_local_bytes(store.base_path()).map_pyerr(py)?;
         Ok(PyBytes::new(py, &path))
     }
 
     def packpath(&self) -> PyResult<PyBytes> {
         let store = self.store(py);
-        let path = encoding::path_to_local_bytes(store.pack_path()).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::path_to_local_bytes(store.pack_path()).map_pyerr(py)?;
         Ok(PyBytes::new(py, &path))
     }
 
     def indexpath(&self) -> PyResult<PyBytes> {
         let store = self.store(py);
-        let path = encoding::path_to_local_bytes(store.index_path()).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::path_to_local_bytes(store.index_path()).map_pyerr(py)?;
         Ok(PyBytes::new(py, &path))
     }
 
@@ -356,7 +351,7 @@ py_class!(class historypackstore |py| {
     data path: PathBuf;
 
     def __new__(_cls, directory: &PyBytes, deletecorruptpacks: bool = false) -> PyResult<historypackstore> {
-        let directory = encoding::local_bytes_to_path(directory.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let directory = encoding::local_bytes_to_path(directory.data(py)).map_pyerr(py)?;
         let path = directory.into();
 
         let corruption_policy = if deletecorruptpacks {
@@ -399,13 +394,10 @@ py_class!(class indexedlogdatastore |py| {
 
     def __new__(_cls, path: &PyBytes) -> PyResult<indexedlogdatastore> {
         let path = encoding::local_bytes_to_path(path.data(py))
-                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+                                 .map_pyerr(py)?;
         indexedlogdatastore::create_instance(
             py,
-            Box::new(match IndexedLogDataStore::new(&path) {
-                Ok(log) => log,
-                Err(e) => return Err(to_pyerr(py, &e)),
-            }),
+            Box::new(IndexedLogDataStore::new(&path).map_pyerr(py)?),
         )
     }
 
@@ -452,13 +444,10 @@ py_class!(class indexedloghistorystore |py| {
 
     def __new__(_cls, path: &PyBytes) -> PyResult<indexedloghistorystore> {
         let path = encoding::local_bytes_to_path(path.data(py))
-            .map_err(|e| to_pyerr(py, &e.into()))?;
+            .map_pyerr(py)?;
         indexedloghistorystore::create_instance(
             py,
-            Box::new(match IndexedLogHistoryStore::new(&path) {
-                Ok(log) => log,
-                Err(e) => return Err(to_pyerr(py, &e)),
-            }),
+            Box::new(IndexedLogHistoryStore::new(&path).map_pyerr(py)?),
         )
     }
 
@@ -518,7 +507,7 @@ py_class!(pub class mutabledeltastore |py| {
     data store: Box<dyn MutableDeltaStore>;
 
     def __new__(_cls, packfilepath: Option<PyBytes> = None, indexedlogpath: Option<PyBytes> = None) -> PyResult<mutabledeltastore> {
-        let store = make_mutabledeltastore(py, packfilepath, indexedlogpath).map_err(|e| to_pyerr(py, &e.into()))?;
+        let store = make_mutabledeltastore(py, packfilepath, indexedlogpath).map_pyerr(py)?;
         mutabledeltastore::create_instance(py, store)
     }
 
@@ -632,7 +621,7 @@ py_class!(pub class mutablehistorystore |py| {
     data store: Box<dyn MutableHistoryStore>;
 
     def __new__(_cls, packfilepath: Option<PyBytes>) -> PyResult<mutablehistorystore> {
-        let store = make_mutablehistorystore(py, packfilepath).map_err(|e| to_pyerr(py, &e.into()))?;
+        let store = make_mutablehistorystore(py, packfilepath).map_pyerr(py)?;
         mutablehistorystore::create_instance(py, store)
     }
 
@@ -862,10 +851,10 @@ py_class!(class contentstore |py| {
     data store: ContentStore;
 
     def __new__(_cls, path: &PyBytes, config: config, remote: pyremotestore) -> PyResult<contentstore> {
-        let path = encoding::local_bytes_to_path(path.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
         let remotestore = remote.into_inner(py);
 
-        let contentstore = ContentStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_err(|e| to_pyerr(py, &e.into()))?;
+        let contentstore = ContentStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
         contentstore::create_instance(py, contentstore)
     }
 
@@ -914,10 +903,10 @@ py_class!(class metadatastore |py| {
     data store: MetadataStore;
 
     def __new__(_cls, path: &PyBytes, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
-        let path = encoding::local_bytes_to_path(path.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
         let remotestore = remote.into_inner(py);
 
-        let metadatastore = MetadataStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_err(|e| to_pyerr(py, &e.into()))?;
+        let metadatastore = MetadataStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
         metadatastore::create_instance(py, metadatastore)
     }
 

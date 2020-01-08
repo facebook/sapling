@@ -218,7 +218,7 @@ class histpacktestsbase(object):
         try:
             pack = self.historypackreader(pack.path())
             self.assertTrue(False, "bad version number should have thrown")
-        except RuntimeError:
+        except error.RustError:
             pass
 
     def testLargePack(self):
