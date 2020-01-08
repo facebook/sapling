@@ -10,7 +10,7 @@ use crate::graph::{FileContentData, Node, NodeData};
 use crate::progress::{
     progress_stream, report_state, ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::setup::{setup_common, LIMIT_DATA_FETCH_ARG};
+use crate::setup::{setup_common, LIMIT_DATA_FETCH_ARG, SCRUB};
 use crate::state::{WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 
@@ -69,13 +69,14 @@ pub fn scrub_objects(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let (datasources, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
+    let (datasources, walk_params) =
+        try_boxfuture!(setup_common(SCRUB, fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
         logger.clone(),
-        "scrub",
+        SCRUB,
         repo_stats_key.clone(),
         walk_params.progress_node_types(),
         PROGRESS_SAMPLE_RATE,

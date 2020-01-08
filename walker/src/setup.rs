@@ -24,12 +24,14 @@ use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;
 use metaconfig_types::Redaction;
 use phases::SqlPhases;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, Logger};
 use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BoxFuture<BlobRepo, Error>,
     pub phases_store: BoxFuture<Arc<SqlPhases>, Error>,
+    pub scuba_builder: ScubaSampleBuilder,
 }
 
 pub struct RepoWalkParams {
@@ -269,14 +271,6 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .number_of_values(1)
             .required(false)
             .help(&INCLUDE_CHECK_TYPE_HELP),
-    )
-    .arg(
-        Arg::with_name(SCUBA_TABLE_ARG)
-            .long(SCUBA_TABLE_ARG)
-            .takes_value(true)
-            .multiple(false)
-            .required(false)
-            .help("Scuba table for logging nodes with issues. e.g. mononoke_walker"),
     );
 
     let app = app_template.build()
@@ -393,7 +387,14 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .required(false)
                 .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
         )
-        ;
+        .arg(
+            Arg::with_name(SCUBA_TABLE_ARG)
+                .long(SCUBA_TABLE_ARG)
+                .takes_value(true)
+                .multiple(false)
+                .required(false)
+                .help("Scuba table for logging nodes with issues. e.g. mononoke_walker"),
+        );
 }
 
 fn parse_node_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<NodeType>, Error> {
@@ -490,6 +491,7 @@ fn reachable_graph_elements(
 }
 
 pub fn setup_common(
+    walk_stats_key: &str,
     fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'_>,
@@ -565,6 +567,11 @@ pub fn setup_common(
         None => config.storage_config.clone(),
     };
 
+    let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
+    let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
+    scuba_builder.add_common_server_data();
+    scuba_builder.add("walk_type", walk_stats_key);
+
     // Open the blobstore explicitly so we can do things like run on one side of a multiplex
     let datasources_fut = blobstore::open_blobstore(
         fb,
@@ -597,6 +604,7 @@ pub fn setup_common(
         RepoWalkDatasources {
             blobrepo,
             phases_store,
+            scuba_builder,
         },
         RepoWalkParams {
             enable_derive,

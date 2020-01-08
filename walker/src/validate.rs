@@ -18,7 +18,7 @@ use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressRecorderUnprotected, ProgressReporter,
     ProgressReporterUnprotected, ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::setup::{setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, SCUBA_TABLE_ARG};
+use crate::setup::{setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, VALIDATE};
 use crate::state::{StepStats, WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
@@ -34,7 +34,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use itertools::Itertools;
 use mononoke_types::MPath;
 use phases::Phase;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::ScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use stats::prelude::*;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
@@ -455,14 +455,11 @@ pub fn validate(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let (datasources, walk_params) = try_boxfuture!(setup_common(fb, &logger, matches, sub_m));
+    let (datasources, walk_params) =
+        try_boxfuture!(setup_common(VALIDATE, fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
-
-    let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
-    let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
-    scuba_builder.add_common_server_data();
 
     cloned!(
         walk_params.include_node_types,
@@ -474,7 +471,7 @@ pub fn validate(
 
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
         logger.clone(),
-        "validate",
+        VALIDATE,
         repo_stats_key.clone(),
         walk_params.progress_node_types(),
         PROGRESS_SAMPLE_RATE,
@@ -497,7 +494,7 @@ pub fn validate(
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
         logger.clone(),
         ctx.fb,
-        scuba_builder,
+        datasources.scuba_builder.clone(),
         repo_stats_key,
         include_check_types,
         PROGRESS_SAMPLE_RATE,
