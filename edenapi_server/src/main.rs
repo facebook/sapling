@@ -16,10 +16,10 @@ use futures_ext::FutureExt;
 use gotham::{bind_server, state::State};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
-use tokio::{net::TcpListener, prelude::*};
+use tokio::{net::TcpListener, prelude::*, runtime::Runtime};
 use tokio_openssl::SslAcceptorExt;
 
-use cmdlib::args;
+use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 use secure_utils::SslConfig;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -28,6 +28,8 @@ const ARG_TLS_CERTIFICATE: &str = "tls-certificate";
 const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
+
+const SERVICE_NAME: &str = "mononoke_edenapi_server";
 
 const DEFAULT_HOST: &str = "::";
 const DEFAULT_PORT: &str = "8000";
@@ -137,6 +139,8 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .takes_value(true),
         );
 
+    let app = args::add_fb303_args(app);
+
     let matches = app.get_matches();
     let logger = args::init_logging(fb, &matches);
     let addr = get_server_addr(&matches)?;
@@ -157,8 +161,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         None => bind_server(listener, || Ok(say_hello), |socket| future::ok(socket)).right_future(),
     };
 
+    let mut runtime = Runtime::new()?;
+    start_fb303_and_stats_agg(fb, &mut runtime, SERVICE_NAME, &logger, &matches)?;
     slog::info!(logger, "Listening for requests at {}://{}", scheme, addr);
-    tokio::run(server);
+    let _ = runtime.block_on(server);
 
     Ok(())
 }
