@@ -14,18 +14,19 @@ from .. import interactiveui
 from . import service, token as tokenmod, util as ccutil, workspace
 
 
-def showhistory(ui, repo, **opts):
+def showhistory(ui, repo, reponame, workspacename, **opts):
     """Shows an interactive view for historical versions of smartlogs"""
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
-    reponame = ccutil.getreponame(repo)
-    workspacename = workspace.currentworkspace(repo)
     with progress.spinner(ui, _("fetching")):
-        versions = serv.gethistoricalversions(reponame, workspacename)
+        versions = sorted(
+            serv.gethistoricalversions(reponame, workspacename),
+            key=lambda version: version["version_number"],
+            reverse=True,
+        )
 
     class smartlogview(interactiveui.viewframe):
         def __init__(self, ui, repo, versions):
             interactiveui.viewframe.__init__(self, ui, repo, -1)
-            versions.reverse()
             self.versions = versions
 
         def render(self):

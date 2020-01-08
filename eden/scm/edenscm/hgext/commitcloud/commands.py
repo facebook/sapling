@@ -248,16 +248,17 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     the command provides a simple view as a list of draft commits.
     """
 
-    if opts.get("history"):
-        interactivehistory.showhistory(ui, repo, **opts)
-        return
-
     reponame = ccutil.getreponame(repo)
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
         workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
+
+    if opts.get("history"):
+        interactivehistory.showhistory(ui, repo, reponame, workspacename, **opts)
+        return
+
     date = opts.get("date")
     version = opts.get("workspace_version")
     if date:
