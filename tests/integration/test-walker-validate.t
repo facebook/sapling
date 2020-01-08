@@ -39,7 +39,7 @@ validate, expecting all valid
   Final count: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:37,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
-  Exiting...
+  Execution succeeded
 
 Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where repo_id >= 0";
@@ -56,7 +56,7 @@ validate, expecting validation fails
   Final count: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:34,0,3; EdgesChecked:3; CheckType:Pass,Fail Total:0,3 HgLinkNodePopulated:0,3
-  Exiting...
+  Execution succeeded
 
 repair by blobimport.
   $ blobimport repo-hg/.hg repo
@@ -70,7 +70,7 @@ validate, expecting all valid, this time checking marker types as well
   Final count: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
-  Exiting...
+  Execution succeeded
 
 Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -84,4 +84,4 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Final count: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
-  Exiting...
+  Execution succeeded

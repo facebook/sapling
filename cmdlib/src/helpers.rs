@@ -6,16 +6,24 @@
  * directory of this source tree.
  */
 
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
+use std::thread;
 use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
 
 use anyhow::{bail, format_err, Context, Error, Result};
+use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
+use futures::sync::oneshot::Receiver;
+use futures::{future::Either, sync, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use slog::{debug, info};
+use panichandler::Fate;
+use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
+use slog::{debug, error, info, Logger};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
+use crate::args;
+use crate::monitoring;
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
@@ -25,6 +33,10 @@ use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
 use sql_ext::MysqlOptions;
+use stats::schedule_stats_aggregation;
+
+pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
+pub const ARG_FORCE_SHUTDOWN_PERIOD: &str = "force-shutdown-period";
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {
     if !ctx.trace().is_enabled() {
@@ -319,4 +331,230 @@ pub fn create_runtime(
         builder.core_threads(core_threads);
     }
     builder.build()
+}
+
+/// Starts a future and waits until termination signal is received, tries to gracefully handle the shutdown.
+pub fn serve_forever<F>(
+    runtime: tokio::runtime::Runtime,
+    server: F,
+    logger: &Logger,
+    will_exit: Arc<AtomicBool>,
+    matches: &ArgMatches,
+) -> Result<(), Error>
+where
+    F: Future<Item = (), Error = ()> + Send + 'static,
+{
+    // Block until receiving a signal that tells us to exit.
+    let block = || -> Result<(), Error> {
+        let signals = Signals::new(&[SIGTERM, SIGINT])?;
+        for signal in signals.forever() {
+            info!(&logger, "Signalled: {}", signal);
+            break;
+        }
+        Ok(())
+    };
+    block_on_fn(runtime, server, logger, will_exit, matches, block)?;
+
+    Ok(())
+}
+
+pub fn block_on_fn<F, Fn>(
+    mut runtime: tokio::runtime::Runtime,
+    server: F,
+    logger: &Logger,
+    will_exit: Arc<AtomicBool>,
+    matches: &ArgMatches,
+    block: Fn,
+) -> Result<(), Error>
+where
+    F: Future<Item = (), Error = ()> + Send + 'static,
+    Fn: FnOnce() -> Result<(), Error>,
+{
+    let shutdown_grace_period: u64 = matches
+        .value_of(ARG_SHUTDOWN_GRACE_PERIOD)
+        .unwrap()
+        .parse()
+        .map_err(Error::from)?;
+    let force_shutdown_period: u64 = matches
+        .value_of(ARG_FORCE_SHUTDOWN_PERIOD)
+        .unwrap()
+        .parse()
+        .map_err(Error::from)?;
+
+    let (shutdown_pub, shutdown_sub) = sync::oneshot::channel::<()>();
+    let main = join_stats_agg(server, shutdown_sub)?;
+    runtime.spawn(main);
+
+    block()?;
+
+    // Shutting down: wait for the grace period.
+    info!(
+        &logger,
+        "Waiting {}s before shutting down server", shutdown_grace_period,
+    );
+    will_exit.store(true, Ordering::Relaxed);
+    thread::sleep(Duration::from_secs(shutdown_grace_period));
+
+    info!(&logger, "Shutting down...");
+    let _ = shutdown_pub.send(());
+
+    // Mononoke uses `tokio::spawn` to start background futures that never complete.
+    panichandler::set_panichandler(Fate::Abort);
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(force_shutdown_period));
+        panic!("Timed out shutting down runtime");
+    });
+
+    runtime
+        .shutdown_on_idle()
+        .wait()
+        .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
+
+    Ok(())
+}
+
+/// Executes the future and waits for it to finish.
+pub fn block_execute<F>(
+    future: F,
+    fb: FacebookInit,
+    app_name: &str,
+    logger: &Logger,
+    matches: &ArgMatches,
+) -> Result<(), Error>
+where
+    F: Future<Item = (), Error = Error> + Send + 'static,
+{
+    monitoring::start_fb303_server(fb, app_name, logger, matches)?;
+    let (shutdown_pub, shutdown_sub) = sync::oneshot::channel::<()>();
+    let future = future
+        .map({
+            let logger = logger.clone();
+            move |_| {
+                let _ = shutdown_pub.send(());
+                info!(&logger, "Execution succeeded")
+            }
+        })
+        .map_err({
+            let logger = logger.clone();
+            move |e| error!(&logger, "Execution error: {:?}", e)
+        })
+        .discard();
+    let mut runtime = args::init_runtime(&matches)?;
+    let main = join_stats_agg(future, shutdown_sub)?;
+    let result = runtime.block_on(main);
+
+    runtime.shutdown_on_idle();
+
+    match result {
+        Ok(()) => Ok(()),
+        Err(()) => Err(Error::msg("Execution failed")),
+    }
+}
+
+/// Join the future with stats aggregator and return a new joined future
+fn join_stats_agg<F>(future: F, shutdown_sub: Receiver<()>) -> Result<BoxFuture<(), ()>, Error>
+where
+    F: Future<Item = (), Error = ()> + Send + 'static,
+{
+    let stats_agg = schedule_stats_aggregation()
+        .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?
+        .discard();
+
+    let main = (stats_agg, future)
+        .into_future()
+        .select2(shutdown_sub)
+        .then({
+            move |res| -> Result<(), ()> {
+                match res {
+                    Ok(Either::B(_)) => Ok(()),
+                    Err(Either::A(_)) => Err(()),
+                    _ => {
+                        // NOTE: We need to panic here, because otherwise main is going to be blocked on
+                        // waiting for a signal forever. This shouldn't normally ever happen.
+                        unreachable!("Terminated or signal listener was dropped.")
+                    }
+                }
+            }
+        });
+
+    Ok(main.boxify())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::args;
+    use anyhow::Error;
+    use clap::Arg;
+    use futures::future::lazy;
+    use slog_glog_fmt;
+    use tokio_timer::sleep;
+
+    fn create_logger() -> Logger {
+        slog_glog_fmt::facebook_logger().unwrap()
+    }
+
+    fn exec_matches<'a>() -> ArgMatches<'a> {
+        let app = args::MononokeApp::new("test_app").build();
+        let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
+        args::add_fb303_args(app).get_matches_from(arg_vec)
+    }
+
+    fn serve_matches<'a>(force_shutdown_period: &'a str) -> ArgMatches<'a> {
+        let app = args::MononokeApp::new("test_app")
+            .build()
+            .arg(
+                Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
+                    .long("shutdown-grace-period")
+                    .takes_value(true)
+                    .required(false)
+                    .default_value("0"),
+            )
+            .arg(
+                Arg::with_name(ARG_FORCE_SHUTDOWN_PERIOD)
+                    .long("force-shutdown-period")
+                    .takes_value(true)
+                    .required(false)
+                    .default_value(force_shutdown_period),
+            );
+
+        let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
+        args::add_fb303_args(app).get_matches_from(arg_vec)
+    }
+
+    #[fbinit::test]
+    fn test_block_execute_success(fb: FacebookInit) {
+        let future = lazy({ || -> Result<(), Error> { Ok(()) } });
+        let logger = create_logger();
+        let matches = exec_matches();
+        let res = block_execute(future, fb, "test_app", &logger, &matches);
+        assert!(res.is_ok());
+    }
+
+    #[fbinit::test]
+    fn test_block_execute_error(fb: FacebookInit) {
+        let future = lazy({ || -> Result<(), Error> { Err(Error::msg("Some error")) } });
+        let logger = create_logger();
+        let matches = exec_matches();
+        let res = block_execute(future, fb, "test_app", &logger, &matches);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_block_on_fn_shutsdown() {
+        let matches = serve_matches("10");
+        let logger = create_logger();
+        let runtime = args::init_runtime(&matches).unwrap();
+        let will_exit = Arc::new(AtomicBool::new(false));
+        let server = sleep(Duration::from_secs(42)).discard();
+        block_on_fn(
+            runtime,
+            server,
+            &logger,
+            will_exit,
+            &matches,
+            || -> Result<(), Error> { Ok(()) },
+        )
+        .unwrap();
+    }
 }

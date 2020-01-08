@@ -9,33 +9,29 @@
 #![deny(unused)]
 #![type_length_limit = "2097152"]
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 
 use anyhow::{Context, Error};
 use clap::{value_t, Arg};
 use cloned::cloned;
 use cmdlib::args;
+use cmdlib::helpers::{serve_forever, ARG_FORCE_SHUTDOWN_PERIOD, ARG_SHUTDOWN_GRACE_PERIOD};
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
-use futures::future::IntoFuture;
-use futures::{future, sync, Future};
+use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::{FutureExt, TryFutureExt};
 use metaconfig_parser::RepoConfigs;
 use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
 use scuba_ext::ScubaSampleBuilder;
-use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::info;
 use source_control::server::make_SourceControlService_server;
 use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
 use srserver::{ThriftServer, ThriftServerBuilder};
-use stats::schedule_stats_aggregation;
 use tokio::runtime::Runtime;
 
 mod commit_id;
@@ -51,7 +47,6 @@ mod specifiers;
 const ARG_PORT: &str = "port";
 const ARG_HOST: &str = "host";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
-const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
 
@@ -93,6 +88,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .default_value("0"),
         )
+        .arg(
+            Arg::with_name(ARG_FORCE_SHUTDOWN_PERIOD)
+                .long("force-shutdown-period")
+                .takes_value(true)
+                .required(false)
+                .default_value("10"),
+        )
         .get_matches();
 
     let logger = args::init_logging(fb, &matches);
@@ -102,10 +104,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let config_path = matches
         .value_of("mononoke-config-path")
         .expect("must set config path");
-
-    let stats_aggregation = schedule_stats_aggregation()
-        .expect("failed to create stats aggregation scheduler")
-        .map_err(Error::from);
 
     let mut runtime = Runtime::new().expect("failed to create tokio runtime");
     let exec = runtime.executor();
@@ -186,72 +184,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     service_framework.add_module(Fb303Module)?;
     service_framework.add_module(ProfileModule)?;
 
-    let (sender, receiver) = sync::oneshot::channel::<()>();
-    let main = (stats_aggregation, monitoring_forever)
-        .into_future()
-        .select2(receiver)
-        .then({
-            cloned!(logger);
-            move |res| -> Result<(), ()> {
-                if let Ok(future::Either::B(_)) = res {
-                    info!(logger, "Shut down server signalled");
-                } else {
-                    // NOTE: We need to panic here, because otherwise main is going to be blocked on
-                    // waiting for a signal forever. This shouldn't normally ever happen.
-                    unreachable!("Server terminated or signal listener was dropped.")
-                }
-
-                Ok(())
-            }
-        });
-
     // Start listening.
     info!(logger, "Listening on {}:{}", &host, port);
     service_framework
         .serve_background()
         .expect("failed to start thrift service");
-    runtime.spawn(main);
-
-    // Wait for a signal that tells us to exit.
-    // TODO(mbthomas): This pattern is copied from LFS server, move to cmdlib.
-    let signals = Signals::new(&[SIGTERM, SIGINT])?;
-    for signal in signals.forever() {
-        info!(logger, "Signalled: {}", signal);
-        break;
-    }
-
-    // Shutting down: wait for the grace period.
-    let shutdown_grace_period: u64 = matches
-        .value_of(ARG_SHUTDOWN_GRACE_PERIOD)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
-
-    info!(
-        logger,
-        "Waiting {}s before shutting down server", shutdown_grace_period,
-    );
-    will_exit.store(true, Ordering::Relaxed);
-    thread::sleep(Duration::from_secs(shutdown_grace_period));
-
-    // Shut down.
-    info!(logger, "Shutting down server...");
+    serve_forever(
+        runtime,
+        monitoring_forever.discard(),
+        &logger,
+        will_exit,
+        &matches,
+    )?;
     drop(service_framework);
-    let _ = sender.send(());
-
-    // Mononoke uses `tokio::spawn` to start background futures that never
-    // complete. Set a timeout to abort the server after 10 seconds.
-    thread::spawn(|| {
-        thread::sleep(Duration::from_secs(10));
-        panic!("Timed out shutting down runtime");
-    });
-
-    // Wait for requests to finish
-    info!(logger, "Waiting for in-flight requests to finish...");
-    runtime
-        .shutdown_on_idle()
-        .wait()
-        .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
 
     info!(logger, "Exiting...");
     Ok(())

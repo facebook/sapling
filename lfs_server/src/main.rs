@@ -15,28 +15,25 @@ use anyhow::{bail, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{future::Either, sync::oneshot, Future, IntoFuture};
+use futures::{Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::TryFutureExt;
 use futures_util::{compat::Future01CompatExt, future::try_join_all, try_join};
 use gotham::{bind_server, bind_server_with_pre_state};
 use scuba::ScubaSampleBuilder;
-use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::sync::{atomic::AtomicBool, Arc};
-use std::thread;
-use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo;
+use cmdlib::helpers::{serve_forever, ARG_FORCE_SHUTDOWN_PERIOD, ARG_SHUTDOWN_GRACE_PERIOD};
 use cmdlib::{args, monitoring::start_fb303_server};
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
-use stats::schedule_stats_aggregation;
 
 use crate::acl::LfsAclChecker;
 use crate::config::get_server_config;
@@ -74,7 +71,6 @@ const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
-const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
@@ -157,6 +153,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false)
                 .default_value("0"),
+        )
+        .arg(
+            Arg::with_name(ARG_FORCE_SHUTDOWN_PERIOD)
+                .long("force-shutdown-period")
+                .takes_value(true)
+                .required(false)
+                .default_value("10"),
         )
         .arg(
             Arg::with_name(ARG_SCUBA_LOG_FILE)
@@ -312,10 +315,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut runtime = args::init_runtime(&matches)?;
 
-    let stats_aggregation = schedule_stats_aggregation()
-        .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?
-        .discard();
-
     let repos: HashMap<_, _> = runtime
         .block_on(try_join_all(futs).compat())?
         .into_iter()
@@ -346,7 +345,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         server,
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
         max_upload_size,
-        will_exit,
+        will_exit.clone(),
         config,
     )?;
 
@@ -382,7 +381,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let listener =
         TcpListener::bind(&addr).chain_err(Error::msg("Could not start TCP listener"))?;
 
-    let run_server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
+    let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
             let config = secure_utils::SslConfig {
                 cert: tls_certificate.to_string(),
@@ -437,59 +436,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         _ => bail!("TLS flags must be passed together"),
     };
 
-    let (sender, receiver) = oneshot::channel::<()>();
-    let main = run_server.join(stats_aggregation).select2(receiver).then({
-        let logger = logger.clone();
-        move |res| -> Result<(), ()> {
-            if let Ok(Either::B(_)) = res {
-                // We were signalled.
-                info!(&logger, "Shut down server");
-            } else {
-                // NOTE: We need to panic here, because otherwise main is going to be blocked on
-                // waiting for a signal forever. This shouldn't normally ever happen.
-                unreachable!("Server terminated or signal listener was dropped.")
-            }
-
-            Ok(())
-        }
-    });
-
-    // Start listening.
     info!(&logger, "Listening on {:?}", addr);
-    runtime.spawn(main);
-
-    // Wait for a signal that tells us to exit.
-    let signals = Signals::new(&[SIGTERM, SIGINT])?;
-    for signal in signals.forever() {
-        info!(&logger, "Signalled: {}", signal);
-        break;
-    }
-
-    // Report unhealthy
-    let shutdown_grace_period: u64 = matches
-        .value_of(ARG_SHUTDOWN_GRACE_PERIOD)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
-
-    info!(
-        &logger,
-        "Waiting {}s before shutting down server", shutdown_grace_period,
-    );
-    thread::sleep(Duration::from_secs(shutdown_grace_period));
-
-    info!(&logger, "Shutting down server...");
-    let _ = sender.send(());
-
-    // Wait for requests to finish.
-    info!(&logger, "Waiting for in-flight requests to finish...");
-    runtime
-        .shutdown_on_idle()
-        .wait()
-        .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
+    serve_forever(runtime, server, &logger, will_exit, &matches)?;
 
     info!(&logger, "Exiting...");
-
     Ok(())
 }
 

@@ -14,8 +14,7 @@ use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
 
-use cmdlib::{args, monitoring};
-use slog::{error, info};
+use cmdlib::{args, helpers::block_execute};
 
 mod blobstore;
 #[macro_use]
@@ -46,16 +45,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .boxify(),
     };
 
-    let mut runtime = args::init_runtime(&matches)?;
-
-    monitoring::start_fb303_and_stats_agg(fb, &mut runtime, app_name, &logger, &matches)?;
-    let res = runtime.block_on(future);
-
-    runtime.shutdown_on_idle();
-
-    info!(&logger, "Exiting...");
-    res.map(|_| ()).map_err(|e| {
-        error!(logger, "{:?}", e);
-        e
-    })
+    block_execute(future, fb, app_name, &logger, &matches)
 }

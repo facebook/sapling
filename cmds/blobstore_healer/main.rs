@@ -17,7 +17,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
 use cloned::cloned;
-use cmdlib::{args, monitoring};
+use cmdlib::{args, helpers::block_execute};
 use configerator::ConfigeratorAPI;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
@@ -304,7 +304,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         bail!("Missing --blobstore-key-like restriction for --drain-only");
     }
     info!(logger, "Using storage_config {:#?}", storage_config);
-
     let cfgr = ConfigeratorAPI::new(fb)?;
     let regions = cfgr
         .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
@@ -338,12 +337,5 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    let mut runtime = args::init_runtime(&matches)?;
-
-    // Thread with a thrift service is now detached
-    monitoring::start_fb303_and_stats_agg(fb, &mut runtime, app_name, &logger, &matches)?;
-
-    let result = runtime.block_on(healer.map(|_| ()));
-    runtime.shutdown_on_idle();
-    result
+    block_execute(healer, fb, app_name, &logger, &matches)
 }
