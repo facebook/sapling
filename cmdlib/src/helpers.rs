@@ -308,8 +308,15 @@ where
     }
 }
 
-pub fn create_runtime(log_thread_name_prefix: Option<&str>) -> io::Result<tokio::runtime::Runtime> {
-    tokio::runtime::Builder::new()
-        .name_prefix(log_thread_name_prefix.unwrap_or("tk-"))
-        .build()
+/// Get a tokio `Runtime` with potentially explicitly set number of core threads
+pub fn create_runtime(
+    log_thread_name_prefix: Option<&str>,
+    core_threads: Option<usize>,
+) -> io::Result<tokio::runtime::Runtime> {
+    let mut builder = tokio::runtime::Builder::new();
+    builder.name_prefix(log_thread_name_prefix.unwrap_or("tk-"));
+    if let Some(core_threads) = core_threads {
+        builder.core_threads(core_threads);
+    }
+    builder.build()
 }

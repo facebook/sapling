@@ -8,6 +8,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
+    io,
     path::Path,
     sync::Arc,
 };
@@ -36,8 +37,8 @@ use slog_logview::LogViewDrain;
 use sql_ext::MysqlOptions;
 
 use crate::helpers::{
-    init_cachelib_from_settings, open_sql_with_config_and_mysql_options, setup_repo_dir,
-    CachelibSettings, CreateStorage,
+    create_runtime, init_cachelib_from_settings, open_sql_with_config_and_mysql_options,
+    setup_repo_dir, CachelibSettings, CreateStorage,
 };
 use crate::log;
 
@@ -52,6 +53,7 @@ const TARGET_REPO_NAME: &str = "target-repo-name";
 const ENABLE_MCROUTER: &str = "enable-mcrouter";
 const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
+const RUNTIME_THREADS: &str = "runtime-threads";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -248,9 +250,19 @@ impl MononokeApp {
         app = add_logger_args(app);
         app = add_mysql_options_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
+        app = add_runtime_args(app);
 
         app
     }
+}
+
+pub fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(RUNTIME_THREADS)
+            .long(RUNTIME_THREADS)
+            .takes_value(true)
+            .help("a number of threads to use in the tokio runtime"),
+    )
 }
 
 pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -959,4 +971,10 @@ pub fn parse_disabled_hooks_no_repo_prefix(
     }
 
     disabled_hooks
+}
+
+/// Initialize a new `tokio::runtime::Runtime` with thread number parsed from the CLI
+pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio::runtime::Runtime> {
+    let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
+    create_runtime(None, core_threads)
 }

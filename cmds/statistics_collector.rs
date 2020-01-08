@@ -14,7 +14,7 @@ use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers::create_runtime, monitoring};
+use cmdlib::{args, monitoring};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -628,7 +628,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     });
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
     monitoring::start_fb303_and_stats_agg(
         fb,
         &mut runtime,

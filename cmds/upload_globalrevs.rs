@@ -15,7 +15,7 @@ use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::{args, helpers::create_runtime};
+use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::{Future, IntoFuture};
@@ -80,6 +80,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
 
+    let mut runtime = args::init_runtime(&matches)?;
     let run = args::open_repo(fb, &logger, &matches)
         .join(globalrevs_store)
         .and_then({
@@ -90,7 +91,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
         });
 
-    let mut runtime = create_runtime(None)?;
     runtime.block_on(run)?;
     runtime.shutdown_on_idle();
     Ok(())

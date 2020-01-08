@@ -14,7 +14,7 @@ use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
 
-use cmdlib::{args, helpers::create_runtime, monitoring};
+use cmdlib::{args, monitoring};
 use slog::{error, info};
 
 mod blobstore;
@@ -46,7 +46,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .boxify(),
     };
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
 
     monitoring::start_fb303_and_stats_agg(fb, &mut runtime, app_name, &logger, &matches)?;
     let res = runtime.block_on(future);

@@ -27,7 +27,7 @@ use tokio::prelude::stream::iter_ok;
 use blobrepo::BlobRepo;
 use blobstore::Storable;
 use changesets::SqlChangesets;
-use cmdlib::{args, helpers::create_runtime};
+use cmdlib::args;
 use context::CoreContext;
 use filestore::{self, Alias, AliasBlob, FetchKey};
 use mononoke_types::{
@@ -369,7 +369,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .verify_all(ctx, step, min_cs_db_id)
         });
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
     let result = runtime.block_on(aliasimport);
     // Let the runtime finish remaining work - uploading logs etc
     runtime.shutdown_on_idle();

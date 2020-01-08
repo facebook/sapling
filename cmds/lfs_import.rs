@@ -9,7 +9,7 @@
 use anyhow::{Error, Result};
 use bytes::Bytes;
 use clap::Arg;
-use cmdlib::{args, helpers::create_runtime};
+use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
@@ -95,7 +95,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .for_each(|_| Ok(()))
         });
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
     let result = runtime.block_on(import);
     runtime.shutdown_on_idle();
     result

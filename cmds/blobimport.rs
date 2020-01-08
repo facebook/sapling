@@ -15,7 +15,7 @@ use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bytes::Bytes;
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::{args, helpers::create_runtime, helpers::upload_and_show_trace};
+use cmdlib::{args, helpers::upload_and_show_trace};
 use context::CoreContext;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -318,7 +318,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             },
         );
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
     let result = runtime.block_on(blobimport);
     // Let the runtime finish remaining work - uploading logs etc
     runtime.shutdown_on_idle();

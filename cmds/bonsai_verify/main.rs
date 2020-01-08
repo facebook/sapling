@@ -14,7 +14,7 @@ use anyhow::{bail, format_err, Error, Result};
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers::create_runtime};
+use cmdlib::args;
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
@@ -431,6 +431,6 @@ fn subcommmand_hg_manifest_verify(
                 })
         });
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
     runtime.block_on(run)
 }

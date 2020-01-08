@@ -17,7 +17,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
 use cloned::cloned;
-use cmdlib::{args, helpers::create_runtime, monitoring};
+use cmdlib::{args, monitoring};
 use configerator::ConfigeratorAPI;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
@@ -338,7 +338,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    let mut runtime = create_runtime(None)?;
+    let mut runtime = args::init_runtime(&matches)?;
 
     // Thread with a thrift service is now detached
     monitoring::start_fb303_and_stats_agg(fb, &mut runtime, app_name, &logger, &matches)?;
