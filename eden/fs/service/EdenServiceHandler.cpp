@@ -129,6 +129,8 @@ std::string toLogArg(const std::vector<std::string>& args) {
 
 namespace /* anonymous namespace for helper functions */ {
 
+#define EDEN_MICRO u8"\u00B5s"
+
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
@@ -160,14 +162,16 @@ class ThriftLogHelper {
       // Logging of future creation at folly::LogLevel::DBG3.
       TLOG(itcLogger_, folly::LogLevel::DBG3, itcFileName_, itcLineNumber_)
           << folly::format(
-                 "{}() created future {:,}us",
+                 "{}() created future {:,} " EDEN_MICRO,
                  itcFunctionName_,
                  itcTimer_.elapsed().count());
     } else {
       // If this object was not used for future creation
       // log the elaped time here.
       TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << folly::format(
-          "{}() took {:,}us", itcFunctionName_, itcTimer_.elapsed().count());
+          "{}() took {:,} " EDEN_MICRO,
+          itcFunctionName_,
+          itcTimer_.elapsed().count());
     }
   }
 
@@ -184,7 +188,7 @@ class ThriftLogHelper {
           // Logging completion time for the request
           // The line number points to where the object was originally created
           TLOG(logger, level, filename, linenumber) << folly::format(
-              "{}() took {:,}us", funcName, timer.elapsed().count());
+              "{}() took {:,} " EDEN_MICRO, funcName, timer.elapsed().count());
           return std::forward<folly::Try<ReturnType>>(ret);
         });
   }
@@ -198,6 +202,8 @@ class ThriftLogHelper {
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
   bool wrapperExecuted_ = false;
 };
+
+#undef EDEN_MICRO
 
 #ifndef _WIN32
 facebook::eden::InodePtr inodeFromUserPath(
