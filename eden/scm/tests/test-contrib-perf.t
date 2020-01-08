@@ -11,6 +11,7 @@ Set vars:
 Prepare repo:
 
   $ hg init
+  $ hg debugtreedirstate off
 
   $ echo this is file a > a
   $ hg add a
