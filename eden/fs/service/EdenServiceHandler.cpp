@@ -536,7 +536,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
 }
 
 #ifndef _WIN32
-apache::thrift::Stream<JournalPosition>
+apache::thrift::ServerStream<JournalPosition>
 EdenServiceHandler::subscribeStreamTemporary(
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
