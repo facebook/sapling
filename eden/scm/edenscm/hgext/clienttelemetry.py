@@ -93,7 +93,13 @@ def _capabilities(orig, repo, proto):
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # Record the command that is running in the client telemetry data.
     _clienttelemetrydata["command"] = cmd
-    _clienttelemetrydata["fullcommand"] = dispatch._formatargs(fullargs)
+
+    fullcommand = dispatch._formatargs(fullargs)
+    # Long invocations can occupy a lot of space in the logs.
+    if len(fullcommand) > 256:
+        fullcommand = fullcommand[:256] + " (truncated)"
+
+    _clienttelemetrydata["fullcommand"] = fullcommand
     return orig(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions)
 
 
