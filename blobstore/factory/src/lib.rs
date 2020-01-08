@@ -24,7 +24,7 @@ use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use fileblob::Fileblob;
 use itertools::Either;
 use manifoldblob::ThriftManifoldBlob;
-use metaconfig_types::{self, BlobConfig, MetadataDBConfig, ShardedFilenodesParams};
+use metaconfig_types::{self, BlobConfig, BlobstoreId, MetadataDBConfig, ShardedFilenodesParams};
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
 use readonlyblob::ReadOnlyBlobstore;
@@ -356,95 +356,27 @@ fn make_blobstore_impl(
         Multiplexed {
             scuba_table,
             blobstores,
-        } => {
-            let sql_factory = match sql_factory {
-                Some(sql_factory) => sql_factory,
-                None => {
-                    let err = format_err!(
-                        "sql factory is not specified, but multiplexed blobstore requires it",
-                    );
-                    return future::err(err).boxify();
-                }
-            };
-            let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
-            let components: Vec<_> = blobstores
-                .iter()
-                .map({
-                    move |(blobstoreid, config)| {
-                        cloned!(blobstoreid);
-                        make_blobstore(fb, config, sql_factory, mysql_options, readonly_storage)
-                            .map({ move |store| (blobstoreid, store) })
-                    }
-                })
-                .collect();
-
-            queue
-                .and_then({
-                    cloned!(scuba_table);
-                    move |queue| {
-                        future::join_all(components).map({
-                            move |components| {
-                                Arc::new(MultiplexedBlobstore::new(
-                                    components,
-                                    queue,
-                                    scuba_table
-                                        .map_or(ScubaSampleBuilder::with_discard(), |table| {
-                                            ScubaSampleBuilder::new(fb, table)
-                                        }),
-                                )) as Arc<dyn Blobstore>
-                            }
-                        })
-                    }
-                })
-                .boxify()
-        }
+        } => make_blobstore_multiplexed_impl(
+            fb,
+            scuba_table,
+            blobstores,
+            sql_factory,
+            mysql_options,
+            readonly_storage,
+            Scrubbing::Disabled,
+        ),
         Scrub {
             scuba_table,
             blobstores,
-        } => {
-            let sql_factory = match sql_factory {
-                Some(sql_factory) => sql_factory,
-                None => {
-                    let err = format_err!(
-                        "sql factory is not specified, but scrub blobstore requires it"
-                    );
-                    return future::err(err).boxify();
-                }
-            };
-            let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
-            let components: Vec<_> = blobstores
-                .iter()
-                .map({
-                    move |(blobstoreid, config)| {
-                        cloned!(blobstoreid);
-                        make_blobstore(fb, config, sql_factory, mysql_options, readonly_storage)
-                            .map({ move |store| (blobstoreid, store) })
-                    }
-                })
-                .collect();
-
-            queue
-                .into_future()
-                .and_then({
-                    cloned!(scuba_table);
-                    move |queue| {
-                        future::join_all(components).map({
-                            move |components| {
-                                Arc::new(ScrubBlobstore::new(
-                                    components,
-                                    queue,
-                                    scuba_table
-                                        .map_or(ScubaSampleBuilder::with_discard(), |table| {
-                                            ScubaSampleBuilder::new(fb, table)
-                                        }),
-                                )) as Arc<dyn Blobstore>
-                            }
-                        })
-                    }
-                })
-                .boxify()
-        }
-
+        } => make_blobstore_multiplexed_impl(
+            fb,
+            scuba_table,
+            blobstores,
+            sql_factory,
+            mysql_options,
+            readonly_storage,
+            Scrubbing::Enabled,
+        ),
         ManifoldWithTtl {
             bucket,
             prefix,
@@ -468,4 +400,68 @@ fn make_blobstore_impl(
     } else {
         read_write
     }
+}
+
+fn make_blobstore_multiplexed_impl(
+    fb: FacebookInit,
+    scuba_table: &Option<String>,
+    inner_config: &[(BlobstoreId, BlobConfig)],
+    sql_factory: Option<&SqlFactory>,
+    mysql_options: MysqlOptions,
+    readonly_storage: ReadOnlyStorage,
+    scrubbing: Scrubbing,
+) -> BoxFuture<Arc<dyn Blobstore>, Error> {
+    let components: Vec<_> = inner_config
+        .iter()
+        .map({
+            move |(blobstoreid, config)| {
+                cloned!(blobstoreid);
+                make_blobstore_impl(
+                    // force per line for easier merges
+                    fb,
+                    config,
+                    sql_factory,
+                    mysql_options,
+                    readonly_storage,
+                )
+                .map({ move |store| (blobstoreid, store) })
+            }
+        })
+        .collect();
+
+    let sql_factory = match sql_factory {
+        Some(sql_factory) => sql_factory,
+        None => {
+            let err =
+                format_err!("sql factory is not specified, but multiplexed stores require it",);
+            return future::err(err).boxify();
+        }
+    };
+    let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
+
+    queue
+        .and_then({
+            cloned!(scuba_table);
+            move |queue| {
+                future::join_all(components).map({
+                    move |components| match scrubbing {
+                        Scrubbing::Enabled => Arc::new(ScrubBlobstore::new(
+                            components,
+                            queue,
+                            scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
+                                ScubaSampleBuilder::new(fb, table)
+                            }),
+                        )) as Arc<dyn Blobstore>,
+                        Scrubbing::Disabled => Arc::new(MultiplexedBlobstore::new(
+                            components,
+                            queue,
+                            scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
+                                ScubaSampleBuilder::new(fb, table)
+                            }),
+                        )) as Arc<dyn Blobstore>,
+                    }
+                })
+            }
+        })
+        .boxify()
 }
