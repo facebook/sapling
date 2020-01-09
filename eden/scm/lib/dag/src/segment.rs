@@ -1251,23 +1251,39 @@ impl Dag {
         full_idmap: &dyn crate::idmap::IdMapLike,
         sparse_idmap: &mut crate::idmap::IdMap,
     ) -> Result<()> {
+        for id in self.universal()? {
+            let slice = full_idmap.slice(id)?;
+            sparse_idmap.insert(id, &slice)?
+        }
+        Ok(())
+    }
+
+    /// Return a subset of [`Id`]s that should be "Universal", including:
+    ///
+    /// - Heads of the master group.
+    /// - Parents of merges (a merge is an id with multiple parents)
+    ///   in the MASTER group.
+    ///
+    /// See also [`FirstAncestorConstraint::KnownUniversally`].
+    ///
+    /// Complexity: `O(flat segments)` for both time and space.
+    fn universal(&self) -> Result<BTreeSet<Id>> {
+        let mut result = BTreeSet::new();
         for seg in self.next_segments(Id::MIN, 0)? {
             let parents = seg.parents()?;
             // Is it a merge?
             if parents.len() >= 2 {
                 for id in parents {
                     debug_assert_eq!(id.group(), Group::MASTER);
-                    sparse_idmap.insert(id, &full_idmap.slice(id)?)?;
+                    result.insert(id);
                 }
             }
         }
-        let next_master = self.next_free_id(0, Group::MASTER)?;
-        if next_master.0 > 0 {
-            let master = next_master - 1;
-            let slice = full_idmap.slice(master)?;
-            sparse_idmap.insert(master, &slice)?;
+        for head in self.heads_ancestors(self.master_group()?)? {
+            debug_assert_eq!(head.group(), Group::MASTER);
+            result.insert(head);
         }
-        Ok(())
+        Ok(result)
     }
 }
 
