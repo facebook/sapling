@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use std::thread;
 use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
 
@@ -15,7 +14,7 @@ use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::sync::oneshot::Receiver;
-use futures::{future::Either, sync, Future, IntoFuture};
+use futures::{future, sync, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use panichandler::Fate;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
@@ -333,16 +332,35 @@ pub fn create_runtime(
     builder.build()
 }
 
-/// Starts a future and waits until termination signal is received, tries to gracefully handle the shutdown.
-pub fn serve_forever<F>(
+/// Starts a future as a server, and waits until a termination signal is received.
+///
+/// When the termination signal is received, the `quiesce` callback is
+/// called.  This should perform any steps required to quiesce the
+/// server.  Requests should still be accepted.
+///
+/// After the configured quiesce timeout, the `server` future is
+/// cancelled, and the `shutdown` callback is called.  This should do
+/// any additional work to stop accepting connections and wait until all
+/// outstanding requests have been handled.
+///
+/// Currently the `shutdown` callback can return `true` to indicate that
+/// the runtime should wait until it is idle before shutting down.  Note
+/// that this option will be removed in Tokio 0.2.
+///
+/// When `shutdown` completes, or when the force shutdown timer expires, the
+/// runtime will be shutdown and the process will exit.
+pub fn serve_forever<Server, QuiesceFn, ShutdownFn>(
     runtime: tokio::runtime::Runtime,
-    server: F,
+    server: Server,
     logger: &Logger,
-    will_exit: Arc<AtomicBool>,
     matches: &ArgMatches,
+    quiesce: QuiesceFn,
+    shutdown: ShutdownFn,
 ) -> Result<(), Error>
 where
-    F: Future<Item = (), Error = ()> + Send + 'static,
+    Server: Future<Item = (), Error = ()> + Send + 'static,
+    QuiesceFn: FnOnce(),
+    ShutdownFn: FnOnce() -> bool,
 {
     // Block until receiving a signal that tells us to exit.
     let block = || -> Result<(), Error> {
@@ -353,21 +371,24 @@ where
         }
         Ok(())
     };
-    block_on_fn(runtime, server, logger, will_exit, matches, block)?;
+    block_on_fn(runtime, server, logger, matches, block, quiesce, shutdown)?;
 
     Ok(())
 }
 
-pub fn block_on_fn<F, BlockFn>(
+pub fn block_on_fn<Server, QuiesceFn, ShutdownFn, BlockFn>(
     mut runtime: tokio::runtime::Runtime,
-    server: F,
+    server: Server,
     logger: &Logger,
-    will_exit: Arc<AtomicBool>,
     matches: &ArgMatches,
     block: BlockFn,
+    quiesce: QuiesceFn,
+    shutdown: ShutdownFn,
 ) -> Result<(), Error>
 where
-    F: Future<Item = (), Error = ()> + Send + 'static,
+    Server: Future<Item = (), Error = ()> + Send + 'static,
+    QuiesceFn: FnOnce(),
+    ShutdownFn: FnOnce() -> bool,
     BlockFn: FnOnce() -> Result<(), Error>,
 {
     let shutdown_grace_period: u64 = matches
@@ -388,11 +409,11 @@ where
     block()?;
 
     // Shutting down: wait for the grace period.
+    quiesce();
     info!(
         &logger,
         "Waiting {}s before shutting down server", shutdown_grace_period,
     );
-    will_exit.store(true, Ordering::Relaxed);
     thread::sleep(Duration::from_secs(shutdown_grace_period));
 
     info!(&logger, "Shutting down...");
@@ -405,10 +426,17 @@ where
         panic!("Timed out shutting down runtime");
     });
 
-    runtime
-        .shutdown_on_idle()
-        .wait()
-        .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
+    if shutdown() {
+        runtime
+            .shutdown_on_idle()
+            .wait()
+            .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
+    } else {
+        runtime
+            .shutdown_now()
+            .wait()
+            .map_err(|_| Error::msg("Failed to shutdown runtime!"))?;
+    }
 
     Ok(())
 }
@@ -466,8 +494,8 @@ where
         .then({
             move |res| -> Result<(), ()> {
                 match res {
-                    Ok(Either::B(_)) => Ok(()),
-                    Err(Either::A(_)) => Err(()),
+                    Ok(future::Either::B(_)) => Ok(()),
+                    Err(future::Either::A(_)) => Err(()),
                     _ => {
                         // NOTE: We need to panic here, because otherwise main is going to be blocked on
                         // waiting for a signal forever. This shouldn't normally ever happen.
@@ -545,15 +573,15 @@ mod test {
         let matches = serve_matches("10");
         let logger = create_logger();
         let runtime = args::init_runtime(&matches).unwrap();
-        let will_exit = Arc::new(AtomicBool::new(false));
         let server = sleep(Duration::from_secs(42)).discard();
         block_on_fn(
             runtime,
             server,
             &logger,
-            will_exit,
             &matches,
             || -> Result<(), Error> { Ok(()) },
+            || (),
+            || true,
         )
         .unwrap();
     }

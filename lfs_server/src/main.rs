@@ -24,7 +24,7 @@ use scuba::ScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
@@ -437,7 +437,21 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     info!(&logger, "Listening on {:?}", addr);
-    serve_forever(runtime, server, &logger, will_exit, &matches)?;
+    serve_forever(
+        runtime,
+        server,
+        &logger,
+        &matches,
+        move || will_exit.store(true, Ordering::Relaxed),
+        move || {
+            // Currently we rely on `shutdown_on_idle` waiting for all
+            // in-flight requests to complete.
+            //
+            // TODO: in preparation for migration to Tokio 0.2, wait
+            // until all requests have completed.
+            true
+        },
+    )?;
 
     info!(&logger, "Exiting...");
     Ok(())

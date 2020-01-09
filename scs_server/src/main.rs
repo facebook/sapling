@@ -9,7 +9,7 @@
 #![deny(unused)]
 #![type_length_limit = "2097152"]
 
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
@@ -192,10 +192,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime,
         monitoring_forever.discard(),
         &logger,
-        will_exit,
         &matches,
+        move || will_exit.store(true, Ordering::Relaxed),
+        move || {
+            // Calling `stop` blocks until the service has completed all requests.
+            service_framework.stop();
+
+            // Runtime should shutdown now.
+            false
+        },
     )?;
-    drop(service_framework);
 
     info!(logger, "Exiting...");
     Ok(())
