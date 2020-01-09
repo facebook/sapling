@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::id::{Group, Id};
+use crate::id::{Group, Id, VertexName};
 use crate::idmap::IdMap;
-use crate::protocol::{Process, RequestLocationToSlice, RequestSliceToLocation};
+use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 use crate::segment::Dag;
 use crate::segment::FirstAncestorConstraint;
 use crate::spanset::SpanSet;
@@ -69,37 +69,37 @@ Lv3: R0-11[]"#
         s
     };
 
-    // [Id] -> RequestLocationToSlice (useful for getting commit hashes from ids).
+    // [Id] -> RequestLocationToName (useful for getting commit hashes from ids).
     let ids: Vec<Id> = (b'A'..=b'L')
-        .map(|b| built.id_map.find_id_by_slice(&[b]).unwrap().unwrap())
+        .map(|b| built.id_map.find_id_by_name(&[b]).unwrap().unwrap())
         .collect();
-    let request1: RequestLocationToSlice = (&built.id_map, &built.dag).process(ids).unwrap();
+    let request1: RequestLocationToName = (&built.id_map, &built.dag).process(ids).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
-        "RequestLocationToSlice { paths: [B~1, B~0, D~1, D~0, H~3, H~2, H~1, H~0, J~1, J~0, L~1, L~0] }"
+        "RequestLocationToName { paths: [B~1, B~0, D~1, D~0, H~3, H~2, H~1, H~0, J~1, J~0, L~1, L~0] }"
     );
 
-    // [slice] -> RequestSliceToLocation (useful for getting ids from commit hashes).
-    let slices = (b'A'..=b'L').map(|b| vec![b].into_boxed_slice()).collect();
-    let request2: RequestSliceToLocation = (&built.id_map, &built.dag).process(slices).unwrap();
+    // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
+    let names = (b'A'..=b'L').map(|b| VertexName::copy_from(&[b])).collect();
+    let request2: RequestNameToLocation = (&built.id_map, &built.dag).process(names).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request2)),
-        "RequestSliceToLocation { slices: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
+        "RequestNameToLocation { names: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
     );
 
-    // RequestLocationToSlice -> ResponseIdSlicePair
+    // RequestLocationToName -> ResponseIdNamePair
     let response1 = (&built.id_map, &built.dag).process(request1).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
-        "ResponseIdSlicePair { path_slices: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
+        "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
     );
 
-    // RequestSliceToLocation -> ResponseIdSlicePair
+    // RequestNameToLocation -> ResponseIdNamePair
     // Only B, D, H, J, L are used since they are "universally known".
     let response2 = (&built.id_map, &built.dag).process(request2).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response2)),
-        "ResponseIdSlicePair { path_slices: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
+        "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
     );
 
     // Applying responses to IdMap. Should not cause errors.
@@ -342,10 +342,10 @@ Lv2: R0-12[] N0-N5[1, 9]"#
 
     // Notice that N4 to N6 were re-written in the last step.
     // 'm' only has 1 id: 8 (master). The old id (N5) is now taken by 'q'.
-    assert_eq!(built.id_map.find_id_by_slice(b"m").unwrap().unwrap(), Id(8));
-    assert_eq!(built.id_map.find_slice_by_id(Id(8)).unwrap().unwrap(), b"m");
+    assert_eq!(built.id_map.find_id_by_name(b"m").unwrap().unwrap(), Id(8));
+    assert_eq!(built.id_map.find_name_by_id(Id(8)).unwrap().unwrap(), b"m");
     let id = Group::NON_MASTER.min_id() + 5;
-    assert_eq!(built.id_map.find_slice_by_id(id).unwrap().unwrap(), b"q");
+    assert_eq!(built.id_map.find_name_by_id(id).unwrap().unwrap(), b"q");
 }
 
 #[test]
@@ -755,7 +755,7 @@ impl IdMap {
         let mut result = text.to_string();
         for &group in Group::ALL.iter() {
             for id in group.min_id().to(self.next_free_id(group).unwrap()) {
-                if let Ok(Some(name)) = self.find_slice_by_id(id) {
+                if let Ok(Some(name)) = self.find_name_by_id(id) {
                     let name = String::from_utf8(name.to_vec()).unwrap();
                     let id_str = format!("{:01$}", id, name.len());
                     if name.len() + 1 == id_str.len() {
@@ -795,17 +795,17 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
     named_dag.dag.set_new_segment_size(segment_size);
 
     let parents = drawdag::parse(&text);
-    let parents_by_name = |name: &[u8]| -> Result<Vec<Box<[u8]>>> {
-        Ok(parents[&String::from_utf8(name.to_vec()).unwrap()]
+    let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
+        Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
             .iter()
-            .map(|p| p.as_bytes().to_vec().into_boxed_slice())
+            .map(|p| VertexName::copy_from(p.as_bytes()))
             .collect())
     };
 
     let ascii = heads
         .split(' ')
         .map(|head| {
-            let binary_head = head.as_bytes().to_vec().into_boxed_slice();
+            let binary_head = VertexName::copy_from(head.as_bytes());
 
             // Assign to non-master if the name starts with a lowercase character.
             let (master, other) = if head.chars().nth(0).unwrap().is_lowercase() {

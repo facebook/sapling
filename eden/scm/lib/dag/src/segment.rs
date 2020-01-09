@@ -1252,8 +1252,8 @@ impl Dag {
         sparse_idmap: &mut crate::idmap::IdMap,
     ) -> Result<()> {
         for id in self.universal()? {
-            let slice = full_idmap.slice(id)?;
-            sparse_idmap.insert(id, &slice)?
+            let name = full_idmap.vertex_name(id)?;
+            sparse_idmap.insert(id, name.as_ref())?
         }
         Ok(())
     }

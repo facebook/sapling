@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet, Group, Id};
+use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet, Group, Id, VertexName};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
@@ -15,9 +15,9 @@ mod bindag;
 fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
-    let head_name = format!("{}", parents.len() - 1).as_bytes().to_vec();
-    let parents_by_name = |name: &[u8]| -> Result<Vec<Box<[u8]>>> {
-        let i = String::from_utf8(name.to_vec())
+    let head_name = VertexName::copy_from(format!("{}", parents.len() - 1).as_bytes());
+    let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
+        let i = String::from_utf8(name.as_ref().to_vec())
             .unwrap()
             .parse::<usize>()
             .unwrap();
@@ -30,10 +30,10 @@ fn main() {
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
     id_map
-        .assign_head(&head_name, &parents_by_name, Group::MASTER)
+        .assign_head(head_name.clone(), &parents_by_name, Group::MASTER)
         .unwrap();
 
-    let head_id = id_map.find_id_by_slice(&head_name).unwrap().unwrap();
+    let head_id = id_map.find_id_by_name(head_name.as_ref()).unwrap().unwrap();
     let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
 
     let dag_dir = tempdir().unwrap();

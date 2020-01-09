@@ -11,7 +11,7 @@ use anyhow::Error;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::{
-    id::{Group, Id},
+    id::{Group, Id, VertexName},
     idmap::IdMap,
     segment::Dag,
     spanset::{SpanSet, SpanSetIter},
@@ -181,8 +181,8 @@ py_class!(class dagindex |py| {
     def build(&self, masternodes: Vec<PyBytes>, othernodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyObject> {
         let map = self.map(py).borrow();
         // All nodes known and nothing needs to be built?
-        if masternodes.iter().all(|n| is_ok_some(map.find_id_by_slice_with_max_group(n.data(py), Group::MASTER)))
-            && othernodes.iter().all(|n| is_ok_some(map.find_id_by_slice(n.data(py)))) {
+        if masternodes.iter().all(|n| is_ok_some(map.find_id_by_name_with_max_group(n.data(py), Group::MASTER)))
+            && othernodes.iter().all(|n| is_ok_some(map.find_id_by_name(n.data(py)))) {
             return Ok(py.None());
         }
         drop(map);
@@ -191,8 +191,8 @@ py_class!(class dagindex |py| {
         let mut map = map.prepare_filesystem_sync().map_pyerr(py)?;
         for (nodes, group) in [(masternodes, Group::MASTER), (othernodes, Group::NON_MASTER)].iter() {
             for node in nodes {
-                let node = node.data(py);
-                map.assign_head(&node, &get_parents, *group).map_pyerr(py)?;
+                let node = VertexName::copy_from(node.data(py));
+                map.assign_head(node, &get_parents, *group).map_pyerr(py)?;
             }
         }
         map.sync().map_pyerr(py)?;
@@ -223,7 +223,7 @@ py_class!(class dagindex |py| {
         // Translate id to node.
         let map = self.map(py).borrow();
         Ok(map
-            .find_slice_by_id(Id(id))
+            .find_name_by_id(Id(id))
             .map_pyerr(py)?
             .map(|node| PyBytes::new(py, node)))
     }
@@ -233,7 +233,7 @@ py_class!(class dagindex |py| {
         let node = node.data(py);
         let map = self.map(py).borrow();
         Ok(map
-            .find_id_by_slice(&node)
+            .find_id_by_name(&node)
             .map_pyerr(py)?.map(|id| id.0))
     }
 
@@ -339,20 +339,20 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
 fn translate_get_parents<'a>(
     py: Python<'a>,
     get_parents: PyObject,
-) -> impl Fn(&[u8]) -> Result<Vec<Box<[u8]>>> + 'a {
-    move |node: &[u8]| -> Result<Vec<Box<[u8]>>> {
+) -> impl Fn(VertexName) -> Result<Vec<VertexName>> + 'a {
+    move |node: VertexName| -> Result<Vec<VertexName>> {
         let mut result = Vec::new();
-        let node = PyBytes::new(py, node);
+        let node = PyBytes::new(py, node.as_ref());
         let parents = get_parents.call(py, (node,), None).into_anyhow_result()?;
         for parent in parents.iter(py).into_anyhow_result()? {
-            let parent = parent
-                .into_anyhow_result()?
-                .cast_as::<PyBytes>(py)
-                .map_err(PyErr::from)
-                .into_anyhow_result()?
-                .data(py)
-                .to_vec()
-                .into_boxed_slice();
+            let parent = VertexName::copy_from(
+                parent
+                    .into_anyhow_result()?
+                    .cast_as::<PyBytes>(py)
+                    .map_err(PyErr::from)
+                    .into_anyhow_result()?
+                    .data(py),
+            );
             result.push(parent);
         }
         Ok(result)

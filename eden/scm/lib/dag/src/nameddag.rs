@@ -10,6 +10,7 @@
 //! Combination of IdMap and Dag.
 
 use crate::id::Group;
+use crate::id::VertexName;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapLike;
 use crate::idmap::SyncableIdMap;
@@ -19,7 +20,7 @@ use anyhow::{bail, Result};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-/// A DAG that uses names (slices) instead of ids as vertexes.
+/// A DAG that uses VertexName instead of ids as vertexes.
 ///
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.
@@ -45,19 +46,21 @@ impl NamedDag {
     pub fn build<F>(
         &mut self,
         parent_names_func: F,
-        master_names: &[Box<[u8]>],
-        non_master_names: &[Box<[u8]>],
+        master_names: &[VertexName],
+        non_master_names: &[VertexName],
     ) -> Result<()>
     where
-        F: Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
+        F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
         // Already include specified nodes?
-        if master_names
+        if master_names.iter().all(|n| {
+            is_ok_some(
+                self.map
+                    .find_id_by_name_with_max_group(n.as_ref(), Group::MASTER),
+            )
+        }) && non_master_names
             .iter()
-            .all(|n| is_ok_some(self.map.find_id_by_slice_with_max_group(n, Group::MASTER)))
-            && non_master_names
-                .iter()
-                .all(|n| is_ok_some(self.map.find_id_by_slice(n)))
+            .all(|n| is_ok_some(self.map.find_id_by_name(n.as_ref())))
         {
             return Ok(());
         }
@@ -104,16 +107,16 @@ impl NamedDag {
 fn non_master_parent_names(
     map: &SyncableIdMap,
     dag: &SyncableDag,
-) -> Result<HashMap<Box<[u8]>, Vec<Box<[u8]>>>> {
+) -> Result<HashMap<VertexName, Vec<VertexName>>> {
     let parent_ids = dag.non_master_parent_ids()?;
     // Map id to name.
     let parent_names = parent_ids
         .iter()
         .map(|(id, parent_ids)| {
-            let name = map.slice(*id)?;
+            let name = map.vertex_name(*id)?;
             let parent_names = parent_ids
                 .into_iter()
-                .map(|p| map.slice(*p))
+                .map(|p| map.vertex_name(*p))
                 .collect::<Result<Vec<_>>>()?;
             Ok((name, parent_names))
         })
@@ -143,7 +146,7 @@ pub fn rebuild_non_master(map: &mut SyncableIdMap, dag: &mut SyncableDag) -> Res
     map.remove_non_master()?;
 
     // Rebuild them.
-    let parent_func = |name: &[u8]| match parents.get(name) {
+    let parent_func = |name: VertexName| match parents.get(&name) {
         Some(names) => Ok(names.iter().cloned().collect()),
         None => bail!(
             "bug: parents of {:?} is missing (in rebuild_non_master)",
@@ -160,11 +163,11 @@ pub fn build<F>(
     map: &mut SyncableIdMap,
     dag: &mut SyncableDag,
     parent_names_func: F,
-    master_heads: &[Box<[u8]>],
-    non_master_heads: &[Box<[u8]>],
+    master_heads: &[VertexName],
+    non_master_heads: &[VertexName],
 ) -> Result<()>
 where
-    F: Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
+    F: Fn(VertexName) -> Result<Vec<VertexName>>,
 {
     // Update IdMap.
     for (nodes, group) in [
@@ -174,7 +177,7 @@ where
     .iter()
     {
         for node in nodes.iter() {
-            map.assign_head(&node, &parent_names_func, *group)?;
+            map.assign_head(node.clone(), &parent_names_func, *group)?;
         }
     }
 

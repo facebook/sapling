@@ -10,12 +10,13 @@
 //! Abstractions used for communication between `(sparse_idmap1, segments1)`
 //! (usually, a client) and `(complete_idmap2, segments2)` (usually, a server).
 //!
-//! When the sparse idmap gets asked to convert unknown id or slice, it goes
+//! When the sparse idmap gets asked to convert unknown id or name, it goes
 //! through the following flow to find the answer:
 //!
-//! - Id -> Slice: Id -> RequestLocationToSlice -> ResponseIdSlicePair -> Slice
-//! - Slice -> Id: Slice -> RequestSliceToLocation -> ResponseIdSlicePair -> Id
+//! - Id -> Name: Id -> RequestLocationToName -> ResponseIdNamePair -> Name
+//! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
+use crate::id::VertexName;
 use crate::idmap::IdMapLike;
 use crate::segment::FirstAncestorConstraint;
 use crate::spanset::SpanSet;
@@ -26,35 +27,35 @@ use std::fmt;
 
 // Request and Response structures -------------------------------------------
 
-/// Request for locating slices (commit hashes) in a Dag.
-/// Useful for converting slices to ids.
+/// Request for locating names (commit hashes) in a Dag.
+/// Useful for converting names to ids.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RequestSliceToLocation {
+pub struct RequestNameToLocation {
     #[serde(rename = "n")]
-    pub slices: Vec<Box<[u8]>>,
+    pub names: Vec<VertexName>,
 
     #[serde(rename = "h")]
-    pub heads: Vec<Box<[u8]>>,
+    pub heads: Vec<VertexName>,
 }
 
-/// Request for converting locations to slices (commit hashes).
-/// Useful for converting ids to slices.
+/// Request for converting locations to names (commit hashes).
+/// Useful for converting ids to names.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RequestLocationToSlice {
+pub struct RequestLocationToName {
     #[serde(rename = "p")]
     pub paths: Vec<AncestorPath>,
 }
 
-/// Response for converting slices to ids or converting slices to ids.
+/// Response for converting names to ids or converting names to ids.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ResponseIdSlicePair {
-    // For converting Id -> Slice, the client provides AncestorPath, the server provides
+pub struct ResponseIdNamePair {
+    // For converting Id -> Name, the client provides AncestorPath, the server provides
     // Vec<Box<[u8]>>.
     //
-    // For converting Slice -> Id, the client provides Box<[u8]>, the server provides
+    // For converting Name -> Id, the client provides Box<[u8]>, the server provides
     // AncestorPath.
     #[serde(rename = "p")]
-    pub path_slices: Vec<(AncestorPath, Vec<Box<[u8]>>)>,
+    pub path_names: Vec<(AncestorPath, Vec<VertexName>)>,
 }
 
 /// The `n`-th first ancestor of `x`. `x~n` in hg revset syntax.
@@ -64,7 +65,7 @@ pub struct ResponseIdSlicePair {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AncestorPath {
     #[serde(rename = "x")]
-    pub x: Box<[u8]>,
+    pub x: VertexName,
 
     #[serde(rename = "n")]
     pub n: u64,
@@ -100,10 +101,10 @@ pub(crate) trait Process<I, O> {
 
 // Basic implementation ------------------------------------------------------
 
-// Slice -> Id, step 1: Slice -> RequestSliceToLocation
+// Name -> Id, step 1: Name -> RequestNameToLocation
 // Works on an incomplete IdMap, client-side.
-impl<M: IdMapLike> Process<Vec<Box<[u8]>>, RequestSliceToLocation> for (&M, &Dag) {
-    fn process(self, slices: Vec<Box<[u8]>>) -> Result<RequestSliceToLocation> {
+impl<M: IdMapLike> Process<Vec<VertexName>, RequestNameToLocation> for (&M, &Dag) {
+    fn process(self, names: Vec<VertexName>) -> Result<RequestNameToLocation> {
         let map = &self.0;
         let dag = &self.1;
         // Only provides heads in the master group, since it's expected that the
@@ -111,16 +112,16 @@ impl<M: IdMapLike> Process<Vec<Box<[u8]>>, RequestSliceToLocation> for (&M, &Dag
         let heads = dag
             .heads_ancestors(dag.master_group()?)?
             .iter()
-            .map(|id| map.slice(id))
-            .collect::<Result<Vec<Box<[u8]>>>>()?;
-        Ok(RequestSliceToLocation { slices, heads })
+            .map(|id| map.vertex_name(id))
+            .collect::<Result<Vec<VertexName>>>()?;
+        Ok(RequestNameToLocation { names, heads })
     }
 }
 
-// Id -> Slice, step 1: Id -> RequestLocationToSlice
+// Id -> Name, step 1: Id -> RequestLocationToName
 // Works on an incomplete IdMap, client-side.
-impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToSlice> for (&M, &Dag) {
-    fn process(self, ids: Vec<Id>) -> Result<RequestLocationToSlice> {
+impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToName> for (&M, &Dag) {
+    fn process(self, ids: Vec<Id>) -> Result<RequestLocationToName> {
         let map = &self.0;
         let dag = &self.1;
         let heads = dag.heads_ancestors(dag.master_group()?)?;
@@ -136,7 +137,7 @@ impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToSlice> for (&M, &Dag) {
                         },
                     )?
                     .ok_or_else(|| format_err!("no segment for id {}", id))?;
-                let x = map.slice(x)?;
+                let x = map.vertex_name(x)?;
                 Ok(AncestorPath {
                     x,
                     n,
@@ -145,27 +146,27 @@ impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToSlice> for (&M, &Dag) {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        Ok(RequestLocationToSlice { paths })
+        Ok(RequestLocationToName { paths })
     }
 }
 
-// Slice -> Id, step 2: RequestSliceToLocation -> ResponseIdSlicePair
+// Name -> Id, step 2: RequestNameToLocation -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
-impl<M: IdMapLike> Process<RequestSliceToLocation, ResponseIdSlicePair> for (&M, &Dag) {
-    fn process(self, request: RequestSliceToLocation) -> Result<ResponseIdSlicePair> {
+impl<M: IdMapLike> Process<RequestNameToLocation, ResponseIdNamePair> for (&M, &Dag) {
+    fn process(self, request: RequestNameToLocation) -> Result<ResponseIdNamePair> {
         let map = &self.0;
         let dag = &self.1;
         let heads = request
             .heads
             .into_iter()
-            .map(|s| map.id(&s))
+            .map(|s| map.vertex_id(s))
             .collect::<Result<Vec<Id>>>()?;
         let heads = SpanSet::from_spans(heads);
-        let path_slices = request
-            .slices
+        let path_names = request
+            .names
             .into_iter()
-            .map(|slice| -> Result<_> {
-                let id = map.id(&slice)?;
+            .map(|name| -> Result<_> {
+                let id = map.vertex_id(name.clone())?;
                 let (x, n) = dag
                     .to_first_ancestor_nth(
                         id,
@@ -173,67 +174,67 @@ impl<M: IdMapLike> Process<RequestSliceToLocation, ResponseIdSlicePair> for (&M,
                             heads: heads.clone(),
                         },
                     )?
-                    .ok_or_else(|| format_err!("no path found for slice {:?}", slice))?;
-                let head = map.slice(x)?;
+                    .ok_or_else(|| format_err!("no path found for name {:?}", &name))?;
+                let x = map.vertex_name(x)?;
                 Ok((
                     AncestorPath {
-                        x: head.to_vec().into_boxed_slice(),
+                        x,
                         n,
                         batch_size: 1,
                     },
-                    vec![slice.to_vec().into_boxed_slice()],
+                    vec![name],
                 ))
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(ResponseIdSlicePair { path_slices })
+        Ok(ResponseIdNamePair { path_names })
     }
 }
 
-// Id -> Slice, step 2: RequestLocationToSlice -> ResponseIdSlicePair
+// Id -> Name, step 2: RequestLocationToName -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
-impl<M: IdMapLike> Process<RequestLocationToSlice, ResponseIdSlicePair> for (&M, &Dag) {
-    fn process(self, request: RequestLocationToSlice) -> Result<ResponseIdSlicePair> {
+impl<M: IdMapLike> Process<RequestLocationToName, ResponseIdNamePair> for (&M, &Dag) {
+    fn process(self, request: RequestLocationToName) -> Result<ResponseIdNamePair> {
         let map = &self.0;
         let dag = &self.1;
-        let path_slices = request
+        let path_names = request
             .paths
             .into_iter()
             .map(|path| -> Result<_> {
-                let id = map.id(&path.x)?;
+                let id = map.vertex_id(path.x.clone())?;
                 let mut id = dag.first_ancestor_nth(id, path.n)?;
-                let slices = (0..path.batch_size)
-                    .map(|i| -> Result<Box<[u8]>> {
+                let names = (0..path.batch_size)
+                    .map(|i| -> Result<VertexName> {
                         if i > 0 {
                             id = dag.first_ancestor_nth(id, 1)?;
                         }
-                        let slice = map.slice(id)?;
-                        Ok(slice.to_vec().into_boxed_slice())
+                        let name = map.vertex_name(id)?;
+                        Ok(name)
                     })
-                    .collect::<Result<Vec<Box<[u8]>>>>()?;
-                debug_assert_eq!(path.batch_size, slices.len() as u64);
-                Ok((path, slices))
+                    .collect::<Result<Vec<VertexName>>>()?;
+                debug_assert_eq!(path.batch_size, names.len() as u64);
+                Ok((path, names))
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(ResponseIdSlicePair { path_slices })
+        Ok(ResponseIdNamePair { path_names })
     }
 }
 
-// Slice -> Id or Id -> Slice, step 3: Apply RequestSliceToLocation to a local IdMap.
+// Name -> Id or Id -> Name, step 3: Apply RequestNameToLocation to a local IdMap.
 // Works on an incomplete IdMap, client-side.
-impl<'a> Process<&ResponseIdSlicePair, ()> for (&'a mut IdMap, &'a Dag) {
-    fn process(mut self, res: &ResponseIdSlicePair) -> Result<()> {
+impl<'a> Process<&ResponseIdNamePair, ()> for (&'a mut IdMap, &'a Dag) {
+    fn process(mut self, res: &ResponseIdNamePair) -> Result<()> {
         let map = &mut self.0;
         let dag = &self.1;
-        for (path, slices) in res.path_slices.iter() {
+        for (path, names) in res.path_names.iter() {
             let x: Id = map
-                .find_id_by_slice(&path.x)?
-                .ok_or_else(|| format_err!("server referred an unknown slice {:?}", &path.x))?;
+                .find_id_by_name(path.x.as_ref())?
+                .ok_or_else(|| format_err!("server referred an unknown name {:?}", &path.x))?;
             let mut id = dag.first_ancestor_nth(x, path.n)?;
-            for (i, slice) in slices.iter().enumerate() {
+            for (i, name) in names.iter().enumerate() {
                 if i > 0 {
                     id = dag.first_ancestor_nth(x, 1)?;
                 }
-                map.insert(id, slice)?;
+                map.insert(id, name.as_ref())?;
             }
         }
         Ok(())

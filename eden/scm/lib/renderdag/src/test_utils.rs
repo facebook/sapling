@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
-use dag::{Group, Id, IdMap};
+use dag::{Group, Id, IdMap, VertexName};
 use tempfile::tempdir;
 
 use crate::render::{Ancestor, Renderer};
@@ -29,19 +29,22 @@ pub(crate) fn render_string(
     let dir = tempdir().unwrap();
     let mut id_map = IdMap::open(dir.path().join("id")).unwrap();
     let parents = drawdag::parse(dag);
-    let parents_by_name = move |name: &[u8]| -> Result<Vec<Box<[u8]>>> {
-        Ok(parents[&String::from_utf8(name.to_vec()).unwrap()]
-            .iter()
-            .map(|p| p.as_bytes().to_vec().into_boxed_slice())
-            .collect())
+    let parents_by_name = move |name: VertexName| -> Result<Vec<VertexName>> {
+        Ok({
+            let name = String::from_utf8(name.as_ref().to_vec()).unwrap();
+            parents[&name]
+                .iter()
+                .map(|p| VertexName::copy_from(p.as_bytes()))
+                .collect()
+        })
     };
 
     let mut last_head = 0;
     for head in heads.iter() {
         id_map
-            .assign_head(head.as_bytes(), &parents_by_name, Group::MASTER)
+            .assign_head(head.as_bytes().into(), &parents_by_name, Group::MASTER)
             .expect("can assign head");
-        let Id(head_id) = id_map.find_id_by_slice(head.as_bytes()).unwrap().unwrap();
+        let Id(head_id) = id_map.find_id_by_name(head.as_bytes()).unwrap().unwrap();
         last_head = head_id;
     }
 
@@ -49,21 +52,18 @@ pub(crate) fn render_string(
         .iter()
         .map(|(desc, anc)| {
             (
-                id_map.find_id_by_slice(desc.as_bytes()).unwrap().unwrap(),
-                id_map.find_id_by_slice(anc.as_bytes()).unwrap().unwrap(),
+                id_map.find_id_by_name(desc.as_bytes()).unwrap().unwrap(),
+                id_map.find_id_by_name(anc.as_bytes()).unwrap().unwrap(),
             )
         })
         .collect();
     let missing: HashSet<_> = missing
         .iter()
-        .map(|node| id_map.find_id_by_slice(node.as_bytes()).unwrap().unwrap())
+        .map(|node| id_map.find_id_by_name(node.as_bytes()).unwrap().unwrap())
         .collect();
 
     for reserve in reserve.iter() {
-        let reserve_id = id_map
-            .find_id_by_slice(reserve.as_bytes())
-            .unwrap()
-            .unwrap();
+        let reserve_id = id_map.find_id_by_name(reserve.as_bytes()).unwrap().unwrap();
         renderer.reserve(reserve_id);
     }
 
@@ -90,7 +90,7 @@ pub(crate) fn render_string(
             })
             .collect();
         let name =
-            String::from_utf8(id_map.find_slice_by_id(node).unwrap().unwrap().to_vec()).unwrap();
+            String::from_utf8(id_map.find_name_by_id(node).unwrap().unwrap().to_vec()).unwrap();
         let message = match messages.get(name.as_str()) {
             Some(message) => format!("{}\n{}", name, message),
             None => name.clone(),

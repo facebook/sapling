@@ -9,7 +9,7 @@
 //!
 //! See [`IdMap`] for the main structure.
 
-use crate::id::{Group, Id};
+use crate::id::{Group, Id, VertexName};
 use anyhow::{bail, ensure, format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
@@ -21,7 +21,7 @@ use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicU64};
 
-/// Bi-directional mapping between an integer id and `[u8]`.
+/// Bi-directional mapping between an integer id and a name (`[u8]`).
 pub struct IdMap {
     log: log::Log,
     path: PathBuf,
@@ -40,10 +40,10 @@ pub struct SyncableIdMap<'a> {
 }
 
 impl IdMap {
-    const INDEX_ID_TO_SLICE: usize = 0;
-    const INDEX_SLICE_TO_ID: usize = 1;
+    const INDEX_ID_TO_NAME: usize = 0;
+    const INDEX_NAME_TO_ID: usize = 1;
 
-    /// Magic bytes in `Log` that indicates "remove all non-master id->slice
+    /// Magic bytes in `Log` that indicates "remove all non-master id->name
     /// mappings". A valid entry has at least 8 bytes so does not conflict
     /// with this.
     const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
@@ -71,7 +71,7 @@ impl IdMap {
                     vec![log::IndexOutput::Reference(0..8)]
                 }
             })
-            .index("slice", |data| {
+            .index("name", |data| {
                 if data.len() >= 8 {
                     vec![log::IndexOutput::Reference(8..data.len() as u64)]
                 } else {
@@ -136,11 +136,11 @@ impl IdMap {
         Ok(())
     }
 
-    /// Find slice by a specified integer id.
-    pub fn find_slice_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
+    /// Find name by a specified integer id.
+    pub fn find_name_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
         let mut key = Vec::with_capacity(8);
         key.write_u64::<BigEndian>(id.0).unwrap();
-        let key = self.log.lookup(Self::INDEX_ID_TO_SLICE, key)?.nth(0);
+        let key = self.log.lookup(Self::INDEX_ID_TO_NAME, key)?.nth(0);
         match key {
             Some(Ok(entry)) => {
                 ensure!(entry.len() >= 8, "index key should have 8 bytes at least");
@@ -151,17 +151,17 @@ impl IdMap {
         }
     }
 
-    /// Find the integer id matching the given slice.
-    pub fn find_id_by_slice(&self, slice: &[u8]) -> Result<Option<Id>> {
-        let key = self.log.lookup(Self::INDEX_SLICE_TO_ID, slice)?.nth(0);
+    /// Find the integer id matching the given name.
+    pub fn find_id_by_name(&self, name: &[u8]) -> Result<Option<Id>> {
+        let key = self.log.lookup(Self::INDEX_NAME_TO_ID, name)?.nth(0);
         match key {
             Some(Ok(mut entry)) => {
                 ensure!(entry.len() >= 8, "index key should have 8 bytes at least");
                 let id = Id(entry.read_u64::<BigEndian>().unwrap());
                 // Double check. Id should <= next_free_id. This is useful for 'remove_non_master'
                 // and re-insert ids.
-                // This is because 'remove_non_master' can only (efficiently) affect the id->slice
-                // index, not the slice->id index.
+                // This is because 'remove_non_master' only removes the id->name index, not
+                // the name->id index.
                 let group = id.group();
                 if group != Group::MASTER && self.next_free_id(group)? <= id {
                     Ok(None)
@@ -174,13 +174,13 @@ impl IdMap {
         }
     }
 
-    /// Similar to `find_slice_by_id`, but returns None if group > `max_group`.
-    pub fn find_id_by_slice_with_max_group(
+    /// Similar to `find_name_by_id`, but returns None if group > `max_group`.
+    pub fn find_id_by_name_with_max_group(
         &self,
-        slice: &[u8],
+        name: &[u8],
         max_group: Group,
     ) -> Result<Option<Id>> {
-        Ok(self.find_id_by_slice(slice)?.and_then(|id| {
+        Ok(self.find_id_by_name(name)?.and_then(|id| {
             if id.group() <= max_group {
                 Some(id)
             } else {
@@ -189,28 +189,28 @@ impl IdMap {
         }))
     }
 
-    /// Insert a new entry mapping from a slice to an id.
+    /// Insert a new entry mapping from a name to an id.
     ///
     /// Errors if the new entry conflicts with existing entries.
-    pub fn insert(&mut self, id: Id, slice: &[u8]) -> Result<()> {
+    pub fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         let group = id.group();
         if id < self.next_free_id(group)? {
-            let existing_slice = self.find_slice_by_id(id)?;
-            if let Some(existing_slice) = existing_slice {
-                if existing_slice == slice {
+            let existing_name = self.find_name_by_id(id)?;
+            if let Some(existing_name) = existing_name {
+                if existing_name == name {
                     return Ok(());
                 } else {
                     bail!(
                         "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                         id,
-                        slice,
+                        name,
                         id,
-                        existing_slice
+                        existing_name
                     );
                 }
             }
         }
-        let existing_id = self.find_id_by_slice(slice)?;
+        let existing_id = self.find_id_by_name(name)?;
         if let Some(existing_id) = existing_id {
             // Allow re-assigning Ids from a higher group to a lower group.
             // For example, when a non-master commit gets merged into the
@@ -223,9 +223,9 @@ impl IdMap {
                 bail!(
                     "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                     id,
-                    slice,
+                    name,
                     existing_id,
-                    slice
+                    name
                 );
             }
             // Mark "need_rebuild_non_master". This prevents "sync" until
@@ -234,9 +234,9 @@ impl IdMap {
             self.need_rebuild_non_master = true;
         }
 
-        let mut data = Vec::with_capacity(8 + slice.len());
+        let mut data = Vec::with_capacity(8 + name.len());
         data.write_u64::<BigEndian>(id.0).unwrap();
-        data.write_all(slice).unwrap();
+        data.write_all(name).unwrap();
         self.log.append(data)?;
         let next_free_id = self.cached_next_free_ids[group.0].get_mut();
         if id.0 >= *next_free_id {
@@ -267,7 +267,7 @@ impl IdMap {
         let lower_bound = lower_bound_id.to_bytearray();
         let upper_bound = upper_bound_id.to_bytearray();
         let range = &lower_bound[..]..=&upper_bound[..];
-        let mut iter = log.lookup_range(Self::INDEX_ID_TO_SLICE, range)?.rev();
+        let mut iter = log.lookup_range(Self::INDEX_ID_TO_NAME, range)?.rev();
         let id = match iter.nth(0) {
             None => lower_bound_id,
             Some(Ok((key, _))) => Id(Cursor::new(key).read_u64::<BigEndian>()? + 1),
@@ -295,9 +295,14 @@ impl IdMap {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
-    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F, group: Group) -> Result<Id>
+    pub fn assign_head<F>(
+        &mut self,
+        head: VertexName,
+        parents_by_name: F,
+        group: Group,
+    ) -> Result<Id>
     where
-        F: Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
+        F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
         // There are some interesting cases to optimize the numbers:
         //
@@ -338,26 +343,26 @@ impl IdMap {
         // Emulate the stack in heap to avoid overflow.
         enum Todo {
             /// Visit parents. Finally assign self.
-            Visit(Box<[u8]>),
+            Visit(VertexName),
 
             /// Assign a number if not assigned. Parents are visited.
-            Assign(Box<[u8]>),
+            Assign(VertexName),
         }
         use Todo::{Assign, Visit};
 
-        let mut todo_stack: Vec<Todo> = vec![Visit(head.to_vec().into_boxed_slice())];
+        let mut todo_stack: Vec<Todo> = vec![Visit(head.clone())];
         while let Some(todo) = todo_stack.pop() {
             match todo {
                 Visit(head) => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
-                    if let None = self.find_id_by_slice_with_max_group(&head, group)? {
+                    if let None = self.find_id_by_name_with_max_group(head.as_ref(), group)? {
                         todo_stack.push(Todo::Assign(head.clone()));
                         // If the parent was not assigned, or was assigned to a higher group,
                         // (re-)assign the parent to this group.
-                        for unassigned_parent in parents_by_name(&head)?
+                        for unassigned_parent in parents_by_name(head)?
                             .into_iter()
-                            .filter(|p| match self.find_id_by_slice_with_max_group(p, group) {
+                            .filter(|p| match self.find_id_by_name_with_max_group(p.as_ref(), group) {
                                 Ok(Some(_)) => false,
                                 _ => true,
                             })
@@ -369,38 +374,38 @@ impl IdMap {
                     }
                 }
                 Assign(head) => {
-                    if let None = self.find_id_by_slice_with_max_group(&head, group)? {
+                    if let None = self.find_id_by_name_with_max_group(head.as_ref(), group)? {
                         let id = self.next_free_id(group)?;
-                        self.insert(id, &head)?;
+                        self.insert(id, head.as_ref())?;
                     }
                 }
             }
         }
 
-        self.find_id_by_slice(head)
+        self.find_id_by_name(head.as_ref())
             .map(|v| v.expect("head should be assigned now"))
     }
 
-    /// Translate `get_parents` from taking slices to taking `Id`s.
+    /// Translate `get_parents` from taking names to taking `Id`s.
     pub fn build_get_parents_by_id<'a>(
         &'a self,
-        get_parents_by_name: &'a dyn Fn(&[u8]) -> Result<Vec<Box<[u8]>>>,
+        get_parents_by_name: &'a dyn Fn(VertexName) -> Result<Vec<VertexName>>,
     ) -> impl Fn(Id) -> Result<Vec<Id>> + 'a {
         let func = move |id: Id| -> Result<Vec<Id>> {
-            let name = match self.find_slice_by_id(id)? {
-                Some(name) => name,
+            let name = match self.find_name_by_id(id)? {
+                Some(name) => VertexName::copy_from(name),
                 None => {
-                    let name = match self.find_slice_by_id(id) {
+                    let name = match self.find_name_by_id(id) {
                         Ok(Some(name)) => format!("{} ({:?})", id, name),
                         _ => format!("{}", id),
                     };
                     bail!("logic error: {} is referred but not assigned", name)
                 }
             };
-            let parent_names = get_parents_by_name(&name)?;
+            let parent_names: Vec<VertexName> = get_parents_by_name(name.clone())?;
             let mut result = Vec::with_capacity(parent_names.len());
             for parent_name in parent_names {
-                if let Some(parent_id) = self.find_id_by_slice(&parent_name)? {
+                if let Some(parent_id) = self.find_id_by_name(parent_name.as_ref())? {
                     ensure!(
                         parent_id < id,
                         "parent {} {:?} should <= {} {:?}",
@@ -454,13 +459,13 @@ impl fmt::Debug for IdMap {
         for data in self.log.iter() {
             if let Ok(mut data) = data {
                 let id = data.read_u64::<BigEndian>().unwrap();
-                let mut slice = Vec::with_capacity(20);
-                data.read_to_end(&mut slice).unwrap();
-                let name = if slice.len() == 20 {
-                    let id20 = types::Id20::from_slice(&slice).unwrap();
+                let mut name = Vec::with_capacity(20);
+                data.read_to_end(&mut name).unwrap();
+                let name = if name.len() == 20 {
+                    let id20 = types::Id20::from_slice(&name).unwrap();
                     id20.to_hex()
                 } else {
-                    String::from_utf8_lossy(&slice).to_string()
+                    String::from_utf8_lossy(&name).to_string()
                 };
                 let id = Id(id);
                 write!(f, "  {}: {},\n", name, id)?;
@@ -485,23 +490,22 @@ impl<'a> DerefMut for SyncableIdMap<'a> {
     }
 }
 
-/// Minimal APIs for converting between Id and slice.
+/// Minimal APIs for converting between Id and name.
 pub trait IdMapLike {
-    fn id(&self, slice: &[u8]) -> Result<Id>;
-    fn slice(&self, id: Id) -> Result<Box<[u8]>>;
+    fn vertex_id(&self, name: VertexName) -> Result<Id>;
+    fn vertex_name(&self, id: Id) -> Result<VertexName>;
 }
 
 impl IdMapLike for IdMap {
-    fn id(&self, slice: &[u8]) -> Result<Id> {
-        self.find_id_by_slice(slice)?
-            .ok_or_else(|| format_err!("{:?} not found", slice))
+    fn vertex_id(&self, name: VertexName) -> Result<Id> {
+        self.find_id_by_name(name.as_ref())?
+            .ok_or_else(|| format_err!("{:?} not found", name))
     }
-    fn slice(&self, id: Id) -> Result<Box<[u8]>> {
-        Ok(self
-            .find_slice_by_id(id)?
-            .ok_or_else(|| format_err!("{} not found", id))?
-            .to_vec()
-            .into_boxed_slice())
+    fn vertex_name(&self, id: Id) -> Result<VertexName> {
+        let bytes = self
+            .find_name_by_id(id)?
+            .ok_or_else(|| format_err!("{} not found", id))?;
+        Ok(VertexName::copy_from(bytes))
     }
 }
 
@@ -537,17 +541,17 @@ mod tests {
         assert_eq!(map.next_free_id(Group::NON_MASTER).unwrap(), id + 2);
 
         for _ in 0..=1 {
-            assert_eq!(map.find_slice_by_id(Id(1)).unwrap().unwrap(), b"abc");
-            assert_eq!(map.find_slice_by_id(Id(2)).unwrap().unwrap(), b"def");
-            assert!(map.find_slice_by_id(Id(3)).unwrap().is_none());
-            assert_eq!(map.find_slice_by_id(Id(10)).unwrap().unwrap(), b"ghi");
+            assert_eq!(map.find_name_by_id(Id(1)).unwrap().unwrap(), b"abc");
+            assert_eq!(map.find_name_by_id(Id(2)).unwrap().unwrap(), b"def");
+            assert!(map.find_name_by_id(Id(3)).unwrap().is_none());
+            assert_eq!(map.find_name_by_id(Id(10)).unwrap().unwrap(), b"ghi");
 
-            assert_eq!(map.find_id_by_slice(b"abc").unwrap().unwrap().0, 1);
-            assert_eq!(map.find_id_by_slice(b"def").unwrap().unwrap().0, 2);
-            assert_eq!(map.find_id_by_slice(b"ghi").unwrap().unwrap().0, 10);
-            assert_eq!(map.find_id_by_slice(b"jkl").unwrap().unwrap(), id);
-            assert_eq!(map.find_id_by_slice(b"jkl2").unwrap().unwrap().0, 15);
-            assert!(map.find_id_by_slice(b"jkl3").unwrap().is_none());
+            assert_eq!(map.find_id_by_name(b"abc").unwrap().unwrap().0, 1);
+            assert_eq!(map.find_id_by_name(b"def").unwrap().unwrap().0, 2);
+            assert_eq!(map.find_id_by_name(b"ghi").unwrap().unwrap().0, 10);
+            assert_eq!(map.find_id_by_name(b"jkl").unwrap().unwrap(), id);
+            assert_eq!(map.find_id_by_name(b"jkl2").unwrap().unwrap().0, 15);
+            assert!(map.find_id_by_name(b"jkl3").unwrap().is_none());
             // HACK: allow sync with re-assigned ids.
             map.need_rebuild_non_master = false;
             map.sync().unwrap();

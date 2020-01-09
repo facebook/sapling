@@ -9,13 +9,66 @@
 //!
 //! Defines types around [`Id`].
 
+pub use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops;
 
-/// An [`Id`] representing a node in the graph.
+/// An integer [`Id`] representing a node in the graph.
 /// [`Id`]s are topologically sorted.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Id(pub u64);
+
+/// Name of a vertex in the graph.
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct VertexName(Bytes);
+
+impl AsRef<[u8]> for VertexName {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl VertexName {
+    pub fn to_hex(&self) -> String {
+        const HEX_CHARS: &[u8] = b"0123456789abcdef";
+        let mut v = Vec::with_capacity(self.0.len() * 2);
+        for &byte in self.as_ref() {
+            v.push(HEX_CHARS[(byte >> 4) as usize]);
+            v.push(HEX_CHARS[(byte & 0xf) as usize]);
+        }
+        unsafe { String::from_utf8_unchecked(v) }
+    }
+
+    pub fn copy_from(value: &[u8]) -> Self {
+        Self(value.to_vec().into())
+    }
+}
+
+impl<T> From<T> for VertexName
+where
+    Bytes: From<T>,
+{
+    fn from(value: T) -> Self {
+        Self(Bytes::from(value))
+    }
+}
+
+impl fmt::Debug for VertexName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.0.len() >= 20 {
+            // Use hex format for long names (ex. binary commit hashes).
+            write!(f, "{}", self.to_hex())
+        } else {
+            // Do not use hex if it's a valid utf-8 name.
+            match std::str::from_utf8(self.as_ref()) {
+                Ok(s) => write!(f, "{}", s),
+                Err(_) => write!(f, "{}", self.to_hex()),
+            }
+        }
+    }
+}
 
 /// An integer that separates distinct groups of [`Id`]s.
 ///

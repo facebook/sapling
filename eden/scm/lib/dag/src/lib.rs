@@ -18,7 +18,7 @@ pub mod protocol;
 pub mod segment;
 pub mod spanset;
 
-pub use id::{Group, Id};
+pub use id::{Group, Id, VertexName};
 pub use idmap::IdMap;
 pub use nameddag::NamedDag;
 pub use segment::Dag;
