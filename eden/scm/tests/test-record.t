@@ -130,7 +130,7 @@ With "copy from"
   record change 3/3 to 'B'? [Ynesfdaq?] y
   
 
-BUG: '+0' should not be committed.
+'+0' is left not committed:
 
   $ hg log -r . -p -T '{desc}\n' --git
   B
@@ -139,10 +139,18 @@ BUG: '+0' should not be committed.
   rename to B
   --- a/A
   +++ b/B
-  @@ -1,3 +1,4 @@
-  +0
+  @@ -1,3 +1,3 @@
    1
   -2
    3
   +5
   
+  $ hg diff --git
+  diff --git a/B b/B
+  --- a/B
+  +++ b/B
+  @@ -1,3 +1,4 @@
+  +0
+   1
+   3
+   5

@@ -18,6 +18,7 @@ import os
 import re
 import stat
 import tempfile
+from typing import Dict
 
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import renderdag
@@ -184,6 +185,18 @@ def newandmodified(chunks, originalchunks):
     return newlyaddedandmodifiedfiles
 
 
+def extractcopies(chunks):
+    # type: (...) -> Dict[str, str]
+    result = {}
+    for chunk in chunks:
+        if ishunk(chunk):
+            copyfrom = chunk.header.copyfrom()
+            if copyfrom:
+                copyto = chunk.header.filename()
+                result[copyto] = copyfrom
+    return result
+
+
 def comparechunks(chunks, headers):
     """
     Determine whether the sets of chunks is the same as the original set of
@@ -346,6 +359,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             tobackup = [
                 f for f in newfiles if f in modified or f in newlyaddedandmodifiedfiles
             ]
+        copied = extractcopies(chunks)
+        tobackup += sorted(copied.keys())  # backup "copyto" - delete by step 3a
+        tobackup += sorted(copied.values())  # backup "copyfrom" - rewrite by step 3a
         backups = {}
         if tobackup:
             backupdir = repo.localvfs.join("record-backups")
@@ -357,6 +373,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         try:
             # backup continues
             for f in tobackup:
+                if not repo.wvfs.exists(f):
+                    continue
                 fd, tmpname = tempfile.mkstemp(dir=backupdir)
                 os.close(fd)
                 ui.debug("backup %r as %r\n" % (f, tmpname))
@@ -384,13 +402,23 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
                 fp.seek(0)
 
             [os.unlink(repo.wjoin(c)) for c in newlyaddedandmodifiedfiles]
-            # 3a. apply filtered patch to clean repo  (clean)
+
+            # 3a. Prepare "copyfrom" -> "copyto" files. Write "copyfrom"
+            # and remove "copyto".
+            # This is used by patch._applydiff. If _applydiff reads directly
+            # from repo["."], not repo.wvfs, then this could be unnecessary.
+            for copyto, copyfrom in copied.items():
+                content = repo["."][copyfrom].data()
+                repo.wvfs.write(copyfrom, content)
+                repo.wvfs.tryunlink(copyto)
+
+            # 3b. apply filtered patch to clean repo  (clean)
             if backups:
                 # Equivalent to hg.revert
                 m = scmutil.matchfiles(repo, backups.keys())
                 mergemod.update(repo, repo.dirstate.p1(), False, True, matcher=m)
 
-            # 3b. (apply)
+            # 3c. (apply)
             if dopatch:
                 try:
                     ui.debug("applying patch\n")

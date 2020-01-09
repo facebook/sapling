@@ -24,6 +24,7 @@ import re
 import shutil
 import tempfile
 import zlib
+from typing import Optional
 
 from . import (
     copies,
@@ -877,6 +878,7 @@ class header(object):
     pretty_re = re.compile("(?:new file|deleted file) ")
     special_re = re.compile("(?:index|deleted|copy|rename) ")
     newfile_re = re.compile("(?:new file)")
+    copyre = re.compile("(?:copy|rename) from (.*)$")
 
     def __init__(self, header):
         self.header = header
@@ -930,6 +932,15 @@ class header(object):
 
     def isnewfile(self):
         return any(self.newfile_re.match(h) for h in self.header)
+
+    def copyfrom(self):
+        # type: () -> Optional[str]
+        """Return the copy-from or rename-from from path, or None"""
+        for h in self.header:
+            matched = self.copyre.match(h)
+            if matched:
+                return matched.group(1)
+        return None
 
     def special(self):
         # Special files are shown only at the header level and not at the hunk
