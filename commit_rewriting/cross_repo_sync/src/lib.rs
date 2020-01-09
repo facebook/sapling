@@ -434,6 +434,10 @@ where
         self.repos.get_bookmark_renamer()
     }
 
+    pub fn get_reverse_bookmark_renamer(&self) -> &BookmarkRenamer {
+        self.repos.get_reverse_bookmark_renamer()
+    }
+
     pub fn rename_bookmark(&self, bookmark: &BookmarkName) -> Option<BookmarkName> {
         self.repos.get_bookmark_renamer()(bookmark)
     }
@@ -1164,6 +1168,19 @@ impl CommitSyncRepos {
             CommitSyncRepos::SmallToLarge {
                 bookmark_renamer, ..
             } => bookmark_renamer,
+        }
+    }
+
+    pub(crate) fn get_reverse_bookmark_renamer(&self) -> &BookmarkRenamer {
+        match self {
+            CommitSyncRepos::LargeToSmall {
+                reverse_bookmark_renamer,
+                ..
+            } => reverse_bookmark_renamer,
+            CommitSyncRepos::SmallToLarge {
+                reverse_bookmark_renamer,
+                ..
+            } => reverse_bookmark_renamer,
         }
     }
 }
