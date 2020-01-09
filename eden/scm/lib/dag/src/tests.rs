@@ -11,6 +11,7 @@ use crate::protocol::{Process, RequestLocationToSlice, RequestSliceToLocation};
 use crate::segment::Dag;
 use crate::segment::FirstAncestorConstraint;
 use crate::spanset::SpanSet;
+use crate::NamedDag;
 use anyhow::Result;
 use tempfile::tempdir;
 
@@ -56,7 +57,7 @@ fn test_protocols() {
             0-2------4-5-6-7--------10-11
 Lv0: RH0-0[] R1-1[] 2-2[0] 3-3[1] H4-4[2, 3] H5-7[4] 8-9[6] H10-11[7, 9]
 Lv1: R0-0[] R1-1[] 2-4[0, 1] 5-11[4]
-Lv2: R0-4[] 5-11[4]
+Lv2: R0-0[] R1-11[0]
 Lv3: R0-11[]"#
     );
 
@@ -190,8 +191,9 @@ Lv1: R0-6[]"#
             2--4--5--6
 Lv0: RH0-0[] R1-1[] R2-2[] R3-3[] 4-4[2, 3] 5-5[1, 4] H6-6[0, 5]
 Lv1: R0-0[] R1-1[] R2-4[] 5-6[1, 4, 0]
-Lv2: R0-0[] R1-6[0]
-Lv3: R0-6[]"#
+Lv2: R0-0[] R1-1[] R2-6[1, 0]
+Lv3: R0-0[] R1-6[0]
+Lv4: R0-6[]"#
     );
 
     assert_eq!(
@@ -311,7 +313,7 @@ Lv1: R0-3[] N0-N1[1]
                 \            \
                  -------------p---q
 Lv0: RH0-1[] H2-3[1] N0-N1[1] N2-N3[N1]
-Lv1: R0-3[] N0-N1[1] N2-N3[N1]
+Lv1: R0-3[] N0-N3[1]
 
 0---1---2---3---4---5---6--------H---I
      \               \          /
@@ -319,8 +321,7 @@ Lv1: R0-3[] N0-N1[1] N2-N3[N1]
                 \            \
                  -------------p---q
 Lv0: RH0-1[] H2-3[1] H4-6[3] N0-N1[1] N2-N3[N1]
-Lv1: R0-3[] 4-6[3] N0-N1[1] N2-N3[N1]
-Lv2: R0-6[] N0-N3[1]
+Lv1: R0-6[] N0-N3[1]
 
 0---1---2---3---4---5---6--------H---I
      \               \          /
@@ -328,8 +329,7 @@ Lv2: R0-6[] N0-N3[1]
                 \            \
                  -------------N7--N8
 Lv0: RH0-1[] H2-3[1] H4-6[3] N0-N1[1] N2-N3[N1] N4-N6[5] N7-N8[N3, N6]
-Lv1: R0-3[] 4-6[3] N0-N1[1] N2-N3[N1] N4-N8[5, N3]
-Lv2: R0-6[] N0-N3[1] N4-N8[5, N3]
+Lv1: R0-6[] N0-N3[1] N4-N8[5, N3]
 
 0---1---2---3---4---5---6--------11--12
      \               \          /
@@ -337,9 +337,8 @@ Lv2: R0-6[] N0-N3[1] N4-N8[5, N3]
                 \            \
                  -------------N7--N8
 Lv0: RH0-1[] H2-3[1] H4-6[3] 7-10[5] H11-12[6, 10] N0-N1[1] N2-N3[N1] N4-N6[5] N7-N8[N3, N6]
-Lv1: R0-3[] 4-6[3] 7-12[5, 6] N0-N1[1] N2-N3[N1] N4-N8[5, N3]
-Lv2: R0-6[] 7-12[5, 6] N0-N3[1] N4-N8[5, N3]
-Lv3: R0-12[] N0-N8[1, 5]"#
+Lv1: R0-6[] 7-12[5, 6] N0-N3[1] N4-N8[5, N3]
+Lv2: R0-12[] N0-N8[1, 5]"#
     );
 
     // 'm' has 2 ids: 8 (master) and 5 (non-master).
@@ -561,7 +560,9 @@ fn test_heads() {
     0 3   7
 Lv0: RH0-2[] R3-4[] 5-5[3] 6-6[4, 5] R7-9[] 10-10[8] 11-11[7]
 Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-9[] 10-10[8] 11-11[7]
-Lv2: R0-2[] R3-6[] R7-9[] 10-10[8] 11-11[7]"#
+Lv2: R0-2[] R3-6[] R7-9[] 10-10[8] 11-11[7]
+Lv3: R0-2[] R3-6[] R7-9[] 10-10[8] 11-11[7]
+Lv4: R0-2[] R3-6[] R7-9[] 10-10[8] 11-11[7]"#
     );
 
     let dag = result.dag;
@@ -778,8 +779,8 @@ struct BuildSegmentResult {
 /// Return the ASCII DAG and segments strings, together with the IdMap and Dag.
 fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
-    let mut id_map = IdMap::open(dir.path().join("id")).unwrap();
-    let mut dag = Dag::open(dir.path().join("seg")).unwrap();
+    let mut named_dag = NamedDag::open(dir.path().join("n")).unwrap();
+    named_dag.dag.set_new_segment_size(segment_size);
 
     let parents = drawdag::parse(&text);
     let parents_by_name = |name: &[u8]| -> Result<Vec<Box<[u8]>>> {
@@ -792,27 +793,24 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
     let ascii = heads
         .split(' ')
         .map(|head| {
+            let binary_head = head.as_bytes().to_vec().into_boxed_slice();
+
             // Assign to non-master if the name starts with a lowercase character.
-            let group = if head.chars().nth(0).unwrap().is_lowercase() {
-                Group::NON_MASTER
+            let (master, other) = if head.chars().nth(0).unwrap().is_lowercase() {
+                (vec![], vec![binary_head])
             } else {
-                Group::MASTER
+                (vec![binary_head], vec![])
             };
-            let head = head.as_bytes();
-            id_map.assign_head(head, &parents_by_name, group).unwrap();
-            let head_id = id_map.find_id_by_slice(head).unwrap().unwrap();
-            let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
-            dag.set_new_segment_size(segment_size);
-            dag.build_segments_volatile(head_id, &parents_by_id)
-                .unwrap();
-            format!("{}\n{}", id_map.replace(text), dag.dump())
+
+            named_dag.build(&parents_by_name, &master, &other).unwrap();
+            format!("{}\n{}", named_dag.map.replace(text), named_dag.dag.dump())
         })
         .collect();
 
     BuildSegmentResult {
         ascii,
-        id_map,
-        dag,
+        id_map: named_dag.map,
+        dag: named_dag.dag,
         dir,
     }
 }
