@@ -3408,7 +3408,7 @@ Rebuilt index "c""#
         verify_len(200000);
 
         // Corrupt meta
-        corrupt(META_FILE, -1);
+        corrupt(META_FILE, 2);
         corrupt(PRIMARY_FILE, 1000);
         verify_corrupted();
         assert_eq!(
