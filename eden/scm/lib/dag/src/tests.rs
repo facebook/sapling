@@ -393,6 +393,20 @@ fn test_segment_ancestors_example1() {
         assert_eq!(dag.is_ancestor(b, a).unwrap(), ancestor == Some(b));
         assert_eq!(dag.is_ancestor(a, b).unwrap(), ancestor == Some(a));
     }
+
+    for (spans, ancestors) in vec![
+        (vec![3..=8], vec![3]),
+        (vec![1..=1, 4..=9], vec![1]),
+        (vec![1..=4], vec![]),
+    ] {
+        assert_eq!(
+            dag.gca_all(SpanSet::from_spans(spans))
+                .unwrap()
+                .iter()
+                .collect::<Vec<Id>>(),
+            ancestors.into_iter().map(Id).collect::<Vec<Id>>(),
+        );
+    }
 }
 
 #[test]

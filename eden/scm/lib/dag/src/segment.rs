@@ -1006,8 +1006,8 @@ impl Dag {
             }
             _ => {
                 // Try to reduce the size of `set`.
-                // `common_ancestors(X)` = `common_ancestors(heads(X))`.
-                let set = self.heads(set)?;
+                // `common_ancestors(X)` = `common_ancestors(roots(X))`.
+                let set = self.roots(set)?;
                 set.iter()
                     .fold(Ok(SpanSet::full()), |set: Result<SpanSet>, id| {
                         Ok(set?.intersection(&self.ancestors(id)?))
