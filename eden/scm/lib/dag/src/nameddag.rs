@@ -96,6 +96,65 @@ impl NamedDag {
     // Before those APIs, LowLevelAccess might have to be used by callsites.
 }
 
+/// Export non-master DAG as parent_names_func on HashMap.
+///
+/// This can be expensive. It is expected to be either called infrequently,
+/// or called with a small amount of data. For example, bounded amount of
+/// non-master commits.
+fn non_master_parent_names(
+    map: &SyncableIdMap,
+    dag: &SyncableDag,
+) -> Result<HashMap<Box<[u8]>, Vec<Box<[u8]>>>> {
+    let parent_ids = dag.non_master_parent_ids()?;
+    // Map id to name.
+    let parent_names = parent_ids
+        .iter()
+        .map(|(id, parent_ids)| {
+            let name = map.slice(*id)?;
+            let parent_names = parent_ids
+                .into_iter()
+                .map(|p| map.slice(*p))
+                .collect::<Result<Vec<_>>>()?;
+            Ok((name, parent_names))
+        })
+        .collect::<Result<HashMap<_, _>>>()?;
+    Ok(parent_names)
+}
+
+/// Re-assign ids and segments for non-master group.
+pub fn rebuild_non_master(map: &mut SyncableIdMap, dag: &mut SyncableDag) -> Result<()> {
+    // backup part of the named graph in memory.
+    let parents = non_master_parent_names(map, dag)?;
+    let mut heads = parents
+        .keys()
+        .collect::<HashSet<_>>()
+        .difference(
+            &parents
+                .values()
+                .flat_map(|ps| ps.into_iter())
+                .collect::<HashSet<_>>(),
+        )
+        .map(|&v| v.clone())
+        .collect::<Vec<_>>();
+    heads.sort_unstable();
+
+    // Remove existing non-master data.
+    dag.remove_non_master()?;
+    map.remove_non_master()?;
+
+    // Rebuild them.
+    let parent_func = |name: &[u8]| match parents.get(name) {
+        Some(names) => Ok(names.iter().cloned().collect()),
+        None => bail!(
+            "bug: parents of {:?} is missing (in rebuild_non_master)",
+            name
+        ),
+    };
+    build(map, dag, parent_func, &[], &heads[..])?;
+
+    Ok(())
+}
+
 /// Build IdMap and Segments for the given heads.
 pub fn build<F>(
     map: &mut SyncableIdMap,
@@ -130,8 +189,10 @@ where
         }
     }
 
-    // XXX: Remove the hack and rebuild non-master data.
-    map.need_rebuild_non_master = false;
+    // Rebuild non-master ids and segments.
+    if map.need_rebuild_non_master {
+        rebuild_non_master(map, dag)?;
+    }
 
     Ok(())
 }

@@ -1320,6 +1320,24 @@ impl SyncableDag {
         Ok(())
     }
 
+    /// Export non-master DAG as parent_id_func on HashMap.
+    ///
+    /// This can be expensive if there are a lot of non-master ids.
+    /// It is currently only used to rebuild non-master groups after
+    /// id re-assignment.
+    pub fn non_master_parent_ids(&self) -> Result<HashMap<Id, Vec<Id>>> {
+        let mut parents = HashMap::new();
+        let start = Group::NON_MASTER.min_id();
+        for seg in self.dag.next_segments(start, 0)? {
+            let span = seg.span()?;
+            parents.insert(span.low, seg.parents()?);
+            for i in (span.low + 1).to(span.high) {
+                parents.insert(i, vec![i - 1]);
+            }
+        }
+        Ok(parents)
+    }
+
     /// Mark non-master segments as "removed".
     pub fn remove_non_master(&mut self) -> Result<()> {
         self.dag.remove_non_master()

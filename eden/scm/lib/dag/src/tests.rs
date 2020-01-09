@@ -334,17 +334,18 @@ Lv1: R0-6[] N0-N3[1] N4-N8[5, N3]
      \               \          /
       N0-N1-N2-N3     7--8--9--10
                 \            \
-                 -------------N7--N8
-Lv0: RH0-1[] H2-3[1] H4-6[3] 7-10[5] H11-12[6, 10] N0-N1[1] N2-N3[N1] N4-N6[5] N7-N8[N3, N6]
-Lv1: R0-6[] 7-12[5, 6] N0-N3[1] N4-N8[5, N3]
-Lv2: R0-12[] N0-N8[1, 5]"#
+                 -------------N4--N5
+Lv0: RH0-1[] H2-3[1] H4-6[3] 7-10[5] H11-12[6, 10] N0-N3[1] N4-N5[N3, 9]
+Lv1: R0-6[] 7-12[5, 6] N0-N5[1, 9]
+Lv2: R0-12[] N0-N5[1, 9]"#
     );
 
-    // 'm' has 2 ids: 8 (master) and 5 (non-master).
+    // Notice that N4 to N6 were re-written in the last step.
+    // 'm' only has 1 id: 8 (master). The old id (N5) is now taken by 'q'.
     assert_eq!(built.id_map.find_id_by_slice(b"m").unwrap().unwrap(), Id(8));
     assert_eq!(built.id_map.find_slice_by_id(Id(8)).unwrap().unwrap(), b"m");
     let id = Group::NON_MASTER.min_id() + 5;
-    assert_eq!(built.id_map.find_slice_by_id(id).unwrap().unwrap(), b"m");
+    assert_eq!(built.id_map.find_slice_by_id(id).unwrap().unwrap(), b"q");
 }
 
 #[test]
