@@ -5,7 +5,8 @@
  * GNU General Public License found in the LICENSE file in the root
  * directory of this source tree.
  */
- #[deny(warnings)]
+
+#![deny(warnings)]
 
 use std::net::SocketAddr;
 

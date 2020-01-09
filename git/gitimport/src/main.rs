@@ -6,7 +6,8 @@
  * directory of this source tree.
  */
 
-#[deny(warnings)]
+#![deny(warnings)]
+
 use anyhow::{format_err, Error};
 use derived_data::BonsaiDerived;
 use futures::Future;

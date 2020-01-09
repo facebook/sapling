@@ -6,7 +6,8 @@
  * directory of this source tree.
  */
 
-#[deny(warnings)]
+#![deny(warnings)]
+
 mod async_limiter_;
 mod errors;
 mod flavor;
