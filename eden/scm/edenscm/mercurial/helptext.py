@@ -976,6 +976,9 @@ Options that control the behavior of EdenFS.
     potentially help save having to send separate fetch requests later to download any
     child trees that are needed.
 
+``automigrate``
+   The repository should automigrate when debugedenimporthelper is run.
+
 ``email``
 ---------
 
