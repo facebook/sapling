@@ -36,9 +36,11 @@ use crate::errors::ErrorKind;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-const DEFAULT_INSERT_CHUNK_SIZE: usize = 1000;
+const MYSQL_INSERT_CHUNK_SIZE: usize = 1000;
+const SQLITE_INSERT_CHUNK_SIZE: usize = 100;
 
 pub struct SqlFilenodes {
+    chunk_size: usize,
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
     read_master_connection: Arc<Vec<Connection>>,
@@ -192,7 +194,13 @@ impl SqlConstructors for SqlFilenodes {
         read_connection: Connection,
         read_master_connection: Connection,
     ) -> Self {
+        let chunk_size = match read_connection {
+            Connection::Sqlite(_) => SQLITE_INSERT_CHUNK_SIZE,
+            Connection::MyRouter(_) | Connection::Raw(_) => MYSQL_INSERT_CHUNK_SIZE,
+        };
+
         Self {
+            chunk_size,
             write_connection: Arc::new(vec![write_connection]),
             read_connection: Arc::new(vec![read_connection]),
             read_master_connection: Arc::new(vec![read_master_connection]),
@@ -237,19 +245,23 @@ impl SqlFilenodes {
         shard_count: usize,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
-        Self::with_sharded_factory(shard_count, move |shard_id| {
-            Ok(create_myrouter_connections(
-                tier.clone(),
-                Some(shard_id),
-                port,
-                read_service_type,
-                PoolSizeConfig::for_sharded_connection(),
-                "shardedfilenodes".into(),
-                readonly,
-            ))
-            .into_future()
-            .boxify()
-        })
+        Self::with_sharded_factory(
+            shard_count,
+            move |shard_id| {
+                Ok(create_myrouter_connections(
+                    tier.clone(),
+                    Some(shard_id),
+                    port,
+                    read_service_type,
+                    PoolSizeConfig::for_sharded_connection(),
+                    "shardedfilenodes".into(),
+                    readonly,
+                ))
+                .into_future()
+                .boxify()
+            },
+            MYSQL_INSERT_CHUNK_SIZE,
+        )
     }
 
     pub fn with_sharded_raw_xdb(
@@ -259,20 +271,25 @@ impl SqlFilenodes {
         shard_count: usize,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
-        Self::with_sharded_factory(shard_count, move |shard_id| {
-            create_raw_xdb_connections(
-                fb,
-                format!("{}.{}", tier, shard_id),
-                read_instance_requirement,
-                readonly,
-            )
-            .boxify()
-        })
+        Self::with_sharded_factory(
+            shard_count,
+            move |shard_id| {
+                create_raw_xdb_connections(
+                    fb,
+                    format!("{}.{}", tier, shard_id),
+                    read_instance_requirement,
+                    readonly,
+                )
+                .boxify()
+            },
+            MYSQL_INSERT_CHUNK_SIZE,
+        )
     }
 
     fn with_sharded_factory(
         shard_count: usize,
         factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
+        chunk_size: usize,
     ) -> BoxFuture<Self, Error> {
         let futs: Vec<_> = (1..=shard_count)
             .into_iter()
@@ -280,7 +297,7 @@ impl SqlFilenodes {
             .collect();
 
         join_all(futs)
-            .map(|shard_connections| {
+            .map(move |shard_connections| {
                 let mut write_connections = vec![];
                 let mut read_connections = vec![];
                 let mut read_master_connections = vec![];
@@ -298,6 +315,7 @@ impl SqlFilenodes {
                 }
 
                 Self {
+                    chunk_size,
                     write_connection: Arc::new(write_connections),
                     read_connection: Arc::new(read_connections),
                     read_master_connection: Arc::new(read_master_connections),
@@ -322,6 +340,7 @@ impl SqlFilenodes {
         }
 
         Ok(Self {
+            chunk_size: SQLITE_INSERT_CHUNK_SIZE,
             write_connection: Arc::new(write_connection),
             read_connection: Arc::new(read_connection),
             read_master_connection: Arc::new(read_master_connection),
@@ -338,7 +357,7 @@ impl SqlFilenodes {
         cloned!(self.read_connection);
 
         filenodes
-            .chunks(DEFAULT_INSERT_CHUNK_SIZE)
+            .chunks(self.chunk_size)
             .and_then(move |filenodes| {
                 STATS::adds.add_value(filenodes.len() as i64);
 
