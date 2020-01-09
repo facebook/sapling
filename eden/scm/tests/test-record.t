@@ -84,4 +84,65 @@ Select no files
   
   
 
+With "copy from"
 
+  $ newrepo
+  $ cat > A << EOF
+  > 1
+  > 2
+  > 3
+  > EOF
+  $ hg commit -m A -A A
+  $ hg mv A B
+  $ cat > B << EOF
+  > 0
+  > 1
+  > 3
+  > 5
+  > EOF
+
+  $ hg commit -i -m B << EOS
+  > y
+  > n
+  > y
+  > y
+  > EOS
+  diff --git a/A b/B
+  rename from A
+  rename to B
+  3 hunks, 3 lines changed
+  examine changes to 'A' and 'B'? [Ynesfdaq?] y
+  
+  @@ -1,1 +1,2 @@
+  +0
+   1
+  record change 1/3 to 'B'? [Ynesfdaq?] n
+  
+  @@ -1,3 +2,2 @@
+   1
+  -2
+   3
+  record change 2/3 to 'B'? [Ynesfdaq?] y
+  
+  @@ -3,1 +3,2 @@
+   3
+  +5
+  record change 3/3 to 'B'? [Ynesfdaq?] y
+  
+
+BUG: '+0' should not be committed.
+
+  $ hg log -r . -p -T '{desc}\n' --git
+  B
+  diff --git a/A b/B
+  rename from A
+  rename to B
+  --- a/A
+  +++ b/B
+  @@ -1,3 +1,4 @@
+  +0
+   1
+  -2
+   3
+  +5
+  
