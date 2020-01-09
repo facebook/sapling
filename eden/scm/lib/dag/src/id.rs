@@ -49,13 +49,13 @@ impl Group {
     pub(crate) const BITS: u32 = 8;
 
     /// The first [`Id`] in this group.
-    pub fn min_id(self) -> Id {
+    pub const fn min_id(self) -> Id {
         Id((self.0 as u64) << (64 - Self::BITS))
     }
 
     /// The maximum [`Id`] in this group.
-    pub fn max_id(self) -> Id {
-        self.min_id() + ((1u64 << (64 - Self::BITS)) - 1)
+    pub const fn max_id(self) -> Id {
+        Id(self.min_id().0 + ((1u64 << (64 - Self::BITS)) - 1))
     }
 }
 
@@ -88,8 +88,8 @@ impl Id {
         [prefix, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]]
     }
 
-    pub const MAX: Self = Self(u64::max_value());
-    pub const MIN: Self = Self(0);
+    pub const MAX: Self = Group::ALL[Group::COUNT - 1].max_id();
+    pub const MIN: Self = Group::ALL[0].min_id();
 }
 
 impl fmt::Display for Id {
