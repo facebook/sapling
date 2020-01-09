@@ -23,7 +23,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow-generaldelta -q --pull --config experimental.bundle2-exp=True
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ grep generaldelta shallow-generaldelta/.hg/requires
   generaldelta
   $ hgcloneshallow ssh://user@dummy/master shallow-plain -q --pull --config format.usegeneraldelta=False --config format.generaldelta=False --config experimental.bundle2-exp=True
@@ -45,7 +45,7 @@ pull from generaldelta to generaldelta
   added 1 changesets with 0 changes to 0 files
   new changesets 2fbb8bb2b903
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 push from generaldelta to generaldelta
   $ echo b > b
   $ hg commit -qAm b
@@ -67,7 +67,7 @@ pull from generaldelta to non-generaldelta
   added 2 changesets with 0 changes to 0 files
   new changesets 2fbb8bb2b903:d6788bd632ca
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 push from non-generaldelta to generaldelta
   $ echo c > c
   $ hg commit -qAm c

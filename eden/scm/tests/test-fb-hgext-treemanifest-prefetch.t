@@ -43,7 +43,7 @@
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   3 trees fetched over * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ cd master
 
@@ -58,7 +58,7 @@
 Test prefetch
   $ hg prefetch -r '0 + 1 + 2'
   4 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls $CACHEDIR/master/packs/manifests
   214f2046312905a44188b27497625a36ffaa4c3d.histidx
   214f2046312905a44188b27497625a36ffaa4c3d.histpack
@@ -152,7 +152,7 @@ requires tree manifest for the base commit.
   2 trees fetched over * (glob)
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/9e2665e9046d365538eaa0f532dfd5c62aa1bf9c.dataidx
 
@@ -185,7 +185,7 @@ Test prefetching when a draft commit is marked public
 - Create a draft commit, and force it to be public
   $ hg prefetch -r .
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ echo foo > foo
   $ hg commit -Aqm 'add foo'
   $ hg phase -p -r .
@@ -239,7 +239,7 @@ Test auto prefetch during normal access
    dir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls $CACHEDIR/master/packs/manifests
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histidx
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histpack
@@ -272,16 +272,16 @@ Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 'tip^'
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r tip
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 - Only 2 of the 3 trees from tip^ are downloaded as part of --stat's fetch
   $ hg log -r tip --stat --pager=off > /dev/null
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test auto prefetch during pull
 
@@ -353,7 +353,7 @@ Test auto prefetch during pull
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 1
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
@@ -462,13 +462,13 @@ Test that prefetch refills just part of a tree when the cache is deleted
 
   $ echo >> dir/x
   $ hg commit -m 'edit x locally'
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ rm -rf $CACHEDIR/master/*
   $ hg cat subdir/z
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   1 trees fetched over * (glob)
   z
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test prefetch non-parent commits with no base node (should fetch minimal
 trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
@@ -476,22 +476,22 @@ trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r '2 + 4'
   5 trees fetched over * (glob)
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test repack option
   $ rm -rf $CACHEDIR/master
 
   $ hg prefetch -r '0'
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r '2'
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ hg prefetch -r '4' --repack
   2 trees fetched over * (glob)
   (running background incremental repack)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ sleep 3
   $ hg debugwaitonrepack
@@ -511,7 +511,7 @@ also fetches 3 trees dealing with the tree manifest of the base revision 2.
   $ hg prefetch
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Running prefetch in the master repository should exit gracefully
 

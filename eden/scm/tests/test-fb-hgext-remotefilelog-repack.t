@@ -18,7 +18,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # Set the prefetchdays config to zero so that all commits are prefetched
 # no matter what their creation date is.
@@ -77,7 +77,7 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
@@ -135,7 +135,7 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
@@ -198,7 +198,7 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg repack
   $ hg log -f y -T '{desc}\n'
   move x to y
@@ -221,7 +221,7 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg repack
   $ ls $TESTTMP/hgcache/master/packs
   73d5a02cfb63aa0417c03a9cb2ba8504bb6f312b.dataidx
@@ -286,7 +286,7 @@ Incremental repack
 
 Single pack - repack does nothing
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
@@ -299,11 +299,11 @@ Single pack - repack does nothing
 
 3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
   $ hg prefetch -r 1
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 2
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 3
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      69 20e1a91049a48630732a9b2ceaf4fa783a3af6c5.datapack
   -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
@@ -328,13 +328,13 @@ Pull should run background repack
   > EOF
   $ clearcache
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 1
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 2
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 3
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      69 20e1a91049a48630732a9b2ceaf4fa783a3af6c5.datapack
   -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
@@ -360,7 +360,7 @@ Pull should run background repack
 
 Test environment variable resolution
   $ CACHEPATH=$TESTTMP/envcache hg prefetch --config 'remotefilelog.cachepath=$CACHEPATH'
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ find $TESTTMP/envcache | sort
   $TESTTMP/envcache
   $TESTTMP/envcache/master
@@ -389,7 +389,7 @@ Test limiting the max delta chain length
 # new loose file is created
   $ echo "new commit" > new_file
   $ hg commit -qAm "one more node"
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 # repacking all
   $ hg repack

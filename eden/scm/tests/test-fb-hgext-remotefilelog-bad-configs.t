@@ -19,7 +19,7 @@ no-check-code
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd shallow
 
 Verify error message when no cachepath specified
@@ -38,5 +38,5 @@ Verify error message when no fallback specified
   $ clearcache
   $ hg up tip
   abort: no remotefilelog server configured - is your .hg/hgrc trusted?
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
   [255]

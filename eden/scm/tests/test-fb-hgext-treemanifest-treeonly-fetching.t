@@ -56,7 +56,7 @@ Test that log -p downloads each tree using the prior tree as a base
   fetching tree '' f50e2ff15ddef5802543b56b0b84d742512e90f0, found via 3b158baa90a6
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ hg log -p 1>/dev/null
   fetching tree '' 88dd1b582645feb893f44bd3b20947ff2d275360, based on f50e2ff15ddef5802543b56b0b84d742512e90f0, found via 2f885f603416
@@ -65,4 +65,4 @@ Test that log -p downloads each tree using the prior tree as a base
   2 trees fetched over * (glob)
   fetching tree '' 1b3e02c1b4460e2d6264781579eb163e76cffad4, based on d09a7a1172be7d3c00d4bc16831b6394d11ce33f
   2 trees fetched over * (glob)
-  3 files fetched over 3 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 3 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)

@@ -42,7 +42,7 @@ Run blame on client
   $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' 11a84bc431b8c59b792f10ed427e7a01fc1a6b75, found via 70b8370240f6
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -55,7 +55,7 @@ Run blame on client
   $ clearcache
   $ hg prefetch -r 'tip^::tip'
   4 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
 - Verify no trees are downloaded
   $ hg blame -r tip -u subdir/x --pager=off

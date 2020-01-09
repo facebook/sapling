@@ -22,7 +22,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ cd shallow
   $ cd ..

@@ -51,7 +51,7 @@
 
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n'
   0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
@@ -88,7 +88,7 @@
    NOTLFS
   +BECOME-LFS-AGAIN
   
-  * files fetched over * (glob)
+  * files fetched over * (glob) (?)
 
 # lfs content could be read after repack
 
@@ -212,7 +212,7 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 515a4dfd2e0c
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg update tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -367,7 +367,7 @@
 
   $ cd ../shallow
   $ hg pull -q
-  5 files fetched over 5 fetches - (5 misses, 0.00% hit ratio) over *s (glob)
+  5 files fetched over 5 fetches - (5 misses, 0.00% hit ratio) over *s (glob) (?)
   $ hg log --removed a.bin --config diff.nobinary=1 --git -p -T '{desc}\n' -r '::tip' --config lfs.url=null://
   binary
   diff --git a/a.bin b/a.bin

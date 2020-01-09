@@ -17,7 +17,7 @@
   $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
                         gettreepack : { basemfnodes : 0,

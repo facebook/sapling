@@ -73,7 +73,7 @@
   $ hg update
   remote: abort: lfs.url needs to be configured
   abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
   [255]
 
   $ cd ..
@@ -102,7 +102,7 @@
 
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
   $ hg debugfilerev -v
   0d2948821b2b: x-lfs

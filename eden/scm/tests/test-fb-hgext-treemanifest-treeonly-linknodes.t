@@ -27,7 +27,7 @@ Create client
   $ hgcloneshallow ssh://user@dummy/master client -q --config extensions.treemanifest= --config treemanifest.treeonly=true
   fetching tree '' 2e4a95dcb6b42bbf0034f84d293bd9c71b19de64
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

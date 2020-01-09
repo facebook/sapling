@@ -20,7 +20,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd shallow
 
 # status
@@ -58,7 +58,7 @@ TODO: Make this test compatibile with obsstore enabled.
   @@ -1,1 +1,1 @@
   -y
   +yy
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # local commit
 
@@ -67,7 +67,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ echo xxx > x
   $ echo yyy > y
   $ hg commit -m a
-  ? files fetched over 1 fetches - (? misses, 0.00% hit ratio) over *s (glob)
+  ? files fetched over 1 fetches - (? misses, 0.00% hit ratio) over *s (glob) (?)
 
 # local commit where the dirstate is clean -- ensure that we do just one fetch
 # (update to a commit on the server first)
@@ -82,7 +82,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ echo xxxx > x
   $ echo yyyy > y
   $ hg commit -m x
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # restore state for future tests
 
@@ -109,7 +109,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg rebase -d tip
   rebasing 9abfe7bca547 "a"
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/9abfe7bca547-8b11e5ff-rebase.hg (glob)
-  3 files fetched over 2 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 2 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # strip
 
@@ -118,7 +118,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg debugstrip -r .
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/19edf50f4de7-df3d0f74-backup.hg (glob)
-  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # unbundle
 
@@ -139,7 +139,7 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cat a
   a
 
@@ -148,18 +148,18 @@ TODO: Make this test compatibile with obsstore enabled.
   $ clearcache
   $ hg revert -r .~2 y z
   no changes needed to z
-  [12] files fetched over [12] fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re)
+  [12] files fetched over [12] fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re) (?)
   $ hg checkout -C -r . -q
 
 # explicit bundle should produce full bundle file
 
   $ hg bundle -r 2 --base 1 ../local.bundle
   1 changesets found
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
-  [12] files fetched over 1 fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re)
+  [12] files fetched over 1 fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re) (?)
   $ cd shallow2
   $ hg unbundle ../local.bundle
   adding changesets

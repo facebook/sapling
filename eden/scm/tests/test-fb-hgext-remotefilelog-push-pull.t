@@ -15,7 +15,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
                         read : { bytes : 1518},
@@ -56,7 +56,7 @@ the server supports our custom getfiles method.
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 1,
                         getpack : { calls : 1,  revs : 1},
                         read : { bytes : 615},
@@ -85,7 +85,7 @@ the server supports our custom getfiles method.
   adding file changes
   added 3 changesets with 3 changes to 3 files
   new changesets d34c38483be9:d7373980d475
-  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s
+  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 2,  revs : 4},
                         read : { bytes : 1516},
@@ -103,7 +103,7 @@ the server supports our custom getfiles method.
   adding file changes
   added 3 changesets with 3 changes to 3 files
   new changesets d34c38483be9:d7373980d475
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
                         read : { bytes : 2925},

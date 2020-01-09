@@ -91,7 +91,7 @@ Create a client
   $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0, found via 9f95b8f1011f
   11 trees fetched over *s (glob)
-  13 files fetched over *s (glob)
+  13 files fetched over *s (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
@@ -108,9 +108,9 @@ Rename the file in a commit
   $ hg mv a/b/c/d/e/f/g/h/i/j/file a/b/c/d/e/f/g/h/i/j/file2
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0, found via 9f95b8f1011f
   11 trees fetched over *s (glob)
-  * files fetched over *s (glob)
+  * files fetched over *s (glob) (?)
   $ hg commit -m "rename"
-  * files fetched over *s (glob)
+  * files fetched over *s (glob) (?)
 
 Amend the commit to add a new file with an empty cache, with descendantrevfastpath enabled
   $ clearcache

@@ -24,7 +24,7 @@ Make client shallow clone
   no changes found
   updating to branch default
   * files updated, * files merged, * files removed, * files unresolved (glob)
-  * files fetched over * fetches - (* misses, * hit ratio) over * (glob)
+  * files fetched over * fetches - (* misses, * hit ratio) over * (glob) (?)
 
   $ cd server
   $ mkcommit first
@@ -38,7 +38,7 @@ Make sure that fastdiscovery is used for pull
 
 Make sure that fastdiscovery is used for push
   $ hg up -q tip
-  3 files fetched over 1 fetches - (3 misses, * hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, * hit ratio) over * (glob) (?)
   $ mkcommit clientcommit
   $ hg push --debug 2>&1 | grep fastdiscovery || echo "no fastdiscovery"
   no fastdiscovery

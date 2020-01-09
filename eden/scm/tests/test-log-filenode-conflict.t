@@ -82,7 +82,7 @@ Y are swapped 0 to 2 times, and merge those branches.
 Try the same on a repacked shallow repo
 
   $ hgcloneshallow ssh://user@dummy/nonshallow1 $TESTTMP/shallow1 -q
-  * files fetched over * (glob)
+  * files fetched over * (glob) (?)
   $ cd $TESTTMP/shallow1
 
   $ hg repack
@@ -189,7 +189,7 @@ With "--removed", it is slightly better.
 Try again in a shallow repo:
 
   $ hgcloneshallow ssh://user@dummy/nonshallow2 $TESTTMP/shallow2 -q
-  * files fetched over * (glob)
+  * files fetched over * (glob) (?)
   $ cd $TESTTMP/shallow2
 
   $ for i in A C E G; do

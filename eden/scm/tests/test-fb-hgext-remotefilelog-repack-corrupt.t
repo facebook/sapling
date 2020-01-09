@@ -20,7 +20,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
 Set the prefetchdays config to zero so that all commits are prefetched
 no matter what their creation date is.
@@ -60,7 +60,7 @@ Create some new data to pack into it
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ findfilessorted $CACHEDIR/master
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histidx
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
@@ -92,7 +92,7 @@ The history for y has to be refetched from the server.
   deleting corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440'
   xy2
   xy
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Next, do the same for local data.  This time there is data loss, as there are no more copies
 of the data available.
@@ -142,17 +142,17 @@ The history for n is lost
   $ hg log -qf n
   detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
   abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   [255]
 
 The local data and history for o is lost
   $ hg cat -q o
   detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf' - ignoring it
   abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
   [255]
   $ hg log -qf o
   detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
   abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   [255]

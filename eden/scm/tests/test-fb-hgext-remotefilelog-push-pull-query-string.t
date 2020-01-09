@@ -34,7 +34,7 @@ as well
 
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/repo client -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
   $ cd client
   $ hg path
   default = ssh://user@dummy/repo

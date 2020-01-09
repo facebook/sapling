@@ -43,7 +43,7 @@
   $ cd shallow
 
   $ hg prefetch -r 0
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 0 x
   x
@@ -52,7 +52,7 @@
 
   $ clearcache
   $ hg prefetch -r 0::1 -b 0
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 1 x
   x2
@@ -61,11 +61,11 @@
 
   $ hg cat -r 0 x
   x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 0 z
   z
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg prefetch -r 0::1 --base 0
   $ hg prefetch -r 0::1 -b 1
@@ -75,7 +75,7 @@
 
   $ clearcache
   $ hg prefetch -r 0::1
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 0 x
   x
@@ -86,14 +86,14 @@
 
   $ clearcache
   $ hg prefetch -r 1 x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 1 x
   x2
 
   $ hg cat -r 1 y
   y
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # prefetch on pull when configured
 
@@ -112,7 +112,7 @@
   updating bookmark foo
   new changesets 109c3a557a73
   prefetching file contents
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -122,7 +122,7 @@
   $ hg debugstrip tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-3f43405e-backup.hg (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ clearcache
 
   $ hg pull
@@ -135,14 +135,14 @@
   updating bookmark foo
   new changesets 109c3a557a73
   prefetching file contents
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # Make some local commits that produce the same file versions as are on the
 # server. To simulate a situation where we have local commits that were somehow
 # pushed, and we will soon pull.
 
   $ hg prefetch -r 'all()'
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   $ hg debugstrip -q -r 0
   $ echo x > x
   $ echo z > z
@@ -165,7 +165,7 @@
   updating bookmark foo
   new changesets 109c3a557a73
   prefetching file contents
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ cd ..
 
@@ -179,7 +179,7 @@
   no changes found
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd shallow2
   $ hg up -q null
   $ echo x > x
@@ -189,7 +189,7 @@
   $ hg up tip
   x: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
   [255]
   $ hg revert --all
 
@@ -199,7 +199,7 @@
   $ hg debugrebuilddirstate
   $ clearcache
   $ hg status
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Prefetch during addrename detection
   $ hg up -q --clean tip
@@ -209,7 +209,7 @@
   $ mv z z2
   $ clearcache
   $ hg addremove -s 50 > /dev/null
-  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over * (glob)
+  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over * (glob) (?)
 
   $ cd ..
 
@@ -230,7 +230,7 @@
   > EOF
   $ clearcache
   $ hg prefetch -r .
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
   $ find $TESTTMP/hgcache -type f | sort
   $TESTTMP/hgcache/master/packs/0a61bfbc8e0c4a08583b3f1abc7ad7f9cc9acc21.dataidx
   $TESTTMP/hgcache/master/packs/0a61bfbc8e0c4a08583b3f1abc7ad7f9cc9acc21.datapack
@@ -250,7 +250,7 @@
   $ cd ../packprefetch
   $ hg pull -q
   $ hg prefetch -r tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg up tip -q
   $ hg log -f z2 -T '{desc}\n'
   move z -> z2
@@ -271,7 +271,7 @@
   $ hgcloneshallow ssh://user@dummy/master packprefetch__2 --noupdate -q
   $ cd packprefetch__2
   $ hg prefetch -r tip -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg up tip -q
   $ cat z2
   z
@@ -294,16 +294,16 @@
   adding z
   forgetting z3
   abort: z2@109c3a557a73: not found in manifest! (?)
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Test connection pool lifetime
   $ clearcache
   $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=0 | grep 'closing expired connection'
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   closing expired connection to ssh://user@dummy/master
   $ clearcache
   $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=300 | grep 'closing expired connection'
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   [1]
 
   $ cat >$TESTTMP/testpool <<EOF

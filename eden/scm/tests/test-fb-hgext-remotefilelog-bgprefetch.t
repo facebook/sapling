@@ -49,7 +49,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ cd shallow
 
   $ hg prefetch -r 0
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 0 x
   x
@@ -85,10 +85,10 @@ TODO: Make this test compatibile with obsstore enabled.
 
 # prefetch uses the current commit as the base
   $ hg up -q 'tip^'
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ clearcache
   $ hg prefetch
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   $ clearcache
   $ hg pull -q
   $ sleep 0.5
@@ -97,7 +97,7 @@ TODO: Make this test compatibile with obsstore enabled.
 - background prefetch downloaded the difference between . and the prefetch
 - revset.
   $ hg prefetch
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg up -q null
 
 # background prefetch with repack on pull when configured
@@ -137,7 +137,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ clearcache
   $ hg up -r 0
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/6a5063cc90091cfb6de3cc015d68cb634d463007.dataidx
   $TESTTMP/hgcache/master/packs/6a5063cc90091cfb6de3cc015d68cb634d463007.datapack
@@ -146,7 +146,7 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hg up -r 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -156,7 +156,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ clearcache
   $ hg up -r 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  * files fetched over * fetches - (* misses, 0.00% hit ratio) over *s (glob)
+  * files fetched over * fetches - (* misses, 0.00% hit ratio) over *s (glob) (?)
   $ sleep 1
   $ hg debugwaitonprefetch >/dev/null 2>%1
   $ sleep 1
@@ -221,7 +221,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg rebase -s temporary -d foo
   rebasing 58147a5b5242 "b" (temporary)
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/58147a5b5242-c3678817-rebase.hg (glob)
-  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob)
+  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob) (?)
   $ sleep 1
   $ hg debugwaitonprefetch >/dev/null 2>%1
   $ sleep 1

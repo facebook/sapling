@@ -23,7 +23,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Set the prefetchdays config to zero so that all commits are prefetched
 # no matter what their creation date is.
@@ -51,13 +51,13 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 2
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ find $CACHEDIR | sort
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master

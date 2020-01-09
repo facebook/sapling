@@ -23,7 +23,7 @@ Clone it
   $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
   fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, found via d2ae7f538514
   1 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
                         gettreepack : { basemfnodes : 0,

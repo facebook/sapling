@@ -35,7 +35,7 @@ Create flat manifest client
   $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -223,7 +223,7 @@ Test pulling new commits from a hybrid server
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test rebasing treeonly commits
   $ hg rebase -d 5 -b 2
@@ -291,7 +291,7 @@ Test peer-to-peer push/pull of tree only commits
   $ hgcloneshallow ssh://user@dummy/master client2 -q
   fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client2
   $ rm -rf $CACHEDIR
   $ cp ../client/.hg/hgrc .hg/hgrc
@@ -325,7 +325,7 @@ Test peer-to-peer push/pull of tree only commits
   |   subdir/x |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Test pushing to a treeonly peer
   $ echo y >> y
@@ -438,7 +438,7 @@ Test prefetch
   $ clearcache
   $ hg prefetch -r 0
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ clearcache
 
   $ hg pull
@@ -495,7 +495,7 @@ Test pulling to a treeonly client from a treeonly server
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
@@ -529,7 +529,7 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   remote: adding manifests
   remote: adding file changes
   remote: added 4 changesets with 4 changes to 2 files
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
        4       223      55      1       4 14bce01d0d73 7e265a5dc522 000000000000
        5       278      61      4       5 5f15f80c2b54 14bce01d0d73 000000000000
@@ -682,7 +682,7 @@ with pullprefetchrevs configured.
 
 Test ondemand downloading trees with a limited depth
   $ hgcloneshallow ssh://user@dummy/master client4 -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client4
   $ cp ../client/.hg/hgrc .hg/hgrc
 

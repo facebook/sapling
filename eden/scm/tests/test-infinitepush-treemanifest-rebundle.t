@@ -26,7 +26,7 @@ Make a remotefilelog client
   no changes found
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - * (glob)
+  1 files fetched over 1 fetches - * (glob) (?)
   $ cd client1
   $ enable infinitepush
   $ setconfig infinitepush.server=false infinitepush.branchpattern=re:scratch/.+

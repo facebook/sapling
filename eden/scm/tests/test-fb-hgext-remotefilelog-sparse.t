@@ -33,14 +33,14 @@
 
   $ hg sparse -I x
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 0 x
   x
 
   $ hg sparse -I z
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg cat -r 0 z
   z
@@ -64,7 +64,7 @@
   updating bookmark foo
   new changesets 876b1317060d
   prefetching file contents
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # Dont consider filtered files when doing copy tracing
 
@@ -79,12 +79,12 @@
   no changes found
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd shallow2
   $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
 
   $ hg up -q 0
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   $ touch a
   $ hg ci -Aqm a
   $ hg push -q -f
@@ -98,6 +98,6 @@ pulled
   $ hg sparse -I z
   $ clearcache
   $ hg prefetch -r '. + .^' -I x -I z
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg rebase -d 2 --keep
   rebasing 876b1317060d "x2" (foo)

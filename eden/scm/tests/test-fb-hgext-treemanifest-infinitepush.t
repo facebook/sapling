@@ -27,7 +27,7 @@ Push a non-tree scratch branch from one client
   $ hgcloneshallow ssh://user@dummy/master normal-client -q
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd normal-client
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
@@ -51,7 +51,7 @@ Push a tree-only scratch branch from another client
   $ hgcloneshallow ssh://user@dummy/master client1 -q
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
@@ -301,7 +301,7 @@ treemanifest data for the public commits.
   $ hg up -q f027ebc7ba78
   fetching tree '' 92ea8e774335a78205d4837583cf4224b5fc5c33, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via f027ebc7ba78
   6 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg merge d32fd17cb041
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

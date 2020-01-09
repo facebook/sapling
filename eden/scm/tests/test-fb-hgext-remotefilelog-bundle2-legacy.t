@@ -60,7 +60,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q --pull --config experimental.bundle2-exp=True
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd shallow
   $ cat >> .hg/hgrc << EOF
   > [extensions]
@@ -81,7 +81,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
   added 1 changesets with 0 changes to 0 files
   new changesets d34c38483be9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ echo a > a
   $ hg commit -qAm a

@@ -38,7 +38,7 @@ Shallow clone from full
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06, found via 79c51fb96423
   2 trees fetched over 0.00s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
 Log on a file without -f
 

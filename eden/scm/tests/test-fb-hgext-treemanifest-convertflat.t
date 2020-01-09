@@ -66,7 +66,7 @@ Create flat manifest client
   $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

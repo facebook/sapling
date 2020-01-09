@@ -43,7 +43,7 @@ Test autocreatetrees
   fetching tree '' 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66, found via e4d61696a942
   2 trees fetched over * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $CACHEDIR/master/packs/manifests
   -r--r--r--    1114 cc7c46997bf8e05307412ce3ac5e2a1ccb159a11.dataidx
   -r--r--r--     262 cc7c46997bf8e05307412ce3ac5e2a1ccb159a11.datapack

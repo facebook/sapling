@@ -20,7 +20,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd shallow
 
 Unbundling a shallow bundle
@@ -28,7 +28,7 @@ Unbundling a shallow bundle
   $ hg debugstrip -r 66ee28d0328c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/66ee28d0328c-3d7aafd1-backup.hg (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ hg unbundle .hg/strip-backup/66ee28d0328c-3d7aafd1-backup.hg
   adding changesets
   adding manifests

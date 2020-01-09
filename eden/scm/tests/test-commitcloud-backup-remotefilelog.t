@@ -47,12 +47,12 @@ Make commit on top of commit that will be stripped server-side. Also make two
 bookmarks
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re)
+  1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re) (?)
   $ hg book goodbooktobackup
   $ hg up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark goodbooktobackup)
-  1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re)
+  1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re) (?)
   $ hg book badbooktobackup
   $ mkcommit clientbadcommit
   $ hg log --graph -T '{desc} {node}'
@@ -130,7 +130,7 @@ the client doesn't receive the public commit file data during the pull.
   $ cd ../secondclient
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ mkcommit draftcommit
   $ hg cloud backup
   backing up stack rooted at 1c8212bf302f
@@ -162,4 +162,4 @@ the client doesn't receive the public commit file data during the pull.
    extracommit |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)

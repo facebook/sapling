@@ -39,7 +39,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 
 # Rebase produces correct log -f linknodes
@@ -95,7 +95,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # Rebase stack onto landed commit
 
@@ -139,7 +139,7 @@ TODO: Make this test compatibile with obsstore enabled.
 /* Local linknode is invalid; remote linknode is valid (formerly slow case) */
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd shallow
   $ echo x >> x
   $ hg commit -Aqm xx2
@@ -160,7 +160,7 @@ TODO: Make this test compatibile with obsstore enabled.
   added 3 changesets with 0 changes to 0 files
   new changesets 01979f9404f8:7200df4e0aca
   $ hg update tip -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ echo x > x
   $ hg commit -qAm xx3
 
@@ -194,7 +194,7 @@ TODO: Make this test compatibile with obsstore enabled.
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # But not after that
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
@@ -233,7 +233,7 @@ Test the same scenario as above but with fastlog enabled
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd shallow
   $ echo x >> x
   $ hg commit -Aqm xx2
@@ -247,7 +247,7 @@ Test the same scenario as above but with fastlog enabled
   $ cd ../shallow
   $ hg pull -q
   $ hg update tip -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ echo x > x
   $ hg commit -qAm xx3
 
@@ -277,7 +277,7 @@ Case 1: fastlog service calls fails or times out
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Case 2: fastlog returns empty results
 
@@ -292,7 +292,7 @@ Case 2: fastlog returns empty results
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Case 3: fastlog returns a bad hash
 
@@ -303,7 +303,7 @@ Case 3: fastlog returns a bad hash
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Fastlog succeeds and returns the correct results
 
@@ -314,14 +314,14 @@ Fastlog succeeds and returns the correct results
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Fastlog should never get called on draft commits
 
   $ clearcache
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/a5957b6bf0bdeb9b96368bddd2838004ad966b7d/crash
   $ hg log -f x > /dev/null
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Test linknode fixup logging
 
@@ -351,7 +351,7 @@ Silencing stdout because we are interested only in ui.log output
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
   linkrevfixup: fastlog succeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Fastlog fails
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/crash
@@ -359,4 +359,4 @@ Fastlog fails
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
   linkrevfixup: fastlog failed (No JSON object could be decoded) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   linkrevfixup: remotefilelog prefetching succeeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)

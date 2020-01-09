@@ -24,7 +24,7 @@ two server and one local commits later.
   $ hgcloneshallow ssh://user@dummy/master client2 -q
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cat >> client2/.hg/hgrc <<EOF
   > [remotefilelog]
   > reponame=master
@@ -43,7 +43,7 @@ Create client1 - it will have both server commits
   $ hgcloneshallow ssh://user@dummy/master client1 -q
   fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via b8ff91c925b4
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -66,7 +66,7 @@ Pushing with treemanifest disabled does not produce trees
 (disable demand import so treemanifest.py is forced to load)
   $ HGDEMANDIMPORT=disable hg push -q ../client2
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls ../client2/.hg/store/packs/manifests || true
   * $ENOENT$ (glob)
 
@@ -80,7 +80,7 @@ cache.
 # already has.
   $ hg -R ../client2 prefetch -r 'all()'
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
   $ cat >> ../client2/.hg/hgrc <<EOF
   > [remotefilelog]
@@ -90,8 +90,8 @@ cache.
 # Push and expect only one bulk download of trees
   $ hg push -q ssh://user@dummy/client2
   4 trees fetched over * (glob)
-  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $CACHEDIR/master/packs/manifests
   -r--r--r--    1196 1b69dc04d7f9d9825351f0af940c80f956e372b9.histidx
   -r--r--r--     183 1b69dc04d7f9d9825351f0af940c80f956e372b9.histpack
@@ -111,7 +111,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
 # already has.
   $ hg -R ../client2 prefetch -r 'all()'
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
   $ cat >> ../client2/.hg/hgrc <<EOF
   > [remotefilelog]
@@ -124,8 +124,8 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   2 trees fetched over * (glob)
   fetching tree '' *, based on *, found via 54609f68e211 (glob)
   2 trees fetched over * (glob)
-  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls ../client2/.hg/store/packs/manifests
   700fb8a7918068e308a998d338d1689074118d07.histidx
   700fb8a7918068e308a998d338d1689074118d07.histpack

@@ -42,11 +42,11 @@
   $ hgcloneshallow ssh://user@dummy/repo client_concurrent -q --config remotefilelog.cachepath=$ROOTDIR/cache_client_concurrent
   fetching tree '' a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via a89d614e2364
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hgcloneshallow ssh://user@dummy/repo client -q  --config remotefilelog.cachepath=$ROOTDIR/cache_client
   fetching tree '' a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via a89d614e2364
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Modify first client repo to create 'out of sync' state
 

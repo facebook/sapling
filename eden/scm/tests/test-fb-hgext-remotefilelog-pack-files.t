@@ -25,7 +25,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # Set the prefetchdays config to zero so that all commits are prefetched
 # no matter what their creation date is.
@@ -109,7 +109,7 @@
   committing changelog
   committed changeset 4:dc68270aa18f
   calling hook commit.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # don't need fetch anything if the pack files format is used
   $ clearcache
@@ -156,7 +156,7 @@
 # Test that pending pack writes can be read
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master pending_test -q
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.00s
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.00s (?)
   $ cd pending_test
   $ setconfig rebase.singeltransaction=True
   $ drawdag <<'EOS'

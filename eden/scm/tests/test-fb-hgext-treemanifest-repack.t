@@ -36,11 +36,11 @@
   $ hg up -q -r 0
   fetching tree '' a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg up -q -r 1
   fetching tree '' 1832e0765de95635a71dc8f6ed96a1adb824ae13, based on a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, found via 8e83608cbe60
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
   -r--r--r--     256 0369e6459e768b72223a4a4fcbba59b5ada8d08f.datapack
   -r--r--r--      89 4301ce26f4c07686220c7f57d80b466cfba9899e.histpack

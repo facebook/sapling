@@ -52,7 +52,7 @@ Create client
   $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -392,7 +392,7 @@ Attempt to push from a treeonly repo without sending trees
   $ cd ../client2
   $ hg up tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ echo >> subdir2/z
   $ hg commit -qm "Edit subdir2/z"
   $ hg push --config treemanifest.sendtrees=False
