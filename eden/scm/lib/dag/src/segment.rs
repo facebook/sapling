@@ -531,15 +531,18 @@ impl Dag {
                     new_segments.push(segment_info);
                 }
 
+                // No point to introduce new levels if it has the same segment count
+                // as the lower level.
+                if segments.len() == new_segments.len()
+                    && self.max_level < level
+                    && group == Group::MASTER
+                {
+                    return Ok(0);
+                }
+
                 // Drop the last segment. It could be incomplete.
                 if drop_last {
                     new_segments.pop();
-                }
-
-                // No point to introduce new levels if it has the same segment count
-                // as the loweer level.
-                if segments.len() == new_segments.len() && self.max_level < level {
-                    return Ok(0);
                 }
 
                 new_segments
@@ -555,10 +558,10 @@ impl Dag {
                 };
                 self.insert(flags, level, low, high, &parents)?;
             }
+        }
 
-            if level > self.max_level && insert_count > 0 {
-                self.max_level = level;
-            }
+        if level > self.max_level && insert_count > 0 {
+            self.max_level = level;
         }
 
         Ok(insert_count)
