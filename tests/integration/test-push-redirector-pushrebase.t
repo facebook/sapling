@@ -215,7 +215,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=large-mon hgmn pull -q
   $ REPONAME=large-mon hgmn up -q master_bookmark
   $ ls non_path_shifting/filetomove
-  ls: cannot access non_path_shifting/filetomove: No such file or directory
+  ls: cannot access *: No such file or directory (glob)
   [2]
   $ ls smallrepofolder/filetomove
   smallrepofolder/filetomove
@@ -235,7 +235,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ ls non_path_shifting
   filetomove
   $ ls smallrepofolder/filetomove
-  ls: cannot access smallrepofolder/filetomove: No such file or directory
+  ls: cannot access *: No such file or directory (glob)
   [2]
   $ verify_wc master_bookmark
 

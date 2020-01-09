@@ -44,9 +44,12 @@
   $ truncate -s 0 "$log_proxy"
 
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
-  $ env time -f "%E" -- hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
+  $ time hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
   abort: LFS HTTP error: HTTP Error 502: Bad Gateway (action=download)!
-  0:04.* (glob)
+  
+  real*0m4.* (glob)
+  user* (glob)
+  sys* (glob)
   [255]
 
   $ cat "$log_proxy"

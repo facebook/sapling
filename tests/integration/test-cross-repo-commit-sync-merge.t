@@ -6,7 +6,7 @@ setup configuration
   $ REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
   $ setup_commitsyncmap
   $ ls $TESTTMP/monsql/sqlite_dbs
-  ls: cannot access $TESTTMP/monsql/sqlite_dbs: No such file or directory
+  ls: cannot access *: No such file or directory (glob)
   [2]
 
 setup hg server repos

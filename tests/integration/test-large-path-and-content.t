@@ -24,7 +24,7 @@ setup repo-hg
   $ dd if=/dev/zero of=${LONG_PATH}/${LONG_FILENAME} bs=150M count=1
   1+0 records in
   1+0 records out
-  157286400 bytes (157 MB) copied, * (glob)
+  157286400 bytes (157 MB* (glob)
   $ hg add ${LONG_PATH}/${LONG_FILENAME}
   this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars: up to 471 MB of RAM may be required to manage this file
   (use 'hg revert this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars' to cancel the pending addition)
@@ -87,7 +87,7 @@ push one more long path from repo2
   $ dd if=/dev/zero of=${LONG_PATH}2/${LONG_FILENAME}2 bs=151M count=1
   1+0 records in
   1+0 records out
-  158334976 bytes (158 MB) copied, * (glob)
+  158334976 bytes (158 MB* (glob)
   $ hg add ${LONG_PATH}2/${LONG_FILENAME}2
   this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars2/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars2: up to 475 MB of RAM may be required to manage this file
   (use 'hg revert this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars2/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars2' to cancel the pending addition)

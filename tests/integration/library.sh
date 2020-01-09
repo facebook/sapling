@@ -764,6 +764,14 @@ function setup_no_ssl_apiserver {
   wait_for_apiserver --no-ssl
 }
 
+function s_client {
+    /usr/local/fbcode/platform007/bin/openssl s_client \
+        -connect localhost:$MONONOKE_SOCKET \
+        -CAfile "${TEST_CERTDIR}/root-ca.crt" \
+        -cert "${TEST_CERTDIR}/localhost.crt" \
+        -key "${TEST_CERTDIR}/localhost.key" \
+        -ign_eof "$@"
+}
 
 function apiserver {
   GLOG_minloglevel=5 "$MONONOKE_APISERVER" "$@" \
@@ -789,7 +797,7 @@ function no_ssl_apiserver {
 function wait_for_apiserver {
   for _ in $(seq 1 200); do
     if [[ -a "$TESTTMP/apiserver.out" ]]; then
-      PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Pzo "(\\d+)\$") && break
+      PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Po "(\\d+)\$") && break
     fi
     sleep 0.1
   done
@@ -826,7 +834,7 @@ function start_and_wait_for_scs_server {
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
   attempts="$((timeout * 10))"
 
-  CHECK_SSL="openssl s_client -connect localhost:$SCS_PORT"
+  CHECK_SSL="/usr/local/fbcode/platform007/bin/openssl s_client -connect localhost:$SCS_PORT"
 
   for _ in $(seq 1 $attempts); do
     $CHECK_SSL 2>&1  </dev/null | grep -q 'DONE' && break

@@ -58,7 +58,7 @@ starts api server
   $ apiserver -H "[::1]" -p $APISERVER_PORT
   $ wait_for_apiserver
   $ function sslcurl() { curl --silent --cert "${TEST_CERTDIR}/localhost.crt" --cacert "${TEST_CERTDIR}/root-ca.crt" --key "${TEST_CERTDIR}/localhost.key" "$@"; }
-  $ function s_client() { openssl s_client -connect $APIHOST -CAfile "${TEST_CERTDIR}/root-ca.crt" -cert "${TEST_CERTDIR}/localhost.crt" -key "${TEST_CERTDIR}/localhost.key" -ign_eof "$@"; }
+  $ function s_client() { /usr/local/fbcode/platform007/bin/openssl s_client -connect $APIHOST -CAfile "${TEST_CERTDIR}/root-ca.crt" -cert "${TEST_CERTDIR}/localhost.crt" -key "${TEST_CERTDIR}/localhost.key" -ign_eof "$@"; }
 
 ping test
   $ sslcurl -i $APISERVER/health_check | grep -iv "date"
@@ -274,11 +274,13 @@ test get changeset
 test TLS Session/Ticket resumption when using client certs
   $ TMPFILE=$(mktemp)
   $ RUN1=$(echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_out $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
+  Can't use SSL_get_servername
   depth=1 C = US, ST = CA, O = FakeRootCanal, CN = fbmononoke.com
   verify return:1
   depth=0 CN = localhost, O = Mononoke, C = US, ST = CA
   verify return:1
   $ RUN2=$(echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_in $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
+  Can't use SSL_get_servername
   $ echo "$RUN1"
       Session-ID: [A-Z0-9]{64} (re)
   HTTP/1.1 200 OK\r (esc)
@@ -293,13 +295,15 @@ test TLS Tickets use encryption keys from seeds - sessions should persist across
   $ apiserver -H "[::1]" -p $APISERVER_PORT
   $ wait_for_apiserver
   $ echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_in $TMPFILE -state | grep -E "^SSL_connect"
-  SSL_connect:before/connect initialization
-  SSL_connect:SSLv3 write client hello A
-  SSL_connect:SSLv3 read server hello A
-  SSL_connect:SSLv3 read finished A
-  SSL_connect:SSLv3 write change cipher spec A
-  SSL_connect:SSLv3 write finished A
-  SSL_connect:SSLv3 flush data
+  SSL_connect:before SSL initialization
+  SSL_connect:SSLv3/TLS write client hello
+  SSL_connect:SSLv3/TLS write client hello
+  Can't use SSL_get_servername
+  SSL_connect:SSLv3/TLS read server hello
+  SSL_connect:SSLv3/TLS read change cipher spec
+  SSL_connect:SSLv3/TLS read finished
+  SSL_connect:SSLv3/TLS write change cipher spec
+  SSL_connect:SSLv3/TLS write finished
   SSL3 alert read:warning:close notify
   SSL3 alert write:warning:close notify
   [1]

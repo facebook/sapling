@@ -19,17 +19,18 @@ setup data
 start mononoke
   $ mononoke
   $ wait_for_mononoke
-  $ function s_client () { openssl s_client -connect localhost:$MONONOKE_SOCKET -CAfile "${TEST_CERTDIR}/root-ca.crt" -cert "${TEST_CERTDIR}/localhost.crt" -key "${TEST_CERTDIR}/localhost.key" -ign_eof "$@"; }
 
 test TLS Session/Ticket resumption when using client certs
   $ TMPFILE=$(mktemp)
   $ RUN1=$(echo -e "hello\n" | s_client -sess_out $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
+  Can't use SSL_get_servername
   depth=1 C = US, ST = CA, O = FakeRootCanal, CN = fbmononoke.com
   verify return:1
   depth=0 CN = localhost, O = Mononoke, C = US, ST = CA
   verify return:1
   read:errno=0
   $ RUN2=$(echo -e "hello\n" | s_client -sess_in $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
+  Can't use SSL_get_servername
   read:errno=0
   $ echo "$RUN1"
       Session-ID: [A-Z0-9]{64} (re)
@@ -42,15 +43,16 @@ test TLS Tickets use encryption keys from seeds - sessions should persist across
   [137]
   $ mononoke
   $ wait_for_mononoke
-  $ alias s_client="openssl s_client -connect localhost:$MONONOKE_SOCKET -CAfile \"${TEST_CERTDIR}/root-ca.crt\" -cert \"${TEST_CERTDIR}/localhost.crt\" -key \"${TEST_CERTDIR}/localhost.key\" -ign_eof"
   $ echo -e "hello\n" | s_client -sess_in $TMPFILE -state | grep -E "^SSL_connect"
-  SSL_connect:before/connect initialization
-  SSL_connect:SSLv3 write client hello A
-  SSL_connect:SSLv3 read server hello A
-  SSL_connect:SSLv3 read finished A
-  SSL_connect:SSLv3 write change cipher spec A
-  SSL_connect:SSLv3 write finished A
-  SSL_connect:SSLv3 flush data
+  SSL_connect:before SSL initialization
+  SSL_connect:SSLv3/TLS write client hello
+  SSL_connect:SSLv3/TLS write client hello
+  Can't use SSL_get_servername
+  SSL_connect:SSLv3/TLS read server hello
+  SSL_connect:SSLv3/TLS read change cipher spec
+  SSL_connect:SSLv3/TLS read finished
+  SSL_connect:SSLv3/TLS write change cipher spec
+  SSL_connect:SSLv3/TLS write finished
   read:errno=0
   SSL3 alert write:warning:close notify
   [1]
