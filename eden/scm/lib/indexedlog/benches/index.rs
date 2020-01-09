@@ -7,7 +7,10 @@
 
 use indexedlog::index::{InsertKey, InsertValue, OpenOptions};
 use minibench::{bench, elapsed, measure, Measure};
-use rand::{ChaChaRng, Rng};
+use rand_chacha::{
+    rand_core::{RngCore, SeedableRng},
+    ChaChaRng,
+};
 use std::sync::Arc;
 use tempfile::tempdir;
 
@@ -16,7 +19,7 @@ const N: usize = 204800;
 /// Generate random buffer
 fn gen_buf(size: usize) -> Vec<u8> {
     let mut buf = vec![0u8; size];
-    ChaChaRng::new_unseeded().fill_bytes(buf.as_mut());
+    ChaChaRng::seed_from_u64(0).fill_bytes(buf.as_mut());
     buf
 }
 
