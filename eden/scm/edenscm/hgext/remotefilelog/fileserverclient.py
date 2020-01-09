@@ -654,7 +654,7 @@ class fileserverclient(object):
         """downloads the given file versions to the cache
         """
         repo = self.repo
-        idstocheck = []
+        idstocheck = set()
         for file, id in fileids:
             # hack
             # - we don't use .hgtags
@@ -663,13 +663,14 @@ class fileserverclient(object):
             if file == ".hgtags" or len(id) == 42 or not repo.shallowmatch(file):
                 continue
 
-            idstocheck.append((file, bin(id)))
+            idstocheck.add((file, bin(id)))
 
         batchlfsdownloads = self.ui.configbool(
             "remotefilelog", "_batchlfsdownloads", True
         )
         dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
 
+        idstocheck = list(idstocheck)
         if repo.fileslog._ruststore:
             repo.fileslog.contentstore.prefetch(idstocheck)
             repo.fileslog.metadatastore.prefetch(idstocheck)
