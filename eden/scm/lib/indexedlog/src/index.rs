@@ -120,7 +120,6 @@ type Checksum = Option<ChecksumTable>;
 /// Read reversed vlq at the given end offset (exclusive).
 /// Return the decoded integer and the bytes used by the VLQ integer.
 fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> io::Result<(u64, usize)> {
-    let buf = buf.as_ref();
     let mut int_buf = Vec::new();
     for i in (0..end_offset).rev() {
         int_buf.push(buf[i]);
@@ -234,7 +233,7 @@ impl Offset {
             index.verify_checksum(self.0, TYPE_BYTES as u64)?;
             match buf.get(self.0 as usize) {
                 Some(x) => Ok(*x as u8),
-                _ => return Err(index.range_error(self.0 as usize, 1)),
+                _ => Err(index.range_error(self.0 as usize, 1)),
             }
         }
     }
@@ -309,13 +308,10 @@ trait TypedOffsetMethods: Sized {
         ))
     }
 
-    #[inline]
     fn type_int() -> u8;
 
-    #[inline]
     fn from_offset_unchecked(offset: Offset) -> Self;
 
-    #[inline]
     fn to_offset(&self) -> Offset;
 }
 
@@ -425,7 +421,7 @@ impl RadixOffset {
     #[inline]
     fn set_link(self, index: &mut Index, value: LinkOffset) {
         if self.is_dirty() {
-            index.dirty_radixes[self.dirty_index()].link_offset = value.into();
+            index.dirty_radixes[self.dirty_index()].link_offset = value;
         } else {
             panic!("bug: set_link called on immutable radix entry");
         }
@@ -508,9 +504,7 @@ fn extract_key_content(index: &Index, key_offset: Offset) -> crate::Result<&[u8]
     match typed_offset {
         TypedOffset::Key(x) => Ok(x.key_content(index)?),
         TypedOffset::ExtKey(x) => Ok(x.key_content(index)?),
-        _ => Err(index
-            .corruption(format!("unexpected key type at {}", key_offset.0))
-            .into()),
+        _ => Err(index.corruption(format!("unexpected key type at {}", key_offset.0))),
     }
 }
 
@@ -674,7 +668,7 @@ impl<'a> RangeIter<'a> {
     }
 
     /// Reconstruct "key" from the stack.
-    fn key(stack: &Vec<IterState>, index: &Index) -> crate::Result<Vec<u8>> {
+    fn key(stack: &[IterState], index: &Index) -> crate::Result<Vec<u8>> {
         // Reconstruct key. Collect base16 child stack (prefix + visiting),
         // then convert to base256.
         let mut prefix = Vec::with_capacity(stack.len() - 1);
@@ -733,10 +727,8 @@ impl<'a> RangeIter<'a> {
                             });
                             continue;
                         }
-                        Ok(_) => Some(Err(index
-                            .corruption("unexpected type during iteration")
-                            .into())),
-                        Err(err) => Some(Err(err.into())),
+                        Ok(_) => Some(Err(index.corruption("unexpected type during iteration"))),
+                        Err(err) => Some(Err(err)),
                     },
                     Err(err) => Some(Err(err)),
                 },
@@ -744,9 +736,9 @@ impl<'a> RangeIter<'a> {
                     Ok(link_offset) if link_offset.is_null() => continue,
                     Ok(link_offset) => match Self::key(stack, index) {
                         Ok(key) => Some(Ok((Cow::Owned(key), link_offset))),
-                        Err(err) => Some(Err(err.into())),
+                        Err(err) => Some(Err(err)),
                     },
-                    Err(err) => Some(Err(err.into())),
+                    Err(err) => Some(Err(err)),
                 },
                 IterState::Leaf(leaf) => match leaf.key_and_link_offset(index) {
                     Ok((key, link_offset)) => Some(Ok((Cow::Borrowed(key), link_offset))),
@@ -800,7 +792,7 @@ impl<'a> DoubleEndedIterator for RangeIter<'a> {
 
 impl LinkOffset {
     /// Iterating through values referred by this linked list.
-    pub fn values<'a>(self, index: &'a Index) -> LeafValueIter<'a> {
+    pub fn values(self, index: &Index) -> LeafValueIter<'_> {
         LeafValueIter {
             errored: false,
             index,
@@ -842,7 +834,7 @@ impl LinkOffset {
     fn create(self, index: &mut Index, value: u64) -> LinkOffset {
         let new_link = MemLink {
             value,
-            next_link_offset: self.into(),
+            next_link_offset: self,
             unused: false,
         };
         let len = index.dirty_links.len();
@@ -870,7 +862,7 @@ impl KeyOffset {
             let end = start + key_len;
             index.verify_checksum(u64::from(self), end as u64 - u64::from(self))?;
             if end > index.buf.len() {
-                Err(index.range_error(start, end - start).into())
+                Err(index.range_error(start, end - start))
             } else {
                 Ok(&index.buf[start..end])
             }
@@ -880,7 +872,7 @@ impl KeyOffset {
     /// Create a new in-memory key entry. The key cannot be empty.
     #[inline]
     fn create(index: &mut Index, key: &[u8]) -> KeyOffset {
-        debug_assert!(key.len() > 0);
+        debug_assert!(!key.is_empty());
         let len = index.dirty_keys.len();
         index.dirty_keys.push(MemKey {
             key: Vec::from(key).into_boxed_slice(),
@@ -992,9 +984,9 @@ impl MemRadix {
         let int_size = RadixOffset::parse_int_size_from_flag(flag);
 
         let mut offsets = [Offset::default(); 16];
-        for i in 0..16 {
+        for (i, o) in offsets.iter_mut().enumerate() {
             if (bitmap >> i) & 1 == 1 {
-                offsets[i] = Offset::from_disk(
+                *o = Offset::from_disk(
                     index,
                     RadixOffset::read_raw_int_unchecked(index, int_size, offset + pos)?,
                 )?;
@@ -1036,8 +1028,7 @@ impl MemRadix {
         };
 
         let mut child_offsets = [0u64; 16];
-        for i in 0..16 {
-            let child_offset = self.offsets[i];
+        for (i, child_offset) in self.offsets.iter().enumerate() {
             if !child_offset.is_null() {
                 bitmap |= 1u16 << i;
                 let child_offset = child_offset.to_disk(offset_map);
@@ -1124,7 +1115,7 @@ impl MemLeaf {
                     link_offset,
                 })
             }
-            _ => Err(index.range_error(offset, 1).into()),
+            _ => Err(index.range_error(offset, 1)),
         }
     }
 
@@ -1391,12 +1382,10 @@ impl MemRoot {
             index.verify_checksum(end - vlq_size, vlq_size)?;
             Self::read_from(index, end - vlq_size - root_size)
         } else {
-            Err(index
-                .corruption(format!(
-                    "index::MemRoot::read_from_end received an 'end' that is too small ({})",
-                    end
-                ))
-                .into())
+            Err(index.corruption(format!(
+                "index::MemRoot::read_from_end received an 'end' that is too small ({})",
+                end
+            )))
         }
     }
 
@@ -1629,6 +1618,7 @@ pub struct OpenOptions {
 }
 
 impl OpenOptions {
+    #[allow(clippy::new_without_default)]
     /// Create [`OpenOptions`] with default configuration:
     /// - no checksum
     /// - no external key buffer
@@ -1735,14 +1725,15 @@ impl OpenOptions {
                 )?,
                 None => {
                     // Fall back to open the file as read-only, automatically.
-                    if open_result.is_err() {
-                        open_options.write = Some(false);
-                        fs::OpenOptions::new()
-                            .read(true)
-                            .open(path)
-                            .context(path, "cannot open Index with read-only mode")?
-                    } else {
-                        open_result.unwrap()
+                    match open_result {
+                        Err(_) => {
+                            open_options.write = Some(false);
+                            fs::OpenOptions::new()
+                                .read(true)
+                                .open(path)
+                                .context(path, "cannot open Index with read-only mode")?
+                        }
+                        Ok(file) => file,
                     }
                 }
             };
@@ -1803,7 +1794,7 @@ impl OpenOptions {
                 dirty_keys: vec![],
                 dirty_ext_keys: vec![],
                 checksum,
-                key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
+                key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
                 len,
             })
         })();
@@ -1817,8 +1808,7 @@ impl OpenOptions {
             if self.checksum_chunk_size != 0 {
                 return Err(crate::Error::programming(
                     "checksum_chunk_size is not supported for in-memory Index",
-                )
-                .into());
+                ));
             }
             let dirty_radixes = vec![MemRadix::default()];
             let clean_root = {
@@ -1842,7 +1832,7 @@ impl OpenOptions {
                 dirty_keys: vec![],
                 dirty_ext_keys: vec![],
                 checksum: None,
-                key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
+                key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
                 len: 0,
             })
         })();
@@ -1883,7 +1873,7 @@ trait IndexBuf {
         // This method is used in hot code paths. Its instruction size matters.
         // Be sure to run `cargo bench --bench index verified` when changing this
         // function, or the inline attributes.
-        if let &Some(ref table) = self.checksum() {
+        if let Some(ref table) = self.checksum() {
             table.check_range(start, length)
         } else {
             Ok(())
@@ -2122,7 +2112,7 @@ impl Index {
                     // new content, so it's not considered as "data corruption".
                     // TODO: Review this decision.
                     let err = crate::Error::path(&path, message);
-                    return Err(err.into());
+                    return Err(err);
                 }
 
                 let mut buf = Vec::with_capacity(estimated_dirty_bytes);
@@ -2222,7 +2212,7 @@ impl Index {
                 // Sanity check - the length should be expected. Otherwise, the lock
                 // is somehow ineffective.
                 if mmap_len != new_len {
-                    return Err(this.corruption("file changed unexpectedly").into());
+                    return Err(this.corruption("file changed unexpectedly"));
                 }
 
                 if let Some(ref mut table) = self.checksum {
@@ -2279,7 +2269,7 @@ impl Index {
                             return Ok(LinkOffset::default());
                         }
                     }
-                    _ => return Err(self.corruption("unexpected type during key lookup").into()),
+                    _ => return Err(self.corruption("unexpected type during key lookup")),
                 }
             }
 
@@ -2343,7 +2333,7 @@ impl Index {
                         return Ok(RangeIter::new(self, front_stack.clone(), front_stack));
                     };
                 }
-                _ => return Err(self.corruption("unexpected type during prefix scan").into()),
+                _ => return Err(self.corruption("unexpected type during prefix scan")),
             }
         }
 
@@ -2455,7 +2445,7 @@ impl Index {
                 // UNSAFE NOTICE: `key` is valid as long as `self.key_buf` is valid. `self.key_buf`
                 // won't be changed. So `self` can still be mutable without a read-only
                 // relationship with `key`.
-                let detached_key = unsafe { &*(key as (*const [u8])) };
+                let detached_key = unsafe { &*(key as *const [u8]) };
                 (detached_key, Some((start, len)))
             }
         };
@@ -2518,7 +2508,7 @@ impl Index {
                                 };
                                 let key_offset = self.create_key(key, key_buf_offset);
                                 let leaf_offset =
-                                    LeafOffset::create(self, new_link_offset, key_offset.into());
+                                    LeafOffset::create(self, new_link_offset, key_offset);
                                 radix.set_child(self, x, leaf_offset.into());
                                 return Ok(());
                             } else {
@@ -2536,14 +2526,14 @@ impl Index {
                         // `old_key` are only valid before `dirty_*keys` being resized.
                         // `old_iter` (used by `split_leaf`) and `old_key` are not used
                         // after creating a key. So it's safe to not copy it.
-                        let detached_key = unsafe { &*(old_key as (*const [u8])) };
+                        let detached_key = unsafe { &*(old_key as *const [u8]) };
                         (detached_key, link_offset)
                     };
                     let matched = if let InsertValue::TombstonePrefix = value {
                         // Only test the prefix of old_key.
-                        old_key.get(..key.as_ref().len()) == Some(key.as_ref())
+                        old_key.get(..key.len()) == Some(key)
                     } else {
-                        old_key == key.as_ref()
+                        old_key == key
                     };
                     if matched {
                         // Key matched. Need to copy leaf entry for modification, except for
@@ -2586,7 +2576,7 @@ impl Index {
                     }
                     return Ok(());
                 }
-                _ => return Err(self.corruption("unexpected type during insertion").into()),
+                _ => return Err(self.corruption("unexpected type during insertion")),
             }
 
             step += 1;
@@ -2628,9 +2618,10 @@ impl Index {
                     None => {
                         // The key ends at this Radix entry.
                         let state = IterState::RadixLeaf(radix);
-                        let state = match inclusive {
-                            true => state.step(side).unwrap(),
-                            false => state,
+                        let state = if inclusive {
+                            state.step(side).unwrap()
+                        } else {
+                            state
                         };
                         stack.push(state);
                         return Ok(stack);
@@ -2658,7 +2649,7 @@ impl Index {
                     stack.push(state);
                     return Ok(stack);
                 }
-                _ => return Err(self.corruption("unexpected type following prefix").into()),
+                _ => return Err(self.corruption("unexpected type following prefix")),
             }
         }
 
@@ -2667,6 +2658,7 @@ impl Index {
         Ok(stack)
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// Split a leaf entry. Separated from `insert_advanced` to make `insert_advanced`
     /// shorter.  The parameters are internal states inside `insert_advanced`. Calling this
     /// from other functions makes less sense.
@@ -2755,16 +2747,20 @@ impl Index {
                 radix.link_offset = old_link_offset;
             }
 
-            if b2.is_none() {
-                // Example 2. new_key is a prefix of old_key. A new leaf is not needed.
-                radix.link_offset = new_link_offset;
-                completed = true;
-            } else if b1 != b2 {
-                // Example 1 and Example 3. A new leaf is needed.
-                let new_key_offset = self.create_key(new_key, key_buf_offset);
-                let new_leaf_offset = LeafOffset::create(self, new_link_offset, new_key_offset);
-                radix.offsets[b2.unwrap() as usize] = new_leaf_offset.into();
-                completed = true;
+            match b2 {
+                None => {
+                    // Example 2. new_key is a prefix of old_key. A new leaf is not needed.
+                    radix.link_offset = new_link_offset;
+                    completed = true;
+                }
+                Some(b2v) if b1 != b2 => {
+                    // Example 1 and Example 3. A new leaf is needed.
+                    let new_key_offset = self.create_key(new_key, key_buf_offset);
+                    let new_leaf_offset = LeafOffset::create(self, new_link_offset, new_key_offset);
+                    radix.offsets[b2v as usize] = new_leaf_offset.into();
+                    completed = true;
+                }
+                _ => (),
             }
 
             // Create the Radix entry, and connect it to the parent entry.
@@ -2908,9 +2904,9 @@ impl Debug for MemRoot {
 
 impl Debug for Index {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(
+        writeln!(
             f,
-            "Index {{ len: {}, root: {:?} }}\n",
+            "Index {{ len: {}, root: {:?} }}",
             self.buf.len(),
             self.dirty_root.radix_offset
         )?;
@@ -2931,73 +2927,73 @@ impl Debug for Index {
                 TYPE_RADIX => {
                     let e = MemRadix::read_from(self, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
-                    write!(f, "{:?}\n", e)?;
+                    writeln!(f, "{:?}", e)?;
                 }
                 TYPE_LEAF => {
                     let e = MemLeaf::read_from(self, i).expect("read");
                     e.write_noninline_to(&mut buf, &offset_map).expect("write");
-                    write!(f, "{:?}\n", e)?;
+                    writeln!(f, "{:?}", e)?;
                 }
                 TYPE_INLINE_LEAF => {
                     let e = MemLeaf::read_from(self, i).expect("read");
-                    write!(f, "Inline{:?}\n", e)?;
+                    writeln!(f, "Inline{:?}", e)?;
                     // Just skip the type int byte so we can parse inlined structures.
                     buf.push(TYPE_INLINE_LEAF);
                 }
                 TYPE_LINK => {
                     let e = MemLink::read_from(self, i).unwrap();
                     e.write_to(&mut buf, &offset_map).expect("write");
-                    write!(f, "{:?}\n", e)?;
+                    writeln!(f, "{:?}", e)?;
                 }
                 TYPE_KEY => {
                     let e = MemKey::read_from(self, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
-                    write!(f, "{:?}\n", e)?;
+                    writeln!(f, "{:?}", e)?;
                 }
                 TYPE_EXT_KEY => {
                     let e = MemExtKey::read_from(self, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
-                    write!(f, "{:?}\n", e)?;
+                    writeln!(f, "{:?}", e)?;
                 }
                 TYPE_ROOT => {
                     let e = MemRoot::read_from(self, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
-                    write!(f, "{:?}\n", e)?;
+                    writeln!(f, "{:?}", e)?;
                 }
                 _ => {
-                    write!(f, "Broken Data!\n")?;
+                    writeln!(f, "Broken Data!")?;
                     break;
                 }
             }
         }
 
         if buf.len() > 1 && self.buf[..] != buf[..] {
-            return write!(f, "Inconsistent Data!\n");
+            return writeln!(f, "Inconsistent Data!");
         }
 
         // In-memory entries
         for (i, e) in self.dirty_radixes.iter().enumerate() {
             write!(f, "Radix[{}]: ", i)?;
-            write!(f, "{:?}\n", e)?;
+            writeln!(f, "{:?}", e)?;
         }
 
         for (i, e) in self.dirty_leafs.iter().enumerate() {
             write!(f, "Leaf[{}]: ", i)?;
-            write!(f, "{:?}\n", e)?;
+            writeln!(f, "{:?}", e)?;
         }
 
         for (i, e) in self.dirty_links.iter().enumerate() {
             write!(f, "Link[{}]: ", i)?;
-            write!(f, "{:?}\n", e)?;
+            writeln!(f, "{:?}", e)?;
         }
 
         for (i, e) in self.dirty_keys.iter().enumerate() {
             write!(f, "Key[{}]: ", i)?;
-            write!(f, "{:?}\n", e)?;
+            writeln!(f, "{:?}", e)?;
         }
 
         for (i, e) in self.dirty_ext_keys.iter().enumerate() {
-            write!(f, "ExtKey[{}]: {:?}\n", i, e)?;
+            writeln!(f, "ExtKey[{}]: {:?}", i, e)?;
         }
 
         Ok(())

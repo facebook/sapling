@@ -218,7 +218,7 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                 io::ErrorKind::PermissionDenied => {
                     // Try to fix permission aggressively.
                     if let Some(parent) = dir.parent() {
-                        if let Ok(_) = fix_perm_path(&parent, true) {
+                        if fix_perm_path(&parent, true).is_ok() {
                             return try_mkdir_once().context(&dir, "cannot mkdir").context(|| {
                                 format!(
                                     "while trying to mkdir {:?} after fix_perm {:?}",
@@ -230,7 +230,7 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                 }
                 _ => (),
             }
-            return Err(err).context(dir, "cannot mkdir");
+            Err(err).context(dir, "cannot mkdir")
         })
     })()
 }

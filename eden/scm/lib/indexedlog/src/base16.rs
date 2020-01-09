@@ -84,7 +84,7 @@ impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
 /// Convert base16 to base256. base16 must have 2 * N items.
 ///
 /// Panic if base16 has 2 * N + 1 items.
-pub(crate) fn base16_to_base256(base16: &Vec<u8>) -> Vec<u8> {
+pub(crate) fn base16_to_base256(base16: &[u8]) -> Vec<u8> {
     assert!(base16.len() & 1 == 0);
     let mut bytes = Vec::with_capacity(base16.len() / 2);
     let mut next_byte: u8 = 0;

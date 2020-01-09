@@ -868,20 +868,14 @@ impl Log {
                                             name
                                         );
                                         false
+                                    } else if index.verify().is_ok() {
+                                        message +=
+                                            &format!("Index {:?} passed integrity check\n", name);
+                                        true
                                     } else {
-                                        if index.verify().is_ok() {
-                                            message += &format!(
-                                                "Index {:?} passed integrity check\n",
-                                                name
-                                            );
-                                            true
-                                        } else {
-                                            message += &format!(
-                                                "Index {:?} failed integrity check\n",
-                                                name
-                                            );
-                                            false
-                                        }
+                                        message +=
+                                            &format!("Index {:?} failed integrity check\n", name);
+                                        false
                                     }
                                 }
                             }
@@ -965,7 +959,7 @@ impl Log {
         let result: crate::Result<_> = (|| {
             self.maybe_return_index_error()?;
             if let Some(index) = self.indexes.get(index_id) {
-                assert!(key.as_ref().len() > 0);
+                assert!(!key.as_ref().is_empty());
                 let link_offset = index.get(&key)?;
                 let inner_iter = link_offset.values(index);
                 Ok(LogLookupIter {
@@ -1276,7 +1270,7 @@ impl Log {
     fn load_log_and_indexes(
         dir: Option<&Path>,
         meta: &LogMetadata,
-        index_defs: &Vec<IndexDef>,
+        index_defs: &[IndexDef],
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<&Vec<Index>>,
         fsync: bool,
@@ -1392,11 +1386,14 @@ impl Log {
             }
         };
 
-        if offset == buf.len() as u64 {
-            return Ok(None);
-        } else if offset > buf.len() as u64 {
-            let msg = format!("read offset {} exceeds buffer size {}", offset, buf.len());
-            return Err(data_error(msg));
+        use std::cmp::Ordering::{Equal, Greater};
+        match offset.cmp(&(buf.len() as u64)) {
+            Equal => return Ok(None),
+            Greater => {
+                let msg = format!("read offset {} exceeds buffer size {}", offset, buf.len());
+                return Err(data_error(msg));
+            }
+            _ => (),
         }
 
         let (entry_flags, vlq_len): (u32, _) = buf.read_vlq_at(offset as usize).map_err(|e| {
@@ -1485,7 +1482,7 @@ impl Log {
     #[inline]
     fn maybe_return_index_error(&self) -> crate::Result<()> {
         if self.index_corrupted {
-            let msg = format!("index is corrupted");
+            let msg = "index is corrupted".to_string();
             Err(self.corruption(msg))
         } else {
             Ok(())
@@ -1625,6 +1622,7 @@ impl IndexDef {
 }
 
 impl OpenOptions {
+    #[allow(clippy::new_without_default)]
     /// Creates a blank new set of options ready for configuration.
     ///
     /// `create` is initially `false`.
@@ -1852,6 +1850,7 @@ impl OpenOptions {
 
             // Make sure the header of the primary log file is okay.
             (|| -> crate::Result<()> {
+                #[allow(clippy::never_loop)]
                 let header_corrupted = loop {
                     if let Err(e) = primary_path.metadata() {
                         if e.kind() == io::ErrorKind::NotFound {
@@ -2110,7 +2109,7 @@ impl<'a> Iterator for LogLookupIter<'a> {
             None => None,
             Some(Err(err)) => {
                 self.errored = true;
-                Some(Err(err.into()))
+                Some(Err(err))
             }
             Some(Ok(offset)) => match self
                 .log
@@ -2127,7 +2126,7 @@ impl<'a> Iterator for LogLookupIter<'a> {
                     // The index iterator is finite if integrity check is turned
                     // on. So trust it and don't worry about infinite iteration
                     // here.
-                    Some(Err(err.into()))
+                    Some(Err(err))
                 }
             },
         }
@@ -2155,7 +2154,7 @@ impl<'a> Iterator for LogIter<'a> {
         {
             Err(e) => {
                 self.errored = true;
-                Some(Err(e.into()))
+                Some(Err(e))
             }
             Ok(Some(entry_result)) => {
                 assert!(entry_result.next_offset > self.next_offset);
@@ -2177,7 +2176,7 @@ impl<'a> LogRangeIter<'a> {
             None => None,
             Some(Err(err)) => {
                 self.errored = true;
-                Some(Err(err.into()))
+                Some(Err(err))
             }
             Some(Ok((key, link_offset))) => {
                 let iter = LogLookupIter {
@@ -2335,8 +2334,8 @@ impl Debug for Log {
             write!(f, "Entry[{}]: ", offset)?;
             match iter.next() {
                 None => break,
-                Some(Ok(bytes)) => write!(f, "{{ bytes: {:?} }}\n", bytes)?,
-                Some(Err(err)) => write!(f, "{{ error: {:?} }}\n", err)?,
+                Some(Ok(bytes)) => writeln!(f, "{{ bytes: {:?} }}", bytes)?,
+                Some(Err(err)) => writeln!(f, "{{ error: {:?} }}", err)?,
             }
         }
         Ok(())

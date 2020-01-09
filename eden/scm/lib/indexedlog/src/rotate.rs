@@ -47,6 +47,7 @@ pub struct OpenOptions {
 }
 
 impl OpenOptions {
+    #[allow(clippy::new_without_default)]
     /// Creates a default new set of options ready for configuration.
     ///
     /// The default values are:
@@ -307,7 +308,7 @@ impl RotateLog {
     /// Append data to the writable [`Log`].
     pub fn append(&mut self, data: impl AsRef<[u8]>) -> crate::Result<()> {
         (|| -> crate::Result<_> {
-            let threshold = self.open_options.auto_sync_threshold.clone();
+            let threshold = self.open_options.auto_sync_threshold;
             let log = self.writable_log();
             log.append(data)?;
             if let Some(threshold) = threshold {
@@ -499,6 +500,7 @@ impl RotateLog {
         self.sync()
     }
 
+    #[allow(clippy::nonminimal_bool)]
     fn try_remove_old_logs(&self, _lock: &ScopedDirLock) {
         if let Ok(read_dir) = self.dir.as_ref().unwrap().read_dir() {
             let latest = self.latest;
@@ -643,7 +645,7 @@ impl<'a> Iterator for RotateLogLookupIter<'a> {
             None => {
                 if self.log_index + 1 >= self.log_rotate.logs.len() {
                     self.end = true;
-                    return None;
+                    None
                 } else {
                     // Try the next log
                     self.log_index += 1;

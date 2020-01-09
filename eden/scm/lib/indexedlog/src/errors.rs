@@ -285,6 +285,7 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
             // Provide more context for PermissionDenied
             if is_eperm {
                 #[cfg(unix)]
+                #[allow(clippy::redundant_closure_call)]
                 {
                     let add_stat_context = |path: &Path, err: Error| {
                         use std::os::unix::fs::MetadataExt;
@@ -328,7 +329,7 @@ pub(crate) trait LazyToString {
 // &'static str is cheap.
 impl LazyToString for &'static str {
     fn to_string_costly(&self) -> String {
-        self.to_string()
+        (*self).to_string()
     }
 }
 

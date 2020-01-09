@@ -117,7 +117,7 @@ impl ChecksumTable {
         // Otherwise, scan related chunks.
         let start = (offset >> self.chunk_size_log) as usize;
         let end = ((offset + length - 1) >> self.chunk_size_log) as usize;
-        if !(start..(end + 1)).all(|i| self.check_chunk(i)) {
+        if !(start..=end).all(|i| self.check_chunk(i)) {
             return checksum_error(self, offset, length);
         }
         Ok(())
@@ -165,7 +165,7 @@ impl ChecksumTable {
                 mmap_readonly(&file, None).context(path, "cannot mmap checksummed file")?;
 
             // Read checksum file into memory
-            let checksum_path = path_appendext(path.as_ref(), "sum");
+            let checksum_path = path_appendext(path, "sum");
             let mut checksum_buf = Vec::new();
             match OpenOptions::new().read(true).open(&checksum_path) {
                 Ok(mut checksum_file) => {
@@ -181,7 +181,7 @@ impl ChecksumTable {
             }
 
             // Parse checksum file
-            let (chunk_size_log, chunk_end, checksums, checked) = if checksum_buf.len() == 0 {
+            let (chunk_size_log, chunk_end, checksums, checked) = if checksum_buf.is_empty() {
                 (DEFAULT_CHUNK_SIZE_LOG, 0, vec![], vec![])
             } else {
                 let mut cur = Cursor::new(checksum_buf);
