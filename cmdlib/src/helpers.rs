@@ -353,9 +353,10 @@ pub fn serve_forever<Server, QuiesceFn, ShutdownFn>(
     runtime: tokio::runtime::Runtime,
     server: Server,
     logger: &Logger,
-    matches: &ArgMatches,
     quiesce: QuiesceFn,
+    shutdown_grace_period: Duration,
     shutdown: ShutdownFn,
+    shutdown_timeout: Duration,
 ) -> Result<(), Error>
 where
     Server: Future<Item = (), Error = ()> + Send + 'static,
@@ -371,7 +372,16 @@ where
         }
         Ok(())
     };
-    block_on_fn(runtime, server, logger, matches, block, quiesce, shutdown)?;
+    block_on_fn(
+        runtime,
+        server,
+        logger,
+        block,
+        quiesce,
+        shutdown_grace_period,
+        shutdown,
+        shutdown_timeout,
+    )?;
 
     Ok(())
 }
@@ -380,10 +390,11 @@ pub fn block_on_fn<Server, QuiesceFn, ShutdownFn, BlockFn>(
     mut runtime: tokio::runtime::Runtime,
     server: Server,
     logger: &Logger,
-    matches: &ArgMatches,
     block: BlockFn,
     quiesce: QuiesceFn,
+    shutdown_grace_period: Duration,
     shutdown: ShutdownFn,
+    shutdown_timeout: Duration,
 ) -> Result<(), Error>
 where
     Server: Future<Item = (), Error = ()> + Send + 'static,
@@ -391,17 +402,6 @@ where
     ShutdownFn: FnOnce() -> bool,
     BlockFn: FnOnce() -> Result<(), Error>,
 {
-    let shutdown_grace_period: u64 = matches
-        .value_of(ARG_SHUTDOWN_GRACE_PERIOD)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
-    let force_shutdown_period: u64 = matches
-        .value_of(ARG_FORCE_SHUTDOWN_PERIOD)
-        .unwrap()
-        .parse()
-        .map_err(Error::from)?;
-
     let (shutdown_pub, shutdown_sub) = sync::oneshot::channel::<()>();
     let main = join_stats_agg(server, shutdown_sub)?;
     runtime.spawn(main);
@@ -412,17 +412,18 @@ where
     quiesce();
     info!(
         &logger,
-        "Waiting {}s before shutting down server", shutdown_grace_period,
+        "Waiting {}s before shutting down server",
+        shutdown_grace_period.as_secs(),
     );
-    thread::sleep(Duration::from_secs(shutdown_grace_period));
+    thread::sleep(shutdown_grace_period);
 
     info!(&logger, "Shutting down...");
     let _ = shutdown_pub.send(());
 
-    // Mononoke uses `tokio::spawn` to start background futures that never complete.
+    // Create a background thread to panic if we fail to shutdown within the timeout.
     panichandler::set_panichandler(Fate::Abort);
     thread::spawn(move || {
-        thread::sleep(Duration::from_secs(force_shutdown_period));
+        thread::sleep(shutdown_timeout);
         panic!("Timed out shutting down runtime");
     });
 
@@ -513,7 +514,6 @@ mod test {
     use super::*;
     use crate::args;
     use anyhow::Error;
-    use clap::Arg;
     use futures::future::lazy;
     use slog_glog_fmt;
     use tokio_timer::sleep;
@@ -524,28 +524,6 @@ mod test {
 
     fn exec_matches<'a>() -> ArgMatches<'a> {
         let app = args::MononokeApp::new("test_app").build();
-        let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
-        args::add_fb303_args(app).get_matches_from(arg_vec)
-    }
-
-    fn serve_matches<'a>(force_shutdown_period: &'a str) -> ArgMatches<'a> {
-        let app = args::MononokeApp::new("test_app")
-            .build()
-            .arg(
-                Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
-                    .long("shutdown-grace-period")
-                    .takes_value(true)
-                    .required(false)
-                    .default_value("0"),
-            )
-            .arg(
-                Arg::with_name(ARG_FORCE_SHUTDOWN_PERIOD)
-                    .long("force-shutdown-period")
-                    .takes_value(true)
-                    .required(false)
-                    .default_value(force_shutdown_period),
-            );
-
         let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
         args::add_fb303_args(app).get_matches_from(arg_vec)
     }
@@ -570,18 +548,19 @@ mod test {
 
     #[test]
     fn test_block_on_fn_shutsdown() {
-        let matches = serve_matches("10");
         let logger = create_logger();
+        let matches = exec_matches();
         let runtime = args::init_runtime(&matches).unwrap();
         let server = sleep(Duration::from_secs(42)).discard();
         block_on_fn(
             runtime,
             server,
             &logger,
-            &matches,
             || -> Result<(), Error> { Ok(()) },
             || (),
+            Duration::from_secs(0),
             || true,
+            Duration::from_secs(10),
         )
         .unwrap();
     }

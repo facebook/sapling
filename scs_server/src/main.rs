@@ -15,8 +15,7 @@ use std::sync::Arc;
 use anyhow::{Context, Error};
 use clap::{value_t, Arg};
 use cloned::cloned;
-use cmdlib::args;
-use cmdlib::helpers::{serve_forever, ARG_FORCE_SHUTDOWN_PERIOD, ARG_SHUTDOWN_GRACE_PERIOD};
+use cmdlib::{args, helpers::serve_forever};
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
@@ -56,6 +55,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = args::MononokeApp::new("Mononoke Source Control Service Server")
         .with_advanced_args_hidden()
         .with_all_repos()
+        .with_shutdown_timeout_args()
         .build()
         .arg(
             Arg::with_name(ARG_HOST)
@@ -79,20 +79,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long("scuba-dataset")
                 .takes_value(true)
                 .help("The name of the scuba dataset to log to"),
-        )
-        .arg(
-            Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
-                .long("shutdown-grace-period")
-                .takes_value(true)
-                .required(false)
-                .default_value("0"),
-        )
-        .arg(
-            Arg::with_name(ARG_FORCE_SHUTDOWN_PERIOD)
-                .long("force-shutdown-period")
-                .takes_value(true)
-                .required(false)
-                .default_value("10"),
         )
         .get_matches();
 
@@ -192,8 +178,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime,
         monitoring_forever.discard(),
         &logger,
-        &matches,
         move || will_exit.store(true, Ordering::Relaxed),
+        args::get_shutdown_grace_period(&matches)?,
         move || {
             // Calling `stop` blocks until the service has completed all requests.
             service_framework.stop();
@@ -201,6 +187,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // Runtime should shutdown now.
             false
         },
+        args::get_shutdown_timeout(&matches)?,
     )?;
 
     info!(logger, "Exiting...");

@@ -30,8 +30,7 @@ use tokio_openssl::SslAcceptorExt;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo;
-use cmdlib::helpers::{serve_forever, ARG_FORCE_SHUTDOWN_PERIOD, ARG_SHUTDOWN_GRACE_PERIOD};
-use cmdlib::{args, monitoring::start_fb303_server};
+use cmdlib::{args, helpers::serve_forever, monitoring::start_fb303_server};
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 
@@ -87,6 +86,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp::new("Mononoke LFS Server")
         .with_advanced_args_hidden()
         .with_all_repos()
+        .with_shutdown_timeout_args()
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
@@ -146,20 +146,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help(
                     "Whether to always wait for an upstream response (primarily useful in testing)",
                 ),
-        )
-        .arg(
-            Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
-                .long("shutdown-grace-period")
-                .takes_value(true)
-                .required(false)
-                .default_value("0"),
-        )
-        .arg(
-            Arg::with_name(ARG_FORCE_SHUTDOWN_PERIOD)
-                .long("force-shutdown-period")
-                .takes_value(true)
-                .required(false)
-                .default_value("10"),
         )
         .arg(
             Arg::with_name(ARG_SCUBA_LOG_FILE)
@@ -441,8 +427,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime,
         server,
         &logger,
-        &matches,
         move || will_exit.store(true, Ordering::Relaxed),
+        args::get_shutdown_grace_period(&matches)?,
         move || {
             // Currently we rely on `shutdown_on_idle` waiting for all
             // in-flight requests to complete.
@@ -451,6 +437,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // until all requests have completed.
             true
         },
+        args::get_shutdown_timeout(&matches)?,
     )?;
 
     info!(&logger, "Exiting...");

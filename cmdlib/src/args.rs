@@ -6,12 +6,12 @@
  * directory of this source tree.
  */
 
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-    path::Path,
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
+use std::io;
+use std::path::Path;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{bail, format_err, Error, Result};
 use clap::{App, Arg, ArgGroup, ArgMatches};
@@ -22,7 +22,6 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::TermDecorator;
-use std::str::FromStr;
 
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 
@@ -99,6 +98,9 @@ pub struct MononokeApp {
 
     /// Adds just --source-repo-id/repo-name, for blobimport into a megarepo
     source_repo: bool,
+
+    /// Adds --shutdown-grace-period and --shutdown-timeout for graceful shutdown.
+    shutdown_timeout: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -122,6 +124,7 @@ impl MononokeApp {
             repo_required: false,
             source_and_target_repos: false,
             source_repo: false,
+            shutdown_timeout: false,
         }
     }
 
@@ -159,6 +162,12 @@ impl MononokeApp {
     /// are sourced from another repo.
     pub fn with_source_repos(mut self) -> Self {
         self.source_repo = true;
+        self
+    }
+
+    /// This command has arguments for graceful shutdown.
+    pub fn with_shutdown_timeout_args(mut self) -> Self {
+        self.shutdown_timeout = true;
         self
     }
 
@@ -251,6 +260,10 @@ impl MononokeApp {
         app = add_mysql_options_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
         app = add_runtime_args(app);
+
+        if self.shutdown_timeout {
+            app = add_shutdown_timeout_args(app);
+        }
 
         app
     }
@@ -709,6 +722,45 @@ pub fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .number_of_values(1)
             .takes_value(true),
     )
+}
+
+pub fn add_shutdown_timeout_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("shutdown-grace-period")
+            .long("shutdown-grace-period")
+            .help(
+                "Number of seconds to wait after receiving a shutdown signal before shutting down.",
+            )
+            .takes_value(true)
+            .required(false)
+            .default_value("0"),
+    )
+    .arg(
+        Arg::with_name("shutdown-timeout")
+            .long("shutdown-timeout")
+            .help("Number of seconds to wait for requests to complete during shutdown.")
+            .takes_value(true)
+            .required(false)
+            .default_value("10"),
+    )
+}
+
+pub fn get_shutdown_grace_period<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
+    let seconds = matches
+        .value_of("shutdown-grace-period")
+        .ok_or(Error::msg("shutdown-grace-period must be specifier"))?
+        .parse()
+        .map_err(Error::from)?;
+    Ok(Duration::from_secs(seconds))
+}
+
+pub fn get_shutdown_timeout<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
+    let seconds = matches
+        .value_of("shutdown-timeout")
+        .ok_or(Error::msg("shutdown-timeout must be specifier"))?
+        .parse()
+        .map_err(Error::from)?;
+    Ok(Duration::from_secs(seconds))
 }
 
 pub fn read_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
