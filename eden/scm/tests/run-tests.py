@@ -500,6 +500,11 @@ def getparser():
     hgconf = parser.add_argument_group("Mercurial Configuration")
     hgconf.add_argument("--chg", action="store_true", help="use chg to run tests")
     hgconf.add_argument(
+        "--chg-sock-path",
+        default="",
+        help="connect to specified chg server address instead of creating a new server",
+    )
+    hgconf.add_argument(
         "--watchman", action="store_true", help="shortcut for --with-watchman=watchman"
     )
     hgconf.add_argument("--compiler", help="compiler to build with")
@@ -973,6 +978,7 @@ class Test(unittest.TestCase):
         hgcommand=None,
         slowtimeout=None,
         usechg=False,
+        chgsockpath=None,
         useipv6=False,
         watchman=None,
         options=None,
@@ -1037,6 +1043,7 @@ class Test(unittest.TestCase):
         self._shell = _bytespath(shell)
         self._hgcommand = hgcommand or b"hg"
         self._usechg = usechg
+        self._chgsockpath = chgsockpath
         self._useipv6 = useipv6
         self._watchman = watchman
         self._options = options
@@ -1048,7 +1055,6 @@ class Test(unittest.TestCase):
         self._out = None
         self._skipped = None
         self._testtmp = None
-        self._chgsockdir = None
 
         self._refout = self.readrefout()
 
@@ -1109,10 +1115,6 @@ class Test(unittest.TestCase):
                 # file.
                 if e.errno != errno.ENOENT:
                     raise
-
-        if self._usechg:
-            self._chgsockdir = os.path.join(self._threadtmp, b"%s.chgsock" % name)
-            os.mkdir(self._chgsockdir)
 
         if self._watchman:
             shortname = hashlib.sha1(b"%s" % name).hexdigest()[:6]
@@ -1329,11 +1331,6 @@ class Test(unittest.TestCase):
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
 
-        if self._usechg:
-            # chgservers will stop automatically after they find the socket
-            # files are deleted
-            shutil.rmtree(self._chgsockdir, True)
-
         if self._watchman:
             try:
                 self._watchmanproc.terminate()
@@ -1523,8 +1520,7 @@ class Test(unittest.TestCase):
             if k.startswith("HG_"):
                 del env[k]
 
-        if self._usechg:
-            env["CHGSOCKNAME"] = os.path.join(self._chgsockdir, b"server")
+        env["CHGSOCKNAME"] = self._chgsockpath
 
         if self._watchman:
             env["WATCHMAN_SOCK"] = self._watchmansock
@@ -3425,6 +3421,14 @@ class TestRunner(object):
             vlog("# Using watchman", self._watchman)
         vlog("# Writing to directory", self._outputdir)
 
+        if not self.options.chg_sock_path:
+            # When running many tests. Attempt to use a shared chg server for
+            # all tests to reduce chg server start overhead from O(tests) to
+            # O(1).
+            # `chgsockpath` is inside HGTMP, and will be cleaned up by
+            # self._cleanup().
+            self.options.chg_sock_path = os.path.join(self._hgtmp, "chgserver")
+
         try:
             return self._runtests(testdescs) or 0
         finally:
@@ -3621,6 +3625,7 @@ class TestRunner(object):
             shell=self.options.shell,
             hgcommand=self._hgcommand,
             usechg=self.options.chg,
+            chgsockpath=self.options.chg_sock_path,
             useipv6=useipv6,
             watchman=self._watchman,
             options=self.options,
