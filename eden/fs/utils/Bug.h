@@ -8,8 +8,8 @@
 #pragma once
 
 #include <folly/Conv.h>
+#include <folly/CppAttributes.h>
 #include <folly/futures/Future.h>
-#include <folly/lang/ColdClass.h>
 #include <atomic>
 #include <string>
 
@@ -65,10 +65,10 @@ namespace eden {
  * In debug builds EdenBug causes the program to abort rather than throwing or
  * returning an exception.
  */
-class EdenBug : public folly::ColdClass {
+class EdenBug {
  public:
-  EdenBug(const char* file, int lineNumber);
-  EdenBug(EdenBug&& other) noexcept;
+  FOLLY_COLD EdenBug(const char* file, int lineNumber);
+  FOLLY_COLD EdenBug(EdenBug&& other) noexcept;
   EdenBug& operator=(EdenBug&& other) = delete;
   ~EdenBug();
 
