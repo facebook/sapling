@@ -17,16 +17,13 @@ this is also case for issue3370.
   $ echo b > b
   $ hg add b
   $ hg commit -m '#0'
-  $ hg tag -l A
   $ hg rename a tmp
   $ hg rename tmp A
   $ hg commit -m '#1'
-  $ hg tag -l B
   $ hg update -q 0
   $ touch x
   $ hg add x
   $ hg commit -m '#2'
-  $ hg tag -l C
 
   $ hg merge -q
   $ hg status -A
@@ -42,7 +39,6 @@ this is also case for issue3370.
   C A
   C b
   $ hg commit -m '(D)'
-  $ hg tag -l D
 
 additional test for issue3452:
 
@@ -63,18 +59,16 @@ additional test for issue3452:
 |
 | issue3452 occurs when (B) is recorded before (C)
 
-  $ hg update -q --clean C
+  $ hg update -q --clean 2
   $ echo "modify 'a' at (E)" > a
   $ echo "modify 'b' at (E)" > b
   $ hg commit -m '(E)'
-  $ hg tag -l E
 
-  $ hg update -q --clean D
+  $ hg update -q --clean 3
   $ echo "modify 'A' at (F)" > A
   $ hg commit -m '(F)'
-  $ hg tag -l F
 
-  $ hg merge -q --tool internal:other E
+  $ hg merge -q --tool internal:other 4
   $ hg status -A
   M A
     a
@@ -89,25 +83,22 @@ regression by changes in the future.
 to avoid unexpected (successful) behavior by filelog unification,
 target file is not 'a'/'A' but 'b'/'B' in this case.
 
-  $ hg update -q --clean A
+  $ hg update -q --clean 0
   $ hg rename b tmp
   $ hg rename tmp B
   $ hg commit -m '(B1)'
-  $ hg tag -l B1
 
-  $ hg merge -q C
+  $ hg merge -q 2
   $ hg status -A
   M x
   C B
   C a
   $ hg commit -m '(D1)'
-  $ hg tag -l D1
 
   $ echo "modify 'B' at (F1)" > B
   $ hg commit -m '(F1)'
-  $ hg tag -l F1
 
-  $ hg merge -q --tool internal:other E
+  $ hg merge -q --tool internal:other 4
   $ hg status -A
   M B
     b
