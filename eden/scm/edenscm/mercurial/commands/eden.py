@@ -980,13 +980,6 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
     elif repo is None:
         raise error.Abort(_("no repository specified"))
 
-    # debugedenimporthelper is one of the few commands run in the backing
-    # repository. In order to keep that repo up-to-date we need to migrate it.
-    # Most repos get this when running pull, but pull is never run in the
-    # backing repo.
-    if ui.configbool("edenfs", "automigrate"):
-        repo.automigratestart()
-
     try:
         return runedenimporthelper(repo, **opts)
     finally:
