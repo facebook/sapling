@@ -384,6 +384,8 @@ fn get_large_to_small_commit_sync_repos(
 
             let bookmark_renamer =
                 get_large_to_small_renamer(commit_sync_config, small_repo.get_repoid())?;
+            let reverse_bookmark_renamer =
+                get_small_to_large_renamer(commit_sync_config, small_repo.get_repoid())?;
             get_large_to_small_mover(&commit_sync_config, small_repo.get_repoid()).map(
                 move |mover| {
                     (CommitSyncRepos::LargeToSmall {
@@ -391,6 +393,7 @@ fn get_large_to_small_commit_sync_repos(
                         small_repo,
                         mover,
                         bookmark_renamer,
+                        reverse_bookmark_renamer,
                     })
                 },
             )
@@ -429,7 +432,8 @@ mod test {
     #[fbinit::test]
     async fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(fb, Arc::new(noop_book_renamer)).await?;
+        let commit_syncer =
+            init(fb, Arc::new(noop_book_renamer), Arc::new(noop_book_renamer)).await?;
 
         let small_repo = commit_syncer.get_small_repo();
         let large_repo = commit_syncer.get_large_repo();
@@ -548,16 +552,13 @@ mod test {
 
     #[fbinit::test]
     async fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
-        let bookmark_renamer = Arc::new(|bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-            let master = BookmarkName::new("master").unwrap();
-            if bookmark_name == &master {
-                Some(master)
-            } else {
-                Some(BookmarkName::new(format!("prefix/{}", bookmark_name)).unwrap())
-            }
-        });
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(fb, bookmark_renamer).await?;
+        let commit_syncer = init(
+            fb,
+            get_large_to_small_renamer(),
+            get_small_to_large_renamer(),
+        )
+        .await?;
 
         let small_repo = commit_syncer.get_small_repo();
         let large_repo = commit_syncer.get_large_repo();
@@ -588,9 +589,38 @@ mod test {
         Ok(())
     }
 
+    fn get_large_to_small_renamer() -> BookmarkRenamer {
+        Arc::new(|bookmark_name: &BookmarkName| -> Option<BookmarkName> {
+            let master = BookmarkName::new("master").unwrap();
+            if bookmark_name == &master {
+                Some(master)
+            } else {
+                Some(BookmarkName::new(format!("prefix/{}", bookmark_name)).unwrap())
+            }
+        })
+    }
+
+    fn get_small_to_large_renamer() -> BookmarkRenamer {
+        Arc::new(|bookmark_name: &BookmarkName| -> Option<BookmarkName> {
+            let master = BookmarkName::new("master").unwrap();
+            if bookmark_name == &master {
+                Some(master)
+            } else {
+                let prefix = "prefix/";
+                let name = format!("{}", bookmark_name);
+                if name.starts_with(prefix) {
+                    Some(BookmarkName::new(&name[prefix.len()..]).unwrap())
+                } else {
+                    None
+                }
+            }
+        })
+    }
+
     async fn init(
         fb: FacebookInit,
         bookmark_renamer: BookmarkRenamer,
+        reverse_bookmark_renamer: BookmarkRenamer,
     ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
         let ctx = CoreContext::test_mock(fb);
         let small_repo = linear::getrepo_with_id(fb, RepositoryId::new(0));
@@ -630,6 +660,7 @@ mod test {
             large_repo: large_repo.clone(),
             mover: Arc::new(identity_mover),
             bookmark_renamer,
+            reverse_bookmark_renamer,
         };
         let commit_syncer = CommitSyncer::new(mapping, repos);
 

@@ -215,6 +215,7 @@ fn sync_parentage(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let config = CommitSyncer::new(mapping, repos);
@@ -323,6 +324,7 @@ fn sync_causes_conflict(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let master_file_path_in_megarepo = mpath("master_file");
@@ -331,6 +333,7 @@ fn sync_causes_conflict(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(master_file_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
@@ -400,6 +403,7 @@ fn sync_empty_commit(fb: FacebookInit) {
             Ok(path.remove_prefix_component(&linear_path_in_megarepo))
         }),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
     let linear_path_in_megarepo = mpath("linear");
     let stl_repos = CommitSyncRepos::SmallToLarge {
@@ -407,6 +411,7 @@ fn sync_empty_commit(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let lts_config = CommitSyncer::new(mapping.clone(), lts_repos);
@@ -514,6 +519,7 @@ fn sync_copyinfo(fb: FacebookInit) {
             Ok(path.remove_prefix_component(&linear_path_in_megarepo))
         }),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
     let linear_path_in_megarepo = mpath("linear");
     let stl_repos = CommitSyncRepos::SmallToLarge {
@@ -521,6 +527,7 @@ fn sync_copyinfo(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let stl_config = CommitSyncer::new(mapping.clone(), stl_repos);
@@ -593,6 +600,7 @@ fn sync_remap_failure(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
     let linear_path_in_megarepo = mpath("linear");
     let stl_repos = CommitSyncRepos::SmallToLarge {
@@ -600,6 +608,7 @@ fn sync_remap_failure(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
     let linear_path_in_megarepo = mpath("linear");
     let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
@@ -612,6 +621,7 @@ fn sync_remap_failure(fb: FacebookInit) {
             },
         ),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
@@ -691,6 +701,7 @@ fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         large_repo: megarepo.clone(),
         mover,
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
 
     let commit_syncer = CommitSyncer::new(mapping.clone(), commit_sync_repos);
@@ -825,6 +836,7 @@ fn sync_parent_search(fb: FacebookInit) {
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)))),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
     let linear_path_in_megarepo = mpath("linear");
     let reverse_repos = CommitSyncRepos::LargeToSmall {
@@ -834,6 +846,7 @@ fn sync_parent_search(fb: FacebookInit) {
             Ok(path.remove_prefix_component(&linear_path_in_megarepo))
         }),
         bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
     let config = CommitSyncer::new(mapping.clone(), repos);
     let reverse_config = CommitSyncer::new(mapping, reverse_repos);
