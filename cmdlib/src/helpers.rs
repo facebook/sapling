@@ -358,17 +358,17 @@ where
     Ok(())
 }
 
-pub fn block_on_fn<F, Fn>(
+pub fn block_on_fn<F, BlockFn>(
     mut runtime: tokio::runtime::Runtime,
     server: F,
     logger: &Logger,
     will_exit: Arc<AtomicBool>,
     matches: &ArgMatches,
-    block: Fn,
+    block: BlockFn,
 ) -> Result<(), Error>
 where
     F: Future<Item = (), Error = ()> + Send + 'static,
-    Fn: FnOnce() -> Result<(), Error>,
+    BlockFn: FnOnce() -> Result<(), Error>,
 {
     let shutdown_grace_period: u64 = matches
         .value_of(ARG_SHUTDOWN_GRACE_PERIOD)
