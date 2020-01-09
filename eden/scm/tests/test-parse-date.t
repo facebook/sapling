@@ -22,10 +22,10 @@ This runs with TZ="GMT"
   hg: parse error: invalid date: 'should fail'
   [255]
   $ hg ci -d "100000000000000000 1400" -m "fail"
-  hg: parse error: date exceeds 32 bits: 100000000000000000
+  hg: parse error: invalid date: '100000000000000000 1400'
   [255]
   $ hg ci -d "100000 1400000" -m "fail"
-  hg: parse error: impossible time zone offset: 1400000
+  hg: parse error: invalid date: '100000 1400000'
   [255]
 
 Check with local timezone other than GMT and with DST
@@ -39,7 +39,14 @@ and ends on October's last Sunday at 2:00am.
 
   $ hg debugrebuildstate
   $ echo "a" > a
+#if windows
+Windows $TZ handling is a workaround to the time-0.1.42 crate.
+It does not support DST. See comments in pyhgtime/src/lib.rs:tzset.
+Workaround it in this test by providing timezone explicitly.
+  $ hg ci -d "2006-07-15 13:30 -0700" -m "summer@UTC-7"
+#else
   $ hg ci -d "2006-07-15 13:30" -m "summer@UTC-7"
+#endif
   $ hg debugrebuildstate
   $ echo "b" > a
   $ hg ci -d "2006-07-15 13:30 +0500" -m "summer@UTC+5"
@@ -104,43 +111,43 @@ Normal range
 Negative range
 
   $ hg log -d "--2"
-  abort: -2 must be nonnegative (see 'hg help dates')
+  hg: parse error: invalid date: '--2'
   [255]
 
 Whitespace only
 
   $ hg log -d " "
-  abort: dates cannot consist entirely of whitespace
+  hg: parse error: invalid date: ' '
   [255]
 
 Test date formats with '>' or '<' accompanied by space characters
 
   $ hg log -d '>' --template '{date|date}\n'
-  abort: invalid day spec, use '>DATE'
+  hg: parse error: invalid date: '>'
   [255]
   $ hg log -d '<' --template '{date|date}\n'
-  abort: invalid day spec, use '<DATE'
+  hg: parse error: invalid date: '<'
   [255]
 
   $ hg log -d ' >' --template '{date|date}\n'
-  abort: invalid day spec, use '>DATE'
+  hg: parse error: invalid date: ' >'
   [255]
   $ hg log -d ' <' --template '{date|date}\n'
-  abort: invalid day spec, use '<DATE'
+  hg: parse error: invalid date: ' <'
   [255]
 
   $ hg log -d '> ' --template '{date|date}\n'
-  abort: invalid day spec, use '>DATE'
+  hg: parse error: invalid date: '> '
   [255]
   $ hg log -d '< ' --template '{date|date}\n'
-  abort: invalid day spec, use '<DATE'
+  hg: parse error: invalid date: '< '
   [255]
 
   $ hg log -d ' > ' --template '{date|date}\n'
-  abort: invalid day spec, use '>DATE'
+  hg: parse error: invalid date: ' > '
   [255]
   $ hg log -d ' < ' --template '{date|date}\n'
-  abort: invalid day spec, use '<DATE'
+  hg: parse error: invalid date: ' < '
   [255]
 
   $ hg log -d '>02/01' --template '{date|date}\n'
@@ -263,9 +270,12 @@ Test issue 3764 (interpreting 'today' and 'yesterday')
 
 Test parsing various ISO8601 forms
 
+#if no-windows
+(TZ with DST does not work on Windows)
   $ hg debugdate "2016-07-27T12:10:21"
   internal: 1469646621 * (glob)
   standard: Wed Jul 27 12:10:21 2016 -0700
+#endif
   $ hg debugdate "2016-07-27T12:10:21Z"
   internal: 1469621421 0
   standard: Wed Jul 27 12:10:21 2016 +0000
@@ -276,9 +286,12 @@ Test parsing various ISO8601 forms
   internal: 1469621421 0
   standard: Wed Jul 27 12:10:21 2016 +0000
 
+#if no-windows
+(TZ with DST does not work on Windows)
   $ hg debugdate "2016-07-27 12:10:21"
   internal: 1469646621 * (glob)
   standard: Wed Jul 27 12:10:21 2016 -0700
+#endif
   $ hg debugdate "2016-07-27 12:10:21Z"
   internal: 1469621421 0
   standard: Wed Jul 27 12:10:21 2016 +0000
@@ -288,6 +301,31 @@ Test parsing various ISO8601 forms
   $ hg debugdate "2016-07-27 121021Z"
   internal: 1469621421 0
   standard: Wed Jul 27 12:10:21 2016 +0000
+
+Test parsing extra forms
+
+  $ setconfig extensions.fakedate="$TESTDIR/fakedate.py"
+  $ hg debugdate 'now'
+  internal: 826207201 0
+  standard: Thu Mar 07 14:00:01 1996 +0000
+  $ hg debugdate '6h ago'
+  internal: 826185601 0
+  standard: Thu Mar 07 08:00:01 1996 +0000
+  $ hg debugdate --range 'today'
+  start: 826185600 (Thu Mar 07 00:00:00 1996 -0800)
+    end: 826272000 (Fri Mar 08 00:00:00 1996 -0800)
+  $ hg debugdate --range 'yesterday to today'
+  start: 826099200 (Wed Mar 06 00:00:00 1996 -0800)
+    end: 826272000 (Fri Mar 08 00:00:00 1996 -0800)
+  $ hg debugdate --range 'since 5 months ago'
+  start: 813057121 (Sat Oct 07 09:12:01 1995 +0000)
+    end: 253402300799 (Fri Dec 31 23:59:59 9999 +0000)
+  $ hg debugdate --range '2000 to 2001'
+  start: 946713600 (Sat Jan 01 00:00:00 2000 -0800)
+    end: 1009872000 (Tue Jan 01 00:00:00 2002 -0800)
+  $ hg debugdate --range 'before 2001'
+  start: -2208988800 (Mon Jan 01 00:00:00 1900 +0000)
+    end: 978336000 (Mon Jan 01 00:00:00 2001 -0800)
 
 Test parsing months
 

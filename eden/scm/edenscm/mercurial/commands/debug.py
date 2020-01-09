@@ -637,22 +637,24 @@ def debugdata(ui, repo, file_, rev=None, **opts):
 
 @command(
     "debugdate",
-    [("e", "extended", None, _("try extended date formats"))],
-    _("[-e] DATE [RANGE]"),
+    [
+        ("e", "extended", False, _("try extended date formats (DEPRECATED)")),
+        ("a", "range", False, _("parse as a range")),
+    ],
+    _("[-a] DATE"),
     norepo=True,
     optionalrepo=True,
 )
-def debugdate(ui, date, range=None, **opts):
+def debugdate(ui, date, **opts):
     """parse and display a date"""
-    if opts[r"extended"]:
-        d = util.parsedate(date, util.extendeddateformats)
+    if opts.get("range"):
+        f = util.matchdate(date)
+        ui.write(_("start: %s (%s)\n") % (f.start[0], util.datestr(f.start)))
+        ui.write(_("  end: %s (%s)\n") % (f.end[0], util.datestr(f.end)))
     else:
         d = util.parsedate(date)
-    ui.write(("internal: %s %s\n") % d)
-    ui.write(("standard: %s\n") % util.datestr(d))
-    if range:
-        m = util.matchdate(range)
-        ui.write(("match: %s\n") % m(d[0]))
+        ui.write(_("internal: %s %s\n") % d)
+        ui.write(_("standard: %s\n") % util.datestr(d))
 
 
 @command(

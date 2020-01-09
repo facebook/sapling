@@ -523,6 +523,7 @@ options_chunk os_mode path_lengths prefetch_files repo_name repo_ui rev_hash
 rev_name rev_range send_chunk send_error send_exception treemanifest_paths
 txn_id use_mononoke use_treemanifest
 
+st_mtime st_ctime st_atime
 """.split()
 
 # ported from check-commit

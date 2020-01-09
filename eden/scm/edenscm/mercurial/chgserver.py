@@ -54,7 +54,7 @@ import struct
 import time
 
 # pyre-fixme[21]: Could not find `bindings`.
-from bindings import commands
+from bindings import commands, hgtime
 
 from . import commandserver, encoding, error, extensions, pycompat, ui as uimod, util
 from .i18n import _
@@ -309,6 +309,8 @@ class chgcmdserver(commandserver.server):
         _log("setenv: %r\n" % sorted(newenv.keys()))
         encoding.environ.clear()
         encoding.environ.update(newenv)
+        # Apply $TZ changes.
+        hgtime.tzset()
 
     capabilities = commandserver.server.capabilities.copy()
     capabilities.update(

@@ -50,9 +50,7 @@ def fakewrite(ui, func):
         # in subrepos.
         return func()
 
-    # parsing 'fakenow' in YYYYmmddHHMM format makes comparison between
-    # 'fakenow' value and 'touch -t YYYYmmddHHMM' argument easy
-    fakenow = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
+    fakenow = util.parsedate(fakenow)[0]
 
     orig_pack_dirstate = parsers.pack_dirstate
     orig_dirstate_getfsnow = dirstate._getfsnow
@@ -81,7 +79,7 @@ def treedirstatewrite(orig, self, st, now):
     ui = self._ui
     fakenow = ui.config("fakedirstatewritetime", "fakenow")
     if fakenow:
-        now = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
+        now = util.parsedate(fakenow)[0]
     return orig(self, st, now)
 
 
@@ -89,7 +87,7 @@ def treestatewrite(orig, self, st, now):
     ui = self._ui
     fakenow = ui.config("fakedirstatewritetime", "fakenow")
     if fakenow:
-        now = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
+        now = util.parsedate(fakenow)[0]
     return orig(self, st, now)
 
 

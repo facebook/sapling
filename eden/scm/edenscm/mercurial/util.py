@@ -568,44 +568,6 @@ def versiontuple(v=None, n=4):
         return (vints[0], vints[1], vints[2], extra)
 
 
-# used by parsedate
-defaultdateformats = (
-    "%Y-%m-%dT%H:%M:%S",  # the 'real' ISO8601
-    "%Y-%m-%dT%H:%M",  #   without seconds
-    "%Y-%m-%dT%H%M%S",  # another awful but legal variant without :
-    "%Y-%m-%dT%H%M",  #   without seconds
-    "%Y-%m-%d %H:%M:%S",  # our common legal variant
-    "%Y-%m-%d %H:%M",  #   without seconds
-    "%Y-%m-%d %H%M%S",  # without :
-    "%Y-%m-%d %H%M",  #   without seconds
-    "%Y-%m-%d %I:%M:%S%p",
-    "%Y-%m-%d %H:%M",
-    "%Y-%m-%d %I:%M%p",
-    "%Y-%m-%d",
-    "%m-%d",
-    "%m/%d",
-    "%m/%d/%y",
-    "%m/%d/%Y",
-    "%a %b %d %H:%M:%S %Y",
-    "%a %b %d %I:%M:%S%p %Y",
-    "%a, %d %b %Y %H:%M:%S",  #  GNU coreutils "/bin/date --rfc-2822"
-    "%b %d %H:%M:%S %Y",
-    "%b %d %I:%M:%S%p %Y",
-    "%b %d %H:%M:%S",
-    "%b %d %I:%M:%S%p",
-    "%b %d %H:%M",
-    "%b %d %I:%M%p",
-    "%b %d %Y",
-    "%b %d",
-    "%H:%M:%S",
-    "%I:%M:%S%p",
-    "%H:%M",
-    "%I:%M%p",
-)
-
-extendeddateformats = defaultdateformats + ("%Y", "%Y-%m", "%b", "%b %Y")
-
-
 def cachefunc(func):
     """cache the result of function calls"""
     # XXX doesn't handle keywords args
@@ -2206,10 +2168,6 @@ def datestr(date=None, format="%a %b %d %H:%M:%S %Y %1%2"):
         format = format.replace("%1", "%c%02d" % (sign, q))
         format = format.replace("%2", "%02d" % r)
     d = t - tz
-    if d > 0x7FFFFFFF:
-        d = 0x7FFFFFFF
-    elif d < -0x80000000:
-        d = -0x80000000
     # Never use time.gmtime() and datetime.datetime.fromtimestamp()
     # because they use the gmtime() system call which is buggy on Windows
     # for negative values.
@@ -2297,7 +2255,7 @@ def strdate(string, format, defaults=None):
     return unixtime, offset
 
 
-def parsedate(date, formats=None, bias=None):
+def parsedate(date):
     """parse a localized date/time and return a (unixtime, offset) tuple.
 
     The date may be a "unixtime offset" string or in one of the specified
@@ -2317,63 +2275,15 @@ def parsedate(date, formats=None, bias=None):
     >>> tz == strtz
     True
     """
-    if bias is None:
-        bias = {}
     if not date:
         return 0, 0
     if isinstance(date, tuple) and len(date) == 2:
         return date
-    if not formats:
-        formats = defaultdateformats
-    date = date.strip()
-
-    if date == "now" or date == _("now"):
-        return makedate()
-    if date == "today" or date == _("today"):
-        date = datetime.date.today().strftime(r"%b %d")
-        date = encoding.strtolocal(date)
-    elif date == "yesterday" or date == _("yesterday"):
-        date = (datetime.date.today() - datetime.timedelta(days=1)).strftime(r"%b %d")
-        date = encoding.strtolocal(date)
-
-    try:
-        when, offset = map(int, date.split(" "))
-    except ValueError:
-        # fill out defaults
-        now = makedate()
-        defaults = {}
-        for part in ("d", "mb", "yY", "HI", "M", "S"):
-            # this piece is for rounding the specific end of unknowns
-            b = bias.get(part)
-            if b is None:
-                if part[0:1] in "HMS":
-                    b = "00"
-                else:
-                    b = "0"
-
-            # this piece is for matching the generic end to today's date
-            n = datestr(now, "%" + part[0:1])
-
-            defaults[part] = (b, n)
-
-        for format in formats:
-            try:
-                when, offset = strdate(date, format, defaults)
-            except (ValueError, OverflowError):
-                pass
-            else:
-                break
-        else:
-            raise error.ParseError(_("invalid date: %r") % date)
-    # validate explicit (probably user-specified) date and
-    # time zone offset. values must fit in signed 32 bits for
-    # current 32-bit linux runtimes. timezones go from UTC-12
-    # to UTC+14
-    if when < -0x80000000 or when > 0x7FFFFFFF:
-        raise error.ParseError(_("date exceeds 32 bits: %d") % when)
-    if offset < -50400 or offset > 43200:
-        raise error.ParseError(_("impossible time zone offset: %d") % offset)
-    return when, offset
+    parsed = bindings.hgtime.parse(date.strip())
+    if parsed:
+        return parsed
+    else:
+        raise error.ParseError(_("invalid date: %r") % date)
 
 
 def matchdate(date):
@@ -2404,52 +2314,16 @@ def matchdate(date):
     >>> f(p5[0])
     False
     """
+    parsed = bindings.hgtime.parserange(date.strip())
+    if parsed:
 
-    def lower(date):
-        d = {"mb": "1", "d": "1"}
-        return parsedate(date, extendeddateformats, d)[0]
+        def matchfunc(x, start=parsed[0][0], end=parsed[1][0]):
+            return x >= start and x < end
 
-    def upper(date):
-        d = {"mb": "12", "HI": "23", "M": "59", "S": "59"}
-        for days in ("31", "30", "29"):
-            try:
-                d["d"] = days
-                return parsedate(date, extendeddateformats, d)[0]
-            except error.ParseError:
-                pass
-        d["d"] = "28"
-        return parsedate(date, extendeddateformats, d)[0]
-
-    date = date.strip()
-
-    if not date:
-        raise Abort(_("dates cannot consist entirely of whitespace"))
-    elif date[0] == "<":
-        if not date[1:]:
-            raise Abort(_("invalid day spec, use '<DATE'"))
-        when = upper(date[1:])
-        return lambda x: x <= when
-    elif date[0] == ">":
-        if not date[1:]:
-            raise Abort(_("invalid day spec, use '>DATE'"))
-        when = lower(date[1:])
-        return lambda x: x >= when
-    elif date[0] == "-":
-        try:
-            days = int(date[1:])
-        except ValueError:
-            raise Abort(_("invalid day spec: %s") % date[1:])
-        if days < 0:
-            raise Abort(_("%s must be nonnegative (see 'hg help dates')") % date[1:])
-        when = makedate()[0] - days * 3600 * 24
-        return lambda x: x >= when
-    elif " to " in date:
-        a, b = date.split(" to ")
-        start, stop = lower(a), upper(b)
-        return lambda x: x >= start and x <= stop
+        matchfunc.start, matchfunc.end = parsed
+        return matchfunc
     else:
-        start, stop = lower(date), upper(date)
-        return lambda x: x >= start and x <= stop
+        raise error.ParseError(_("invalid date: %r") % date)
 
 
 def stringmatcher(pattern, casesensitive=True):

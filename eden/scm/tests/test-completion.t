@@ -297,7 +297,7 @@ Show all commands + options
   debugcreatestreamclonebundle: 
   debugdag: bookmarks, branches, dots, spaces
   debugdata: changelog, manifest, dir
-  debugdate: extended
+  debugdate: extended, range
   debugdeltachain: changelog, manifest, dir, template
   debugdirs: rev, print0
   debugdirstate: nodates, datesort, json

@@ -38,9 +38,7 @@ def internalpatch(
 
     fakenow = ui.config("fakepatchtime", "fakenow")
     if fakenow:
-        # parsing 'fakenow' in YYYYmmddHHMM format makes comparison between
-        # 'fakenow' value and 'touch -t YYYYmmddHHMM' argument easy
-        fakenow = util.parsedate(fakenow, ["%Y%m%d%H%M"])[0]
+        fakenow = util.parsedate(fakenow)[0]
         for f in files:
             repo.wvfs.utime(f, (fakenow, fakenow))
 

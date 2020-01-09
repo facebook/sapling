@@ -825,7 +825,7 @@ changed on the filesystem (see also issue4583))
   > [fakedirstatewritetime]
   > # emulate invoking dirstate.write() via repo.status()
   > # at 2000-01-01 00:00
-  > fakenow = 200001010000
+  > fakenow = 2000-01-01 00:00:00
   > EOF
 
   $ beforemerge
