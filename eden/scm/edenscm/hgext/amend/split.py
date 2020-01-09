@@ -164,9 +164,10 @@ def split(ui, repo, *revs, **opts):
                     ui.status(_("no more change to split\n"))
         except Exception:
             # Rollback everything
+            hg.updaterepo(repo, r, True)  # overwrite=True
             if newcommits:
-                hg.updaterepo(repo, r, True)  # overwrite=True
                 visibility.remove(repo, [c.node() for c in newcommits])
+
             if bookactive is not None:
                 bookmarks.activate(repo, bookactive)
             raise
