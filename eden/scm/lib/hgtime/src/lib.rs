@@ -10,7 +10,7 @@
 //! See [`HgTime`] and [`HgTime::parse`] for main features.
 
 use chrono::prelude::*;
-use chrono::Duration;
+use chrono::{Duration, LocalResult};
 use std::convert::{TryFrom, TryInto};
 use std::ops::{Add, Range, RangeInclusive, Sub};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
@@ -441,14 +441,16 @@ impl<Tz: TimeZone> TryFrom<DateTime<Tz>> for HgTime {
 impl TryFrom<NaiveDateTime> for HgTime {
     type Error = ();
     fn try_from(time: NaiveDateTime) -> Result<Self, ()> {
-        let timestamp = time.timestamp();
-        // Use local offset. (Is there a better way to do this?)
-        let offset = HgTime::now().ok_or(())?.offset;
-        if (timestamp + offset as i64) < 0 {
-            Err(())
-        } else {
-            let unixtime = timestamp + offset as i64;
-            HgTime { unixtime, offset }.bounded().ok_or(())
+        let offset = DEFAULT_OFFSET.load(Ordering::SeqCst);
+        match FixedOffset::west_opt(offset) {
+            Some(offset) => match offset.from_local_datetime(&time) {
+                LocalResult::Single(datetime) => HgTime::try_from(datetime),
+                _ => return Err(()),
+            },
+            None => match Local.from_local_datetime(&time) {
+                LocalResult::Single(local) => HgTime::try_from(local),
+                _ => return Err(()),
+            },
         }
     }
 }
@@ -538,7 +540,7 @@ mod tests {
         // d: parse date, compare with now, within expected range
         // The right side of assert_eq! is a string so it's autofix-able.
 
-        assert_eq!(t("2006-02-01 13:00:30"), "1138806030 7200");
+        assert_eq!(t("2006-02-01 13:00:30"), t("2006-02-01 13:00:30-0200"));
         assert_eq!(t("2006-02-01 13:00:30-0500"), "1138816830 18000");
         assert_eq!(t("2006-02-01 13:00:30 +05:00"), "1138780830 -18000");
         assert_eq!(t("2006-02-01 13:00:30Z"), "1138798830 0");
