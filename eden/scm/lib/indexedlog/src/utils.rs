@@ -10,7 +10,7 @@ use std::{
     hash::Hasher,
     io::{self, Write},
     path::Path,
-    sync::atomic::{self, AtomicI64},
+    sync::atomic::AtomicI64,
 };
 
 use crate::errors::{IoResultExt, ResultExt};
@@ -113,7 +113,6 @@ pub fn open_dir(lock_path: impl AsRef<Path>) -> io::Result<File> {
     }
     #[cfg(not(unix))]
     {
-        use std::fs;
         let mut path = path.to_path_buf();
         path.push("lock");
         fs::OpenOptions::new().write(true).create(true).open(&path)
@@ -242,6 +241,10 @@ pub(crate) fn fix_perm_path(path: &Path, is_dir: bool) -> io::Result<()> {
         let file = fs::OpenOptions::new().read(true).open(path)?;
         fix_perm_file(&file, is_dir)?;
     }
+    #[cfg(windows)]
+    {
+        let _ = (path, is_dir);
+    }
     Ok(())
 }
 
@@ -249,6 +252,7 @@ pub(crate) fn fix_perm_path(path: &Path, is_dir: bool) -> io::Result<()> {
 pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
     #[cfg(unix)]
     {
+        use std::sync::atomic;
         // chown
         let mut uid = CHOWN_UID.load(atomic::Ordering::SeqCst);
         let mut gid = CHOWN_GID.load(atomic::Ordering::SeqCst);
@@ -275,7 +279,10 @@ pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
             file.set_permissions(perm)?;
         }
     }
-    #[allow(unreachable_code)]
+    #[cfg(windows)]
+    {
+        let _ = (file, is_dir);
+    }
     Ok(())
 }
 
