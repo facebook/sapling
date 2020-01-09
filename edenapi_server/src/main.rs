@@ -16,7 +16,7 @@ use futures_ext::FutureExt;
 use gotham::{bind_server, state::State};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
-use tokio::{net::TcpListener, prelude::*, runtime::Runtime};
+use tokio::{net::TcpListener, prelude::*};
 use tokio_openssl::SslAcceptorExt;
 
 use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
@@ -161,7 +161,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         None => bind_server(listener, || Ok(say_hello), |socket| future::ok(socket)).right_future(),
     };
 
-    let mut runtime = Runtime::new()?;
+    let mut runtime = args::init_runtime(&matches)?;
     start_fb303_and_stats_agg(fb, &mut runtime, SERVICE_NAME, &logger, &matches)?;
     slog::info!(logger, "Listening for requests at {}://{}", scheme, addr);
     let _ = runtime.block_on(server);

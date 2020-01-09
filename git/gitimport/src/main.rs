@@ -35,7 +35,6 @@ use mononoke_types::{
     hash::GitSha1, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
     FileType, MPath, MPathElement,
 };
-use tokio::runtime::Runtime;
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DERIVE_TREES: &str = "derive-trees";
@@ -185,7 +184,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
 
     let matches = app.get_matches();
-    let mut runtime = Runtime::new()?;
+    let mut runtime = args::init_runtime(&matches)?;
 
     args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches);

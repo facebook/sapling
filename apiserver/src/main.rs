@@ -17,7 +17,6 @@ use clap::{value_t, Arg};
 use fbinit::FacebookInit;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;
-use tokio::runtime::Runtime;
 
 use blobrepo_factory::Caching;
 use context::CoreContext;
@@ -518,7 +517,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     let stats_aggregation =
         schedule_stats_aggregation().expect("failed to create stats aggregation scheduler");
 
-    let mut runtime = Runtime::new().expect("tokio runtime for blocking jobs");
+    let mut runtime =
+        cmdlib::args::init_runtime(&matches).expect("tokio runtime for blocking jobs");
     let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
 
     let ssl_acceptor = if let Some(cert) = matches.value_of("ssl-certificate") {

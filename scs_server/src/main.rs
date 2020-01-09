@@ -32,7 +32,6 @@ use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
 use srserver::{ThriftServer, ThriftServerBuilder};
-use tokio::runtime::Runtime;
 
 mod commit_id;
 mod errors;
@@ -105,7 +104,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .value_of("mononoke-config-path")
         .expect("must set config path");
 
-    let mut runtime = Runtime::new().expect("failed to create tokio runtime");
+    let mut runtime = args::init_runtime(&matches).expect("failed to create tokio runtime");
     let exec = runtime.executor();
 
     let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
