@@ -13,13 +13,12 @@ use rand_chacha::ChaChaRng;
 
 use minibench::{bench, elapsed};
 use pathmatcher::AlwaysMatcher;
-use types::{HgId, PathComponentBuf, RepoPathBuf};
+use types::{testutil::generate_repo_paths, HgId, RepoPathBuf};
 
 use manifest::{FileMetadata, Manifest};
 use manifest_tree::{testutil::*, TreeManifest, TreeStore};
 
 const INIT_SET_COUNT: usize = 4_000_000;
-const PATH_LENGTH: usize = 6;
 const OP_COUNT: usize = 1_000_000;
 
 // See https://github.com/rust-lang/rust/issues/64102
@@ -31,25 +30,15 @@ pub fn black_box<T>(dummy: T) -> T {
     }
 }
 
-pub fn arbitrary_entry<G: quickcheck::Gen>(qc_gen: &mut G) -> (RepoPathBuf, FileMetadata) {
-    let path = {
-        let mut path_buf = RepoPathBuf::new();
-        for _ in 0..PATH_LENGTH {
-            path_buf.push(PathComponentBuf::arbitrary(qc_gen).as_ref());
-        }
-        path_buf
-    };
-    let hgid = HgId::arbitrary(qc_gen);
-    (path, FileMetadata::regular(hgid))
-}
-
 pub fn generate_entries<G: quickcheck::Gen>(
     entry_count: usize,
     qc_gen: &mut G,
 ) -> Vec<(RepoPathBuf, FileMetadata)> {
+    let repo_paths = generate_repo_paths(entry_count, qc_gen);
     let mut result = Vec::with_capacity(entry_count);
-    for _ in 0..entry_count {
-        result.push(arbitrary_entry(qc_gen));
+    for path in repo_paths.into_iter() {
+        let hgid = HgId::arbitrary(qc_gen);
+        result.push((path, FileMetadata::regular(hgid)));
     }
     result
 }
@@ -76,13 +65,16 @@ fn main() {
     let rng = ChaChaRng::from_seed([0u8; 32]);
     let mut qc_gen = StdGen::new(rng, 10);
     let store = Arc::new(TestStore::new());
-    let initial_entries = generate_entries(INIT_SET_COUNT, &mut qc_gen);
+    let entries = generate_entries(INIT_SET_COUNT + OP_COUNT, &mut qc_gen);
+    let initial_entries = &entries[..INIT_SET_COUNT];
+    let op_entries = &entries[INIT_SET_COUNT..];
     let mut initial_manifest = TreeManifest::ephemeral(store.clone());
     for (path, file_metadata) in initial_entries.iter() {
         initial_manifest
             .insert(path.to_owned(), *file_metadata)
             .unwrap();
     }
+    println!("initial_entry_cnt = {}", initial_entries.len());
     // Iterate through the tree before it gets committed to storage
     bench("iterate_files_ephemeral", || {
         // In this block we rely on the fact that we have access to the initial manifest before
@@ -120,9 +112,8 @@ fn main() {
     // Execute OP_COUNT insertions.
     bench("insert", || {
         let mut manifest = initial_manifest.clone();
-        let entries = generate_entries(OP_COUNT, &mut qc_gen);
         elapsed(|| {
-            for (path, file_metadata) in entries.iter() {
+            for (path, file_metadata) in op_entries.iter() {
                 manifest.insert(path.to_owned(), *file_metadata).unwrap();
             }
         })
@@ -131,8 +122,8 @@ fn main() {
     // Finalize a tree with OP_COUNT new leaves.
     bench("finalize", || {
         let mut manifest = initial_manifest.clone();
-        for (path, file_metadata) in generate_entries(OP_COUNT, &mut qc_gen) {
-            manifest.insert(path, file_metadata).unwrap();
+        for (path, file_metadata) in op_entries.iter() {
+            manifest.insert(path.to_owned(), *file_metadata).unwrap();
         }
         elapsed(|| {
             for x in manifest.finalize(vec![&initial_manifest]).unwrap() {
