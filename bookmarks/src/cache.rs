@@ -16,11 +16,18 @@ use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
 use sql_ext::TransactionResult;
+use stats::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
+
+define_stats! {
+    prefix = "mononoke.bookmarks.cache";
+    cached_bookmarks_hits: dynamic_timeseries("{}.hit", (repo: String); Rate, Sum),
+    cached_bookmarks_misses: dynamic_timeseries("{}.miss", (repo: String); Rate, Sum),
+}
 
 type CacheData = BTreeMap<BookmarkName, (BookmarkHgKind, ChangesetId)>;
 
@@ -102,7 +109,9 @@ impl CachedBookmarks {
             // create new cache if the old one has either expired or failed
             .and_modify(|cache| {
                 let cache_failed = cache.is_failed();
+                let mut cache_hit = true;
                 if cache.expires <= now || cache_failed {
+                    cache_hit = false;
                     *cache = Cache::new(
                         ctx.clone(),
                         repoid,
@@ -117,6 +126,12 @@ impl CachedBookmarks {
                         //    in case of success, next request should go through replica
                         !cache_failed || cache.maybe_stale,
                     );
+                }
+
+                if cache_hit {
+                    STATS::cached_bookmarks_hits.add_value(1, (repoid.id().to_string(), ))
+                } else {
+                    STATS::cached_bookmarks_misses.add_value(1, (repoid.id().to_string(), ))
                 }
             })
             // create new cache if threre is no cache entry
