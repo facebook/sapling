@@ -45,7 +45,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
             [ticket_seed] --ssl-ticket-seeds [PATH]             'path to a file with encryption keys for SSL tickets'
 
-            -d, --debug                                         'print debug level output'
             --test-instance                                     'disables some functionality for tests'
             --local-configerator-path [PATH]                    'local path to fetch configerator configs from. used only if --test-instance is '
             "#,
