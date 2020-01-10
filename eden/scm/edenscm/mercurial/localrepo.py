@@ -20,6 +20,8 @@ import random
 import time
 import weakref
 
+from edenscm.hgext.extlib.phabricator import diffprops
+
 from . import (
     bookmarks,
     branchmap,
@@ -2305,7 +2307,13 @@ class localrepository(object):
                 )
                 mutation.recordentries(self, [entry], skipexisting=False)
             tr.close()
-            self.ui.log("commit_info", node=hex(n), author=user, **ctx.loginfo())
+
+            loginfo = ctx.loginfo()
+            diffnumber = diffprops.parserevfromcommitmsg(ctx.description())
+            if diffnumber is not None:
+                loginfo.update({"phabricator_diff_number": diffnumber})
+
+            self.ui.log("commit_info", node=hex(n), author=user, **loginfo)
             return n
         finally:
             if tr:
