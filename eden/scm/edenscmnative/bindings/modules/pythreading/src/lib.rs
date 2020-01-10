@@ -7,21 +7,19 @@
 
 #![allow(non_camel_case_types)]
 
-// Cpython's macros are not well behaved when imported individually.
-#[macro_use]
-extern crate cpython;
-
-use cpython::{exc, PyErr, PyObject, PyResult, PyType, PythonObject};
+use cpython::*;
 use std::cell::Cell;
 use std::sync::{Condvar, Mutex};
 use std::thread::{self, ThreadId};
 use std::time::Duration;
 
-py_module_initializer!(threading, initthreading, PyInit_threading, |py, m| {
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "threading"].join(".");
+    let m = PyModule::new(py, &name)?;
     m.add_class::<Condition>(py)?;
     m.add_class::<bug29988wrapper>(py)?;
-    Ok(())
-});
+    Ok(m)
+}
 
 #[derive(Copy, Clone)]
 struct Owner {

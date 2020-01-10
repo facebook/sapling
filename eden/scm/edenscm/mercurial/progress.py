@@ -18,10 +18,7 @@ import threading
 import time
 
 # pyre-fixme[21]: Could not find `bindings`.
-from bindings import tracing
-
-# pyre-fixme[21]: Could not find `edenscmnative`.
-from edenscmnative import threading as rustthreading
+from bindings import threading as rustthreading, tracing
 
 from . import encoding, util
 from .i18n import _

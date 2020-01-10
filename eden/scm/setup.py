@@ -178,13 +178,7 @@ from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
-from distutils_rust import (
-    RustExtension,
-    RustBinary,
-    RustVendoredCrates,
-    BuildRustExt,
-    InstallRustExt,
-)
+from distutils_rust import RustBinary, RustVendoredCrates, BuildRustExt, InstallRustExt
 import distutils
 
 havefb = os.path.exists("fb")
@@ -1465,7 +1459,6 @@ packages = [
     "edenscm.mercurial.hgweb",
     "edenscm.mercurial.httpclient",
     "edenscm.mercurial.pure",
-    "edenscm.mercurial.rust",
     "edenscm.mercurial.thirdparty",
     "edenscm.mercurial.thirdparty.attr",
     "edenscm.mercurial.thirdparty.pyre2",
@@ -1990,19 +1983,6 @@ if havefb:
         RustVendoredCrates("tp2-crates-io", dest="build/tp2-crates-io")
     )
 
-rustextmodules = [
-    RustExtension(
-        "indexes",
-        package="edenscmnative",
-        manifest="edenscm/hgext/extlib/indexes/Cargo.toml",
-    ),
-    RustExtension(
-        "threading",
-        package="edenscmnative",
-        manifest="edenscm/mercurial/rust/threading/Cargo.toml",
-    ),
-]
-
 hgmainfeatures = (
     " ".join(
         filter(
@@ -2067,7 +2047,6 @@ setup(
     ext_modules=extmodules,
     libraries=libraries,
     rust_vendored_crates=rustvendoredcrates,
-    rust_ext_modules=rustextmodules,
     rust_ext_binaries=rustextbinaries,
     package_data=packagedata,
     cmdclass=cmdclass,

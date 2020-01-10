@@ -48,7 +48,10 @@ from edenscm.mercurial.node import (
     nullid,
 )
 
-from . import indexes, parsers
+from . import parsers
+import bindings
+
+indexes = bindings.indexes
 indexes.nodemap.emptyindexbuffer() # force demandimport to load indexes
 
 configtable = {}

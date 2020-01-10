@@ -28,6 +28,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     m.add(py, "edenapi", pyedenapi::init_module(py, &name)?)?;
     m.add(py, "error", pyerror::init_module(py, &name)?)?;
     m.add(py, "hgtime", pyhgtime::init_module(py, &name)?)?;
+    m.add(py, "indexes", pyindexes::init_module(py, &name)?)?;
     m.add(py, "lz4", pylz4::init_module(py, &name)?)?;
     m.add(py, "manifest", pymanifest::init_module(py, &name)?)?;
     m.add(py, "metalog", pymetalog::init_module(py, &name)?)?;
@@ -46,6 +47,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     )?;
     m.add(py, "revlogindex", pyrevlogindex::init_module(py, &name)?)?;
     m.add(py, "stackdesc", pystackdesc::init_module(py, &name)?)?;
+    m.add(py, "threading", pythreading::init_module(py, &name)?)?;
     m.add(py, "tracing", pytracing::init_module(py, &name)?)?;
     m.add(py, "treestate", pytreestate::init_module(py, &name)?)?;
     m.add(py, "vlq", pyvlq::init_module(py, &name)?)?;

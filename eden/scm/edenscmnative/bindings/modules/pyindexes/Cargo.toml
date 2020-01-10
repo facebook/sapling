@@ -1,5 +1,5 @@
 [package]
-name = "indexes"
+name = "pyindexes"
 version = "0.1.0"
 edition = "2018"
 
@@ -7,10 +7,6 @@ edition = "2018"
 default = ["python2"]
 python2 = []
 python3 = []
-
-[lib]
-name = "indexes"
-crate-type = ["cdylib"]
 
 [dependencies]
 cpython-ext = { path = "../../../../lib/cpython-ext" }
@@ -21,7 +17,7 @@ thiserror = "1.0.5"
 [dependencies.cpython]
 version = "0.3"
 default-features = false
-features = ["extension-module-2-7"]
+features = ["python27-sys"]
 
 [dependencies.python27-sys]
 version = "0.3"

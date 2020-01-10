@@ -6,16 +6,18 @@
  */
 
 use crate::nodemap::NodeRevMap;
-use cpython::{PyBytes, PyObject, PyResult};
+use cpython::{PyBytes, PyModule, PyObject, PyResult, Python};
 use std::slice;
 
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::SimplePyBuf;
 
-py_module_initializer!(indexes, initindexes, PyInit_indexes, |py, m| {
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "indexes"].join(".");
+    let m = PyModule::new(py, &name)?;
     m.add_class::<nodemap>(py)?;
-    Ok(())
-});
+    Ok(m)
+}
 
 py_class!(class nodemap |py| {
     data nodemap: NodeRevMap<SimplePyBuf<u8>, SimplePyBuf<u32>>;

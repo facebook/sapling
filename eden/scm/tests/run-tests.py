@@ -83,7 +83,7 @@ except (ImportError, AttributeError):
     shellquote = pipes.quote
 
 try:
-    from edenscmnative.threading import Condition as RLock
+    from bindings.threading import Condition as RLock
 except ImportError:
     RLock = threading.RLock
 

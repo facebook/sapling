@@ -57,7 +57,7 @@ import unittest
 from thread import get_ident, start_new_thread
 
 import silenttestrunner
-from edenscmnative import threading as rustthreading
+from bindings import threading as rustthreading
 
 
 # From test_support.py

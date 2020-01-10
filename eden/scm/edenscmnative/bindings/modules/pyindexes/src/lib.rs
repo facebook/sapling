@@ -14,3 +14,5 @@ pub mod nodemap;
 
 #[allow(non_camel_case_types)]
 pub mod pyext;
+
+pub use pyext::init_module;

@@ -22,6 +22,7 @@ pydag = { path = "modules/pydag" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
 pyhgtime = { path = "modules/pyhgtime" }
+pyindexes = { path = "modules/pyindexes" }
 pylz4 = { path = "modules/pylz4" }
 pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }
@@ -32,6 +33,7 @@ pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
 pyrevlogindex = { path = "modules/pyrevlogindex" }
 pystackdesc = { path = "modules/pystackdesc" }
+pythreading = { path = "modules/pythreading" }
 pytracing = { path = "modules/pytracing" }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
