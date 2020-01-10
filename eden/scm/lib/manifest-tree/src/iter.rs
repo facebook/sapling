@@ -266,7 +266,7 @@ mod tests {
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
-    use crate::{store::TestStore, testutil::*};
+    use crate::testutil::*;
 
     #[test]
     fn test_items_empty() {

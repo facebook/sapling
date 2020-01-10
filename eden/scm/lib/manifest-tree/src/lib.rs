@@ -679,7 +679,7 @@ mod tests {
     use manifest::FileType;
     use types::{hgid::NULL_ID, testutil::*};
 
-    use self::{store::TestStore, testutil::*};
+    use self::testutil::*;
 
     #[test]
     fn test_insert() {

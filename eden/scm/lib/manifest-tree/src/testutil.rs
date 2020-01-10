@@ -5,17 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
+use bytes::Bytes;
+use parking_lot::{Mutex, RwLock};
 
 use manifest::{File, FileMetadata, Manifest};
-use types::{testutil::*, HgId, RepoPath};
+use types::{testutil::*, HgId, Key, RepoPath, RepoPathBuf};
 
-use crate::{
-    store::{self, TestStore},
-    Link, TreeManifest,
-};
+use crate::{store, Link, TreeManifest, TreeStore};
 
 pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
     Ok(store::Element::new(
@@ -53,4 +52,49 @@ pub(crate) fn make_tree<'a>(
             .unwrap();
     }
     tree
+}
+
+/// An in memory `Store` implementation backed by HashMaps. Primarily intended for tests.
+pub struct TestStore {
+    entries: RwLock<HashMap<RepoPathBuf, HashMap<HgId, Bytes>>>,
+    pub prefetched: Mutex<Vec<Vec<Key>>>,
+}
+
+impl TestStore {
+    pub fn new() -> Self {
+        TestStore {
+            entries: RwLock::new(HashMap::new()),
+            prefetched: Mutex::new(Vec::new()),
+        }
+    }
+
+    #[allow(unused)]
+    pub fn fetches(&self) -> Vec<Vec<Key>> {
+        self.prefetched.lock().clone()
+    }
+}
+
+impl TreeStore for TestStore {
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+        let underlying = self.entries.read();
+        let result = underlying
+            .get(path)
+            .and_then(|hgid_hash| hgid_hash.get(&hgid))
+            .map(|entry| entry.clone());
+        result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, hgid))
+    }
+
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
+        let mut underlying = self.entries.write();
+        underlying
+            .entry(path.to_owned())
+            .or_insert(HashMap::new())
+            .insert(hgid, data);
+        Ok(())
+    }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+        self.prefetched.lock().push(keys);
+        Ok(())
+    }
 }

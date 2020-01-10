@@ -390,7 +390,7 @@ mod tests {
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
-    use crate::{link::DirLink, store::TestStore, testutil::*, Link};
+    use crate::{link::DirLink, testutil::*, Link};
 
     #[test]
     fn test_diff_entry_from_file() {
