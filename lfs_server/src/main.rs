@@ -20,7 +20,6 @@ use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::TryFutureExt;
 use futures_util::{compat::Future01CompatExt, future::try_join_all, try_join};
 use gotham::{bind_server, bind_server_with_pre_state};
-use scuba::ScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -68,9 +67,7 @@ const ARG_TLS_CERTIFICATE: &str = "tls-certificate";
 const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
-const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
-const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
@@ -87,6 +84,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_all_repos()
         .with_shutdown_timeout_args()
+        .with_scuba_logging_args()
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
@@ -134,24 +132,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("The base URL for an upstream server"),
         )
         .arg(
-            Arg::with_name(ARG_SCUBA_DATASET)
-                .long(ARG_SCUBA_DATASET)
-                .takes_value(true)
-                .help("The name of the scuba dataset to log to"),
-        )
-        .arg(
             Arg::with_name(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
                 .long(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
                 .takes_value(false)
                 .help(
                     "Whether to always wait for an upstream response (primarily useful in testing)",
                 ),
-        )
-        .arg(
-            Arg::with_name(ARG_SCUBA_LOG_FILE)
-                .long(ARG_SCUBA_LOG_FILE)
-                .takes_value(true)
-                .help("A log file to write Scuba logs to (primarily useful in testing)"),
         )
         .arg(
             Arg::with_name(ARG_LIVE_CONFIG)
@@ -229,14 +215,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let tls_ca = matches.value_of(ARG_TLS_CA);
     let tls_ticket_seeds = matches.value_of(ARG_TLS_TICKET_SEEDS);
 
-    let scuba_log = matches.value_of(ARG_SCUBA_LOG_FILE);
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
 
-    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of(ARG_SCUBA_DATASET) {
-        ScubaSampleBuilder::new(fb, scuba_dataset)
-    } else {
-        ScubaSampleBuilder::with_discard()
-    };
+    let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches)?;
 
     let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
 
@@ -349,7 +330,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .add(log_middleware)
         .add(ServerIdentityMiddleware::new())
         .add(LoadMiddleware::new())
-        .add(ScubaMiddleware::new(scuba_logger, scuba_log)?)
+        .add(ScubaMiddleware::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())
         .build(router);

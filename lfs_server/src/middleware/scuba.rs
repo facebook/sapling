@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-use anyhow::Error;
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{
@@ -16,10 +15,6 @@ use hyper::{
 };
 use hyper::{Body, Response};
 use scuba::{ScubaSampleBuilder, ScubaValue};
-use std::fs::{File, OpenOptions};
-use std::io::Write;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
 use time_ext::DurationExt;
 
 use super::{ClientIdentity, Middleware, RequestContext, RequestLoad as RequestLoadMiddleware};
@@ -127,28 +122,11 @@ impl Into<String> for ScubaKey {
 #[derive(Clone)]
 pub struct ScubaMiddleware {
     scuba: ScubaSampleBuilder,
-    log_file: Option<Arc<Mutex<File>>>,
 }
 
 impl ScubaMiddleware {
-    pub fn new<L: AsRef<Path>>(
-        scuba: ScubaSampleBuilder,
-        log_file: Option<L>,
-    ) -> Result<Self, Error> {
-        let log_file: Result<_, Error> = log_file
-            .map(|log_file| {
-                let log_file = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(log_file)?;
-                Ok(Arc::new(Mutex::new(log_file)))
-            })
-            .transpose();
-
-        Ok(Self {
-            scuba,
-            log_file: log_file?,
-        })
+    pub fn new(scuba: ScubaSampleBuilder) -> Self {
+        Self { scuba }
     }
 }
 
@@ -175,7 +153,6 @@ where
 }
 
 fn log_stats(
-    log_file: Option<Arc<Mutex<File>>>,
     state: &mut State,
     status_code: &StatusCode,
     content_length: Option<u64>,
@@ -288,17 +265,6 @@ fn log_stats(
             perf_counters.insert_perf_counters(&mut scuba);
 
             scuba.log();
-
-            // Write to a log file here. If this fails, we don't take further action (this is only used
-            // in tests, so it's largely fine).
-            if let Some(log_file) = log_file {
-                let mut log_file = log_file.lock().expect("Poisoned lock");
-                let _ = scuba.to_json().map_err(|_| ()).and_then(|sample| {
-                    log_file
-                        .write_all(sample.to_string().as_bytes())
-                        .map_err(|_| ())
-                });
-            }
         },
     );
 
@@ -335,11 +301,6 @@ impl Middleware for ScubaMiddleware {
             }
         }
 
-        log_stats(
-            self.log_file.clone(),
-            state,
-            &response.status(),
-            response.body().content_length(),
-        );
+        log_stats(state, &response.status(), response.body().content_length());
     }
 }
