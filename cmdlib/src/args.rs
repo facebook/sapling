@@ -20,6 +20,7 @@ use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
+use scuba::ScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::TermDecorator;
 
@@ -101,6 +102,9 @@ pub struct MononokeApp {
 
     /// Adds --shutdown-grace-period and --shutdown-timeout for graceful shutdown.
     shutdown_timeout: bool,
+
+    /// Adds --scuba-dataset and --scuba-log-file for scuba logging.
+    scuba_logging: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -125,6 +129,7 @@ impl MononokeApp {
             source_and_target_repos: false,
             source_repo: false,
             shutdown_timeout: false,
+            scuba_logging: false,
         }
     }
 
@@ -168,6 +173,12 @@ impl MononokeApp {
     /// This command has arguments for graceful shutdown.
     pub fn with_shutdown_timeout_args(mut self) -> Self {
         self.shutdown_timeout = true;
+        self
+    }
+
+    /// This command has arguments for scuba logging.
+    pub fn with_scuba_logging_args(mut self) -> Self {
+        self.scuba_logging = true;
         self
     }
 
@@ -263,6 +274,10 @@ impl MononokeApp {
 
         if self.shutdown_timeout {
             app = add_shutdown_timeout_args(app);
+        }
+
+        if self.scuba_logging {
+            app = add_scuba_logging_args(app);
         }
 
         app
@@ -761,6 +776,36 @@ pub fn get_shutdown_timeout<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
         .parse()
         .map_err(Error::from)?;
     Ok(Duration::from_secs(seconds))
+}
+
+pub fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("scuba-dataset")
+            .long("scuba-dataset")
+            .takes_value(true)
+            .help("The name of the scuba dataset to log to"),
+    )
+    .arg(
+        Arg::with_name("scuba-log-file")
+            .long("scuba-log-file")
+            .takes_value(true)
+            .help("A log file to write Scuba logs to (primarily useful in testing)"),
+    )
+}
+
+pub fn get_scuba_sample_builder<'a>(
+    fb: FacebookInit,
+    matches: &ArgMatches<'a>,
+) -> Result<ScubaSampleBuilder> {
+    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
+        ScubaSampleBuilder::new(fb, scuba_dataset)
+    } else {
+        ScubaSampleBuilder::with_discard()
+    };
+    if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
+        scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
+    }
+    Ok(scuba_logger)
 }
 
 pub fn read_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
