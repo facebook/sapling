@@ -24,7 +24,6 @@ use futures_preview::{FutureExt, TryFutureExt};
 use metaconfig_parser::RepoConfigs;
 use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
-use scuba_ext::ScubaSampleBuilder;
 use slog::info;
 use source_control::server::make_SourceControlService_server;
 use srserver::service_framework::{
@@ -44,7 +43,6 @@ mod specifiers;
 
 const ARG_PORT: &str = "port";
 const ARG_HOST: &str = "host";
-const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
 
@@ -56,6 +54,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_all_repos()
         .with_shutdown_timeout_args()
+        .with_scuba_logging_args()
         .build()
         .arg(
             Arg::with_name(ARG_HOST)
@@ -74,12 +73,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .value_name("PORT")
                 .help("Thrift port"),
         )
-        .arg(
-            Arg::with_name(ARG_SCUBA_DATASET)
-                .long("scuba-dataset")
-                .takes_value(true)
-                .help("The name of the scuba dataset to log to"),
-        )
         .get_matches();
 
     let logger = args::init_logging(fb, &matches);
@@ -95,11 +88,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
 
-    let mut scuba_builder = if let Some(scuba_dataset) = matches.value_of(ARG_SCUBA_DATASET) {
-        ScubaSampleBuilder::new(fb, scuba_dataset)
-    } else {
-        ScubaSampleBuilder::with_discard()
-    };
+    let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches)?;
 
     scuba_builder.add_common_server_data();
 

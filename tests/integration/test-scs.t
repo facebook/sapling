@@ -65,7 +65,7 @@ try talking to the server before it is up
   [1]
 
 start SCS server
-  $ start_and_wait_for_scs_server
+  $ start_and_wait_for_scs_server --scuba-log-file "$TESTTMP/scuba.json"
 
 repos
   $ scsc repos
@@ -354,3 +354,7 @@ list directory
   file        10  b
   file         5  binary
   file         0  c
+
+check scuba logs
+  $ interesting_tags="TBD"
+  $ jq "if (.normal.log_tag | match(\"^($interesting_tags)\$\")) then (.normal.log_tag, .normal.msg) else empty end" < "$TESTTMP/scuba.json"
