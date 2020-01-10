@@ -42,11 +42,6 @@ impl fmt::Display for StateOpenError {
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("Missing typed key entry for key: {0}")]
-    MissingTypedKeyEntry(String),
-    // TODO(anastasiyaz): Use general Alias Key instead of Sha256
-    #[error("Incorrect content of alias blob: {0}")]
-    IncorrectAliasBlobContent(Sha256),
     #[error("Error while opening state for {0}")]
     StateOpen(StateOpenError),
     #[error("Changeset id {0} is missing")]
