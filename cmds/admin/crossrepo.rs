@@ -27,7 +27,7 @@ use futures_preview::{
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
 };
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
-use movers::get_large_to_small_mover;
+use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use slog::{info, warn, Logger};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -385,17 +385,18 @@ fn get_large_to_small_commit_sync_repos(
                 get_large_to_small_renamer(commit_sync_config, small_repo.get_repoid())?;
             let reverse_bookmark_renamer =
                 get_small_to_large_renamer(commit_sync_config, small_repo.get_repoid())?;
-            get_large_to_small_mover(&commit_sync_config, small_repo.get_repoid()).map(
-                move |mover| {
-                    (CommitSyncRepos::LargeToSmall {
-                        large_repo,
-                        small_repo,
-                        mover,
-                        bookmark_renamer,
-                        reverse_bookmark_renamer,
-                    })
-                },
-            )
+            let mover = get_large_to_small_mover(&commit_sync_config, small_repo.get_repoid())?;
+            let reverse_mover =
+                get_small_to_large_mover(&commit_sync_config, small_repo.get_repoid())?;
+
+            Ok(CommitSyncRepos::LargeToSmall {
+                large_repo,
+                small_repo,
+                mover,
+                reverse_mover,
+                bookmark_renamer,
+                reverse_bookmark_renamer,
+            })
         })
 }
 
@@ -589,6 +590,7 @@ mod test {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
                 mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
             },
@@ -596,6 +598,7 @@ mod test {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
                 mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
             },

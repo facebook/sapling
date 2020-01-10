@@ -352,6 +352,7 @@ pub enum CommitSyncRepos {
         large_repo: BlobRepo,
         small_repo: BlobRepo,
         mover: Mover,
+        reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
     },
@@ -359,6 +360,7 @@ pub enum CommitSyncRepos {
         small_repo: BlobRepo,
         large_repo: BlobRepo,
         mover: Mover,
+        reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
     },
@@ -428,6 +430,10 @@ where
 
     pub fn get_mover(&self) -> &Mover {
         self.repos.get_mover()
+    }
+
+    pub fn get_reverse_mover(&self) -> &Mover {
+        self.repos.get_reverse_mover()
     }
 
     pub fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
@@ -1160,6 +1166,13 @@ impl CommitSyncRepos {
         }
     }
 
+    pub(crate) fn get_reverse_mover(&self) -> &Mover {
+        match self {
+            CommitSyncRepos::LargeToSmall { reverse_mover, .. } => reverse_mover,
+            CommitSyncRepos::SmallToLarge { reverse_mover, .. } => reverse_mover,
+        }
+    }
+
     pub(crate) fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
         match self {
             CommitSyncRepos::LargeToSmall {
@@ -1319,6 +1332,7 @@ where
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
         mover: small_to_large_mover.clone(),
+        reverse_mover: large_to_small_mover.clone(),
         bookmark_renamer: small_to_large_renamer.clone(),
         reverse_bookmark_renamer: large_to_small_renamer.clone(),
     };
@@ -1327,6 +1341,7 @@ where
         small_repo,
         large_repo,
         mover: large_to_small_mover,
+        reverse_mover: small_to_large_mover.clone(),
         bookmark_renamer: large_to_small_renamer,
         reverse_bookmark_renamer: small_to_large_renamer.clone(),
     };
