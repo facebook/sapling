@@ -28,7 +28,7 @@ use time_ext::DurationExt;
 
 define_stats! {
     prefix = "mononoke.bookmarks.warm_bookmarks_cache";
-    cached_bookmark_update_time_ms: dynamic_timeseries("{}.cached_bookmark_update_time", (repo: String); Average, Sum),
+    cached_bookmark_update_time_ms: dynamic_timeseries("{}.update_time", (repo: String); Average, Sum),
 }
 
 pub struct WarmBookmarksCache {
