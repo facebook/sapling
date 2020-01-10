@@ -43,7 +43,7 @@ parsed = dispatch._parseconfig(
         "lists.list18=\n \n\nding\ndong",
         "date.epoch=0 0",
         "date.birth=2005-04-19T00:00:00",
-        "date.invalid=0",
+        "date.invalid=invalid",
     ],
 )
 

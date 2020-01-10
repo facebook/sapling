@@ -327,8 +327,13 @@ Test parsing extra forms
   start: -2208988800 (Mon Jan 01 00:00:00 1900 +0000)
     end: 978336000 (Mon Jan 01 00:00:00 2001 -0800)
 
+#if no-windows
+(Windows parsing are affected by System Local settings that are unclear how to
+override in tests. Cannot assume English here.)
+
 Test parsing months
 
   $ for i in Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec; do
   >   hg log -d "$i 2018" -r null
   > done
+#endif
