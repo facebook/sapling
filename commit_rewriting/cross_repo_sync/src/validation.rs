@@ -31,66 +31,69 @@ use synced_commit_mapping::SyncedCommitMapping;
 pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: CommitSyncer<M>,
-    large_hash: ChangesetId,
+    source_hash: ChangesetId,
 ) -> Result<(), Error> {
-    let large_repo = commit_syncer.get_large_repo();
-    let small_repo = commit_syncer.get_small_repo();
+    let source_repo = commit_syncer.get_source_repo();
+    let target_repo = commit_syncer.get_target_repo();
 
-    let small_hash = get_synced_commit(ctx.clone(), &commit_syncer, large_hash).await?;
-    info!(ctx.logger(), "small repo cs id: {}", small_hash);
+    let target_hash = get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
+    info!(ctx.logger(), "target repo cs id: {}", target_hash);
 
-    let moved_large_repo_entries = async {
-        let large_root_mf_id =
-            fetch_root_mf_id(ctx.clone(), large_repo.clone(), large_hash.clone()).await?;
+    let moved_source_repo_entries = async {
+        let source_root_mf_id =
+            fetch_root_mf_id(ctx.clone(), source_repo.clone(), source_hash.clone()).await?;
 
-        let large_repo_entries =
-            list_all_filenode_ids(ctx.clone(), large_repo.clone(), large_root_mf_id)
+        let source_repo_entries =
+            list_all_filenode_ids(ctx.clone(), source_repo.clone(), source_root_mf_id)
                 .compat()
                 .await?;
 
-        if large_hash == small_hash {
+        if source_hash == target_hash {
             // No need to move any paths, because this commit was preserved as is
-            Ok(large_repo_entries)
+            Ok(source_repo_entries)
         } else {
-            move_all_paths(large_repo_entries, commit_syncer.get_mover())
+            move_all_paths(source_repo_entries, commit_syncer.get_mover())
         }
     };
 
-    let small_repo_entries = async {
-        let small_root_mf_id =
-            fetch_root_mf_id(ctx.clone(), small_repo.clone(), small_hash.clone()).await?;
+    let target_repo_entries = async {
+        let target_root_mf_id =
+            fetch_root_mf_id(ctx.clone(), target_repo.clone(), target_hash.clone()).await?;
 
-        list_all_filenode_ids(ctx.clone(), small_repo.clone(), small_root_mf_id)
+        list_all_filenode_ids(ctx.clone(), target_repo.clone(), target_root_mf_id)
             .compat()
             .await
     };
 
-    let (moved_large_repo_entries, small_repo_entries) =
-        try_join!(moved_large_repo_entries, small_repo_entries)?;
+    let (moved_source_repo_entries, target_repo_entries) =
+        try_join!(moved_source_repo_entries, target_repo_entries)?;
 
     compare_contents(
         ctx.clone(),
-        (large_repo.clone(), &moved_large_repo_entries),
-        (small_repo.clone(), &small_repo_entries),
-        large_hash,
+        (source_repo.clone(), &moved_source_repo_entries),
+        (target_repo.clone(), &target_repo_entries),
+        source_hash,
     )
     .await?;
 
-    let mut missing_count = 0;
-    for (path, _) in small_repo_entries {
-        if moved_large_repo_entries.get(&path).is_none() {
+    let mut extra_target_files_count = 0;
+    for (path, _) in target_repo_entries {
+        let reverse_mover = commit_syncer.get_reverse_mover();
+        // "path" is not present in the source, however that might be expected - we use
+        // reverse_mover to check that.
+        if moved_source_repo_entries.get(&path).is_none() && !reverse_mover(&path)?.is_none() {
             error!(
                 ctx.logger(),
-                "{:?} is present in small repo, but not in large", path
+                "{:?} is present in target repo, but not in source", path
             );
-            missing_count = missing_count + 1;
+            extra_target_files_count = extra_target_files_count + 1;
         }
     }
 
-    if missing_count > 0 {
+    if extra_target_files_count > 0 {
         return Err(format_err!(
-            "{} files are present in small repo, but not in large",
-            missing_count
+            "{} files are present in target repo, but not in source",
+            extra_target_files_count
         )
         .into());
     }
@@ -177,7 +180,7 @@ fn list_all_filenode_ids(
     ctx: CoreContext,
     repo: BlobRepo,
     mf_id: HgManifestId,
-) -> BoxFuture<HashMap<Option<MPath>, HgFileNodeId>, Error> {
+) -> BoxFuture<HashMap<MPath, HgFileNodeId>, Error> {
     info!(
         ctx.logger(),
         "fetching filenode ids for {}",
@@ -186,7 +189,15 @@ fn list_all_filenode_ids(
     mf_id
         .list_all_entries(ctx.clone(), repo.get_blobstore())
         .filter_map(move |(path, entry)| match entry {
-            Entry::Leaf((_, filenode_id)) => Some((path, filenode_id)),
+            Entry::Leaf((_, filenode_id)) => {
+                match path {
+                    Some(path) => Some((path, filenode_id)),
+                    None => {
+                        // Leaf shouldn't normally be None
+                        None
+                    }
+                }
+            }
             Entry::Tree(_) => None,
         })
         .collect_to::<HashMap<_, _>>()
@@ -203,8 +214,8 @@ fn list_all_filenode_ids(
 
 async fn compare_contents(
     ctx: CoreContext,
-    (large_repo, large_filenodes): (BlobRepo, &HashMap<Option<MPath>, HgFileNodeId>),
-    (small_repo, small_filenodes): (BlobRepo, &HashMap<Option<MPath>, HgFileNodeId>),
+    (large_repo, large_filenodes): (BlobRepo, &HashMap<MPath, HgFileNodeId>),
+    (small_repo, small_filenodes): (BlobRepo, &HashMap<MPath, HgFileNodeId>),
     large_hash: ChangesetId,
 ) -> Result<(), Error> {
     let mut different_filenodes = HashSet::new();
@@ -272,16 +283,14 @@ async fn compare_contents(
 }
 
 fn move_all_paths(
-    filenodes: HashMap<Option<MPath>, HgFileNodeId>,
+    filenodes: HashMap<MPath, HgFileNodeId>,
     mover: &Mover,
-) -> Result<HashMap<Option<MPath>, HgFileNodeId>, Error> {
+) -> Result<HashMap<MPath, HgFileNodeId>, Error> {
     let mut moved_large_repo_entries = HashMap::new();
     for (path, filenode_id) in filenodes {
-        if let Some(path) = path {
-            let moved_path = mover(&path)?;
-            if let Some(moved_path) = moved_path {
-                moved_large_repo_entries.insert(Some(moved_path), filenode_id);
-            }
+        let moved_path = mover(&path)?;
+        if let Some(moved_path) = moved_path {
+            moved_large_repo_entries.insert(moved_path, filenode_id);
         }
     }
 
