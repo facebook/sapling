@@ -488,7 +488,7 @@ def dispatch(req):
             duration,
         )
 
-        threshold = req.ui.configint("tracing", "threshold") * 1000  # milliseconds
+        threshold = req.ui.configint("tracing", "threshold")
         if duration >= threshold:
             key = "flat/perftrace-%(host)s-%(pid)s-%(time)s" % {
                 "host": socket.gethostname(),
@@ -501,7 +501,9 @@ def dispatch(req):
             # The ASCII implementation will fold repetitive calls so
             # the length of the output is practically bounded.
             output = bindings.tracing.singleton.ascii(
-                max([duration / 100, threshold]) * 1e6
+                # Minimum resolution = 1% of max(duration, threshold)
+                # It's in microseconds (1e6) to divide it by 100 = 1e4
+                (max([duration, threshold]) * 1e4)
             )
             if req.ui.configbool("tracing", "stderr"):
                 req.ui.warn("%s\n" % output)
