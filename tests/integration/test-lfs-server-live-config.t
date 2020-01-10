@@ -33,7 +33,7 @@
   > {
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
-  >   "throttle_limits": []
+  >   "throttle_limits": [],
   >   "acl_check": false,
   >   "enforce_acl_check": false
   > }
@@ -41,6 +41,8 @@
 
 # Wait for it to be updated
   $ sleep 2
+  $ grep "$LIVE_CONFIG" "$lfs_log"
+  * Updated path $TESTTMP/live.json (glob)
 
 # Get the updated config
   $ curl -fs "${lfs_root}/config" | jq -S .
@@ -49,5 +51,5 @@
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
     "throttle_limits": [],
-    "track_bytes_sent": true
+    "track_bytes_sent": false
   }
