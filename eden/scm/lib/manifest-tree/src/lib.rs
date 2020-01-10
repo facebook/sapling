@@ -9,8 +9,8 @@ mod diff;
 mod iter;
 mod link;
 mod store;
-#[cfg(test)]
-mod testutil;
+#[cfg(any(test, feature = "for-tests"))]
+pub mod testutil;
 
 use std::{
     collections::{btree_map::Entry, BTreeMap},
