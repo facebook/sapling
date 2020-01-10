@@ -28,7 +28,7 @@ use time_ext::DurationExt;
 
 define_stats! {
     prefix = "mononoke.bookmarks.warm_bookmarks_cache";
-    cached_bookmark_update_time_ms: timeseries(Rate, Sum),
+    cached_bookmark_update_time_ms: dynamic_timeseries("{}.cached_bookmark_update_time", (repo: String); Average, Sum),
 }
 
 pub struct WarmBookmarksCache {
@@ -100,10 +100,11 @@ fn spawn_bookmarks_updater(
             .and_then({
                 cloned!(ctx);
                 move |()| {
+                    let repoid = repo.get_repoid();
                     update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone(), warmers.clone(), warm_cs_ids.clone())
-                    .timed(|stats, _| {
+                    .timed(move |stats, _| {
                         STATS::cached_bookmark_update_time_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64, (repoid.id().to_string(), ));
                         Ok(())
                     })
                 }
