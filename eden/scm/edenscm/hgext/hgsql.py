@@ -1116,6 +1116,17 @@ def wraprepo(repo):
                 self._filecache.pop("manifestlog", None)
                 self._filecache.pop("_phasecache", None)
 
+                # hgsql only writes to revlogs. Sync revlog to zstore.
+                # This is for test compatibility. Do not use it in production.
+                if "zstorecommitdata" in self.storerequirements:
+                    if not util.istest():
+                        raise error.Abort(
+                            _(
+                                "zstore commit data is forbidden for hgsql production use due to performance concerns"
+                            )
+                        )
+                    self._syncrevlogtozstore()
+
                 # Refill the cache. We can't just reuse the exact contents of
                 # the old cached ctx, since the old ctx contains a reference to
                 # the old revlog, which is now out of date.

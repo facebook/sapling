@@ -4,6 +4,11 @@
   $ SKIPREMOTEFILELOGCHECK=1
   $ export SKIPREMOTEFILELOGCHECK
 
+The fixcorrupt extension fixes pure revlog-based changelog. It is incompatible
+with zstore-baked changelog.d:
+
+  $ setconfig format.use-zstore-commit-data=false
+
   $ cat > noinline.py << EOF
   > from edenscm.mercurial import revlog
   > revlog.REVLOG_DEFAULT_FLAGS = 0

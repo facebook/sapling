@@ -1101,6 +1101,23 @@ Example for ``~/.hgrc``::
 
     Enabled by default.
 
+``use-zstore-commit-data``
+
+    Use zstore (a SHA1 content store) to store commit metadata (user, date,
+    message, extras, but not the parent order). This makes it that
+    "00changelog.d" is no longer used for reading commits content. If
+    "00changelog.i" is still used, "00changelog.d" is still written to when
+    adding new commits.
+
+``use-zstore-commit-data-revlog-fallback``
+
+    When data is not found in zstore, fallback to lookup in revlog.
+
+``use-zstore-commit-data-server-fallback``
+
+    When data is not found in zstore, fallback to lookup from the server.
+    (Not implemented yet)
+
 ``dirstate``
     Dirstate format version to use. One of 0 (flat dirstate), 1
     (treedirstate), and 2 (treestate). Default is 1.

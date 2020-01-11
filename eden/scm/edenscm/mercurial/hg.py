@@ -678,6 +678,13 @@ def clone(
                 raise
 
             destlock = copystore(ui, srcrepo, destpath)
+            # repo initialization might also take a lock. Keeping destlock
+            # outside the repo object can cause deadlock. To avoid deadlock,
+            # we just release destlock here. The lock will be re-acquired
+            # soon by `destpeer`, or `local.lock()` below.
+            if destlock is not None:
+                destlock.release()
+
             # copy bookmarks over
             srcbookmarks = srcrepo.svfs.join("bookmarks")
             dstbookmarks = os.path.join(destpath, "store", "bookmarks")
@@ -688,11 +695,6 @@ def clone(
             # into it
             destpeer = peer(srcrepo, peeropts, dest)
             srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
-            # Attach "destlock" to the repo. So 'repo.lock()' wouldn't
-            # deadlock. wlock needs to be taken first.
-            if destlock:
-                destlockw = destpeer.local().wlock()
-                destpeer.local()._lockref = weakref.ref(destlock)
         else:
             try:
                 destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
@@ -755,6 +757,8 @@ def clone(
                 fp.close()
 
                 destrepo.ui.setconfig("paths", "default", defaulturl, "clone")
+                if destrepo.ui.configbool("format", "use-zstore-commit-data"):
+                    destrepo._syncrevlogtozstore()
 
                 if update:
                     if update is not True:

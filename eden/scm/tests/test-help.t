@@ -1212,6 +1212,12 @@ Separate sections from subsections
   
       "usestore"
   
+      "use-zstore-commit-data"
+  
+      "use-zstore-commit-data-revlog-fallback"
+  
+      "use-zstore-commit-data-server-fallback"
+  
       "dirstate"
   
       "uselz4"

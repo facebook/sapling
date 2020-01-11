@@ -20,6 +20,8 @@ import random
 import time
 import weakref
 
+# pyre-fixme[21]: Could not find `bindings`.
+import bindings
 from edenscm.hgext.extlib.phabricator import diffprops
 
 from . import (
@@ -52,6 +54,7 @@ from . import (
     pathutil,
     peer,
     phases,
+    progress,
     pushkey,
     pycompat,
     repository,
@@ -356,7 +359,7 @@ class localrepository(object):
         "treestate",
         "storerequirements",
     }
-    _basestoresupported = {"visibleheads", "narrowheads"}
+    _basestoresupported = {"visibleheads", "narrowheads", "zstorecommitdata"}
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
     # sets of (ui, featureset) functions for repo and store features.
@@ -588,6 +591,7 @@ class localrepository(object):
                     self.svfs.write(name, self.sharedvfs.read(name))
 
         self._narrowheadsmigration()
+        self._zstorecommitdatamigration()
 
     def _narrowheadsmigration(self):
         """Migrate if 'narrow-heads' config has changed."""
@@ -647,6 +651,58 @@ class localrepository(object):
                         )
                     self.storerequirements.remove("narrowheads")
                     self._writestorerequirements()
+
+    def _zstorecommitdatamigration(self):
+        """Migrate if 'narrow-heads' config has changed."""
+        zstorecommitdatadesired = self.ui.configbool("format", "use-zstore-commit-data")
+        zstorecommitdatacurrent = "zstorecommitdata" in self.storerequirements
+        if zstorecommitdatadesired != zstorecommitdatacurrent:
+            if zstorecommitdatadesired:
+                # Migrating up. Read all commits in revlog and store them in
+                # zstore.
+                with self.lock():
+                    self._syncrevlogtozstore()
+                    self.storerequirements.add("zstorecommitdata")
+                    self._writestorerequirements()
+            else:
+                # Migrating down is just removing the store requirement.
+                with self.lock():
+                    self.storerequirements.remove("zstorecommitdata")
+                    self._writestorerequirements()
+
+    def _syncrevlogtozstore(self):
+        """Sync commit data from revlog to zstore"""
+        zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
+        self.unfiltered().changelog.zstore = zstore
+
+        if self.ui.configbool(
+            "format", "use-zstore-commit-data-revlog-fallback"
+        ) or self.ui.configbool("format", "use-zstore-commit-data-server-fallback"):
+            return
+
+        with progress.bar(
+            self.ui, _("migrating commit data"), _("commits"), len(self)
+        ) as prog:
+            cl = self.changelog
+            cl.zstore = None
+            textwithheader = revlog.textwithheader
+            clrevision = cl.revision
+            clparents = cl.parents
+            clnode = cl.node
+            insert = zstore.insert
+            contains = zstore.__contains__
+            for rev in self:
+                prog.value += 1
+                node = clnode(rev)
+                if contains(node):
+                    continue
+                text = clrevision(rev)
+                p1, p2 = clparents(node)
+                newnode = insert(textwithheader(text, p1, p2))
+                assert node == newnode
+                if (rev + 1) % 1000000 == 0:
+                    zstore.flush()
+            zstore.flush()
 
     @property
     def vfs(self):
@@ -852,10 +908,15 @@ class localrepository(object):
     @storecache("00changelog.i", "visibleheads", "remotenames")
     def changelog(self):
         def loadchangelog(self):
+            if "zstorecommitdata" in self.storerequirements:
+                zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
+            else:
+                zstore = None
             return changelog.changelog(
                 self.svfs,
                 uiconfig=self.ui.uiconfig(),
                 trypending=txnutil.mayhavesharedpending(self.root, self.sharedroot),
+                zstore=zstore,
             )
 
         cl = loadchangelog(self)
@@ -1317,6 +1378,11 @@ class localrepository(object):
 
         def releasefn(tr, success):
             repo = reporef()
+            # Flush changelog zstore unconditionally. This makes the commit
+            # data available even if the transaction gets rolled back.
+            zstore = repo.changelog.zstore
+            if zstore is not None:
+                zstore.flush()
             if success:
                 # this should be explicitly invoked here, because
                 # in-memory changes aren't written out at closing
@@ -2660,5 +2726,8 @@ def newrepostorerequirements(repo):
 
     if ui.configbool("experimental", "narrow-heads"):
         requirements.add("narrowheads")
+
+    if ui.configbool("format", "use-zstore-commit-data"):
+        requirements.add("zstorecommitdata")
 
     return requirements
