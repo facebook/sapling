@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import encoding, error, revlog, util, visibility
+from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid
 from .pycompat import range
@@ -20,6 +20,8 @@ from .thirdparty import attr
 
 
 _defaultextra = {"branch": "default"}
+
+textwithheader = revlog.textwithheader
 
 
 def _string_escape(text):
@@ -275,7 +277,7 @@ class changelogrevision(object):
 
 
 class changelog(revlog.revlog):
-    def __init__(self, opener, uiconfig, trypending=False):
+    def __init__(self, opener, uiconfig, trypending=False, zstore=None):
         """Load a changelog revlog using an opener.
 
         If ``trypending`` is true, we attempt to load the index from a
@@ -325,6 +327,15 @@ class changelog(revlog.revlog):
         self._delaybuf = None
         self._divert = False
         self.filteredrevs = frozenset()
+
+        if uiconfig.configbool("format", "use-zstore-commit-data-revlog-fallback"):
+            self._zstorefallback = "revlog"
+        elif uiconfig.configbool("format", "use-zstore-commit-data-server-fallback"):
+            self._zstorefallback = "server"
+        else:
+            self._zstorefallback = None
+
+        self.zstore = zstore
 
     def _loadvisibleheads(self, opener):
         return visibility.visibleheads(opener)
@@ -586,7 +597,18 @@ class changelog(revlog.revlog):
             parseddate = "%s %s" % (parseddate, extra)
         l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
         text = "\n".join(l)
-        return self.addrevision(text, transaction, len(self), p1, p2)
+        result = self.addrevision(text, transaction, len(self), p1, p2)
+        zstore = self.zstore
+        if zstore is not None:
+            zstore.flush()
+        return result
+
+    def addgroup(self, *args, **kwargs):
+        result = super(changelog, self).addgroup(*args, **kwargs)
+        zstore = self.zstore
+        if zstore is not None:
+            zstore.flush()
+        return result
 
     def branchinfo(self, rev):
         """return the branch name and open/close state of a revision
@@ -596,13 +618,59 @@ class changelog(revlog.revlog):
         extra = self.read(rev)[5]
         return encoding.tolocal(extra.get("branch")), "close" in extra
 
-    def _addrevision(self, node, rawtext, transaction, *args, **kwargs):
+    def _addrevision(
+        self,
+        node,
+        rawtext,
+        transaction,
+        link,
+        p1,
+        p2,
+        flags,
+        cachedelta,
+        ifh,
+        dfh,
+        **kwargs
+    ):
         # overlay over the standard revlog._addrevision to track the new
         # revision on the transaction.
         rev = len(self)
         node = super(changelog, self)._addrevision(
-            node, rawtext, transaction, *args, **kwargs
+            node,
+            rawtext,
+            transaction,
+            link,
+            p1,
+            p2,
+            flags,
+            cachedelta,
+            ifh,
+            dfh,
+            **kwargs
         )
+
+        # Also write (key=node, data=''.join(sorted([p1,p2]))+text) to zstore
+        # if zstore exists.
+        # `_addrevision` is the single API that writes to revlog `.d`.
+        # It is used by `add` and `addgroup`.
+        zstore = self.zstore
+        if zstore is not None:
+            # `rawtext` can be None (code path: revlog.addgroup), in that case
+            # `cachedelta` is the way to get `text`.
+            if rawtext is None:
+                baserev, delta = cachedelta
+                basetext = self.revision(baserev, _df=dfh, raw=False)
+                text = mdiff.patch(basetext, delta)
+            else:
+                # text == rawtext only if there is no flags.
+                # We need 'text' to calculate commit SHA1.
+                assert not flags, "revlog flags on changelog is unexpected"
+                text = rawtext
+            sha1text = textwithheader(text, p1, p2)
+            # Use `p1` as a potential delta-base.
+            zstorenode = zstore.insert(sha1text, [p1])
+            assert zstorenode == node, "zstore SHA1 should match node"
+
         revs = transaction.changes.get("revs")
         if revs is not None:
             if revs:
@@ -612,6 +680,28 @@ class changelog(revlog.revlog):
                 revs = range(rev, rev + 1)
             transaction.changes["revs"] = revs
         return node
+
+    def revision(self, nodeorrev, _df=None, raw=False):
+        # "revision" is the single API that reads `.d` from revlog.
+        # Use zstore if possible.
+        zstore = self.zstore
+        if zstore is None:
+            return super(changelog, self).revision(nodeorrev, _df=_df, raw=raw)
+        else:
+            if isinstance(nodeorrev, int):
+                node = self.node(nodeorrev)
+            else:
+                node = nodeorrev
+            if node == nullid:
+                return ""
+            text = zstore[node]
+            if text is None:
+                # fallback to revlog
+                if self._zstorefallback == "revlog":
+                    return super(changelog, self).revision(nodeorrev, _df=_df, raw=raw)
+                raise error.LookupError(node, self.indexfile, _("no data for node"))
+            # Strip the p1, p2 header
+            return text[40:]
 
 
 def _remotenodes(changelog):

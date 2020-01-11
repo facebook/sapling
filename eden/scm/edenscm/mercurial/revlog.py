@@ -154,6 +154,17 @@ def hash(text, p1, p2):
     return s.digest()
 
 
+def textwithheader(text, p1, p2):
+    """Similar to `hash`, but only return the content before calculating SHA1."""
+    if p1 < p2:
+        a = p1
+        b = p2
+    else:
+        a = p2
+        b = p1
+    return "%s%s%s" % (a, b, text)
+
+
 def _trimchunk(revlog, revs, startidx, endidx=None):
     """returns revs[startidx:endidx] without empty trailing revs
     """
