@@ -54,6 +54,8 @@ import bindings
 indexes = bindings.indexes
 indexes.nodemap.emptyindexbuffer() # force demandimport to load indexes
 
+RustError = bindings.error.RustError
+
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -298,11 +300,11 @@ cdef class nodemap(object):
             node = self._rustnodemap.partialmatch(hexprefix)
             if node is not None:
                 candidates.add(node)
-        except RuntimeError as ex:
+        except (RuntimeError, RustError) as ex:
             # Convert b'ambiguous prefix' to RevlogError. This is because the
             # rust code cannot access RevlogError cleanly. So we do the
             # conversion here.
-            if b'ambiguous prefix' in ex:
+            if b'ambiguous prefix' in str(ex):
                 raise error.RevlogError
             raise
 
