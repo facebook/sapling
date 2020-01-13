@@ -317,6 +317,12 @@ replace-with = "vendored-sources"
         shutil.copy(src, desttmp)
         shutil.move(desttmp, dest)
 
+        # Copy pdb debug info.
+        pdbsrc = src[:-4] + ".pdb"
+        if os.path.exists(pdbsrc):
+            pdbdest = dest[:-4] + ".pdb"
+            shutil.copy(pdbsrc, pdbdest)
+
     def set_long_paths_manifest(self, fname):
         if not distutils.util.get_platform().startswith("win-"):
             # This only makes sense on Windows

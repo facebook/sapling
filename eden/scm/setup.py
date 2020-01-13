@@ -1002,62 +1002,6 @@ class buildembedded(Command):
     def finalize_options(self):
         pass
 
-    def _is_ext_file(self, path):
-        """Return True if file is a native Python extension"""
-        return any(map(lambda sf: path.endswith(sf), self.extsuffixes))
-
-    def _process_dir(self, dirtowalk, target_prefix, skipdirs, dirforpycs):
-        """Py-Compile all the files recursively in dir
-
-        `dirtowalk` - a dir to process
-        `target_prefix` - put compiled files in this subdir. It has to be
-                          a suffix of `dirtowalk`. For example, we would call
-                          this with `dirtowalk` ".../hg/mercurial" and
-                          `target_prefix` "mercurial" and expect any processed
-                          files to be put in `dirforpycs`/mercurial
-        `skipdirs` - do not process dirs in this list
-        `dirforpycs` - a place to put .pyc files
-        """
-        # we need to chdir to be able to use relative source paths, see below
-        # so if dirtowalk is /a/b/c/ and target_prefix is b/c/, tmpcwd would be /a/
-        tmpcwd = dirtowalk[: -len(target_prefix)] if target_prefix else dirtowalk
-        with chdir(tmpcwd):
-            for dirpath, dirnames, filenames in os.walk(dirtowalk):
-                relative_dirpath = (
-                    pjoin(target_prefix, relpath(dirpath, dirtowalk)) + os.path.sep
-                )  # trailing separator is needed to match skipdirs
-                if any(
-                    map(lambda skipdir: relative_dirpath.startswith(skipdir), skipdirs)
-                ):
-                    continue
-                target_dir = os.path.join(dirforpycs, relative_dirpath)
-                ensureexists(target_dir)
-                for filename in filenames:
-                    if not any(filename.endswith(suff) for suff in self.srcsuffixes):
-                        continue
-                    # it is important to use relative source path rather than absolute
-                    # since it is what gets baked into the resulting .pyc
-                    relative_source_path = os.path.join(relative_dirpath, filename)
-                    compfilename = None
-                    # we are certain that this loop will produce a good compiled filename
-                    # because we know that filename ends with one of the suffixes
-                    # from our chek above
-                    for suff in self.srcsuffixes:
-                        if not filename.endswith(suff):
-                            continue
-                        compfilename = filename[: -len(suff)] + self.compsuffix
-                        break
-
-                    targetpath = os.path.join(target_dir, compfilename)
-                    py_compile.compile(relative_source_path, targetpath)
-
-    def _process_hg_source(self, dirforpycs):
-        """Py-Compile all of the Mercurial Python files and copy
-        results to `dirforpycs`"""
-        hgdirs = ["edenscm"]
-        for d, p in {pjoin(scriptdir, hgdir): hgdir for hgdir in hgdirs}.items():
-            self._process_dir(d, p, set(), dirforpycs)
-
     def _process_hg_exts(self, dirforexts):
         """Prepare Mercurail native Python extensions
 
@@ -1070,8 +1014,18 @@ class buildembedded(Command):
 
     def _zip_pyc_files(self, zipname):
         """Modify a zip archive to include edenscm .pyc files"""
+        sourcedir = pjoin(scriptdir, "edenscm")
         with zipfile.PyZipFile(zipname, "a") as z:
-            z.writepy(pjoin(scriptdir, "edenscm"))
+            # Write .py files for better traceback.
+            for root, _dirs, files in os.walk(sourcedir):
+                for basename in files:
+                    sourcepath = pjoin(root, basename)
+                    if sourcepath.endswith(".py"):
+                        # relative to scriptdir
+                        inzippath = sourcepath[len(scriptdir) + 1 :]
+                        z.write(sourcepath, inzippath)
+            # Compile and write .pyc files.
+            z.writepy(sourcedir)
 
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
@@ -1102,6 +1056,11 @@ class buildembedded(Command):
         targetname = "hg.exe" if iswindows else "hg"
         log.debug("copying main mercurial binary from %s" % bindir)
         copy_to(pjoin(bindir, sourcename), pjoin(dirtocopy, targetname))
+        # On Windows, debuginfo is not embedded, but stored as .pdb.
+        # Copy it for better debugging.
+        if iswindows:
+            pdbname = pjoin(bindir, "hg.pdb")
+            copy_to(pdbname, pjoin(dirtocopy, "hg.pdb"))
 
     def _copy_other(self, dirtocopy):
         """Copy misc files, which aren't main hg codebase"""
