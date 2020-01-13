@@ -96,8 +96,8 @@ fn build_tls_acceptor(
     Ok(builder.build())
 }
 
-fn say_hello(state: State) -> (State, &'static str) {
-    (state, "Hello, world!\n")
+fn health_check(state: State) -> (State, &'static str) {
+    (state, "I_AM_ALIVE")
 }
 
 #[fbinit::main]
@@ -156,11 +156,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     let server = match acceptor {
         Some(acceptor) => bind_server(
             listener,
-            || Ok(say_hello),
+            || Ok(health_check),
             move |socket| acceptor.accept_async(socket).map_err(|_| ()),
         )
         .left_future(),
-        None => bind_server(listener, || Ok(say_hello), |socket| future::ok(socket)).right_future(),
+        None => {
+            bind_server(listener, || Ok(health_check), |socket| future::ok(socket)).right_future()
+        }
     };
 
     let mut runtime = args::init_runtime(&matches)?;
