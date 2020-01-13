@@ -8,8 +8,9 @@
 use thrift_types::edenfs as eden;
 
 use crate::path_relativizer::PathRelativizer;
-use anyhow::{Error, Result};
+use anyhow::{bail, ensure, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
+use clidispatch::{errors::FallbackToPython, io::IO};
 use crypto::{digest::Digest, sha2::Sha256};
 use eden::client::EdenService;
 use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
@@ -38,11 +39,10 @@ use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use thrift_types::futures::future::TryFutureExt;
 use tokio_core::reactor::Core;
+#[cfg(unix)]
 use tokio_uds::UnixStream;
 
 /// Standalone status command for edenfs.
-///
-/// Return `None` if this implementation cannot handle the `status` command.
 ///
 /// TODO: This does not match the Python implementation. Namely:
 /// - No pager.
@@ -61,7 +61,28 @@ pub fn maybe_status_fastpath(
     repo_root: &Path,
     cwd: &Path,
     print_config: PrintConfig,
-) -> Option<Result<u8>> {
+    io: &mut IO,
+) -> Result<u8> {
+    maybe_status_fastpath_internal(repo_root, cwd, print_config, io)
+}
+
+#[cfg(windows)]
+fn maybe_status_fastpath_internal(
+    repo_root: &Path,
+    cwd: &Path,
+    print_config: PrintConfig,
+    io: &mut IO,
+) -> Result<u8> {
+    Err(FallbackToPython.into())
+}
+
+#[cfg(unix)]
+fn maybe_status_fastpath_internal(
+    repo_root: &Path,
+    cwd: &Path,
+    print_config: PrintConfig,
+    io: &mut IO,
+) -> Result<u8> {
     let mut core = Core::new().expect("Core creation failed");
     let handle = core.handle();
 
@@ -70,56 +91,26 @@ pub fn maybe_status_fastpath(
     // of the Eden mount has been bind mounted to another location, resulting
     // in the Eden mount appearing at multiple separate locations.
     let eden_root = repo_root.join(".eden").join("root");
-    let eden_root = match read_link(eden_root) {
-        Ok(eden_root) => eden_root.into_os_string().into_string(),
-        // does not exist or not a symlink - therefore this is not an Eden repo
-        Err(_) => return None,
-    };
-    let eden_root = match eden_root {
-        Ok(eden_root) => eden_root,
-        // Repo root is not valid UTF-8.  This is not normally expected.
-        // (We perhaps could just change the thrift API to treat the path as
-        // binary so we can deal with this situation more easily here.)
-        Err(_) => return None,
-    };
+    let eden_root = read_link(eden_root).map_err(|_| FallbackToPython)?;
+    let eden_root = eden_root
+        .into_os_string()
+        .into_string()
+        .map_err(|_| FallbackToPython)?;
 
     // Look up Eden's socket address.
     let sock_addr = repo_root.join(".eden").join("socket");
-    let sock_addr = match read_link(sock_addr) {
-        // does not exist or not a symlink - therefore this is not an Eden repo
-        Ok(sock_addr) => sock_addr,
-        Err(_) => return None,
-    };
-    let sock = match UnixStream::connect(&sock_addr, &handle) {
-        Ok(sock) => sock,
-        // cannot connect to eden daemon or invalid unix domain socket
-        Err(_) => return None,
-    };
+    let sock_addr = read_link(sock_addr).map_err(|_| FallbackToPython)?;
+    let sock = UnixStream::connect(&sock_addr, &handle).map_err(|_| FallbackToPython)?;
 
     let transport = SocketTransport::new(&handle, sock);
     let client = EdenService::new(BinaryProtocol, transport);
-
-    let sock2 = match UnixStream::connect(sock_addr, &handle) {
-        Ok(sock) => sock,
-        // cannot connect to eden daemon or invalid unix domain socket
-        Err(_) => return None,
-    };
+    let sock2 = UnixStream::connect(sock_addr, &handle).map_err(|_| FallbackToPython)?;
 
     let transport = SocketTransport::new(&handle, sock2);
     let fb303_client = BaseService::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
-    let dirstate_data = match read_hg_dirstate(&repo_root) {
-        Ok(result) => result,
-        Err(error) => {
-            eprintln!(
-                "error reading {}/.hg/dirstate: {}",
-                repo_root.display(),
-                error
-            );
-            return Some(Ok(1));
-        }
-    };
+    let dirstate_data = read_hg_dirstate(&repo_root)?;
 
     // If any of the files are present that should trigger the 'morestatus' extension, bail out of
     // the wrapper here and default to the Python implementation. D9025269 has a prototype
@@ -127,7 +118,7 @@ pub fn maybe_status_fastpath(
     // and call out to it here rather than maintain a parallel implementation in the wrapper.
     let hg_dir = repo_root.join(".hg");
     if needs_morestatus_extension(&hg_dir, &dirstate_data.p2) {
-        return None;
+        return Err(FallbackToPython.into());
     }
 
     let stdout = io::stdout();
@@ -140,55 +131,39 @@ pub fn maybe_status_fastpath(
         &eden_root,
         dirstate_data.p1,
         print_config.status_types.ignored,
-    );
+    )?;
 
-    let result = match &status {
-        Ok(status) => {
-            let mut locked_stdout = stdout.lock();
-            let relativizer = PathRelativizer::new(cwd.to_path_buf(), repo_root.to_path_buf());
-            let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
-            if let Err(error) = print_config.print_status(
-                &repo_root,
-                &status.status,
-                &dirstate_data,
-                &relativizer,
-                use_color,
-                &mut locked_stdout,
-            ) {
-                eprintln!("error writing to stdout: {}", error);
-                1
-            } else {
-                0
-            }
-        }
-        Err(error) => {
-            // We could fall back on hg if the RPC fails, but it's likely to fail with the same
-            // error.
-            eprintln!("error fetching eden status: {}", error);
-            1
-        }
-    };
+    let relativizer = PathRelativizer::new(cwd.to_path_buf(), repo_root.to_path_buf());
+    let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
+    print_config.print_status(
+        &repo_root,
+        &status.status,
+        &dirstate_data,
+        &relativizer,
+        use_color,
+        &mut io.output,
+    )?;
 
-    if let Ok(version) = status.and_then(|s| s.version.parse::<u32>().map_err(|e| e.into())) {
+    if let Ok(version) = status.version.parse::<u32>() {
         if use_color {
-            eprint!("{}", BOLD);
+            let _ = io.write_err(BOLD);
         }
         // TODO: in the future we can have this look at some configuration that
         // we ship with the eden server, but for now, let's just hard code the
         // version check and advice.
         if version < 20180825 {
-            eprintln!(
+            let _ = io.write_err(
                 "
 IMPORTANT: Your running Eden server version is known to have issues importing
 data from mercurial.  You should run `eden restart` at your earliest opportunity
-to pick up the fix."
+to pick up the fix.\n",
             );
         } else if version == 20181023 {
-            eprintln!(
+            let _ = io.write_err(
                 "
 IMPORTANT: Your running Eden server version is known to have issues importing
 data from mercurial.  You should run `eden restart && eden gc` at your earliest
-opportunity to pick up the fix and fixup the cache."
+opportunity to pick up the fix and fixup the cache.\n",
             );
         } else {
             use chrono::offset::TimeZone;
@@ -201,19 +176,19 @@ opportunity to pick up the fix and fixup the cache."
             let version_date = chrono::Local.ymd(year as i32, month, day);
 
             if today - version_date > chrono::Duration::days(45) {
-                eprintln!(
+                let _ = io.write_err(
                     "
 Your running Eden server is more than 45 days old.  You should run
-`eden restart` to update to the current release."
+`eden restart` to update to the current release.\n",
                 );
             }
         }
         if use_color {
-            eprint!("{}", RESET);
+            let _ = io.write_err(RESET);
         }
     }
 
-    Some(Ok(result))
+    Ok(0)
 }
 
 const NULL_COMMIT: [u8; 20] = [0; 20];
@@ -454,8 +429,8 @@ impl PrintConfig {
         relativizer: &HgStatusPathRelativizer,
         use_color: bool,
         out: &mut W,
-    ) -> Result<(), io::Error> {
-        let groups = group_entries(&repo_root, &status, &dirstate_data);
+    ) -> Result<()> {
+        let groups = group_entries(&repo_root, &status, &dirstate_data)?;
         let endl = self.endl;
 
         let mut print_group =
@@ -568,12 +543,12 @@ fn group_entries(
     repo_root: &Path,
     status: &ScmStatus,
     dirstate_data: &DirstateData,
-) -> GroupedEntries {
+) -> Result<GroupedEntries> {
     let mut result = GroupedEntries::default();
     let mut dirstates = dirstate_data.tuples.clone();
     for (path_str, status_code) in &status.entries {
-        let path = PathBuf::from(OsString::from_vec(path_str.to_vec()));
-        let dirstate = dirstates.remove(&path);
+        let path = Path::new(str::from_utf8(path_str)?);
+        let dirstate = dirstates.remove(path);
         use self::DirstateDataStatus::*;
         let group = match (status_code.clone(), dirstate) {
             (ScmFileStatus::MODIFIED, Some(DirstateDataTuple { status: Remove, .. })) => {
@@ -607,7 +582,7 @@ fn group_entries(
                  once Thrift enums are translated as Rust enums."
             ),
         };
-        group.push(path);
+        group.push(path.to_path_buf());
     }
 
     for (path, tuple) in dirstates {
@@ -637,7 +612,7 @@ fn group_entries(
         }
     }
 
-    result
+    Ok(result)
 }
 
 struct DirstateReader {
@@ -670,17 +645,14 @@ impl DirstateReader {
         Ok(BigEndian::read_u32(&buf))
     }
 
-    #[cfg(unix)]
-    fn read_path(&mut self) -> Result<PathBuf, io::Error> {
+    fn read_path(&mut self) -> Result<PathBuf> {
         let path_length = self.read_u16()?;
 
         let mut buf = vec![0; path_length as usize];
         self.reader.read_exact(&mut buf)?;
         self.sha256.input(&buf);
 
-        use std::ffi::OsStr;
-        use std::os::unix::ffi::OsStrExt;
-        Ok(OsStr::from_bytes(&buf).into())
+        Ok(Path::new(str::from_utf8(&buf)?).to_path_buf())
     }
 
     fn verify_checksum(&mut self) -> Result<(), io::Error> {
@@ -712,7 +684,7 @@ impl DirstateReader {
     }
 }
 
-fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData, io::Error> {
+fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData> {
     let dirstate = repo_root.join(".hg").join("dirstate");
     let mut reader = DirstateReader {
         reader: BufReader::new(File::open(dirstate)?),
@@ -725,12 +697,7 @@ fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData, io::Error> {
     reader.hashing_read(&mut p2)?;
 
     let version = reader.read_u32()?;
-    if version != 1 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Unsupported dirstate version: {}", version),
-        ));
-    }
+    ensure!(version == 1, "Unsupported dirstate version: {}", version);
 
     let mut tuples: HashMap<PathBuf, DirstateDataTuple> = HashMap::new();
     let mut copymap: HashMap<PathBuf, PathBuf> = HashMap::new();
@@ -745,12 +712,7 @@ fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData, io::Error> {
                     b'r' => DirstateDataStatus::Remove,
                     b'a' => DirstateDataStatus::Add,
                     b'?' => DirstateDataStatus::Unknown,
-                    value => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::InvalidInput,
-                            format!("Unknown status type (ASCII value): {}", value),
-                        ));
-                    }
+                    value => bail!("Unknown status type (ASCII value): {}", value),
                 };
 
                 // The next four bytes compose an unsigned integer that corresponds to mode_t.
@@ -762,12 +724,7 @@ fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData, io::Error> {
                     0 => DirstateMergeState::NotApplicable,
                     -1 => DirstateMergeState::BothParents,
                     -2 => DirstateMergeState::OtherParent,
-                    value => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::InvalidInput,
-                            format!("Unknown merge type: {}", value),
-                        ));
-                    }
+                    value => bail!("Unknown merge type: {}", value),
                 };
                 let path = reader.read_path()?;
                 tuples.insert(
@@ -787,12 +744,7 @@ fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData, io::Error> {
                 reader.verify_checksum()?;
                 break;
             }
-            header => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    format!("Unrecognized header byte: {:x}", header),
-                ));
-            }
+            header => bail!("Unrecognized header byte: {:x}", header),
         };
     }
 

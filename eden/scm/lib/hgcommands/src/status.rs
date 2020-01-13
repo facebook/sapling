@@ -232,8 +232,5 @@ fn status(opts: StatusOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     };
 
     let cwd = std::env::current_dir()?;
-    match maybe_status_fastpath(repo.path(), &cwd, print_config) {
-        None => Err(errors::FallbackToPython.into()),
-        Some(result) => result,
-    }
+    maybe_status_fastpath(repo.path(), &cwd, print_config, io)
 }

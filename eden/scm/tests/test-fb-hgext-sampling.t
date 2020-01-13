@@ -127,9 +127,7 @@ Test exception logging:
 
 Note: Errors raised by the dispatch logic aren't logged here:
   $ hg st --nonexistant > /dev/null
-  hg status: option --nonexistant not recognized
-  (use 'hg status -h' to get help)
-  atexit handler executed
+  abort: option --nonexistant not recognized
   [255]
   >>> import json, pprint
   >>> with open("$LOGDIR/samplingpath.txt") as f:
