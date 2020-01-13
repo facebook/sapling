@@ -84,7 +84,7 @@ where
                     node_line.push_str(" ");
                 }
                 NodeLine::Parent => node_line.push_str("| "),
-                NodeLine::Ancestor => node_line.push_str(": "),
+                NodeLine::Ancestor => node_line.push_str(". "),
                 NodeLine::Blank => node_line.push_str("  "),
             }
         }
@@ -119,7 +119,7 @@ where
                     {
                         link_line.push_str("+");
                     } else if cur.contains(LinkLine::ANCESTOR) {
-                        link_line.push_str(":");
+                        link_line.push_str(".");
                     } else {
                         link_line.push_str("|");
                     }
@@ -170,7 +170,7 @@ where
                     } else {
                         term_line.push_str(match line.pad_lines[i] {
                             PadLine::Parent => "| ",
-                            PadLine::Ancestor => ": ",
+                            PadLine::Ancestor => ". ",
                             PadLine::Blank => "  ",
                         });
                     }
@@ -189,7 +189,7 @@ where
         for entry in line.pad_lines.iter() {
             base_pad_line.push_str(match entry {
                 PadLine::Parent => "| ",
-                PadLine::Ancestor => ": ",
+                PadLine::Ancestor => ". ",
                 PadLine::Blank => "  ",
             });
         }
@@ -355,18 +355,18 @@ mod tests {
               o  Y
              /
             o  F
-            :
-            : o  X
-            :/
+            .
+            . o  X
+            ./
             | o  W
             |/
             o  E
-            :
+            .
             o    D
             |\
             | o  C
-            | :
-            o :  B
+            | .
+            o .  B
             |/
             o  A"#
         );
@@ -379,9 +379,9 @@ mod tests {
             r#"
                   o  E
             .-+-+-+
-            : o | :  D
-            :/ \| :
-            |   o :  C
+            . o | .  D
+            ./ \| .
+            |   o .  C
             |   |/
             o   |  B
             +---'
@@ -450,5 +450,4 @@ mod tests {
                long message 3"#
         );
     }
-
 }

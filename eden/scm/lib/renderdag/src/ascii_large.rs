@@ -89,7 +89,7 @@ where
                     node_line.push_str(" ");
                 }
                 NodeLine::Parent => node_line.push_str(if i > 0 { " | " } else { "| " }),
-                NodeLine::Ancestor => node_line.push_str(if i > 0 { " : " } else { ": " }),
+                NodeLine::Ancestor => node_line.push_str(if i > 0 { " . " } else { ". " }),
                 NodeLine::Blank => node_line.push_str(if i > 0 { "   " } else { "  " }),
             }
         }
@@ -120,7 +120,7 @@ where
                 if cur.contains(LinkLine::CHILD | LinkLine::PARENT) {
                     top_link_line.push_str("|");
                 } else if cur.contains(LinkLine::CHILD | LinkLine::ANCESTOR) {
-                    top_link_line.push_str(":");
+                    top_link_line.push_str(".");
                 } else if cur.contains(LinkLine::ANY_MERGE) {
                     top_link_line.push_str(" ");
                 } else if cur.contains(LinkLine::HORIZONTAL) {
@@ -128,7 +128,7 @@ where
                 } else if cur.contains(LinkLine::PARENT) {
                     top_link_line.push_str("|");
                 } else if cur.contains(LinkLine::ANCESTOR) {
-                    top_link_line.push_str(":");
+                    top_link_line.push_str(".");
                 } else {
                     top_link_line.push_str(" ");
                 }
@@ -155,7 +155,7 @@ where
                 if cur.contains(LinkLine::PARENT) {
                     bot_link_line.push_str("|");
                 } else if cur.contains(LinkLine::ANCESTOR) {
-                    bot_link_line.push_str(":");
+                    bot_link_line.push_str(".");
                 } else {
                     bot_link_line.push_str(" ");
                 }
@@ -195,7 +195,7 @@ where
                     } else {
                         term_line.push_str(match line.pad_lines[i] {
                             PadLine::Parent => "| ",
-                            PadLine::Ancestor => ": ",
+                            PadLine::Ancestor => ". ",
                             PadLine::Blank => "  ",
                         });
                     }
@@ -222,9 +222,9 @@ where
                 }
                 PadLine::Ancestor => {
                     if i > 0 {
-                        " : "
+                        " . "
                     } else {
-                        ": "
+                        ". "
                     }
                 }
                 PadLine::Blank => {
@@ -446,24 +446,24 @@ mod tests {
               /
              /
             o  F
-            :
-            :
-            :  o  X
-            : /
-            :/
+            .
+            .
+            .  o  X
+            . /
+            ./
             |  o  W
             | /
             |/
             o  E
-            :
-            :
+            .
+            .
             o     D
             |\
             | \
             |  o  C
-            |  :
-            |  :
-            o  :  B
+            |  .
+            |  .
+            o  .  B
             | /
             |/
             o  A"#
@@ -476,12 +476,12 @@ mod tests {
             render(&test_fixtures::SPLIT_PARENTS),
             r#"
                      o  E
-              ______/:
-             /  /  / :
-            :  o  |  :  D
-            : / \ |  :
-            :/   \|  :
-            |     o  :  C
+              ______/.
+             /  /  / .
+            .  o  |  .  D
+            . / \ |  .
+            ./   \|  .
+            |     o  .  C
             |     | /
             |     |/
             o     |  B
@@ -561,5 +561,4 @@ mod tests {
                long message 3"#
         );
     }
-
 }
