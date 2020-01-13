@@ -12,6 +12,59 @@ use itertools::Itertools;
 use crate::output::OutputRendererOptions;
 use crate::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
 
+mod glyph {
+    pub(super) const SPACE: usize = 0;
+    pub(super) const HORIZONTAL: usize = 1;
+    pub(super) const PARENT: usize = 2;
+    pub(super) const ANCESTOR: usize = 3;
+    pub(super) const MERGE_LEFT: usize = 4;
+    pub(super) const MERGE_RIGHT: usize = 5;
+    pub(super) const MERGE_BOTH: usize = 6;
+    pub(super) const FORK_LEFT: usize = 7;
+    pub(super) const FORK_RIGHT: usize = 8;
+    pub(super) const FORK_BOTH: usize = 9;
+    pub(super) const JOIN_LEFT: usize = 10;
+    pub(super) const JOIN_RIGHT: usize = 11;
+    pub(super) const JOIN_BOTH: usize = 12;
+    pub(super) const TERMINATION: usize = 13;
+    pub(super) const COUNT: usize = 14;
+}
+
+const SQUARE_GLYPHS: [&str; glyph::COUNT] = [
+    "  ", "──", "│ ", "· ", "┘ ", "└─", "┴─", "┐ ", "┌─", "┬─", "┤ ", "├─", "┼─", "~ ",
+];
+
+const CURVED_GLYPHS: [&str; glyph::COUNT] = [
+    "  ", "──", "│ ", "╷ ", "╯ ", "╰─", "┴─", "╮ ", "╭─", "┬─", "┤ ", "├─", "┼─", "~ ",
+];
+
+const DEC_GLYPHS: [&str; glyph::COUNT] = [
+    "  ",
+    "\x1B(0qq\x1B(B",
+    "\x1B(0x \x1B(B",
+    "\x1B(0~ \x1B(B",
+    "\x1B(0j \x1B(B",
+    "\x1B(0mq\x1B(B",
+    "\x1B(0vq\x1B(B",
+    "\x1B(0k \x1B(B",
+    "\x1B(0lq\x1B(B",
+    "\x1B(0wq\x1B(B",
+    "\x1B(0u \x1B(B",
+    "\x1B(0tq\x1B(B",
+    "\x1B(0nq\x1B(B",
+    "~ ",
+];
+
+impl PadLine {
+    fn to_glyph(&self) -> usize {
+        match *self {
+            PadLine::Parent => glyph::PARENT,
+            PadLine::Ancestor => glyph::ANCESTOR,
+            PadLine::Blank => glyph::SPACE,
+        }
+    }
+}
+
 pub struct BoxDrawingRenderer<N, R>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
@@ -19,6 +72,7 @@ where
     inner: R,
     options: OutputRendererOptions,
     extra_pad_line: Option<String>,
+    glyphs: &'static [&'static str; glyph::COUNT],
     _phantom: PhantomData<N>,
 }
 
@@ -31,8 +85,19 @@ where
             inner,
             options,
             extra_pad_line: None,
+            glyphs: &CURVED_GLYPHS,
             _phantom: PhantomData,
         }
+    }
+
+    pub fn with_square_glyphs(mut self) -> Self {
+        self.glyphs = &SQUARE_GLYPHS;
+        self
+    }
+
+    pub fn with_dec_graphics_glyphs(mut self) -> Self {
+        self.glyphs = &DEC_GLYPHS;
+        self
     }
 }
 
@@ -61,6 +126,7 @@ where
         glyph: String,
         message: String,
     ) -> String {
+        let glyphs = self.glyphs;
         let line = self.inner.next_row(node, parents, glyph, message);
         let mut out = String::new();
         let mut message_lines = line
@@ -83,9 +149,9 @@ where
                     node_line.push_str(&line.glyph);
                     node_line.push_str(" ");
                 }
-                NodeLine::Parent => node_line.push_str("│ "),
-                NodeLine::Ancestor => node_line.push_str("╷ "),
-                NodeLine::Blank => node_line.push_str("  "),
+                NodeLine::Parent => node_line.push_str(glyphs[glyph::PARENT]),
+                NodeLine::Ancestor => node_line.push_str(glyphs[glyph::ANCESTOR]),
+                NodeLine::Blank => node_line.push_str(glyphs[glyph::SPACE]),
             }
         }
         if let Some(msg) = message_lines.next() {
@@ -101,17 +167,17 @@ where
             for cur in link_row.iter() {
                 if cur.contains(LinkLine::HORIZONTAL) {
                     if cur.intersects(LinkLine::CHILD) {
-                        link_line.push_str("┼─");
+                        link_line.push_str(glyphs[glyph::JOIN_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_FORK)
                         && cur.intersects(LinkLine::ANY_MERGE)
                     {
-                        link_line.push_str("┼─");
+                        link_line.push_str(glyphs[glyph::JOIN_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_FORK) {
-                        link_line.push_str("┬─");
+                        link_line.push_str(glyphs[glyph::FORK_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_MERGE) {
-                        link_line.push_str("┴─");
+                        link_line.push_str(glyphs[glyph::MERGE_BOTH]);
                     } else {
-                        link_line.push_str("──");
+                        link_line.push_str(glyphs[glyph::HORIZONTAL]);
                     }
                 } else if cur.intersects(LinkLine::PARENT | LinkLine::ANCESTOR)
                     && !cur.intersects(LinkLine::LEFT_FORK | LinkLine::RIGHT_FORK)
@@ -119,39 +185,39 @@ where
                     let left = cur.contains(LinkLine::LEFT_MERGE);
                     let right = cur.contains(LinkLine::RIGHT_MERGE);
                     match (left, right) {
-                        (true, true) => link_line.push_str("┼─"),
-                        (true, false) => link_line.push_str("┤ "),
-                        (false, true) => link_line.push_str("├─"),
+                        (true, true) => link_line.push_str(glyphs[glyph::JOIN_BOTH]),
+                        (true, false) => link_line.push_str(glyphs[glyph::JOIN_LEFT]),
+                        (false, true) => link_line.push_str(glyphs[glyph::JOIN_RIGHT]),
                         (false, false) => {
                             if cur.contains(LinkLine::ANCESTOR) {
-                                link_line.push_str("╷ ");
+                                link_line.push_str(glyphs[glyph::ANCESTOR]);
                             } else {
-                                link_line.push_str("│ ");
+                                link_line.push_str(glyphs[glyph::PARENT]);
                             }
                         }
                     }
                 } else if cur.contains(LinkLine::LEFT_FORK)
                     && cur.intersects(LinkLine::LEFT_MERGE | LinkLine::CHILD)
                 {
-                    link_line.push_str("┤ ");
+                    link_line.push_str(glyphs[glyph::JOIN_LEFT]);
                 } else if cur.contains(LinkLine::RIGHT_FORK)
                     && cur.intersects(LinkLine::RIGHT_MERGE | LinkLine::CHILD)
                 {
-                    link_line.push_str("├─");
+                    link_line.push_str(glyphs[glyph::JOIN_RIGHT]);
                 } else if cur.contains(LinkLine::ANY_MERGE) {
-                    link_line.push_str("┴─");
+                    link_line.push_str(glyphs[glyph::MERGE_BOTH]);
                 } else if cur.contains(LinkLine::ANY_FORK) {
-                    link_line.push_str("┬─");
+                    link_line.push_str(glyphs[glyph::FORK_BOTH]);
                 } else if cur.contains(LinkLine::LEFT_FORK) {
-                    link_line.push_str("╮ ");
+                    link_line.push_str(glyphs[glyph::FORK_LEFT]);
                 } else if cur.contains(LinkLine::LEFT_MERGE) {
-                    link_line.push_str("╯ ");
+                    link_line.push_str(glyphs[glyph::MERGE_LEFT]);
                 } else if cur.contains(LinkLine::RIGHT_FORK) {
-                    link_line.push_str("╭─");
+                    link_line.push_str(glyphs[glyph::FORK_RIGHT]);
                 } else if cur.contains(LinkLine::RIGHT_MERGE) {
-                    link_line.push_str("╰─");
+                    link_line.push_str(glyphs[glyph::MERGE_RIGHT]);
                 } else {
-                    link_line.push_str("  ");
+                    link_line.push_str(glyphs[glyph::SPACE]);
                 }
             }
             if let Some(msg) = message_lines.next() {
@@ -164,18 +230,14 @@ where
 
         // Render the term line
         if let Some(term_row) = line.term_line {
-            let term_strs = ["│ ", "~ "];
+            let term_strs = [glyphs[glyph::PARENT], glyphs[glyph::TERMINATION]];
             for term_str in term_strs.iter() {
                 let mut term_line = String::new();
                 for (i, term) in term_row.iter().enumerate() {
                     if *term {
                         term_line.push_str(term_str);
                     } else {
-                        term_line.push_str(match line.pad_lines[i] {
-                            PadLine::Parent => "│ ",
-                            PadLine::Ancestor => "╷ ",
-                            PadLine::Blank => "  ",
-                        });
+                        term_line.push_str(glyphs[line.pad_lines[i].to_glyph()]);
                     }
                 }
                 if let Some(msg) = message_lines.next() {
@@ -190,11 +252,7 @@ where
 
         let mut base_pad_line = String::new();
         for entry in line.pad_lines.iter() {
-            base_pad_line.push_str(match entry {
-                PadLine::Parent => "│ ",
-                PadLine::Ancestor => "╷ ",
-                PadLine::Blank => "  ",
-            });
+            base_pad_line.push_str(glyphs[entry.to_glyph()]);
         }
 
         // Render any pad lines

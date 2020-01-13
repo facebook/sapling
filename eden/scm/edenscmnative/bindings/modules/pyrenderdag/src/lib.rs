@@ -18,7 +18,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add(py, "ascii", py_fn!(py, ascii(min_height: usize)))?;
     m.add(py, "asciilarge", py_fn!(py, asciilarge(min_height: usize)))?;
-    m.add(py, "boxdrawing", py_fn!(py, boxdrawing(min_height: usize)))?;
+    m.add(py, "lines", py_fn!(py, lines(min_height: usize)))?;
+    m.add(
+        py,
+        "linessquare",
+        py_fn!(py, linessquare(min_height: usize)),
+    )?;
+    m.add(py, "linesdec", py_fn!(py, linesdec(min_height: usize)))?;
     Ok(m)
 }
 
@@ -78,12 +84,34 @@ fn asciilarge(py: Python, min_height: usize) -> PyResult<renderer> {
     renderer::create_instance(py, renderer)
 }
 
-fn boxdrawing(py: Python, min_height: usize) -> PyResult<renderer> {
+fn lines(py: Python, min_height: usize) -> PyResult<renderer> {
     let renderer = Arc::new(Mutex::new(
         GraphRowRenderer::new()
             .output()
             .with_min_row_height(min_height)
             .build_box_drawing(),
+    ));
+    renderer::create_instance(py, renderer)
+}
+
+fn linessquare(py: Python, min_height: usize) -> PyResult<renderer> {
+    let renderer = Arc::new(Mutex::new(
+        GraphRowRenderer::new()
+            .output()
+            .with_min_row_height(min_height)
+            .build_box_drawing()
+            .with_square_glyphs(),
+    ));
+    renderer::create_instance(py, renderer)
+}
+
+fn linesdec(py: Python, min_height: usize) -> PyResult<renderer> {
+    let renderer = Arc::new(Mutex::new(
+        GraphRowRenderer::new()
+            .output()
+            .with_min_row_height(min_height)
+            .build_box_drawing()
+            .with_dec_graphics_glyphs(),
     ));
     renderer::create_instance(py, renderer)
 }

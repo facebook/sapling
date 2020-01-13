@@ -3129,7 +3129,9 @@ def rustdisplaygraph(
     renderers = {
         "ascii": (renderdag.ascii, 2),
         "ascii-large": (renderdag.asciilarge, 2),
-        "lines": (renderdag.boxdrawing, 2),
+        "lines": (renderdag.lines, 2),
+        "lines-square": (renderdag.linessquare, 2),
+        "lines-dec": (renderdag.linesdec, 2),
     }
     renderer, minheight = renderers.get(
         ui.config("experimental", "graph.renderer"), (renderdag.ascii, 2)
