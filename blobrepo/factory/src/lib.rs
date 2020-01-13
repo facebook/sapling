@@ -89,6 +89,8 @@ pub fn open_blobrepo(
                     &sql_factory,
                     mysql_options,
                     readonly_storage,
+                    None,
+                    None,
                 ),
                 sql_factory,
             )

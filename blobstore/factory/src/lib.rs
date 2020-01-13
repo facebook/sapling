@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use std::{path::PathBuf, sync::Arc};
+use std::{num::NonZeroU32, path::PathBuf, sync::Arc};
 
 use anyhow::{format_err, Error};
 use cloned::cloned;
@@ -39,6 +39,7 @@ use sql_ext::{
 };
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use throttledblob::ThrottledBlob;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct ReadOnlyStorage(pub bool);
@@ -258,17 +259,23 @@ pub fn make_blobstore_no_sql(
         None,
         MysqlOptions::default(),
         readonly_storage,
+        None,
+        None,
     )
 }
 
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
+/// If `read_qps` or `write_qps` are Some then ThrottledBlob will be used to limit
+/// QPS to the underlying blobstore
 pub fn make_blobstore(
     fb: FacebookInit,
     blobconfig: &BlobConfig,
     sql_factory: &SqlFactory,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
+    read_qps: Option<NonZeroU32>,
+    write_qps: Option<NonZeroU32>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     make_blobstore_impl(
         fb,
@@ -276,6 +283,8 @@ pub fn make_blobstore(
         Some(sql_factory),
         mysql_options,
         readonly_storage,
+        read_qps,
+        write_qps,
     )
 }
 
@@ -285,6 +294,8 @@ fn make_blobstore_impl(
     sql_factory: Option<&SqlFactory>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
+    read_qps: Option<NonZeroU32>,
+    write_qps: Option<NonZeroU32>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
 
@@ -365,6 +376,8 @@ fn make_blobstore_impl(
             mysql_options,
             readonly_storage,
             None,
+            read_qps.clone(),
+            write_qps.clone(),
         ),
         Scrub {
             scuba_table,
@@ -381,6 +394,8 @@ fn make_blobstore_impl(
                 Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
                 *scrub_action,
             )),
+            read_qps.clone(),
+            write_qps.clone(),
         ),
         ManifoldWithTtl {
             bucket,
@@ -406,6 +421,16 @@ fn make_blobstore_impl(
         store
     };
 
+    let store = if read_qps.is_some() || write_qps.is_some() {
+        store
+            .map(move |inner| {
+                Arc::new(ThrottledBlob::new(inner, read_qps, write_qps)) as Arc<dyn Blobstore>
+            })
+            .boxify()
+    } else {
+        store
+    };
+
     store
 }
 
@@ -417,6 +442,8 @@ pub fn make_blobstore_multiplexed(
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
+    read_qps: Option<NonZeroU32>,
+    write_qps: Option<NonZeroU32>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     let component_readonly = match &scrub_args {
         // Need to write to components to repair them.
@@ -436,6 +463,8 @@ pub fn make_blobstore_multiplexed(
                     sql_factory,
                     mysql_options,
                     component_readonly,
+                    read_qps,
+                    write_qps,
                 )
                 .map({ move |store| (blobstoreid, store) })
             }

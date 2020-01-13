@@ -26,7 +26,7 @@ use metaconfig_types::{Redaction, ScrubAction};
 use phases::SqlPhases;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, Logger};
-use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc};
+use std::{collections::HashSet, iter::FromIterator, num::NonZeroU32, str::FromStr, sync::Arc};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BoxFuture<BlobRepo, Error>,
@@ -72,6 +72,8 @@ const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
+const READ_QPS_ARG: &'static str = "blobstore-read-qps";
+const WRITE_QPS_ARG: &'static str = "blobstore-write-qps";
 pub const LIMIT_DATA_FETCH_ARG: &'static str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
@@ -396,6 +398,20 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
         )
         .arg(
+            Arg::with_name(READ_QPS_ARG)
+                .long(READ_QPS_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Read QPS limit to ThrottledBlob"),
+        )
+        .arg(
+            Arg::with_name(WRITE_QPS_ARG)
+                .long(WRITE_QPS_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Write QPS limit to ThrottledBlob"),
+        )
+        .arg(
             Arg::with_name(SCUBA_TABLE_ARG)
                 .long(SCUBA_TABLE_ARG)
                 .takes_value(true)
@@ -575,6 +591,16 @@ pub fn setup_common(
         None => config.storage_config.clone(),
     };
 
+    let read_qps: Option<NonZeroU32> = sub_m
+        .value_of(READ_QPS_ARG)
+        .map(|v| v.parse())
+        .transpose()?;
+
+    let write_qps: Option<NonZeroU32> = sub_m
+        .value_of(WRITE_QPS_ARG)
+        .map(|v| v.parse())
+        .transpose()?;
+
     let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
     let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
     scuba_builder.add_common_server_data();
@@ -596,6 +622,8 @@ pub fn setup_common(
         scrub_action,
         scuba_builder.clone(),
         args::get_repo_name(fb, &matches)?,
+        read_qps,
+        write_qps,
         logger.clone(),
     );
 

@@ -27,7 +27,7 @@ use prefixblob::PrefixBlobstore;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::MysqlOptions;
-use std::{convert::From, sync::Arc};
+use std::{convert::From, num::NonZeroU32, sync::Arc};
 
 pub const BLOBSTORE_ID: &'static str = "blobstore_id";
 
@@ -116,6 +116,8 @@ pub fn open_blobstore(
     scrub_action: Option<ScrubAction>,
     scuba_builder: ScubaSampleBuilder,
     repo_stats_key: String,
+    read_qps: Option<NonZeroU32>,
+    write_qps: Option<NonZeroU32>,
     logger: Logger,
 ) -> BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
     // Allow open of just one inner store
@@ -155,6 +157,8 @@ pub fn open_blobstore(
                 mysql_options,
                 readonly_storage,
                 Some((scrub_handler, scrub_action)),
+                read_qps,
+                write_qps,
             ),
             (
                 None,
@@ -170,6 +174,8 @@ pub fn open_blobstore(
                 mysql_options,
                 readonly_storage,
                 None,
+                read_qps,
+                write_qps,
             ),
             (None, blobconfig) => make_blobstore(
                 fb,
@@ -177,6 +183,8 @@ pub fn open_blobstore(
                 &sql_factory,
                 mysql_options,
                 readonly_storage,
+                read_qps,
+                write_qps,
             ),
             (Some(_), _) => {
                 future::err(format_err!("Scrub action passed for non-scrubbable store")).boxify()

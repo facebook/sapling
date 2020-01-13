@@ -88,6 +88,8 @@ fn get_blobstore(
             &sql_factory,
             mysql_options,
             readonly_storage,
+            None,
+            None,
         )
     })
     .boxify()
