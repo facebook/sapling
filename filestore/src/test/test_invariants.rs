@@ -89,7 +89,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     // high, but this actually makes most store() calls fail, since there is a lot that needs to go
     // right for a store() call to succeed (all the chunks need to be saved, then we need to write
     // 3 aliases, and then the content).
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
     let mut gen = StdGen::new(rand::thread_rng(), 128);
 
     let memblob = Arc::new(memblob::LazyMemblob::new());

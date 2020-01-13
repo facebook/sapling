@@ -28,7 +28,7 @@ use std::{
     iter::FromIterator,
     sync::{Arc, Mutex},
 };
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 struct TestLeafId(u64);

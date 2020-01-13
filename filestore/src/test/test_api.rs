@@ -55,7 +55,7 @@ lazy_static! {
 
 #[fbinit::test]
 fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -94,7 +94,7 @@ fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -125,7 +125,7 @@ fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
 
@@ -158,7 +158,7 @@ fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
 
@@ -191,7 +191,7 @@ fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
 
@@ -224,7 +224,7 @@ fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -259,7 +259,7 @@ fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
@@ -314,7 +314,7 @@ fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
@@ -338,7 +338,7 @@ fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
@@ -378,7 +378,7 @@ fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
@@ -407,7 +407,7 @@ fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
@@ -448,7 +448,7 @@ fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
@@ -489,7 +489,7 @@ fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
@@ -533,7 +533,7 @@ fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
@@ -577,7 +577,7 @@ fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_get_range(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -608,7 +608,7 @@ fn filestore_get_range(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let small = FilestoreConfig {
         chunk_size: Some(3),
@@ -646,7 +646,7 @@ fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -713,7 +713,7 @@ fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let content_id = canonical(HELLO_WORLD);
 
@@ -759,7 +759,7 @@ fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -791,7 +791,7 @@ fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -828,7 +828,7 @@ fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -859,7 +859,7 @@ fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let bytes = Bytes::new();
 
@@ -892,7 +892,7 @@ fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
@@ -918,7 +918,7 @@ fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_store_error(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let memblob = memblob::LazyMemblob::new();
     let blob = FailingBlobstore::new(memblob.clone(), 1.0, 0.0); // Blobstore you can't write to.
@@ -946,7 +946,7 @@ fn filestore_store_error(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
@@ -1011,7 +1011,7 @@ fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
@@ -1076,7 +1076,7 @@ fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
@@ -1131,7 +1131,7 @@ fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
@@ -1163,7 +1163,7 @@ fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio::runtime::Runtime::new()?;
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);

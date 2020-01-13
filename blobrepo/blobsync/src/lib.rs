@@ -7,6 +7,7 @@
  */
 
 #![deny(warnings)]
+#![type_length_limit = "1817182"]
 
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
@@ -114,7 +115,7 @@ mod test {
     use scuba_ext::ScubaSampleBuilder;
     use std::collections::HashMap;
     use std::sync::Arc;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     fn request(data: impl AsRef<[u8]>) -> StoreRequest {
         StoreRequest::new(data.as_ref().len() as u64)

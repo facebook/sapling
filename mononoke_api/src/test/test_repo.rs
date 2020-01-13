@@ -29,7 +29,7 @@ use synced_commit_mapping::SyncedCommitMappingEntry;
 
 #[fbinit::test]
 fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -60,7 +60,7 @@ fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -94,7 +94,7 @@ fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -127,7 +127,7 @@ fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -165,7 +165,7 @@ fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -232,7 +232,7 @@ fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -326,7 +326,7 @@ fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -371,7 +371,7 @@ fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn tree_list(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -503,7 +503,7 @@ fn tree_list(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -580,7 +580,7 @@ fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn file_contents(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -615,7 +615,7 @@ fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn xrepo_commit_lookup(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);

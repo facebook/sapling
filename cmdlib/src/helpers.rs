@@ -323,8 +323,8 @@ where
 pub fn create_runtime(
     log_thread_name_prefix: Option<&str>,
     core_threads: Option<usize>,
-) -> io::Result<tokio::runtime::Runtime> {
-    let mut builder = tokio::runtime::Builder::new();
+) -> io::Result<tokio_compat::runtime::Runtime> {
+    let mut builder = tokio_compat::runtime::Builder::new();
     builder.name_prefix(log_thread_name_prefix.unwrap_or("tk-"));
     if let Some(core_threads) = core_threads {
         builder.core_threads(core_threads);
@@ -350,7 +350,7 @@ pub fn create_runtime(
 /// When `shutdown` completes, or when the force shutdown timer expires, the
 /// runtime will be shutdown and the process will exit.
 pub fn serve_forever<Server, QuiesceFn, ShutdownFn>(
-    runtime: tokio::runtime::Runtime,
+    runtime: tokio_compat::runtime::Runtime,
     server: Server,
     logger: &Logger,
     quiesce: QuiesceFn,
@@ -387,7 +387,7 @@ where
 }
 
 pub fn block_on_fn<Server, QuiesceFn, ShutdownFn, BlockFn>(
-    mut runtime: tokio::runtime::Runtime,
+    runtime: tokio_compat::runtime::Runtime,
     server: Server,
     logger: &Logger,
     block: BlockFn,

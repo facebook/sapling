@@ -20,7 +20,7 @@ use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
 use srserver::ThriftServerBuilder;
-use tokio::runtime::TaskExecutor;
+use tokio_compat::runtime::TaskExecutor;
 
 use self::facebook::FacebookServiceImpl;
 use self::mononoke::MononokeAPIServiceImpl;

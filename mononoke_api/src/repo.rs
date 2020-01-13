@@ -24,9 +24,9 @@ use fsnodes::{derive_fsnodes, RootFsnodeMapping};
 use aclchecker::AclChecker;
 use blame::derive_blame;
 use futures::stream::{self, Stream};
-use futures_ext::{asynchronize, StreamExt};
+use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future::{try_join3, try_join_all};
+use futures_preview::future::{self, try_join3, try_join_all, TryFutureExt};
 use futures_preview::StreamExt as NewStreamExt;
 use identity::Identity;
 use mercurial_types::Globalrev;
@@ -145,7 +145,7 @@ impl Repo {
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-        let acl_checker = asynchronize({
+        let acl_checker = tokio_preview::task::spawn_blocking({
             let acl = config.hipster_acl;
             move || match &acl {
                 Some(acl) => {
@@ -160,7 +160,8 @@ impl Repo {
                 None => Ok(None),
             }
         })
-        .compat();
+        .map_err(|e| anyhow::Error::new(e))
+        .and_then(|r| future::ready(r));
 
         let skiplist_index = fetch_skiplist_index(
             ctx.clone(),
@@ -800,7 +801,7 @@ mod tests {
 
     #[fbinit::test]
     fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         runtime.block_on(
             async move {
                 let ctx = CoreContext::test_mock(fb);
@@ -834,7 +835,7 @@ mod tests {
 
     #[fbinit::test]
     fn test_try_find_child_merge(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         runtime.block_on(
             async move {
                 let ctx = CoreContext::test_mock(fb);

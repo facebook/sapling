@@ -27,7 +27,7 @@ use crate::{
 
 #[fbinit::test]
 fn create_commit(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
@@ -91,7 +91,7 @@ fn create_commit(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);

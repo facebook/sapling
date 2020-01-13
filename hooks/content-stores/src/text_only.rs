@@ -84,7 +84,7 @@ mod test {
     use crate::InMemoryFileContentStore;
     use fbinit::FacebookInit;
     use mercurial_types_mocks::nodehash::{ONES_CSID, TWOS_FNID};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_acceptable_file(fb: FacebookInit) {

@@ -49,7 +49,7 @@ mod test {
         let data = Bytes::from(&b"hello, world"[..]); // b7e23ec29af22b0b4e41da31e868d57226121c84
         let s = stream::once(Ok::<_, ()>(data));
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: Sha1 = rt
             .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
@@ -72,7 +72,7 @@ mod test {
             .map(Bytes::from);
         let s = stream::iter_ok::<_, ()>(data);
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: Sha1 = rt
             .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
@@ -93,7 +93,7 @@ mod test {
         let data = Bytes::from(&b"hello, world"[..]); // 8c01d89ae06311834ee4b1fab2f0414d35f01102
         let s = stream::once(Ok::<_, ()>(data));
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: GitSha1 = rt
             .block_on(hash_stream(
@@ -123,7 +123,7 @@ mod test {
             .map(Bytes::from);
         let s = stream::iter_ok::<_, ()>(data);
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: GitSha1 = rt
             .block_on(hash_stream(
@@ -151,7 +151,7 @@ mod test {
         let data = Bytes::from(&b"hello, world"[..]); // 09ca7e4eaa6e8ae9c7d261167129184883644d07dfba7cbfbc4c8a2e08360d5b
         let s = stream::once(Ok::<_, ()>(data));
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: Sha256 = rt
             .block_on(hash_stream(Sha256IncrementalHasher::new(), s))
@@ -175,7 +175,7 @@ mod test {
             .map(Bytes::from);
         let s = stream::iter_ok::<_, ()>(data);
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: Sha256 = rt
             .block_on(hash_stream(Sha256IncrementalHasher::new(), s))
@@ -197,7 +197,7 @@ mod test {
         let data = Bytes::from(&b"hello, world"[..]); // 19d95f338fa0f547f773c12353eb6dacb1a7ce9b0402515484e8276055774b35
         let s = stream::once(Ok::<_, ()>(data));
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: ContentId = rt
             .block_on(hash_stream(ContentIdIncrementalHasher::new(), s))
@@ -221,7 +221,7 @@ mod test {
             .map(Bytes::from);
         let s = stream::iter_ok::<_, ()>(data);
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
         let res: ContentId = rt
             .block_on(hash_stream(ContentIdIncrementalHasher::new(), s))
@@ -241,7 +241,7 @@ mod test {
     #[test]
     fn sha1_empty() {
         let s = stream::iter_ok::<_, ()>(Vec::<Bytes>::new());
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
         let res: Sha1 = rt
             .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
             .unwrap();

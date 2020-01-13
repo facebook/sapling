@@ -76,7 +76,7 @@ fn main(fb: FacebookInit) {
         let stats_aggregation = stats::schedule_stats_aggregation()
             .expect("failed to create stats aggregation scheduler");
 
-        let mut runtime = cmdlib::args::init_runtime(&matches)?;
+        let runtime = cmdlib::args::init_runtime(&matches)?;
 
         let config = get_config(fb, &matches)?;
         let cert = matches.value_of("cert").unwrap().to_string();

@@ -1594,13 +1594,13 @@ pub fn create_bonsai_changeset_with_files(
 pub mod many_diamonds {
     use super::*;
 
-    pub fn getrepo(fb: FacebookInit, runtime: &mut tokio::runtime::Runtime) -> BlobRepo {
+    pub fn getrepo(fb: FacebookInit, runtime: &mut tokio_compat::runtime::Runtime) -> BlobRepo {
         getrepo_with_id(fb, runtime, RepositoryId::new(0))
     }
 
     pub fn getrepo_with_id(
         fb: FacebookInit,
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         id: RepositoryId,
     ) -> BlobRepo {
         let repo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
@@ -1707,7 +1707,7 @@ mod test {
 
     #[fbinit::test]
     fn test_many_diamonds(fb: FacebookInit) {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         many_diamonds::getrepo(fb, &mut runtime);
     }
 }

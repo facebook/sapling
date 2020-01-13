@@ -218,7 +218,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         concurrency,
     };
 
-    let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
+    let mut runtime = tokio_compat::runtime::Runtime::new().map_err(Error::from)?;
 
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
         (CMD_MANIFOLD, Some(sub)) => {

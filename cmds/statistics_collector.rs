@@ -651,7 +651,7 @@ mod tests {
     use maplit::btreemap;
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[test]
     fn test_number_of_lines_empty_stream() -> Result<(), Error> {

@@ -13,7 +13,8 @@ use context::{CoreContext, PerfCounters, SessionContainer};
 use dns_lookup::lookup_addr;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
-use futures_ext::{asynchronize, FutureExt};
+use futures_ext::FutureExt;
+use futures_preview::{future, prelude::*};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{
@@ -132,7 +133,7 @@ impl RequestContext {
             };
 
         // We get the client hostname in post request, because that might be a little slow.
-        let client_hostname = asynchronize(move || -> Result<_, Error> {
+        let client_hostname = tokio_preview::task::spawn_blocking(move || -> Result<_, Error> {
             let hostname = client_address
                 .as_ref()
                 .map(lookup_addr)
@@ -142,6 +143,9 @@ impl RequestContext {
 
             Ok(hostname)
         })
+        .map_err(|e| Error::new(e))
+        .and_then(|r| future::ready(r))
+        .compat()
         .or_else(|_| -> Result<_, !> { Ok(None) });
 
         let fut = if let Some(checkpoint) = checkpoint {

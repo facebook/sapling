@@ -1325,7 +1325,7 @@ mod test {
         }
     }
 
-    fn run_future<F, I>(runtime: &mut tokio::runtime::Runtime, future: F) -> Result<I>
+    fn run_future<F, I>(runtime: &mut tokio_compat::runtime::Runtime, future: F) -> Result<I>
     where
         F: Future<Item = I, Error = Error> + Send + 'static,
         I: Send + 'static,
@@ -1334,7 +1334,7 @@ mod test {
     }
 
     fn query_reachability_hint_on_self_is_true(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -1396,7 +1396,7 @@ mod test {
                 use super::*;
                 #[fbinit::test]
                 fn no_index(fb: FacebookInit) {
-                    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+                    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
                     let ctx = CoreContext::test_mock(fb);
                     let repo = Arc::new($repo::getrepo(fb));
                     let sli = SkiplistIndex::new();
@@ -1409,7 +1409,7 @@ mod test {
                     let repo = Arc::new($repo::getrepo(fb));
                     let sli = SkiplistIndex::new();
                     {
-                        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+                        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
                         let heads = repo.get_bonsai_heads_maybe_stale(ctx.clone()).collect();
                         let heads = run_future(&mut runtime, heads).unwrap();
                         for head in heads {
@@ -1418,7 +1418,7 @@ mod test {
                             run_future(&mut runtime, f).unwrap();
                         }
                     }
-                    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+                    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
                     $test_name(&mut runtime, ctx, repo, sli);
                 }
             }
@@ -1426,7 +1426,7 @@ mod test {
     }
 
     fn query_reachability_to_higher_gen_is_false(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -1493,7 +1493,7 @@ mod test {
 
     #[fbinit::test]
     fn test_query_reachability_from_unindexed_node(fb: FacebookInit) {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(linear::getrepo(fb));
         let sli = SkiplistIndex::new();
@@ -1590,7 +1590,7 @@ mod test {
     }
 
     fn query_from_indexed_merge_node(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -1669,7 +1669,7 @@ mod test {
     }
 
     fn advance_node_linear(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -1774,7 +1774,7 @@ mod test {
     }
 
     fn advance_node_uneven_merge(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -1934,7 +1934,7 @@ mod test {
     }
 
     fn advance_node_on_partial_index(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -2101,7 +2101,7 @@ mod test {
     }
 
     fn simul_node_advance_on_wide_branch(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -2168,7 +2168,7 @@ mod test {
     }
 
     fn process_frontier_on_wide_branch(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -2247,7 +2247,7 @@ mod test {
     }
 
     fn test_is_ancestor(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -2313,7 +2313,7 @@ mod test {
     }
 
     fn test_is_ancestor_merge_uneven(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,
@@ -2322,7 +2322,7 @@ mod test {
     }
 
     fn test_is_ancestor_unshared_merge_even(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
         sli: SkiplistIndex,

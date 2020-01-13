@@ -182,7 +182,7 @@ mod test {
     #[fbinit::test]
     fn test_persist(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut rt = tokio::runtime::Runtime::new()?;
+        let mut rt = tokio_compat::runtime::Runtime::new()?;
 
         let inner = EagerMemblob::new();
         let outer = MemWritesBlobstore::new(inner.clone());

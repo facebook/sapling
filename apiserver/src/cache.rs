@@ -121,7 +121,7 @@ mod test {
     #[test]
     fn test_cache_missed() {
         let manager = CacheManager::create_mock();
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let key = "key-test-missed".to_string();
         let keygen_key = manager.keygen.key(key.clone());
@@ -156,7 +156,7 @@ mod test {
     #[test]
     fn test_memcache_missed() {
         let manager = CacheManager::create_mock();
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let key = "key-test-memcache-missed".to_string();
         let keygen_key = manager.keygen.key(key.clone());
@@ -191,7 +191,7 @@ mod test {
     #[test]
     fn test_cachelib_missed() {
         let manager = CacheManager::create_mock();
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let key = "key-test-cachelib-missed".to_string();
         let keygen_key = manager.keygen.key(key.clone());
@@ -227,7 +227,7 @@ mod test {
     #[test]
     fn test_cache_hit() {
         let manager = CacheManager::create_mock();
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let key = "key-test-hit".to_string();
         let num = 1032;

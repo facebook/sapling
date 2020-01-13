@@ -491,7 +491,7 @@ mod test {
         time::Duration,
     };
     use tests_utils::resolve_cs_id;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Debug)]
     struct TestGenNum(u64, ChangesetId, Vec<ChangesetId>);

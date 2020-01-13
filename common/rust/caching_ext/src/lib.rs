@@ -285,7 +285,7 @@ mod test {
             db_data,
         );
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let f = params.run(hashset! {});
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 0);
@@ -317,7 +317,7 @@ mod test {
 
         // Fetch from db
         let f = params.run(hashset! {"key".to_string()});
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 1);
 
@@ -362,7 +362,7 @@ mod test {
             db_data_fetches.clone(),
             db_data,
         );
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let f = params.run(hashset! {
             "key0".to_string(), "key1".to_string(), "key2".to_string()
         });
@@ -393,7 +393,7 @@ mod test {
             db_data,
         );
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let f = params.run(hashset! {"key1".to_string()});
         runtime.block_on(f).unwrap();
         assert_eq!(cachelib.gets_count(), 1);
@@ -456,7 +456,7 @@ mod test {
             db_data,
         );
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let f = params.run(hashset! {});
         let _ = runtime.block_on(f).unwrap();

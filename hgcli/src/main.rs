@@ -71,7 +71,7 @@ fn main(fb: FacebookInit) {
         .get_matches();
 
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
-        tokio::runtime::Runtime::new()
+        tokio_compat::runtime::Runtime::new()
             .map_err(Error::from)
             .and_then(|mut runtime| {
                 let result = runtime.block_on(serve::cmd(fb, &matches, subcmd));

@@ -22,7 +22,7 @@ use stats::schedule_stats_aggregation;
 /// e.g. for mononoke/blobstore_healer, pass blobstore_healer
 pub fn start_fb303_and_stats_agg(
     fb: FacebookInit,
-    runtime: &mut tokio::runtime::Runtime,
+    runtime: &mut tokio_compat::runtime::Runtime,
     service_name: &str,
     logger: &Logger,
     matches: &ArgMatches,

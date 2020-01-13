@@ -7,6 +7,7 @@
  */
 
 #![deny(warnings)]
+#![type_length_limit = "4715995"]
 
 use anyhow::Error;
 use blobrepo::BlobRepo;

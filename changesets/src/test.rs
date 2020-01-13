@@ -21,7 +21,7 @@ use mononoke_types_mocks::repo::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::sync::Arc;
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 
 fn run_test(fb: FacebookInit, test_fn: fn(FacebookInit, SqlChangesets)) {
     test_fn(fb, SqlChangesets::with_sqlite_in_memory().unwrap());

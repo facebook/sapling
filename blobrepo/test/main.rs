@@ -45,7 +45,7 @@ use std::{
     sync::Arc,
 };
 use tests_utils::{create_commit, store_files};
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 use tracing_blobstore::TracingBlobstore;
 use utils::{
     create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
@@ -1271,7 +1271,7 @@ fn test_hg_commit_generation_simple(fb: FacebookInit) {
     let bcs_id = bcs.get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
 
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime
         .block_on(blobrepo::save_bonsai_changesets(
             vec![bcs],
@@ -1304,7 +1304,7 @@ fn test_hg_commit_generation_stack(fb: FacebookInit) {
 
     let top_of_stack = changesets.last().unwrap().clone().get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime
         .block_on(blobrepo::save_bonsai_changesets(
             changesets,
@@ -1321,7 +1321,7 @@ fn test_hg_commit_generation_stack(fb: FacebookInit) {
 #[fbinit::test]
 fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     let repo = fixtures::linear::getrepo(fb);
 
     let first_bcs = create_bonsai_changeset(vec![]);
@@ -1352,7 +1352,7 @@ fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
 #[fbinit::test]
 fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     let repo = fixtures::linear::getrepo(fb);
 
     let last_bcs_id = runtime
@@ -1372,7 +1372,7 @@ fn test_hg_commit_generation_diamond(fb: FacebookInit) {
 #[fbinit::test]
 fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     let repo = fixtures::many_diamonds::getrepo(fb, &mut runtime);
     let book = bookmarks::BookmarkName::new("master").unwrap();
     let bcs_id = runtime
@@ -1390,7 +1390,7 @@ fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
 fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo = blobrepo_factory::new_memblob_empty(None).expect("cannot create empty repo");
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
     let root_bcs = fixtures::create_bonsai_changeset(vec![]);
 

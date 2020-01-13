@@ -11,8 +11,7 @@ use if_ as acl_constants;
 use aclchecker::{AclChecker, Identity};
 use anyhow::{bail, Error};
 use fbinit::FacebookInit;
-use futures_ext::asynchronize;
-use futures_util::compat::Future01CompatExt;
+use futures_preview::{future, prelude::*};
 use slog::{info, Logger};
 
 const ACL_CHECKER_TIMEOUT_MS: u32 = 10_000;
@@ -37,7 +36,7 @@ impl LfsAclChecker {
             );
             let identity = Identity::new(acl_constants::REPO, &acl);
 
-            asynchronize(move || {
+            tokio_preview::task::spawn_blocking(move || {
                 let acl_checker = AclChecker::new(fb, &identity)?;
                 if acl_checker.do_wait_updated(ACL_CHECKER_TIMEOUT_MS) {
                     Ok(Self::AclChecker(Some(acl_checker)))
@@ -45,7 +44,8 @@ impl LfsAclChecker {
                     bail!("Failed to update AclChecker")
                 }
             })
-            .compat()
+            .map_err(|e| Error::new(e))
+            .and_then(|r| future::ready(r))
             .await
         } else {
             Ok(Self::AclChecker(None))

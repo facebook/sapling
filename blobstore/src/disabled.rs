@@ -52,7 +52,7 @@ mod test {
         let disabled = DisabledBlob::new("test");
         let ctx = CoreContext::test_mock(fb);
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         match runtime.block_on(disabled.get(ctx.clone(), "foobar".to_string())) {
             Ok(_) => panic!("Unexpected success"),

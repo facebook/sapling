@@ -192,7 +192,7 @@ mod test {
     use crate::blob::HgBlob;
     use futures::stream;
     use quickcheck::quickcheck;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[test]
     fn test_node_none() {

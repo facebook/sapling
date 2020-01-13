@@ -7,6 +7,7 @@
  */
 
 #![deny(warnings)]
+#![type_length_limit = "5383355"]
 
 use anyhow::{format_err, Error};
 use clap::Arg;

@@ -27,7 +27,7 @@ use mononoke_types::ChangesetId;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use std::sync::Arc;
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 const HG_CHANGESET_TYPE: &'static str = "hg-changeset";

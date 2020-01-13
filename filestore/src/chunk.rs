@@ -179,7 +179,7 @@ mod test {
     use assert_matches::assert_matches;
     use futures::stream;
     use quickcheck::quickcheck;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[test]
     fn test_make_chunks_no_chunk_size() {

@@ -20,7 +20,7 @@ use mononoke_types::DateTime;
 
 #[fbinit::test]
 fn test_simple(fb: FacebookInit) {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+    let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
     let ctx = CoreContext::test_mock(fb);
     let queue = SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap();

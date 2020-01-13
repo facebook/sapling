@@ -247,7 +247,7 @@ mod test {
     use fixtures::linear;
     use pretty_assertions::assert_eq;
     use quickcheck::{quickcheck, TestResult};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {

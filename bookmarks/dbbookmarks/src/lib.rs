@@ -1288,7 +1288,7 @@ mod test {
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::iter::FromIterator;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[test]
     fn test_conditional_retry_without_delay() {

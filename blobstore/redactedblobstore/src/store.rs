@@ -98,7 +98,7 @@ impl SqlRedactedContentStore {
 #[cfg(test)]
 mod test {
     use super::*;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[test]
     fn test_redacted_store() {

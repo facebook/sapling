@@ -15,7 +15,7 @@ use fbinit::FacebookInit;
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;
 use serde_derive::{Deserialize, Serialize};
-use tokio::runtime;
+use tokio_compat::runtime;
 
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue};

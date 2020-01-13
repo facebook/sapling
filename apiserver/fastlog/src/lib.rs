@@ -257,7 +257,7 @@ mod tests {
     use revset::AncestorsNodeStream;
     use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {

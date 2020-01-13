@@ -155,7 +155,7 @@ mod test {
     use revset::AncestorsNodeStream;
     use std::sync::Arc;
     use test_utils::iterate_all_entries;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     fn fetch_manifest_by_cs_id(
         ctx: CoreContext,

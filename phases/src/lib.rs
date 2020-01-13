@@ -430,7 +430,7 @@ mod tests {
     use mercurial_types::nodehash::HgChangesetId;
     use mononoke_types_mocks::changesetid::*;
     use std::str::FromStr;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn add_get_phase_sql_test(fb: FacebookInit) -> Result<()> {

@@ -402,7 +402,7 @@ mod test {
     use fixtures::{linear, many_files_dirs};
     use std::str::FromStr;
     use test_utils::{get_bonsai_changeset, iterate_all_entries};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {

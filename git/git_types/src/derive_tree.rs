@@ -261,11 +261,9 @@ mod test {
     impl_test!(unshared_merge_uneven);
 
     #[fbinit::test]
-    async fn many_diamonds(fb: FacebookInit) -> Result<(), Error> {
-        run_tree_derivation_for_fixture(fb, |fb| {
-            let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
-            fixtures::many_diamonds::getrepo(fb, &mut runtime)
-        })
-        .await
+    fn many_diamonds(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = ::tokio_compat::runtime::Runtime::new().unwrap();
+        let repo = fixtures::many_diamonds::getrepo(fb, &mut runtime);
+        runtime.block_on_std(run_tree_derivation_for_fixture(fb, move |_| repo))
     }
 }

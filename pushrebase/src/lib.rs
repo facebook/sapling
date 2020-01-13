@@ -1428,7 +1428,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_one_commit(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         runtime.block_on(
             async move {
                 let ctx = CoreContext::test_mock(fb);
@@ -1485,7 +1485,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_one_commit_with_txn(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         runtime.block_on(
             async move {
                 let ctx = CoreContext::test_mock(fb);
@@ -2564,7 +2564,7 @@ mod tests {
         })
     }
 
-    fn run_future<F, I, E>(runtime: &mut tokio::runtime::Runtime, future: F) -> Result<I, E>
+    fn run_future<F, I, E>(runtime: &mut tokio_compat::runtime::Runtime, future: F) -> Result<I, E>
     where
         F: Future<Item = I, Error = E> + Send + 'static,
         I: Send + 'static,
@@ -2575,7 +2575,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_create_new_bookmark(fb: FacebookInit) {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb);
         // Bottom commit of the repo
@@ -2679,7 +2679,7 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_one_commit_with_bundle_id(fb: FacebookInit) {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb);
@@ -2736,7 +2736,7 @@ mod tests {
     fn pushrebase_timezone(fb: FacebookInit) {
         // We shouldn't change timezone even if timestamp changes
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb);
@@ -2807,7 +2807,7 @@ mod tests {
 
     #[fbinit::test]
     fn forbid_p2_root_rebases(fb: FacebookInit) {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb);
 
@@ -3441,7 +3441,7 @@ mod tests {
     }
 
     fn ensure_content(
-        runtime: &mut tokio::runtime::Runtime,
+        runtime: &mut tokio_compat::runtime::Runtime,
         ctx: &CoreContext,
         hg_cs_id: HgChangesetId,
         repo: &BlobRepo,

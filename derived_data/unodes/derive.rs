@@ -286,7 +286,7 @@ mod tests {
     };
     use std::collections::{HashSet, VecDeque};
     use test_utils::{get_bonsai_changeset, iterate_all_entries};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn linear_test(fb: FacebookInit) {

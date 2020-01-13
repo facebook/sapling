@@ -142,7 +142,7 @@ mod test {
                 }
             });
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         let result = runtime.block_on(fut);
         runtime.shutdown_on_idle();
         result.unwrap()

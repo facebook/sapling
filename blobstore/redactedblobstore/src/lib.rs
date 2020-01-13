@@ -241,7 +241,7 @@ mod test {
     use maplit::hashmap;
     use memblob::EagerMemblob;
     use prefixblob::PrefixBlobstore;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_redacted_key(fb: FacebookInit) {

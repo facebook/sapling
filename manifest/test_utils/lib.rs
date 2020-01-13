@@ -16,7 +16,7 @@ use manifest::{Entry, Manifest};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 use std::str::FromStr;
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 
 pub fn get_bonsai_changeset(
     ctx: CoreContext,

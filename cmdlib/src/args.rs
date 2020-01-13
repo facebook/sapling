@@ -1075,8 +1075,8 @@ pub fn parse_disabled_hooks_no_repo_prefix(
     disabled_hooks
 }
 
-/// Initialize a new `tokio::runtime::Runtime` with thread number parsed from the CLI
-pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio::runtime::Runtime> {
+/// Initialize a new `tokio_compat::runtime::Runtime` with thread number parsed from the CLI
+pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
     create_runtime(None, core_threads)
 }

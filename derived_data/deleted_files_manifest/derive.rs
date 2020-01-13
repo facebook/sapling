@@ -478,7 +478,7 @@ mod tests {
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
     use test_utils::get_bonsai_changeset;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn linear_test(fb: FacebookInit) {

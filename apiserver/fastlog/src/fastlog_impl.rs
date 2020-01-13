@@ -239,7 +239,7 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::linear;
     use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {

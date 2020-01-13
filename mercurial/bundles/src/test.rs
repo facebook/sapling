@@ -18,7 +18,7 @@ use assert_matches::assert_matches;
 use futures::stream;
 use futures::stream::Stream;
 use futures_ext::BoxStream;
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 use tokio_io::AsyncRead;
 
 use crate::parts::phases_part;

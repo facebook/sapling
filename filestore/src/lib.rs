@@ -8,6 +8,7 @@
 
 #![feature(never_type)]
 #![deny(warnings)]
+#![type_length_limit = "1658755"]
 
 use bytes::Bytes;
 
