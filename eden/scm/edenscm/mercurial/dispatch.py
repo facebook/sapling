@@ -213,7 +213,6 @@ def _preimportmodules():
         "revset",
         "revsetlang",
         "rewriteutil",
-        "rust",
         "scmposix",
         "scmutil",
         "server",
