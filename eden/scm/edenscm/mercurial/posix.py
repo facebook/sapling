@@ -1044,52 +1044,6 @@ def statisexec(st):
     return st and (st.st_mode & 0o100 != 0)
 
 
-def poll(fds):
-    """block until something happens on any file descriptor
-
-    This is a generic helper that will check for any activity
-    (read, write.  exception) and return the list of touched files.
-
-    In unsupported cases, it will raise a NotImplementedError"""
-    try:
-        while True:
-            try:
-                res = select.select(fds, fds, fds)
-                break
-            except select.error as inst:
-                if inst.args[0] == errno.EINTR:
-                    continue
-                raise
-    except ValueError:  # out of range file descriptor
-        raise NotImplementedError()
-    return sorted(list(set(sum(res, []))))
-
-
-def readpipe(pipe):
-    """Read all available data from a pipe."""
-    # We can't fstat() a pipe because Linux will always report 0.
-    # So, we set the pipe to non-blocking mode and read everything
-    # that's available.
-    flags = fcntl.fcntl(pipe, fcntl.F_GETFL)
-    flags |= os.O_NONBLOCK
-    oldflags = fcntl.fcntl(pipe, fcntl.F_SETFL, flags)
-
-    try:
-        chunks = []
-        while True:
-            try:
-                s = pipe.read()
-                if not s:
-                    break
-                chunks.append(s)
-            except IOError:
-                break
-
-        return "".join(chunks)
-    finally:
-        fcntl.fcntl(pipe, fcntl.F_SETFL, oldflags)
-
-
 def bindunixsocket(sock, path):
     """Bind the UNIX domain socket to the specified path"""
     # use relative path instead of full path at bind() if possible, since

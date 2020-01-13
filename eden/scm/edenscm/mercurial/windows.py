@@ -591,27 +591,6 @@ def statisexec(st):
     return False
 
 
-def poll(fds):
-    # see posix.py for description
-    raise NotImplementedError()
-
-
-def readpipe(pipe):
-    """Read all available data from a pipe."""
-    chunks = []
-    while True:
-        size = win32.peekpipe(pipe)
-        if not size:
-            break
-
-        s = pipe.read(size)
-        if not s:
-            break
-        chunks.append(s)
-
-    return "".join(chunks)
-
-
 def bindunixsocket(sock, path):
     raise NotImplementedError("unsupported platform")
 

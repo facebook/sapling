@@ -142,12 +142,10 @@ openhardlinks = platform.openhardlinks
 oslink = platform.oslink
 parsepatchoutput = platform.parsepatchoutput
 pconvert = platform.pconvert
-poll = platform.poll
 popen = platform.popen
 posixfile = platform.posixfile
 quotecommand = platform.quotecommand
 readlock = platform.readlock
-readpipe = platform.readpipe
 releaselock = platform.releaselock
 removedirs = platform.removedirs
 rename = platform.rename
@@ -340,103 +338,6 @@ except NameError:
 
 
 closefds = pycompat.isposix
-
-_chunksize = 4096
-
-
-class bufferedinputpipe(object):
-    """a manually buffered input pipe
-
-    Python will not let us use buffered IO and lazy reading with 'polling' at
-    the same time. We cannot probe the buffer state and select will not detect
-    that data are ready to read if they are already buffered.
-
-    This class let us work around that by implementing its own buffering
-    (allowing efficient readline) while offering a way to know if the buffer is
-    empty from the output (allowing collaboration of the buffer with polling).
-
-    This class lives in the 'util' module because it makes use of the 'os'
-    module from the python stdlib.
-    """
-
-    def __init__(self, input):
-        self._input = input
-        self._buffer = []
-        self._eof = False
-        self._lenbuf = 0
-
-    @property
-    def hasbuffer(self):
-        """True is any data is currently buffered
-
-        This will be used externally a pre-step for polling IO. If there is
-        already data then no polling should be set in place."""
-        return bool(self._buffer)
-
-    @property
-    def closed(self):
-        return self._input.closed
-
-    def fileno(self):
-        return self._input.fileno()
-
-    def close(self):
-        return self._input.close()
-
-    def read(self, size):
-        while (not self._eof) and (self._lenbuf < size):
-            self._fillbuffer()
-        return self._frombuffer(size)
-
-    def readline(self, *args, **kwargs):
-        if 1 < len(self._buffer):
-            # this should not happen because both read and readline end with a
-            # _frombuffer call that collapse it.
-            self._buffer = ["".join(self._buffer)]
-            self._lenbuf = len(self._buffer[0])
-        lfi = -1
-        if self._buffer:
-            lfi = self._buffer[-1].find("\n")
-        while (not self._eof) and lfi < 0:
-            self._fillbuffer()
-            if self._buffer:
-                lfi = self._buffer[-1].find("\n")
-        size = lfi + 1
-        if lfi < 0:  # end of file
-            size = self._lenbuf
-        elif 1 < len(self._buffer):
-            # we need to take previous chunks into account
-            size += self._lenbuf - len(self._buffer[-1])
-        return self._frombuffer(size)
-
-    def _frombuffer(self, size):
-        """return at most 'size' data from the buffer
-
-        The data are removed from the buffer."""
-        if size == 0 or not self._buffer:
-            return ""
-        buf = self._buffer[0]
-        if 1 < len(self._buffer):
-            buf = "".join(self._buffer)
-
-        data = buf[:size]
-        buf = buf[len(data) :]
-        if buf:
-            self._buffer = [buf]
-            self._lenbuf = len(buf)
-        else:
-            self._buffer = []
-            self._lenbuf = 0
-        return data
-
-    def _fillbuffer(self):
-        """read data to the buffer"""
-        data = os.read(self._input.fileno(), _chunksize)
-        if not data:
-            self._eof = True
-        else:
-            self._lenbuf += len(data)
-            self._buffer.append(data)
 
 
 def mmapread(fp):

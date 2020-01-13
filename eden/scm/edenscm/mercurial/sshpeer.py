@@ -13,6 +13,8 @@
 from __future__ import absolute_import
 
 import re
+import threading
+from typing import Any
 
 from . import error, progress, pycompat, util, wireproto
 from .i18n import _
@@ -33,111 +35,70 @@ def _serverquote(s):
     return "'%s'" % s.replace("'", "'\\''")
 
 
-def _forwardoutput(ui, pipe):
-    """display all data currently available on pipe as remote output.
-
-    This is non blocking."""
-    s = util.readpipe(pipe)
-    _writessherror(ui, s)
-
-
 def _writessherror(ui, s):
+    # type: (Any, bytes) -> None
     if s and not ui.quiet:
         for l in s.splitlines():
-            if l.startswith("ssh:"):
-                prefix = ""
+            if l.startswith(b"ssh:"):
+                prefix = b""
             else:
-                prefix = _("remote: ")
-            ui.write_err(prefix, l, "\n")
+                prefix = _(b"remote: ")
+            ui.write_err(prefix, l, b"\n")
 
 
-class doublepipe(object):
-    """Operate a side-channel pipe in addition of a main one
+class countingpipe(object):
+    """Wraps a pipe that count the number of bytes read/written to it
+    """
 
-    The side-channel pipe contains server output to be forwarded to the user
-    input. The double pipe will behave as the "main" pipe, but will ensure the
-    content of the "side" pipe is properly processed while we wait for blocking
-    call on the "main" pipe.
-
-    If large amounts of data are read from "main", the forward will cease after
-    the first bytes start to appear. This simplifies the implementation
-    without affecting actual output of sshpeer too much as we rarely issue
-    large read for data not yet emitted by the server.
-
-    The main pipe is expected to be a 'bufferedinputpipe' from the util module
-    that handle all the os specific bits. This class lives in this module
-    because it focus on behavior specific to the ssh protocol."""
-
-    def __init__(self, ui, main, side):
+    def __init__(self, ui, pipe):
         self._ui = ui
-        self._main = main
-        self._side = side
+        self._pipe = pipe
         self._totalbytes = 0
-
-    def _wait(self):
-        """wait until some data are available on main or side
-
-        return a pair of boolean (ismainready, issideready)
-
-        (This will only wait for data if the setup is supported by `util.poll`)
-        """
-        if getattr(self._main, "hasbuffer", False):  # getattr for classic pipe
-            return (True, True)  # main has data, assume side is worth poking at.
-        fds = [self._main.fileno(), self._side.fileno()]
-        try:
-            act = util.poll(fds)
-        except NotImplementedError:
-            # non supported yet case, assume all have data.
-            act = fds
-        return (self._main.fileno() in act, self._side.fileno() in act)
 
     def write(self, data):
         self._totalbytes += len(data)
         self._ui.metrics.gauge("ssh_write_bytes", len(data))
-        return self._call("write", data)
+        return self._pipe.write(data)
 
     def read(self, size):
-        r = self._call("read", size)
-        if size != 0 and not r:
-            # We've observed a condition that indicates the
-            # stdout closed unexpectedly. Check stderr one
-            # more time and snag anything that's there before
-            # letting anyone know the main part of the pipe
-            # closed prematurely.
-            _forwardoutput(self._ui, self._side)
+        r = self._pipe.read(size)
         self._totalbytes += len(r)
         self._ui.metrics.gauge("ssh_read_bytes", len(r))
         return r
 
     def readline(self):
-        r = self._call("readline")
+        r = self._pipe.readline()
         self._totalbytes += len(r)
         self._ui.metrics.gauge("ssh_read_bytes", len(r))
         return r
 
-    def _call(self, methname, data=None):
-        """call <methname> on "main", forward output of "side" while blocking
-        """
-        # data can be '' or 0
-        if (data is not None and not data) or self._main.closed:
-            _forwardoutput(self._ui, self._side)
-            return ""
-        while True:
-            mainready, sideready = self._wait()
-            if sideready:
-                _forwardoutput(self._ui, self._side)
-            if mainready:
-                meth = getattr(self._main, methname)
-                if data is None:
-                    return meth()
-                else:
-                    return meth(data)
-
     def close(self):
-        return self._main.close()
+        return self._pipe.close()
 
     def flush(self):
-        return self._main.flush()
+        return self._pipe.flush()
+
+
+class threadedstderr(threading.Thread):
+    def __init__(self, ui, stderr):
+        self._ui = ui
+        self._stderr = stderr
+        self._stop = False
+        threading.Thread.__init__(self)
+        self.daemon = True
+
+    def run(self):
+        # type: () -> None
+        while not self._stop:
+            buf = self._stderr.readline()
+            if len(buf) == 0:
+                break
+
+            _writessherror(self._ui, buf)
+
+    def close(self):
+        # type: () -> None
+        self._stop = True
 
 
 class sshpeer(wireproto.wirepeer):
@@ -230,16 +191,13 @@ class sshpeer(wireproto.wirepeer):
 
         # while self._subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
-        #
-        # no buffer allow the use of 'select'
-        # feel free to remove buffering and select usage when we ultimately
-        # move to threading.
         sub = util.popen4(cmd, bufsize=0, env=sshenv)
         self._pipeo, self._pipei, self._pipee, self._subprocess = sub
 
-        self._pipei = util.bufferedinputpipe(self._pipei)
-        self._pipei = doublepipe(self.ui, self._pipei, self._pipee)
-        self._pipeo = doublepipe(self.ui, self._pipeo, self._pipee)
+        self._pipee = threadedstderr(self.ui, self._pipee)
+        self._pipee.start()
+        self._pipei = countingpipe(self.ui, self._pipei)
+        self._pipeo = countingpipe(self.ui, self._pipeo)
 
         self.ui.metrics.gauge("ssh_connections")
 
@@ -262,7 +220,6 @@ class sshpeer(wireproto.wirepeer):
         while lines[-1] and max_noise:
             try:
                 l = r.readline()
-                self._readerr()
                 if lines[-1] == "1\n" and l == "\n":
                     break
                 if l:
@@ -279,9 +236,6 @@ class sshpeer(wireproto.wirepeer):
             if l.startswith("capabilities:"):
                 self._caps.update(l[:-1].split(":")[1].split())
                 break
-
-    def _readerr(self):
-        _forwardoutput(self.ui, self._pipee)
 
     def _abort(self, exception):
         self._cleanup()
@@ -301,13 +255,14 @@ class sshpeer(wireproto.wirepeer):
             sshbytessent=_totalbytessent,
             sshbytesreceived=_totalbytesreceived,
         )
-        try:
-            # read the error descriptor until EOF
-            for l in self._pipee:
-                self.ui.write_err(_("remote: "), l)
-        except (IOError, ValueError):
-            pass
         self._pipee.close()
+
+        if util.istest():
+            # Let's give the thread a bit of time to complete, in the case
+            # where the pipe is somehow still open, the read call will block on it
+            # forever. In this case, there isn't anything to read anyway, so
+            # waiting more would just cause Mercurial to hang.
+            self._pipee.join(1)
 
     __del__ = _cleanup
 
@@ -388,10 +343,8 @@ class sshpeer(wireproto.wirepeer):
     def _getamount(self):
         l = self._pipei.readline()
         if l == "\n":
-            self._readerr()
             msg = _("check previous remote output")
             self._abort(error.OutOfBandError(hint=msg))
-        self._readerr()
         try:
             return int(l)
         except ValueError:
@@ -406,7 +359,6 @@ class sshpeer(wireproto.wirepeer):
             self._pipeo.write(data)
         if flush:
             self._pipeo.flush()
-        self._readerr()
 
 
 instance = sshpeer
