@@ -22,6 +22,8 @@ use revisionstore::{
 use std::path::Path;
 use types::{HgId, Key, RepoPathBuf};
 
+use crate::status;
+
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
@@ -35,6 +37,8 @@ pub fn table() -> CommandTable {
 
     Returns 0 on success."#,
     );
+    status::register(&mut table);
+
     table.register(dump_trace, "dump-trace", "export tracing information");
 
     table.register(
@@ -64,6 +68,22 @@ pub fn table() -> CommandTable {
 }
 
 define_flags! {
+    pub struct WalkOpts {
+        /// include names matching the given patterns
+        #[short('I')]
+        include: Vec<String>,
+
+        /// exclude names matching the given patterns
+        #[short('X')]
+        exclude: Vec<String>,
+    }
+
+    pub struct FormatterOpts {
+        /// display with template (EXPERIMENTAL)
+        #[short('T')]
+        template: String,
+    }
+
     pub struct RootOpts {
         /// show root of the shared repo
         shared: bool,

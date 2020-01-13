@@ -115,6 +115,7 @@ impl Repo {
         &self.shared_path
     }
 
+    /// Repo root path, without `.hg`.
     pub fn path(&self) -> &Path {
         self.path.as_path()
     }

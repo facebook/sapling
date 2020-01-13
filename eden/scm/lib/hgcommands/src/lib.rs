@@ -9,6 +9,7 @@ pub mod commands;
 mod hgpython;
 mod python;
 mod run;
+mod status;
 
 pub use crate::hgpython::HgPython;
 pub use run::run_command;

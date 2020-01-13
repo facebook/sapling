@@ -16,6 +16,7 @@ clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
 edenapi = { path = "../edenapi" }
+edenfs-client = { path = "../edenfs-client"}
 flate2 = "1"
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }

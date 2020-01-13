@@ -107,8 +107,3 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg -R repo4 perftestsuite --seed 1 --use-profile --print 2>&1 | grep "Sample count"
   Sample count: * (glob)
   Sample count: * (glob)
-  Sample count: * (glob)
-  Sample count: * (glob)
-  Sample count: * (glob)
-  Sample count: * (glob)
-  Sample count: * (glob)

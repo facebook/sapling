@@ -151,6 +151,7 @@ no closing quotation
 
 invalid options
 
+  $ hg init
   $ hg no--cwd
   abort: option --cwd may not be abbreviated!
   [255]
