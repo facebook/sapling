@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use context::generate_session_id;
 use fbinit::FacebookInit;
+use futures_stats::{FutureStats, TimedFutureExt};
 use mononoke_api::{
     ChangesetContext, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke, RepoContext,
     SessionContainer, TreeContext, TreeId,
@@ -229,13 +230,14 @@ impl SourceControlServiceImpl {
     }
 }
 
-fn log_result<T>(ctx: CoreContext, result: &Result<T, errors::ServiceError>) {
+fn log_result<T>(ctx: CoreContext, stats: &FutureStats, result: &Result<T, errors::ServiceError>) {
     let (status, error) = match result {
         Ok(_) => ("SUCCESS", None),
         Err(errors::ServiceError::Request(e)) => ("REQUEST_ERROR", Some(format!("{:?}", e))),
         Err(errors::ServiceError::Internal(e)) => ("INTERNAL_ERROR", Some(format!("{:?}", e))),
     };
     let mut scuba = ctx.scuba().clone();
+    scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
         scuba.add("error", error.as_str());
@@ -279,8 +281,11 @@ macro_rules! impl_thrift_methods {
                 let handler = async move {
                     let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*)?;
                     ctx.scuba().clone().log_with_msg("Request start", None);
-                    let res = (self.0).$method_name(ctx.clone(), $( $param_name ),* ).await;
-                    log_result(ctx, &res);
+                    let (stats, res) = (self.0)
+                        .$method_name(ctx.clone(), $( $param_name ),* )
+                        .timed()
+                        .await;
+                    log_result(ctx, &stats, &res);
                     Ok(res?)
                 };
                 Box::pin(handler)
