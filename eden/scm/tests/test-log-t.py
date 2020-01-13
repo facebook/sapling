@@ -875,7 +875,7 @@ sh % "hg log -k r1" == r"""
 # log -p -l2 --color=always
 
 sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--color=always'" == r"""
-    [0;33mchangeset:   6:2404bbcab562[0m
+    [0;93mchangeset:   6:2404bbcab562[0m
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -887,9 +887,9 @@ sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--c
      b1
     [0;92m+postm[0m
 
-    [0;33mchangeset:   5:302e9dd6890d[0m
-    parent:      3:e62f78d544b4
-    parent:      4:ddb82e70d1a1
+    [0;93mchangeset:   5:302e9dd6890d[0m
+    [0;93mparent:      3:e62f78d544b4[0m
+    [0;93mparent:      4:ddb82e70d1a1[0m
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
@@ -1803,7 +1803,7 @@ sh % "hg --config 'extensions.names=../names.py' log -r 0" == r"""
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a bunch of weird directories"""
 sh % "hg --config 'extensions.names=../names.py' --config 'extensions.color=' --config 'color.log.barcolor=red' '--color=always' log -r 0" == r"""
-    [0;33mchangeset:   0:65624cd9070a[0m
+    [0;93mchangeset:   0:65624cd9070a[0m
     [0;31mbarlog:      foo[0m
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000

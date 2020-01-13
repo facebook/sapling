@@ -167,17 +167,17 @@ even though stdout is no longer a tty.
   > mode = ansi
   > EOF
   $ hg log --limit 3
-  paged! '\x1b[0;33mchangeset:   10:46106edeeb38\x1b[0m\n'
+  paged! '\x1b[0;93mchangeset:   10:46106edeeb38\x1b[0m\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
   paged! '\n'
-  paged! '\x1b[0;33mchangeset:   9:6dd8ea7dd621\x1b[0m\n'
+  paged! '\x1b[0;93mchangeset:   9:6dd8ea7dd621\x1b[0m\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 9\n'
   paged! '\n'
-  paged! '\x1b[0;33mchangeset:   8:cff05a6312fe\x1b[0m\n'
+  paged! '\x1b[0;93mchangeset:   8:cff05a6312fe\x1b[0m\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 8\n'
@@ -188,17 +188,17 @@ An invalid pager command name is reported sensibly if we don't have to
 use shell=True in the subprocess call:
   $ hg log --limit 3 --config pager.pager=this-command-better-never-exist
   missing pager command 'this-command-better-never-exist', skipping pager
-  \x1b[0;33mchangeset:   10:46106edeeb38\x1b[0m (esc)
+  \x1b[0;93mchangeset:   10:46106edeeb38\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
   
-  \x1b[0;33mchangeset:   9:6dd8ea7dd621\x1b[0m (esc)
+  \x1b[0;93mchangeset:   9:6dd8ea7dd621\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 9
   
-  \x1b[0;33mchangeset:   8:cff05a6312fe\x1b[0m (esc)
+  \x1b[0;93mchangeset:   8:cff05a6312fe\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 8
