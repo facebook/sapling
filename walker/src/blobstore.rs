@@ -27,20 +27,34 @@ use prefixblob::PrefixBlobstore;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::MysqlOptions;
+use stats::prelude::*;
 use std::{convert::From, num::NonZeroU32, sync::Arc};
+
+define_stats! {
+    prefix = "mononoke.walker";
+    scrub_repaired: dynamic_timeseries("{}.blobstore.{}.{}.repaired", (subcommand: &'static str, blobstore_id: String, repo: String); Rate, Sum),
+    scrub_repair_required: dynamic_timeseries("{}.blobstore.{}.{}.repair_required", (subcommand: &'static str, blobstore_id: String, repo: String); Rate, Sum),
+}
 
 pub const BLOBSTORE_ID: &'static str = "blobstore_id";
 
 pub struct StatsScrubHandler {
     scuba: ScubaSampleBuilder,
+    subcommand_stats_key: &'static str,
     repo_stats_key: String,
     inner: LoggingScrubHandler,
 }
 
 impl StatsScrubHandler {
-    pub fn new(quiet: bool, scuba: ScubaSampleBuilder, repo_stats_key: String) -> Self {
+    pub fn new(
+        quiet: bool,
+        scuba: ScubaSampleBuilder,
+        subcommand_stats_key: &'static str,
+        repo_stats_key: String,
+    ) -> Self {
         Self {
             scuba,
+            subcommand_stats_key,
             repo_stats_key,
             inner: LoggingScrubHandler::new(quiet),
         }
@@ -72,6 +86,25 @@ impl ScrubHandler for StatsScrubHandler {
                 },
             )
             .log();
+        if is_repaired {
+            STATS::scrub_repaired.add_value(
+                1,
+                (
+                    self.subcommand_stats_key,
+                    blobstore_id.to_string(),
+                    self.repo_stats_key.clone(),
+                ),
+            );
+        } else {
+            STATS::scrub_repair_required.add_value(
+                1,
+                (
+                    self.subcommand_stats_key,
+                    blobstore_id.to_string(),
+                    self.repo_stats_key.clone(),
+                ),
+            );
+        }
     }
 }
 
@@ -115,6 +148,7 @@ pub fn open_blobstore(
     readonly_storage: ReadOnlyStorage,
     scrub_action: Option<ScrubAction>,
     scuba_builder: ScubaSampleBuilder,
+    walk_stats_key: &'static str,
     repo_stats_key: String,
     read_qps: Option<NonZeroU32>,
     write_qps: Option<NonZeroU32>,
@@ -129,7 +163,8 @@ pub fn open_blobstore(
         Arc::new(StatsScrubHandler::new(
             false,
             scuba_builder.clone(),
-            repo_stats_key,
+            walk_stats_key,
+            repo_stats_key.clone(),
         )) as Arc<dyn ScrubHandler>
     });
 
@@ -149,17 +184,28 @@ pub fn open_blobstore(
                     blobstores,
                     scrub_action,
                 },
-            ) => make_blobstore_multiplexed(
-                fb,
-                &scuba_table,
-                &blobstores,
-                Some(&sql_factory),
-                mysql_options,
-                readonly_storage,
-                Some((scrub_handler, scrub_action)),
-                read_qps,
-                write_qps,
-            ),
+            ) => {
+                // Make sure the repair stats are set to zero for each store.
+                // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
+                // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
+                for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
+                    for (id, _config) in &blobstores {
+                        s.add_value(0, (walk_stats_key, id.to_string(), repo_stats_key.clone()));
+                    }
+                }
+
+                make_blobstore_multiplexed(
+                    fb,
+                    &scuba_table,
+                    &blobstores,
+                    Some(&sql_factory),
+                    mysql_options,
+                    readonly_storage,
+                    Some((scrub_handler, scrub_action)),
+                    read_qps,
+                    write_qps,
+                )
+            }
             (
                 None,
                 BlobConfig::Multiplexed {

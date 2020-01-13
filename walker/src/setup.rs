@@ -637,6 +637,7 @@ pub fn setup_common(
         readonly_storage,
         scrub_action,
         scuba_builder.clone(),
+        walk_stats_key,
         args::get_repo_name(fb, &matches)?,
         read_qps,
         write_qps,
