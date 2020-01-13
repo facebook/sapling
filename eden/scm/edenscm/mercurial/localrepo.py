@@ -2616,9 +2616,14 @@ class localrepository(object):
 
         Called at the start of pull if pull.automigrate is true
         """
-        treestate.automigrate(self)
-        mutation.automigrate(self)
-        visibility.automigrate(self)
+        try:
+            with self.wlock(wait=False), self.lock(wait=False):
+                treestate.automigrate(self)
+                mutation.automigrate(self)
+                visibility.automigrate(self)
+        except errormod.LockHeld:
+            self.ui.debug("skipping automigrate because lock is held\n")
+            pass
 
     def automigratefinish(self):
         """perform potentially expensive in-place migrations
