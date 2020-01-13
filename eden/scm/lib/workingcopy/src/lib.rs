@@ -7,12 +7,42 @@
 
 use std::fs::{self, DirEntry};
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use thiserror::Error;
 
 use pathmatcher::{DirectoryMatch, Matcher};
+use types::path::ParseError;
 use types::{RepoPath, RepoPathBuf};
+
+#[derive(Error, Debug)]
+pub enum WalkError {
+    #[error("invalid file name encoding '{0}'")]
+    FsUtf8Error(String),
+    #[error("IO error at '{0}': {1}")]
+    IOError(RepoPathBuf, #[source] io::Error),
+    #[error("path error at '{0}': {1}")]
+    RepoPathError(String, #[source] ParseError),
+}
+
+impl WalkError {
+    pub fn filename(&self) -> String {
+        match self {
+            WalkError::FsUtf8Error(path) => path.to_string(),
+            WalkError::IOError(path, _) => path.to_string(),
+            WalkError::RepoPathError(path, _) => path.to_string(),
+        }
+    }
+
+    pub fn message(&self) -> String {
+        match self {
+            WalkError::FsUtf8Error(_) => "invalid file name encoding".to_string(),
+            WalkError::IOError(_, error) => error.to_string(),
+            WalkError::RepoPathError(_, error) => error.to_string(),
+        }
+    }
+}
 
 /// Walker traverses the working copy, starting at the root of the repo,
 /// finding files matched by matcher
@@ -40,11 +70,19 @@ where
         }
     }
 
-    fn match_entry(&mut self, next_dir: &RepoPathBuf, entry: io::Result<DirEntry>) -> Result<()> {
-        let entry = entry?;
+    fn match_entry(&mut self, next_dir: &RepoPathBuf, entry: DirEntry) -> Result<()> {
+        // It'd be nice to move all this conversion noise to a function, but having it here saves
+        // us from allocating filename repeatedly.
         let filename = entry.file_name();
-        let filename = RepoPath::from_str(filename.to_str().unwrap())?;
-        let filetype = entry.file_type()?;
+        let filename = filename.to_str().ok_or(WalkError::FsUtf8Error(
+            filename.to_string_lossy().into_owned(),
+        ))?;
+        let filename = RepoPath::from_str(filename)
+            .map_err(|e| WalkError::RepoPathError(filename.to_owned(), e))?;
+        let filetype = entry
+            .file_type()
+            .map_err(|e| WalkError::IOError(filename.to_owned(), e))?;
+
         let mut candidate_path = next_dir.clone();
         candidate_path.push(filename);
         if filetype.is_file() || filetype.is_symlink() {
@@ -67,10 +105,17 @@ where
     /// Lazy traversal to find matching files
     fn walk(&mut self) -> Result<()> {
         while self.file_matches.is_empty() && !self.dir_matches.is_empty() {
-            let mut next_dir = self.dir_matches.pop().unwrap();
-            for entry in fs::read_dir(self.root.join(next_dir.as_str()))? {
-                if let Err(e) = self.match_entry(&mut next_dir, entry) {
-                    self.file_matches.push(Err(e));
+            let next_dir = self.dir_matches.pop().unwrap();
+            let abs_next_dir = self.root.join(next_dir.as_str());
+            // Don't process the directory if it contains a .hg directory, unless it's the root.
+            if next_dir.is_empty() || !Path::exists(&abs_next_dir.join(".hg")) {
+                for entry in fs::read_dir(abs_next_dir)
+                    .map_err(|e| WalkError::IOError(next_dir.clone(), e))?
+                {
+                    let entry = entry.map_err(|e| WalkError::IOError(next_dir.clone(), e))?;
+                    if let Err(e) = self.match_entry(&next_dir, entry) {
+                        self.file_matches.push(Err(e));
+                    }
                 }
             }
         }

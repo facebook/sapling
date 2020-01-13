@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.20"
 pathmatcher = { path = "../pathmatcher"}
+thiserror = "1.0.5"
 types = { path = "../types"}
 
 [dev-dependencies]

@@ -212,6 +212,11 @@ class physicalfilesystem(object):
             st = util.lstat(join(fn))
             yield fn, st
 
+        for path, walkerror in walker.errors():
+            path = encoding.unitolocal(path)
+            walkerror = encoding.unitolocal(walkerror)
+            match.bad(path, walkerror)
+
     @util.timefunction("fswalk", 0, "ui")
     def _walk(self, match, listignored=False):
         join = self.opener.join
