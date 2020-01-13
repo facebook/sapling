@@ -54,6 +54,11 @@ pub const EDGES: &'static str = "edges";
 pub const PASS: &'static str = "pass";
 pub const FAIL: &'static str = "fail";
 pub const TOTAL: &'static str = "total";
+pub const NODE_KEY: &'static str = "node_key";
+pub const CHECK_TYPE: &'static str = "check_type";
+pub const CHECK_FAIL: &'static str = "check_fail";
+pub const WALK_TYPE: &'static str = "walk_type";
+pub const REPO: &'static str = "repo";
 
 define_stats! {
     prefix = "mononoke.walker.validate";
@@ -399,15 +404,15 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                         scuba.add("node_path", MPath::display_opt(path).to_string());
                     }
                     scuba
-                        .add("walk_type", "validate")
-                        .add("repo", self.repo_stats_key.to_string())
-                        .add("check_type", k.stats_key())
+                        .add(WALK_TYPE, "validate")
+                        .add(REPO, self.repo_stats_key.to_string())
+                        .add(CHECK_TYPE, k.stats_key())
                         .add(
-                            "check_fail",
+                            CHECK_FAIL,
                             if c.status == CheckStatus::Pass { 0 } else { 1 },
                         )
                         .add("node_type", n.get_type().to_string())
-                        .add("node_key", n.stats_key())
+                        .add(NODE_KEY, n.stats_key())
                         .log();
                     for json in scuba.get_sample().to_json() {
                         warn!(self.logger, "Validation failed: {}", json)

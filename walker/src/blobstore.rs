@@ -6,11 +6,14 @@
  * directory of this source tree.
  */
 
+use crate::validate::{CHECK_FAIL, CHECK_TYPE, NODE_KEY, REPO};
+
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use blobstore_factory::{
     make_blobstore, make_blobstore_multiplexed, make_sql_factory, ReadOnlyStorage, SqlFactory,
 };
+use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     self,
@@ -21,9 +24,56 @@ use inlinable_string::InlinableString;
 use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction, StorageConfig};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
+use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::MysqlOptions;
 use std::{convert::From, sync::Arc};
+
+pub const BLOBSTORE_ID: &'static str = "blobstore_id";
+
+pub struct StatsScrubHandler {
+    scuba: ScubaSampleBuilder,
+    repo_stats_key: String,
+    inner: LoggingScrubHandler,
+}
+
+impl StatsScrubHandler {
+    pub fn new(quiet: bool, scuba: ScubaSampleBuilder, repo_stats_key: String) -> Self {
+        Self {
+            scuba,
+            repo_stats_key,
+            inner: LoggingScrubHandler::new(quiet),
+        }
+    }
+}
+
+impl ScrubHandler for StatsScrubHandler {
+    fn on_repair(
+        &self,
+        ctx: &CoreContext,
+        blobstore_id: BlobstoreId,
+        key: &str,
+        is_repaired: bool,
+    ) {
+        self.inner.on_repair(ctx, blobstore_id, key, is_repaired);
+        self.scuba.clone()
+            // If we start to run in multi-repo mode this will need to be prefix aware instead
+            .add(REPO, self.repo_stats_key.clone())
+            .add(BLOBSTORE_ID, blobstore_id)
+            // TODO parse out NodeType from string key prefix if we can. Or better, make blobstore keys typed?
+            .add(NODE_KEY, key)
+            .add(CHECK_TYPE, "scrub_repair")
+            .add(
+                CHECK_FAIL,
+                if is_repaired {
+                    0
+                } else {
+                    1
+                },
+            )
+            .log();
+    }
+}
 
 fn get_blobconfig(
     blob_config: BlobConfig,
@@ -64,6 +114,8 @@ pub fn open_blobstore(
     prefix: Option<String>,
     readonly_storage: ReadOnlyStorage,
     scrub_action: Option<ScrubAction>,
+    scuba_builder: ScubaSampleBuilder,
+    repo_stats_key: String,
     logger: Logger,
 ) -> BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
     // Allow open of just one inner store
@@ -72,7 +124,11 @@ pub fn open_blobstore(
 
     let scrub_handler = scrub_action.map(|scrub_action| {
         blobconfig.set_scrubbed(scrub_action);
-        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>
+        Arc::new(StatsScrubHandler::new(
+            false,
+            scuba_builder.clone(),
+            repo_stats_key,
+        )) as Arc<dyn ScrubHandler>
     });
 
     let datasources = make_sql_factory(

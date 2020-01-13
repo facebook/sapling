@@ -9,7 +9,7 @@
 use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
 use crate::progress::sort_by_string;
-use crate::validate::CheckType;
+use crate::validate::{CheckType, WALK_TYPE};
 use crate::walk::OutgoingEdge;
 
 use anyhow::{format_err, Error};
@@ -499,7 +499,7 @@ fn reachable_graph_elements(
 }
 
 pub fn setup_common(
-    walk_stats_key: &str,
+    walk_stats_key: &'static str,
     fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'_>,
@@ -576,9 +576,9 @@ pub fn setup_common(
     };
 
     let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
-    let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
+    let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
     scuba_builder.add_common_server_data();
-    scuba_builder.add("walk_type", walk_stats_key);
+    scuba_builder.add(WALK_TYPE, walk_stats_key);
 
     let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
@@ -594,6 +594,8 @@ pub fn setup_common(
         None,
         readonly_storage,
         scrub_action,
+        scuba_builder.clone(),
+        args::get_repo_name(fb, &matches)?,
         logger.clone(),
     );
 
