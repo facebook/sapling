@@ -1403,7 +1403,6 @@ fn toposort_changesets(
 
     Ok(sorted_css
         .into_iter()
-        .rev() // reversing to get parents before the children
         .filter_map(|cs| changesets.remove(&cs).map(|revlog_cs| (cs, revlog_cs)))
         .collect())
 }

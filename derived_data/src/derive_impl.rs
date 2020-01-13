@@ -131,8 +131,7 @@ pub(crate) fn derive_impl<
                     // Note - sort_topological returns all nodes including commits which were already
                     // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
                     // The '.filter()' below removes ["b"]
-                    .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id))
-                    .rev(),
+                    .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id)),
             )
         }
     })

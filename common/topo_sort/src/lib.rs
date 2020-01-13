@@ -17,7 +17,7 @@ use std::{
 /// Sort nodes of DAG topologically. Implemented as depth-first search with tail-call
 /// eliminated. Complexity: `O(N)` from number of nodes.
 /// It returns None if graph has a cycle.
-/// Nodes with no outgoing edges will be *last* in the resulting vector
+/// Nodes with no outgoing edges will be *first* in the resulting vector i.e. ancestors go first
 pub fn sort_topological<T>(dag: &HashMap<T, Vec<T>>) -> Option<Vec<T>>
 where
     T: Clone + Eq + Hash,
@@ -80,7 +80,6 @@ where
         }
     }
 
-    output.reverse();
     Some(output)
 }
 
@@ -93,18 +92,18 @@ mod test {
     #[test]
     fn sort_topological_test() {
         let res = sort_topological(&hashmap! {1 => vec![2]});
-        assert_eq!(Some(vec![1, 2]), res);
+        assert_eq!(Some(vec![2, 1]), res);
 
         let res = sort_topological(&hashmap! {1 => vec![1]});
         assert_eq!(None, res);
 
         let res = sort_topological(&hashmap! {1 => vec![2], 2 => vec![3]});
-        assert_eq!(Some(vec![1, 2, 3]), res);
+        assert_eq!(Some(vec![3, 2, 1]), res);
 
         let res = sort_topological(&hashmap! {1 => vec![2, 3], 2 => vec![3]});
-        assert_eq!(Some(vec![1, 2, 3]), res);
+        assert_eq!(Some(vec![3, 2, 1]), res);
 
         let res = sort_topological(&hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![4]});
-        assert!(Some(vec![1, 2, 3, 4]) == res || Some(vec![1, 3, 2, 4]) == res);
+        assert!(Some(vec![4, 3, 2, 1]) == res || Some(vec![4, 2, 3, 1]) == res);
     }
 }

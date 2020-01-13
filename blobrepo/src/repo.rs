@@ -1752,12 +1752,12 @@ impl BlobRepo {
         .and_then({
             cloned!(ctx);
             move |commits_to_generate: Vec<BonsaiChangeset>| {
-                let start = (0, commits_to_generate);
+                let start = (0, commits_to_generate.into_iter());
 
                 loop_fn(
                     start,
                     move |(mut generated_count, mut commits_to_generate)| match commits_to_generate
-                        .pop()
+                        .next()
                     {
                         Some(bcs) => {
                             let bcs_id = bcs.get_changeset_id();
@@ -1867,9 +1867,7 @@ pub fn save_bonsai_changesets(
         bcs_parents.insert(bcs.get_changeset_id(), parents);
     }
 
-    let mut topo_sorted_commits = sort_topological(&bcs_parents).expect("loop in commit chain!");
-    // Reverse output to have parents in the beginning
-    topo_sorted_commits.reverse();
+    let topo_sorted_commits = sort_topological(&bcs_parents).expect("loop in commit chain!");
     let mut bonsai_complete_futs = vec![];
     for bcs_id in topo_sorted_commits {
         if let Some(bcs) = bonsai_changesets.get(&bcs_id) {

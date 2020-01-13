@@ -683,7 +683,6 @@ impl PushRedirector {
         let to_sync: Vec<ChangesetId> = sort_topological(&to_sync)
             .ok_or(format_err!("Cycle in the uploaded changeset DAG!"))?
             .into_iter()
-            .rev()
             .collect();
 
         let mut synced_ids = Vec::new();
