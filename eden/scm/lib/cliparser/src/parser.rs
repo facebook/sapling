@@ -676,6 +676,15 @@ impl ParseOutput {
         }
     }
 
+    /// Clone only the "options" part.
+    pub fn clone_only_opts(&self) -> ParseOutput {
+        ParseOutput {
+            opts: self.opts.clone(),
+            args: Vec::new(),
+            first_arg_index: 0,
+        }
+    }
+
     /// Get parsed value by name.
     ///
     /// The callsite must make sure the name and type are correct (i.e. they

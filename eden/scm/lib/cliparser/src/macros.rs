@@ -14,6 +14,7 @@ macro_rules! define_flags {
             arg0 ()
             args []
             varargs ()
+            subflags []
             misc ($vis $name 1 false)
         ); )*
     };
@@ -28,6 +29,7 @@ macro_rules! _define_flags_impl {
       arg0 ( $( $arg0:ident )? )
       args [ $( ($arg:ident, $arg_index:tt) )* ]
       varargs ( $($varargs:ident)? )
+      subflags [ $( ($subflag_name:ident, $subflag_type:ty) )* ]
       misc ($vis:vis $name:ident $varargs_offset:tt $has_varargs:tt)
     ) => {
         $vis struct $name {
@@ -35,6 +37,7 @@ macro_rules! _define_flags_impl {
             $( pub $varargs: Vec<String>, )?
             $( pub $arg0: String, )?
             $( pub $arg: String, )*
+            $( pub $subflag_name: $subflag_type, )*
         }
 
         impl $crate::parser::StructFlags for $name {
@@ -42,7 +45,10 @@ macro_rules! _define_flags_impl {
                 let flags: Vec<(char, String, String, $crate::parser::Value)> = vec![
                     $( ($short, stringify!($field).replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default)), )*
                 ];
-                flags.into_iter().map(Into::into).collect()
+                #[allow(unused_mut)]
+                let mut result: Vec<$crate::parser::Flag> = flags.into_iter().map(Into::into).collect();
+                $( result.append(&mut <$subflag_type>::flags()); )*
+                result
             }
         }
 
@@ -62,6 +68,7 @@ macro_rules! _define_flags_impl {
                     $( $varargs: out.args.get($varargs_offset..).map(|v| v.to_vec()).unwrap_or_default(), )?
                     $( $arg0: out.args.get(0).cloned().unwrap_or_default(), )?
                     $( $arg: out.args[$arg_index].clone(), )*
+                    $( $subflag_name: <$subflag_type>::try_from(out.clone_only_opts())?, )*
                 })
             }
         }
@@ -76,6 +83,7 @@ macro_rules! _define_flags_impl {
       arg0 $arg0:tt
       args $args:tt
       varargs $varargs:tt
+      subflags $subflags:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
@@ -84,6 +92,7 @@ macro_rules! _define_flags_impl {
             arg0 $arg0
             args $args
             varargs $varargs
+            subflags $subflags
             misc $misc
         );
     };
@@ -97,6 +106,7 @@ macro_rules! _define_flags_impl {
       arg0 $arg0:tt
       args $args:tt
       varargs $varargs:tt
+      subflags $subflags:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
@@ -105,6 +115,7 @@ macro_rules! _define_flags_impl {
             arg0 $arg0
             args $args
             varargs $varargs
+            subflags $subflags
             misc $misc
         );
     };
@@ -119,6 +130,7 @@ macro_rules! _define_flags_impl {
       arg0 $arg0:tt
       args $args:tt
       varargs $varargs:tt
+      subflags $subflags:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
@@ -127,6 +139,7 @@ macro_rules! _define_flags_impl {
             arg0 $arg0
             args $args
             varargs $varargs
+            subflags $subflags
             misc $misc
         );
     };
@@ -141,6 +154,7 @@ macro_rules! _define_flags_impl {
       arg0 $arg0:tt
       args $args:tt
       varargs $varargs:tt
+      subflags $subflags:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
@@ -149,6 +163,7 @@ macro_rules! _define_flags_impl {
             arg0 $arg0
             args $args
             varargs $varargs
+            subflags $subflags
             misc $misc
         );
     };
@@ -162,6 +177,7 @@ macro_rules! _define_flags_impl {
       arg0 $arg0:tt
       args [ $( $rest_args:tt )* ]
       varargs $varargs:tt
+      subflags $subflags:tt
       misc ($vis:vis $name:ident $varargs_offset:tt $has_varargs:tt)
     ) => {
         $crate::_define_flags_impl!(
@@ -170,7 +186,30 @@ macro_rules! _define_flags_impl {
             arg0 $arg0
             args [ ($arg_name, $varargs_offset) $( $rest_args )* ]
             varargs $varargs
+            subflags $subflags
             misc ($vis $name ($varargs_offset + 1) $has_varargs)
+        );
+    };
+
+    // Match a field like:
+    //
+    //    foo_opts: FooFlags,
+    ( input [ $flag_name:ident : $flag_type:ty, $($rest:tt)* ]
+      flags $flags:tt
+      arg0 $arg0:tt
+      args $args:tt
+      varargs $varargs:tt
+      subflags [ $( $subflags:tt )* ]
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags $flags
+            arg0 $arg0
+            args $args
+            varargs $varargs
+            subflags [ $( $subflags )* ( $flag_name, $flag_type ) ]
+            misc $misc
         );
     };
 
@@ -183,6 +222,7 @@ macro_rules! _define_flags_impl {
       arg0 $arg0:tt
       args $args:tt
       varargs ()
+      subflags $subflags:tt
       misc ($vis:vis $name:ident $varargs_offset:tt false)
     ) => {
         $crate::_define_flags_impl!(
@@ -191,6 +231,7 @@ macro_rules! _define_flags_impl {
             arg0 $arg0
             args $args
             varargs ( $varargs_name )
+            subflags $subflags
             misc ($vis $name $varargs_offset true)
         );
     };
@@ -204,6 +245,7 @@ macro_rules! _define_flags_impl {
       arg0 ()
       args $args:tt
       varargs $varargs:tt
+      subflags $subflags:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
@@ -212,6 +254,7 @@ macro_rules! _define_flags_impl {
             arg0 ( $arg0 )
             args $args
             varargs $varargs
+            subflags $subflags
             misc $misc
         );
     };
@@ -248,6 +291,19 @@ mod tests {
 
             #[command_name]
             name: String,
+        }
+
+        struct ComposedOptions {
+            /// new value
+            new: bool = true,
+
+            /// (duplicated name)
+            foo: bool = false,
+
+            test_opts: TestOptions,
+
+            #[args]
+            args: Vec<String>,
         }
     }
 
@@ -318,5 +374,27 @@ mod tests {
         assert_eq!(parsed.follow, true);
         assert_eq!(parsed.pats, vec!["b", "c"]);
         assert_eq!(parsed.name, "foo");
+    }
+
+    #[test]
+    fn test_composed_options() {
+        let parsed = ParseOptions::new()
+            .flags(ComposedOptions::flags())
+            .parse_args(&vec![
+                "cmdname",
+                "--no-new",
+                "--foo=true",
+                "1",
+                "--count",
+                "5",
+                "6",
+            ])
+            .unwrap();
+        let parsed = ComposedOptions::try_from(parsed).unwrap();
+        assert_eq!(parsed.new, false);
+        assert_eq!(parsed.test_opts.count, 5);
+        assert_eq!(parsed.test_opts.foo, true);
+        assert_eq!(parsed.foo, true);
+        assert_eq!(parsed.args, vec!["1", "6"]);
     }
 }
