@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use dag::{Group, Id, IdMap, VertexName};
 use tempfile::tempdir;
+use unicode_width::UnicodeWidthStr;
 
 use crate::render::{Ancestor, Renderer};
 use crate::test_fixtures::TestFixture;
@@ -95,7 +96,21 @@ pub(crate) fn render_string(
             Some(message) => format!("{}\n{}", name, message),
             None => name.clone(),
         };
+        let width = renderer.width(Some(&node), Some(&parents));
         let row = renderer.next_row(node, parents, String::from("o"), message);
+        let row_indent = row
+            .lines()
+            .filter_map(|line| line.find(&name).map(|offset| &line[..offset]))
+            .next()
+            .expect("name should be in the output");
+        assert_eq!(
+            row_indent.width() as u64,
+            width,
+            "indent '{}' for row for {} is the wrong width",
+            row_indent,
+            name
+        );
+
         out.push_str(&row);
     }
 

@@ -12,3 +12,4 @@ itertools = "0.8"
 [dev-dependencies]
 drawdag = { path = "../drawdag" }
 dag = { path = "../dag" }
+unicode-width = "0.1.7"
