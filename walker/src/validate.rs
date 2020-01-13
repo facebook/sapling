@@ -16,9 +16,12 @@
 use crate::graph::{EdgeType, Node, NodeData, NodeType};
 use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressRecorderUnprotected, ProgressReporter,
-    ProgressReporterUnprotected, ProgressStateCountByType, ProgressStateMutex,
+    ProgressReporterUnprotected, ProgressStateMutex,
 };
-use crate::setup::{setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, VALIDATE};
+use crate::setup::{
+    setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, PROGRESS_SAMPLE_DURATION_S,
+    PROGRESS_SAMPLE_RATE, VALIDATE,
+};
 use crate::state::{StepStats, WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
 use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
@@ -70,10 +73,6 @@ pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[
     CheckType::BonsaiChangesetPhaseIsPublic,
     CheckType::HgLinkNodePopulated,
 ];
-
-const PROGRESS_SAMPLE_RATE: u64 = 1000;
-const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
-const VALIDATE_PROGRESS_SAMPLE_DURATION_S: u64 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum CheckStatus {
@@ -474,15 +473,6 @@ pub fn validate(
     let mut include_check_types = try_boxfuture!(parse_check_types(sub_m));
     include_check_types.retain(|t| include_node_types.contains(&t.node_type()));
 
-    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-        logger.clone(),
-        VALIDATE,
-        repo_stats_key.clone(),
-        walk_params.progress_node_types(),
-        PROGRESS_SAMPLE_RATE,
-        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
-    ));
-
     info!(
         logger,
         "Performing check types {:?}",
@@ -503,11 +493,11 @@ pub fn validate(
         repo_stats_key,
         include_check_types,
         PROGRESS_SAMPLE_RATE,
-        Duration::from_secs(VALIDATE_PROGRESS_SAMPLE_DURATION_S),
+        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
     ));
 
     let make_sink = {
-        cloned!(ctx, walk_params.quiet);
+        cloned!(ctx, walk_params.progress_state, walk_params.quiet);
         move |walk_output| {
             cloned!(ctx, progress_state, validate_progress_state);
             let walk_progress =

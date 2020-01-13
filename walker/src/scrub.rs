@@ -7,9 +7,7 @@
  */
 
 use crate::graph::{FileContentData, Node, NodeData};
-use crate::progress::{
-    progress_stream, report_state, ProgressStateCountByType, ProgressStateMutex,
-};
+use crate::progress::{progress_stream, report_state};
 use crate::setup::{setup_common, LIMIT_DATA_FETCH_ARG, SCRUB};
 use crate::state::{WalkState, WalkStateCHashMap};
 use crate::tail::walk_exact_tail;
@@ -17,7 +15,6 @@ use crate::tail::walk_exact_tail;
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -26,10 +23,6 @@ use futures::{
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;
-use std::time::Duration;
-
-const PROGRESS_SAMPLE_RATE: u64 = 100;
-const PROGRESS_SAMPLE_DURATION_S: u64 = 1;
 
 // Force load of leaf data like file contents that graph traversal did not need
 pub fn loading_stream<InStream, SS>(
@@ -73,20 +66,15 @@ pub fn scrub_objects(
         try_boxfuture!(setup_common(SCRUB, fb, &logger, matches, sub_m));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
-    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-        logger.clone(),
-        SCRUB,
-        repo_stats_key.clone(),
-        walk_params.progress_node_types(),
-        PROGRESS_SAMPLE_RATE,
-        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
-    ));
-
     let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
 
     let make_sink = {
-        cloned!(ctx, walk_params.quiet, walk_params.scheduled_max);
+        cloned!(
+            ctx,
+            walk_params.progress_state,
+            walk_params.quiet,
+            walk_params.scheduled_max
+        );
         move |walk_output| {
             cloned!(ctx, progress_state);
             let loading = loading_stream(limit_data_fetch, scheduled_max, walk_output);

@@ -8,7 +8,8 @@
 
 use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
-use crate::progress::sort_by_string;
+use crate::progress::{sort_by_string, ProgressStateCountByType, ProgressStateMutex};
+use crate::state::StepStats;
 use crate::validate::{CheckType, WALK_TYPE};
 use crate::walk::OutgoingEdge;
 
@@ -26,7 +27,10 @@ use metaconfig_types::{Redaction, ScrubAction};
 use phases::SqlPhases;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, Logger};
-use std::{collections::HashSet, iter::FromIterator, num::NonZeroU32, str::FromStr, sync::Arc};
+use std::{
+    collections::HashSet, iter::FromIterator, num::NonZeroU32, str::FromStr, sync::Arc,
+    time::Duration,
+};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BoxFuture<BlobRepo, Error>,
@@ -42,17 +46,11 @@ pub struct RepoWalkParams {
     pub include_edge_types: HashSet<EdgeType>,
     pub tail_secs: Option<u64>,
     pub quiet: bool,
+    pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats>>,
 }
 
-impl RepoWalkParams {
-    pub fn progress_node_types(&self) -> HashSet<NodeType> {
-        let mut s = self.include_node_types.clone();
-        for e in &self.walk_roots {
-            s.insert(e.target.get_type());
-        }
-        s
-    }
-}
+pub const PROGRESS_SAMPLE_RATE: u64 = 1000;
+pub const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 
 // Sub commands
 pub const SCRUB: &'static str = "scrub";
@@ -74,6 +72,8 @@ const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
 const READ_QPS_ARG: &'static str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &'static str = "blobstore-write-qps";
+const PROGRESS_SAMPLE_RATE_ARG: &'static str = "progress-sample-rate";
+const PROGRESS_INTERVAL_ARG: &'static str = "progress-interval";
 pub const LIMIT_DATA_FETCH_ARG: &'static str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
@@ -327,6 +327,20 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Tail by polling the entry points at interval of TAIL seconds"),
         )
         .arg(
+            Arg::with_name(PROGRESS_INTERVAL_ARG)
+                .long(PROGRESS_INTERVAL_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Minimum interval between progress reports in seconds."),
+        )
+        .arg(
+            Arg::with_name(PROGRESS_SAMPLE_RATE_ARG)
+                .long(PROGRESS_SAMPLE_RATE_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Sample the walk output stream for progress roughly 1 in N steps. Only log if progress-interval has passed."),
+        )
+        .arg(
             Arg::with_name(ENABLE_DERIVE_ARG)
                 .long(ENABLE_DERIVE_ARG)
                 .takes_value(false)
@@ -527,6 +541,8 @@ pub fn setup_common(
     let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
+    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
+    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
 
     let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
 
@@ -644,6 +660,20 @@ pub fn setup_common(
     )
     .boxify();
 
+    let mut progress_node_types = include_node_types.clone();
+    for e in &walk_roots {
+        progress_node_types.insert(e.target.get_type());
+    }
+
+    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        logger.clone(),
+        walk_stats_key,
+        args::get_repo_name(fb, &matches)?,
+        progress_node_types,
+        progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
+        Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+    ));
+
     Ok((
         RepoWalkDatasources {
             blobrepo,
@@ -658,6 +688,7 @@ pub fn setup_common(
             include_edge_types,
             tail_secs,
             quiet,
+            progress_state,
         },
     ))
 }

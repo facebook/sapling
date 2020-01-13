@@ -9,7 +9,7 @@
 use crate::graph::{FileContentData, Node, NodeData};
 use crate::progress::{
     progress_stream, report_state, ProgressRecorderUnprotected, ProgressReporterUnprotected,
-    ProgressStateCountByType, ProgressStateMutex,
+    ProgressStateMutex,
 };
 use crate::setup::{setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG, SAMPLE_RATE_ARG};
 use crate::state::{WalkState, WalkStateCHashMap};
@@ -35,9 +35,6 @@ use std::{
     ops::Add,
     time::{Duration, Instant},
 };
-
-const PROGRESS_SAMPLE_RATE: u64 = 1000;
-const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 
 #[derive(Clone, Copy, Default, Debug)]
 struct SizingStats {
@@ -204,23 +201,12 @@ pub fn compression_benefit(
     ));
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
-
-    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-        logger.clone(),
-        COMPRESSION_BENEFIT,
-        repo_stats_key.clone(),
-        walk_params.progress_node_types(),
-        PROGRESS_SAMPLE_RATE,
-        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
-    ));
-
     let sizing_state = ProgressStateMutex::new(SizingState::new(logger.clone(), 1));
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
 
     let make_sink = {
-        cloned!(ctx, walk_params.quiet);
+        cloned!(ctx, walk_params.progress_state, walk_params.quiet);
         move |walk_output| {
             cloned!(ctx, progress_state, sizing_state);
             let walk_progress = progress_stream(quiet, progress_state.clone(), walk_output);
