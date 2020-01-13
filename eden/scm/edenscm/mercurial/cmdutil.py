@@ -3166,7 +3166,7 @@ def rustdisplaygraph(
             **pycompat.strkwargs(props)
         )
         msg = displayer.hunk.pop(rev)
-        ui.write(renderer.nextrow(rev, parents, char, msg).encode("utf-8"))
+        ui.write(encoding.unitolocal(renderer.nextrow(rev, parents, char, msg)))
         displayer.flush(ctx)
 
     displayer.close()
