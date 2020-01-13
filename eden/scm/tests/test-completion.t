@@ -128,6 +128,7 @@ Show debug commands if there are no other candidates
   debuglocks
   debugmanifestdirs
   debugmergestate
+  debugmetalog
   debugmutation
   debugmutationfromobsmarkers
   debugnamecomplete
@@ -324,6 +325,7 @@ Show all commands + options
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
   debugmanifestdirs: rev
   debugmergestate: 
+  debugmetalog: time-range
   debugmutation: successors
   debugmutationfromobsmarkers: 
   debugnamecomplete: 

@@ -1002,6 +1002,7 @@ Test list of internal help commands
                  print treemanifest id, and paths
    debugmergestate
                  print merge state
+   debugmetalog  show changes in commit graph over time
    debugmutation
                  display the mutation history (or future) of a commit
    debugmutationfromobsmarkers

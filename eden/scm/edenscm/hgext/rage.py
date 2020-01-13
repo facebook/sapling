@@ -273,6 +273,10 @@ def _makerage(ui, repo, **opts):
         ("df -h", lambda: shcmd("df -h", check=False)),
         # smartlog as the user sees it
         ("hg sl", lambda: hgcmd("smartlog", template="{sl_debug}")),
+        (
+            "hg debugmetalog -t 'since 2d ago'",
+            lambda: hgcmd("debugmetalog", time_range=["since 2d ago"]),
+        ),
         # unfiltered smartlog for recent hidden changesets, including full
         # node identity
         (

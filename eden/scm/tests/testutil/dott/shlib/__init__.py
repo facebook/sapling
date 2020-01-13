@@ -67,7 +67,7 @@ else:
 
 
 try:
-    from edenscm.mercurial import dispatch, encoding, ui as uimod, util
+    from edenscm.mercurial import encoding, util, pycompat
     import bindings
 except ImportError:
     raise RuntimeError("Cannot find edenscm")
@@ -309,7 +309,9 @@ def _hg(*args, **kwargs):
     cwdbefore = os.getcwd()
     fout = util.stringio()
     fin = util.stringio(stdin)
-    status = bindings.commands.run(["hg"] + list(args), fin, fout, fout)
+    sysargs = ["hg"] + list(args)
+    pycompat.sysargv = sysargs
+    status = bindings.commands.run(sysargs, fin, fout, fout)
     cwdafter = os.getcwd()
     if cwdafter != cwdbefore:
         # Revert side effect of --cwd
