@@ -1,0 +1,20 @@
+[package]
+name = "edenfs-client"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "*"
+byteorder = "1.2"
+chrono = "0.4"
+libc = "0.2"
+rust-crypto = "0.2"
+thrift-types = { path = "../thrift-types" }
+tokio-core = "0.1"
+tokio-uds = "0.1"
+
+[target.'cfg(unix)'.dependencies]
+fbthrift-socket = { path = "../../../../common/rust/thrift/socket" }
+
+[dev-dependencies]
+telemetry = { path = "../../../../scm/telemetry/telemetry" }
