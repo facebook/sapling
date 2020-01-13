@@ -1542,6 +1542,8 @@ class Test(unittest.TestCase):
             hgrc.write(b"default-date = 0 0\n")
             hgrc.write(b"[experimental]\n")
             hgrc.write(b"metalog = true\n")
+            hgrc.write(b"[format]\n")
+            hgrc.write(b"use-zstore-commit-data=true\n")
             hgrc.write(b"[lfs]\n")
             if self._watchman:
                 hgrc.write(b"[extensions]\nfsmonitor=\n")

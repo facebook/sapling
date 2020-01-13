@@ -10,6 +10,7 @@ Create a repository:
   experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
+  format.use-zstore-commit-data=true
   fsmonitor.detectrace=1 (fsmonitor !)
   remotefilelog.reponame=reponame-default
   remotefilelog.cachepath=$TESTTMP/default-hgcache

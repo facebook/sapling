@@ -162,6 +162,7 @@ more there after
   allheads
   data
   fncache
+  hgcommits
   journal.bookmarks
   journal.phaseroots
   metalog
@@ -744,6 +745,8 @@ new commits must be visible in pretxnchangegroup (issue3428)
   $ echo 'prechangegroup = hg --traceback tip' >> to/.hg/hgrc
   $ echo 'pretxnchangegroup = hg --traceback tip' >> to/.hg/hgrc
   $ echo a >> to/a
+ (trigger zstore migration)
+  $ hg --cwd to log
   $ hg --cwd to ci -Ama
   adding a
   $ hg clone to from

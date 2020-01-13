@@ -41,6 +41,7 @@ sh % "ls .hg" == r"""
 
 sh % "ls .hg/store" == r"""
     allheads
+    hgcommits
     metalog
     requires"""
 
@@ -74,7 +75,9 @@ sh % "ls .hg" == r"""
 
 sh % "ls .hg/store" == r"""
     allheads
+    hgcommits
     metalog
+    requires
     undo
     undo.backupfiles
     undo.bookmarks

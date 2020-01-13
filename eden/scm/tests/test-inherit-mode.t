@@ -90,6 +90,11 @@ new directories are setgid
   00660 ./.hg/store/data/dir/bar.i
   00660 ./.hg/store/data/foo.i
   00660 ./.hg/store/fncache
+  02775 ./.hg/store/hgcommits/
+  02775 ./.hg/store/hgcommits/v1/
+  00664 ./.hg/store/hgcommits/v1/index-id
+  00664 ./.hg/store/hgcommits/v1/log
+  00664 ./.hg/store/hgcommits/v1/meta
   02775 ./.hg/store/metalog/
   02775 ./.hg/store/metalog/blobs/
   00664 ./.hg/store/metalog/blobs/index-id
@@ -153,6 +158,11 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/data/dir/bar.i
   00660 ../push/.hg/store/data/foo.i
   00660 ../push/.hg/store/fncache
+  02775 ../push/.hg/store/hgcommits/
+  02775 ../push/.hg/store/hgcommits/v1/
+  00664 ../push/.hg/store/hgcommits/v1/index-id
+  00664 ../push/.hg/store/hgcommits/v1/log
+  00664 ../push/.hg/store/hgcommits/v1/meta
   02775 ../push/.hg/store/metalog/
   02775 ../push/.hg/store/metalog/blobs/
   00664 ../push/.hg/store/metalog/blobs/index-id
