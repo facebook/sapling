@@ -1,0 +1,20 @@
+[package]
+name = "thrift-types"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+fbthrift = { path = "../../../../thrift/lib/rust" }
+futures_preview = { package = "futures", version = "0.3" }
+thiserror = "1"
+
+eden_config = { path = "eden_config" }
+eden = { path = "eden" }
+fb303_core = { path = "fb303_core" }
+fb303 = { path = "fb303" }
+
+
+[build-dependencies]
+tempfile = "*"
