@@ -8,12 +8,18 @@
 
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_sql_factory, ReadOnlyStorage, SqlFactory};
+use blobstore_factory::{
+    make_blobstore, make_blobstore_multiplexed, make_sql_factory, ReadOnlyStorage, SqlFactory,
+};
 use fbinit::FacebookInit;
-use futures::{self, future::Future};
+use futures::{
+    self,
+    future::{self, Future},
+};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use inlinable_string::InlinableString;
-use metaconfig_types::{BlobConfig, BlobstoreId, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction, StorageConfig};
+use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use slog::Logger;
 use sql_ext::MysqlOptions;
@@ -57,10 +63,17 @@ pub fn open_blobstore(
     // TODO(ahornby) take multiple prefix for when scrubbing multiple repos
     prefix: Option<String>,
     readonly_storage: ReadOnlyStorage,
+    scrub_action: Option<ScrubAction>,
     logger: Logger,
 ) -> BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
     // Allow open of just one inner store
-    let blobconfig = try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
+    let mut blobconfig =
+        try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
+
+    let scrub_handler = scrub_action.map(|scrub_action| {
+        blobconfig.set_scrubbed(scrub_action);
+        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>
+    });
 
     let datasources = make_sql_factory(
         fb,
@@ -69,17 +82,51 @@ pub fn open_blobstore(
         readonly_storage,
         logger,
     )
-    .map(move |sql_factory| {
-        (
-            make_blobstore(
+    .and_then(move |sql_factory| {
+        let blobstore = match (scrub_handler, blobconfig) {
+            (
+                Some(scrub_handler),
+                BlobConfig::Scrub {
+                    scuba_table,
+                    blobstores,
+                    scrub_action,
+                },
+            ) => make_blobstore_multiplexed(
+                fb,
+                &scuba_table,
+                &blobstores,
+                Some(&sql_factory),
+                mysql_options,
+                readonly_storage,
+                Some((scrub_handler, scrub_action)),
+            ),
+            (
+                None,
+                BlobConfig::Multiplexed {
+                    scuba_table,
+                    blobstores,
+                },
+            ) => make_blobstore_multiplexed(
+                fb,
+                &scuba_table,
+                &blobstores,
+                Some(&sql_factory),
+                mysql_options,
+                readonly_storage,
+                None,
+            ),
+            (None, blobconfig) => make_blobstore(
                 fb,
                 &blobconfig,
                 &sql_factory,
                 mysql_options,
                 readonly_storage,
             ),
-            sql_factory,
-        )
+            (Some(_), _) => {
+                future::err(format_err!("Scrub action passed for non-scrubbable store")).boxify()
+            }
+        };
+        future::ok((blobstore, sql_factory))
     });
 
     datasources

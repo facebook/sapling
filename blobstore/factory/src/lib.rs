@@ -24,8 +24,10 @@ use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use fileblob::Fileblob;
 use itertools::Either;
 use manifoldblob::ThriftManifoldBlob;
-use metaconfig_types::{self, BlobConfig, BlobstoreId, MetadataDBConfig, ShardedFilenodesParams};
-use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
+use metaconfig_types::{
+    self, BlobConfig, BlobstoreId, MetadataDBConfig, ScrubAction, ShardedFilenodesParams,
+};
+use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use readonlyblob::ReadOnlyBlobstore;
 use rocksblob::Rocksblob;
@@ -286,7 +288,7 @@ fn make_blobstore_impl(
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
 
-    let read_write = match blobconfig {
+    let store = match blobconfig {
         Disabled => {
             Ok(Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn Blobstore>)
                 .into_future()
@@ -352,30 +354,33 @@ fn make_blobstore_impl(
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()
         .boxify(),
-
         Multiplexed {
             scuba_table,
             blobstores,
-        } => make_blobstore_multiplexed_impl(
+        } => make_blobstore_multiplexed(
             fb,
             scuba_table,
             blobstores,
             sql_factory,
             mysql_options,
             readonly_storage,
-            Scrubbing::Disabled,
+            None,
         ),
         Scrub {
             scuba_table,
             blobstores,
-        } => make_blobstore_multiplexed_impl(
+            scrub_action,
+        } => make_blobstore_multiplexed(
             fb,
             scuba_table,
             blobstores,
             sql_factory,
             mysql_options,
             readonly_storage,
-            Scrubbing::Enabled,
+            Some((
+                Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+                *scrub_action,
+            )),
         ),
         ManifoldWithTtl {
             bucket,
@@ -393,24 +398,32 @@ fn make_blobstore_impl(
             .boxify(),
     };
 
-    if readonly_storage.0 {
-        read_write
+    let store = if readonly_storage.0 {
+        store
             .map(|inner| Arc::new(ReadOnlyBlobstore::new(inner)) as Arc<dyn Blobstore>)
             .boxify()
     } else {
-        read_write
-    }
+        store
+    };
+
+    store
 }
 
-fn make_blobstore_multiplexed_impl(
+pub fn make_blobstore_multiplexed(
     fb: FacebookInit,
     scuba_table: &Option<String>,
     inner_config: &[(BlobstoreId, BlobConfig)],
     sql_factory: Option<&SqlFactory>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-    scrubbing: Scrubbing,
+    scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
+    let component_readonly = match &scrub_args {
+        // Need to write to components to repair them.
+        Some((_, ScrubAction::Repair)) => ReadOnlyStorage(false),
+        _ => readonly_storage,
+    };
+
     let components: Vec<_> = inner_config
         .iter()
         .map({
@@ -422,7 +435,7 @@ fn make_blobstore_multiplexed_impl(
                     config,
                     sql_factory,
                     mysql_options,
-                    readonly_storage,
+                    component_readonly,
                 )
                 .map({ move |store| (blobstoreid, store) })
             }
@@ -444,15 +457,18 @@ fn make_blobstore_multiplexed_impl(
             cloned!(scuba_table);
             move |queue| {
                 future::join_all(components).map({
-                    move |components| match scrubbing {
-                        Scrubbing::Enabled => Arc::new(ScrubBlobstore::new(
+                    move |components| match scrub_args {
+                        Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
                             components,
                             queue,
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                                 ScubaSampleBuilder::new(fb, table)
                             }),
-                        )) as Arc<dyn Blobstore>,
-                        Scrubbing::Disabled => Arc::new(MultiplexedBlobstore::new(
+                            scrub_handler,
+                            scrub_action,
+                        ))
+                            as Arc<dyn Blobstore>,
+                        None => Arc::new(MultiplexedBlobstore::new(
                             components,
                             queue,
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {

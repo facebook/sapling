@@ -10,8 +10,10 @@
 
 pub mod base;
 pub mod queue;
+pub mod scrub;
 
-pub use crate::queue::{MultiplexedBlobstore, ScrubBlobstore};
+pub use crate::queue::MultiplexedBlobstore;
+pub use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 
 #[cfg(test)]
 mod test;

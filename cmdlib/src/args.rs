@@ -31,7 +31,9 @@ use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
 use blobstore_factory::Scrubbing;
 use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, StorageConfig};
+use metaconfig_types::{
+    BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction, StorageConfig,
+};
 use mononoke_types::RepositoryId;
 use slog_logview::LogViewDrain;
 use sql_ext::MysqlOptions;
@@ -888,7 +890,10 @@ fn open_repo_internal_with_repo_id<'a>(
     let (reponame, config) = {
         let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(fb, matches, repo_id));
         if let Scrubbing::Enabled = scrub {
-            config.storage_config.blobstore.set_scrubbed();
+            config
+                .storage_config
+                .blobstore
+                .set_scrubbed(ScrubAction::ReportOnly);
         }
         (reponame, config)
     };

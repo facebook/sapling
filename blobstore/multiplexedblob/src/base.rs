@@ -34,7 +34,7 @@ use tokio::timer::timeout::Error as TimeoutError;
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 const SAMPLE_RATE: i32 = 100;
-const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / (SAMPLE_RATE as f32));
+pub const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / (SAMPLE_RATE as f32));
 
 type BlobstoresWithEntry = HashSet<BlobstoreId>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
@@ -158,7 +158,7 @@ impl MultiplexedBlobstoreBase {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    ) -> BoxFuture<Option<BlobstoreBytes>, ErrorKind> {
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
 
         let requests = self
@@ -174,7 +174,7 @@ impl MultiplexedBlobstoreBase {
                     });
 
                 if successes.is_empty() {
-                    future::err(ErrorKind::AllFailed(errors.into()).into())
+                    future::err(ErrorKind::AllFailed(errors.into()))
                 } else {
                     let mut best_value = None;
                     let mut missing = HashSet::new();
@@ -186,22 +186,26 @@ impl MultiplexedBlobstoreBase {
                             missing.insert(blobstore_id);
                         } else {
                             answered.insert(blobstore_id);
-                        }
-                        if best_value.is_none() {
-                            best_value = value;
-                        } else if value != best_value {
-                            all_same = false;
+                            if best_value.is_none() {
+                                best_value = value;
+                            } else if value != best_value {
+                                all_same = false;
+                            }
                         }
                     }
 
-                    match (all_same, missing.is_empty() && best_value.is_some()) {
-                        (false, _) => future::err(
-                            ErrorKind::ValueMismatch(Arc::new(answered), Arc::new(missing)).into(),
-                        ),
-                        (true, false) => future::err(
-                            ErrorKind::SomeMissingItem(Arc::new(missing), best_value).into(),
-                        ),
-                        (true, true) => future::ok(best_value),
+                    match (all_same, best_value.is_some(), missing.is_empty()) {
+                        (false, _, _) => future::err(ErrorKind::ValueMismatch(
+                            Arc::new(answered),
+                            Arc::new(missing),
+                        )),
+                        (true, false, _) => {
+                            future::err(ErrorKind::SomeFailedOthersNone(errors.into()))
+                        }
+                        (true, true, false) => {
+                            future::err(ErrorKind::SomeMissingItem(Arc::new(missing), best_value))
+                        }
+                        (true, true, true) => future::ok(best_value),
                     }
                 }
             })

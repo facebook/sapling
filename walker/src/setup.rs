@@ -22,7 +22,7 @@ use fbinit::FacebookInit;
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;
-use metaconfig_types::Redaction;
+use metaconfig_types::{Redaction, ScrubAction};
 use phases::SqlPhases;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, Logger};
@@ -70,6 +70,7 @@ const EXCLUDE_EDGE_TYPE_ARG: &'static str = "exclude-edge-type";
 const INCLUDE_EDGE_TYPE_ARG: &'static str = "include-edge-type";
 const BOOKMARK_ARG: &'static str = "bookmark";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
+const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
 pub const LIMIT_DATA_FETCH_ARG: &'static str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
@@ -222,7 +223,7 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app_template = args::MononokeApp::new(app_name);
 
     let scrub_objects =
-        setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, aka copy any missing data from stores where it is found to stores where it is missing"))
+        setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"))
         .arg(
             Arg::with_name(LIMIT_DATA_FETCH_ARG)
                 .long(LIMIT_DATA_FETCH_ARG)
@@ -329,6 +330,13 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("Enable derivation of data (e.g. hg, file metadata). Default is false"),
+        )
+        .arg(
+            Arg::with_name(SCRUB_BLOBSTORE_ACTION_ARG)
+                .long(SCRUB_BLOBSTORE_ACTION_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
         )
         .arg(
             Arg::with_name(EXCLUDE_NODE_TYPE_ARG)
@@ -572,6 +580,11 @@ pub fn setup_common(
     scuba_builder.add_common_server_data();
     scuba_builder.add("walk_type", walk_stats_key);
 
+    let scrub_action = sub_m
+        .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
+        .map(ScrubAction::from_str)
+        .transpose()?;
+
     // Open the blobstore explicitly so we can do things like run on one side of a multiplex
     let datasources_fut = blobstore::open_blobstore(
         fb,
@@ -580,6 +593,7 @@ pub fn setup_common(
         inner_blobstore_id,
         None,
         readonly_storage,
+        scrub_action,
         logger.clone(),
     );
 

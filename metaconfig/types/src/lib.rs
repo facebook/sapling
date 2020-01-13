@@ -16,7 +16,7 @@ use anyhow::{anyhow, Error, Result};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
-    mem,
+    fmt, mem,
     num::NonZeroUsize,
     path::PathBuf,
     str,
@@ -455,6 +455,12 @@ impl BlobstoreId {
     }
 }
 
+impl fmt::Display for BlobstoreId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl From<BlobstoreId> for Value {
     fn from(id: BlobstoreId) -> Self {
         Value::UInt(id.0)
@@ -536,6 +542,27 @@ impl TryFrom<RawStorageConfig> for StorageConfig {
     }
 }
 
+/// What to do when the ScrubBlobstore finds a problem
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize)]
+pub enum ScrubAction {
+    /// Log items needing repair
+    ReportOnly,
+    /// Do repairs
+    Repair,
+}
+
+impl FromStr for ScrubAction {
+    type Err = Error;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        match string {
+            "ReportOnly" => Ok(ScrubAction::ReportOnly),
+            "Repair" => Ok(ScrubAction::Repair),
+            _ => Err(anyhow!("Unable to parse {} as {}", string, "ScrubAction")),
+        }
+    }
+}
+
 /// Configuration for a blobstore
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BlobConfig {
@@ -587,6 +614,8 @@ pub enum BlobConfig {
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, BlobConfig)>,
+        /// Whether to attempt repair
+        scrub_action: ScrubAction,
     },
     /// Store in a manifold bucket, but every object will have an expiration
     ManifoldWithTtl {
@@ -618,7 +647,7 @@ impl BlobConfig {
     /// Change all internal blobstores to scrub themselves for errors where possible.
     /// This maximises error rates, and asks blobstores to silently fix errors when they are able
     /// to do so - ideal for repository checkers.
-    pub fn set_scrubbed(&mut self) {
+    pub fn set_scrubbed(&mut self, scrub_action: ScrubAction) {
         use BlobConfig::{Multiplexed, Scrub};
 
         if let Multiplexed {
@@ -629,11 +658,12 @@ impl BlobConfig {
             let scuba_table = mem::replace(scuba_table, None);
             let mut blobstores = mem::replace(blobstores, Vec::new());
             for (_, store) in blobstores.iter_mut() {
-                store.set_scrubbed();
+                store.set_scrubbed(scrub_action);
             }
             *self = Scrub {
                 scuba_table,
                 blobstores,
+                scrub_action,
             };
         }
     }
