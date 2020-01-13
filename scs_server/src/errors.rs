@@ -6,6 +6,8 @@
  * directory of this source tree.
  */
 
+use std::error::Error as StdError;
+
 use mononoke_api::MononokeError;
 use source_control as thrift;
 use source_control::services::source_control_service as service;
@@ -13,7 +15,6 @@ use source_control::services::source_control_service as service;
 pub(crate) enum ServiceError {
     Request(thrift::RequestError),
     Internal(thrift::InternalError),
-    Mononoke(MononokeError),
 }
 
 impl From<thrift::RequestError> for ServiceError {
@@ -30,7 +31,16 @@ impl From<thrift::InternalError> for ServiceError {
 
 impl From<MononokeError> for ServiceError {
     fn from(e: MononokeError) -> Self {
-        Self::Mononoke(e)
+        match e {
+            MononokeError::InvalidRequest(reason) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::INVALID_REQUEST,
+                reason,
+            }),
+            MononokeError::InternalError(error) => Self::Internal(thrift::InternalError {
+                reason: error.to_string(),
+                backtrace: error.backtrace().map(ToString::to_string),
+            }),
+        }
     }
 }
 
@@ -41,7 +51,6 @@ macro_rules! impl_into_thrift_error {
                 match e {
                     ServiceError::Request(e) => e.into(),
                     ServiceError::Internal(e) => e.into(),
-                    ServiceError::Mononoke(e) => e.into(),
                 }
             }
         }

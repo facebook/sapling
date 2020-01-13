@@ -17,7 +17,7 @@ use mononoke_api::{
     SessionContainer, TreeContext, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
-use scuba_ext::{ScubaSampleBuilder, ScubaValue};
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
 use source_control::server::SourceControlService;
@@ -28,6 +28,7 @@ use tracing::TraceContext;
 
 use crate::errors;
 use crate::from_request::FromRequest;
+use crate::params::AddScubaParams;
 use crate::specifiers::SpecifierExt;
 
 #[derive(Clone)]
@@ -61,11 +62,15 @@ impl SourceControlServiceImpl {
 
     pub(crate) fn create_ctx(
         &self,
+        name: &str,
         req_ctxt: &RequestContext,
         specifier: Option<&dyn SpecifierExt>,
+        params: &dyn AddScubaParams,
     ) -> Result<CoreContext, errors::ServiceError> {
         let mut scuba = self.scuba_builder.clone();
-        scuba.add_common_server_data().add("type", "thrift");
+        scuba.add_common_server_data();
+        scuba.add("type", "thrift");
+        scuba.add("method", name);
         if let Some(specifier) = specifier {
             if let Some(reponame) = specifier.scuba_reponame() {
                 scuba.add("reponame", reponame);
@@ -77,6 +82,7 @@ impl SourceControlServiceImpl {
                 scuba.add("path", path);
             }
         }
+        params.add_scuba_params(&mut scuba);
         let session_id = generate_session_id();
         scuba.add("session_uuid", session_id.to_string());
 
@@ -101,7 +107,9 @@ impl SourceControlServiceImpl {
             None,
         );
 
-        Ok(session.new_context(self.logger.clone(), scuba))
+        let ctx = session.new_context(self.logger.clone(), scuba);
+
+        Ok(ctx)
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.
@@ -221,24 +229,61 @@ impl SourceControlServiceImpl {
     }
 }
 
+fn log_result<T>(ctx: CoreContext, result: &Result<T, errors::ServiceError>) {
+    let (status, error) = match result {
+        Ok(_) => ("SUCCESS", None),
+        Err(errors::ServiceError::Request(e)) => ("REQUEST_ERROR", Some(format!("{:?}", e))),
+        Err(errors::ServiceError::Internal(e)) => ("INTERNAL_ERROR", Some(format!("{:?}", e))),
+    };
+    let mut scuba = ctx.scuba().clone();
+    scuba.add("status", status);
+    if let Some(error) = error {
+        scuba.add("error", error.as_str());
+    }
+    scuba.log_with_msg("Request complete", None);
+}
+
+// Define a macro to construct a CoreContext based on the thrift parameters.
+macro_rules! create_ctx {
+    ( $service_impl:expr, $method_name:ident, $req_ctxt:ident, $params_name:ident ) => {
+        $service_impl.create_ctx(stringify!($method_name), $req_ctxt, None, &$params_name)
+    };
+
+    ( $service_impl:expr, $method_name:ident, $req_ctxt:ident, $obj_name:ident, $params_name:ident ) => {
+        $service_impl.create_ctx(
+            stringify!($method_name),
+            $req_ctxt,
+            Some(&$obj_name),
+            &$params_name,
+        )
+    };
+}
+
 // Define a macro that generates a non-async wrapper that delegates to the
 // async implementation of the method.
 //
 // The implementations of the methods can be found in the `methods` module.
 macro_rules! impl_thrift_methods {
-    ( $( async fn $method_name:ident($( $param_name:ident : $param_type:ty, )*) -> $result_type:ty; )* ) => {
+    ( $( async fn $method_name:ident($( $param_name:ident : $param_type:ty, )*) -> Result<$ok_type:ty, $err_type:ty>; )* ) => {
         $(
             fn $method_name<'implementation, 'req_ctxt, 'async_trait>(
                 &'implementation self,
                 req_ctxt: &'req_ctxt RequestContext,
                 $( $param_name: $param_type ),*
-            ) -> Pin<Box<dyn Future<Output = $result_type> + Send + 'async_trait>>
+            ) -> Pin<Box<dyn Future<Output = Result<$ok_type, $err_type>> + Send + 'async_trait>>
             where
                 'implementation: 'async_trait,
                 'req_ctxt: 'async_trait,
                 Self: Sync + 'async_trait,
             {
-                Box::pin((self.0).$method_name(req_ctxt, $( $param_name ),* ))
+                let handler = async move {
+                    let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*)?;
+                    ctx.scuba().clone().log_with_msg("Request start", None);
+                    let res = (self.0).$method_name(ctx.clone(), $( $param_name ),* ).await;
+                    log_result(ctx, &res);
+                    Ok(res?)
+                };
+                Box::pin(handler)
             }
         )*
     }

@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use context::CoreContext;
 use source_control as thrift;
-use source_control::services::source_control_service as service;
-use srserver::RequestContext;
 
+use crate::errors;
 use crate::from_request::check_range_and_convert;
 use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -18,11 +18,10 @@ impl SourceControlServiceImpl {
     /// List the contents of a directory.
     pub(crate) async fn tree_list(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         tree: thrift::TreeSpecifier,
         params: thrift::TreeListParams,
-    ) -> Result<thrift::TreeListResponse, service::TreeListExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&tree))?;
+    ) -> Result<thrift::TreeListResponse, errors::ServiceError> {
         let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
         let offset: usize = check_range_and_convert("offset", params.offset, 0..)?;
         let limit: usize = check_range_and_convert(

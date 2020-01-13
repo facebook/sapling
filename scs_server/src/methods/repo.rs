@@ -11,6 +11,7 @@ use std::convert::TryFrom;
 
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
+use context::CoreContext;
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::stream::FuturesOrdered;
@@ -20,8 +21,6 @@ use mononoke_api::{
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
-use source_control::services::source_control_service as service;
-use srserver::RequestContext;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
@@ -35,11 +34,10 @@ impl SourceControlServiceImpl {
     /// the requested indentity schemes.
     pub(crate) async fn repo_resolve_bookmark(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoResolveBookmarkParams,
-    ) -> Result<thrift::RepoResolveBookmarkResponse, service::RepoResolveBookmarkExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&repo))?;
+    ) -> Result<thrift::RepoResolveBookmarkResponse, errors::ServiceError> {
         let repo = self.repo(ctx, &repo)?;
         match repo.resolve_bookmark(params.bookmark_name).await? {
             Some(cs) => {
@@ -59,11 +57,10 @@ impl SourceControlServiceImpl {
     /// List bookmarks.
     pub(crate) async fn repo_list_bookmarks(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoListBookmarksParams,
-    ) -> Result<thrift::RepoListBookmarksResponse, service::RepoListBookmarksExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&repo))?;
+    ) -> Result<thrift::RepoListBookmarksResponse, errors::ServiceError> {
         let limit = match check_range_and_convert(
             "limit",
             params.limit,
@@ -98,11 +95,10 @@ impl SourceControlServiceImpl {
     /// Create a new commit.
     pub(crate) async fn repo_create_commit(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateCommitParams,
-    ) -> Result<thrift::RepoCreateCommitResponse, service::RepoCreateCommitExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&repo))?;
+    ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
         let repo = self.repo(ctx, &repo)?.write().await?;
 
         let parents: Vec<_> = params

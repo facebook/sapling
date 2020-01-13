@@ -9,14 +9,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::{TryFrom, TryInto};
 
+use context::CoreContext;
 use futures_util::{future, stream, try_join, StreamExt, TryStreamExt};
 use mononoke_api::{
     unified_diff, ChangesetContext, ChangesetSpecifier, CopyInfo, MononokeError, MononokePath,
     RepoContext,
 };
 use source_control as thrift;
-use source_control::services::source_control_service as service;
-use srserver::RequestContext;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
@@ -32,11 +31,10 @@ impl SourceControlServiceImpl {
     /// Look up commit.
     pub(crate) async fn commit_lookup(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLookupParams,
-    ) -> Result<thrift::CommitLookupResponse, service::CommitLookupExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
         let repo = self.repo(ctx, &commit.repo)?;
         match repo
             .changeset(ChangesetSpecifier::from_request(&commit.id)?)
@@ -59,11 +57,10 @@ impl SourceControlServiceImpl {
     /// Get diff.
     pub(crate) async fn commit_file_diffs(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFileDiffsParams,
-    ) -> Result<thrift::CommitFileDiffsResponse, service::CommitFileDiffsExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<thrift::CommitFileDiffsResponse, errors::ServiceError> {
         let context_lines = params.context as usize;
 
         // Check the path count limit
@@ -144,11 +141,10 @@ impl SourceControlServiceImpl {
     /// Get commit info.
     pub(crate) async fn commit_info(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitInfoParams,
-    ) -> Result<thrift::CommitInfo, service::CommitInfoExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<thrift::CommitInfo, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
 
         async fn map_parent_identities(
@@ -193,11 +189,10 @@ impl SourceControlServiceImpl {
     /// Returns `true` if this commit is an ancestor of `other_commit`.
     pub(crate) async fn commit_is_ancestor_of(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitIsAncestorOfParams,
-    ) -> Result<bool, service::CommitIsAncestorOfExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<bool, errors::ServiceError> {
         let repo = self.repo(ctx, &commit.repo)?;
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
@@ -220,11 +215,10 @@ impl SourceControlServiceImpl {
     // Diff two commits
     pub(crate) async fn commit_compare(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCompareParams,
-    ) -> Result<thrift::CommitCompareResponse, service::CommitCompareExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<thrift::CommitCompareResponse, errors::ServiceError> {
         let (repo, base_changeset) = self.repo_changeset(ctx, &commit).await?;
 
         let other_changeset_id = match &params.other_commit_id {
@@ -284,11 +278,10 @@ impl SourceControlServiceImpl {
     /// Returns files that match the criteria
     pub(crate) async fn commit_find_files(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFindFilesParams,
-    ) -> Result<thrift::CommitFindFilesResponse, service::CommitFindFilesExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<thrift::CommitFindFilesResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let limit: usize = check_range_and_convert(
             "limit",
@@ -322,11 +315,10 @@ impl SourceControlServiceImpl {
     /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo
     pub(crate) async fn commit_lookup_xrepo(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLookupXRepoParams,
-    ) -> Result<thrift::CommitLookupResponse, service::CommitLookupXrepoExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit))?;
+    ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
         let repo = self.repo(ctx.clone(), &commit.repo)?;
         let other_repo = self.repo(ctx, &params.other_repo)?;
         match repo

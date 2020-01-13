@@ -6,11 +6,10 @@
  * directory of this source tree.
  */
 
+use context::CoreContext;
 use futures_util::future;
 use mononoke_api::{ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
-use source_control::services::source_control_service as service;
-use srserver::RequestContext;
 use std::collections::{BTreeSet, HashMap};
 use std::iter::FromIterator;
 
@@ -25,11 +24,10 @@ impl SourceControlServiceImpl {
     /// Returns information about the file or directory at a path in a commit.
     pub(crate) async fn commit_path_info(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         _params: thrift::CommitPathInfoParams,
-    ) -> Result<thrift::CommitPathInfoResponse, service::CommitPathInfoExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit_path))?;
+    ) -> Result<thrift::CommitPathInfoResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
         let response = match path.entry().await? {
@@ -76,11 +74,10 @@ impl SourceControlServiceImpl {
 
     pub(crate) async fn commit_path_blame(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathBlameParams,
-    ) -> Result<thrift::CommitPathBlameResponse, service::CommitPathBlameExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&commit_path))?;
+    ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
 

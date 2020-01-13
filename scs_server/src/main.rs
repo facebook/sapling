@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+#![feature(backtrace)]
 #![deny(unused)]
 #![type_length_limit = "2097152"]
 
@@ -38,6 +39,7 @@ mod from_request;
 mod into_response;
 mod methods;
 mod monitoring;
+mod params;
 mod source_control_impl;
 mod specifiers;
 

@@ -67,9 +67,110 @@ try talking to the server before it is up
 start SCS server
   $ start_and_wait_for_scs_server --scuba-log-file "$TESTTMP/scuba.json"
 
+make some simple requests that we can use to check scuba logging
+
 repos
   $ scsc repos
   repo
+
+lookup using bookmark
+  $ scsc lookup --repo repo -B BOOKMARK_C -S bonsai
+  006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
+
+diff paths only
+  $ scsc diff --repo repo --paths-only -B BOOKMARK_B --bonsai-id "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b"
+  M b
+  A binary
+  A c
+
+check the scuba logs
+  $ summarize_scuba_json "Request.*" < "$TESTTMP/scuba.json" \
+  >     .normal.log_tag .normal.msg .normal.method \
+  >     .normal.commit .normal.other_commit .normal.path \
+  >     .normal.bookmark_name .normvector.identity_schemes \
+  >     .normal.status .normal.error
+  {
+    "log_tag": "Request start",
+    "method": "list_repos"
+  }
+  {
+    "log_tag": "Request complete",
+    "method": "list_repos",
+    "status": "SUCCESS"
+  }
+  {
+    "bookmark_name": "BOOKMARK_C",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request start",
+    "method": "repo_resolve_bookmark"
+  }
+  {
+    "bookmark_name": "BOOKMARK_C",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request complete",
+    "method": "repo_resolve_bookmark",
+    "status": "SUCCESS"
+  }
+  {
+    "commit": "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request start",
+    "method": "commit_lookup"
+  }
+  {
+    "commit": "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request complete",
+    "method": "commit_lookup",
+    "status": "SUCCESS"
+  }
+  {
+    "bookmark_name": "BOOKMARK_B",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request start",
+    "method": "repo_resolve_bookmark"
+  }
+  {
+    "bookmark_name": "BOOKMARK_B",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request complete",
+    "method": "repo_resolve_bookmark",
+    "status": "SUCCESS"
+  }
+  {
+    "commit": "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request start",
+    "method": "commit_compare",
+    "other_commit": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb"
+  }
+  {
+    "commit": "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b",
+    "identity_schemes": [
+      "BONSAI"
+    ],
+    "log_tag": "Request complete",
+    "method": "commit_compare",
+    "other_commit": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+    "status": "SUCCESS"
+  }
+
+commands after this point may run requests in parallel, which can change the ordering
+of the scuba samples.
 
 diff
   $ scsc diff --repo repo -B BOOKMARK_B -i "$COMMIT_C"
@@ -238,10 +339,6 @@ blame
     }
   ]
 
-lookup using bookmarks
-  $ scsc lookup --repo repo  -B BOOKMARK_B
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299
-
 lookup, commit without globalrev
   $ scsc lookup --repo repo  -B BOOKMARK_B -S bonsai,hg,globalrev
   bonsai=c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb
@@ -354,7 +451,3 @@ list directory
   file        10  b
   file         5  binary
   file         0  c
-
-check scuba logs
-  $ interesting_tags="TBD"
-  $ jq "if (.normal.log_tag | match(\"^($interesting_tags)\$\")) then (.normal.log_tag, .normal.msg) else empty end" < "$TESTTMP/scuba.json"

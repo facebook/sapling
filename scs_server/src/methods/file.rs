@@ -9,11 +9,10 @@
 use std::cmp::min;
 
 use bytes::BufMut;
+use context::CoreContext;
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use source_control as thrift;
-use source_control::services::source_control_service as service;
-use srserver::RequestContext;
 
 use crate::errors;
 use crate::from_request::check_range_and_convert;
@@ -25,11 +24,10 @@ impl SourceControlServiceImpl {
     /// Test whether a file exists.
     pub(crate) async fn file_exists(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         file: thrift::FileSpecifier,
         _params: thrift::FileExistsParams,
-    ) -> Result<bool, service::FileExistsExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&file))?;
+    ) -> Result<bool, errors::ServiceError> {
         let (_repo, file) = self.repo_file(ctx, &file).await?;
         Ok(file.is_some())
     }
@@ -37,11 +35,10 @@ impl SourceControlServiceImpl {
     /// Get file info.
     pub(crate) async fn file_info(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         file: thrift::FileSpecifier,
         _params: thrift::FileInfoParams,
-    ) -> Result<thrift::FileInfo, service::FileInfoExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&file))?;
+    ) -> Result<thrift::FileInfo, errors::ServiceError> {
         match self.repo_file(ctx, &file).await? {
             (_repo, Some(file)) => Ok(file.metadata().await?.into_response()),
             (_repo, None) => Err(errors::file_not_found(file.description()).into()),
@@ -51,11 +48,10 @@ impl SourceControlServiceImpl {
     /// Get a chunk of file content.
     pub(crate) async fn file_content_chunk(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         file: thrift::FileSpecifier,
         params: thrift::FileContentChunkParams,
-    ) -> Result<thrift::FileChunk, service::FileContentChunkExn> {
-        let ctx = self.create_ctx(req_ctxt, Some(&file))?;
+    ) -> Result<thrift::FileChunk, errors::ServiceError> {
         let offset: u64 = check_range_and_convert("offset", params.offset, 0..)?;
         let size: u64 = check_range_and_convert(
             "size",

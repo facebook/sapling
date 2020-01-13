@@ -6,10 +6,10 @@
  * directory of this source tree.
  */
 
+use context::CoreContext;
 use source_control as thrift;
-use source_control::services::source_control_service as service;
-use srserver::RequestContext;
 
+use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 pub(crate) mod commit;
@@ -21,10 +21,9 @@ pub(crate) mod tree;
 impl SourceControlServiceImpl {
     pub(crate) async fn list_repos(
         &self,
-        req_ctxt: &RequestContext,
+        _ctx: CoreContext,
         _params: thrift::ListReposParams,
-    ) -> Result<Vec<thrift::Repo>, service::ListReposExn> {
-        let _ctx = self.create_ctx(req_ctxt, None)?;
+    ) -> Result<Vec<thrift::Repo>, errors::ServiceError> {
         let mut repo_names: Vec<_> = self
             .mononoke
             .repo_names()

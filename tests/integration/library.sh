@@ -1405,3 +1405,16 @@ function git() {
   GIT_AUTHOR_EMAIL="$email" \
   command git "$@"
 }
+
+function summarize_scuba_json() {
+  local interesting_tags
+  local key_spec
+  interesting_tags="$1"
+  shift
+  key_spec=""
+  for key in "$@"
+  do
+     key_spec="$key_spec + (if (${key} != null) then {${key##*.}: ${key}} else {} end)"
+  done
+  jq -S "if (.normal.log_tag | match(\"^($interesting_tags)\$\")) then ${key_spec:3} else empty end"
+}
