@@ -1403,6 +1403,9 @@ PyMODINIT_FUNC PyInit_osutil(void) {
 
   m = PyModule_Create(&osutil_module);
   PyModule_AddIntConstant(m, "version", version);
+#ifndef _WIN32
+  PyModule_AddIntConstant(m, "O_CLOEXEC", O_CLOEXEC);
+#endif
   return m;
 }
 #else
