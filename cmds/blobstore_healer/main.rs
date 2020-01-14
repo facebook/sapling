@@ -159,12 +159,7 @@ fn maybe_schedule_healer_for_storage(
                 drain_only,
             );
 
-            if dry_run {
-                let ctx = CoreContext::new_with_logger(fb, logger);
-                repo_healer.heal(ctx).boxify()
-            } else {
-                schedule_everlasting_healing(fb, logger, repo_healer, replication_lag_db_conns)
-            }
+            schedule_everlasting_healing(fb, logger, repo_healer, replication_lag_db_conns)
         },
     );
     Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
@@ -184,28 +179,27 @@ fn schedule_everlasting_healing(
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
         cloned!(logger, replication_lag_db_conns);
-        repo_healer.heal(ctx).and_then(move |()| {
-            ensure_small_db_replication_lag(logger, replication_lag_db_conns)
+        let max_replication_lag_fn = max_replication_lag(replication_lag_db_conns);
+
+        repo_healer
+            .heal(ctx)
+            .and_then(move |last_batch_full_sized| {
+                ensure_small_db_replication_lag(
+                    logger,
+                    max_replication_lag_fn,
+                    last_batch_full_sized,
+                )
                 .map(|()| Loop::Continue(()))
-        })
+            })
     });
 
     spawn_future(fut).boxify()
 }
 
-fn ensure_small_db_replication_lag(
-    logger: Logger,
+fn max_replication_lag(
     replication_lag_db_conns: Arc<Vec<(String, Connection)>>,
-) -> impl Future<Item = (), Error = Error> {
-    // Make sure we've slept at least once before continuing
-    let last_max_lag: Option<usize> = None;
-
-    loop_fn(last_max_lag, move |last_max_lag| {
-        if last_max_lag.is_some() && last_max_lag.unwrap() < MAX_ALLOWED_REPLICATION_LAG_SECS {
-            // No need check rep lag again, was ok on last loop
-            return ok(Loop::Break(())).left_future();
-        }
-
+) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
+    move || {
         // Check what max replication lag on replicas, and sleep for that long.
         // This is done in order to avoid overloading the db.
         let lag_secs_futs: Vec<_> = replication_lag_db_conns
@@ -223,42 +217,89 @@ fn ensure_small_db_replication_lag(
                             } else {
                                 Err(err)
                             }
-                        },
+                        }
                         None => Err(err),
                     })
                     .and_then(|maybe_secs| {
                         let err = format_err!(
-                            "Could not fetch db replication lag for {}. Failing to avoid overloading db",
-                            region
-                        );
+                    "Could not fetch db replication lag for {}. Failing to avoid overloading db",
+                    region
+                );
 
-                        maybe_secs
-                            .ok_or(err)
-                            .map(|lag_secs| (region, lag_secs))
+                        maybe_secs.ok_or(err).map(|lag_secs| (region, lag_secs))
                     })
             })
             .collect();
 
+        Box::new(join_all(lag_secs_futs).and_then(move |lags| {
+            let (region, max_lag_secs): (String, usize) = lags
+                .into_iter()
+                .max_by_key(|(_, lag)| *lag)
+                .unwrap_or(("".to_string(), 0));
+            ok((region, max_lag_secs))
+        }))
+    }
+}
+
+fn ensure_small_db_replication_lag<F>(
+    logger: Logger,
+    compute_max_lag: F,
+    last_batch_full_sized: bool,
+) -> impl Future<Item = (), Error = Error>
+where
+    F: Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send>,
+{
+    // Make sure we've slept at least once before continuing
+    let last_max_lag: Option<usize> = None;
+
+    loop_fn(last_max_lag, move |last_max_lag| {
+        if last_max_lag.is_some() && last_max_lag.unwrap() < MAX_ALLOWED_REPLICATION_LAG_SECS {
+            // No need check rep lag again, was ok on last loop
+            return ok(Loop::Break(())).left_future();
+        }
+
         cloned!(logger);
 
-        join_all(lag_secs_futs)
-            .and_then(move |lags| {
-                let (region, max_lag_secs): (String, usize) = lags
-                    .into_iter()
-                    .max_by_key(|(_, lag)| *lag)
-                    .unwrap_or(("".to_string(), 0));
+        // Check what max replication lag on replicas, and sleep for that long.
+        // This is done in order to avoid overloading the db.
+        compute_max_lag()
+            .and_then(move |(region, max_lag_secs)| {
                 info!(
                     logger,
-                    "Max replication lag is {}, {}s", region, max_lag_secs
+                    "Max replication lag is {}, {}s", region, max_lag_secs,
                 );
-                let max_lag = Duration::from_secs(max_lag_secs as u64);
 
+                // if there are items remaining (i.e. last batch read was full sized),
+                // and lag < bound, carry on without pause
+                if last_batch_full_sized && max_lag_secs < MAX_ALLOWED_REPLICATION_LAG_SECS {
+                    info!(
+                        logger,
+                        "As there are items remaining and lag < bound, carry on without pause",
+                    );
+                    return ok(Loop::Break(())).left_future();
+                }
+
+                // if last batch read was not full,  wait at least 1 second,
+                // to avoid busy looping as don't want to hammer the database
+                // with thousands of reads a second.
+                let max_lag_secs = if !last_batch_full_sized {
+                    info!(
+                        logger,
+                        "As the last batch was not full sized, wait at least one second",
+                    );
+                    std::cmp::max(1, max_lag_secs)
+                } else {
+                    max_lag_secs
+                };
+
+                let max_lag = Duration::from_secs(max_lag_secs as u64);
                 let start = Instant::now();
                 let next_iter_deadline = start + max_lag;
 
                 Delay::new(next_iter_deadline)
                     .map(move |()| Loop::Continue(Some(max_lag_secs)))
                     .from_err()
+                    .right_future()
             })
             .right_future()
     })

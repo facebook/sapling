@@ -60,7 +60,7 @@ impl Healer {
 
     /// Heal one batch of entries. It selects a set of entries which are not too young (bounded
     /// by ENTRY_HEALING_MIN_AGE) up to `blobstore_sync_queue_limit` at once.
-    pub fn heal(&self, ctx: CoreContext) -> impl Future<Item = (), Error = Error> {
+    pub fn heal(&self, ctx: CoreContext) -> impl Future<Item = bool, Error = Error> {
         cloned!(
             self.logger,
             self.blobstore_sync_queue_limit,
@@ -70,6 +70,7 @@ impl Healer {
 
         let now = DateTime::now().into_chrono();
         let healing_deadline = DateTime::new(now - *ENTRY_HEALING_MIN_AGE);
+        let max_batch_size = self.blobstore_sync_queue_limit;
         let drain_only = self.drain_only;
         sync_queue
             .iter(
@@ -115,15 +116,16 @@ impl Healer {
                     })
                     .collect();
 
-                if healing_futures.len() == 0 {
+                let last_batch_size = healing_futures.len();
+
+                if last_batch_size == 0 {
                     info!(logger, "All caught up, nothing to do");
-                    return futures::future::ok(()).left_future();
+                    return futures::future::ok(false).left_future();
                 }
 
                 info!(
                     logger,
-                    "Found {} blobs to be healed... Doing it",
-                    healing_futures.len()
+                    "Found {} blobs to be healed... Doing it", last_batch_size
                 );
                 futures::stream::futures_unordered(healing_futures)
                     .collect()
@@ -140,7 +142,11 @@ impl Healer {
                             );
                             let entries_to_remove =
                                 processed_entries.into_iter().flatten().collect();
-                            cleanup_after_healing(ctx, sync_queue, entries_to_remove)
+                            cleanup_after_healing(ctx, sync_queue, entries_to_remove).and_then(
+                                move |()| {
+                                    return futures::future::ok(last_batch_size == max_batch_size);
+                                },
+                            )
                         },
                     )
                     .right_future()
