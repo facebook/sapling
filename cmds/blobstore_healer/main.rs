@@ -189,7 +189,7 @@ fn schedule_everlasting_healing(
                     max_replication_lag_fn,
                     last_batch_full_sized,
                 )
-                .map(|()| Loop::Continue(()))
+                .map(|_lag| Loop::Continue(()))
             })
     });
 
@@ -241,68 +241,86 @@ fn max_replication_lag(
     }
 }
 
+fn compute_delay(
+    logger: Logger,
+    max_lag_secs: usize,
+    last_batch_full_sized: bool,
+) -> Option<usize> {
+    // if there are items remaining (i.e. last batch read was full sized),
+    // and lag < bound, carry on without pause
+    if last_batch_full_sized && max_lag_secs < MAX_ALLOWED_REPLICATION_LAG_SECS {
+        info!(
+            logger,
+            "As there are items remaining and lag < bound, carry on without pause",
+        );
+        return None;
+    }
+
+    // if last batch read was not full,  wait at least 1 second,
+    // to avoid busy looping as don't want to hammer the database
+    // with thousands of reads a second.
+    let max_lag_secs = if !last_batch_full_sized {
+        info!(
+            logger,
+            "As the last batch was not full sized, wait at least one second",
+        );
+        std::cmp::max(1, max_lag_secs)
+    } else {
+        max_lag_secs
+    };
+
+    return Some(max_lag_secs);
+}
+
 fn ensure_small_db_replication_lag<F>(
     logger: Logger,
     compute_max_lag: F,
     last_batch_full_sized: bool,
-) -> impl Future<Item = (), Error = Error>
+) -> impl Future<Item = usize, Error = Error>
 where
     F: Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send>,
 {
     // Make sure we've slept at least once before continuing
     let last_max_lag: Option<usize> = None;
+    let total_lag: usize = 0;
 
-    loop_fn(last_max_lag, move |last_max_lag| {
-        if last_max_lag.is_some() && last_max_lag.unwrap() < MAX_ALLOWED_REPLICATION_LAG_SECS {
-            // No need check rep lag again, was ok on last loop
-            return ok(Loop::Break(())).left_future();
-        }
+    loop_fn(
+        (total_lag, last_max_lag),
+        move |(total_lag, last_max_lag)| {
+            if last_max_lag.is_some() && last_max_lag.unwrap() < MAX_ALLOWED_REPLICATION_LAG_SECS {
+                // No need check rep lag again, was ok on last loop
+                return ok(Loop::Break(total_lag)).left_future();
+            }
 
-        cloned!(logger);
+            cloned!(logger);
 
-        // Check what max replication lag on replicas, and sleep for that long.
-        // This is done in order to avoid overloading the db.
-        compute_max_lag()
-            .and_then(move |(region, max_lag_secs)| {
-                info!(
-                    logger,
-                    "Max replication lag is {}, {}s", region, max_lag_secs,
-                );
-
-                // if there are items remaining (i.e. last batch read was full sized),
-                // and lag < bound, carry on without pause
-                if last_batch_full_sized && max_lag_secs < MAX_ALLOWED_REPLICATION_LAG_SECS {
+            // Check what max replication lag on replicas, and sleep for that long.
+            // This is done in order to avoid overloading the db.
+            compute_max_lag()
+                .and_then(move |(region, max_lag_secs)| {
                     info!(
                         logger,
-                        "As there are items remaining and lag < bound, carry on without pause",
+                        "Max replication lag is {}, {}s", region, max_lag_secs,
                     );
-                    return ok(Loop::Break(())).left_future();
-                }
 
-                // if last batch read was not full,  wait at least 1 second,
-                // to avoid busy looping as don't want to hammer the database
-                // with thousands of reads a second.
-                let max_lag_secs = if !last_batch_full_sized {
-                    info!(
-                        logger,
-                        "As the last batch was not full sized, wait at least one second",
-                    );
-                    std::cmp::max(1, max_lag_secs)
-                } else {
-                    max_lag_secs
-                };
+                    match compute_delay(logger, max_lag_secs, last_batch_full_sized) {
+                        None => return ok(Loop::Break(total_lag)).left_future(),
+                        Some(max_lag_secs) => {
+                            let max_lag = Duration::from_secs(max_lag_secs as u64);
+                            let start = Instant::now();
+                            let next_iter_deadline = start + max_lag;
+                            let total_lag = total_lag + max_lag_secs;
 
-                let max_lag = Duration::from_secs(max_lag_secs as u64);
-                let start = Instant::now();
-                let next_iter_deadline = start + max_lag;
-
-                Delay::new(next_iter_deadline)
-                    .map(move |()| Loop::Continue(Some(max_lag_secs)))
-                    .from_err()
-                    .right_future()
-            })
-            .right_future()
-    })
+                            Delay::new(next_iter_deadline)
+                                .map(move |()| Loop::Continue((total_lag, Some(max_lag_secs))))
+                                .from_err()
+                                .right_future()
+                        }
+                    }
+                })
+                .right_future()
+        },
+    )
 }
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
@@ -380,4 +398,106 @@ fn main(fb: FacebookInit) -> Result<()> {
     };
 
     block_execute(healer.compat(), fb, app_name, &logger, &matches)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use tokio::runtime::Runtime;
+
+    fn compute_delay_test(
+        fb: FacebookInit,
+        simulated_lag_secs: usize,
+        last_batch_full: bool,
+        expected_wait_time: Option<usize>,
+    ) {
+        let ctx = CoreContext::test_mock(fb);
+        let logger = ctx.logger();
+        cloned!(logger);
+
+        let delay = compute_delay(logger, simulated_lag_secs, last_batch_full);
+
+        assert!(
+            delay == expected_wait_time,
+            "compute_delay should have returned {:?}, but returned {:?}",
+            expected_wait_time,
+            delay,
+        );
+    }
+
+    #[fbinit::test]
+    fn compute_delay_test_suite(fb: FacebookInit) {
+        // max lag is 2, last batch is not full, we should wait at least 2 seconds
+        compute_delay_test(fb, 2, false, Some(2));
+        // max lag is 0, last batch is not full, we should wait at least 1 seconds
+        compute_delay_test(fb, 0, false, Some(1));
+        // max lag is 3, last batch is full, we should not wait
+        compute_delay_test(fb, 3, true, None)
+    }
+
+    fn simulated_constant_lag(
+        lag: usize,
+    ) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
+        move || Box::new(ok(("simulated_lag".to_string(), lag)))
+    }
+
+    fn simulated_decreasing_lag(
+        initial_lag: usize,
+        decrement: usize,
+    ) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
+        let lag = RefCell::new(initial_lag);
+        move || {
+            Box::new(ok((
+                "simulated_lag".to_string(),
+                lag.replace_with(|&mut old| if old < decrement { 0 } else { old - decrement }),
+            )))
+        }
+    }
+
+    fn ensure_small_db_replication_lag_test<F>(
+        fb: FacebookInit,
+        simulated_lag: F,
+        last_batch_full: bool,
+        expected_wait_time: usize,
+    ) where
+        F: Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> + Send + 'static,
+    {
+        let ctx = CoreContext::test_mock(fb);
+        let logger = ctx.logger();
+        cloned!(logger);
+
+        let mut runtime = Runtime::new().unwrap();
+        let lag_future = ensure_small_db_replication_lag(logger, simulated_lag, last_batch_full);
+        let elapsed_delay = runtime.block_on(lag_future);
+
+        match elapsed_delay {
+            Ok(elapsed_delay) =>
+            assert!(elapsed_delay == expected_wait_time,
+                "ensure_small_db_replication_lag should have waited {} seconds, but waited {} seconds",
+                expected_wait_time, elapsed_delay),
+            Err(e) => assert!(false, "ensure_small_db_replication_lab returned an error: {:?}", e),
+        }
+    }
+
+    #[fbinit::test]
+    fn ensure_small_db_replication_lag_test_suite(fb: FacebookInit) {
+        // max lag is 2, last batch is not full, we should wait at least 2 seconds
+        ensure_small_db_replication_lag_test(fb, simulated_constant_lag(2), false, 2);
+        // max lag is 0, last batch is not full, we should wait at least 1 seconds
+        ensure_small_db_replication_lag_test(fb, simulated_constant_lag(0), false, 1);
+        // max lag is 3, last batch is full, we should not wait
+        ensure_small_db_replication_lag_test(fb, simulated_constant_lag(3), true, 0);
+
+        // max lag initially is 8, and decreases at every cycle by 2.
+        // lags are thus 8, 6, 4, ...  since the first two lags are > MAX_LAG, we wait 8 + 6
+        // the third lag is < MAX_LAG and last batch is full, so we don't wait anymore
+        ensure_small_db_replication_lag_test(fb, simulated_decreasing_lag(8, 2), true, 14);
+
+        // max lag initially is 8, and decreases at every cycle by 2.
+        // lags are thus 8, 6, 4, ...  since the first two lags are > MAX_LAG, we wait 8 + 6
+        // then lag is 4, but the last batch is not full, so we wait 4 more seconds
+        ensure_small_db_replication_lag_test(fb, simulated_decreasing_lag(8, 2), false, 18);
+    }
+
 }
