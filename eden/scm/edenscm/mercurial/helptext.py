@@ -791,9 +791,6 @@ messages for each action.
 - ``changeset.import.bypass`` for :hg:`import --bypass`
 - ``changeset.import.normal.merge`` for :hg:`import` on merges
 - ``changeset.import.normal.normal`` for :hg:`import` on other
-- ``changeset.mq.qnew`` for :hg:`qnew`
-- ``changeset.mq.qfold`` for :hg:`qfold`
-- ``changeset.mq.qrefresh`` for :hg:`qrefresh`
 - ``changeset.rebase.collapse`` for :hg:`rebase --collapse`
 - ``changeset.rebase.merge`` for :hg:`rebase` on merges
 - ``changeset.rebase.normal`` for :hg:`rebase` on other
@@ -3076,8 +3073,7 @@ format for communicating changes.
 
 To make Mercurial produce the git extended diff format, use the --git
 option available for many commands, or set 'git = True' in the [diff]
-section of your configuration file. You do not need to set this option
-when importing diffs in this format or using them in the mq extension.
+section of your configuration file.
 """
 
 
@@ -4152,8 +4148,7 @@ phases = r"""What are phases?
 ================
 
 Phases are a system for tracking which changesets have been or should
-be shared. This helps prevent common mistakes when modifying history
-(for instance, with the mq or rebase extensions).
+be shared. This helps prevent common mistakes when modifying history.
 
 Each changeset in a repository is in one of the following phases:
 
@@ -4173,7 +4168,7 @@ For the most part, phases should work transparently. By default, a
 changeset is created in the draft phase and is moved into the public
 phase when it is pushed to another repository.
 
-Once changesets become public, extensions like mq and rebase will
+Once changesets become public, commands like amend and rebase will
 refuse to operate on them to prevent creating duplicate changesets.
 Phases can also be manually manipulated with the :hg:`phase` command
 if needed. See :hg:`help -v phase` for examples.

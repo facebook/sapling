@@ -423,24 +423,12 @@ def mutableancestors(ctx):
 
 def getcommitfunc(extra, interactive, editor=False):
     def commitfunc(ui, repo, message, match, opts):
-        hasmq = util.safehasattr(repo, "mq")
-        if hasmq:
-            saved, repo.mq.checkapplied = repo.mq.checkapplied, False
-        try:
-            editor_ = False
-            if editor:
-                editor_ = cmdutil.getcommiteditor(editform="shelve.shelve", **opts)
-            return repo.commit(
-                message,
-                ui.username(),
-                opts.get("date"),
-                match,
-                editor=editor_,
-                extra=extra,
-            )
-        finally:
-            if hasmq:
-                repo.mq.checkapplied = saved
+        editor_ = False
+        if editor:
+            editor_ = cmdutil.getcommiteditor(editform="shelve.shelve", **opts)
+        return repo.commit(
+            message, ui.username(), opts.get("date"), match, editor=editor_, extra=extra
+        )
 
     def interactivecommitfunc(ui, repo, *pats, **opts):
         match = scmutil.match(repo["."], pats, {})

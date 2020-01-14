@@ -1788,62 +1788,6 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     return newps[0], newps[1], base
 
 
-def isagitpatch(repo, patchname):
-    "Return true if the given patch is in git format"
-    mqpatch = os.path.join(repo.mq.path, patchname)
-    for line in patch.linereader(file(mqpatch, "rb")):  # noqa
-        if line.startswith("diff --git"):
-            return True
-    return False
-
-
-def updatemq(repo, state, skipped, **opts):
-    "Update rebased mq patches - finalize and then import them"
-    mqrebase = {}
-    mq = repo.mq
-    original_series = mq.fullseries[:]
-    skippedpatches = set()
-
-    for p in mq.applied:
-        rev = repo[p.node].rev()
-        if rev in state:
-            repo.ui.debug(
-                "revision %d is an mq patch (%s), finalize it.\n" % (rev, p.name)
-            )
-            mqrebase[rev] = (p.name, isagitpatch(repo, p.name))
-        else:
-            # Applied but not rebased, not sure this should happen
-            skippedpatches.add(p.name)
-
-    if mqrebase:
-        mq.finish(repo, mqrebase.keys())
-
-        # We must start import from the newest revision
-        for rev in sorted(mqrebase, reverse=True):
-            if rev not in skipped:
-                name, isgit = mqrebase[rev]
-                repo.ui.note(
-                    _("updating mq patch %s to %s:%s\n")
-                    % (name, state[rev], repo[state[rev]])
-                )
-                mq.qimport(repo, (), patchname=name, git=isgit, rev=[str(state[rev])])
-            else:
-                # Rebased and skipped
-                skippedpatches.add(mqrebase[rev][0])
-
-        # Patches were either applied and rebased and imported in
-        # order, applied and removed or unapplied. Discard the removed
-        # ones while preserving the original series order and guards.
-        newseries = [
-            s
-            for s in original_series
-            if mq.guard_re.split(s, 1)[0] not in skippedpatches
-        ]
-        mq.fullseries[:] = newseries
-        mq.seriesdirty = True
-        mq.savedirty()
-
-
 def storecollapsemsg(repo, collapsemsg):
     "Store the collapse message to allow recovery"
     collapsemsg = collapsemsg or ""

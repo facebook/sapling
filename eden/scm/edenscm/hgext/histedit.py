@@ -1129,12 +1129,6 @@ def _readfile(ui, path):
 
 
 def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
-    # TODO only abort if we try to histedit mq patches, not just
-    # blanket if mq patches are applied somewhere
-    mq = getattr(repo, "mq", None)
-    if mq and mq.applied:
-        raise error.Abort(_("source has mq patches applied"))
-
     # basic argument incompatibility processing
     outg = opts.get("outgoing")
     editplan = opts.get("edit_plan")
@@ -1271,7 +1265,6 @@ def _finishhistedit(ui, repo, state, fm):
     if not state.keep:
         if mapping:
             movetopmostbookmarks(repo, state.topmost, ntm)
-            # TODO update mq state
     else:
         mapping = {}
 

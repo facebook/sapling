@@ -50,7 +50,7 @@ def share(ui, source, dest=None, noupdate=False, bookmarks=False, relative=False
 
     .. note::
 
-       using rollback or extensions that destroy/modify history (mq,
+       using rollback or extensions that destroy/modify history (amend,
        rebase, etc.) can cause considerable confusion with shared
        clones. In particular, if two shared clones are both updated to
        the same changeset, and one of them destroys that changeset

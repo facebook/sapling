@@ -2166,8 +2166,6 @@ class localrepository(object):
                 )
 
             status = self.status(match=match, clean=force)
-            if force:
-                status.modified.extend(status.clean)  # mq may commit clean files
 
             # make sure all explicit patterns are matched
             if not force:

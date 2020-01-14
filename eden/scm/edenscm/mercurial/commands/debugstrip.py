@@ -45,13 +45,7 @@ def _findupdatetarget(repo, nodes):
     unode, p2 = repo.changelog.parents(nodes[0])
     currentbranch = repo[None].branch()
 
-    if (
-        util.safehasattr(repo, "mq")
-        and p2 != nullid
-        and p2 in [x.node for x in repo.mq.applied]
-    ):
-        unode = p2
-    elif currentbranch != repo[unode].branch():
+    if currentbranch != repo[unode].branch():
         pwdir = "parents(wdir())"
         revset = "max(((parents(%ln::%r) + %r) - %ln::%r) and branch(%s))"
         branchtarget = repo.revs(
@@ -164,23 +158,6 @@ def stripcmd(ui, repo, *revs, **opts):
                 break
 
         rootnodes = set(cl.node(r) for r in roots)
-
-        q = getattr(repo, "mq", None)
-        if q is not None and q.applied:
-            # refresh queue state if we're about to strip
-            # applied patches
-            if cl.rev(repo.lookup("qtip")) in strippedrevs:
-                q.applieddirty = True
-                start = 0
-                end = len(q.applied)
-                for i, statusentry in enumerate(q.applied):
-                    if statusentry.node in rootnodes:
-                        # if one of the stripped roots is an applied
-                        # patch, only part of the queue is stripped
-                        start = i
-                        break
-                del q.applied[start:end]
-                q.savedirty()
 
         revs = sorted(rootnodes)
         if update and opts.get("keep"):
