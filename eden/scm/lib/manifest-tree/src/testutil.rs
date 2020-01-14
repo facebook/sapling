@@ -14,23 +14,7 @@ use parking_lot::{Mutex, RwLock};
 use manifest::{testutil::*, Manifest};
 use types::{testutil::*, HgId, Key, RepoPath, RepoPathBuf};
 
-use crate::{store, Link, TreeManifest, TreeStore};
-
-pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
-    Ok(store::Element::new(
-        path_component_buf(path),
-        hgid(hex),
-        flag,
-    ))
-}
-
-pub(crate) fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
-    match tree.get_link(path).unwrap().unwrap() {
-        Link::Leaf(file_metadata) => file_metadata.hgid,
-        Link::Durable(ref entry) => entry.hgid,
-        Link::Ephemeral(_) => panic!("Asked for hgid on path {} but found ephemeral hgid.", path),
-    }
-}
+use crate::{TreeManifest, TreeStore};
 
 pub fn make_tree_manifest<'a>(
     paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>,

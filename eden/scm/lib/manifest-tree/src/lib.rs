@@ -681,6 +681,24 @@ mod tests {
 
     use self::testutil::*;
 
+    fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
+        Ok(store::Element::new(
+            path_component_buf(path),
+            hgid(hex),
+            flag,
+        ))
+    }
+
+    fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
+        match tree.get_link(path).unwrap().unwrap() {
+            Link::Leaf(file_metadata) => file_metadata.hgid,
+            Link::Durable(ref entry) => entry.hgid,
+            Link::Ephemeral(_) => {
+                panic!("Asked for hgid on path {} but found ephemeral hgid.", path)
+            }
+        }
+    }
+
     #[test]
     fn test_insert() {
         let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
