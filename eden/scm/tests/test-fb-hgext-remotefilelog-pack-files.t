@@ -42,11 +42,7 @@
   $ hg pull -q
   $ hg up -q tip
 
-# Test pack local data
-  $ test -d .hg/store/packs
-  [1]
-
-# new loose file is created
+# new pack file is created
   $ echo "new commit" > new_file
   $ echo "something else" > base_file
   $ hg commit -qAm "one more node"

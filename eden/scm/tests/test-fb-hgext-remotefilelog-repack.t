@@ -382,40 +382,19 @@ Test limiting the max delta chain length
   1bb2e6237e03  000000000000  8             (missing)
   
 
-# Test repacking loose files
-  $ [ -d .hg/store/packs ]
-  [1]
-
-# new loose file is created
-  $ echo "new commit" > new_file
-  $ hg commit -qAm "one more node"
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
-
-# repacking all
-  $ hg repack
-  $ findfilessorted .hg/store/packs
-  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histidx
-  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histpack
-  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.dataidx
-  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.datapack
-
-# check the commit data
-  $ hg cat -r . new_file
-  new commit
-
 # Verify that temporary datapacks are removed
   $ touch -a -t 201901010000 $TESTTMP/hgcache/master/packs/foo.datapack-tmp
   $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histidx
-  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histpack
-  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.dataidx
-  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.datapack
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.dataidx
+  $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $TESTTMP/hgcache/master/packs/foo.datapack-tmp
   $TESTTMP/hgcache/master/packs/repacklock
   $ hg repack
   $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histidx
-  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histpack
-  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.dataidx
-  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.datapack
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.dataidx
+  $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $TESTTMP/hgcache/master/packs/repacklock
