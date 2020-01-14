@@ -48,6 +48,9 @@ class PrjfsChannel : public FsChannel {
   static HRESULT CALLBACK
   getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept;
 
+  static HRESULT CALLBACK
+  queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept;
+
   static HRESULT CALLBACK getFileData(
       const PRJ_CALLBACK_DATA* callbackData,
       UINT64 byteOffset,

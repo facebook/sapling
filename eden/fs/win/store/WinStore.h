@@ -21,6 +21,7 @@ class Tree;
 class Blob;
 class BlobMetadata;
 class EdenMount;
+class TreeEntry;
 
 struct FileMetadata {
   //
@@ -79,11 +80,17 @@ class WinStore {
   bool getFileMetadata(const std::wstring_view path, FileMetadata& fileMetadata)
       const;
 
+  /**
+   * Function to check if a file exist in the backing store.
+   */
+  bool checkFileName(const std::wstring_view path) const;
+
   std::shared_ptr<const Tree> getTree(const std::wstring_view path) const;
   std::shared_ptr<const Blob> getBlob(const std::wstring_view path) const;
 
  private:
   std::shared_ptr<const Tree> getTree(const RelativePathPiece& relPath) const;
+  const TreeEntry* getTreeEntry(const std::wstring_view path) const;
 
   // Store a pointer to EdenMount. WinStore doesn't own or maintain the
   // lifetime of Mount. Instead, at this point, WinStore will be owned by the

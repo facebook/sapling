@@ -45,6 +45,9 @@ class EdenDispatcher {
   getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept;
 
   HRESULT
+  queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept;
+
+  HRESULT
   getFileData(
       const PRJ_CALLBACK_DATA& callbackData,
       uint64_t byteOffset,

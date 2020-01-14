@@ -54,6 +54,17 @@ shared_ptr<const Tree> WinStore::getTree(const std::wstring_view path) const {
   return getTree(relPath);
 }
 
+const TreeEntry* WinStore::getTreeEntry(const std::wstring_view path) const {
+  std::string edenPath = winToEdenPath(path);
+  RelativePathPiece relPath{edenPath};
+  RelativePathPiece parentPath = relPath.dirname();
+  shared_ptr<const Tree> tree = getTree(parentPath);
+  if (tree) {
+    return tree->getEntryPtr(relPath.basename());
+  }
+  return nullptr;
+}
+
 bool WinStore::getAllEntries(
     const std::wstring_view path,
     vector<FileMetadata>& entryList) const {
@@ -107,50 +118,41 @@ bool WinStore::getAllEntries(
 bool WinStore::getFileMetadata(
     const std::wstring_view path,
     FileMetadata& fileMetadata) const {
-  std::string edenPath = winToEdenPath(path);
-  RelativePathPiece relPath{edenPath};
-  RelativePathPiece parentPath = relPath.dirname();
-  shared_ptr<const Tree> tree = getTree(parentPath);
-  if (tree) {
-    auto entry = tree->getEntryPtr(relPath.basename());
-    if (entry) {
-      fileMetadata.name = edenToWinName(entry->getName().value().toStdString());
-      fileMetadata.isDirectory = entry->isTree();
-      fileMetadata.hash = entry->getHash();
+  auto entry = getTreeEntry(path);
+  if (entry) {
+    fileMetadata.name = edenToWinName(entry->getName().value().toStdString());
+    fileMetadata.isDirectory = entry->isTree();
+    fileMetadata.hash = entry->getHash();
 
-      if (!fileMetadata.isDirectory) {
-        const std::optional<uint64_t>& size = entry->getSize();
-        if (size.has_value()) {
-          fileMetadata.size = size.value();
-        } else {
-          auto size =
-              getMount().getObjectStore()->getBlobSize(entry->getHash()).get();
-          fileMetadata.size = size;
-        }
+    if (!fileMetadata.isDirectory) {
+      const std::optional<uint64_t>& size = entry->getSize();
+      if (size.has_value()) {
+        fileMetadata.size = size.value();
+      } else {
+        auto size =
+            getMount().getObjectStore()->getBlobSize(entry->getHash()).get();
+        fileMetadata.size = size;
       }
-      return true;
     }
+    return true;
   }
+  return false;
+}
 
+bool WinStore::checkFileName(const std::wstring_view path) const {
+  auto entry = getTreeEntry(path);
+  if (entry) {
+    return true;
+  }
   return false;
 }
 
 std::shared_ptr<const Blob> WinStore::getBlob(
     const std::wstring_view path) const {
-  std::string edenPath = winToEdenPath(path);
-  RelativePathPiece relPath(edenPath);
-  RelativePathPiece parentPath = relPath.dirname();
-
-  auto tree = getTree(parentPath);
-  if (!tree) {
-    return nullptr;
-  }
-
-  auto file = tree->getEntryPtr(relPath.basename());
+  auto file = getTreeEntry(path);
   if ((!file) || (file->isTree())) {
     return nullptr;
   }
-
   return (getMount().getObjectStore()->getBlob(file->getHash()).get());
 }
 

@@ -76,6 +76,7 @@ void PrjfsChannel::start() {
   callbacks.GetPlaceholderInfoCallback = getPlaceholderInfo;
   callbacks.GetFileDataCallback = getFileData;
   callbacks.NotificationCallback = notification;
+  callbacks.QueryFileNameCallback = queryFileName;
 
   PRJ_STARTVIRTUALIZING_OPTIONS startOpts = {};
   PRJ_NOTIFICATION_MAPPING notificationMappings[3] = {};
@@ -164,6 +165,11 @@ HRESULT PrjfsChannel::getEnumerationData(
 HRESULT PrjfsChannel::getPlaceholderInfo(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   return getDispatcher(callbackData)->getFileInfo(*callbackData);
+}
+
+HRESULT PrjfsChannel::queryFileName(
+    const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  return getDispatcher(callbackData)->queryFileName(*callbackData);
 }
 
 HRESULT PrjfsChannel::getFileData(

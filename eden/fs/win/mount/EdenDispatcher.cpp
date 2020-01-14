@@ -211,6 +211,20 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   }
 }
 
+HRESULT
+EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
+  try {
+    const std::wstring_view path{callbackData.FilePathName};
+    if (!winStore_.checkFileName(path)) {
+      return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+    }
+
+    return S_OK;
+  } catch (const std::exception& ex) {
+    return exceptionToHResult();
+  }
+}
+
 static uint64_t BlockAlignTruncate(uint64_t ptr, uint32_t alignment) {
   return ((ptr) & (0 - (static_cast<uint64_t>(alignment))));
 }
