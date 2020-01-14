@@ -469,11 +469,12 @@ where
     // a handle to stop
     runtime.shutdown_on_idle();
 
-    match &result {
-        Ok(_) => info!(logger, "Execution succeeded"),
-        Err(e) => error!(logger, "Execution error: {:?}", e),
-    };
-    result
+    // Log error in glog format (main will log, but not with glog)
+    result.map_err(move |e| {
+        error!(logger, "Execution error: {:?}", e);
+        // Shorten the error that main will print, given that already printed in glog form
+        format_err!("Execution failed")
+    })
 }
 
 /// Join the future with stats aggregator and return a new joined future

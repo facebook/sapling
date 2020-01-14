@@ -37,4 +37,3 @@ compression-benefit, not expecting any compression from the tiny test files
   Walking node types * (glob)
   Final count: * (glob)
   * Total: SizingStats { raw: 3, compressed: 3 },000% * (glob)
-  Execution succeeded

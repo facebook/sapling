@@ -37,7 +37,6 @@ Base case, check can walk fine
   Walking node types * (glob)
   Final count: (37, 37)
   Walked* (glob)
-  Execution succeeded
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
@@ -62,7 +61,6 @@ Check can walk fine on the only remaining side
   Walking node types * (glob)
   Final count: (37, 37)
   Walked* (glob)
-  Execution succeeded
 
 Check can walk fine on the multiplex remaining side
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
@@ -71,7 +69,6 @@ Check can walk fine on the multiplex remaining side
   Walking node types * (glob)
   Final count: (37, 37)
   Walked* (glob)
-  Execution succeeded
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --scrub-blobstore-action=ReportOnly -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
@@ -81,7 +78,6 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly 
   27 scrub: blobstore_id BlobstoreId(0) not repaired for repo0000.
   1 Final count: (37, 37)
   1 Walked* (glob)
-  1 Execution succeeded
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
@@ -91,7 +87,6 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode
   27 scrub: blobstore_id BlobstoreId(0) repaired for repo0000.
   1 Final count: (37, 37)
   1 Walked* (glob)
-  1 Execution succeeded
 
 Check that all is repaired by running on only the deleted side
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
@@ -100,7 +95,6 @@ Check that all is repaired by running on only the deleted side
   Walking node types * (glob)
   Final count: (37, 37)
   Walked* (glob)
-  Execution succeeded
 
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
   $ ls blobstore/0/blobs/* | wc -l

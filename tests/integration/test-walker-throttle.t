@@ -37,17 +37,15 @@ Base case, check can walk fine
   Walking node types * (glob)
   Final count: (37, 37)
   Walked* (glob)
-  Execution succeeded
 
 Check reads throttle
   $ START_SECS=$(/usr/bin/date "+%s")
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --blobstore-read-qps=6 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --blobstore-read-qps=5 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
   Walked* (glob)
-  Execution succeeded
   $ END_SECS=$(/usr/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
   $ if [[ "$ELAPSED_SECS" -ge 4 ]]; then echo Took Long Enough Read; else echo "Too short: $ELAPSED_SECS"; fi
@@ -60,14 +58,13 @@ Delete all data from one side of the multiplex
 
 Check writes throttle in Repair mode
   $ START_SECS=$(/usr/bin/date "+%s")
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --blobstore-write-qps=6 --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --blobstore-write-qps=5 --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   27 scrub: blobstore_id BlobstoreId(0) repaired for repo0000.
   1 Final count: (37, 37)
   1 Walked* (glob)
-  1 Execution succeeded
   $ END_SECS=$(/usr/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
   $ if [[ "$ELAPSED_SECS" -ge 4 ]]; then echo Took Long Enough Repair; else echo "Too short: $ELAPSED_SECS"; fi
