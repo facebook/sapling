@@ -24,11 +24,12 @@ use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::BlobstoreBytes;
-use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
+use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, open_sqlite_in_memory,
     open_sqlite_path, PoolSizeConfig, SqlConnections,
 };
+use sql_facebook::{myrouter, raw};
 use stats::prelude::*;
 use std::fmt;
 use std::num::NonZeroUsize;

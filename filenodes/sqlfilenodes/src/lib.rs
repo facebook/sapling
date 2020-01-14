@@ -18,7 +18,8 @@ use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
+use sql::{rusqlite::Connection as SqliteConnection, Connection};
+use sql_facebook::{myrouter, raw};
 use stats::prelude::*;
 
 use filenodes::{FilenodeInfo, Filenodes};
@@ -196,7 +197,7 @@ impl SqlConstructors for SqlFilenodes {
     ) -> Self {
         let chunk_size = match read_connection {
             Connection::Sqlite(_) => SQLITE_INSERT_CHUNK_SIZE,
-            Connection::MyRouter(_) | Connection::Raw(_) => MYSQL_INSERT_CHUNK_SIZE,
+            Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
         };
 
         Self {

@@ -34,8 +34,9 @@ use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use prefixblob::PrefixBlobstore;
 use slog::{error, info, o, Logger};
-use sql::{myrouter, Connection};
+use sql::Connection;
 use sql_ext::MysqlOptions;
+use sql_facebook::{ext::ConnectionFbExt, myrouter};
 use sqlblob::Sqlblob;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -136,7 +137,7 @@ fn maybe_schedule_healer_for_storage(
     };
 
     let mut replication_lag_db_conns = Vec::new();
-    let mut conn_builder = Connection::myrouter_builder();
+    let mut conn_builder = myrouter::Builder::new();
     conn_builder
         .service_type(myrouter::ServiceType::SLAVE)
         .locality(myrouter::DbLocality::EXPLICIT)
@@ -145,7 +146,7 @@ fn maybe_schedule_healer_for_storage(
 
     for region in replication_lag_db_regions {
         conn_builder.explicit_region(region.clone());
-        replication_lag_db_conns.push((region, conn_builder.build_read_only()));
+        replication_lag_db_conns.push((region, conn_builder.build_read_only().into()));
     }
 
     let heal = blobstores.and_then(

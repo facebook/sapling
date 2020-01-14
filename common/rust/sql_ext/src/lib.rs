@@ -19,10 +19,10 @@ use std::{path::Path, time::Duration};
 use tokio_timer::sleep;
 
 use sql::{
-    myrouter, raw,
     rusqlite::{Connection as SqliteConnection, OpenFlags as SqliteOpenFlags},
     Connection, Transaction,
 };
+use sql_facebook::{myrouter, raw};
 
 #[derive(Copy, Clone, Debug)]
 pub struct MysqlOptions {
@@ -106,7 +106,7 @@ pub fn create_myrouter_connections(
     label: String,
     readonly: bool,
 ) -> SqlConnections {
-    let mut builder = Connection::myrouter_builder();
+    let mut builder = myrouter::Builder::new();
     builder.tier(tier, shard_id).port(port);
 
     builder.tie_break(myrouter::TieBreak::SLAVE_FIRST);
@@ -117,21 +117,24 @@ pub fn create_myrouter_connections(
         .clone()
         .service_type(read_service_type)
         .max_num_of_concurrent_connections(pool_size_config.read_pool_size)
-        .build_read_only();
+        .build_read_only()
+        .into();
 
     builder.service_type(myrouter::ServiceType::MASTER);
-    let read_master_connection = builder
+    let read_master_connection: Connection = builder
         .clone()
         .max_num_of_concurrent_connections(pool_size_config.read_master_pool_size)
-        .build_read_only();
+        .build_read_only()
+        .into();
 
     let write_connection = if readonly {
-        // Myrouter respects readonly, it connects as scriptro
+        // MyRouter respects readonly, it connects as scriptro
         read_master_connection.clone()
     } else {
         builder
             .max_num_of_concurrent_connections(pool_size_config.write_pool_size)
             .build_read_write()
+            .into()
     };
 
     SqlConnections {
@@ -151,47 +154,28 @@ where
     T: ?Sized,
     &'a T: AsRef<str>,
 {
-    let tier: &str = tier.as_ref();
+    let mut builder = raw::Builder::new(tier.as_ref(), raw::InstanceRequirement::Master);
 
     let write_connection = if readonly {
         ok(None).left_future()
     } else {
-        raw::RawConnection::new_from_tier(
-            fb,
-            tier,
-            raw::InstanceRequirement::Master,
-            None,
-            None,
-            None,
-        )
-        .map(Some)
-        .right_future()
+        builder.build(fb).map(Some).right_future()
     };
 
-    let read_connection = raw::RawConnection::new_from_tier(
-        fb,
-        tier,
-        read_instance_requirement,
-        None,
-        None,
-        Some("scriptro"),
-    );
+    builder.role_override("scriptro");
 
-    let read_master_connection = raw::RawConnection::new_from_tier(
-        fb,
-        tier,
-        raw::InstanceRequirement::Master,
-        None,
-        None,
-        Some("scriptro"),
-    );
+    let read_master_connection = builder.build(fb);
+
+    let read_connection = builder
+        .instance_requirement(read_instance_requirement)
+        .build(fb);
 
     write_connection
         .join3(read_connection, read_master_connection)
         .map(|(wr, rd, rm)| SqlConnections {
-            write_connection: Connection::Raw(wr.unwrap_or_else(|| rm.clone())),
-            read_connection: Connection::Raw(rd),
-            read_master_connection: Connection::Raw(rm),
+            write_connection: wr.unwrap_or_else(|| rm.clone()).into(),
+            read_connection: rd.into(),
+            read_master_connection: rm.into(),
         })
 }
 
@@ -377,7 +361,7 @@ pub fn myrouter_ready(
             if let Some(myrouter_port) = mysql_options.myrouter_port {
                 myrouter::wait_for_myrouter(myrouter_port, db_address).right_future()
             } else {
-                // Myrouter was not enabled: we don't need to wait for it.
+                // MyRouter was not enabled: we don't need to wait for it.
                 ok(()).left_future()
             }
         }
