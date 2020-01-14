@@ -18,7 +18,6 @@ use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
 use fbthrift_socket::SocketTransport;
 use std::collections::HashMap;
 use std::default::Default;
-use std::ffi::OsString;
 use std::fs::read_link;
 use std::fs::symlink_metadata;
 use std::fs::File;
@@ -26,8 +25,6 @@ use std::io;
 use std::io::BufReader;
 use std::io::Read;
 use std::io::Write;
-#[cfg(unix)]
-use std::os::unix::ffi::OsStringExt;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 use std::path::Path;

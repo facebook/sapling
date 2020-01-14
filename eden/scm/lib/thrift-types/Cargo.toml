@@ -17,4 +17,4 @@ fb303 = { path = "fb303" }
 
 
 [build-dependencies]
-tempfile = "*"
+tempfile = "3.1.0"
