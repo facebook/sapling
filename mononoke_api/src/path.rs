@@ -61,7 +61,9 @@ impl TryFrom<&str> for MononokePath {
         if path.is_empty() {
             Ok(MononokePath(None))
         } else {
-            Ok(MononokePath(Some(MPath::try_from(path)?)))
+            let mpath = MPath::try_from(path)
+                .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?;
+            Ok(MononokePath(Some(mpath)))
         }
     }
 }
