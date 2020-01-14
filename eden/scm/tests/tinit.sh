@@ -24,7 +24,7 @@ newserver() {
   if [ -n "$USE_MONONOKE" ] ; then
     REPONAME=$reponame setup_mononoke_config
     mononoke
-    wait_for_mononoke "$TESTTMP/$reponame"
+    MONONOKE_START_TIMEOUT=60 wait_for_mononoke "$TESTTMP/$reponame"
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
