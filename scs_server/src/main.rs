@@ -103,6 +103,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 args::parse_mysql_options(&matches),
                 caching,
                 args::parse_readonly_storage(&matches),
+                args::parse_blobstore_options(&matches),
             )
             .boxed()
             .compat(),

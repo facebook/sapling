@@ -8,6 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::io;
+use std::num::NonZeroU32;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -29,7 +30,7 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
-use blobstore_factory::Scrubbing;
+use blobstore_factory::{BlobstoreOptions, Scrubbing, ThrottleOptions};
 use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{
@@ -66,6 +67,9 @@ pub const WITH_CONTENT_SHA1_CACHE: &str = "with-content-sha1-cache";
 const SKIP_CACHING: &str = "skip-caching";
 const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
 const READONLY_STORAGE: &str = "readonly-storage";
+
+const READ_QPS_ARG: &str = "blobstore-read-qps";
+const WRITE_QPS_ARG: &str = "blobstore-write-qps";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -281,6 +285,7 @@ impl MononokeApp {
 
         app = add_logger_args(app);
         app = add_mysql_options_args(app);
+        app = add_blobstore_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
         app = add_runtime_args(app);
 
@@ -751,6 +756,23 @@ pub fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
+pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(READ_QPS_ARG)
+            .long(READ_QPS_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Read QPS limit to ThrottledBlob"),
+    )
+    .arg(
+        Arg::with_name(WRITE_QPS_ARG)
+            .long(WRITE_QPS_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Write QPS limit to ThrottledBlob"),
+    )
+}
+
 pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(ENABLE_MCROUTER)
@@ -946,6 +968,7 @@ fn open_repo_internal_with_repo_id<'a>(
     };
 
     let mysql_options = parse_mysql_options(matches);
+    let blobstore_options = parse_blobstore_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
 
     cloned!(logger);
@@ -960,6 +983,7 @@ fn open_repo_internal_with_repo_id<'a>(
         common_config.scuba_censored_table,
         config.filestore,
         readonly_storage,
+        blobstore_options,
         logger,
     )
     .boxify()
@@ -1003,6 +1027,18 @@ pub fn parse_mysql_options<'a>(matches: &ArgMatches<'a>) -> MysqlOptions {
         myrouter_port,
         master_only,
     }
+}
+
+pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions {
+    let read_qps: Option<NonZeroU32> = matches
+        .value_of(READ_QPS_ARG)
+        .map(|v| v.parse().expect("Provided qps is not u32"));
+
+    let write_qps: Option<NonZeroU32> = matches
+        .value_of(WRITE_QPS_ARG)
+        .map(|v| v.parse().expect("Provided qps is not u32"));
+
+    BlobstoreOptions::new(ThrottleOptions::new(read_qps, write_qps))
 }
 
 pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) {

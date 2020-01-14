@@ -15,7 +15,7 @@ use std::{
 
 use anyhow::{format_err, Error};
 use blobrepo::{file_history::get_file_history, BlobRepo};
-use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
+use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
@@ -117,6 +117,7 @@ impl MononokeRepo {
         common_config: CommonConfig,
         mysql_options: MysqlOptions,
         readonly_storage: ReadOnlyStorage,
+        blobstore_options: BlobstoreOptions,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
         with_skiplist: bool,
@@ -143,6 +144,7 @@ impl MononokeRepo {
                 common_config.scuba_censored_table,
                 config.filestore,
                 readonly_storage,
+                blobstore_options,
                 logger.clone(),
             ))
             .map(move |(synced_commit_mapping, repo)| {

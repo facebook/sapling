@@ -19,7 +19,7 @@ mod repo_handlers;
 mod request_handler;
 
 use anyhow::Error;
-use blobrepo_factory::{Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use configerator_cached::ConfigStore;
 use fbinit::FacebookInit;
 use futures::Future;
@@ -48,6 +48,7 @@ pub fn create_repo_listeners(
     terminate_process: &'static AtomicBool,
     config_store: Option<ConfigStore>,
     readonly_storage: ReadOnlyStorage,
+    blobstore_options: BlobstoreOptions,
 ) -> (BoxFuture<(), Error>, ready_state::ReadyState) {
     let sockname = String::from(sockname);
     let root_log = root_log.clone();
@@ -62,6 +63,7 @@ pub fn create_repo_listeners(
             disabled_hooks,
             common_config.scuba_censored_table.clone(),
             readonly_storage,
+            blobstore_options.clone(),
             &root_log,
             &mut ready,
         )

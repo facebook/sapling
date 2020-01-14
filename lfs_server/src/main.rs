@@ -205,6 +205,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let caching = args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches);
     let mysql_options = args::parse_mysql_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
@@ -243,7 +244,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .filter(|(_name, config)| config.enabled)
         .map(|(name, config)| {
             let scuba_censored_table = common.scuba_censored_table.clone();
-            cloned!(test_acl_checker, logger);
+            cloned!(blobstore_options, test_acl_checker, logger);
             async move {
                 let aclchecker = async {
                     if let Some(test_checker) = test_acl_checker {
@@ -270,6 +271,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     scuba_censored_table,
                     config.filestore.clone(),
                     readonly_storage,
+                    blobstore_options,
                     logger.clone(),
                 )
                 .compat();

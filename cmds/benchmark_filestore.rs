@@ -32,7 +32,7 @@ use std::io::BufReader;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
-use throttledblob::ThrottledBlob;
+use throttledblob::{ThrottleOptions, ThrottledBlob};
 use tokio::{codec, fs::File};
 
 const NAME: &str = "benchmark_filestore";
@@ -294,7 +294,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .transpose()?;
 
     let blob: Arc<dyn Blobstore> = runtime.block_on(lazy(move || -> Result<_, Error> {
-        let blob = ThrottledBlob::new(blob, read_qps, write_qps);
+        let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps));
         Ok(Arc::new(blob))
     }))?;
 

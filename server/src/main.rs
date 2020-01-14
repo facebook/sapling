@@ -143,6 +143,7 @@ fn main(fb: FacebookInit) {
             &TERMINATE_PROCESS,
             config_source,
             cmdlib::args::parse_readonly_storage(&matches),
+            cmdlib::args::parse_blobstore_options(&matches),
         );
 
         tracing_fb303::register(fb);

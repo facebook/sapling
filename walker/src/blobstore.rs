@@ -11,7 +11,8 @@ use crate::validate::{CHECK_FAIL, CHECK_TYPE, NODE_KEY, REPO};
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use blobstore_factory::{
-    make_blobstore, make_blobstore_multiplexed, make_sql_factory, ReadOnlyStorage, SqlFactory,
+    make_blobstore, make_blobstore_multiplexed, make_sql_factory, BlobstoreOptions,
+    ReadOnlyStorage, SqlFactory,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -28,7 +29,7 @@ use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::MysqlOptions;
 use stats::prelude::*;
-use std::{convert::From, num::NonZeroU32, sync::Arc};
+use std::{convert::From, sync::Arc};
 
 define_stats! {
     prefix = "mononoke.walker";
@@ -150,8 +151,7 @@ pub fn open_blobstore(
     scuba_builder: ScubaSampleBuilder,
     walk_stats_key: &'static str,
     repo_stats_key: String,
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
+    blobstore_options: BlobstoreOptions,
     logger: Logger,
 ) -> BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
     // Allow open of just one inner store
@@ -202,8 +202,7 @@ pub fn open_blobstore(
                     mysql_options,
                     readonly_storage,
                     Some((scrub_handler, scrub_action)),
-                    read_qps,
-                    write_qps,
+                    blobstore_options,
                 )
             }
             (
@@ -220,8 +219,7 @@ pub fn open_blobstore(
                 mysql_options,
                 readonly_storage,
                 None,
-                read_qps,
-                write_qps,
+                blobstore_options,
             ),
             (None, blobconfig) => make_blobstore(
                 fb,
@@ -229,8 +227,7 @@ pub fn open_blobstore(
                 &sql_factory,
                 mysql_options,
                 readonly_storage,
-                read_qps,
-                write_qps,
+                blobstore_options,
             ),
             (Some(_), _) => {
                 future::err(format_err!("Scrub action passed for non-scrubbable store")).boxify()

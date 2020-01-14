@@ -575,6 +575,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         repo_configs,
         cmdlib::args::parse_mysql_options(&matches),
         cmdlib::args::parse_readonly_storage(&matches),
+        cmdlib::args::parse_blobstore_options(&matches),
         cache,
         with_cachelib,
         with_skiplist,

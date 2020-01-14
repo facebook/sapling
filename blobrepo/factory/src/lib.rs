@@ -40,7 +40,7 @@ use sql_ext::MysqlOptions;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 
-pub use blobstore_factory::ReadOnlyStorage;
+pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Caching {
@@ -70,6 +70,7 @@ pub fn open_blobrepo(
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
+    blobstore_options: BlobstoreOptions,
     logger: Logger,
 ) -> BoxFuture<BlobRepo, Error> {
     let sql_fut = make_sql_factory(
@@ -89,8 +90,7 @@ pub fn open_blobrepo(
                     &sql_factory,
                     mysql_options,
                     readonly_storage,
-                    None,
-                    None,
+                    blobstore_options,
                 ),
                 sql_factory,
             )

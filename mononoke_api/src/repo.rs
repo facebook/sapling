@@ -14,7 +14,7 @@ use std::{
 
 use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
+use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -116,6 +116,7 @@ impl Repo {
         mysql_options: MysqlOptions,
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
+        blobstore_options: BlobstoreOptions,
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
@@ -138,6 +139,7 @@ impl Repo {
             common_config.scuba_censored_table,
             config.filestore,
             readonly_storage,
+            blobstore_options,
             logger.clone(),
         )
         .compat()

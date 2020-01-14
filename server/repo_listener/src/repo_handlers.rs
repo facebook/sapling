@@ -17,7 +17,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
-use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
+use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore_factory::make_blobstore_no_sql;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
@@ -220,6 +220,7 @@ pub fn repo_handlers(
     disabled_hooks: &HashMap<String, HashSet<String>>,
     scuba_censored_table: Option<String>,
     readonly_storage: ReadOnlyStorage,
+    blobstore_options: BlobstoreOptions,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
@@ -267,6 +268,7 @@ pub fn repo_handlers(
                 scuba_censored_table.clone(),
                 config.filestore.clone(),
                 readonly_storage,
+                blobstore_options.clone(),
                 logger.clone(),
             )
             .and_then(move |blobrepo| {

@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_factory::{Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeMapping;
@@ -79,6 +79,7 @@ impl Mononoke {
         mysql_options: MysqlOptions,
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
+        blobstore_options: BlobstoreOptions,
     ) -> Result<Self, Error> {
         let common_config = configs.common;
         let repos = future::join_all(
@@ -87,7 +88,7 @@ impl Mononoke {
                 .into_iter()
                 .filter(move |&(_, ref config)| config.enabled)
                 .map(move |(name, config)| {
-                    cloned!(logger, common_config);
+                    cloned!(logger, common_config, blobstore_options);
                     async move {
                         info!(logger, "Initializing repo: {}", &name);
                         let repo = Repo::new(
@@ -99,6 +100,7 @@ impl Mononoke {
                             mysql_options,
                             with_cachelib,
                             readonly_storage,
+                            blobstore_options,
                         )
                         .await
                         .expect("failed to initialize repo");

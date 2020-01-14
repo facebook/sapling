@@ -9,7 +9,7 @@
 use std::collections::HashMap;
 
 use anyhow::Error;
-use blobrepo_factory::{Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -47,6 +47,7 @@ impl Mononoke {
         configs: RepoConfigs,
         mysql_options: MysqlOptions,
         readonly_storage: ReadOnlyStorage,
+        blobstore_options: BlobstoreOptions,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
         with_skiplist: bool,
@@ -59,7 +60,7 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        cloned!(logger, cache);
+                        cloned!(logger, blobstore_options, cache);
                         lazy({
                             cloned!(common_config);
                             move || {
@@ -71,6 +72,7 @@ impl Mononoke {
                                     common_config,
                                     mysql_options,
                                     readonly_storage,
+                                    blobstore_options,
                                     cache,
                                     with_cachelib,
                                     with_skiplist,

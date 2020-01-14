@@ -22,15 +22,33 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
+#[derive(Clone, Copy, Debug)]
+pub struct ThrottleOptions {
+    read_qps: Option<NonZeroU32>,
+    write_qps: Option<NonZeroU32>,
+}
+
+impl ThrottleOptions {
+    pub fn new(read_qps: Option<NonZeroU32>, write_qps: Option<NonZeroU32>) -> Self {
+        Self {
+            read_qps,
+            write_qps,
+        }
+    }
+
+    pub fn has_throttle(&self) -> bool {
+        self.read_qps.is_some() || self.write_qps.is_some()
+    }
+}
+
 /// A Blobstore that rate limits the number of read and write operations.
 #[derive(Clone)]
 pub struct ThrottledBlob<T: Blobstore + Clone> {
     blobstore: T,
     read_limiter: AsyncLimiter,
     write_limiter: AsyncLimiter,
-    /// The qps fields are used for Debug. They are not consulted at runtime.
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
+    /// The options fields are used for Debug. They are not consulted at runtime.
+    options: ThrottleOptions,
 }
 
 fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
@@ -44,13 +62,12 @@ fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
 }
 
 impl<T: Blobstore + Clone> ThrottledBlob<T> {
-    pub fn new(blobstore: T, read_qps: Option<NonZeroU32>, write_qps: Option<NonZeroU32>) -> Self {
+    pub fn new(blobstore: T, options: ThrottleOptions) -> Self {
         Self {
             blobstore,
-            read_limiter: limiter(read_qps),
-            write_limiter: limiter(write_qps),
-            read_qps,
-            write_qps,
+            read_limiter: limiter(options.read_qps),
+            write_limiter: limiter(options.write_qps),
+            options,
         }
     }
 }
@@ -103,8 +120,7 @@ impl<T: Blobstore + Clone> fmt::Debug for ThrottledBlob<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ThrottledBlob")
             .field("blobstore", &self.blobstore)
-            .field("read_qps", &self.read_qps)
-            .field("write_qps", &self.write_qps)
+            .field("options", &self.options)
             .finish()
     }
 }

@@ -98,6 +98,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         common_config.scuba_censored_table,
         config.filestore.clone(),
         readonly_storage,
+        cmdlib::args::parse_blobstore_options(&matches),
         logger.clone(),
     );
 

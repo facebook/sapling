@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use std::{num::NonZeroU32, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{format_err, Error};
 use cloned::cloned;
@@ -48,6 +48,19 @@ pub struct ReadOnlyStorage(pub bool);
 pub enum Scrubbing {
     Enabled,
     Disabled,
+}
+
+pub use throttledblob::ThrottleOptions;
+
+#[derive(Clone, Debug)]
+pub struct BlobstoreOptions {
+    pub throttle_options: ThrottleOptions,
+}
+
+impl BlobstoreOptions {
+    pub fn new(throttle_options: ThrottleOptions) -> Self {
+        Self { throttle_options }
+    }
 }
 
 trait SqlFactoryBase: Send + Sync {
@@ -259,14 +272,13 @@ pub fn make_blobstore_no_sql(
         None,
         MysqlOptions::default(),
         readonly_storage,
-        None,
-        None,
+        BlobstoreOptions::new(ThrottleOptions::new(None, None)),
     )
 }
 
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
-/// If `read_qps` or `write_qps` are Some then ThrottledBlob will be used to limit
+/// If `throttling.read_qps` or `throttling.write_qps` are Some then ThrottledBlob will be used to limit
 /// QPS to the underlying blobstore
 pub fn make_blobstore(
     fb: FacebookInit,
@@ -274,8 +286,7 @@ pub fn make_blobstore(
     sql_factory: &SqlFactory,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
+    blobstore_options: BlobstoreOptions,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     make_blobstore_impl(
         fb,
@@ -283,8 +294,7 @@ pub fn make_blobstore(
         Some(sql_factory),
         mysql_options,
         readonly_storage,
-        read_qps,
-        write_qps,
+        blobstore_options,
     )
 }
 
@@ -294,8 +304,7 @@ fn make_blobstore_impl(
     sql_factory: Option<&SqlFactory>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
+    blobstore_options: BlobstoreOptions,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
 
@@ -376,8 +385,7 @@ fn make_blobstore_impl(
             mysql_options,
             readonly_storage,
             None,
-            read_qps.clone(),
-            write_qps.clone(),
+            blobstore_options.clone(),
         ),
         Scrub {
             scuba_table,
@@ -394,8 +402,7 @@ fn make_blobstore_impl(
                 Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
                 *scrub_action,
             )),
-            read_qps.clone(),
-            write_qps.clone(),
+            blobstore_options.clone(),
         ),
         ManifoldWithTtl {
             bucket,
@@ -421,10 +428,13 @@ fn make_blobstore_impl(
         store
     };
 
-    let store = if read_qps.is_some() || write_qps.is_some() {
+    let store = if blobstore_options.throttle_options.has_throttle() {
         store
             .map(move |inner| {
-                Arc::new(ThrottledBlob::new(inner, read_qps, write_qps)) as Arc<dyn Blobstore>
+                Arc::new(ThrottledBlob::new(
+                    inner,
+                    blobstore_options.throttle_options,
+                )) as Arc<dyn Blobstore>
             })
             .boxify()
     } else {
@@ -442,8 +452,7 @@ pub fn make_blobstore_multiplexed(
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
+    blobstore_options: BlobstoreOptions,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     let component_readonly = match &scrub_args {
         // Need to write to components to repair them.
@@ -455,7 +464,7 @@ pub fn make_blobstore_multiplexed(
         .iter()
         .map({
             move |(blobstoreid, config)| {
-                cloned!(blobstoreid);
+                cloned!(blobstoreid, blobstore_options);
                 make_blobstore_impl(
                     // force per line for easier merges
                     fb,
@@ -463,8 +472,7 @@ pub fn make_blobstore_multiplexed(
                     sql_factory,
                     mysql_options,
                     component_readonly,
-                    read_qps,
-                    write_qps,
+                    blobstore_options,
                 )
                 .map({ move |store| (blobstoreid, store) })
             }
