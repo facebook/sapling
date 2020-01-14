@@ -76,6 +76,26 @@ add_subdirectory(eden/scm/edenscm/mercurial)
 add_subdirectory(eden/scm/lib)
 add_subdirectory(eden/test_support)
 
+if(WIN32)
+  # On Windows our Python binaries are compiled into executables which depend
+  # on Python.  They need to be able to find the correct Python DLL at runtime.
+  # If INSTALL_PYTHON_LIB is enabled we will copy the correct Python DLL into
+  # Eden's installation directory so that our programs can easily find the
+  # right Python library.
+  #
+  # It might be nice if we could link against Python statically.  The
+  # FindPython3.cmake module does support a Python3_USE_STATIC_LIBS variable,
+  # but unfortunately it is ignored on Windows.
+  set(
+    INSTALL_PYTHON_LIB FALSE CACHE BOOL
+    "Install the Python DLL in Eden's bin/ directory."
+  )
+  if(INSTALL_PYTHON_LIB)
+    get_target_property(python_dll Python3::Python LOCATION)
+    install(FILES "${python_dll}" DESTINATION bin)
+  endif()
+endif()
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.h
