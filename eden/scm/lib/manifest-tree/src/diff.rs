@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn test_diff_single() {
-        let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
+        let tree = make_tree_manifest(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
         let mut next = VecDeque::new();
 
@@ -514,7 +514,7 @@ mod tests {
 
     #[test]
     fn test_diff() {
-        let ltree = make_tree(&[
+        let ltree = make_tree_manifest(&[
             ("changed", "1"),
             ("d1/changed", "1"),
             ("d1/leftonly", "1"),
@@ -525,7 +525,7 @@ mod tests {
             ("leftonly", "1"),
             ("same", "1"),
         ]);
-        let rtree = make_tree(&[
+        let rtree = make_tree_manifest(&[
             ("changed", "2"),
             ("d1/changed", "2"),
             ("d1/rightonly", "1"),
@@ -562,7 +562,7 @@ mod tests {
 
     #[test]
     fn test_diff_matcher() {
-        let ltree = make_tree(&[
+        let ltree = make_tree_manifest(&[
             ("changed", "1"),
             ("d1/changed", "1"),
             ("d1/leftonly", "1"),
@@ -573,7 +573,7 @@ mod tests {
             ("leftonly", "1"),
             ("same", "1"),
         ]);
-        let rtree = make_tree(&[
+        let rtree = make_tree_manifest(&[
             ("changed", "2"),
             ("d1/changed", "2"),
             ("d1/rightonly", "1"),
@@ -604,8 +604,9 @@ mod tests {
 
     #[test]
     fn test_diff_generic() {
-        let mut left = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
-        let mut right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
+        let mut left =
+            make_tree_manifest(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
+        let mut right = make_tree_manifest(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
@@ -707,7 +708,8 @@ mod tests {
     #[test]
     fn test_diff_left_empty() {
         let mut left = TreeManifest::ephemeral(Arc::new(TestStore::new()));
-        let mut right = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")]);
+        let mut right =
+            make_tree_manifest(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")]);
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
@@ -749,8 +751,8 @@ mod tests {
 
     #[test]
     fn test_diff_matcher_2() {
-        let left = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
-        let right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
+        let left = make_tree_manifest(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
+        let right = make_tree_manifest(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
 
         assert_eq!(
             Diff::new(
@@ -821,7 +823,7 @@ mod tests {
 
     #[test]
     fn test_diff_on_sort_order_edge() {
-        let left = make_tree(&[("foo/bar-test/a.txt", "10"), ("foo/bartest/b.txt", "20")]);
+        let left = make_tree_manifest(&[("foo/bar-test/a.txt", "10"), ("foo/bartest/b.txt", "20")]);
         let mut right = left.clone();
         right
             .insert(repo_path_buf("foo/bar/c.txt"), make_meta("30"))

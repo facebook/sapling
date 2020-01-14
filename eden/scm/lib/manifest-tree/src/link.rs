@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_list_directory() -> Result<()> {
-        let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
+        let tree = make_tree_manifest(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
         let (files, dirs) = dir.list(&tree.store)?;
 

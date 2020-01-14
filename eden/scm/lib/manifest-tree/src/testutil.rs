@@ -32,7 +32,7 @@ pub(crate) fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
     }
 }
 
-pub(crate) fn make_tree<'a>(
+pub fn make_tree_manifest<'a>(
     paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>,
 ) -> TreeManifest {
     let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
