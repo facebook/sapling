@@ -505,7 +505,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
     let with_skiplist = !matches.is_present("without-skiplist");
-    let with_cache = matches.is_present("with-content-sha1-cache");
+    let with_cache = matches.is_present(cmdlib::args::WITH_CONTENT_SHA1_CACHE);
 
     let address = format!("{}:{}", host, port);
 

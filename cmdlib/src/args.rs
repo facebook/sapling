@@ -19,6 +19,7 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use lazy_static::lazy_static;
 use panichandler::{self, Fate};
 use scuba::ScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
@@ -56,6 +57,15 @@ const ENABLE_MCROUTER: &str = "enable-mcrouter";
 const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 const RUNTIME_THREADS: &str = "runtime-threads";
+
+const CACHE_SIZE_GB: &str = "cache-size-gb";
+const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
+const MAX_PROCESS_SIZE: &str = "max-process-size";
+const MIN_PROCESS_SIZE: &str = "min-process-size";
+pub const WITH_CONTENT_SHA1_CACHE: &str = "with-content-sha1-cache";
+const SKIP_CACHING: &str = "skip-caching";
+const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
+const READONLY_STORAGE: &str = "readonly-storage";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -618,43 +628,67 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
         })
         .collect();
 
-    app.arg(Arg::from_usage(
-            "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
-    ))
-    .arg(Arg::from_usage(
-            "--use-tupperware-shrinker 'Use the Tupperware-aware cache shrinker to avoid OOM'"
-    ))
-    .arg(Arg::from_usage(
-            "--max-process-size [SIZE] 'process size at which cachelib will shrink, in GiB'"
-    ))
-    .arg(Arg::from_usage(
-            "--min-process-size [SIZE] 'process size at which cachelib will grow back to cache-size-gb, in GiB'"
-    ))
-    .arg(Arg::from_usage(
-            "--with-content-sha1-cache  '[Mononoke API Server only] enable content SHA1 cache'"
-    ))
-    .args_from_usage(
-        r#"
-        --skip-caching 'do not init cachelib and disable caches (useful for tests)'
-        "#,
+    // Computed help strings with lifetime 'b is problematic, so use lazy_static instead:
+    lazy_static! {
+        static ref MIN_PROCESS_SIZE_HELP: std::string::String = format!(
+            "process size at which cachelib will grow back to {} in GiB",
+            CACHE_SIZE_GB
+        );
+    }
+
+    app.arg(
+        Arg::with_name(CACHE_SIZE_GB)
+            .long(CACHE_SIZE_GB)
+            .takes_value(true)
+            .value_name("SIZE")
+            .help("size of the cachelib cache, in GiB"),
     )
-    .args_from_usage(
-        r#"
-        --cachelib-only-blobstore 'do not init memcache for blobstore'
-        "#,
+    .arg(
+        Arg::with_name(USE_TUPPERWARE_SHRINKER)
+            .long(USE_TUPPERWARE_SHRINKER)
+            .help("Use the Tupperware-aware cache shrinker to avoid OOM"),
     )
-    .args_from_usage(
-        r#"
-        --readonly-storage 'Error on any attempts to write to storage'
-        "#,
+    .arg(
+        Arg::with_name(MAX_PROCESS_SIZE)
+            .long(MAX_PROCESS_SIZE)
+            .takes_value(true)
+            .value_name("SIZE")
+            .help("process size at which cachelib will shrink, in GiB"),
+    )
+    .arg(
+        Arg::with_name(MIN_PROCESS_SIZE)
+            .long(MIN_PROCESS_SIZE)
+            .takes_value(true)
+            .value_name("SIZE")
+            .help(&*MIN_PROCESS_SIZE_HELP),
+    )
+    .arg(
+        Arg::with_name(WITH_CONTENT_SHA1_CACHE)
+            .long(WITH_CONTENT_SHA1_CACHE)
+            .help("[Mononoke API Server only] enable content SHA1 cache"),
+    )
+    .arg(
+        Arg::with_name(SKIP_CACHING)
+            .long(SKIP_CACHING)
+            .help("do not init cachelib and disable caches (useful for tests)"),
+    )
+    .arg(
+        Arg::with_name(CACHELIB_ONLY_BLOBSTORE)
+            .long(CACHELIB_ONLY_BLOBSTORE)
+            .help("do not init memcache for blobstore"),
+    )
+    .arg(
+        Arg::with_name(READONLY_STORAGE)
+            .long(READONLY_STORAGE)
+            .help("Error on any attempts to write to storage"),
     )
     .args(&cache_args)
 }
 
 pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
-    if matches.is_present("skip-caching") {
+    if matches.is_present(SKIP_CACHING) {
         Caching::Disabled
-    } else if matches.is_present("cachelib-only-blobstore") {
+    } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE) {
         Caching::CachelibOnlyBlobstore
     } else {
         Caching::Enabled
@@ -666,16 +700,16 @@ pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching 
 
     if caching == Caching::Enabled || caching == Caching::CachelibOnlyBlobstore {
         let mut settings = CachelibSettings::default();
-        if let Some(cache_size) = matches.value_of("cache-size-gb") {
+        if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
             settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
         }
-        if let Some(max_process_size) = matches.value_of("max-process-size") {
+        if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
             settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
         }
-        if let Some(min_process_size) = matches.value_of("min-process-size") {
+        if let Some(min_process_size) = matches.value_of(MIN_PROCESS_SIZE) {
             settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
         }
-        settings.use_tupperware_shrinker = matches.is_present("use-tupperware-shrinker");
+        settings.use_tupperware_shrinker = matches.is_present(USE_TUPPERWARE_SHRINKER);
         if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
             settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
         }
@@ -688,7 +722,7 @@ pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching 
         if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
             settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
         }
-        settings.with_content_sha1_cache = matches.is_present("with-content-sha1-cache");
+        settings.with_content_sha1_cache = matches.is_present(WITH_CONTENT_SHA1_CACHE);
         if let Some(content_sha1_cache_size) = matches.value_of("content-sha1-cache-size") {
             settings.content_sha1_cache_size = Some(content_sha1_cache_size.parse().unwrap());
         }
