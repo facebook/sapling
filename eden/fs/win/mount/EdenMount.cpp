@@ -83,16 +83,9 @@ const AbsolutePath& EdenMount::getPath() const {
   return config_->getMountPath();
 }
 
-folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
-    const {
+folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
   auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
   return objectStore_->getTreeForCommit(commitHash);
-}
-
-std::shared_ptr<const Tree> EdenMount::getRootTree() const {
-  // TODO: We should convert callers of this API to use the Future-based
-  // version.
-  return getRootTreeFuture().get();
 }
 
 folly::Future<folly::Unit> EdenMount::diff(

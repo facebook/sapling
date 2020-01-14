@@ -35,7 +35,7 @@ WinStore ::~WinStore() {}
 
 shared_ptr<const Tree> WinStore::getTree(
     const RelativePathPiece& relPath) const {
-  auto tree = getMount().getRootTree();
+  auto tree = getMount().getRootTree().get();
 
   for (auto piece : relPath.components()) {
     auto entry = tree->getEntryPtr(piece);

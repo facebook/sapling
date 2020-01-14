@@ -366,7 +366,7 @@ void TestMount::renameFile(
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {
-  return edenMount_->getRootTree();
+  return edenMount_->getRootTree().get();
 }
 
 } // namespace eden

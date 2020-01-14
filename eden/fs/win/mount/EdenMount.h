@@ -170,8 +170,7 @@ class EdenMount {
   const std::shared_ptr<UnboundedQueueExecutor>& getThreadPool() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
-  std::shared_ptr<const Tree> getRootTree() const;
-  folly::Future<std::shared_ptr<const Tree>> getRootTreeFuture() const;
+  folly::Future<std::shared_ptr<const Tree>> getRootTree() const;
 
   /**
    * Check out the specified commit.
