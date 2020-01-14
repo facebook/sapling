@@ -21,11 +21,11 @@
 
 [megarepo_test]
 large_repo_id = 0
-common_pushrebase_bookmarks = ["master"]
+common_pushrebase_bookmarks = ["master_bookmark"]
 
     [[megarepo_test.small_repos]]
     repoid = 1
-    bookmark_prefix = "fbsource"
+    bookmark_prefix = "fbsource/"
     default_action = "preserve"
     direction = "small_to_large"
 
@@ -34,7 +34,7 @@ common_pushrebase_bookmarks = ["master"]
 
     [[megarepo_test.small_repos]]
     repoid = 2
-    bookmark_prefix = "ovrsource"
+    bookmark_prefix = "ovrsource/"
     default_action = "prepend_prefix"
     default_prefix = "arvr-legacy"
     direction = "small_to_large"
