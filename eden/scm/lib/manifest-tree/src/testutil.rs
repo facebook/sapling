@@ -11,7 +11,7 @@ use anyhow::{format_err, Result};
 use bytes::Bytes;
 use parking_lot::{Mutex, RwLock};
 
-use manifest::{File, FileMetadata, Manifest};
+use manifest::{testutil::*, Manifest};
 use types::{testutil::*, HgId, Key, RepoPath, RepoPathBuf};
 
 use crate::{store, Link, TreeManifest, TreeStore};
@@ -29,17 +29,6 @@ pub(crate) fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
         Link::Leaf(file_metadata) => file_metadata.hgid,
         Link::Durable(ref entry) => entry.hgid,
         Link::Ephemeral(_) => panic!("Asked for hgid on path {} but found ephemeral hgid.", path),
-    }
-}
-
-pub(crate) fn make_meta(hex: &str) -> FileMetadata {
-    FileMetadata::regular(hgid(hex))
-}
-
-pub(crate) fn make_file(path: &str, hex: &str) -> File {
-    File {
-        path: repo_path_buf(path),
-        meta: make_meta(hex),
     }
 }
 

@@ -676,7 +676,7 @@ pub fn prefetch(
 mod tests {
     use super::*;
 
-    use manifest::FileType;
+    use manifest::{testutil::*, FileType};
     use types::{hgid::NULL_ID, testutil::*};
 
     use self::testutil::*;

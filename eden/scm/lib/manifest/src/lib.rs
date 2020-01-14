@@ -12,6 +12,9 @@
 //! repository. The file path and file revision are then used to retrieve the contents of the
 //! file thus achieving the reconstruction of the entire repository state.
 
+#[cfg(any(test, feature = "for-tests"))]
+pub mod testutil;
+
 use anyhow::Result;
 
 use pathmatcher::Matcher;

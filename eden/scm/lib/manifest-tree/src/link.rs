@@ -275,6 +275,7 @@ impl PartialOrd for DirLink<'_> {
 mod tests {
     use super::*;
 
+    use manifest::testutil::*;
     use types::testutil::*;
 
     use crate::testutil::*;

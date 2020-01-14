@@ -262,7 +262,7 @@ mod tests {
 
     use std::sync::Arc;
 
-    use manifest::Manifest;
+    use manifest::{testutil::*, Manifest};
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 

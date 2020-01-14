@@ -386,7 +386,7 @@ mod tests {
 
     use std::sync::Arc;
 
-    use manifest::{DiffType, FileMetadata, FileType, Manifest};
+    use manifest::{testutil::*, DiffType, FileMetadata, FileType, Manifest};
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
