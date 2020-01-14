@@ -6,15 +6,14 @@
  * directory of this source tree.
  */
 
-use std::thread;
-use std::{cmp::min, fs, io, path::Path, str::FromStr, time::Duration};
+use std::{cmp::min, fs, future::Future, io, path::Path, str::FromStr, thread, time::Duration};
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::sync::oneshot::Receiver;
-use futures::{future, sync, Future, IntoFuture};
+use futures::{future as old_future, sync, Future as OldFuture, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use panichandler::Fate;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
@@ -32,12 +31,12 @@ use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
 use sql_ext::MysqlOptions;
-use stats::schedule_stats_aggregation;
+use stats::{schedule_stats_aggregation, schedule_stats_aggregation_preview};
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 pub const ARG_FORCE_SHUTDOWN_PERIOD: &str = "force-shutdown-period";
 
-pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {
+pub fn upload_and_show_trace(ctx: CoreContext) -> impl OldFuture<Item = (), Error = !> {
     if !ctx.trace().is_enabled() {
         debug!(ctx.logger(), "Trace is disabled");
         return Ok(()).into_future().left_future();
@@ -244,7 +243,7 @@ pub fn csid_resolve(
     ctx: CoreContext,
     repo: BlobRepo,
     hash_or_bookmark: impl ToString,
-) -> impl Future<Item = ChangesetId, Error = Error> {
+) -> impl OldFuture<Item = ChangesetId, Error = Error> {
     let hash_or_bookmark = hash_or_bookmark.to_string();
     BookmarkName::new(hash_or_bookmark.clone())
         .into_future()
@@ -281,7 +280,7 @@ pub fn get_root_manifest_id(
     ctx: CoreContext,
     repo: BlobRepo,
     hash_or_bookmark: impl ToString,
-) -> impl Future<Item = HgManifestId, Error = Error> {
+) -> impl OldFuture<Item = HgManifestId, Error = Error> {
     csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark).and_then(move |bcs_id| {
         repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
             .and_then({
@@ -359,7 +358,7 @@ pub fn serve_forever<Server, QuiesceFn, ShutdownFn>(
     shutdown_timeout: Duration,
 ) -> Result<(), Error>
 where
-    Server: Future<Item = (), Error = ()> + Send + 'static,
+    Server: OldFuture<Item = (), Error = ()> + Send + 'static,
     QuiesceFn: FnOnce(),
     ShutdownFn: FnOnce() -> bool,
 {
@@ -397,7 +396,7 @@ pub fn block_on_fn<Server, QuiesceFn, ShutdownFn, BlockFn>(
     shutdown_timeout: Duration,
 ) -> Result<(), Error>
 where
-    Server: Future<Item = (), Error = ()> + Send + 'static,
+    Server: OldFuture<Item = (), Error = ()> + Send + 'static,
     QuiesceFn: FnOnce(),
     ShutdownFn: FnOnce() -> bool,
     BlockFn: FnOnce() -> Result<(), Error>,
@@ -443,47 +442,44 @@ where
 }
 
 /// Executes the future and waits for it to finish.
-pub fn block_execute<F>(
+pub fn block_execute<F, Out>(
     future: F,
     fb: FacebookInit,
     app_name: &str,
     logger: &Logger,
     matches: &ArgMatches,
-) -> Result<(), Error>
+) -> Result<Out, Error>
 where
-    F: Future<Item = (), Error = Error> + Send + 'static,
+    F: Future<Output = Result<Out, Error>> + Send + 'static,
 {
     monitoring::start_fb303_server(fb, app_name, logger, matches)?;
-    let (shutdown_pub, shutdown_sub) = sync::oneshot::channel::<()>();
-    let future = future
-        .map({
-            let logger = logger.clone();
-            move |_| {
-                let _ = shutdown_pub.send(());
-                info!(&logger, "Execution succeeded")
-            }
-        })
-        .map_err({
-            let logger = logger.clone();
-            move |e| error!(&logger, "Execution error: {:?}", e)
-        })
-        .discard();
     let mut runtime = args::init_runtime(&matches)?;
-    let main = join_stats_agg(future, shutdown_sub)?;
-    let result = runtime.block_on(main);
 
+    let result = runtime.block_on_std(async {
+        let stats_agg = schedule_stats_aggregation_preview()
+            .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+        // Note: this returns a JoinHandle, which we drop, thus detaching the task
+        // It thus does not count towards shutdown_on_idle below
+        tokio_preview::task::spawn(stats_agg);
+
+        future.await
+    });
+
+    // Only needed while we have a compat runtime - this waits for futures without
+    // a handle to stop
     runtime.shutdown_on_idle();
 
-    match result {
-        Ok(()) => Ok(()),
-        Err(()) => Err(Error::msg("Execution failed")),
-    }
+    match &result {
+        Ok(_) => info!(logger, "Execution succeeded"),
+        Err(e) => error!(logger, "Execution error: {:?}", e),
+    };
+    result
 }
 
 /// Join the future with stats aggregator and return a new joined future
 fn join_stats_agg<F>(future: F, shutdown_sub: Receiver<()>) -> Result<BoxFuture<(), ()>, Error>
 where
-    F: Future<Item = (), Error = ()> + Send + 'static,
+    F: OldFuture<Item = (), Error = ()> + Send + 'static,
 {
     let stats_agg = schedule_stats_aggregation()
         .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?
@@ -495,8 +491,8 @@ where
         .then({
             move |res| -> Result<(), ()> {
                 match res {
-                    Ok(future::Either::B(_)) => Ok(()),
-                    Err(future::Either::A(_)) => Err(()),
+                    Ok(old_future::Either::B(_)) => Ok(()),
+                    Err(old_future::Either::A(_)) => Err(()),
                     _ => {
                         // NOTE: We need to panic here, because otherwise main is going to be blocked on
                         // waiting for a signal forever. This shouldn't normally ever happen.
@@ -514,7 +510,7 @@ mod test {
     use super::*;
     use crate::args;
     use anyhow::Error;
-    use futures::future::lazy;
+    use futures_preview::future::lazy;
     use slog_glog_fmt;
     use tokio_timer::sleep;
 
@@ -530,7 +526,7 @@ mod test {
 
     #[fbinit::test]
     fn test_block_execute_success(fb: FacebookInit) {
-        let future = lazy({ || -> Result<(), Error> { Ok(()) } });
+        let future = lazy({ |_| -> Result<(), Error> { Ok(()) } });
         let logger = create_logger();
         let matches = exec_matches();
         let res = block_execute(future, fb, "test_app", &logger, &matches);
@@ -539,7 +535,7 @@ mod test {
 
     #[fbinit::test]
     fn test_block_execute_error(fb: FacebookInit) {
-        let future = lazy({ || -> Result<(), Error> { Err(Error::msg("Some error")) } });
+        let future = lazy({ |_| -> Result<(), Error> { Err(Error::msg("Some error")) } });
         let logger = create_logger();
         let matches = exec_matches();
         let res = block_execute(future, fb, "test_app", &logger, &matches);

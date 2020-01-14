@@ -28,6 +28,7 @@ use futures::{
     prelude::*,
 };
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use healer::Healer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
@@ -337,5 +338,5 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    block_execute(healer, fb, app_name, &logger, &matches)
+    block_execute(healer.compat(), fb, app_name, &logger, &matches)
 }

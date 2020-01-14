@@ -13,6 +13,7 @@ use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 
 use cmdlib::{args, helpers::block_execute};
 
@@ -45,5 +46,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .boxify(),
     };
 
-    block_execute(future, fb, app_name, &logger, &matches)
+    block_execute(future.compat(), fb, app_name, &logger, &matches)
 }
