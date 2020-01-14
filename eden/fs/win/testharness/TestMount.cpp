@@ -150,8 +150,11 @@ void TestMount::initialize(
 }
 
 void TestMount::createMount() {
-  shared_ptr<ObjectStore> objectStore =
-      ObjectStore::create(localStore_, backingStore_, stats_);
+  shared_ptr<ObjectStore> objectStore = ObjectStore::create(
+      localStore_,
+      backingStore_,
+      stats_,
+      &folly::QueuedImmediateExecutor::instance());
   auto journal = std::make_unique<Journal>(stats_);
   edenMount_ = EdenMount::create(
       std::move(config_),
@@ -206,7 +209,11 @@ void TestMount::remount() {
   // Create a new copy of the CheckoutConfig
   auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
-  auto objectStore = ObjectStore::create(localStore_, backingStore_, stats_);
+  auto objectStore = ObjectStore::create(
+      localStore_,
+      backingStore_,
+      stats_,
+      &folly::QueuedImmediateExecutor::instance());
 
   auto journal = std::make_unique<Journal>(stats_);
 
