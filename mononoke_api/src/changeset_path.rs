@@ -11,7 +11,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Error;
-use blame::fetch_blame;
+use blame::{fetch_blame, BlameError};
 use bytes::Bytes;
 use cloned::cloned;
 use filestore::FetchKey;
@@ -255,7 +255,12 @@ impl ChangesetPathContext {
         })?;
 
         fetch_blame(ctx, repo, csid, mpath.clone())
-            .map_err(|error| MononokeError::from(Error::from(error)))
+            .map_err(|error| match error {
+                BlameError::NoSuchPath(_) | BlameError::IsDirectory(_) => {
+                    MononokeError::InvalidRequest(error.to_string())
+                }
+                _ => MononokeError::from(Error::from(error)),
+            })
             .compat()
             .await
     }

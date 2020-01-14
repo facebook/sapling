@@ -14,7 +14,7 @@ pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping};
 #[cfg(test)]
 mod tests;
 
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
@@ -34,6 +34,10 @@ use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 #[derive(Debug, Error)]
 pub enum BlameError {
+    #[error("No such path: {0}")]
+    NoSuchPath(MPath),
+    #[error("Blame is not available for directories: {0}")]
+    IsDirectory(MPath),
     #[error("{0}")]
     Rejected(BlameRejected),
     #[error("{0}")]
@@ -108,20 +112,17 @@ fn fetch_blame_if_derived(
                     .find_entry(ctx, blobstore, Some(path))
             }
         })
+        .from_err()
         .and_then({
             cloned!(path);
             move |entry_opt| {
-                let entry = entry_opt.ok_or_else(|| format_err!("No such path: {}", path))?;
+                let entry = entry_opt.ok_or_else(|| BlameError::NoSuchPath(path.clone()))?;
                 match entry.into_leaf() {
-                    None => Err(format_err!(
-                        "Blame is not available for directories: {}",
-                        path
-                    )),
+                    None => Err(BlameError::IsDirectory(path)),
                     Some(file_unode_id) => Ok(BlameId::from(file_unode_id)),
                 }
             }
         })
-        .from_err()
         .and_then({
             cloned!(ctx, blobstore);
             move |blame_id| {
