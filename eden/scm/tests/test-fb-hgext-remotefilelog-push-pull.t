@@ -194,7 +194,7 @@ the server supports our custom getfiles method.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 2 changesets with 1 changes to 1 files
   new changesets 3a2e32c04641:cedeb4167c1f
 
   $ cd ..

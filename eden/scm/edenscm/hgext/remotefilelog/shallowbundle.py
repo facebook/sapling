@@ -242,6 +242,10 @@ class shallowcg1packer(changegroup.cg1packer):
                 )
             else:
                 files = []
+
+                phasecache = repo._phasecache
+                cl = repo.changelog
+
                 # Prefetch the revisions being bundled
                 for i, fname in enumerate(sorted(changedfiles)):
                     filerevlog = repo.file(fname)
@@ -251,9 +255,9 @@ class shallowcg1packer(changegroup.cg1packer):
                     for fnode, cnode in list(linkrevnodes.iteritems()):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
-                            if repo.fileslog.localcontentstore.getmissing(
-                                [(fname, fnode)]
-                            ) != [] and repo.shallowmatch(fname):
+                            if phasecache.phase(
+                                repo, cl.rev(cnode)
+                            ) == phases.public and repo.shallowmatch(fname):
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))

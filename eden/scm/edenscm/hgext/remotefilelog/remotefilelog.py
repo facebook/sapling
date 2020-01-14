@@ -615,9 +615,6 @@ class remotefileslog(filelog.fileslog):
         self.contentstore = unioncontentstore(*contentstores)
         self.metadatastore = unionmetadatastore(*metadatastores)
 
-        self.localcontentstore = unioncontentstore(*self.localdatastores)
-        self.localmetadatastore = unionmetadatastore(*self.localhistorystores)
-
         repo.fileservice.setstore(self.contentstore, self.metadatastore)
         shallowutil.reportpackmetrics(
             repo.ui,
