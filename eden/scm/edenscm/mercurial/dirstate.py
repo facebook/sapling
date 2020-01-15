@@ -719,28 +719,37 @@ class dirstate(object):
 
         filename = self._filename
         if tr:
-            # 'dirstate.write()' is not only for writing in-memory
-            # changes out, but also for dropping ambiguous timestamp.
-            # delayed writing re-raise "ambiguous timestamp issue".
-            # See also the wiki page below for detail:
-            # https://www.mercurial-scm.org/wiki/DirstateTransactionPlan
-
-            # emulate dropping timestamp in 'parsers.pack_dirstate'
-            now = _getfsnow(self._opener)
-            self._map.clearambiguoustimes(self._updatedfiles, now)
-
-            # emulate that all 'dirstate.normal' results are written out
-            self._lastnormaltime = 0
-            self._updatedfiles.clear()
-
-            # delay writing in-memory changes out
-            tr.addfilegenerator(
-                "dirstate", (self._filename,), self._writedirstate, location="local"
-            )
+            self._markforwrite()
             return
 
         st = self._opener(filename, "w", atomictemp=True, checkambig=True)
         self._writedirstate(st)
+
+    def _markforwrite(self):
+        tr = self._repo.currenttransaction()
+        if not tr:
+            raise error.ProgrammingError("no transaction during dirstate write")
+
+        self._dirty = True
+
+        # 'dirstate.write()' is not only for writing in-memory
+        # changes out, but also for dropping ambiguous timestamp.
+        # delayed writing re-raise "ambiguous timestamp issue".
+        # See also the wiki page below for detail:
+        # https://www.mercurial-scm.org/wiki/DirstateTransactionPlan
+
+        # emulate dropping timestamp in 'parsers.pack_dirstate'
+        now = _getfsnow(self._opener)
+        self._map.clearambiguoustimes(self._updatedfiles, now)
+
+        # emulate that all 'dirstate.normal' results are written out
+        self._lastnormaltime = 0
+        self._updatedfiles.clear()
+
+        # delay writing in-memory changes out
+        tr.addfilegenerator(
+            "dirstate", (self._filename,), self._writedirstate, location="local"
+        )
 
     @util.propertycache
     def checkoutidentifier(self):
