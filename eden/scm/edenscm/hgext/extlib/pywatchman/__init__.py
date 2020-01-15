@@ -34,6 +34,7 @@ import math
 import os
 import socket
 import subprocess
+import sys
 import time
 
 # pyre-fixme[21]: Could not find `edenscmnative`.
@@ -307,6 +308,47 @@ class CommandError(WatchmanError):
         super(CommandError, self).__init__("watchman command error: %s" % (msg,), cmd)
 
 
+def is_named_pipe_path(path):
+    """Returns True if path is a watchman named pipe path """
+    return path.startswith("\\\\.\\pipe\\watchman")
+
+
+class SockPath(object):
+    """Describes how to connect to watchman"""
+
+    unix_domain = None
+    named_pipe = None
+    tcp_address = None
+
+    def __init__(
+        self, unix_domain=None, named_pipe=None, sockpath=None, tcp_address=None
+    ):
+        if named_pipe is None and sockpath is not None and is_named_pipe_path(sockpath):
+            named_pipe = sockpath
+
+        if (
+            unix_domain is None
+            and sockpath is not None
+            and not is_named_pipe_path(sockpath)
+        ):
+            unix_domain = sockpath
+
+        if compat.PYTHON3 and named_pipe:
+            named_pipe = os.fsencode(named_pipe)
+
+        self.unix_domain = unix_domain
+        self.named_pipe = named_pipe
+
+        self.tcp_address = tcp_address
+
+    def legacy_sockpath(self):
+        """Returns a sockpath suitable for passing to the watchman
+        CLI --sockname parameter"""
+        if self.named_pipe:
+            return self.named_pipe
+        return self.unix_domain
+
+
 class Transport(object):
     """ communication transport to the watchman server """
 
@@ -370,23 +412,14 @@ class Codec(object):
         self.transport.setTimeout(value)
 
 
-class UnixSocketTransport(Transport):
-    """ local unix domain socket transport """
+class SocketTransport(Transport):
+    """ abstract socket transport """
 
     sock = None
+    timeout = None
 
-    def __init__(self, sockpath, timeout):
-        self.sockpath = sockpath
-        self.timeout = timeout
-
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        try:
-            sock.settimeout(self.timeout)
-            sock.connect(self.sockpath)
-            self.sock = sock
-        except socket.error as e:
-            sock.close()
-            raise SocketConnectError(self.sockpath, e)
+    def __init__(self):
+        pass
 
     def close(self):
         if self.sock:
@@ -411,6 +444,57 @@ class UnixSocketTransport(Transport):
             self.sock.sendall(data)
         except socket.timeout:
             raise SocketTimeout("timed out sending query command")
+
+
+class UnixSocketTransport(SocketTransport):
+    """ local unix domain socket transport """
+
+    def __init__(self, sockpath, timeout):
+        super(UnixSocketTransport, self).__init__()
+        self.sockpath = sockpath
+        self.timeout = timeout
+
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(self.timeout)
+            sock.connect(self.sockpath.unix_domain)
+            self.sock = sock
+        except socket.error as e:
+            sock.close()
+            raise SocketConnectError(self.sockpath.unix_domain, e)
+
+
+class TcpSocketTransport(SocketTransport):
+    """ TCP socket transport """
+
+    def __init__(self, sockpath, timeout):
+        super(TcpSocketTransport, self).__init__()
+        self.sockpath = sockpath
+        self.timeout = timeout
+
+        try:
+            # Note that address resolution does not respect 'timeout'
+            # which applies only to socket traffic.
+            results = socket.getaddrinfo(
+                self.sockpath.tcp_address[0],
+                self.sockpath.tcp_address[1],
+                0,
+                socket.IPPROTO_TCP,
+            )
+            (family, type, proto, canonname, sockaddr) = results[0]
+        except Exception as e:
+            raise SocketConnectError(
+                "Error resolving address: %r" % (self.sockpath.tcp_address,), e
+            )
+
+        sock = socket.socket(family, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(self.timeout)
+            sock.connect(sockaddr)
+            self.sock = sock
+        except socket.error as e:
+            sock.close()
+            raise SocketConnectError(str(self.sockpath.tcp_address), e)
 
 
 def _get_overlapped_result_ex_impl(pipe, olap, nbytes, millis, alertable):
@@ -461,10 +545,8 @@ class WindowsNamedPipeTransport(Transport):
         self.timeout = int(math.ceil(timeout * 1000))
         self._iobuf = None
 
-        if compat.PYTHON3:
-            sockpath = os.fsencode(sockpath)
         self.pipe = CreateFile(
-            sockpath,
+            self.sockpath.named_pipe,
             GENERIC_READ | GENERIC_WRITE,
             0,
             None,
@@ -476,7 +558,9 @@ class WindowsNamedPipeTransport(Transport):
         err = GetLastError()
         if self.pipe == INVALID_HANDLE_VALUE or self.pipe == 0:
             self.pipe = None
-            raise SocketConnectError(self.sockpath, self._make_win_err("", err))
+            raise SocketConnectError(
+                self.sockpath.named_pipe, self._make_win_err("", err)
+            )
 
         # event for the overlapped I/O operations
         self._waitable = CreateEvent(None, True, False, None)
@@ -615,6 +699,15 @@ class WindowsNamedPipeTransport(Transport):
         )
 
 
+def _default_binpath(binpath=None):
+    if binpath:
+        return binpath
+    # The test harness sets WATCHMAN_BINARY to the binary under test,
+    # so we use that by default, otherwise, allow resolving watchman
+    # from the users PATH.
+    return os.environ.get("WATCHMAN_BINARY", "watchman")
+
+
 class CLIProcessTransport(Transport):
     """ open a pipe to the cli to talk to the service
     This intended to be used only in the test harness!
@@ -638,10 +731,10 @@ class CLIProcessTransport(Transport):
     proc = None
     closed = True
 
-    def __init__(self, sockpath, timeout, binpath="watchman"):
+    def __init__(self, sockpath, timeout, binpath=None):
         self.sockpath = sockpath
         self.timeout = timeout
-        self.binpath = binpath
+        self.binpath = _default_binpath(binpath)
 
     def close(self):
         if self.proc:
@@ -657,7 +750,7 @@ class CLIProcessTransport(Transport):
             return self.proc
         args = [
             self.binpath,
-            "--sockname={0}".format(self.sockpath),
+            "--sockname={0}".format(self.sockpath.legacy_sockpath()),
             "--logfile=/BOGUS",
             "--statefile=/BOGUS",
             "--no-spawn",
@@ -867,6 +960,7 @@ class client(object):
     def __init__(
         self,
         sockpath=None,
+        tcpAddress=None,
         timeout=1.0,
         transport=None,
         sendEncoding=None,
@@ -876,17 +970,24 @@ class client(object):
         # meaning
         valueEncoding=False,
         valueErrors=False,
-        binpath="watchman",
+        binpath=None,
     ):
+        if sockpath is not None and not isinstance(sockpath, SockPath):
+            sockpath = SockPath(sockpath=sockpath, tcpAddress=tcpAddress)
         self.sockpath = sockpath
         self.timeout = timeout
         self.useImmutableBser = useImmutableBser
-        self.binpath = binpath
+        self.binpath = _default_binpath(binpath)
 
         if inspect.isclass(transport) and issubclass(transport, Transport):
             self.transport = transport
         else:
             transport = transport or os.getenv("WATCHMAN_TRANSPORT") or "local"
+            if self.transport == "tcp" and tcpAddress is None:
+                raise WatchmanError(
+                    "Constructor requires argument tcpAddress when 'tcp' "
+                    "transport protocol is used"
+                )
             if transport == "local" and os.name == "nt":
                 self.transport = WindowsNamedPipeTransport
             elif transport == "local":
@@ -897,6 +998,8 @@ class client(object):
                     sendEncoding = "json"
                 if recvEncoding is None:
                     recvEncoding = sendEncoding
+            elif transport == "tcp":
+                self.transport = TcpSocketTransport
             else:
                 raise WatchmanError("invalid transport %s" % transport)
 
@@ -960,7 +1063,7 @@ class client(object):
         # should use it unless explicitly set otherwise
         path = os.getenv("WATCHMAN_SOCK")
         if path:
-            return path
+            return SockPath(sockpath=path)
 
         cmd = [self.binpath, "--output-encoding=bser", "get-sockname"]
         try:
@@ -989,7 +1092,24 @@ class client(object):
         if "error" in result:
             raise WatchmanError("get-sockname error: %s" % result["error"])
 
-        return result["sockname"]
+        def get_path_result(name):
+            value = result.get(name, None)
+            if value is None:
+                return None
+            return value.decode(sys.getfilesystemencoding(), errors="surrogateescape")
+
+        # sockname is always present
+        sockpath = get_path_result("sockname")
+        assert sockpath is not None
+
+        return SockPath(
+            # unix_domain and named_pipe are reported by newer versions
+            # of the server and may not be present
+            unix_domain=get_path_result("unix_domain"),
+            named_pipe=get_path_result("named_pipe"),
+            # sockname is always present
+            sockpath=sockpath,
+        )
 
     def _connect(self):
         """ establish transport connection """
