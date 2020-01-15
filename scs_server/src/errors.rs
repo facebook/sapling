@@ -36,6 +36,10 @@ impl From<MononokeError> for ServiceError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
                 reason,
             }),
+            error @ MononokeError::PermissionDenied { .. } => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::PERMISSION_DENIED,
+                reason: error.to_string(),
+            }),
             MononokeError::InternalError(error) => Self::Internal(thrift::InternalError {
                 reason: error.to_string(),
                 backtrace: error.backtrace().map(ToString::to_string),

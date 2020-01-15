@@ -485,22 +485,35 @@ impl Repo {
             .await?;
         maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
     }
+
+    fn check_acl(&self, ctx: &CoreContext, mode: &'static str) -> Result<(), MononokeError> {
+        if let Some(acl_checker) = self.acl_checker.as_ref() {
+            let identities = ctx.identities();
+            let permitted = identities
+                .as_ref()
+                .map(|identities| acl_checker.check_set(&identities, &[mode]))
+                .unwrap_or(false);
+            if !permitted {
+                debug!(
+                    ctx.logger(),
+                    "Permission denied: {} access to {}", mode, self.name
+                );
+                let identities = identities
+                    .as_ref()
+                    .map(|identities| identities.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+                return Err(MononokeError::PermissionDenied { mode, identities });
+            }
+        }
+        Ok(())
+    }
 }
 
 /// A context object representing a query to a particular repo.
 impl RepoContext {
     pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
-        // For now we just log if the ACL check fails.
-        if let Some(acl_checker) = repo.acl_checker.as_ref() {
-            if let Some(identities) = ctx.identities() {
-                if !acl_checker.check_set(&identities, &["read"]) {
-                    debug!(
-                        ctx.logger(),
-                        "Access check would have failed for repo {}", repo.name
-                    );
-                }
-            }
-        }
+        // Check the user is permitted to access this repo.
+        repo.check_acl(&ctx, "read")?;
         Ok(Self { repo, ctx })
     }
 
@@ -542,11 +555,6 @@ impl RepoContext {
     /// The warm bookmarks cache for the referenced repository.
     pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         &self.repo.warm_bookmarks_cache
-    }
-
-    /// The ACL checker for the referenced repository.
-    pub(crate) fn acl_checker(&self) -> Option<&Arc<AclChecker>> {
-        self.repo.acl_checker.as_ref()
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset
@@ -779,17 +787,8 @@ impl RepoContext {
             )));
         }
 
-        // For now we just log the ACL check.
-        if let Some(acl_checker) = self.acl_checker() {
-            if let Some(identities) = self.ctx().identities() {
-                if !acl_checker.check_set(&identities, &["write"]) {
-                    debug!(
-                        self.ctx().logger(),
-                        "Write access checked would have failed"
-                    );
-                }
-            }
-        }
+        // Check the user is permitted to write to this repo.
+        self.repo.check_acl(&self.ctx, "write")?;
 
         Ok(RepoWriteContext::new(self))
     }
