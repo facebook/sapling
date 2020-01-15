@@ -21,7 +21,7 @@ pub mod spanset;
 pub use id::{Group, Id, VertexName};
 pub use idmap::IdMap;
 pub use nameddag::NamedDag;
-pub use segment::Dag;
+pub use segment::IdDag;
 
 #[cfg(test)]
 mod tests;

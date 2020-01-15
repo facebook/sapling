@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag, Group, Id, VertexName};
+use dag::{idmap::IdMap, segment::IdDag, Group, Id, VertexName};
 use minibench::{
     bench, elapsed,
     measure::{self, Measure},
@@ -47,7 +47,7 @@ fn main() {
         bench(format!("building segment_size={}", segment_size), || {
             built = true;
             measure::Both::<measure::WallClock, String>::measure(|| {
-                let mut dag = Dag::open(&dag_dir.path()).unwrap();
+                let mut dag = IdDag::open(&dag_dir.path()).unwrap();
                 dag.set_new_segment_size(segment_size);
                 let mut syncable = dag.prepare_filesystem_sync().unwrap();
                 let segment_len = syncable
@@ -63,7 +63,7 @@ fn main() {
             format!("ancestor calcuation segment_size={}", segment_size),
             || {
                 assert!(built, "segments must be built to run this benchmak");
-                let dag = Dag::open(&dag_dir.path()).unwrap();
+                let dag = IdDag::open(&dag_dir.path()).unwrap();
                 elapsed(|| {
                     for i in (0..parents.len() as u64).step_by(10079) {
                         for j in (1..parents.len() as u64).step_by(2351) {

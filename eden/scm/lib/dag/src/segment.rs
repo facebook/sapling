@@ -7,11 +7,11 @@
 
 //! # segment
 //!
-//! Segmented DAG. See [`Dag`] for the main structure.
+//! Segmented DAG. See [`IdDag`] for the main structure.
 //!
-//! There are 2 flavors of DAG: [`Dag`] and [`SyncableDag`]. [`Dag`] loads
+//! There are 2 flavors of DAG: [`IdDag`] and [`SyncableIdDag`]. [`IdDag`] loads
 //! from the filesystem, is responsible for all kinds of queires, and can
-//! have in-memory-only changes. [`SyncableDag`] is the only way to update
+//! have in-memory-only changes. [`SyncableIdDag`] is the only way to update
 //! the filesystem state, and does not support queires.
 
 use crate::id::{Group, Id};
@@ -46,20 +46,24 @@ pub type Level = u8;
 ///
 /// See `slides/201904-segmented-changelog/segmented-changelog.pdf` for pretty
 /// graphs about how segments help with ancestry queries.
-pub struct Dag {
+///
+/// [`IdDag`] is often used together with [`IdMap`] to allow customized names
+/// on vertexes. The [`NamedDag`] type provides an easy-to-use interface to
+/// keep [`IdDag`] and [`IdMap`] in sync.
+pub struct IdDag {
     pub(crate) log: log::Log,
     path: PathBuf,
     max_level: Level,
     new_seg_size: usize,
 }
 
-/// Guard to make sure [`Dag`] on-disk writes are race-free.
-pub struct SyncableDag {
-    dag: Dag,
+/// Guard to make sure [`IdDag`] on-disk writes are race-free.
+pub struct SyncableIdDag {
+    dag: IdDag,
     lock_file: File,
 }
 
-/// [`Segment`] provides access to fields of a node in a [`Dag`] graph.
+/// [`Segment`] provides access to fields of a node in a [`IdDag`] graph.
 /// [`Segment`] reads directly from the byte slice, without a full parsing.
 pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
 
@@ -76,7 +80,7 @@ pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
 // for the worse case (i.e. each flat segment has length 1). Each segment has
 // only 1 byte overhead.
 
-impl Dag {
+impl IdDag {
     const INDEX_LEVEL_HEAD: usize = 0;
     const INDEX_PARENT: usize = 1;
     const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
@@ -86,7 +90,7 @@ impl Dag {
     /// not conflict with this.
     const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
 
-    /// Open [`Dag`] at the given directory. Create it on demand.
+    /// Open [`IdDag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let log = log::OpenOptions::new()
@@ -246,14 +250,14 @@ impl Dag {
         }
     }
 
-    /// Return a [`SyncableDag`] instance that provides race-free
+    /// Return a [`SyncableIdDag`] instance that provides race-free
     /// filesytem read and write access by taking an exclusive lock.
     ///
-    /// The [`SyncableDag`] instance provides a `sync` method that
+    /// The [`SyncableIdDag`] instance provides a `sync` method that
     /// actually writes changes to disk.
     ///
     /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&self) -> Result<SyncableDag> {
+    pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -275,8 +279,8 @@ impl Dag {
         log.sync()?;
         let max_level = Self::max_level_from_log(&log)?;
 
-        Ok(SyncableDag {
-            dag: Dag {
+        Ok(SyncableIdDag {
+            dag: IdDag {
                 log,
                 path: self.path.clone(),
                 max_level,
@@ -310,8 +314,8 @@ impl Dag {
 }
 
 // Build segments.
-impl Dag {
-    /// Make sure the [`Dag`] contains the given id (and all ids smaller than
+impl IdDag {
+    /// Make sure the [`IdDag`] contains the given id (and all ids smaller than
     /// `high`) by building up segments on demand.
     ///
     /// `get_parents` describes the DAG. Its input and output are `Id`s.
@@ -319,7 +323,7 @@ impl Dag {
     /// This is often used together with [`crate::idmap::IdMap`].
     ///
     /// Content inserted by this function *will not* be written to disk.
-    /// For example, [`Dag::prepare_filesystem_sync`] will drop them.
+    /// For example, [`IdDag::prepare_filesystem_sync`] will drop them.
     pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
         F: Fn(Id) -> Result<Vec<Id>>,
@@ -341,7 +345,7 @@ impl Dag {
     /// segment. Setting it to 0 will makes sure flat segments cover the given
     /// `high - 1`, with the downside of increasing fragmentation.  Setting it
     /// to a larger value will reduce fragmentation, with the downside of
-    /// [`Dag`] covers less ids.
+    /// [`IdDag`] covers less ids.
     ///
     /// Return number of segments inserted.
     fn build_flat_segments<F>(
@@ -587,7 +591,7 @@ impl Dag {
 }
 
 // Reload.
-impl Dag {
+impl IdDag {
     /// Reload from the filesystem. Discard pending changes.
     pub fn reload(&mut self) -> Result<()> {
         self.log.clear_dirty()?;
@@ -599,7 +603,7 @@ impl Dag {
 }
 
 // Remove data.
-impl Dag {
+impl IdDag {
     /// Mark non-master ids as "removed".
     pub fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
@@ -614,8 +618,8 @@ impl Dag {
 }
 
 // User-facing DAG-related algorithms.
-impl Dag {
-    /// Return a [`SpanSet`] that covers all ids stored in this [`Dag`].
+impl IdDag {
+    /// Return a [`SpanSet`] that covers all ids stored in this [`IdDag`].
     pub fn all(&self) -> Result<SpanSet> {
         let mut result = SpanSet::empty();
         for &group in Group::ALL.iter().rev() {
@@ -693,7 +697,7 @@ impl Dag {
 
     /// Calculate parents of the given set.
     ///
-    /// Note: [`SpanSet`] does not preserve order. Use [`Dag::parent_ids`] if
+    /// Note: [`SpanSet`] does not preserve order. Use [`IdDag::parent_ids`] if
     /// order is needed.
     pub fn parents(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let mut result = SpanSet::empty();
@@ -885,7 +889,7 @@ impl Dag {
         //            Push them to the result.
 
         struct Context<'a> {
-            this: &'a Dag,
+            this: &'a IdDag,
             set: SpanSet,
             result_lower_bound: Id,
             result: SpanSet,
@@ -1077,7 +1081,7 @@ impl Dag {
         //     - Iterate through level N-1 segments covered by S.
 
         struct Context<'a> {
-            this: &'a Dag,
+            this: &'a IdDag,
             roots: SpanSet,
             ancestors: SpanSet,
             roots_min: Id,
@@ -1177,7 +1181,7 @@ impl Dag {
         }
 
         struct Context<'a> {
-            this: &'a Dag,
+            this: &'a IdDag,
             roots: SpanSet,
             roots_min: Id,
             result: SpanSet,
@@ -1243,9 +1247,9 @@ impl Dag {
 }
 
 // Full IdMap -> Sparse IdMap
-impl Dag {
+impl IdDag {
     /// Copy a subset of "Universal" mapping from `full_idmap` to
-    /// `sparse_idmap`. See [`Dag::universal`].
+    /// `sparse_idmap`. See [`IdDag::universal`].
     pub fn write_sparse_idmap(
         &self,
         full_idmap: &dyn crate::idmap::IdMapLike,
@@ -1304,11 +1308,11 @@ pub enum FirstAncestorConstraint {
     KnownUniversally { heads: SpanSet },
 }
 
-impl SyncableDag {
-    /// Make sure the [`SyncableDag`] contains the given id (and all ids smaller
+impl SyncableIdDag {
+    /// Make sure the [`SyncableIdDag`] contains the given id (and all ids smaller
     /// than `high`) by building up segments on demand.
     ///
-    /// This is similar to [`Dag::build_segments_volatile`]. However, the build
+    /// This is similar to [`IdDag::build_segments_volatile`]. However, the build
     /// result is intended to be written to the filesystem. Therefore high-level
     /// segments are intentionally made lagging to reduce fragmentation.
     pub fn build_segments_persistent<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
@@ -1323,11 +1327,11 @@ impl SyncableDag {
 
     /// Write pending changes to disk. Release the exclusive lock.
     ///
-    /// The newly written entries can be fetched by [`Dag::reload`].
+    /// The newly written entries can be fetched by [`IdDag::reload`].
     ///
-    /// To avoid races, [`Dag`]s in the `reload_dags` list will be
-    /// reloaded while [`SyncableDag`] still holds the lock.
-    pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut Dag>) -> Result<()> {
+    /// To avoid races, [`IdDag`]s in the `reload_dags` list will be
+    /// reloaded while [`SyncableIdDag`] still holds the lock.
+    pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut IdDag>) -> Result<()> {
         self.dag.log.sync()?;
         for dag in reload_dags {
             dag.reload()?;
@@ -1460,7 +1464,7 @@ impl<'a> Segment<'a> {
     }
 }
 
-impl Debug for Dag {
+impl Debug for IdDag {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut first = true;
         for level in 0..=self.max_level {
@@ -1582,7 +1586,7 @@ mod tests {
     #[test]
     fn test_segment_basic_lookups() {
         let dir = tempdir().unwrap();
-        let mut dag = Dag::open(dir.path()).unwrap();
+        let mut dag = IdDag::open(dir.path()).unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
         assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
 
@@ -1648,7 +1652,7 @@ mod tests {
     #[test]
     fn test_sync_reload() {
         let dir = tempdir().unwrap();
-        let mut dag = Dag::open(dir.path()).unwrap();
+        let mut dag = IdDag::open(dir.path()).unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
 
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
@@ -1668,7 +1672,7 @@ mod tests {
     #[test]
     fn test_all() {
         let dir = tempdir().unwrap();
-        let mut dag = Dag::open(dir.path()).unwrap();
+        let mut dag = IdDag::open(dir.path()).unwrap();
         assert!(dag.all().unwrap().is_empty());
         dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
         assert_eq!(dag.all().unwrap().count(), 1002);

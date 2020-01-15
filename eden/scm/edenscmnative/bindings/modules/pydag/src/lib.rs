@@ -13,7 +13,7 @@ use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::{
     id::{Group, Id, VertexName},
     idmap::IdMap,
-    segment::Dag,
+    segment::IdDag,
     spanset::{SpanSet, SpanSetIter},
 };
 use encoding::local_bytes_to_path;
@@ -166,12 +166,12 @@ impl ToPyObject for Spans {
 }
 
 py_class!(class dagindex |py| {
-    data dag: RefCell<Dag>;
+    data dag: RefCell<IdDag>;
     data map: RefCell<IdMap>;
 
     def __new__(_cls, path: &PyBytes, segment_size: usize = 16) -> PyResult<dagindex> {
         let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
-        let mut dag = Dag::open(path.join("segment")).map_pyerr(py)?;
+        let mut dag = IdDag::open(path.join("segment")).map_pyerr(py)?;
         let map = IdMap::open(path.join("idmap")).map_pyerr(py)?;
         dag.set_new_segment_size(segment_size);
         Self::create_instance(py, RefCell::new(dag), RefCell::new(map))

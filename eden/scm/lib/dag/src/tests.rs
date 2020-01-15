@@ -8,8 +8,8 @@
 use crate::id::{Group, Id, VertexName};
 use crate::idmap::IdMap;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
-use crate::segment::Dag;
 use crate::segment::FirstAncestorConstraint;
+use crate::segment::IdDag;
 use crate::spanset::SpanSet;
 use crate::NamedDag;
 use anyhow::Result;
@@ -772,7 +772,7 @@ impl IdMap {
     }
 }
 
-impl Dag {
+impl IdDag {
     /// Dump segments in a compact string form.
     fn dump(&self) -> String {
         format!("{:?}", self)
@@ -783,12 +783,12 @@ impl Dag {
 struct BuildSegmentResult {
     ascii: Vec<String>,
     id_map: IdMap,
-    dag: Dag,
+    dag: IdDag,
     dir: tempfile::TempDir,
 }
 
 /// Take an ASCII DAG, assign segments from given heads.
-/// Return the ASCII DAG and segments strings, together with the IdMap and Dag.
+/// Return the ASCII DAG and segments strings, together with the IdMap and IdDag.
 fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
     let mut named_dag = NamedDag::open(dir.path().join("n")).unwrap();

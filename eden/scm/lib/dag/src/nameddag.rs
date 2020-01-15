@@ -7,15 +7,15 @@
 
 //! # nameddag
 //!
-//! Combination of IdMap and Dag.
+//! Combination of IdMap and IdDag.
 
 use crate::id::Group;
 use crate::id::VertexName;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapLike;
 use crate::idmap::SyncableIdMap;
-use crate::segment::Dag;
-use crate::segment::SyncableDag;
+use crate::segment::IdDag;
+use crate::segment::SyncableIdDag;
 use anyhow::{bail, Result};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -25,7 +25,7 @@ use std::path::Path;
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.
 pub struct NamedDag {
-    pub(crate) dag: Dag,
+    pub(crate) dag: IdDag,
     pub(crate) map: IdMap,
 }
 
@@ -38,7 +38,7 @@ impl NamedDag {
         // API changes on the indexedlog side.
         let _locked = map.prepare_filesystem_sync()?;
         map.reload()?;
-        let dag = Dag::open(path.join("segments"))?;
+        let dag = IdDag::open(path.join("segments"))?;
         Ok(Self { dag, map })
     }
 
@@ -106,7 +106,7 @@ impl NamedDag {
 /// non-master commits.
 fn non_master_parent_names(
     map: &SyncableIdMap,
-    dag: &SyncableDag,
+    dag: &SyncableIdDag,
 ) -> Result<HashMap<VertexName, Vec<VertexName>>> {
     let parent_ids = dag.non_master_parent_ids()?;
     // Map id to name.
@@ -125,7 +125,7 @@ fn non_master_parent_names(
 }
 
 /// Re-assign ids and segments for non-master group.
-pub fn rebuild_non_master(map: &mut SyncableIdMap, dag: &mut SyncableDag) -> Result<()> {
+pub fn rebuild_non_master(map: &mut SyncableIdMap, dag: &mut SyncableIdDag) -> Result<()> {
     // backup part of the named graph in memory.
     let parents = non_master_parent_names(map, dag)?;
     let mut heads = parents
@@ -161,7 +161,7 @@ pub fn rebuild_non_master(map: &mut SyncableIdMap, dag: &mut SyncableDag) -> Res
 /// Build IdMap and Segments for the given heads.
 pub fn build<F>(
     map: &mut SyncableIdMap,
-    dag: &mut SyncableDag,
+    dag: &mut SyncableIdDag,
     parent_names_func: F,
     master_heads: &[VertexName],
     non_master_heads: &[VertexName],
@@ -207,12 +207,12 @@ where
 /// consistent with `smartset.abstractsmartset`. Ideally, `smartset` provides
 /// public commit hash interface, and there is no LowLevelAccess here.
 pub unsafe trait LowLevelAccess {
-    fn dag(&self) -> &Dag;
+    fn dag(&self) -> &IdDag;
     fn map(&self) -> &IdMap;
 }
 
 unsafe impl LowLevelAccess for NamedDag {
-    fn dag(&self) -> &Dag {
+    fn dag(&self) -> &IdDag {
         &self.dag
     }
     fn map(&self) -> &IdMap {

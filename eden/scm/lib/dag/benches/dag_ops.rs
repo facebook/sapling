@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::Dag, spanset::SpanSet, Group, Id, VertexName};
+use dag::{idmap::IdMap, segment::IdDag, spanset::SpanSet, Group, Id, VertexName};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
@@ -39,7 +39,7 @@ fn main() {
     let dag_dir = tempdir().unwrap();
 
     bench("building segments", || {
-        let mut dag = Dag::open(&dag_dir.path()).unwrap();
+        let mut dag = IdDag::open(&dag_dir.path()).unwrap();
         elapsed(|| {
             dag.build_segments_volatile(head_id, &parents_by_id)
                 .unwrap();
@@ -47,7 +47,7 @@ fn main() {
     });
 
     // Write segments to filesystem.
-    let mut dag = Dag::open(&dag_dir.path()).unwrap();
+    let mut dag = IdDag::open(&dag_dir.path()).unwrap();
     let mut syncable = dag.prepare_filesystem_sync().unwrap();
     syncable
         .build_segments_persistent(head_id, &parents_by_id)
