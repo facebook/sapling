@@ -291,7 +291,8 @@ def metaedit(ui, repo, templ, *revs, **opts):
         if opts["fold"]:
             ui.status(_("%i changesets folded\n") % len(revs))
         if newp1 is not None:
-            hg.update(repo, newp1)
+            with repo.wlock(), repo.lock(), repo.transaction("metaedit-checkout"):
+                hg.update(repo, newp1)
 
 
 def _histediting(repo):
