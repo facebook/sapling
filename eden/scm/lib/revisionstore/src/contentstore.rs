@@ -162,6 +162,9 @@ impl<'a> ContentStoreBuilder<'a> {
             datastore.add(shared_indexedlogdatastore);
         }
 
+        // The shared stores should precede the local one since we expect both the number of blobs,
+        // and the number of requests satisfied by the shared cache to be significantly higher than
+        // ones in the local store.
         datastore.add(shared_pack_store.clone());
         datastore.add(local_pack_store.clone());
 

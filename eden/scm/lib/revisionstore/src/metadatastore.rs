@@ -144,6 +144,12 @@ impl<'a> MetadataStoreBuilder<'a> {
             historystore.add(shared_indexedloghistorystore);
         }
 
+        // The shared store should precede the local one for 2 reasons:
+        //  - It is expected that the number of blobs and the number of requests satisfied by the
+        //    shared cache to be significantly higher than ones in the local store
+        //  - When pushing changes on a pushrebase server, the local linknode will become
+        //    incorrect, future fetches will put that change in the shared cache where the linknode
+        //    will be correct.
         historystore.add(shared_pack_store.clone());
         historystore.add(local_pack_store.clone());
 
