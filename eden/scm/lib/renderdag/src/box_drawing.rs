@@ -172,12 +172,26 @@ where
                         && cur.intersects(LinkLine::ANY_MERGE)
                     {
                         link_line.push_str(glyphs[glyph::JOIN_BOTH]);
+                    } else if cur.intersects(LinkLine::ANY_FORK)
+                        && cur.intersects(LinkLine::PARENT)
+                        && !line.merge
+                    {
+                        link_line.push_str(glyphs[glyph::JOIN_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_FORK) {
                         link_line.push_str(glyphs[glyph::FORK_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_MERGE) {
                         link_line.push_str(glyphs[glyph::MERGE_BOTH]);
                     } else {
                         link_line.push_str(glyphs[glyph::HORIZONTAL]);
+                    }
+                } else if cur.contains(LinkLine::PARENT) && !line.merge {
+                    let left = cur.intersects(LinkLine::LEFT_MERGE | LinkLine::LEFT_FORK);
+                    let right = cur.intersects(LinkLine::RIGHT_MERGE | LinkLine::RIGHT_FORK);
+                    match (left, right) {
+                        (true, true) => link_line.push_str(glyphs[glyph::JOIN_BOTH]),
+                        (true, false) => link_line.push_str(glyphs[glyph::JOIN_LEFT]),
+                        (false, true) => link_line.push_str(glyphs[glyph::JOIN_RIGHT]),
+                        (false, false) => link_line.push_str(glyphs[glyph::PARENT]),
                     }
                 } else if cur.intersects(LinkLine::PARENT | LinkLine::ANCESTOR)
                     && !cur.intersects(LinkLine::LEFT_FORK | LinkLine::RIGHT_FORK)
@@ -337,7 +351,7 @@ mod tests {
             o   │ │  G
             ├─────╮
             │   │ o  F
-            │   ╭─╯
+            │   ├─╯
             │   o  E
             │   │
             o   │  D
@@ -389,7 +403,7 @@ mod tests {
               o  X
             ╭─╯
             │ o  W
-            ╭─╯
+            ├─╯
             o  G
             │
             o    F
@@ -420,7 +434,7 @@ mod tests {
             ╷ o  X
             ╭─╯
             │ o  W
-            ╭─╯
+            ├─╯
             o  E
             ╷
             o    D
@@ -458,7 +472,7 @@ mod tests {
               o  K
               │
               │ o  J
-              ╭─╯
+              ├─╯
               o    I
             ╭─┼─╮
             │ │ │
@@ -511,5 +525,4 @@ mod tests {
                long message 3"#
         );
     }
-
 }

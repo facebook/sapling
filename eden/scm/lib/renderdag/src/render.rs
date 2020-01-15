@@ -184,6 +184,9 @@ pub struct GraphRow<N> {
     /// The message for this row.
     pub message: String,
 
+    /// True if this row is for a merge commit.
+    pub merge: bool,
+
     /// The node columns for this row.
     pub node_line: Vec<NodeLine>,
 
@@ -283,6 +286,9 @@ where
                 .unwrap_or_else(|| self.columns.new_empty())
         });
         self.columns[column] = Column::Empty;
+
+        // This row is for a merge if there are multiple parents.
+        let merge = parents.len() > 1;
 
         // Build the initial node line.
         let mut node_line: Vec<_> = self.columns.iter().map(|c| c.to_node_line()).collect();
@@ -409,6 +415,7 @@ where
             node,
             glyph,
             message,
+            merge,
             node_line,
             link_line,
             term_line,
