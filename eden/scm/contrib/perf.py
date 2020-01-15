@@ -791,8 +791,8 @@ def perfdirstatewrite(ui, repo, **opts):
     "a" in ds
 
     def d():
-        ds._dirty = True
-        ds.write(repo.currenttransaction())
+        with repo.wlock(), repo.lock(), repo.transaction("perf"):
+            ds._markforwrite()
 
     timer(d)
     fm.end()
