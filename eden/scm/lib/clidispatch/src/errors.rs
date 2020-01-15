@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 use thiserror::Error;
+use thrift_types::edenfs as eden;
 
 #[derive(Debug, Error)]
 #[error("cannot decode arguments")]
@@ -62,7 +63,52 @@ pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO) {
             // UX: Colorize the output once `io` can output colors.
             let _ = io.write_err(format!("     {}\n", possibility));
         }
+    } else if let Some(eden::ErrorKind::EdenServiceGetScmStatusV2Error(
+        eden::services::eden_service::GetScmStatusV2Exn::ex(e),
+    )) = err.downcast_ref::<eden::ErrorKind>()
+    {
+        let _ = io.write_err(format!("abort: {}\n", e.message));
+        let _ = io.flush();
     } else {
         let _ = io.write_err(format!("abort: {}\n", err));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn test_status_error_msg() {
+        // Construct error and parameters
+        let error_msg = "cannot compute status while a checkout is currently in progress";
+        let expected_error = format!("abort: {}\n", error_msg);
+
+        let error: anyhow::Error = eden::ErrorKind::EdenServiceGetScmStatusV2Error(
+            eden::services::eden_service::GetScmStatusV2Exn::ex(eden::EdenError {
+                message: error_msg.to_string(),
+                errorCode: Some(255),
+                errorType: eden::EdenErrorType::CHECKOUT_IN_PROGRESS,
+            }),
+        )
+        .into();
+
+        let tin = Cursor::new(Vec::new());
+        let tout = Cursor::new(Vec::new());
+        let terr = Cursor::new(Vec::new());
+        let mut io = crate::io::IO::new(tin, tout, Some(terr));
+
+        // Call print_error with error and in-memory IO stream
+        print_error(&error, &mut io);
+
+        // Make sure error message is formatted correctly.
+        if let Some(actual_error_wrapped) = &io.error {
+            let any = Box::as_ref(&actual_error_wrapped).as_any();
+            if let Some(c) = any.downcast_ref::<std::io::Cursor<Vec<u8>>>() {
+                let actual_error = c.clone().into_inner();
+                assert_eq!(String::from_utf8(actual_error).unwrap(), expected_error);
+            }
+        }
     }
 }

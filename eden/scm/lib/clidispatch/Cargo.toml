@@ -12,6 +12,7 @@ configparser = { path = "../configparser" }
 cliparser = { path = "../cliparser" }
 indexedlog = { path = "../indexedlog" }
 thiserror = "1.0.5"
+thrift-types = { path = "../thrift-types" }
 util = { path = "../util" }
 
 [dev-dependencies]
