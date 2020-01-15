@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! # nameddag
+//! # namedag
 //!
 //! Combination of IdMap and IdDag.
 
@@ -24,12 +24,12 @@ use std::path::Path;
 ///
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.
-pub struct NamedDag {
+pub struct NameDag {
     pub(crate) dag: IdDag,
     pub(crate) map: IdMap,
 }
 
-impl NamedDag {
+impl NameDag {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let mut map = IdMap::open(path.join("idmap"))?;
@@ -94,7 +94,7 @@ impl NamedDag {
     // TODO: Consider implementing these:
     // - NamedSpanSet - SpanSet wrapper that only exposes "names".
     //   - Potentially, it has to implement smartset-like interfaces.
-    // - On NamedDag, methods wrapping dag algorithms that uses NamedSpanSet
+    // - On NameDag, methods wrapping dag algorithms that uses NamedSpanSet
     //   as input and output.
     // Before those APIs, LowLevelAccess might have to be used by callsites.
 }
@@ -211,7 +211,7 @@ pub unsafe trait LowLevelAccess {
     fn map(&self) -> &IdMap;
 }
 
-unsafe impl LowLevelAccess for NamedDag {
+unsafe impl LowLevelAccess for NameDag {
     fn dag(&self) -> &IdDag {
         &self.dag
     }

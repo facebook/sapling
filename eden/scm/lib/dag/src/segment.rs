@@ -48,7 +48,7 @@ pub type Level = u8;
 /// graphs about how segments help with ancestry queries.
 ///
 /// [`IdDag`] is often used together with [`IdMap`] to allow customized names
-/// on vertexes. The [`NamedDag`] type provides an easy-to-use interface to
+/// on vertexes. The [`NameDag`] type provides an easy-to-use interface to
 /// keep [`IdDag`] and [`IdMap`] in sync.
 pub struct IdDag {
     pub(crate) log: log::Log,

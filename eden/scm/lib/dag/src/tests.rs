@@ -11,7 +11,7 @@ use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 use crate::segment::FirstAncestorConstraint;
 use crate::segment::IdDag;
 use crate::spanset::SpanSet;
-use crate::NamedDag;
+use crate::NameDag;
 use anyhow::Result;
 use tempfile::tempdir;
 
@@ -791,7 +791,7 @@ struct BuildSegmentResult {
 /// Return the ASCII DAG and segments strings, together with the IdMap and IdDag.
 fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
-    let mut named_dag = NamedDag::open(dir.path().join("n")).unwrap();
+    let mut named_dag = NameDag::open(dir.path().join("n")).unwrap();
     named_dag.dag.set_new_segment_size(segment_size);
 
     let parents = drawdag::parse(&text);
