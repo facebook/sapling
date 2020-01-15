@@ -103,7 +103,8 @@ def defineactions():
         def run(self):
             state = self.state
             repo, ctxnode = state.repo, state.parentctxnode
-            hg.update(repo, ctxnode)
+            with repo.wlock(), repo.lock(), repo.transaction("histedit"):
+                hg.update(repo, ctxnode)
 
             # release locks so the program can call hg and then relock.
             lock.release(state.lock, state.wlock)

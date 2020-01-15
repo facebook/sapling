@@ -509,9 +509,10 @@ class histeditaction(object):
         repo = self.repo
         rulectx = repo[self.node]
         repo.ui.pushbuffer(error=True, labeled=True)
-        hg.update(repo, self.state.parentctxnode, quietempty=True)
-        stats = applychanges(repo.ui, repo, rulectx, {})
-        repo.dirstate.setbranch(rulectx.branch())
+        with repo.wlock(), repo.lock(), repo.transaction("histedit"):
+            hg.update(repo, self.state.parentctxnode, quietempty=True)
+            stats = applychanges(repo.ui, repo, rulectx, {})
+            repo.dirstate.setbranch(rulectx.branch())
         if stats and stats[3] > 0:
             buf = repo.ui.popbuffer()
             repo.ui.write(*buf)
@@ -586,19 +587,20 @@ def commitfuncfor(repo, src):
 
 def applychanges(ui, repo, ctx, opts):
     """Merge changeset from ctx (only) in the current working directory"""
-    wcpar = repo.dirstate.parents()[0]
-    if ctx.p1().node() == wcpar:
-        # edits are "in place" we do not need to make any merge,
-        # just applies changes on parent for editing
-        cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
-        stats = None
-    else:
-        try:
-            # ui.forcemerge is an internal variable, do not document
-            repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "histedit")
-            stats = mergemod.graft(repo, ctx, ctx.p1(), ["local", "histedit"])
-        finally:
-            repo.ui.setconfig("ui", "forcemerge", "", "histedit")
+    with repo.wlock(), repo.lock(), repo.transaction("histedit"):
+        wcpar = repo.dirstate.parents()[0]
+        if ctx.p1().node() == wcpar:
+            # edits are "in place" we do not need to make any merge,
+            # just applies changes on parent for editing
+            cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
+            stats = None
+        else:
+            try:
+                # ui.forcemerge is an internal variable, do not document
+                repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "histedit")
+                stats = mergemod.graft(repo, ctx, ctx.p1(), ["local", "histedit"])
+            finally:
+                repo.ui.setconfig("ui", "forcemerge", "", "histedit")
     return stats
 
 
@@ -725,8 +727,9 @@ class edit(histeditaction):
     def run(self):
         repo = self.repo
         rulectx = repo[self.node]
-        hg.update(repo, self.state.parentctxnode, quietempty=True)
-        applychanges(repo.ui, repo, rulectx, {})
+        with repo.wlock(), repo.lock(), repo.transaction("revert"):
+            hg.update(repo, self.state.parentctxnode, quietempty=True)
+            applychanges(repo.ui, repo, rulectx, {})
         raise error.InterventionRequired(
             _("Editing (%s), you may commit or record as needed now.")
             % node.short(self.node),
@@ -820,7 +823,8 @@ class fold(histeditaction):
     def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
         parent = ctx.parents()[0].node()
         repo.ui.pushbuffer()
-        hg.update(repo, parent)
+        with repo.transaction("fold-checkout"):
+            hg.update(repo, parent)
         repo.ui.popbuffer()
         ### prepare new commit data
         commitopts = {}
@@ -862,7 +866,8 @@ class fold(histeditaction):
         if n is None:
             return ctx, []
         repo.ui.pushbuffer()
-        hg.update(repo, n)
+        with repo.transaction("fold-checkout"):
+            hg.update(repo, n)
         repo.ui.popbuffer()
         replacements = [
             (oldctx.node(), (newnode,)),
@@ -878,7 +883,10 @@ class fold(histeditaction):
 class base(histeditaction):
     def run(self):
         if self.repo["."].node() != self.node:
-            mergemod.update(self.repo, self.node, False, True)
+            with self.repo.wlock(), self.repo.lock(), self.repo.transaction(
+                "histedit-base"
+            ):
+                mergemod.update(self.repo, self.node, False, True)
             #                                     branchmerge, force)
         return self.continueclean()
 
@@ -1244,7 +1252,8 @@ def _continuehistedit(ui, repo, state):
 def _finishhistedit(ui, repo, state, fm):
     """This action runs when histedit is finishing its session"""
     repo.ui.pushbuffer()
-    hg.update(repo, state.parentctxnode, quietempty=True)
+    with repo.transaction("histedit"):
+        hg.update(repo, state.parentctxnode, quietempty=True)
     repo.ui.popbuffer()
 
     mapping, tmpnodes, created, ntm = processreplacement(state)
@@ -1321,7 +1330,8 @@ def _aborthistedit(ui, repo, state):
         unfi = repo.unfiltered()
         revs = list(unfi.revs("%ln::", leafs | tmpnodes))
         if unfi.revs("parents() and (%n  or %ld)", state.parentctxnode, revs):
-            hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
+            with repo.transaction("histedit.abort") as tr:
+                hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
 
         nodes = map(unfi.changelog.node, revs)
         scmutil.cleanupnodes(repo, nodes, "histedit")
