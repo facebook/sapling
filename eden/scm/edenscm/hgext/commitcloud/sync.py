@@ -311,9 +311,10 @@ def _maybeupdateworkingcopy(repo, currentnode):
                     ),
                 )
                 ui.status(_("updating to %s\n") % nodemod.short(destination))
-                return hg.updatetotally(
-                    ui, repo, destination, destination, updatecheck="noconflict"
-                )
+                with repo.wlock(), repo.lock(), repo.transaction("sync-checkout"):
+                    return hg.updatetotally(
+                        ui, repo, destination, destination, updatecheck="noconflict"
+                    )
         else:
             hintutil.trigger("commitcloud-update-on-move")
     else:
