@@ -45,13 +45,6 @@ class physicalfilesystem(object):
         self.ftolog = self.mtolog
         self.cleanlookups = []
 
-        # Temporary variable used to communicate the post-lookup dirstate
-        # identity to the higher level postdsstatus functions, so they can
-        # determine if the dirstate changing was caused by this process or by an
-        # external process. This will be deleted in a future diff, once the
-        # higher level postdsstatus logic moves down into this layer.
-        self._newid = None
-
     def _ischanged(self, fn, st, lookups):
         try:
             t = self.dirstate._map[fn]
@@ -437,8 +430,6 @@ class physicalfilesystem(object):
                         # This is a no-op if dirstate is not dirty.
                         tr = repo.currenttransaction()
                         newdirstate.write(tr)
-
-                        self._newid = newdirstate.identity()
                     else:
                         # in this case, writing changes out breaks
                         # consistency, because .hg/dirstate was

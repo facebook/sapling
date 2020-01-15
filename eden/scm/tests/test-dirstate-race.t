@@ -156,7 +156,7 @@ treated differently in _checklookup() according to runtime platform.
 
 #if fsmonitor
   $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
-  skip marking lookups clean: identity mismatch
+  skip updating dirstate: identity mismatch
 #else
   $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
   skip marking lookups clean: identity mismatch

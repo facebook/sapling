@@ -1073,19 +1073,7 @@ class dirstate(object):
 
                 with self._repo.wlock(freshinstance):
                     identity = self._repo.dirstate.identity()
-                    fsnewid = self._repo.dirstate._fs._newid
-                    if (
-                        identity == oldid
-                        or
-                        # It's possible that the filesystem changed the dirstate
-                        # when it marked lookup files as clean. If the current
-                        # identity also matches the id of the
-                        # post-lookup-cleaning identity, that is ok too.
-                        # This nastiness will disappear in a future diff when
-                        # the poststatusfixup logic moves into the filesystem
-                        # layer.
-                        (fsnewid is not None and identity == fsnewid)
-                    ):
+                    if identity == oldid:
                         if poststatusbefore:
                             for ps in poststatusbefore:
                                 ps(wctx, status)
@@ -1102,22 +1090,6 @@ class dirstate(object):
                         if poststatusafter:
                             for ps in poststatusafter:
                                 ps(wctx, status)
-                    else:
-                        if freshinstance:
-                            ui.write_err(
-                                _(
-                                    "warning: failed to update watchman state because dirstate has been changed by other processes\n"
-                                )
-                            )
-                            ui.write_err(slowstatuswarning)
-
-                        # in this case, writing changes out breaks
-                        # consistency, because .hg/dirstate was
-                        # already changed simultaneously after last
-                        # caching (see also issue5584 for detail)
-                        self._repo.ui.debug(
-                            "skip updating dirstate: " "identity mismatch\n"
-                        )
             except error.LockError:
                 if freshinstance:
                     ui.write_err(

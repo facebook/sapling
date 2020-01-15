@@ -945,14 +945,20 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                     # skip it here.
                     if isfullstatus and not istreestate:
                         self._updatefsmonitorstate(changed, startclock)
-
-                    self._newid = newdirstate.identity()
                 else:
+                    if freshinstance:
+                        repo.ui.write_err(
+                            _(
+                                "warning: failed to update watchman state because dirstate has been changed by other processes\n"
+                            )
+                        )
+                        repo.ui.write_err(dirstatemod.slowstatuswarning)
+
                     # in this case, writing changes out breaks
                     # consistency, because .hg/dirstate was
                     # already changed simultaneously after last
                     # caching (see also issue5584 for detail)
-                    repo.ui.debug("skip marking lookups clean: identity mismatch\n")
+                    repo.ui.debug("skip updating dirstate: identity mismatch\n")
         except error.LockError:
             if freshinstance:
                 repo.ui.write_err(
