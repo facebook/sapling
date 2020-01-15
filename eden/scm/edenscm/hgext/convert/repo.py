@@ -734,8 +734,6 @@ class repo_source(common.converter_source):
     FILECACHE_SIZE_MAX = 1000
     DIFFCACHE_SIZE_MAX = 1000
 
-    FORMAT_UNIFIED_COMMIT_MESSAGE = "[MERGED] %s"
-
     def __init__(self, ui, repotype, path, revs=None):
         """
         raises common.NoRepo if the directory doesn't exist or isn't a Google repo
@@ -964,7 +962,6 @@ class repo_source(common.converter_source):
         if variant == self.VARIANT_UNIFIED:
             previoushash = self.repo.unifiedprevioushashes[commit.rev]
             # self.ui.note('Previous hash for %s is %s\n' % (commit.rev, previous_hash))
-            commit.desc = self.FORMAT_UNIFIED_COMMIT_MESSAGE % commit.desc
             if previoushash == nodemod.nullhex:
                 commit.parents = []
             else:
