@@ -8,6 +8,7 @@
   > {
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
+  >   "disable_hostname_logging": false,
   >   "throttle_limits": [],
   >   "acl_check": false,
   >   "enforce_acl_check": false
@@ -22,6 +23,7 @@
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
     "acl_check": false,
+    "disable_hostname_logging": false,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
     "throttle_limits": [],
@@ -33,6 +35,7 @@
   > {
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
+  >   "disable_hostname_logging": false,
   >   "throttle_limits": [],
   >   "acl_check": false,
   >   "enforce_acl_check": false
@@ -48,6 +51,7 @@
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
     "acl_check": false,
+    "disable_hostname_logging": false,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
     "throttle_limits": [],

@@ -8,6 +8,7 @@
   > {
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
+  >   "disable_hostname_logging": false,
   >   "throttle_limits": [
   >     {"counter": "mononoke.lfs.download.size_bytes_sent.sum.5", "limit": 10, "sleep_ms": 1000 }
   >   ],

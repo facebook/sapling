@@ -8,6 +8,7 @@
   > {
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
+  >   "disable_hostname_logging": false,
   >   "throttle_limits": [],
   >   "acl_check": true,
   >   "enforce_acl_check": false

@@ -29,6 +29,7 @@ pub struct Limit {
 pub struct ServerConfig {
     pub track_bytes_sent: bool,
     pub enable_consistent_routing: bool,
+    pub disable_hostname_logging: bool,
     pub throttle_limits: Vec<Limit>,
     pub acl_check: bool,
     pub enforce_acl_check: bool,
@@ -39,6 +40,7 @@ impl Default for ServerConfig {
         Self {
             track_bytes_sent: false,
             enable_consistent_routing: false,
+            disable_hostname_logging: false,
             throttle_limits: vec![],
             acl_check: false,
             enforce_acl_check: false,

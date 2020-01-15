@@ -296,7 +296,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .unwrap()
         .parse()?;
 
-    let config = get_server_config(
+    let config_handle = get_server_config(
         fb,
         logger.clone(),
         matches.value_of(ARG_LIVE_CONFIG),
@@ -315,7 +315,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
         max_upload_size,
         will_exit.clone(),
-        config,
+        config_handle.clone(),
     )?;
 
     let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
@@ -328,7 +328,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let root = MononokeLfsHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
-        .add(RequestContextMiddleware::new(fb, logger.clone()))
+        .add(RequestContextMiddleware::new(
+            fb,
+            logger.clone(),
+            config_handle,
+        ))
         .add(log_middleware)
         .add(ServerIdentityMiddleware::new())
         .add(LoadMiddleware::new())

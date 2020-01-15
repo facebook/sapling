@@ -9,10 +9,11 @@
 use std::fmt;
 
 use anyhow::Error;
+use configerator_cached::ConfigHandle;
 use context::{CoreContext, PerfCounters, SessionContainer};
 use dns_lookup::lookup_addr;
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
+use futures::{future::ok, Future, IntoFuture};
 use futures_ext::FutureExt;
 use futures_preview::{future, prelude::*};
 use gotham::state::{request_id, FromState, State};
@@ -31,6 +32,8 @@ use tokio::{
 };
 
 use super::{ClientIdentity, Middleware};
+
+use crate::config::ServerConfig;
 
 type PostRequestCallback =
     Box<dyn FnOnce(&Duration, &Option<String>, Option<u64>, &PerfCounters) + Sync + Send + 'static>;
@@ -116,7 +119,12 @@ impl RequestContext {
         sender
     }
 
-    fn dispatch_post_request(self, client_address: Option<IpAddr>, content_length: Option<u64>) {
+    fn dispatch_post_request(
+        self,
+        client_address: Option<IpAddr>,
+        content_length: Option<u64>,
+        disable_hostname_logging: bool,
+    ) {
         let Self {
             ctx,
             start_time,
@@ -133,20 +141,24 @@ impl RequestContext {
             };
 
         // We get the client hostname in post request, because that might be a little slow.
-        let client_hostname = tokio_preview::task::spawn_blocking(move || -> Result<_, Error> {
-            let hostname = client_address
-                .as_ref()
-                .map(lookup_addr)
-                .transpose()
-                .ok()
-                .flatten();
+        let client_hostname = match disable_hostname_logging {
+            true => ok(None).left_future(),
+            _ => tokio_preview::task::spawn_blocking(move || -> Result<_, Error> {
+                let hostname = client_address
+                    .as_ref()
+                    .map(lookup_addr)
+                    .transpose()
+                    .ok()
+                    .flatten();
 
-            Ok(hostname)
-        })
-        .map_err(|e| Error::new(e))
-        .and_then(|r| future::ready(r))
-        .compat()
-        .or_else(|_| -> Result<_, !> { Ok(None) });
+                Ok(hostname)
+            })
+            .map_err(|e| Error::new(e))
+            .and_then(|r| future::ready(r))
+            .compat()
+            .or_else(|_| -> Result<_, !> { Ok(None) })
+            .right_future(),
+        };
 
         let fut = if let Some(checkpoint) = checkpoint {
             // NOTE: We use then() here: if the receiver was dropped, we still want to run our
@@ -187,11 +199,20 @@ impl RequestContext {
 pub struct RequestContextMiddleware {
     fb: FacebookInit,
     logger: Logger,
+    config_handle: ConfigHandle<ServerConfig>,
 }
 
 impl RequestContextMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger) -> Self {
-        Self { fb, logger }
+    pub fn new(
+        fb: FacebookInit,
+        logger: Logger,
+        config_handle: ConfigHandle<ServerConfig>,
+    ) -> Self {
+        Self {
+            fb,
+            logger,
+            config_handle,
+        }
     }
 }
 
@@ -217,8 +238,13 @@ impl Middleware for RequestContextMiddleware {
 
         let content_length = response.body().content_length();
 
+        let config = self.config_handle.get();
         if let Some(ctx) = state.try_take::<RequestContext>() {
-            ctx.dispatch_post_request(client_address, content_length);
+            ctx.dispatch_post_request(
+                client_address,
+                content_length,
+                config.disable_hostname_logging,
+            );
         }
     }
 }
