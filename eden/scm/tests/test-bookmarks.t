@@ -556,7 +556,6 @@ test clone with pull protocol
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets f7b1eb17ad24:db815d6d32e6
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-pull bookmarks
@@ -594,7 +593,6 @@ test clone with a specific revision
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets f7b1eb17ad24:925d80f479bb
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-rev bookmarks
@@ -632,7 +630,6 @@ create bundle with two heads
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets 125c9a1d6df6:9c404beeabc2
 
 update to active bookmark if it's not the parent
 
@@ -676,7 +673,6 @@ pull --update works the same as pull && update
   added 2 changesets with 2 changes to 2 files
   updating bookmark Y
   updating bookmark Z
-  new changesets 125c9a1d6df6:9c404beeabc2
 
 (# tests strange but with --date crashing when bookmark have to move)
 
@@ -701,7 +697,6 @@ pull --update works the same as pull && update
   added 2 changesets with 2 changes to 2 files
   updating bookmark Y
   updating bookmark Z
-  new changesets 125c9a1d6df6:9c404beeabc2
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -726,7 +721,6 @@ We warn about divergent during bare update to the active bookmark
   added 2 changesets with 2 changes to 2 files
   updating bookmark Y
   updating bookmark Z
-  new changesets 125c9a1d6df6:9c404beeabc2
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence update
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -884,7 +878,6 @@ case)
   adding remote bookmark foo
   adding remote bookmark four
   adding remote bookmark should-end-on-two
-  new changesets f047c86095b7
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
   3:125c9a1d6df6
@@ -907,7 +900,6 @@ updates the working directory and current active bookmark)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 81dcce76aa0b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark Y
   $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"

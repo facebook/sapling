@@ -227,7 +227,6 @@ Test that rebasing and pushing works as expected
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 1846eede8b68
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   o  2 b  default/@
   |

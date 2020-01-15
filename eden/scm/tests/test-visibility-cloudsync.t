@@ -88,7 +88,6 @@ Create another client and use it to modify the commits and create some new ones.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  new changesets dae3b312bb78:c70a9bd6bfd1
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -174,7 +173,6 @@ Now cloud sync.  The sets of commits should be merged.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  new changesets d8fc5ae9b7ef:dd114d9b2f9e
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -209,7 +207,6 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files
-  new changesets ba83c5428cb2:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -286,7 +283,6 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files
-  new changesets dae3b312bb78:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -344,7 +340,6 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 3 files
-  new changesets 1ef69cfd595b
   commitcloud: commits synchronized
   finished in * sec (glob)
 

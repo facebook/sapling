@@ -104,7 +104,6 @@ Sync from the second client and `hg unamend` there
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets b68dd726c6c6
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -198,7 +197,6 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
-  new changesets cb45bbd0ae75:74b668b6b779
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions

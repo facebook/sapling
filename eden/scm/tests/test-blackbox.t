@@ -92,7 +92,6 @@ clone, commit, pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets d02f48003e62
   $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
   [legacy][command] pull
   [legacy][command_finish] pull exited 0 after 0.00 seconds
@@ -131,7 +130,6 @@ we must not cause a failure if we cannot write to the log
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets d02f48003e62
 
   $ rm .hg/blackbox/v1
 

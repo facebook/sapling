@@ -103,7 +103,6 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 18d955ee7ba0
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

@@ -20,7 +20,6 @@
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  new changesets cd010b8cd998:02de42196ebe
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

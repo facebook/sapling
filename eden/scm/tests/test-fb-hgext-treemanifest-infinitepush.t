@@ -82,7 +82,6 @@ Pull a non-tree scratch branch into a normal client
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets 3ef288300b64:ebde88dba372
   $ hg log -r tip -vp
   changeset:   2:ebde88dba372
   bookmark:    scratch/nontree
@@ -108,7 +107,6 @@ Pull a treeonly scratch branch into a normal client
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets 02c12aef64ff:5a7a7de8a420
 - Verify no new manifest revlog entry was written
 - ...but we can still read the manifest
   $ hg log -r 02c12aef64ff --stat -T '{rev}\n'
@@ -132,7 +130,6 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 02c12aef64ff
   $ hg log -r 02c12aef64ff  --stat
   changeset:   1:02c12aef64ff
   user:        test
@@ -152,7 +149,6 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 1 files
-  new changesets 5a7a7de8a420
   $ hg log -G
   o  changeset:   2:5a7a7de8a420
   |  bookmark:    scratch/foo
@@ -183,7 +179,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 3ef288300b64
   $ hg log -r 3ef288300b64 --stat
   changeset:   3:3ef288300b64
   parent:      0:085784c01c08
@@ -202,7 +197,6 @@ Pull a normal scratch branch into a treeonly client
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 1 files
-  new changesets ebde88dba372
   $ hg log -r 3ef288300b64 -T ' ' --stat
     bar/car |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -264,7 +258,6 @@ treemanifest data for the public commits.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 085784c01c08:02c12aef64ff
   1 trees fetched over * (glob)
 
   $ hg log -G -T '{node|short} {phase} {desc}'

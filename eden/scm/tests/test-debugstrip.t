@@ -215,7 +215,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 264128213d29
   $ rm .hg/strip-backup/*
   $ hg log --graph
   o  changeset:   4:264128213d29

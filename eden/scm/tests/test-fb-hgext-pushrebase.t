@@ -565,7 +565,6 @@ Test that the prepushrebase hook can run against the bundle repo
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 3903775176ed
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd prepushrebaseclient
@@ -873,7 +872,6 @@ Test force pushes
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 86cf3bb05fcf
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  2 aa
   |

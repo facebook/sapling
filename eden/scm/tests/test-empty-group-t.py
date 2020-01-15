@@ -60,7 +60,6 @@ sh % "hg clone -r 3 a b" == r"""
     adding manifests
     adding file changes
     added 4 changesets with 3 changes to 3 files
-    new changesets 5fcb73622933:d15a0c284984
     updating to branch default
     3 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
@@ -69,7 +68,6 @@ sh % "hg clone -r 4 a c" == r"""
     adding manifests
     adding file changes
     added 4 changesets with 3 changes to 3 files
-    new changesets 5fcb73622933:1ec3c74fc0e0
     updating to branch default
     3 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
@@ -116,8 +114,7 @@ sh % "hg -R b pull a" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 0 files
-    new changesets 1ec3c74fc0e0"""
+    added 1 changesets with 0 changes to 0 files"""
 
 sh % "hg -R c pull a" == r"""
     pulling from a
@@ -125,5 +122,4 @@ sh % "hg -R c pull a" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 0 files
-    new changesets d15a0c284984"""
+    added 1 changesets with 0 changes to 0 files"""

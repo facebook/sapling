@@ -64,7 +64,6 @@ Repo1: 2 commits. Sync them to the database.
   added 2 changesets with 2 changes to 2 files
   adding remote bookmark A
   adding remote bookmark B
-  new changesets 426bada5c675:112478962961
   [hgsql] held lock for * seconds (read 5 rows; write 10 rows) (glob)
 
 Repo2: Emulate client push. Hold the lock for long.
@@ -100,7 +99,6 @@ Explaination:
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark E
-  new changesets 9bc730a19041
   [hgsql] held lock for * seconds (read * rows; write 8 rows) (glob)
 
 Make sure repo2 and repo3 log looks sane.
@@ -115,7 +113,6 @@ Make sure repo2 and repo3 log looks sane.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark C
-  new changesets 26805aba1e60
   [hgsql] held lock for * seconds (read 9 rows; write 8 rows) (glob)
 
   $ cat $TESTTMP/repo3/out
@@ -129,5 +126,4 @@ Make sure repo2 and repo3 log looks sane.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark D
-  new changesets f585351a92f8
   [hgsql] held lock for * seconds (read 10 rows; write 8 rows) (glob)

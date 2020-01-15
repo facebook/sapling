@@ -75,8 +75,7 @@ sh % "hg pull ../other" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 1 files
-    new changesets f89bcc95eba5"""
+    added 1 changesets with 0 changes to 1 files"""
 
 # check that bundle is not affected
 
@@ -125,7 +124,6 @@ sh % "hg clone --pull pull-hidden-common pull-hidden-common-client" == r"""
     adding manifests
     adding file changes
     added 3 changesets with 3 changes to 1 files
-    new changesets 96ee1d7354c4:6a29ed9c68de
     updating to branch default
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
@@ -169,5 +167,4 @@ sh % "hg pull --debug" == r"""
     bundle2-input-part: "phase-heads" supported
     bundle2-input-part: total payload size 24
     bundle2-input-bundle: 2 parts total
-    checking for updated bookmarks
-    new changesets bec0734cd68e"""
+    checking for updated bookmarks"""

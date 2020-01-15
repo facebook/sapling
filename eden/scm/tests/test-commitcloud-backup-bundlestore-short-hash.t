@@ -28,7 +28,6 @@ We are making commit in repo (server) and will recover it in client 1 via short 
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets f8b49bf62d4d
   'f8b49b' found remotely
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -95,7 +94,6 @@ Commit should be pulled from backup storage.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets c1b6fe8fce73
   'c1b6fe' found remotely
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -203,7 +201,6 @@ case 1: recent commit, length of prefix = 6 characters
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets * (glob)
   '*' found remotely (glob)
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -217,7 +214,6 @@ case 2: recent commit, length of prefix < 6 characters
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  new changesets * (glob)
   '*' found remotely (glob)
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -268,7 +264,6 @@ case 3b: 32 days old commit, hash size - full hash
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 4 files
-  new changesets *:* (glob)
   * found remotely (glob)
   pull finished in * sec (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -282,7 +277,6 @@ case 3c: 30 days old, hash size 10 characters
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 5 files
-  new changesets * (glob)
   '*' found remotely (glob)
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

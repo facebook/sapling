@@ -100,7 +100,6 @@ check its contents separately.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets b292c1e3311f
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

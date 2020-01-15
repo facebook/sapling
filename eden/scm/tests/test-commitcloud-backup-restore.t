@@ -45,7 +45,6 @@ Restore
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 89ecc969c0ac
   $ waitbgbackup
   $ hg log --graph -T '{desc}'
   o  firstcommit
@@ -92,7 +91,6 @@ Restore with ambiguous repo root
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets c1bfda8efb6e
   $ hg log --graph -T '{desc}'
   o  secondcommit
   
@@ -113,7 +111,6 @@ Check bookmarks escaping
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 89ecc969c0ac
   $ hg book
      abook                     1:89ecc969c0ac
      book/bookmarks/somebook   1:89ecc969c0ac
@@ -142,7 +139,6 @@ Create a repo with `/bookmarks/` in path
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets a2a9ae518b62
   $ hg book
      abook                     1:89ecc969c0ac
      book/bookmarks/somebook   1:89ecc969c0ac

@@ -111,7 +111,6 @@ on the remote parent:
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
-  new changesets 2665aaee66e9:0f2ff26688b9
   $ cd b
 
   $ hg up -C 1

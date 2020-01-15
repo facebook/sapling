@@ -86,7 +86,6 @@ Do the push!
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: new changesets 112478962961
   remote: [hgsql] held lock for * seconds (read 8 rows; write 7 rows) (glob)
   remote: checking conflicts with 426bada5c675
   remote: pushing 1 changeset:

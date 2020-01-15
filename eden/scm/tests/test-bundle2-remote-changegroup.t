@@ -97,7 +97,6 @@ Start a simple HTTP server to serve bundles
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  new changesets cd010b8cd998:02de42196ebe
 
   $ hg -R repo log -G
   o  7:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
@@ -139,7 +138,6 @@ Test a pull with an remote-changegroup
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files
-  new changesets cd010b8cd998:9520eea781bc
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R clone ssh://user@dummy/repo
@@ -150,7 +148,6 @@ Test a pull with an remote-changegroup
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
-  new changesets 24b6387c8c8c:02de42196ebe
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -185,7 +182,6 @@ Test a pull with an remote-changegroup and a following changegroup
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets cd010b8cd998:5fddd98957c8
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R clone ssh://user@dummy/repo
@@ -201,7 +197,6 @@ Test a pull with an remote-changegroup and a following changegroup
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
-  new changesets 32af7686d403:02de42196ebe
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -236,7 +231,6 @@ Test a pull with a changegroup followed by an remote-changegroup
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets cd010b8cd998:5fddd98957c8
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R clone ssh://user@dummy/repo
@@ -252,7 +246,6 @@ Test a pull with a changegroup followed by an remote-changegroup
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
-  new changesets 32af7686d403:02de42196ebe
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -292,7 +285,6 @@ Test a pull with two remote-changegroups and a changegroup
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets cd010b8cd998:5fddd98957c8
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R clone ssh://user@dummy/repo
@@ -313,7 +305,6 @@ Test a pull with two remote-changegroups and a changegroup
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 32af7686d403:02de42196ebe
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -350,7 +341,6 @@ Hash digest tests
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  new changesets cd010b8cd998:02de42196ebe
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf clone
@@ -365,7 +355,6 @@ Hash digest tests
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  new changesets cd010b8cd998:02de42196ebe
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf clone
@@ -400,7 +389,6 @@ Multiple hash digests can be given
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  new changesets cd010b8cd998:02de42196ebe
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf clone
@@ -446,7 +434,6 @@ Corruption tests
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets cd010b8cd998:5fddd98957c8
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

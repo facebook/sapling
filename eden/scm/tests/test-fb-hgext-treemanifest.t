@@ -38,7 +38,6 @@ Test autocreatetrees
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets e4d61696a942
   $ hg up -r tip
   fetching tree '' 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66, found via e4d61696a942
   2 trees fetched over * (glob)

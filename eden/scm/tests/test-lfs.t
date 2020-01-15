@@ -94,7 +94,6 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets b29ba743f89d:00c137947d30
 
 # Check the blobstore is not yet populated
   $ [ -d .hg/store/lfs/objects ]
@@ -195,7 +194,6 @@
   adding manifests
   adding file changes
   added 5 changesets with 10 changes to 4 files
-  new changesets fd47a419c4f7:5adf850972b9
 
   $ cd ..
 

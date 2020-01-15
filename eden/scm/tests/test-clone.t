@@ -150,7 +150,6 @@ Use --pull:
   adding manifests
   adding file changes
   added 11 changesets with 11 changes to 2 files
-  new changesets acb14030fe0a:a7949464abda
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R g verify
@@ -265,7 +264,6 @@ Testing clone --pull -u:
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 2 files
-  new changesets acb14030fe0a:4f44d5743f52
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -390,7 +388,6 @@ Testing -u -r <branch>:
   adding manifests
   adding file changes
   added 13 changesets with 13 changes to 2 files
-  new changesets acb14030fe0a:4f44d5743f52
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -421,7 +418,6 @@ Testing -r <branch>:
   adding manifests
   adding file changes
   added 13 changesets with 13 changes to 2 files
-  new changesets acb14030fe0a:4f44d5743f52
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -678,7 +674,6 @@ Clone with auto share from a repo with filtered revision 0 should not result in 
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets e082c1832e09
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -691,7 +686,6 @@ Clone from repo with content should result in shared store being created
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
   updating working directory
@@ -730,7 +724,6 @@ Clone with existing share dir should result in pull + share
   adding remote bookmark branch2
   adding remote bookmark head1
   adding remote bookmark head2
-  new changesets 4a8dc1ab4c13:79168763a548
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -774,7 +767,6 @@ Clone from unrelated repo should result in new share
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets 22aeff664783:63cf6c3dba4a
   searching for changes
   no changes found
   updating working directory
@@ -793,7 +785,6 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
   updating working directory
@@ -809,7 +800,6 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 1 files
-  new changesets b5f04eac9d8f:79168763a548
   searching for changes
   no changes found
   updating working directory
@@ -827,7 +817,6 @@ request to clone a single revision is respected in sharing mode
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets b5f04eac9d8f:4a8dc1ab4c13
   no changes found
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -855,7 +844,6 @@ making another clone should only pull down requested rev
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark head2
-  new changesets 99f71071f117
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -933,7 +921,6 @@ pooled".
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
   updating working directory

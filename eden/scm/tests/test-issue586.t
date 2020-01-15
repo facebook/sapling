@@ -25,7 +25,6 @@ dirstate
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets cb9a9f314b8b
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -60,7 +59,6 @@ create test repos
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 7132ab4568ac
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir tst
@@ -75,7 +73,6 @@ create test repos
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 5ddceb349652
 
 merge both repos
 

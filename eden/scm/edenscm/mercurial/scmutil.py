@@ -1338,8 +1338,6 @@ class simplekeyvaluefile(object):
 
 _reportobsoletedsource = ["debugobsolete", "pull", "push", "serve", "unbundle"]
 
-_reportnewcssource = ["pull", "unbundle"]
-
 
 def registersummarycallback(repo, otr, txnname=""):
     """register a callback to issue a summary after the transaction is closed
@@ -1378,29 +1376,6 @@ def registersummarycallback(repo, otr, txnname=""):
             obsoleted = obsutil.getobsoleted(repo, tr)
             if obsoleted:
                 repo.ui.status(_("obsoleted %i changesets\n") % len(obsoleted))
-
-    if txmatch(_reportnewcssource):
-
-        @reportsummary
-        def reportnewcs(repo, tr):
-            """Report the range of new revisions pulled/unbundled."""
-            newrevs = tr.changes.get("revs", range(0, 0))
-            if not newrevs:
-                return
-
-            # Compute the bounds of new revisions' range, excluding obsoletes.
-            unfi = repo.unfiltered()
-            revs = unfi.revs("%ld and not obsolete()", newrevs)
-            if not revs:
-                # Got only obsoletes.
-                return
-            minrev, maxrev = unfi[revs.min()], unfi[revs.max()]
-
-            if minrev == maxrev:
-                revrange = minrev
-            else:
-                revrange = "%s:%s" % (minrev, maxrev)
-            repo.ui.status(_("new changesets %s\n") % revrange)
 
 
 def nodesummaries(repo, nodes, maxnumnodes=4):

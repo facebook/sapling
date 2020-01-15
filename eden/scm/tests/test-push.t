@@ -16,7 +16,6 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets bfaf4b5cbf01:916f1afdef90
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    echo
@@ -142,7 +141,6 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 4 changesets with 2 changes to 3 files
-  new changesets c70afb1ee985:faa2e4234c7a
 
   $ hg verify
   checking changesets

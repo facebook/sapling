@@ -45,7 +45,6 @@ sh % "hg clone -r0 a b" == r"""
     adding manifests
     adding file changes
     added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "'HGEDITOR=cat' hg --cwd b import ../exported-tip.patch" == "applying ../exported-tip.patch"
@@ -334,7 +333,6 @@ sh % "hg clone -r0 a b13" == r"""
     adding manifests
     adding file changes
     added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg --cwd a export tip" > "tmp"

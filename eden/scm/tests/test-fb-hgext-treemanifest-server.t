@@ -144,7 +144,7 @@ Test pushing only flat fails if forcetreereceive is on
 
 Test pushing flat and tree
   $ cat >> $TESTTMP/myhook.sh <<EOF
-  > set -xe
+  > set -e
   > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'subdir2/z' ]] && exit 1
   > exit 2
   > EOF
@@ -166,9 +166,6 @@ Test pushing flat and tree
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: +++ hg log -r af56a207a2d7d0a4ea1b555a4b922fc3ca6c3701 -T '{file_adds}'
-  remote: ++ [[ subdir2/z == \s\u\b\d\i\r\2\/\z ]]
-  remote: ++ exit 1
   remote: prepushrebase.myhook hook exited with status 1
   abort: push failed on remote
   [255]
@@ -181,9 +178,6 @@ Test pushing tree-only commit with commit hooks
   $ hg push --to mybook -r .
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: +++ hg log -r 4d563be8759aa4359dd5aa22a8fb5b91bad99412 -T '{file_adds}'
-  remote: ++ [[ subdir2/z == \s\u\b\d\i\r\2\/\z ]]
-  remote: ++ exit 1
   remote: prepushrebase.myhook hook exited with status 1
   abort: push failed on remote
   [255]
@@ -384,7 +378,6 @@ Try pulling while treemanifest.blocksendflat is True
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 4d563be8759a
   $ hg status --change 4d563be8759a
   A subdir2/z
 

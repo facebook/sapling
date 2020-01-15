@@ -158,7 +158,6 @@ Test for `hg diff --since-last-submit`
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  new changesets 95847be64d6a
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -197,7 +196,6 @@ Test for `hg diff --since-last-submit`
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  new changesets 95847be64d6a
   commitcloud: commits synchronized
   finished in * (glob)
 

@@ -134,7 +134,6 @@ Test scratch bookmarks still pullable
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 45f7b362ad7c
   $ hg book -a
   no bookmarks set
      default/scratch/test1     1:45f7b362ad7c

@@ -406,7 +406,6 @@ Test prefetching certain revs during pull
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  new changesets dece825f8add:cfacdcc4cee5
   prefetching tree for bd6f9b289c01
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \

@@ -105,7 +105,6 @@ Pull full.hg into empty (using --cwd)
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets f9ee2f85a263:aa35859c02ea
 
 Rollback empty
 
@@ -121,7 +120,6 @@ Pull full.hg into empty again (using --cwd)
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets f9ee2f85a263:aa35859c02ea
 
 Pull full.hg into test (using -R)
 
@@ -151,7 +149,6 @@ Pull full.hg into empty again (using -R)
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets f9ee2f85a263:aa35859c02ea
 
 Log -R full.hg in fresh empty
 
@@ -233,7 +230,6 @@ hg -R ../full.hg verify
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets f9ee2f85a263:aa35859c02ea
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle*../full.hg (glob)
 
 Rollback empty
@@ -257,7 +253,6 @@ Pull full.hg into empty again (using -R; with hook)
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets f9ee2f85a263:aa35859c02ea
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle:empty+full.hg
 
 Cannot produce streaming clone bundles with "hg bundle"
@@ -391,7 +386,6 @@ Create partial clones
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  new changesets f9ee2f85a263:eebf5a27f8ca
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg clone partial partial2
@@ -543,7 +537,6 @@ Direct clone from bundle (all-history)
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets f9ee2f85a263:aa35859c02ea
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R full-clone heads
@@ -582,12 +575,10 @@ Unbundle incremental bundles into fresh empty in one go
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets f9ee2f85a263
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 34c2bf6b0626
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 View full contents of the bundle

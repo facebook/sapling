@@ -1206,8 +1206,7 @@ sh % "hg clone -U -r31 repo repo2" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 31 changesets with 31 changes to 1 files
-    new changesets e6eb3150255d:621d83e11f67"""
+    added 31 changesets with 31 changes to 1 files"""
 sh % "cd repo2"
 
 sh % "hg incoming --graph ../repo" == r"""

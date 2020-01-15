@@ -55,7 +55,6 @@ Setup another client
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 0da81a72db1a
   'scratch/lfscommit' found remotely
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -87,4 +86,3 @@ Pull just one head to trigger rebundle
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  new changesets c800524c1b76

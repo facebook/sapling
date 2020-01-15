@@ -176,7 +176,6 @@ Test unbundling the original commit
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 43903a6bf43f
 # Verify the packs were brought back and the data is accessible
   $ ls_l .hg/store/packs/manifests | wc -l
   \s*12 (re)
@@ -205,7 +204,6 @@ Test pulling new commits from a hybrid server
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 098a163f13ea
 
   $ hg debugindex -m --config treemanifest.treeonly=False
   hg debugindex: invalid arguments
@@ -351,7 +349,6 @@ Test bundling
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
-  new changesets 41bd8aa2aeb7:06f5aa20a0d4
   $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
   o  modify y
   |   y |  1 +
@@ -364,7 +361,7 @@ Test bundling
 Test pushing to a hybrid server w/ pushrebase w/ hooks
   $ cat >> $TESTTMP/filehook.sh <<EOF
   > #!/bin/bash
-  > set -xe
+  > set -e
   > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'y' ]] && exit 1
   > echo \$(hg log -r \$HG_NODE -T '{file_adds}')
   > exit 2
@@ -377,9 +374,6 @@ Test pushing to a hybrid server w/ pushrebase w/ hooks
   $ hg push -r 2 --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: ++ hg log -r 41bd8aa2aeb72ff43d5bc329fa115c7c8f9c6f7f -T '{file_adds}'
-  remote: + [[ y == \y ]]
-  remote: + exit 1
   remote: prepushrebase.fail hook exited with status 1
   abort: push failed on remote
   [255]
@@ -448,7 +442,6 @@ Test prefetch
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets dad1be784127
   $ cd ..
 
 Test converting server to treeonly
@@ -485,7 +478,6 @@ Test pulling to a treeonly client from a treeonly server
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  new changesets dad1be784127:7253109af085
   $ hg log -r tip -T '{desc}\n' --stat
   fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
   2 trees fetched over * (glob)
@@ -675,7 +667,6 @@ with pullprefetchrevs configured.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
-  new changesets d618f764f9a1:dad1be784127
   prefetching tree for dad1be784127
   2 trees fetched over * (glob)
   $ cd ..

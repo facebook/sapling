@@ -88,7 +88,6 @@ delta coming from the server base delta server are not recompressed.
   adding manifests
   adding file changes
   added 4 changesets with 6 changes to 3 files
-  new changesets 0ea3fcf9d01d:bba78d330d9c
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg clone repo --pull --config format.generaldelta=1 full
@@ -97,7 +96,6 @@ delta coming from the server base delta server are not recompressed.
   adding manifests
   adding file changes
   added 4 changesets with 6 changes to 3 files
-  new changesets 0ea3fcf9d01d:bba78d330d9c
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #if common-zlib
@@ -240,7 +238,6 @@ test maxdeltachainspan
   adding manifests
   adding file changes
   added 53 changesets with 53 changes to 53 files
-  new changesets 61246295ee1e:99cae3713489
   updating to branch default
   14 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R relax-chain debugindex -m

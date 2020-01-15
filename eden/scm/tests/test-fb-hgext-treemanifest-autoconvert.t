@@ -48,7 +48,6 @@ Test auto creating trees for merge commit
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  new changesets d32fd17cb041:92f4ca0e667c
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 1125},
                         write : { bytes : 667}}}}

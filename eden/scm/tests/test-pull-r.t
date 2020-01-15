@@ -50,7 +50,6 @@ don't show "(+1 heads)" message when pulling closed head
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
-  new changesets 8c900227dd5d:1a1aa123db21
   $ hg heads -q --closed
   4:1a1aa123db21
   2:effea6de0384
@@ -122,7 +121,6 @@ We use http because http is better is our racy-est option.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets effea6de0384
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  changeset:   2:effea6de0384

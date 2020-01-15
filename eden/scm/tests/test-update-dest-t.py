@@ -54,5 +54,4 @@ sh % "hg pull ../repo" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 2 changesets with 2 changes to 1 files
-    new changesets 8f0162e483d0:048c2cb95949"""
+    added 2 changesets with 2 changes to 1 files"""

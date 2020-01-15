@@ -104,7 +104,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets fed61014d323
 
   $ hg rebase -d tip
   rebasing 9abfe7bca547 "a"
@@ -135,7 +134,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 19edf50f4de7
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -166,7 +164,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  new changesets 19edf50f4de7
 
   $ hg log -r 2 --stat
   changeset:   2:19edf50f4de7

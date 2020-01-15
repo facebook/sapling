@@ -37,7 +37,6 @@ sh % "hg --config 'commands.update.check=abort' pull -u ../tt" == r"""
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets 107cefe13e42
     abort: uncommitted changes
     [255]"""
 sh % "hg debugstrip --no-backup tip"
@@ -52,7 +51,6 @@ sh % "hg pull -u ../tt" == r'''
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets 107cefe13e42
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updated to "800c91d5bfc1: m"
     1 other heads for branch "default"'''
@@ -68,7 +66,6 @@ sh % "hg pull -u ../t" == r'''
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets 800c91d5bfc1
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updated to "107cefe13e42: m"
     1 other heads for branch "default"'''
@@ -90,7 +87,6 @@ sh % "hg pull -u ../tt" == r"""
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets 483b76ad4309
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
 # Similarity between "hg update" and "hg pull -u" in handling bookmark
@@ -117,7 +113,6 @@ sh % "hg pull -u -r active-after-pull" == r"""
     adding file changes
     added 1 changesets with 1 changes to 1 files
     adding remote bookmark active-after-pull
-    new changesets f815b3da6163
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (activating bookmark active-after-pull)"""
 
@@ -144,7 +139,6 @@ sh % "hg pull -u '$TESTTMP/t#active-after-pull'" == r"""
     adding file changes
     added 1 changesets with 1 changes to 1 files
     adding remote bookmark active-after-pull
-    new changesets f815b3da6163
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (activating bookmark active-after-pull)"""
 
@@ -179,7 +173,6 @@ sh % "hg pull -u -r f815b3da6163" == r"""
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets f815b3da6163
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (leaving bookmark active-before-pull)"""
 

@@ -22,7 +22,6 @@ Initialize repository
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 273d008d6e8e
 
   $ hg -R foo1 book branchy
   $ hg -R foo1 book
@@ -38,7 +37,6 @@ Pull. Bookmark should not jump to new head.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 84a798d48b17
 
   $ hg -R foo1 book
    * branchy                   1:e3e522925eff

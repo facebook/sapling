@@ -110,7 +110,6 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
-  new changesets 109c3a557a73
   prefetching file contents
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
 
@@ -133,7 +132,6 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
-  new changesets 109c3a557a73
   prefetching file contents
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
@@ -163,7 +161,6 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
-  new changesets 109c3a557a73
   prefetching file contents
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 

@@ -243,7 +243,6 @@ Test secret changeset are not pull
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files
-  new changesets 4a2df7238c3b:cf9fe039dfd6
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0
   test-debug-phase: new rev 2:  x -> 0
@@ -611,7 +610,6 @@ test hidden changeset are not cloned as public (issue3935)
   adding manifests
   adding file changes
   added 7 changesets with 6 changes to 6 files
-  new changesets 4a2df7238c3b:17a481b3bccb
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0
   test-debug-phase: new rev 2:  x -> 0

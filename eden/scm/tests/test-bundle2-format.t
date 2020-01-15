@@ -826,7 +826,6 @@ Support for changegroup
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  new changesets cd010b8cd998:02de42196ebe
 
   $ hg log -G
   o  8:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H

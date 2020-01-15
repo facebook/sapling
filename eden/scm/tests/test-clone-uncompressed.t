@@ -94,7 +94,6 @@ Cannot stream clone when there are secret changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96ee1d7354c4
 
   $ killdaemons.py
 
@@ -129,7 +128,6 @@ Verify interaction between preferuncompressed and secret presence
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96ee1d7354c4
 
   $ killdaemons.py
 
@@ -160,7 +158,6 @@ there is no security so it isn't important to prevent a clone here.)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96ee1d7354c4
 
 Stream clone while repo is changing:
 

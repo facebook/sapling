@@ -46,7 +46,6 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets b90e70beeb58
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -63,7 +62,6 @@ bar should remain deleted.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets e1adc944e717
   $ hg merge
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

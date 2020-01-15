@@ -36,7 +36,6 @@ Test import and merge diffs
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
-  new changesets 07f494440405:890ecaa90481
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
@@ -47,7 +46,6 @@ Test import and merge diffs
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 102a90ea7b4a
 
 Test without --exact and diff.p1 == workingdir.p1
 

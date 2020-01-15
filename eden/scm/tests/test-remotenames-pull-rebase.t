@@ -89,7 +89,6 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets 7a820e70c81f:4557926d2166
   updating to active bookmark bmnottracking
   nothing to rebase
   $ hg rebase -d 3
@@ -119,7 +118,6 @@ Tests the behavior of a pull followed by a pull --rebase
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 550352cd8c78
   $ hg pull --rebase
   pulling from $TESTTMP/remoterepo (glob)
   searching for changes
@@ -192,7 +190,6 @@ Test pull with --rebase and --tool
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
-  new changesets b1a3b9086dc9
   rebasing 1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth
   saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/*.hg (glob)

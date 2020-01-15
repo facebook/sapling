@@ -46,7 +46,6 @@ now pull and merge from test-a
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96b70246a118
   $ hg merge
   merging test.txt
   warning: 1 conflicts while merging test.txt! (edit, then use 'hg resolve --mark')
@@ -82,7 +81,6 @@ pull and merge from test-a again
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 40d11a4173a8
   $ hg merge --debug
     searching for copies back to rev 1
   resolving manifests

@@ -23,7 +23,6 @@ Pull master bookmark
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 1449e7934ec1
   $ hg bookmarks --list-subscriptions
      default/master            0:1449e7934ec1
 
@@ -74,7 +73,6 @@ Move master bookmark
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 0238718db2b1
   $ hg bookmarks --list-subscriptions
      default/master            1:0238718db2b1
 
@@ -86,7 +84,6 @@ Specify bookmark to pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets ed7a9fd254d1
   $ hg bookmarks --list-subscriptions
      default/master            1:0238718db2b1
      default/secondbook        2:ed7a9fd254d1
@@ -136,7 +133,6 @@ Move bookmark in first remote, pull and make sure it moves in local repo
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets c47dca9795c9
   $ hg bookmarks --list-subscriptions
      default/master            1:0238718db2b1
      default/secondbook        3:c47dca9795c9
@@ -185,7 +181,6 @@ Update to the remote bookmark from secondremote
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 0022441e80e5
   `secondremote/secondbook` found remotely
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book --list-subscriptions
@@ -290,7 +285,6 @@ Clone remote repo with the selectivepull enabled
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  new changesets 1449e7934ec1:c47dca9795c9
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd new_localrepo

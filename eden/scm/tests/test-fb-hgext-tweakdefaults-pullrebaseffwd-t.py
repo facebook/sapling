@@ -28,13 +28,12 @@ sh % "cd clone"
 sh % "echo b" > "../repo/b"
 sh % "hg -R ../repo commit -qAm b"
 sh % "hg pull --rebase -d default" == r"""
-    pulling from $TESTTMP/repo (glob)
+    pulling from $TESTTMP/repo
     searching for changes
     adding changesets
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets d2ae7f538514
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     nothing to rebase - fast-forwarded to default"""
 sh % "hg log -G -T '{rev} {desc}'" == r"""
@@ -53,7 +52,6 @@ sh % "hg pull --rebase -d default" == r"""
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    new changesets 177f92b77385
     rebasing 86d71924e1d0 "x"
     saved backup bundle to $TESTTMP/clone/.hg/strip-backup/86d71924e1d0-48875604-rebase.hg"""
 sh % "hg log -G -T '{rev} {desc}'" == r"""

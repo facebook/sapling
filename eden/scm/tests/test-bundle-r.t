@@ -8,7 +8,6 @@
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  new changesets bfaf4b5cbf01:916f1afdef90
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
@@ -29,7 +28,6 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets bfaf4b5cbf01
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -42,7 +40,6 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets bfaf4b5cbf01:21f32785131f
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -55,7 +52,6 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  new changesets bfaf4b5cbf01:4ce51a113780
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -68,7 +64,6 @@
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  new changesets bfaf4b5cbf01:93ee6ab32777
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -81,7 +76,6 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets bfaf4b5cbf01:c70afb1ee985
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -94,7 +88,6 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  new changesets bfaf4b5cbf01:f03ae5a9b979
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -107,7 +100,6 @@
   adding manifests
   adding file changes
   added 4 changesets with 5 changes to 2 files
-  new changesets bfaf4b5cbf01:095cb14b1b4d
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -120,7 +112,6 @@
   adding manifests
   adding file changes
   added 5 changesets with 6 changes to 3 files
-  new changesets bfaf4b5cbf01:faa2e4234c7a
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -133,7 +124,6 @@
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 2 files
-  new changesets bfaf4b5cbf01:916f1afdef90
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -148,7 +138,6 @@
   adding manifests
   adding file changes
   added 4 changesets with 2 changes to 3 files
-  new changesets c70afb1ee985:faa2e4234c7a
   $ hg verify
   checking changesets
   checking manifests
@@ -226,7 +215,6 @@ revision 2
   adding manifests
   adding file changes
   added 6 changesets with 4 changes to 4 files
-  new changesets 93ee6ab32777:916f1afdef90
 
 revision 8
 
@@ -250,7 +238,6 @@ revision 2
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets 93ee6ab32777:916f1afdef90
 
 revision 4
 
@@ -269,7 +256,6 @@ revision 4
   adding manifests
   adding file changes
   added 4 changesets with 3 changes to 3 files
-  new changesets c70afb1ee985:faa2e4234c7a
 
 revision 6
 
@@ -288,7 +274,6 @@ revision 6
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets 93ee6ab32777:916f1afdef90
 
 revision 4
 
@@ -321,7 +306,6 @@ revision 4
   adding manifests
   adding file changes
   added 7 changesets with 4 changes to 4 files
-  new changesets 93ee6ab32777:03fc0b0e347c
 
 revision 9
 

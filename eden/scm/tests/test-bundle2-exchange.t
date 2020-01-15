@@ -53,7 +53,6 @@ The extension requires a repo (currently unused)
   adding file changes
   added 8 changesets with 7 changes to 7 files
   pre-close-tip:02de42196ebe draft 
-  new changesets cd010b8cd998:02de42196ebe
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_TXNNAME=unbundle
   bundle:*/tests/bundles/rebase.hg HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
@@ -87,7 +86,6 @@ clone --pull
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
   pre-close-tip:9520eea781bc draft 
-  new changesets cd010b8cd998:9520eea781bc
   postclose-tip:9520eea781bc draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=9520eea781bcca16c1e15acc0ba14335a0e8e5ba HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=clone HG_URL=file:$TESTTMP/main
   updating to branch default
@@ -118,7 +116,6 @@ pull
   added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
   pre-close-tip:24b6387c8c8c draft 
-  new changesets 24b6387c8c8c
   postclose-tip:24b6387c8c8c draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
   file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
@@ -289,7 +286,6 @@ pull over ssh
   1 new obsolescence markers
   updating bookmark book_02de
   pre-close-tip:02de42196ebe draft book_02de
-  new changesets 02de42196ebe
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
   ssh://user@dummy/main HG_URL=ssh://user@dummy/main
@@ -315,7 +311,6 @@ pull over http
   1 new obsolescence markers
   updating bookmark book_42cc
   pre-close-tip:42ccdea3bb16 draft book_42cc
-  new changesets 42ccdea3bb16
   postclose-tip:42ccdea3bb16 draft book_42cc
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
   http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/ (glob)
@@ -984,7 +979,6 @@ bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96ee1d7354c4
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -1070,7 +1064,6 @@ Verify the global server.bundle1 option works
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96ee1d7354c4
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -1098,7 +1091,6 @@ Verify bundle1 pushes can be disabled
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 96ee1d7354c4
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle2-only

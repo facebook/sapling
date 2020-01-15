@@ -110,7 +110,6 @@
   adding manifests
   adding file changes
   added 7 changesets with 7 changes to 7 files
-  new changesets 07b1b9442c5b:6e48f4215d24
   $ hg update
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

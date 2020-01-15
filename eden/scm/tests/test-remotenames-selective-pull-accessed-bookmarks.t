@@ -260,7 +260,6 @@ Check selective pull setup using accessed bookmarks
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets d65ac0c5f8c9
   $ hg book --list-subs
      default/C_bookmark        7:d65ac0c5f8c9
      default/master            1:206754acf7d8

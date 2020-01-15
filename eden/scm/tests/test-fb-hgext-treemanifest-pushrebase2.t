@@ -64,7 +64,6 @@ Push a commit that client1 doesnt have
   adding manifests
   adding file changes
   added 5 changesets with 6 changes to 6 files
-  new changesets 426bada5c675:5a587c09248a
   $ hg up -q tip
 - Add a bunch of files, to force it to choose to make a delta
   $ echo >> file1

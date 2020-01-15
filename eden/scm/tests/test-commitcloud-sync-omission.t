@@ -189,7 +189,6 @@ Connect to commit cloud
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1f9ebd6d1390ebc603e401171eda0c444a0f8754 not found, omitting oldbook bookmark
-  new changesets 1c1b7955142c:7f958333fe84
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -231,7 +230,6 @@ Sync these commits to the first client - it has everything
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets ff52de2f760c
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -326,7 +324,6 @@ Second client syncs that in, but still leaves the old commits missing
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files
-  new changesets 46f8775ee5d4
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -403,7 +400,6 @@ Second client syncs the old stack in, and now has the bookmark
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets 1f9ebd6d1390:2b8dce7bd745
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -470,7 +466,6 @@ Connect to commit cloud
   adding file changes
   added 3 changesets with 3 changes to 3 files
   1c1b7955142cd8a3beec705c9cca9d775ecb0fa8 not found, omitting midbook bookmark
-  new changesets ff52de2f760c:2b8dce7bd745
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -596,7 +591,6 @@ A full sync pulls the old commits in
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets 1c1b7955142c:d133b886da68
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -679,7 +673,6 @@ Pull in some of the commits by setting max age manually
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets 1f9ebd6d1390:2b8dce7bd745
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -818,7 +811,6 @@ Pull this into client1
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets f770b7f72fa5
 
 Move midbook to the public commit.
   $ hg book -fr 11 midbook
@@ -870,6 +862,5 @@ from the cloud workspace, but the sync should still work.
   added 1 changesets with 0 changes to 3 files
   f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
   obsoleted 1 changesets
-  new changesets 2ace67ee4791
   commitcloud: commits synchronized
   finished in 0.00 sec

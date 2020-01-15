@@ -318,7 +318,6 @@ Test force pushes
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 86cf3bb05fcf
   $ hg log -G -T '{rev} {desc} {remotebookmarks}'
   o  3 aa
   |

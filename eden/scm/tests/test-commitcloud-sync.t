@@ -194,7 +194,6 @@ Sync from the second client - the commit should appear
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets fa5d62c46fd7
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -228,7 +227,6 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  new changesets 02f6fc2b7154
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -317,7 +315,6 @@ Sync the amended commit to the other client
   adding file changes
   added 2 changesets with 1 changes to 2 files
   obsoleted 2 changesets
-  new changesets a7bb357e7299:48610b1a7ec0
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
@@ -387,7 +384,6 @@ Expected result: the message telling that revision has been moved to another rev
   adding file changes
   added 1 changesets with 0 changes to 2 files
   obsoleted 1 changesets
-  new changesets 41f3b9359864
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
@@ -450,7 +446,6 @@ Expected result: client2 should be moved to the amended version
   adding file changes
   added 1 changesets with 1 changes to 3 files
   obsoleted 1 changesets
-  new changesets 8134e74ecdc8
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been moved remotely to 8134e74ecdc8
@@ -511,7 +506,6 @@ Expected result: move should not happen, expect a message that move is ambiguous
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files
-  new changesets abd5311ab3c6:cebbb614447e
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been replaced remotely with multiple revisions
@@ -572,7 +566,6 @@ Expected result: client2 should be moved to fada67350ab0
   adding file changes
   added 1 changesets with 1 changes to 3 files
   obsoleted 1 changesets
-  new changesets fada67350ab0
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision abd5311ab3c6 has been moved remotely to fada67350ab0
@@ -938,7 +931,6 @@ And the commits should now be availble in the other client.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files
-  new changesets a6b97eebbf74:9bd68ef10d6b
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -1016,7 +1008,6 @@ Commit still becomes available in the other repo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  new changesets e58a6603d256:799d22972c4e
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -1087,7 +1078,6 @@ Sync this onto the second client, the remote bookmarks don't change.
   adding file changes
   added 2 changesets with 0 changes to 3 files
   obsoleted 2 changesets
-  new changesets acd5b9e8c656:2da6c73964b8
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1111,7 +1101,6 @@ Do a pull on this client.  The remote bookmarks now get updated.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 97250524560a
   $ hg trglog
   o  97250524560a 'public 2'  default/publicbookmark2
   |
@@ -1147,7 +1136,6 @@ Rebase the commits again, and resync to the first client.
   adding file changes
   added 2 changesets with 0 changes to 3 files
   obsoleted 2 changesets
-  new changesets 97250524560a:af621240884f
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1254,7 +1242,6 @@ Reconnect to the default repository.  This should work and pull in the commits.
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
-  new changesets 3597ff85ead0:af621240884f
   commitcloud: commits synchronized
   finished in * (glob)
 

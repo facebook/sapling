@@ -109,7 +109,6 @@ Make a push from the client
 Apply a bundle on the second server via the command line
   $ cd ../server2
   $ hg unbundle $TESTTMP/bundle
-  new changesets a8078509f8d1
   $ hg log -r a8078509f8d1
   changeset:   2:a8078509f8d1
   user:        test
@@ -144,7 +143,6 @@ Try unbundle with bad commitdates file
 
 Now try with correct file
   $ hg unbundle $TESTTMP/bundle --config pushrebase.commitdatesfile=$TESTTMP/commitdatesfile
-  new changesets d85a52e5321a
   $ hg show d85a52e5321a
   changeset:   2:d85a52e5321a
   user:        test
@@ -197,7 +195,6 @@ Apply stack
   $ cd ../server2
   $ python $TESTTMP/encode_json.py  c661726b7d9318b82a36fc87d368067982e6d470,b01ae7689fd28b3b0eb2d005cad16a46084b0d42  3 > $TESTTMP/commitdatesfile
   $ hg unbundle $TESTTMP/bundle --config pushrebase.commitdatesfile=$TESTTMP/commitdatesfile
-  new changesets b5e2b8071144:143d91ad57b2
   $ log
   o  stack push 2 [public:143d91ad57b2]
   |
@@ -240,9 +237,7 @@ Create and push a commit with different timezone
 
   $ cd ../server2
   $ hg unbundle $TESTTMP/bundle
-  new changesets f8e54def88a9
 
   $ cd ../server3
   $ python $TESTTMP/encode_json.py  f8e54def88a9cc429ae2077991fdc80e3f4ab5b7  0 > $TESTTMP/commitdatesfile
   $ hg unbundle $TESTTMP/bundle --config pushrebase.commitdatesfile=$TESTTMP/commitdatesfile
-  new changesets f8e54def88a9

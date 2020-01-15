@@ -49,7 +49,6 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets d34c38483be9
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 1019},
                         write : { bytes : 618}}}}
@@ -84,7 +83,6 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets d34c38483be9:d7373980d475
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 2,  revs : 4},
@@ -102,7 +100,6 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  new changesets d34c38483be9:d7373980d475
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
@@ -195,7 +192,6 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
-  new changesets 3a2e32c04641:cedeb4167c1f
 
   $ cd ..
 
@@ -248,7 +244,6 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 5 changesets with 4 changes to 3 files
-  new changesets cb9a9f314b8b:d8f06a4c6d38
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 2951},
                         write : { bytes : 659}}}}

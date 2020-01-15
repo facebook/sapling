@@ -73,7 +73,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
-  new changesets 6b4b6f66ef8c
   prefetching file contents
   $ sleep 0.5
   $ hg debugwaitonprefetch >/dev/null 2>%1
@@ -119,7 +118,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
-  new changesets 6b4b6f66ef8c
   prefetching file contents
   $ sleep 0.5
   $ hg debugwaitonprefetch >/dev/null 2>%1

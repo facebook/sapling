@@ -61,8 +61,7 @@ sh % "hg reset --clean 66ee28d0328c" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
-    new changesets 66ee28d0328c"""
+    added 1 changesets with 1 changes to 1 files"""
 sh % "hg log -G -T '{node|short} {bookmarks} {phase}\\n'" == r"""
     @  66ee28d0328c foo draft
     |
@@ -124,8 +123,7 @@ sh % "hg reset 66ee28d0328c" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
-    new changesets 66ee28d0328c"""
+    added 1 changesets with 1 changes to 1 files"""
 sh % "hg book foo-bar -r '.^'"
 sh % "hg reset foo-bar" == r"""
     saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-reset.hg
@@ -139,8 +137,7 @@ sh % "hg reset -C 66ee28d0328c" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
-    new changesets 66ee28d0328c"""
+    added 1 changesets with 1 changes to 1 files"""
 sh % "touch toberemoved"
 sh % "hg commit -qAm 'add file for removal'"
 sh % "echo z" >> "x"

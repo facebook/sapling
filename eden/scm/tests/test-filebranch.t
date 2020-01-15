@@ -56,7 +56,6 @@ Merging:
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
-  new changesets bdd988058d16
 
   $ hg merge -v
   resolving manifests

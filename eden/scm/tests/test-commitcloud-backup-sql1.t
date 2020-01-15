@@ -51,7 +51,6 @@ Pull scratch commit from the second client
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 2d9cfa751213
   $ hg up scratch/book
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark scratch/book)

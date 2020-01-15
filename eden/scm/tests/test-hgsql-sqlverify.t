@@ -29,7 +29,6 @@ Run with incorrect local revlogs
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 7c3bad9141dc
 
   $ hg log -r tip --forcesync -T '{desc}\n'
   add b

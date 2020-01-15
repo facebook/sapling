@@ -62,7 +62,6 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets a9688f18cb91
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)

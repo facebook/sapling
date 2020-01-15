@@ -251,7 +251,6 @@ Test applying multiple patches
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets 07f494440405:540395c44225
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-multi1
@@ -278,7 +277,6 @@ Test applying multiple patches with --exact
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets 07f494440405:540395c44225
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-multi2

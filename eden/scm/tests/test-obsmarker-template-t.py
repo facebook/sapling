@@ -1312,8 +1312,7 @@ sh % "hg pull" == r"""
     adding file changes
     added 1 changesets with 0 changes to 1 files
     2 new obsolescence markers
-    obsoleted 1 changesets
-    new changesets 7a230b46bf61"""
+    obsoleted 1 changesets"""
 sh % "hg log --hidden -G" == r"""
     o  changeset:   2:7a230b46bf61
     |  parent:      0:ea207398892e

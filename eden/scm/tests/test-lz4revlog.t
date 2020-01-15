@@ -50,7 +50,6 @@ disable lz4, then clone
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets f7b1eb17ad24:2e93b276e8fa
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sort w/.hg/requires
@@ -138,4 +137,3 @@ uncompressed clone from lz4 to non-lz4 should fall back to pull
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 2 files
-  new changesets bdf7353f787b:18e28922b6ed

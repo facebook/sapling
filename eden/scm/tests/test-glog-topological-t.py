@@ -26,8 +26,7 @@ sh % 'hg unbundle "$TESTDIR/bundles/remote.hg"' == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 9 changesets with 7 changes to 4 files
-    new changesets bfaf4b5cbf01:916f1afdef90"""
+    added 9 changesets with 7 changes to 4 files"""
 
 sh % "hg log -G" == r"""
     o  8

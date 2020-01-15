@@ -146,7 +146,6 @@
   adding manifests
   adding file changes
   added 3 changesets with 4 changes to 2 files
-  new changesets 3490593cf53c:751f5ef10bc7
   '751f5ef10bc73a8f549197b380773d4f680daa8c' found remotely
   pull finished in * sec (glob)
   751f5ef10bc7 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it directly
