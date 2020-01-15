@@ -36,13 +36,15 @@ use mononoke_types::{
 };
 use movers::{get_large_to_small_mover, get_small_to_large_mover, Mover};
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
+use slog::info;
 use sql_ext::TransactionResult;
-use std::{fmt, sync::Arc};
+use std::{collections::VecDeque, fmt, sync::Arc};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
     WorkingCopyEquivalence,
 };
 use thiserror::Error;
+use topo_sort::sort_topological;
 
 pub mod validation;
 
@@ -364,6 +366,63 @@ pub enum CommitSyncRepos {
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
     },
+}
+
+pub async fn find_toposorted_unsynced_ancestors<M>(
+    ctx: CoreContext,
+    commit_syncer: &CommitSyncer<M>,
+    start_cs_id: ChangesetId,
+) -> Result<Vec<ChangesetId>, Error>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+{
+    let source_repo = commit_syncer.get_source_repo().clone();
+
+    let mut visited = hashset! { start_cs_id };
+    let mut q = VecDeque::new();
+    q.push_back(start_cs_id);
+
+    let mut commits_to_backsync = HashMap::new();
+
+    let mut traversed_num = 0;
+    while let Some(cs_id) = q.pop_front() {
+        traversed_num += 1;
+        if traversed_num % 100 == 0 {
+            info!(
+                ctx.logger(),
+                "traversed {} commits while backsyncing, starting from {}",
+                traversed_num,
+                start_cs_id
+            );
+        }
+        let maybe_commit_sync_outcome = commit_syncer
+            .get_commit_sync_outcome(ctx.clone(), cs_id)
+            .await?;
+
+        if maybe_commit_sync_outcome.is_some() {
+            continue;
+        } else {
+            let parents = source_repo
+                .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+                .compat()
+                .await?;
+
+            commits_to_backsync.insert(cs_id, parents.clone());
+
+            q.extend(parents.into_iter().filter(|p| visited.insert(*p)));
+        }
+    }
+
+    // sort_topological returns a list which contains both commits_to_backsync keys and
+    // values (i.e. parents). We need only keys, so below we added a filter to remove parents
+    //
+    // TODO(stash): T60147215 change sort_topological logic to not return parents!
+    let res = sort_topological(&commits_to_backsync).expect("unexpected cycle in commit graph!");
+
+    Ok(res
+        .into_iter()
+        .filter(|r| commits_to_backsync.contains_key(r))
+        .collect())
 }
 
 #[derive(Clone)]
