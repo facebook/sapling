@@ -171,6 +171,15 @@ class physicalfilesystem(object):
         repo-rooted file path and the bool is whether the file exists on disk
         or not.
         """
+        results = []
+        for fn in self._pendingchanges(match, listignored):
+            results.append(fn[0])
+            yield fn
+
+        oldid = self.dirstate.identity()
+        self._postpendingfixup(oldid, results)
+
+    def _pendingchanges(self, match, listignored):
         dmap = self.dirstate._map
         dmap.preload()
 
@@ -238,8 +247,6 @@ class physicalfilesystem(object):
 
         for changed in self._processlookups(lookups):
             yield changed
-
-        self._marklookupsclean()
 
     @util.timefunction("fswalk", 0, "ui")
     def _rustwalk(self, match, listignored=False):
@@ -407,12 +414,11 @@ class physicalfilesystem(object):
 
         return files, resultdirs, errors
 
-    def _marklookupsclean(self):
+    def _postpendingfixup(self, oldid, changed):
         """update dirstate for files that are actually clean"""
-        if self.cleanlookups:
+        if self.cleanlookups or self.dirstate._dirty:
             try:
                 repo = self.dirstate._repo
-                oldid = self.dirstate.identity()
 
                 # Updating the dirstate is optional so we don't wait on the
                 # lock.
@@ -420,24 +426,8 @@ class physicalfilesystem(object):
                     # The dirstate may have been reloaded after the wlock
                     # was taken, so load it again.
                     newdirstate = repo.dirstate
-                    newdmap = newdirstate._map
                     if newdirstate.identity() == oldid:
-                        normal = newdirstate.normal
-                        for f in self.cleanlookups:
-                            # Only make something clean if it's already in a
-                            # normal state. Things in other states, like 'm'
-                            # merge state, should not be marked clean.
-                            entry = newdmap[f]
-                            if (
-                                entry[0] == "n"
-                                and f not in newdmap.copymap
-                                and entry[2] != -2
-                            ):
-                                # It may have been a while since we added the
-                                # file to cleanlookups, so double check that
-                                # it's still clean.
-                                if self._compareondisk(f) is False:
-                                    normal(f)
+                        self._marklookupsclean()
 
                         # write changes out explicitly, because nesting
                         # wlock at runtime may prevent 'wlock.release()'
@@ -449,8 +439,6 @@ class physicalfilesystem(object):
                         newdirstate.write(tr)
 
                         self._newid = newdirstate.identity()
-
-                        self.cleanlookups = []
                     else:
                         # in this case, writing changes out breaks
                         # consistency, because .hg/dirstate was
@@ -459,6 +447,25 @@ class physicalfilesystem(object):
                         repo.ui.debug("skip marking lookups clean: identity mismatch\n")
             except error.LockError:
                 pass
+
+    def _marklookupsclean(self):
+        dirstate = self.dirstate
+        normal = dirstate.normal
+        newdmap = dirstate._map
+        cleanlookups = self.cleanlookups
+        self.cleanlookups = []
+
+        for f in cleanlookups:
+            # Only make something clean if it's already in a
+            # normal state. Things in other states, like 'm'
+            # merge state, should not be marked clean.
+            entry = newdmap[f]
+            if entry[0] == "n" and f not in newdmap.copymap and entry[2] != -2:
+                # It may have been a while since we added the
+                # file to cleanlookups, so double check that
+                # it's still clean.
+                if self._compareondisk(f) is False:
+                    normal(f)
 
 
 def findthingstopurge(dirstate, match, findfiles, finddirs, includeignored):

@@ -897,25 +897,29 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                 # Ideally we'd return the result incrementally, but we need to
                 # be able to fall back if watchman fails. So let's consume the
                 # whole pendingchanges list upfront.
-                return list(self._pendingchanges(match))
+                return list(self._fspendingchanges(match))
             except fsmonitorfallback as ex:
                 return bail(str(ex))
 
-    def _pendingchanges(self, match=None):
+    def _fspendingchanges(self, match=None):
         if match is None:
             match = util.always
 
         self.dirstate._map.preload()
         lookups = []
+        results = []
         for fn, st in self._fsmonitorwalk(match):
             changed = self._ischanged(fn, st, lookups)
             if changed:
+                results.append(changed[0])
                 yield changed
 
         for changed in self._processlookups(lookups):
+            results.append(changed[0])
             yield changed
 
-        self._marklookupsclean()
+        oldid = self.dirstate.identity()
+        self._postpendingfixup(oldid, results)
 
     @util.timefunction("fsmonitorwalk", 0, "_ui")
     def _fsmonitorwalk(self, match):

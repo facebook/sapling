@@ -60,12 +60,12 @@ confused with a file with the exec bit set
   >     filesystem,
   > )
   > def extsetup():
-  >     extensions.wrapfunction(filesystem.physicalfilesystem, '_marklookupsclean', overridemarklookups)
-  > def overridemarklookups(orig, self):
+  >     extensions.wrapfunction(filesystem.physicalfilesystem, '_postpendingfixup', overridepostpending)
+  > def overridepostpending(orig, self, oldid, changed):
   >     # make an update that changes the dirstate from underneath
   >     self.dirstate._repo.ui.system(r"sh '$TESTTMP/dirstaterace.sh'",
   >                                   cwd=self.dirstate._repo.root)
-  >     return orig(self)
+  >     return orig(self, oldid, changed)
   > EOF
 
   $ hg debugrebuilddirstate
