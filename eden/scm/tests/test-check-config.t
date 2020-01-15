@@ -60,6 +60,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fbscmquery.gitcallsigns (list)
   undocumented: fbscmquery.reponame (str)
   undocumented: format.usehgsql (bool)
+  undocumented: fsmonitor.tcp (bool)
+  undocumented: fsmonitor.tcp-host (str) ["::1"]
+  undocumented: fsmonitor.tcp-port (int) [12300]
   undocumented: git.public (list)
   undocumented: grep.biggrepcorpus (str)
   undocumented: grep.biggreptier (str) ["biggrep.master"]

@@ -215,6 +215,9 @@ configitem("fsmonitor", "walk_on_invalidate", default=False)
 configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
 configitem("fsmonitor", "warn-fresh-instance", default=False)
 configitem("fsmonitor", "fallback-on-watchman-exception", default=True)
+configitem("fsmonitor", "tcp", default=False)
+configitem("fsmonitor", "tcp-host", default="::1")
+configitem("fsmonitor", "tcp-port", default=12300)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:

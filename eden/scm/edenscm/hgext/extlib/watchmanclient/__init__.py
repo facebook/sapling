@@ -81,6 +81,11 @@ class client(object):
                 self._sockpath = sockpath
                 repo.ui.debug("watchman sockpath is set as %s\n" % sockpath)
 
+        self._transport = None
+        if repo.ui.configbool("fsmonitor", "tcp", False):
+            self._transport = "tcp"
+        self._tcp_host = repo.ui.config("fsmonitor", "tcp-host", "::1")
+        self._tcp_port = repo.ui.configint("fsmonitor", "tcp-port", 12300)
         self._timeout = timeout
         self._watchmanclient = None
         self._root = repo.root
@@ -123,6 +128,8 @@ class client(object):
                 self._firsttime = False
                 self._watchmanclient = pywatchman.client(
                     sockpath=self._sockpath,
+                    transport=self._transport,
+                    tcpAddress=(self._tcp_host, self._tcp_port),
                     timeout=self._timeout,
                     recvEncoding="bser-v1",
                     sendEncoding="bser-v1",
