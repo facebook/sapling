@@ -95,7 +95,6 @@ Clone the repository, and pull
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  new changesets 48d4d2fa17e5
   $ hgmn up master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)

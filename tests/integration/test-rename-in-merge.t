@@ -61,7 +61,6 @@ start mononoke
   adding file changes
   added 1 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
-  new changesets 38674c683e74
   $ hgmn up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C

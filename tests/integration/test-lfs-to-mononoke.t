@@ -145,7 +145,6 @@ Create a new client repository, using getpack (with its own cachepath)
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  new changesets 99765c8d839c:c651f052c52d
  
   $ hgmn update -r master_bookmark -v
   resolving manifests

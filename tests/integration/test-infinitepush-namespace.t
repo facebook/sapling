@@ -146,7 +146,6 @@ Check everything is as expected
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 47da8b81097c
   $ hg bookmarks --remote
      default/master_bookmark   0:3903775176ed
      default/plain/123         1:47da8b81097c

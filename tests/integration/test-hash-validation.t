@@ -59,7 +59,6 @@ Prefetch should fail with corruption error
   adding file changes
   added 3 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
-  new changesets 426bada5c675:26805aba1e60
 
   $ hgmn prefetch -r ":"
   remote: Command failed

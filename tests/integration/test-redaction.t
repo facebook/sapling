@@ -123,7 +123,6 @@ Push files
   adding file changes
   added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  new changesets 14961831bd3a:064d994d0240
 
   $ tglogpnr
   o  064d994d0240 public 'add censored c' master_bookmark

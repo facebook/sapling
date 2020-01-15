@@ -104,7 +104,6 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 0db8825b9792
 
   $ ls $TESTTMP/blobstore/blobs | grep "alias.content" | wc -l
   0

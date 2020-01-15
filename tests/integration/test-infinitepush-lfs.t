@@ -106,4 +106,3 @@ Try to pull it
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 68394cf51f7e

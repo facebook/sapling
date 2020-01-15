@@ -83,4 +83,3 @@ Commit should have been accepted
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 47da8b81097c

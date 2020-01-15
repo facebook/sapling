@@ -116,7 +116,6 @@ Do infinitepush (aka commit cloud) push
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 47da8b81097c
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
@@ -209,7 +208,6 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 007299f6399f
   $ hgmn up -q "007299f6399f"
   $ cat newfile2
   new2
@@ -276,7 +274,6 @@ Pushbackup also works
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 2cfeca6399fd
   $ hgmn up -q 2cfeca6399fd
   $ cat aa
   aa
@@ -422,7 +419,6 @@ Check phases on another side (for pull command and pull -r)
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  new changesets 500658c138a4:eca836c7c651
 
   $ tglogp
   o  5: eca836c7c651 draft 'change on top of the release'

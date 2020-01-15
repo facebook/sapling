@@ -86,7 +86,6 @@ test publishing
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 907767d421e4
   $ hgmn up 907767d421e4cb28c7978bedef8ccac7242b155e
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn up b2d646f64a9978717516887968786c6b7a33edf9
@@ -97,7 +96,6 @@ test publishing
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets b2d646f64a99
   'b2d646f64a9978717516887968786c6b7a33edf9' found remotely
   pull finished in * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

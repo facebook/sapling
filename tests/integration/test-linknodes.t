@@ -107,7 +107,6 @@ pull the infinitepush commit
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 60ab8a6c8e65
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621 --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -182,7 +181,6 @@ pull only the master branch into another repo
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 6dbc3093b595
   $ hgmn up master_bookmark --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -228,7 +226,6 @@ pull the infinitepush commit again in a new repo
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 60ab8a6c8e65
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debughistorypack ../cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb
