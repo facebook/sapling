@@ -108,8 +108,7 @@ Pull full.hg into empty (using --cwd)
 
 Rollback empty
 
-  $ hg -R empty rollback
-  repository tip rolled back to revision -1 (undo pull)
+  $ hg -R empty debugstrip 0 --no-backup
 
 Pull full.hg into empty again (using --cwd)
 
@@ -137,8 +136,7 @@ Pull full.hg into empty (using -R)
 
 Rollback empty
 
-  $ hg -R empty rollback
-  repository tip rolled back to revision -1 (undo pull)
+  $ hg -R empty debugstrip 0 --no-backup
 
 Pull full.hg into empty again (using -R)
 
@@ -234,8 +232,7 @@ hg -R ../full.hg verify
 
 Rollback empty
 
-  $ hg rollback
-  repository tip rolled back to revision -1 (undo pull)
+  $ hg debugstrip 0 --no-backup
   $ cd ..
 
 Log -R bundle:empty+full.hg (broken with Rust code path)

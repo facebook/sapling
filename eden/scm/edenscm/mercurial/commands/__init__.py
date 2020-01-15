@@ -4732,60 +4732,62 @@ def pull(ui, repo, source="default", **opts):
     ui.status(_("pulling from %s\n") % util.hidepassword(source))
 
     with repo.connectionpool.get(source, opts=opts) as conn:
-        other = conn.peer
-        revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
+        with repo.wlock(), repo.lock(), repo.transaction("pull"):
+            other = conn.peer
+            revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
 
-        pullopargs = {}
-        if opts.get("bookmark"):
-            if not revs:
-                revs = []
-            # The list of bookmark used here is not the one used to actually
-            # update the bookmark name. This can result in the revision pulled
-            # not ending up with the name of the bookmark because of a race
-            # condition on the server. (See issue 4689 for details)
-            remotebookmarks = other.listkeys("bookmarks")
-            remotebookmarks = bookmarks.unhexlifybookmarks(remotebookmarks)
-            pullopargs["remotebookmarks"] = remotebookmarks
-            for b in opts["bookmark"]:
-                b = repo._bookmarks.expandname(b)
-                if b not in remotebookmarks:
-                    raise error.Abort(_("remote bookmark %s not found!") % b)
-                revs.append(hex(remotebookmarks[b]))
+            pullopargs = {}
+            if opts.get("bookmark"):
+                if not revs:
+                    revs = []
+                # The list of bookmark used here is not the one used to actually
+                # update the bookmark name. This can result in the revision pulled
+                # not ending up with the name of the bookmark because of a race
+                # condition on the server. (See issue 4689 for details)
+                remotebookmarks = other.listkeys("bookmarks")
+                remotebookmarks = bookmarks.unhexlifybookmarks(remotebookmarks)
+                pullopargs["remotebookmarks"] = remotebookmarks
+                for b in opts["bookmark"]:
+                    b = repo._bookmarks.expandname(b)
+                    if b not in remotebookmarks:
+                        raise error.Abort(_("remote bookmark %s not found!") % b)
+                    revs.append(hex(remotebookmarks[b]))
 
-        if revs:
-            try:
-                # When 'rev' is a bookmark name, we cannot guarantee that it
-                # will be updated with that name because of a race condition
-                # server side. (See issue 4689 for details)
-                oldrevs = revs
-                revs = []  # actually, nodes
-                for r in oldrevs:
-                    node = other.lookup(r)
-                    revs.append(node)
-                    if r == checkout:
-                        checkout = node
-            except error.CapabilityError:
-                err = _(
-                    "other repository doesn't support revision lookup, "
-                    "so a rev cannot be specified."
-                )
-                raise error.Abort(err)
+            if revs:
+                try:
+                    # When 'rev' is a bookmark name, we cannot guarantee that it
+                    # will be updated with that name because of a race condition
+                    # server side. (See issue 4689 for details)
+                    oldrevs = revs
+                    revs = []  # actually, nodes
+                    for r in oldrevs:
+                        node = other.lookup(r)
+                        revs.append(node)
+                        if r == checkout:
+                            checkout = node
+                except error.CapabilityError:
+                    err = _(
+                        "other repository doesn't support revision lookup, "
+                        "so a rev cannot be specified."
+                    )
+                    raise error.Abort(err)
 
-        pullopargs.update(opts.get("opargs", {}))
-        modheads = exchange.pull(
-            repo,
-            other,
-            heads=revs,
-            force=opts.get("force"),
-            bookmarks=opts.get("bookmark", ()),
-            opargs=pullopargs,
-        ).cgresult
+            pullopargs.update(opts.get("opargs", {}))
+            modheads = exchange.pull(
+                repo,
+                other,
+                heads=revs,
+                force=opts.get("force"),
+                bookmarks=opts.get("bookmark", ()),
+                opargs=pullopargs,
+            ).cgresult
 
-        # brev is a name, which might be a bookmark to be activated at
-        # the end of the update. In other words, it is an explicit
-        # destination of the update
-        brev = None
+            # brev is a name, which might be a bookmark to be activated at
+            # the end of the update. In other words, it is an explicit
+            # destination of the update
+            brev = None
 
+        # Run 'update' in another transaction.
         if checkout and checkout in repo:
             checkout = str(repo.changelog.rev(checkout))
 

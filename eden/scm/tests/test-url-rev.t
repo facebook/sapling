@@ -163,8 +163,7 @@ No new revs, no update:
   $ hg parents -q
   0:1f0dee641bb7
 
-  $ hg rollback
-  repository tip rolled back to revision 1 (undo pull)
+  $ hg debugstrip 1 --no-backup
 
   $ hg parents -q
   0:1f0dee641bb7
@@ -180,12 +179,12 @@ Pull -u takes us back to branch foo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  $ hg rollback
-  repository tip rolled back to revision 1 (undo pull)
-  working directory now based on revision 0
+  $ hg debugstrip 2 --no-backup
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark foo)
 
   $ hg parents -q
   0:1f0dee641bb7

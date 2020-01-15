@@ -117,8 +117,7 @@ pull
   1 new obsolescence markers
   pre-close-tip:24b6387c8c8c draft 
   postclose-tip:24b6387c8c8c draft 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
+  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -141,8 +140,7 @@ pull empty (with phase movement)
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
+  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
   $ hg -R other log -G
   o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -161,8 +159,7 @@ pull empty
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
+  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
   $ hg -R other log -G
   o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -287,8 +284,7 @@ pull over ssh
   updating bookmark book_02de
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  ssh://user@dummy/main HG_URL=ssh://user@dummy/main
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=ssh://user@dummy/main
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   2222222222222222222222222222222222222222 24b6387c8c8cae37178880f3fa95ded3cb1cf785 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -312,8 +308,7 @@ pull over http
   updating bookmark book_42cc
   pre-close-tip:42ccdea3bb16 draft book_42cc
   postclose-tip:42ccdea3bb16 draft book_42cc
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/ (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=http://localhost:$HGPORT/ (glob)
   $ cat main-error.log
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
