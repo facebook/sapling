@@ -387,33 +387,32 @@ def reposetup(ui, repo):
                 hgeoldata = self.wvfs.read(".hgeol")
                 neweol = eolfile(self.ui, self.root, hgeoldata)
 
-                wlock = None
                 try:
-                    wlock = self.wlock()
-                    for f in self.dirstate:
-                        if self.dirstate[f] != "n":
-                            continue
-                        if oldeol is not None:
-                            if not oldeol.match(f) and not neweol.match(f):
+                    with repo.wlock(), repo.lock(), repo.transaction("eol"):
+                        for f in self.dirstate:
+                            if self.dirstate[f] != "n":
                                 continue
-                            oldkey = None
-                            for pattern, key, m in oldeol.patterns:
-                                if m(f):
-                                    oldkey = key
-                                    break
-                            newkey = None
-                            for pattern, key, m in neweol.patterns:
-                                if m(f):
-                                    newkey = key
-                                    break
-                            if oldkey == newkey:
-                                continue
-                        # all normal files need to be looked at again since
-                        # the new .hgeol file specify a different filter
-                        self.dirstate.normallookup(f)
-                    # Write the cache to update mtime and cache .hgeol
-                    with self.localvfs("eol.cache", "w") as f:
-                        f.write(hgeoldata)
+                            if oldeol is not None:
+                                if not oldeol.match(f) and not neweol.match(f):
+                                    continue
+                                oldkey = None
+                                for pattern, key, m in oldeol.patterns:
+                                    if m(f):
+                                        oldkey = key
+                                        break
+                                newkey = None
+                                for pattern, key, m in neweol.patterns:
+                                    if m(f):
+                                        newkey = key
+                                        break
+                                if oldkey == newkey:
+                                    continue
+                            # all normal files need to be looked at again since
+                            # the new .hgeol file specify a different filter
+                            self.dirstate.normallookup(f)
+                        # Write the cache to update mtime and cache .hgeol
+                        with self.localvfs("eol.cache", "w") as f:
+                            f.write(hgeoldata)
                 except errormod.LockUnavailable:
                     # If we cannot lock the repository and clear the
                     # dirstate, then a commit might not see all files
@@ -421,9 +420,6 @@ def reposetup(ui, repo):
                     # repository, then we can also not make a commit,
                     # so ignore the error.
                     pass
-                finally:
-                    if wlock is not None:
-                        wlock.release()
 
         def commitctx(self, ctx, error=False):
             for f in sorted(ctx.added() + ctx.modified()):
