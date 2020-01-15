@@ -574,6 +574,9 @@ test that custom environment is passed down to ssh executable
   $ cat >>dumpenv <<EOF
   > #! /bin/sh
   > echo \$VAR >&2
+  > read hello
+  > read between
+  > read args
   > EOF
   $ chmod +x dumpenv
   $ hg pull ssh://something --config ui.ssh="./dumpenv"
