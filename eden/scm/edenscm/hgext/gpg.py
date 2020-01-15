@@ -323,7 +323,8 @@ def _dosign(ui, repo, *revs, **opts):
     sigsfile.close()
 
     if ".hgsigs" not in repo.dirstate:
-        repo[None].add([".hgsigs"])
+        with repo.lock(), repo.transaction("add-signatures"):
+            repo[None].add([".hgsigs"])
 
     if opts["no_commit"]:
         return
