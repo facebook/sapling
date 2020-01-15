@@ -16,7 +16,7 @@ use crate::idmap::IdMapLike;
 use crate::idmap::SyncableIdMap;
 use crate::segment::IdDag;
 use crate::segment::SyncableIdDag;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
@@ -27,6 +27,9 @@ use std::path::Path;
 pub struct NameDag {
     pub(crate) dag: IdDag,
     pub(crate) map: IdMap,
+
+    /// Heads added via `add_heads` that are not flushed yet.
+    pending_heads: Vec<VertexName>,
 }
 
 impl NameDag {
@@ -39,11 +42,18 @@ impl NameDag {
         let _locked = map.prepare_filesystem_sync()?;
         map.reload()?;
         let dag = IdDag::open(path.join("segments"))?;
-        Ok(Self { dag, map })
+        Ok(Self {
+            dag,
+            map,
+            pending_heads: Default::default(),
+        })
     }
 
-    /// Build segments. Write to disk.
-    pub fn build<F>(
+    /// Add vertexes and their ancestors to the on-disk DAG.
+    ///
+    /// This is similar to calling `add_heads` followed by `flush`.
+    /// But is faster.
+    pub fn add_heads_and_flush<F>(
         &mut self,
         parent_names_func: F,
         master_names: &[VertexName],
@@ -52,6 +62,11 @@ impl NameDag {
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
+        ensure!(
+            self.pending_heads.is_empty(),
+            "ProgrammingError: add_heads_and_flush called with pending heads ({:?})",
+            &self.pending_heads,
+        );
         // Already include specified nodes?
         if master_names.iter().all(|n| {
             is_ok_some(
@@ -84,11 +99,139 @@ impl NameDag {
         Ok(())
     }
 
-    /// Reload segments from disk.
+    /// Add vertexes and their ancestors to the in-memory DAG.
+    ///
+    /// This does not write to disk. Use `add_heads_and_flush` to add heads
+    /// and write to disk more efficiently.
+    ///
+    /// The added vertexes are immediately query-able. They will get Ids
+    /// assigned to the NON_MASTER group internally. The `flush` function
+    /// can re-assign Ids to the MASTER group.
+    pub fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    where
+        F: Fn(VertexName) -> Result<Vec<VertexName>>,
+    {
+        // Assign to the NON_MASTER group unconditionally so we can avoid the
+        // complexity re-assigning non-master ids.
+        //
+        // This simplifies the API (not taking 2 groups), but comes with a
+        // performance penalty - if the user does want to make one of the head
+        // in the "master" group, we have to re-assign ids in flush().
+        //
+        // Practically, the callsite might want to use add_heads + flush
+        // intead of add_heads_and_flush, if:
+        // - The callsites cannot figure out "master_heads" at the same time
+        //   it does the graph change. For example, hg might know commits
+        //   before bookmark movements.
+        // - The callsite is trying some temporary graph changes, and does
+        //   not want to pollute the on-disk DAG. For example, calculating
+        //   a preview of a rebase.
+        let group = Group::NON_MASTER;
+
+        // Update IdMap. Keep track of what heads are added.
+        for head in heads.iter() {
+            if self.map.find_id_by_name(head.as_ref())?.is_none() {
+                self.map.assign_head(head.clone(), &parents, group)?;
+                self.pending_heads.push(head.clone());
+            }
+        }
+
+        // Update segments in the NON_MASTER group.
+        let parent_ids_func = self.map.build_get_parents_by_id(&parents);
+        let id = self.map.next_free_id(group)?;
+        if id > group.min_id() {
+            self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
+        }
+
+        Ok(())
+    }
+
+    /// Write in-memory DAG to disk. This will also pick up changes to
+    /// the DAG by other processes.
+    pub fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
+        // Sanity check.
+        for head in master_heads.iter() {
+            ensure!(
+                self.map.find_id_by_name(head.as_ref())?.is_some(),
+                "head {:?} does not exist in DAG",
+                head
+            );
+        }
+
+        // Dump the pending DAG to memory so we can re-assign numbers.
+        //
+        // PERF: There could be a fast path that does not re-assign numbers.
+        // But in practice we might always want to re-assign master commits.
+        let parents_map = self.pending_graph()?;
+        let mut non_master_heads = Vec::new();
+        std::mem::swap(&mut self.pending_heads, &mut non_master_heads);
+
+        self.reload()?;
+        let parents = |name| {
+            parents_map.get(&name).cloned().ok_or_else(|| {
+                anyhow!(
+                    "{:?} not found in parent map ({:?}, {:?})",
+                    &name,
+                    &parents_map,
+                    &non_master_heads,
+                )
+            })
+        };
+        let flush_result = self.add_heads_and_flush(&parents, master_heads, &non_master_heads);
+        if let Err(flush_err) = flush_result {
+            // Add back commits to revert the side effect of 'reload()'.
+            return match self.add_heads(&parents, &non_master_heads) {
+                Ok(_) => Err(flush_err),
+                Err(err) => Err(flush_err.context(err)),
+            };
+        }
+        Ok(())
+    }
+
+    /// Reload segments from disk. This discards in-memory content.
     pub fn reload(&mut self) -> Result<()> {
         self.map.reload()?;
         self.dag.reload()?;
+        self.pending_heads.clear();
         Ok(())
+    }
+
+    /// Get ordered parent vertexes.
+    pub fn parents(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        let id = match self.map.find_id_by_name(name.as_ref())? {
+            Some(id) => id,
+            None => bail!("{:?} does not exist in DAG", name),
+        };
+        self.dag
+            .parent_ids(id)?
+            .into_iter()
+            .map(|id| {
+                let name = match self.map.find_name_by_id(id)? {
+                    Some(name) => name,
+                    None => bail!("cannot resolve parent id {} to name", id),
+                };
+                Ok(VertexName::copy_from(name))
+            })
+            .collect()
+    }
+
+    /// Return parent relationship for non-master vertexes reachable from heads
+    /// added by `add_heads`.
+    fn pending_graph(&self) -> Result<HashMap<VertexName, Vec<VertexName>>> {
+        let mut parents_map: HashMap<VertexName, Vec<VertexName>> = Default::default();
+        let mut to_visit: Vec<VertexName> = self.pending_heads.clone();
+        while let Some(name) = to_visit.pop() {
+            let group = self.map.find_id_by_name(name.as_ref())?.map(|i| i.group());
+            if group == Some(Group::MASTER) {
+                continue;
+            }
+            let parents = self.parents(name.clone())?;
+            for parent in parents.iter() {
+                to_visit.push(parent.clone());
+            }
+            parents_map.insert(name, parents);
+        }
+        Ok(parents_map)
     }
 
     // TODO: Consider implementing these:

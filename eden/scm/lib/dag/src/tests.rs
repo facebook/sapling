@@ -814,7 +814,9 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
                 (vec![binary_head], vec![])
             };
 
-            named_dag.build(&parents_by_name, &master, &other).unwrap();
+            named_dag.add_heads(&parents_by_name, &master).unwrap();
+            named_dag.add_heads(&parents_by_name, &other).unwrap();
+            named_dag.flush(&master).unwrap();
             format!("{}\n{}", named_dag.map.replace(text), named_dag.dag.dump())
         })
         .collect();
