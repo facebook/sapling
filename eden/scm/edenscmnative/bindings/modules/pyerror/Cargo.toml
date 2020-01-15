@@ -8,4 +8,5 @@ cpython = { version = "0.3", features = ["python27-sys"], default-features = fal
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 indexedlog = { path = "../../../../lib/indexedlog" }
 metalog = { path = "../../../../lib/metalog" }
+revisionstore = { path = "../../../../lib/revisionstore" }
 treestate = { path = "../../../../lib/treestate" }

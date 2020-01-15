@@ -58,6 +58,7 @@ pub use crate::packstore::{
 pub use crate::remotestore::RemoteStore;
 pub use crate::repack::ToKeys;
 pub use crate::uniondatastore::UnionDataStore;
+pub use crate::util::Error;
 
 pub use indexedlog::Repair as IndexedlogRepair;
 

@@ -7,15 +7,22 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{format_err, Result};
+use anyhow::Result;
+use thiserror::Error;
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use util::path::create_dir;
 
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("could not find config option {0}")]
+    ConfigNotSet(String),
+}
+
 fn get_repo_name(config: &ConfigSet) -> Result<String> {
     let name = config
         .get("remotefilelog", "reponame")
-        .ok_or_else(|| format_err!("remotefilelog.reponame is not set"))?;
+        .ok_or_else(|| Error::ConfigNotSet("remotefilelog.reponame".into()))?;
     Ok(String::from_utf8(name.to_vec())?)
 }
 
@@ -23,7 +30,7 @@ fn get_cache_path(config: &ConfigSet) -> Result<PathBuf> {
     let reponame = get_repo_name(config)?;
     let config_path: PathBuf = config
         .get_or_default::<Option<_>>("remotefilelog", "cachepath")?
-        .ok_or_else(|| format_err!("remotefilelog.cachepath is not set"))?;
+        .ok_or_else(|| Error::ConfigNotSet("remotefilelog.cachepath".into()))?;
     let mut path = PathBuf::new();
     path.push(config_path);
     create_dir(&path)?;

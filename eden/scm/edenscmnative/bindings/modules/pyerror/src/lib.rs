@@ -11,6 +11,7 @@ use cpython_ext::error;
 py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
 py_exception!(error, RustError);
+py_exception!(error, RevisionstoreError);
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "error"].join(".");
@@ -19,6 +20,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "RustError", py.get_type::<RustError>())?;
+    m.add(
+        py,
+        "RevisionstoreError",
+        py.get_type::<RevisionstoreError>(),
+    )?;
 
     register_error_handlers();
 
@@ -31,6 +37,8 @@ fn register_error_handlers() {
             Some(PyErr::new::<IndexedLogError, _>(py, e.to_string()))
         } else if let Some(e) = e.downcast_ref::<metalog::Error>() {
             Some(PyErr::new::<MetaLogError, _>(py, e.to_string()))
+        } else if let Some(e) = e.downcast_ref::<revisionstore::Error>() {
+            Some(PyErr::new::<RevisionstoreError, _>(py, e.to_string()))
         } else {
             None
         }

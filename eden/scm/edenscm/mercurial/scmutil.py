@@ -197,6 +197,8 @@ def callcatch(ui, func):
         ui.warn(_("  %s\n\n") % str(inst).replace("\n", "\n  "))
         ui.warn(_("(this usually happens after hard reboot or system crash)\n"))
         ui.warn(_("(try '@prog@ doctor' to attempt to fix it)\n"))
+    except error.RevisionstoreError as inst:
+        ui.warn(_("%s\n") % inst, error=_("abort"))
     except ImportError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
         m = str(inst).split()[-1]
