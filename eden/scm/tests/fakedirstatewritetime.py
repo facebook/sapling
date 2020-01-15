@@ -65,9 +65,9 @@ def fakewrite(ui, func):
         dirstate._getfsnow = orig_dirstate_getfsnow
 
 
-def _poststatusfixup(orig, self, status, fixup, workingctx, oldid):
+def _poststatusfixup(orig, self, status, workingctx, oldid):
     ui = workingctx.repo().ui
-    return fakewrite(ui, lambda: orig(self, status, fixup, workingctx, oldid))
+    return fakewrite(ui, lambda: orig(self, status, workingctx, oldid))
 
 
 def markcommitted(orig, committablectx, node):

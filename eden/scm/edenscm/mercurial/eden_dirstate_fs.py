@@ -30,11 +30,11 @@ class eden_filesystem(filesystem.physicalfilesystem):
                 continue
 
             if code == MODIFIED or code == ADDED:
-                yield (path, True, False)
+                yield (path, True)
             elif code == REMOVED:
-                yield (path, False, False)
+                yield (path, False)
             elif code == IGNORED and listignored:
-                yield (path, True, False)
+                yield (path, True)
             else:
                 raise RuntimeError(
                     "unexpected status code '%s' for '%s'" % (code, path)

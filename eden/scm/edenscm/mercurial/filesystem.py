@@ -18,6 +18,7 @@ from edenscm.mercurial import registrar
 
 from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _
+from .node import hex
 
 
 _rangemask = 0x7FFFFFFF
@@ -40,6 +41,16 @@ class physicalfilesystem(object):
         self.dirstate = dirstate
         self.mtolog = self.ui.configint("experimental", "samplestatus")
         self.ltolog = self.mtolog
+        self.dtolog = self.mtolog
+        self.ftolog = self.mtolog
+        self.cleanlookups = []
+
+        # Temporary variable used to communicate the post-lookup dirstate
+        # identity to the higher level postdsstatus functions, so they can
+        # determine if the dirstate changing was caused by this process or by an
+        # external process. This will be deleted in a future diff, once the
+        # higher level postdsstatus logic moves down into this layer.
+        self._newid = None
 
     def _ischanged(self, fn, st, lookups):
         try:
@@ -121,16 +132,44 @@ class physicalfilesystem(object):
                 "filesystem.walk should not yield state '%s' for '%s'" % (state, fn)
             )
 
+    def _compareondisk(self, path):
+        """Compares the on-disk file content with the clean-checkout content.
+        Return True if on-disk is different, False if it is the same, and None
+        of the on-disk file is deleted or no longer accessible.
+        """
+        repo = self.dirstate._repo
+        p1 = self.dirstate.parents()[0]
+        wctx = repo[None]
+        pctx = repo[p1]
+
+        try:
+            # This will return True for a file that got replaced by a
+            # directory in the interim, but fixing that is pretty hard.
+            if (
+                path not in pctx
+                or wctx.flags(path) != pctx.flags(path)
+                or pctx[path].cmp(wctx[path])
+            ):
+                # Has changed
+                return True
+            else:
+                # Has not changed
+                return False
+        except (IOError, OSError):
+            # A file become inaccessible in between? Mark it as deleted,
+            # matching dirstate behavior (issue5584).
+            # The dirstate has more complex behavior around whether a
+            # missing file matches a directory, etc, but we don't need to
+            # bother with that: if f has made it to this point, we're sure
+            # it's in the dirstate.
+            return None
+
     def pendingchanges(self, match=None, listignored=False):
         """Yields all the files that differ from the pristine tree.
 
-        Returns an iterator of (string, bool, bool), where the string is the
-        repo-rooted file path, the first bool is whether the file exists on disk
-        or not, and the last bool is whether the file is in the lookup state and
-        needs to be compared.
-
-        The last bool will be dropped once lookup handling is moved into the
-        filesystem layer.
+        Returns an iterator of (string, bool), where the string is the
+        repo-rooted file path and the bool is whether the file exists on disk
+        or not.
         """
         dmap = self.dirstate._map
         dmap.preload()
@@ -149,8 +188,7 @@ class physicalfilesystem(object):
             seen.add(fn)
             changed = self._ischanged(fn, st, lookups)
             if changed:
-                # Repackage it with a False bit to indicate no lookup necessary.
-                yield (changed[0], changed[1], False)
+                yield changed
 
         auditpath = pathutil.pathauditor(self.root, cached=True)
 
@@ -192,17 +230,16 @@ class physicalfilesystem(object):
                 # handle testing if added files are still there.
                 if state in "a":
                     continue
-                yield (fn, False, False)
+                yield (fn, False)
             else:
                 changed = self._ischanged(fn, st, lookups)
                 if changed:
-                    # Repackage it with a False bit to indicate no lookup necessary.
-                    yield (changed[0], changed[1], False)
+                    yield changed
 
-        # Report all the files that need lookup resolution. This is temporary
-        # and will be replaced soon.
-        for fn in lookups:
-            yield (fn, True, True)
+        for changed in self._processlookups(lookups):
+            yield changed
+
+        self._marklookupsclean()
 
     @util.timefunction("fswalk", 0, "ui")
     def _rustwalk(self, match, listignored=False):
@@ -216,6 +253,35 @@ class physicalfilesystem(object):
             path = encoding.unitolocal(path)
             walkerror = encoding.unitolocal(walkerror)
             match.bad(path, walkerror)
+
+    def _processlookups(self, lookups):
+        repo = self.dirstate._repo
+        if util.safehasattr(repo, "fileservice"):
+            p1 = self.dirstate.parents()[0]
+            p1mf = repo[p1].manifest()
+            repo.fileservice.prefetch((f, hex(p1mf[f])) for f in lookups if f in p1mf)
+
+        # Sort so we get deterministic ordering. This is important for tests.
+        for fn in sorted(lookups):
+            changed = self._compareondisk(fn)
+            if changed is None:
+                # File no longer exists
+                if self.dtolog > 0:
+                    self.dtolog -= 1
+                    self.ui.log("status", "R %s: checked in filesystem" % fn)
+                yield (fn, False)
+            elif changed is True:
+                # File exists and is modified
+                if self.mtolog > 0:
+                    self.mtolog -= 1
+                    self.ui.log("status", "M %s: checked in filesystem" % fn)
+                yield (fn, True)
+            else:
+                # File exists and is clean
+                if self.ftolog > 0:
+                    self.ftolog -= 1
+                    self.ui.log("status", "C %s: checked in filesystem" % fn)
+                self.cleanlookups.append(fn)
 
     @util.timefunction("fswalk", 0, "ui")
     def _walk(self, match, listignored=False):
@@ -340,6 +406,59 @@ class physicalfilesystem(object):
             resultdirs = list(dirs)
 
         return files, resultdirs, errors
+
+    def _marklookupsclean(self):
+        """update dirstate for files that are actually clean"""
+        if self.cleanlookups:
+            try:
+                repo = self.dirstate._repo
+                oldid = self.dirstate.identity()
+
+                # Updating the dirstate is optional so we don't wait on the
+                # lock.
+                with repo.wlock(False):
+                    # The dirstate may have been reloaded after the wlock
+                    # was taken, so load it again.
+                    newdirstate = repo.dirstate
+                    newdmap = newdirstate._map
+                    if newdirstate.identity() == oldid:
+                        normal = newdirstate.normal
+                        for f in self.cleanlookups:
+                            # Only make something clean if it's already in a
+                            # normal state. Things in other states, like 'm'
+                            # merge state, should not be marked clean.
+                            entry = newdmap[f]
+                            if (
+                                entry[0] == "n"
+                                and f not in newdmap.copymap
+                                and entry[2] != -2
+                            ):
+                                # It may have been a while since we added the
+                                # file to cleanlookups, so double check that
+                                # it's still clean.
+                                if self._compareondisk(f) is False:
+                                    normal(f)
+
+                        # write changes out explicitly, because nesting
+                        # wlock at runtime may prevent 'wlock.release()'
+                        # after this block from doing so for subsequent
+                        # changing files
+                        #
+                        # This is a no-op if dirstate is not dirty.
+                        tr = repo.currenttransaction()
+                        newdirstate.write(tr)
+
+                        self._newid = newdirstate.identity()
+
+                        self.cleanlookups = []
+                    else:
+                        # in this case, writing changes out breaks
+                        # consistency, because .hg/dirstate was
+                        # already changed simultaneously after last
+                        # caching (see also issue5584 for detail)
+                        repo.ui.debug("skip marking lookups clean: identity mismatch\n")
+            except error.LockError:
+                pass
 
 
 def findthingstopurge(dirstate, match, findfiles, finddirs, includeignored):

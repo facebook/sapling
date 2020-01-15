@@ -56,16 +56,16 @@ confused with a file with the exec bit set
 
   $ cat >> $TESTTMP/dirstaterace.py << EOF
   > from edenscm.mercurial import (
-  >     dirstate,
   >     extensions,
+  >     filesystem,
   > )
   > def extsetup():
-  >     extensions.wrapfunction(dirstate.dirstate, '_checklookup', overridechecklookup)
-  > def overridechecklookup(orig, self, wctx, files):
+  >     extensions.wrapfunction(filesystem.physicalfilesystem, '_marklookupsclean', overridemarklookups)
+  > def overridemarklookups(orig, self):
   >     # make an update that changes the dirstate from underneath
-  >     self._repo.ui.system(r"sh '$TESTTMP/dirstaterace.sh'",
-  >                          cwd=self._repo.root)
-  >     return orig(self, wctx, files)
+  >     self.dirstate._repo.ui.system(r"sh '$TESTTMP/dirstaterace.sh'",
+  >                                   cwd=self.dirstate._repo.root)
+  >     return orig(self)
   > EOF
 
   $ hg debugrebuilddirstate
@@ -76,19 +76,20 @@ confused with a file with the exec bit set
   n   0         -1 unset               dir1/c
   n   0         -1 unset               e
 
-XXX Note that this returns M for files that got replaced by directories. This is
-definitely a bug, but the fix for that is hard and the next status run is fine
-anyway.
+Test deleting some files after lookup but before being marked clean. Verify
+they remain lookup/unset afterwards.
 
   $ cat > $TESTTMP/dirstaterace.sh <<EOF
   > rm b && rm -r dir1 && rm d && mkdir d && rm e && mkdir e
   > EOF
 
-  $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py
-  M d
-  M e
+  $ hg status --traceback --config extensions.dirstaterace=$TESTTMP/dirstaterace.py
+  $ hg status
   ! b
+  ! d
   ! dir1/c
+  ! e
+
   $ hg debugdirstate
   n 644          2 * a (glob)
   n   0         -1 unset               b
@@ -153,20 +154,14 @@ treated differently in _checklookup() according to runtime platform.
 
 #if fsmonitor
   $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
-  poststatusfixup decides to wait for wlock since watchman reported fresh instance
-  warning: failed to update watchman state because dirstate has been changed by other processes
-  (status will still be slow next time; try to complete or abort other source control operations and then run 'hg status' again)
-  skip updating dirstate: identity mismatch
-  M a
-  ! d
-  ! dir1/c
+  skip marking lookups clean: identity mismatch
 #else
   $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
-  skip updating dirstate: identity mismatch
-  M a
-  ! d
-  ! dir1/c
+  skip marking lookups clean: identity mismatch
 #endif
+
+  $ hg status --debug -X path:e
+  ? b
 
   $ hg parents -q
   0:* (glob)

@@ -847,13 +847,12 @@ class dirstate(object):
         pctx = wctx.parents()[0]
 
         listignored, listclean, listunknown = ignored, clean, unknown
-        lookup, modified, added, unknown, ignored = set(), [], [], [], []
+        modified, added, unknown, ignored = [], [], [], []
         removed, deleted, clean = [], [], []
 
         dmap = self._map
         dmap.preload()
         dget = dmap.__getitem__
-        ladd = lookup.add  # aka "unsure"
         madd = modified.append
         aadd = added.append
         uadd = unknown.append
@@ -887,7 +886,7 @@ class dirstate(object):
         # Step 1: Get the files that are different from the clean checkedout p1 tree.
         pendingchanges = self._fs.pendingchanges(match, listignored=listignored)
 
-        for fn, exists, needslookup in pendingchanges:
+        for fn, exists in pendingchanges:
             try:
                 t = dget(fn)
                 # This "?" state is only tracked by treestate, emulate the old
@@ -906,23 +905,14 @@ class dirstate(object):
             if not exists and state in "nma":
                 dadd(fn)
             elif state == "n":
-                # Lookup handling is temporary until fs.pendingchanges can
-                # handle it.
-                if needslookup:
-                    ladd(fn)
-                else:
-                    madd(fn)
+                madd(fn)
             else:
                 # All other states will be handled by the logic below, and we
                 # don't care that it's a pending change.
                 pass
 
         # The seen set is used to prevent steps 2 and 3 from processing things
-        # we saw in step 1. We explicitly do not add lookup to the seen set,
-        # because that would prevent them from being processed in Step 2. It's
-        # possible step 2 would classify something as modified, while lookup
-        # would classify it as clean, so let's give step 2 a chance, then remove
-        # things from lookup that were processed in step 2.
+        # we saw in step 1.
         seenset = set(deleted + modified)
 
         # audit_path is used to verify that nonnormal files still exist and are
@@ -1016,16 +1006,6 @@ class dirstate(object):
             modified, added, removed, deleted, unknown, ignored, clean
         )
 
-        fixup = []
-        if lookup:
-            lookup = lookup - seenset
-            modified2, deleted2, fixup = self._checklookup(wctx, lookup)
-            status.modified.extend(modified2)
-            status.deleted.extend(deleted2)
-
-            if fixup and listclean:
-                status.clean.extend(fixup)
-
         # Step 3: If clean files were requested, add those to the results
         seenset = set()
         for files in status:
@@ -1047,8 +1027,10 @@ class dirstate(object):
             except OSError as ex:
                 match.bad(path, encoding.strtolocal(ex.strerror))
 
+        # TODO: fire this inside filesystem. fixup is a list of files that
+        # checklookup says are clean
         if not getattr(self._repo, "_insidepoststatusfixup", False):
-            self._poststatusfixup(status, fixup, wctx, oldid)
+            self._poststatusfixup(status, wctx, oldid)
 
         perftrace.tracevalue("A/M/R Files", len(modified) + len(added) + len(removed))
         if len(unknown) > 0:
@@ -1057,59 +1039,12 @@ class dirstate(object):
             perftrace.tracevalue("Ignored Files", len(ignored))
         return status
 
-    def _checklookup(self, wctx, files):
-        # check for any possibly clean files
-        if not files:
-            return [], [], []
-
-        modified = []
-        deleted = []
-        fixup = []
-        pctx = wctx.parents()[0]
-
-        # Log some samples
-        ui = self._ui
-        mtolog = ftolog = dtolog = ui.configint("experimental", "samplestatus")
-
-        # do a full compare of any files that might have changed
-        for f in sorted(files):
-            try:
-                # This will return True for a file that got replaced by a
-                # directory in the interim, but fixing that is pretty hard.
-                if (
-                    f not in pctx
-                    or wctx.flags(f) != pctx.flags(f)
-                    or pctx[f].cmp(wctx[f])
-                ):
-                    modified.append(f)
-                    if mtolog > 0:
-                        mtolog -= 1
-                        ui.log("status", "M %s: checked in filesystem" % f)
-                else:
-                    fixup.append(f)
-                    if ftolog > 0:
-                        ftolog -= 1
-                        ui.log("status", "C %s: checked in filesystem" % f)
-            except (IOError, OSError):
-                # A file become inaccessible in between? Mark it as deleted,
-                # matching dirstate behavior (issue5584).
-                # The dirstate has more complex behavior around whether a
-                # missing file matches a directory, etc, but we don't need to
-                # bother with that: if f has made it to this point, we're sure
-                # it's in the dirstate.
-                deleted.append(f)
-                if dtolog > 0:
-                    dtolog -= 1
-                    ui.log("status", "R %s: checked in filesystem" % f)
-
-        return modified, deleted, fixup
-
-    def _poststatusfixup(self, status, fixup, wctx, oldid):
+    def _poststatusfixup(self, status, wctx, oldid):
         """update dirstate for files that are actually clean"""
         poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
         poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
         ui = self._repo.ui
-        if fixup or poststatusbefore or poststatusafter or self._dirty:
+        if poststatusbefore or poststatusafter or self._dirty:
             # prevent infinite loop because fsmonitor postfixup might call
             # wctx.status()
             self._repo._insidepoststatusfixup = True
@@ -1134,15 +1069,23 @@ class dirstate(object):
                     )
 
                 with self._repo.wlock(freshinstance):
-                    if self._repo.dirstate.identity() == oldid:
+                    identity = self._repo.dirstate.identity()
+                    fsnewid = self._repo.dirstate._fs._newid
+                    if (
+                        identity == oldid
+                        or
+                        # It's possible that the filesystem changed the dirstate
+                        # when it marked lookup files as clean. If the current
+                        # identity also matches the id of the
+                        # post-lookup-cleaning identity, that is ok too.
+                        # This nastiness will disappear in a future diff when
+                        # the poststatusfixup logic moves into the filesystem
+                        # layer.
+                        (fsnewid is not None and identity == fsnewid)
+                    ):
                         if poststatusbefore:
                             for ps in poststatusbefore:
                                 ps(wctx, status)
-
-                        if fixup:
-                            normal = self.normal
-                            for f in fixup:
-                                normal(f)
 
                         # write changes out explicitly, because nesting
                         # wlock at runtime may prevent 'wlock.release()'

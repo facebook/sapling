@@ -910,13 +910,12 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         for fn, st in self._fsmonitorwalk(match):
             changed = self._ischanged(fn, st, lookups)
             if changed:
-                # Repackage it with a False bit to indicate no lookup necessary.
-                yield (changed[0], changed[1], False)
+                yield changed
 
-        # Report all the files that need lookup resolution. This is temporary
-        # and will be replaced soon.
-        for fn in lookups:
-            yield (fn, True, True)
+        for changed in self._processlookups(lookups):
+            yield changed
+
+        self._marklookupsclean()
 
     @util.timefunction("fsmonitorwalk", 0, "_ui")
     def _fsmonitorwalk(self, match):
