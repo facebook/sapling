@@ -68,7 +68,8 @@ def mvcheck(orig, ui, repo, *pats, **opts):
 
     with repo.wlock():
         if renames is not None:
-            scmutil._markchanges(repo, (), (), renames)
+            with repo.lock(), repo.transaction("automv"):
+                scmutil._markchanges(repo, (), (), renames)
         return orig(ui, repo, *pats, **pycompat.strkwargs(opts))
 
 
