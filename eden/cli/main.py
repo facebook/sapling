@@ -158,8 +158,9 @@ class DiskUsageCmd(Subcmd):
     def backing_usage(self, backing_repo: Path) -> None:
         self.underlined(f"Backing repo: {backing_repo}")
         print(
-            """CAUTION! You can lose work and break things by deleting data from the
-backing repo directory!
+            """
+CAUTION! You can lose work and break things by manually deleting data
+from the backing repo directory!
 """
         )
         self.usage_for_dir("Overall usage", backing_repo)
@@ -173,7 +174,9 @@ backing repo directory!
                 self.usage_for_dir("    LFS cache", hg_dir)
                 print(
                     """
-Mercurial currently has no safe way to manage the LFS cache.  See T35583239
+Reclaim space from the LFS cache directory by running:
+
+    hg -R {backing_repo} gc
 """
                 )
 
