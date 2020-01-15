@@ -868,19 +868,6 @@ class dirstate(object):
         # "M" files.
         mtolog = self._ui.configint("experimental", "samplestatus")
 
-        if util.safehasattr(dmap, "nonnormalsetfiltered"):
-            # treestate has a fast path to filter out ignored directories.
-            ignorevisitdir = ignore.visitdir
-
-            def dirfilter(path):
-                result = ignorevisitdir(path.rstrip("/"))
-                return result == "all"
-
-            nonnormalset = dmap.nonnormalsetfiltered(dirfilter)
-        else:
-            nonnormalset = dmap.nonnormalset
-
-        otherparentset = dmap.otherparentset
         oldid = self.identity()
 
         # Step 1: Get the files that are different from the clean checkedout p1 tree.
@@ -910,6 +897,22 @@ class dirstate(object):
                 # All other states will be handled by the logic below, and we
                 # don't care that it's a pending change.
                 pass
+
+        # Fetch the nonnormalset after iterating over pendingchanges, since the
+        # iteration may change the nonnormalset as lookup states are resolved.
+        if util.safehasattr(dmap, "nonnormalsetfiltered"):
+            # treestate has a fast path to filter out ignored directories.
+            ignorevisitdir = ignore.visitdir
+
+            def dirfilter(path):
+                result = ignorevisitdir(path.rstrip("/"))
+                return result == "all"
+
+            nonnormalset = dmap.nonnormalsetfiltered(dirfilter)
+        else:
+            nonnormalset = dmap.nonnormalset
+
+        otherparentset = dmap.otherparentset
 
         # The seen set is used to prevent steps 2 and 3 from processing things
         # we saw in step 1.

@@ -174,6 +174,7 @@ import weakref
 from edenscm.mercurial import (
     blackbox,
     context,
+    dirstate as dirstatemod,
     encoding,
     error,
     extensions,
@@ -705,7 +706,6 @@ def overridestatus(
             # the filesystem will be slower than parsing a potentially
             # very large Watchman result set.
             self._watchmanclient.settimeout(self._fsmonitorstate.timeout + 0.1)
-        startclock = self._watchmanclient.getcurrentclock()
     except Exception as ex:
         self._watchmanclient.clearconnection()
         _handleunavailable(self.ui, self._fsmonitorstate, ex)
@@ -728,28 +728,6 @@ def overridestatus(
             # state.set needs to run before dirstate write, since it changes
             # dirstate (treestate).
             self.addpostdsstatus(poststatustreestate, afterdirstatewrite=False)
-        else:
-            # Invalidate fsmonitor.state if dirstate changes. This avoids the
-            # following issue:
-            # 1. pid 11 writes dirstate
-            # 2. pid 22 reads dirstate and inconsistent fsmonitor.state
-            # 3. pid 22 calculates a wrong state
-            # 4. pid 11 writes fsmonitor.state
-            # Because before 1,
-            # 0. pid 11 invalidates fsmonitor.state
-            # will happen.
-            #
-            # To avoid race conditions when reading without a lock, do things
-            # in this order:
-            # 1. Invalidate fsmonitor state
-            # 2. Write dirstate
-            # 3. Write fsmonitor state
-            psbefore = lambda *args, **kwds: self._fsmonitorstate.invalidate(
-                reason="dirstate_change"
-            )
-            self.addpostdsstatus(psbefore, afterdirstatewrite=False)
-            psafter = poststatus(startclock)
-            self.addpostdsstatus(psafter, afterdirstatewrite=True)
 
     r = orig(node1, node2, match, listignored, listclean, stateunknown)
     modified, added, removed, deleted, unknown, ignored, clean = r
@@ -784,23 +762,7 @@ def overridestatus(
 
 
 def poststatustreestate(wctx, status):
-    clock = wctx.repo()._fsmonitorstate.getlastclock()
-    hashignore = None
-    notefiles = (
-        status.modified
-        + status.added
-        + status.removed
-        + status.deleted
-        + status.unknown
-    )
-    # For treestate, the clock and the file state are always consistent - they
-    # should not affect "status" correctness, even if they are not the latest
-    # state. Changing the clock to None would make the next "status" command
-    # slower. Therefore avoid doing that.
-    repo = wctx.repo()
-    if clock is not None:
-        repo._fsmonitorstate.set(clock, hashignore, notefiles)
-
+    repo = wctx._repo
     dirstate = repo.dirstate
     oldtrackignored = (dirstate.getmeta("track-ignored") or "1") == "1"
     newtrackignored = repo.ui.configbool("fsmonitor", "track-ignore-files")
@@ -826,23 +788,6 @@ def poststatustreestate(wctx, status):
                 if ignore(path):
                     dirstate.delete(path)
         dirstate.setmeta("track-ignored", str(int(newtrackignored)))
-
-
-class poststatus(object):
-    def __init__(self, startclock):
-        self._startclock = startclock
-
-    def __call__(self, wctx, status):
-        clock = wctx.repo()._fsmonitorstate.getlastclock() or self._startclock
-        hashignore = _hashignore(wctx.repo().dirstate._ignore)
-        notefiles = (
-            status.modified
-            + status.added
-            + status.removed
-            + status.deleted
-            + status.unknown
-        )
-        wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
 
 
 def makedirstate(repo, dirstate):
@@ -905,6 +850,8 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if match is None:
             match = util.always
 
+        startclock = self._watchmanclient.getcurrentclock()
+
         self.dirstate._map.preload()
         lookups = []
         results = []
@@ -919,7 +866,120 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
             yield changed
 
         oldid = self.dirstate.identity()
-        self._postpendingfixup(oldid, results)
+        self._fspostpendingfixup(oldid, results, startclock, match)
+
+    def _fspostpendingfixup(self, oldid, changed, startclock, match):
+        """update dirstate for files that are actually clean"""
+        try:
+            repo = self.dirstate._repo
+
+            istreestate = "treestate" in self.dirstate._repo.requirements
+
+            # Only update fsmonitor state if the results aren't filtered
+            isfullstatus = not match or match.always()
+
+            # Updating the dirstate is optional so we don't wait on the
+            # lock.
+            # wlock can invalidate the dirstate, so cache normal _after_
+            # taking the lock. This is a bit weird because we're inside the
+            # dirstate that is no longer valid.
+
+            # If watchman reports fresh instance, still take the lock,
+            # since not updating watchman state leads to very painful
+            # performance.
+            freshinstance = False
+            try:
+                freshinstance = self._fs._fsmonitorstate._lastisfresh
+            except Exception:
+                pass
+            if freshinstance:
+                repo.ui.debug(
+                    "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
+                )
+            with repo.wlock(freshinstance):
+                # The dirstate may have been reloaded after the wlock
+                # was taken, so load it again.
+                newdirstate = repo.dirstate
+                if newdirstate.identity() == oldid:
+                    # Invalidate fsmonitor.state if dirstate changes. This avoids the
+                    # following issue:
+                    # 1. pid 11 writes dirstate
+                    # 2. pid 22 reads dirstate and inconsistent fsmonitor.state
+                    # 3. pid 22 calculates a wrong state
+                    # 4. pid 11 writes fsmonitor.state
+                    # Because before 1,
+                    # 0. pid 11 invalidates fsmonitor.state
+                    # will happen.
+                    #
+                    # To avoid race conditions when reading without a lock, do things
+                    # in this order:
+                    # 1. Invalidate fsmonitor state
+                    # 2. Write dirstate
+                    # 3. Write fsmonitor state
+                    if isfullstatus:
+                        if not istreestate:
+                            # Treestate is always in sync and doesn't need this
+                            # valdiation.
+                            self._fsmonitorstate.invalidate(reason="dirstate_change")
+                        else:
+                            # Treestate records the fsmonitor state inside the
+                            # dirstate, so we need to write it before we call
+                            # newdirstate.write()
+                            self._updatefsmonitorstate(changed, startclock)
+
+                    self._marklookupsclean()
+
+                    # write changes out explicitly, because nesting
+                    # wlock at runtime may prevent 'wlock.release()'
+                    # after this block from doing so for subsequent
+                    # changing files
+                    #
+                    # This is a no-op if dirstate is not dirty.
+                    tr = repo.currenttransaction()
+                    newdirstate.write(tr)
+
+                    # In non-treestate mode write the fsmonitorstate after the
+                    # dirstate to avoid the race condition mentioned in the
+                    # comment above. In treestate mode this race condition
+                    # doesn't exist, and the state is written earlier, so we can
+                    # skip it here.
+                    if isfullstatus and not istreestate:
+                        self._updatefsmonitorstate(changed, startclock)
+
+                    self._newid = newdirstate.identity()
+                else:
+                    # in this case, writing changes out breaks
+                    # consistency, because .hg/dirstate was
+                    # already changed simultaneously after last
+                    # caching (see also issue5584 for detail)
+                    repo.ui.debug("skip marking lookups clean: identity mismatch\n")
+        except error.LockError:
+            if freshinstance:
+                repo.ui.write_err(
+                    _(
+                        "warning: failed to update watchman state because wlock cannot be obtained\n"
+                    )
+                )
+                repo.ui.write_err(dirstatemod.slowstatuswarning)
+
+    def _updatefsmonitorstate(self, changed, startclock):
+        istreestate = "treestate" in self.dirstate._repo.requirements
+
+        clock = self._fsmonitorstate.getlastclock()
+        hashignore = None
+        notefiles = changed
+
+        if not istreestate:
+            if not clock:
+                clock = startclock
+            hashignore = _hashignore(self.dirstate._ignore)
+
+        # For treestate, the clock and the file state are always consistent - they
+        # should not affect "status" correctness, even if they are not the latest
+        # state. Changing the clock to None would make the next "status" command
+        # slower. Therefore avoid doing that.
+        if clock is not None or not istreestate:
+            self._fsmonitorstate.set(clock, hashignore, notefiles)
 
     @util.timefunction("fsmonitorwalk", 0, "_ui")
     def _fsmonitorwalk(self, match):

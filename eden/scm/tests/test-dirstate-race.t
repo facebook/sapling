@@ -59,13 +59,15 @@ confused with a file with the exec bit set
   >     extensions,
   >     filesystem,
   > )
+  > from edenscm.hgext import fsmonitor
   > def extsetup():
   >     extensions.wrapfunction(filesystem.physicalfilesystem, '_postpendingfixup', overridepostpending)
-  > def overridepostpending(orig, self, oldid, changed):
+  >     extensions.wrapfunction(fsmonitor.fsmonitorfilesystem, '_fspostpendingfixup', overridepostpending)
+  > def overridepostpending(orig, self, *args):
   >     # make an update that changes the dirstate from underneath
   >     self.dirstate._repo.ui.system(r"sh '$TESTTMP/dirstaterace.sh'",
   >                                   cwd=self.dirstate._repo.root)
-  >     return orig(self, oldid, changed)
+  >     return orig(self, *args)
   > EOF
 
   $ hg debugrebuilddirstate
