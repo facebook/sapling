@@ -672,8 +672,10 @@ class fileserverclient(object):
 
         idstocheck = list(idstocheck)
         if repo.fileslog._ruststore:
-            repo.fileslog.contentstore.prefetch(idstocheck)
-            repo.fileslog.metadatastore.prefetch(idstocheck)
+            if fetchdata:
+                repo.fileslog.contentstore.prefetch(idstocheck)
+            if fetchhistory:
+                repo.fileslog.metadatastore.prefetch(idstocheck)
 
             if batchlfsdownloads and dolfsprefetch:
                 self._lfsprefetch(fileids)

@@ -391,7 +391,7 @@ class remotefilectx(context.filectx):
         logmsg = ""
         start = time.time()
         try:
-            repo.fileservice.prefetch([(path, hex(fnode))], force=True)
+            repo.fileservice.prefetch([(path, hex(fnode))], force=True, fetchdata=False)
 
             # Now that we've downloaded a new blob from the server,
             # we need to rebuild the ancestor map to recompute the
