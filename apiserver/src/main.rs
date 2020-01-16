@@ -456,7 +456,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .help("Thrift port"),
         )
         .arg(Arg::with_name("with-scuba").long("with-scuba"))
-        .arg(Arg::with_name("debug").short("p").long("debug"))
         .arg(Arg::with_name("without-skiplist").long("without-skiplist"))
         .arg(
             Arg::with_name("mononoke-config-path")
