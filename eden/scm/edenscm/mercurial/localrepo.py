@@ -2372,7 +2372,12 @@ class localrepository(object):
                 mutation.recordentries(self, [entry], skipexisting=False)
             tr.close()
 
+            # Generate and log interesting data.
             loginfo = ctx.loginfo()
+            path = os.path.commonprefix([os.path.dirname(p) for p in files])
+            if len(path) > 0:
+                loginfo.update({"common_directory_path": path})
+
             diffnumber = diffprops.parserevfromcommitmsg(ctx.description())
             if diffnumber is not None:
                 loginfo.update({"phabricator_diff_number": diffnumber})
