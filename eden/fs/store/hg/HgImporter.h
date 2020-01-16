@@ -127,7 +127,7 @@ class HgImporter : public Importer {
    */
   HgImporter(
       AbsolutePathPiece repoPath,
-      std::shared_ptr<HgImporterThreadStats>,
+      std::shared_ptr<EdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   virtual ~HgImporter();
@@ -276,7 +276,7 @@ class HgImporter : public Importer {
   facebook::eden::Subprocess helper_;
 #endif
   const AbsolutePath repoPath_;
-  std::shared_ptr<HgImporterThreadStats> const stats_;
+  std::shared_ptr<EdenStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
   /**
@@ -316,7 +316,7 @@ class HgImporterManager : public Importer {
  public:
   HgImporterManager(
       AbsolutePathPiece repoPath,
-      std::shared_ptr<HgImporterThreadStats>,
+      std::shared_ptr<EdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash resolveManifestNode(folly::StringPiece revName) override;
@@ -338,7 +338,7 @@ class HgImporterManager : public Importer {
   std::unique_ptr<HgImporter> importer_;
 
   const AbsolutePath repoPath_;
-  std::shared_ptr<HgImporterThreadStats> const stats_;
+  std::shared_ptr<EdenStats> const stats_;
   const std::optional<AbsolutePath> importHelperScript_;
 };
 

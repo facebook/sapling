@@ -129,7 +129,7 @@ class HgImporterEofError : public HgImporterError {
 
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
-    std::shared_ptr<HgImporterThreadStats> stats,
+    std::shared_ptr<EdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath}, stats_{std::move(stats)} {
   std::vector<string> cmd;
@@ -484,7 +484,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
 
 HgImporter::TransactionID HgImporter::sendManifestRequest(
     folly::StringPiece revName) {
-  stats_->manifest.addValue(1);
+  stats_->getHgImporterStatsForCurrentThread().manifest.addValue(1);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -505,7 +505,8 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
 
 HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
     folly::StringPiece revName) {
-  stats_->manifestNodeForCommit.addValue(1);
+  stats_->getHgImporterStatsForCurrentThread().manifestNodeForCommit.addValue(
+      1);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -527,7 +528,7 @@ HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
 HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
     Hash revHash) {
-  stats_->catFile.addValue(1);
+  stats_->getHgImporterStatsForCurrentThread().catFile.addValue(1);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -551,7 +552,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
 
 HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
-  stats_->prefetchFiles.addValue(1);
+  stats_->getHgImporterStatsForCurrentThread().prefetchFiles.addValue(1);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -608,7 +609,7 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
 HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash pathManifestNode) {
-  stats_->fetchTree.addValue(1);
+  stats_->getHgImporterStatsForCurrentThread().fetchTree.addValue(1);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -713,7 +714,7 @@ const ImporterOptions& HgImporter::getOptions() const {
 
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
-    std::shared_ptr<HgImporterThreadStats> stats,
+    std::shared_ptr<EdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       stats_{std::move(stats)},

@@ -39,8 +39,7 @@ class HgImportTest : public ::testing::Test {
   TemporaryDirectory testDir_{"eden_hg_import_test"};
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + "repo"_pc};
-  std::shared_ptr<HgImporterThreadStats> stats_ =
-      std::make_shared<HgImporterThreadStats>();
+  std::shared_ptr<EdenStats> stats_ = std::make_shared<EdenStats>();
 };
 
 } // namespace

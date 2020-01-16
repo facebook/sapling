@@ -112,8 +112,7 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
-      threadLocalImporter.reset(new HgImporterManager(
-          repository_, getSharedHgImporterStatsForCurrentThread(stats_)));
+      threadLocalImporter.reset(new HgImporterManager(repository_, stats_));
       func();
     });
   }
@@ -224,8 +223,7 @@ HgBackingStore::HgBackingStore(
     XLOG(WARN) << "Rust native store is disabled due to: " << ex.what();
   }
 #endif
-  HgImporter importer(
-      repository, getSharedHgImporterStatsForCurrentThread(stats));
+  HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
