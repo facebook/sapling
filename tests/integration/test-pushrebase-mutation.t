@@ -31,7 +31,7 @@ clone the repo
 create a commit with mutation extras
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg commit -m 1
-  $ echo 1a > 1 && hg amend -m 1a --config mutation.record=true
+  $ echo 1a > 1 && hg amend -m 1a --config mutation.enabled=true --config mutation.record=true
   $ hg debugmutation .
    *  6ad95cdc8ab9aab92b341e8a7b90296d04885b30 amend by test at 1970-01-01T00:00:00 from:
       f0161ad23099c690115006c21e96f780f5d740b6
@@ -60,7 +60,7 @@ create another commit on the base commit with mutation extras
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo 2 > 2 && hg add 2 && hg commit -m 2
-  $ echo 2a > 2 && hg amend -m 2a --config mutation.record=true
+  $ echo 2a > 2 && hg amend -m 2a --config mutation.enabled=true --config mutation.record=true
   $ hg debugmutation .
    *  fd935a5d42c4be474397d87ab7810b0b006722af amend by test at 1970-01-01T00:00:00 from:
       1b9fe529321657f93e84f23afaf9c855b9af34ff

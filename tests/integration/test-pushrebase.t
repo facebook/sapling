@@ -408,7 +408,7 @@ Test non-fast-forward force pushrebase
 
 -- Check that a force pushrebase with mutation markers is a fail
   $ echo SPARTACUS > sum_ego && hg ci -qAm 27
-  $ echo SPARTACUS! > sum_ego && hg amend --config mutation.record=true
+  $ echo SPARTACUS! > sum_ego && hg amend --config mutation.enabled=true --config mutation.record=true
   $ hgmn push -r . -f --to newbook
   pushing rev * to destination ssh://user@dummy/repo bookmark newbook (glob)
   searching for changes
