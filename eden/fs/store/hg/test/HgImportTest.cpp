@@ -14,8 +14,6 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -41,7 +39,6 @@ class HgImportTest : public ::testing::Test {
   TemporaryDirectory testDir_{"eden_hg_import_test"};
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + "repo"_pc};
-  MemoryLocalStore localStore_;
   std::shared_ptr<HgImporterThreadStats> stats_ =
       std::make_shared<HgImporterThreadStats>();
 };
@@ -55,31 +52,37 @@ TEST_F(HgImportTest, importTest) {
   // Set up the initial commit
   repo_.mkdir("foo");
   StringPiece barData = "this is a test file\n";
-  repo_.writeFile("foo/bar.txt", barData);
+  RelativePathPiece filePath{"foo/bar.txt"};
+  repo_.writeFile(filePath, barData);
   repo_.hg("add");
   auto commit1 = repo_.commit("Initial commit");
 
   // Import the root tree
-  HgImporter importer(repo_.path(), &localStore_, stats_);
+  HgImporter importer(repo_.path(), stats_);
+
+  auto fileHash = repo_.hg("manifest", "--debug").substr(0, 40);
+
+  auto blob = importer.importFileContents(filePath, Hash{fileHash});
+  EXPECT_BLOB_EQ(blob, barData);
 
   // Test importing objects that do not exist
   Hash noSuchHash = makeTestHash("123");
   EXPECT_THROW_RE(
-      importer.importFileContents(noSuchHash),
+      importer.importFileContents(filePath, noSuchHash),
       std::exception,
-      "value not present in store");
+      "no match found");
 
   EXPECT_THROW_RE(
-      importer.importFileContents(commit1),
+      importer.importFileContents(RelativePathPiece{"hello"}, commit1),
       std::exception,
-      "value not present in store");
+      "no match found");
 }
 
 // TODO(T33797958): Check hg_importer_helper's exit code on Windows (in
 // HgImportTest).
 #ifndef _WIN32
 TEST_F(HgImportTest, importerHelperExitsCleanly) {
-  HgImporter importer(repo_.path(), &localStore_, stats_);
+  HgImporter importer(repo_.path(), stats_);
   auto status = importer.debugStopHelperProcess();
   EXPECT_EQ(status.str(), "exited with status 0");
 }

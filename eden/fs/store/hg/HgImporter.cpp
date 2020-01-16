@@ -35,7 +35,6 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -76,11 +75,6 @@ DEFINE_string(
     "Value to use for the PYTHONPATH when running mercurial import script. If "
     "this value is non-empty, the existing PYTHONPATH from the environment is "
     "replaced with this value.");
-
-DEFINE_int32(
-    hgManifestImportBufferSize,
-    256 * 1024 * 1024, // 256MB
-    "Buffer size for batching LocalStore writes during hg manifest imports");
 
 namespace {
 using namespace facebook::eden;
@@ -135,10 +129,9 @@ class HgImporterEofError : public HgImporterError {
 
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
-    LocalStore* store,
     std::shared_ptr<HgImporterThreadStats> stats,
     std::optional<AbsolutePath> importHelperScript)
-    : repoPath_{repoPath}, store_{store}, stats_{std::move(stats)} {
+    : repoPath_{repoPath}, stats_{std::move(stats)} {
   std::vector<string> cmd;
 
   // importHelperScript takes precedence if it was specified; this is used
@@ -324,16 +317,14 @@ void HgImporter::stopHelperProcess() {
 #endif
 }
 
-unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
-  // Look up the mercurial path and file revision hash,
-  // which we need to import the data from mercurial
-  HgProxyHash hgInfo(store_, blobHash, "importFileContents");
-
-  XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
-             << hgInfo.revHash().toString();
+unique_ptr<Blob> HgImporter::importFileContents(
+    RelativePathPiece path,
+    Hash blobHash) {
+  XLOG(DBG5) << "requesting file contents of '" << path << "', "
+             << blobHash.toString();
 
   // Ask the import helper process for the file contents
-  auto requestID = sendFileRequest(hgInfo.path(), hgInfo.revHash());
+  auto requestID = sendFileRequest(path, blobHash);
 
   // Read the response.  The response body contains the file contents,
   // which is exactly what we want to return.
@@ -347,9 +338,9 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
         "CMD_CAT_FILE response for blob ",
         blobHash,
         " (",
-        hgInfo.path(),
+        path,
         ", ",
-        hgInfo.revHash(),
+        blobHash,
         ") from hg_import_helper.py is too "
         "short for body length field: length = ",
         header.dataLength);
@@ -377,9 +368,9 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
         "inconsistent body length received when importing blob ",
         blobHash,
         " (",
-        hgInfo.path(),
+        path,
         ", ",
-        hgInfo.revHash(),
+        blobHash,
         "): bodyLength=",
         bodyLength,
         " responseLength=",
@@ -388,8 +379,8 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
     throw std::runtime_error(std::move(msg));
   }
 
-  XLOG(DBG4) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
-             << hgInfo.revHash() << "); length=" << bodyLength;
+  XLOG(DBG4) << "imported blob " << blobHash << " (" << path << ", " << blobHash
+             << "); length=" << bodyLength;
 
   return make_unique<Blob>(blobHash, std::move(buf));
 }
@@ -722,11 +713,9 @@ const ImporterOptions& HgImporter::getOptions() const {
 
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
-    LocalStore* store,
     std::shared_ptr<HgImporterThreadStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
-      store_{store},
       stats_{std::move(stats)},
       importHelperScript_{importHelperScript} {}
 
@@ -767,9 +756,11 @@ Hash HgImporterManager::resolveManifestNode(StringPiece revName) {
   });
 }
 
-unique_ptr<Blob> HgImporterManager::importFileContents(Hash blobHash) {
-  return retryOnError([&](HgImporter* importer) {
-    return importer->importFileContents(blobHash);
+unique_ptr<Blob> HgImporterManager::importFileContents(
+    RelativePathPiece path,
+    Hash blobHash) {
+  return retryOnError([=](HgImporter* importer) {
+    return importer->importFileContents(path, blobHash);
   });
 }
 
@@ -789,8 +780,7 @@ void HgImporterManager::fetchTree(
 
 HgImporter* HgImporterManager::getImporter() {
   if (!importer_) {
-    importer_ =
-        make_unique<HgImporter>(repoPath_, store_, stats_, importHelperScript_);
+    importer_ = make_unique<HgImporter>(repoPath_, stats_, importHelperScript_);
   }
   return importer_.get();
 }

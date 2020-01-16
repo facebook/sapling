@@ -17,7 +17,6 @@
 #endif
 
 #include "eden/fs/eden-config.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -90,7 +89,9 @@ class Importer {
    *
    * Returns an Blob containing the file contents.
    */
-  virtual std::unique_ptr<Blob> importFileContents(Hash blobHash) = 0;
+  virtual std::unique_ptr<Blob> importFileContents(
+      RelativePathPiece path,
+      Hash blobHash) = 0;
 
   virtual void prefetchFiles(
       const std::vector<std::pair<RelativePath, Hash>>& files) = 0;
@@ -122,14 +123,10 @@ class HgImporter : public Importer {
  public:
   /**
    * Create a new HgImporter object that will import data from the specified
-   * repository into the given LocalStore.
-   *
-   * The caller is responsible for ensuring that the LocalStore object remains
-   * valid for the lifetime of the HgImporter object.
+   * repository.
    */
   HgImporter(
       AbsolutePathPiece repoPath,
-      LocalStore* store,
       std::shared_ptr<HgImporterThreadStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
@@ -140,7 +137,9 @@ class HgImporter : public Importer {
 #endif
 
   Hash resolveManifestNode(folly::StringPiece revName) override;
-  std::unique_ptr<Blob> importFileContents(Hash blobHash) override;
+  std::unique_ptr<Blob> importFileContents(
+      RelativePathPiece path,
+      Hash blobHash) override;
   void prefetchFiles(
       const std::vector<std::pair<RelativePath, Hash>>& files) override;
   void fetchTree(RelativePathPiece path, Hash pathManifestNode) override;
@@ -277,7 +276,6 @@ class HgImporter : public Importer {
   facebook::eden::Subprocess helper_;
 #endif
   const AbsolutePath repoPath_;
-  LocalStore* const store_{nullptr};
   std::shared_ptr<HgImporterThreadStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
@@ -318,13 +316,14 @@ class HgImporterManager : public Importer {
  public:
   HgImporterManager(
       AbsolutePathPiece repoPath,
-      LocalStore* store,
       std::shared_ptr<HgImporterThreadStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash resolveManifestNode(folly::StringPiece revName) override;
 
-  std::unique_ptr<Blob> importFileContents(Hash blobHash) override;
+  std::unique_ptr<Blob> importFileContents(
+      RelativePathPiece path,
+      Hash blobHash) override;
   void prefetchFiles(
       const std::vector<std::pair<RelativePath, Hash>>& files) override;
   void fetchTree(RelativePathPiece path, Hash pathManifestNode) override;
@@ -339,7 +338,6 @@ class HgImporterManager : public Importer {
   std::unique_ptr<HgImporter> importer_;
 
   const AbsolutePath repoPath_;
-  LocalStore* const store_{nullptr};
   std::shared_ptr<HgImporterThreadStats> const stats_;
   const std::optional<AbsolutePath> importHelperScript_;
 };

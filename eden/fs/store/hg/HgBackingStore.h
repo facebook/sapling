@@ -156,6 +156,7 @@ class HgBackingStore : public BackingStore {
 #endif
 
   folly::SemiFuture<std::unique_ptr<Blob>> getBlobFromHgImporter(
+      const RelativePathPiece& path,
       const Hash& id);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);

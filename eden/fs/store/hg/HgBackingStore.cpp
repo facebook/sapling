@@ -105,19 +105,15 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
  public:
   HgImporterThreadFactory(
       AbsolutePathPiece repository,
-      LocalStore* localStore,
       std::shared_ptr<EdenStats> stats)
       : delegate_("HgImporter"),
         repository_(repository),
-        localStore_(localStore),
         stats_(std::move(stats)) {}
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
       threadLocalImporter.reset(new HgImporterManager(
-          repository_,
-          localStore_,
-          getSharedHgImporterStatsForCurrentThread(stats_)));
+          repository_, getSharedHgImporterStatsForCurrentThread(stats_)));
       func();
     });
   }
@@ -125,7 +121,6 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
  private:
   folly::NamedThreadFactory delegate_;
   AbsolutePath repository_;
-  LocalStore* localStore_;
   std::shared_ptr<EdenStats> stats_;
 };
 
@@ -217,10 +212,7 @@ HgBackingStore::HgBackingStore(
            */
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<HgImporterThreadFactory>(
-              repository,
-              localStore,
-              stats))),
+          std::make_shared<HgImporterThreadFactory>(repository, stats))),
       config_(config),
       serverThreadPool_(serverThreadPool) {
 #ifdef EDEN_HAVE_RUST_DATAPACK
@@ -233,7 +225,7 @@ HgBackingStore::HgBackingStore(
   }
 #endif
   HgImporter importer(
-      repository, localStore, getSharedHgImporterStatsForCurrentThread(stats));
+      repository, getSharedHgImporterStatsForCurrentThread(stats));
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
@@ -719,12 +711,14 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
             }));
   }
 
-  futures.push_back(getBlobFromHgImporter(id).deferValue(
-      [stats = stats_, watch](SemiFuture<std::unique_ptr<Blob>>&& blob) {
-        stats->getHgBackingStoreStatsForCurrentThread()
-            .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
-        return std::move(blob);
-      }));
+  futures.push_back(
+      getBlobFromHgImporter(hgInfo.path(), hgInfo.revHash())
+          .deferValue([stats = stats_,
+                       watch](SemiFuture<std::unique_ptr<Blob>>&& blob) {
+            stats->getHgBackingStoreStatsForCurrentThread()
+                .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
+            return std::move(blob);
+          }));
 
   return folly::collectAnyWithoutException(futures).deferValue(
       [](std::pair<size_t, unique_ptr<Blob>>&& result) {
@@ -733,9 +727,10 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
 }
 
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
+    const RelativePathPiece& path,
     const Hash& id) {
-  return folly::via(importThreadPool_.get(), [id] {
-    return getThreadLocalImporter().importFileContents(id);
+  return folly::via(importThreadPool_.get(), [path = path.copy(), id] {
+    return getThreadLocalImporter().importFileContents(path, id);
   });
 }
 
