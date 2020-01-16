@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ enable amend rebase reset
-  $ setconfig experimental.evolution=
+  $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 

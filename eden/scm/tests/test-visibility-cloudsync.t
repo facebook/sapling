@@ -6,7 +6,7 @@
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
   $ setconfig visibility.enabled=true
-  $ setconfig experimental.evolution=
+  $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.user=test mutation.date="0 0"
   $ setconfig remotefilelog.reponame=server

@@ -834,7 +834,8 @@ def makestore(ui, repo):
         kwargs[r"defaultformat"] = defaultformat
     readonly = not isenabled(repo, createmarkersopt)
     store = obsstore(repo.svfs, readonly=readonly, **kwargs)
-    if store and readonly:
+    obsolete = ui.config("experimental", "evolution") == "obsolete"
+    if store and readonly and not obsolete:
         ui.warn(
             _("obsolete feature not enabled but %i markers found!\n") % len(list(store))
         )
