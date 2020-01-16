@@ -31,9 +31,10 @@ impl BackingStore {
         config.load_hgrc(hg.join("hgrc"), "repository");
 
         let store_path = hg.join("store");
-        let blobstore = ContentStoreBuilder::new(&store_path, &config);
-        let treestore =
-            ContentStoreBuilder::new(&store_path, &config).suffix(Path::new("manifests"));
+        let blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
+        let treestore = ContentStoreBuilder::new(&config)
+            .local_path(&store_path)
+            .suffix(Path::new("manifests"));
 
         let (blobstore, treestore) = if use_edenapi {
             let edenapi_config = edenapi::Config::from_hg_config(&config)?;

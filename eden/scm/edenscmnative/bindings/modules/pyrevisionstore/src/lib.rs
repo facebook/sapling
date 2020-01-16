@@ -854,7 +854,7 @@ py_class!(class contentstore |py| {
         let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
         let remotestore = remote.into_inner(py);
 
-        let contentstore = ContentStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
+        let contentstore = ContentStoreBuilder::new(&config.get_cfg(py)).local_path(path).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
         contentstore::create_instance(py, contentstore)
     }
 
@@ -906,7 +906,7 @@ py_class!(class metadatastore |py| {
         let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
         let remotestore = remote.into_inner(py);
 
-        let metadatastore = MetadataStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
+        let metadatastore = MetadataStoreBuilder::new(&config.get_cfg(py)).local_path(path).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
         metadatastore::create_instance(py, metadatastore)
     }
 

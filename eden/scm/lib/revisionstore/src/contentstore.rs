@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::Key;
@@ -27,7 +27,7 @@ use crate::{
 
 struct ContentStoreInner {
     datastore: UnionDataStore<Box<dyn DataStore>>,
-    local_mutabledatastore: Box<dyn MutableDeltaStore>,
+    local_mutabledatastore: Option<Box<dyn MutableDeltaStore>>,
     shared_mutabledatastore: Box<dyn MutableDeltaStore>,
     remote_store: Option<Arc<dyn RemoteDataStore>>,
 }
@@ -43,7 +43,9 @@ pub struct ContentStore {
 
 impl ContentStore {
     pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
-        ContentStoreBuilder::new(&local_path, config).build()
+        ContentStoreBuilder::new(config)
+            .local_path(&local_path)
+            .build()
     }
 }
 
@@ -97,15 +99,25 @@ impl Drop for ContentStoreInner {
 
 /// MutableDeltaStore is only implemented for the local store and not for the remote ones. The
 /// remote stores will be automatically written to while calling the various `DataStore` methods.
+///
+/// These methods can only be used when the ContentStore was created with a local store.
 impl MutableDeltaStore for ContentStore {
     /// Add the data to the local store.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        self.inner.local_mutabledatastore.add(delta, metadata)
+        self.inner
+            .local_mutabledatastore
+            .as_ref()
+            .ok_or_else(|| format_err!("writing to a non-local ContentStore is not allowed"))?
+            .add(delta, metadata)
     }
 
     /// Commit the data written to the local store.
     fn flush(&self) -> Result<Option<PathBuf>> {
-        self.inner.local_mutabledatastore.flush()
+        self.inner
+            .local_mutabledatastore
+            .as_ref()
+            .ok_or_else(|| format_err!("flushing a non-local ContentStore is not allowed"))?
+            .flush()
     }
 }
 
@@ -114,20 +126,37 @@ impl MutableDeltaStore for ContentStore {
 /// use this builder to add optional `RemoteStore` to enable remote data fetching， and a `Path`
 /// suffix to specify other type of stores.
 pub struct ContentStoreBuilder<'a> {
-    local_path: PathBuf,
+    local_path: Option<PathBuf>,
+    no_local_store: bool,
     config: &'a ConfigSet,
     remotestore: Option<Box<dyn RemoteStore>>,
     suffix: Option<&'a Path>,
 }
 
 impl<'a> ContentStoreBuilder<'a> {
-    pub fn new(local_path: impl AsRef<Path>, config: &'a ConfigSet) -> Self {
+    pub fn new(config: &'a ConfigSet) -> Self {
         Self {
-            local_path: local_path.as_ref().to_path_buf(),
+            local_path: None,
+            no_local_store: false,
             config,
             remotestore: None,
             suffix: None,
         }
+    }
+
+    /// Path to the local store.
+    pub fn local_path(mut self, local_path: impl AsRef<Path>) -> Self {
+        self.local_path = Some(local_path.as_ref().to_path_buf());
+        self
+    }
+
+    /// Allows a ContentStore to be created without a local store.
+    ///
+    /// This should be used in very specific cases that do not want a local store. Unless you know
+    /// exactly that this is what you want, do not use.
+    pub fn no_local_store(mut self) -> Self {
+        self.no_local_store = true;
+        self
     }
 
     pub fn remotestore(mut self, remotestore: Box<dyn RemoteStore>) -> Self {
@@ -142,10 +171,6 @@ impl<'a> ContentStoreBuilder<'a> {
 
     pub fn build(self) -> Result<ContentStore> {
         let cache_packs_path = get_cache_packs_path(self.config, self.suffix)?;
-        let local_pack_store = Box::new(MutableDataPackStore::new(
-            get_local_packs_path(self.local_path, self.suffix)?,
-            CorruptionPolicy::IGNORE,
-        )?);
         let shared_pack_store = Box::new(MutableDataPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
@@ -166,7 +191,24 @@ impl<'a> ContentStoreBuilder<'a> {
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
         datastore.add(shared_pack_store.clone());
-        datastore.add(local_pack_store.clone());
+
+        let local_mutabledatastore: Option<Box<dyn MutableDeltaStore>> =
+            if let Some(local_path) = self.local_path {
+                let local_pack_store = Box::new(MutableDataPackStore::new(
+                    get_local_packs_path(local_path, self.suffix)?,
+                    CorruptionPolicy::IGNORE,
+                )?);
+                datastore.add(local_pack_store.clone());
+
+                Some(local_pack_store)
+            } else {
+                if !self.no_local_store {
+                    return Err(format_err!(
+                        "a ContentStore cannot be built without a local store"
+                    ));
+                }
+                None
+            };
 
         let remote_store: Option<Arc<dyn RemoteDataStore>> =
             if let Some(remotestore) = self.remotestore {
@@ -177,7 +219,6 @@ impl<'a> ContentStoreBuilder<'a> {
                 None
             };
 
-        let local_mutabledatastore: Box<dyn MutableDeltaStore> = local_pack_store;
         let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
 
         Ok(ContentStore {
@@ -331,7 +372,8 @@ mod tests {
         let mut remotestore = FakeRemoteStore::new();
         remotestore.data(map);
 
-        let store = ContentStoreBuilder::new(&localdir, &config)
+        let store = ContentStoreBuilder::new(&config)
+            .local_path(&localdir)
             .remotestore(Box::new(remotestore))
             .build()?;
         let data_get = store.get(&k)?;
@@ -355,7 +397,8 @@ mod tests {
         let mut remotestore = FakeRemoteStore::new();
         remotestore.data(map);
 
-        let store = ContentStoreBuilder::new(&localdir, &config)
+        let store = ContentStoreBuilder::new(&config)
+            .local_path(&localdir)
             .remotestore(Box::new(remotestore))
             .build()?;
         store.get(&k)?;
@@ -379,7 +422,8 @@ mod tests {
         let mut remotestore = FakeRemoteStore::new();
         remotestore.data(map);
 
-        let store = ContentStoreBuilder::new(&localdir, &config)
+        let store = ContentStoreBuilder::new(&config)
+            .local_path(&localdir)
             .remotestore(Box::new(remotestore))
             .build()?;
 
@@ -403,12 +447,49 @@ mod tests {
         let mut remotestore = FakeRemoteStore::new();
         remotestore.data(map);
 
-        let store = ContentStoreBuilder::new(&localdir, &config)
+        let store = ContentStoreBuilder::new(&config)
+            .local_path(&localdir)
             .remotestore(Box::new(remotestore))
             .build()?;
         store.get(&k)?;
         store.inner.shared_mutabledatastore.get(&k)?;
-        assert!(store.inner.local_mutabledatastore.get(&k)?.is_none());
+        assert!(store
+            .inner
+            .local_mutabledatastore
+            .as_ref()
+            .unwrap()
+            .get(&k)?
+            .is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_shared_only_store() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+
+        let store = ContentStore::new(&localdir, &config)?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: Some(key("a", "1")),
+            key: k1.clone(),
+        };
+        store.add(&delta, &Default::default())?;
+        store.flush()?;
+
+        let store = ContentStoreBuilder::new(&config).no_local_store().build()?;
+        assert_eq!(store.get(&k1)?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_local_store() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let config = make_config(&cachedir);
+        assert!(ContentStoreBuilder::new(&config).build().is_err());
         Ok(())
     }
 }
