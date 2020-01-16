@@ -1,34 +1,15 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ REPOTYPE="blob_files"
-  $ setup_common_config "$REPOTYPE"
-  $ cd $TESTTMP
-
-setup common configuration
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh="$DUMMYSSH"
-  > EOF
-
-setup repo
-  $ hg init repo-hg
-  $ cd repo-hg
-  $ setup_hg_server
-  $ hg debugdrawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOF
-
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
-
-blobimport, succeeding
-  $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ default_setup_blobimport "blob_files"
+  hg repo
+  o  C [draft;rev=2;26805aba1e60]
+  |
+  o  B [draft;rev=1;112478962961]
+  |
+  o  A [draft;rev=0;426bada5c675]
+  $
+  blobimporting
 
 check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"

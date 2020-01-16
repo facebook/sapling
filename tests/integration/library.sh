@@ -1336,8 +1336,8 @@ function log() {
 }
 
 # Default setup that many of the test use
-function default_setup() {
-  setup_common_config "$BLOB_TYPE"
+function default_setup_blobimport() {
+  setup_common_config "$@"
   cd "$TESTTMP" || exit 1
 
   cat >> "$HGRCPATH" <<EOF
@@ -1358,24 +1358,27 @@ B
 A
 EOF
 
-hg bookmark master_bookmark -r tip
+  hg bookmark master_bookmark -r tip
 
-echo "hg repo"
-log -r ":"
+  echo "hg repo"
+  log -r ":"
 
-cd .. || exit 1
-echo "blobimporting"
-blobimport repo-hg/.hg repo
+  cd .. || exit 1
+  echo "blobimporting"
+  blobimport repo-hg/.hg repo
+}
 
-echo "starting Mononoke"
-mononoke "$@"
-wait_for_mononoke "$TESTTMP/repo"
+function default_setup() {
+  default_setup_blobimport "$BLOB_TYPE"
+  echo "starting Mononoke"
+  mononoke "$@"
+  wait_for_mononoke "$TESTTMP/repo"
 
-echo "cloning repo in hg client 'repo2'"
-hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
-cd repo2 || exit 1
-setup_hg_client
-cat >> .hg/hgrc <<EOF
+  echo "cloning repo in hg client 'repo2'"
+  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
+  cd repo2 || exit 1
+  setup_hg_client
+  cat >> .hg/hgrc <<EOF
 [extensions]
 pushrebase =
 remotenames =
