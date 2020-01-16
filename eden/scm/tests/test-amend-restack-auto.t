@@ -1,11 +1,9 @@
 #chg-compatible
 
   $ . helpers-usechg.sh
-  $ enable amend rebase
+  $ enable mutation-norecord amend rebase
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.singletransaction=True
-  $ setconfig experimental.evolution.allowdivergence=True
-  $ setconfig experimental.evolution="createmarkers, allowunstable"
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"
@@ -310,12 +308,6 @@ Test rebasing children with obsolete children themselves needing a restack.
   |
   @  6 21006be03678 A
   |
-  | x  3 b45c90359798 C
-  | |
-  | x  2 917a077edb8d B
-  | |
-  | x  1 ac2f7407182b A
-  |/
   o  0 48b9aae0607f Z
 
 Test not rebasing unrelated changes. When rebasing X, only X:: are expected to be rebased.

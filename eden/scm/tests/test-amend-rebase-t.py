@@ -14,10 +14,15 @@ sh % "cat" << r"""
 amend=
 rebase=
 [experimental]
-evolution = createmarkers, allowunstable
+evolution = obsolete
+[mutation]
+enabled=true
+record=false
+[visibility]
+enabled=true
 """ >> "$HGRCPATH"
 
-# Test that rebased commits that would cause instability are inhibited.
+# Test that rebases that cause an orphan commit are not a problem.
 sh % "hg init repo"
 sh % "cd repo"
 sh % "hg debugbuilddag -m '+3 *3'"

@@ -1,7 +1,7 @@
 #chg-compatible
 
 Set up test environment.
-  $ enable amend obsstore rebase
+  $ enable mutation-norecord amend rebase
   $ showgraph() {
   >   hg log --graph -T "{rev} {bookmarks} {desc|firstline}" | sed \$d
   > }

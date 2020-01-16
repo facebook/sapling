@@ -2,7 +2,7 @@
 
 #chg-compatible
 
-#testcases obsstore-off obsstore-on
+#testcases obsstore-off obsstore-on mutation
 
   $ cat << EOF >> $HGRCPATH
   > [extensions]
@@ -13,8 +13,12 @@
 
 #if obsstore-on
   $ setconfig experimental.evolution=createmarkers
-#else
+#endif
+#if obsstore-off
   $ setconfig experimental.evolution=
+#endif
+#if mutation
+  $ enable mutation-norecord
 #endif
 
 Basic amend
@@ -178,6 +182,18 @@ Amend in the middle of a stack
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
 #if obsstore-on
+
+  $ hg log -T '{rev} {node|short} {desc}\n' -G
+  @  3 be169c7e8dbe B
+  |
+  | o  2 26805aba1e60 C
+  | |
+  | x  1 112478962961 B
+  |/
+  o  0 426bada5c675 A
+  
+#endif
+#if mutation
 
   $ hg log -T '{rev} {node|short} {desc}\n' -G
   @  3 be169c7e8dbe B

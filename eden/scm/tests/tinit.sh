@@ -119,7 +119,17 @@ enable() {
     rcpath="$HGRCPATH"
   fi
   for name in "$@"; do
-    if [ "$name" = obsstore ]; then
+    if [ "$name" = "mutation-norecord" ]; then
+      cat >> $rcpath << EOF
+[experimental]
+evolution = obsolete
+[mutation]
+enabled=true
+record=false
+[visibility]
+enabled=true
+EOF
+    elif [ "$name" = obsstore ]; then
       cat >> $rcpath << EOF
 [experimental]
 evolution = createmarkers, allowunstable

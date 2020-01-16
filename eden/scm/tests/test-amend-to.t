@@ -1,15 +1,7 @@
 #chg-compatible
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > directaccess=
-  > histedit=
-  > rebase=
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > EOF
+  $ enable mutation-norecord amend directaccess histedit rebase
 Test that amend --to option
   $ hg init repo && cd repo
   $ mkcommit() {

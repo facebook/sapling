@@ -1,14 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > tweakdefaults=
-  > [experimental]
-  > evolution = createmarkers
-  > EOF
+  $ enable mutation-norecord amend rebase tweakdefaults
+  $ setconfig mutation.date="0 0"
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"
@@ -65,10 +59,14 @@ Test hg amend --fixup.
   o  0 add a
 
 Test that the operation field on the metadata is correctly set.
-  $ hg debugobsolete
-  7c3bad9141dcb46ff89abf5f61856facd56e476c * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'} (glob)
-  4538525df7e2b9f09423636c61ef63a4cb872a2d * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'} (glob)
-  47d2a3944de8b013de3be9578e8e344ea2e6c097 * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'} (glob)
+  $ hg debugmutation "all()"
+   *  1f0dee641bb7258c56bd60e93edfa2405381c41e
+   \*  * amend by test at 1970-01-01T00:00:00 from: (glob)
+      7c3bad9141dcb46ff89abf5f61856facd56e476c
+   \*  * rebase by test at 1970-01-01T00:00:00 from: (glob)
+      4538525df7e2b9f09423636c61ef63a4cb872a2d
+   \*  * rebase by test at 1970-01-01T00:00:00 from: (glob)
+      47d2a3944de8b013de3be9578e8e344ea2e6c097
 
 Test hg amend --rebase
   $ hg amend -m "amended again" --rebase

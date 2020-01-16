@@ -13,7 +13,11 @@ sh % "cat" << r"""
 amend=
 undo =
 [experimental]
-evolution = createmarkers, allowunstable
+evolution = obsolete
+[mutation]
+enabled = true
+[visibility]
+enabled = true
 """ >> "$HGRCPATH"
 
 # Create repo

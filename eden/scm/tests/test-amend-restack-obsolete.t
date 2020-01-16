@@ -1,11 +1,9 @@
 #chg-compatible
 
   $ . helpers-usechg.sh
-  $ enable amend rebase
+  $ enable mutation-norecord amend rebase
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.singletransaction=True
-  $ setconfig experimental.evolution.allowdivergence=True
-  $ setconfig experimental.evolution="createmarkers, allowunstable"
   $ setconfig amend.autorestack=no-conflict
   $ mkcommit() {
   >   echo "$1" > "$1"
@@ -30,13 +28,13 @@ Test invalid value for amend.autorestack
   $ showgraph
   o  5 3c36beb5705f D
   |
-  x  4 07863d11c289 C_old
-  |
-  | o  3 26805aba1e60 C
+  | o  4 26805aba1e60 C
   | |
-  x |  2 3326d5194fc9 B_old
+  x |  3 07863d11c289 C_old
   | |
-  | @  1 112478962961 B
+  | @  2 112478962961 B
+  | |
+  x |  1 3326d5194fc9 B_old
   |/
   o  0 426bada5c675 A
   $ hg amend -m "B'"
@@ -49,9 +47,9 @@ Test invalid value for amend.autorestack
   |
   | o  5 3c36beb5705f D
   | |
-  | x  4 07863d11c289 C_old
+  | x  3 07863d11c289 C_old
   | |
-  | x  2 3326d5194fc9 B_old
+  | x  1 3326d5194fc9 B_old
   |/
   o  0 426bada5c675 A
   $ hg rebase --restack
@@ -63,8 +61,4 @@ Test invalid value for amend.autorestack
   |
   @  6 180681c3ccd0 B'
   |
-  | x  4 07863d11c289 C_old
-  | |
-  | x  2 3326d5194fc9 B_old
-  |/
   o  0 426bada5c675 A

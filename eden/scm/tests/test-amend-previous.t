@@ -1,15 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > [experimental]
-  > evolution = createmarkers
-  > [ui]
-  > disallowemptyupdate = True
-  > EOF
+  $ enable mutation-norecord amend rebase
+  $ setconfig ui.disallowemptyupdate=true
   $ hg init amendprevious && cd amendprevious
 
 Check help text for new options and removal of unsupported options.

@@ -22,8 +22,7 @@ shlib.mkcommit = mkcommit
 
 
 sh % "enable amend rebase remotenames"
-sh % "setconfig experimental.evolution.allowdivergence=True experimental.narrow-heads=True"
-sh % 'setconfig "experimental.evolution=createmarkers, allowunstable"'
+sh % "setconfig experimental.narrow-heads=True"
 sh % "setconfig visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date='0 0' experimental.evolution= remotenames.rename.default=remote"
 sh % "hg init restack"
 sh % "cd restack"

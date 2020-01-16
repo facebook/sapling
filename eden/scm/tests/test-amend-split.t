@@ -1,19 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > [ui]
-  > interactive = true
-  > [amend]
-  > safestrip = false
-  > [hint]
-  > ack-hint-ack = true
-  > EOF
+  $ enable mutation-norecord amend rebase
+  $ setconfig ui.interactive=true amend.safestrip=false hint.ack-hint-ack=true
   $ mkcommit() {
   >    echo "${1}1" > "${1}1"
   >    echo "${1}2" > "${1}2"
@@ -238,10 +227,6 @@ Split using revset.
   o  12 a265b3c6c419 add a1 and a2
   |
   o  11 5a5595e342b1 add a1 and a2
-  
-  o  10 bd98a3c83a29 add d1 and d2
-  |
-  x  0 c20cc4d302fc add a1 and a2
 
 Test that command aborts when given multiple commits.
   $ hg split 11 12
@@ -274,10 +259,6 @@ Test --no-rebase flag.
   o  12 a265b3c6c419 add a1 and a2
   |
   o  11 5a5595e342b1 add a1 and a2
-  
-  o  10 bd98a3c83a29 add d1 and d2
-  |
-  x  0 c20cc4d302fc add a1 and a2
   $ hg split --no-rebase << EOF
   > y
   > y
@@ -323,10 +304,6 @@ Test --no-rebase flag.
   o  12 a265b3c6c419 add a1 and a2
   |
   o  11 5a5595e342b1 add a1 and a2
-  
-  o  10 bd98a3c83a29 add d1 and d2
-  |
-  x  0 c20cc4d302fc add a1 and a2
 
 Test that bookmarks are correctly moved.
   $ reset

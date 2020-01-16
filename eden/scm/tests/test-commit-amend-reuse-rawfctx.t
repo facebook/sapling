@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ enable obsstore
+  $ enable mutation-norecord
 
 File node could be reused during commit --amend
 

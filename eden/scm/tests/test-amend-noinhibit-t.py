@@ -14,7 +14,12 @@ sh % "cat" << r"""
 amend=
 rebase=
 [experimental]
-evolution = createmarkers
+evolution = obsolete
+[mutation]
+enabled=true
+record=false
+[visibility]
+enabled=true
 """ >> "$HGRCPATH"
 sh % "hg init repo"
 sh % "cd repo"

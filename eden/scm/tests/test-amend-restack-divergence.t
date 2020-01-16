@@ -2,9 +2,7 @@
 
   $ . helpers-usechg.sh
 
-  $ enable amend rebase
-  $ setconfig experimental.evolution.allowdivergence=True
-  $ setconfig experimental.evolution="createmarkers, allowunstable"
+  $ enable mutation-norecord amend rebase
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"
@@ -49,8 +47,6 @@ onto the newest successor of their parent.
   @  4 cef323f40828 successor 2
   |
   | o  3 f60c1f15a70e successor 1
-  |/
-  | x  1 7c3bad9141dc add b
   |/
   o  0 1f0dee641bb7 add a
 
@@ -99,6 +95,6 @@ since the successor is obsolete.
   |
   | o  2 4538525df7e2 add c
   | |
-  | o  1 7c3bad9141dc add b
+  | x  1 7c3bad9141dc add b
   |/
   o  0 1f0dee641bb7 add a

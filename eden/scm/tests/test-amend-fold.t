@@ -1,13 +1,7 @@
 #chg-compatible
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > EOF
+  $ enable mutation-norecord amend rebase
   $ reset() {
   >   cd ..
   >   rm -rf repo

@@ -2,9 +2,7 @@
 
   $ . helpers-usechg.sh
 
-  $ enable amend rebase
-  $ setconfig experimental.evolution.allowdivergence=True
-  $ setconfig experimental.evolution="createmarkers, allowunstable"
+  $ enable mutation-norecord amend rebase
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"
@@ -92,11 +90,11 @@ Restack will only restack the "current" stack and leave other stacks untouched.
   | |
   | | o  13 5cb8c357af9e D
   | | |
-  o | |  9 a975bfef72d2 L
+  o | |  12 a975bfef72d2 L
   | | |
-  | o |  7 889f49cd29f6 G
+  | o |  9 889f49cd29f6 G
   | | |
-  | | o  5 dc0947a82db8 C
+  | | o  7 dc0947a82db8 C
   | | |
   | | | o  3 48b9aae0607f Z
   | | |
@@ -105,42 +103,6 @@ Restack will only restack the "current" stack and leave other stacks untouched.
   o /  1 e8e0a81d950f E
    /
   o  0 426bada5c675 A
-
-The "prune" cases.
-
-  $ newrepo
-  $ drawdag<<'EOS'
-  > D E
-  > |/
-  > C
-  > |       # amend: F -> F2
-  > B  G H  # prune: A, C, F2
-  > |  |/
-  > A  F F2
-  > EOS
-
-  $ hg update -q $B
-  $ hg rebase --restack
-  rebasing 112478962961 "B"
-  rebasing f585351a92f8 "D"
-  rebasing 78d2dca436b2 "E"
-
-  $ hg update -q $H
-  $ hg rebase --restack
-  rebasing 8fdb2c1feb20 "G"
-  rebasing 02ac06fe83b9 "H"
-
-  $ showgraph
-  @  13 3e1fefc3c8db H
-  
-  o  12 0706cfb95b41 G
-  
-  o  11 8c0ccd1582b3 E
-  |
-  | o  10 f88ac1d7b477 D
-  |/
-  o  9 653ee58caf75 B
-
 
 
 Restack could resume after resolving merge conflicts.
@@ -191,7 +153,7 @@ Restack could resume after resolving merge conflicts.
   | |
   o |  4 7fb047a69f22 E
   | |
-  | o  2 dc0947a82db8 C
+  | o  3 dc0947a82db8 C
   |/
   o  0 426bada5c675 A
 

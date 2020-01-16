@@ -18,7 +18,12 @@
   > amend=
   > rebase=
   > [experimental]
-  > evolution=createmarkers, allowunstable
+  > evolution=obsolete
+  > [mutation]
+  > enabled=true
+  > record=false
+  > [visibility]
+  > enabled=true
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
