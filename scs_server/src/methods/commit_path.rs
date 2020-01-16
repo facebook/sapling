@@ -78,6 +78,25 @@ impl SourceControlServiceImpl {
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathBlameParams,
     ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
+        match params.format {
+            thrift::BlameFormat::VERBOSE => {
+                self.commit_path_blame_verbose(ctx, commit_path, params)
+                    .await
+            }
+            other_format => Err(errors::invalid_request(format!(
+                "unsupported blame format {}",
+                other_format
+            ))
+            .into()),
+        }
+    }
+
+    async fn commit_path_blame_verbose(
+        &self,
+        ctx: CoreContext,
+        commit_path: thrift::CommitPathSpecifier,
+        params: thrift::CommitPathBlameParams,
+    ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
 
@@ -86,7 +105,7 @@ impl SourceControlServiceImpl {
         let identities = map_commit_identities(
             &repo,
             csids.clone(),
-            &BTreeSet::from_iter(Some(params.identity_scheme)),
+            &BTreeSet::from_iter(params.identity_scheme),
         )
         .await?;
 
@@ -121,7 +140,13 @@ impl SourceControlServiceImpl {
                 |(line, (contents, (csid, path)))| -> Result<_, thrift::RequestError> {
                     let commit = identities
                         .get(&csid)
-                        .and_then(|ids| ids.get(&params.identity_scheme))
+                        .and_then(|ids| {
+                            ids.get(
+                                &params
+                                    .identity_scheme
+                                    .unwrap_or(thrift::CommitIdentityScheme::BONSAI),
+                            )
+                        })
                         .ok_or_else(|| {
                             errors::commit_not_found(format!("failed to resolve commit: {}", csid))
                         })?;
