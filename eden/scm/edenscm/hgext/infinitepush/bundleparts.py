@@ -122,7 +122,7 @@ def getscratchbranchparts(
         )
     )
 
-    if mutation.recording(repo):
+    if mutation.enabled(repo):
         if constants.scratchmutationparttype not in bundle2.bundle2caps(peer):
             repo.ui.warn(
                 _("no server support for %r - skipping\n")

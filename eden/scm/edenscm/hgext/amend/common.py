@@ -202,7 +202,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
         date = commitopts.get("date") or None
         extra = dict(commitopts.get("extra", old.extra()))
         extra["branch"] = head.branch()
-        mutation.record(repo, extra, [c.node() for c in updates], mutop)
+        mutinfo = mutation.record(repo, extra, [c.node() for c in updates], mutop)
         loginfo = {
             "predecessors": " ".join(c.hex() for c in updates),
             "mutation": mutop,
@@ -218,6 +218,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
             date=date,
             extra=extra,
             loginfo=loginfo,
+            mutinfo=mutinfo,
         )
 
         if commitopts.get("edit"):
@@ -260,7 +261,7 @@ def metarewrite(repo, old, newbases, commitopts, copypreds=None):
         if copypreds:
             preds.extend(copypreds)
             mutop = "metaedit-copy"
-        mutation.record(repo, extra, preds, mutop)
+        mutinfo = mutation.record(repo, extra, preds, mutop)
         loginfo = {"predecessors": old.hex(), "mutation": mutop}
 
         new = context.metadataonlyctx(
@@ -272,6 +273,7 @@ def metarewrite(repo, old, newbases, commitopts, copypreds=None):
             date=date,
             extra=extra,
             loginfo=loginfo,
+            mutinfo=mutinfo,
         )
 
         if commitopts.get("edit"):

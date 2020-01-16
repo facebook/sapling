@@ -179,10 +179,6 @@ py_class!(class mutationentry |py| {
             (PyBytes::new(py, k.as_ref()), PyBytes::new(py, v.as_ref()))
         }).collect())
     }
-
-    def tostoreentry(&self) -> PyResult<mutationentry> {
-        Ok(self.to_py_object(py))
-    }
 });
 
 py_class!(class mutationstore |py| {

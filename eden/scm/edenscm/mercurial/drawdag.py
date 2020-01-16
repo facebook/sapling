@@ -295,7 +295,7 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, filemap, mutationinfo, date):
+    def __init__(self, repo, name, parentctxs, filemap, mutationspec, date):
         added = []
         removed = []
         for path, data in filemap.items():
@@ -311,22 +311,28 @@ class simplecommitctx(context.committablectx):
                     raise error.Abort(_("%s: both added and removed") % path)
                 added.append(path)
         extra = {b"branch": b"default"}
-        if mutationinfo is not None:
-            predctxs, cmd, split = mutationinfo
-            extra["mutpred"] = ",".join(
-                [mutation.identfromnode(p.node()) for p in predctxs]
-            )
-            extra["mutdate"] = date
-            extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
-            extra["mutop"] = cmd
+        mutinfo = None
+        if mutationspec is not None:
+            predctxs, cmd, split = mutationspec
+            mutinfo = {
+                "mutpred": ",".join(
+                    [mutation.identfromnode(p.node()) for p in predctxs]
+                ),
+                "mutdate": date,
+                "mutuser": repo.ui.config("mutation", "user") or repo.ui.username(),
+                "mutop": cmd,
+            }
             if split:
-                extra["mutsplit"] = ",".join(
+                mutinfo["mutsplit"] = ",".join(
                     [mutation.identfromnode(s.node()) for s in split]
                 )
+            if mutation.recording(repo):
+                extra.update(mutinfo)
         opts = {
             "changes": scmutil.status([], added, removed, [], [], [], []),
             "date": date,
             "extra": extra,
+            "mutinfo": mutinfo,
         }
         super(simplecommitctx, self).__init__(self, name, **opts)
         self._repo = repo
@@ -521,10 +527,10 @@ def drawdag(repo, text, **opts):
         if rels:
             obsmarkers.append((cmd, rels))
 
-    # Only record mutations if mutation recording is enabled.
+    # Only record mutations if mutation is enabled.
     mutationedges = {}
     mutationpreds = set()
-    if mutation.recording(repo):
+    if mutation.enabled(repo):
         # For mutation recording to work, we must include the mutations
         # as extra edges when walking the DAG.
         for succ, (preds, cmd, split) in mutations.items():

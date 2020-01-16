@@ -34,22 +34,27 @@ def nodefromident(ident):
 
 
 def record(repo, extra, prednodes, op=None, splitting=None):
+    mutinfo = None
     for key in "mutpred", "mutuser", "mutdate", "mutop", "mutsplit":
         if key in extra:
             del extra[key]
-    if recording(repo):
-        extra["mutpred"] = ",".join(identfromnode(p) for p in prednodes)
-        extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
+    if enabled(repo):
+        mutinfo = {}
+        mutinfo["mutpred"] = ",".join(identfromnode(p) for p in prednodes)
+        mutinfo["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
         date = repo.ui.config("mutation", "date")
         if date is None:
             date = util.makedate()
         else:
             date = util.parsedate(date)
-        extra["mutdate"] = "%d %d" % date
+        mutinfo["mutdate"] = "%d %d" % date
         if op is not None:
-            extra["mutop"] = op
+            mutinfo["mutop"] = op
         if splitting:
-            extra["mutsplit"] = ",".join(identfromnode(n) for n in splitting)
+            mutinfo["mutsplit"] = ",".join(identfromnode(n) for n in splitting)
+        if recording(repo):
+            extra.update(mutinfo)
+    return mutinfo
 
 
 def recording(repo):
@@ -107,52 +112,29 @@ class bundlemutationstore(object):
         pass
 
 
-class mutationentry(object):
-    def __init__(self, node, extra):
-        self.extra = extra
-        self.node = node
+def createentry(node, mutinfo, origin):
+    def nodesfrominfo(info):
+        if info is not None:
+            return [nodefromident(x) for x in info.split(",")]
 
-    def origin(self):
-        return None
-
-    def succ(self):
-        return self.node
-
-    def preds(self):
-        if "mutpred" in self.extra:
-            return [nodefromident(x) for x in self.extra["mutpred"].split(",")]
-
-    def split(self):
-        if "mutsplit" in self.extra:
-            return [nodefromident(x) for x in self.extra["mutsplit"].split(",")]
-
-    def op(self):
-        return self.extra.get("mutop")
-
-    def user(self):
-        return self.extra.get("mutuser")
-
-    def time(self):
-        if "mutdate" in self.extra:
-            return float(self.extra.get("mutdate").split()[0])
-
-    def tz(self):
-        if "mutdate" in self.extra:
-            return int(self.extra.get("mutdate").split()[1])
-
-    def tostoreentry(self, origin=ORIGIN_COMMIT):
-        if "mutpred" in self.extra:
-            return mutationstore.mutationentry(
-                origin,
-                self.node,
-                self.preds(),
-                self.split(),
-                self.op() or "",
-                self.user() or "",
-                self.time() or 0,
-                self.tz() or 0,
-                None,
-            )
+    if mutinfo is not None:
+        try:
+            time, tz = mutinfo["mutdate"].split()
+            time = float(time)
+            tz = int(tz)
+        except (IndexError, ValueError):
+            time, tz = 0.0, 0
+        return mutationstore.mutationentry(
+            origin,
+            node,
+            nodesfrominfo(mutinfo.get("mutpred")),
+            nodesfrominfo(mutinfo.get("mutsplit")),
+            mutinfo.get("mutop", ""),
+            mutinfo.get("mutuser", ""),
+            time,
+            tz,
+            None,
+        )
 
 
 def createsyntheticentry(
@@ -169,34 +151,21 @@ def createsyntheticentry(
     )
 
 
-def createcommitentry(repo, node):
-    extra = repo.changelog.changelogrevision(node).extra
-    if "mutpred" in extra:
-        return mutationentry(node, extra)
-
-
 def recordentries(repo, entries, skipexisting=True):
     count = 0
     with repo.transaction("record-mutation") as tr:
-        unfi = repo.unfiltered()
         ms = repo._mutationstore
         tr.addfinalize("mutation", lambda _tr: ms.flush())
         for entry in entries:
-            if skipexisting:
-                succ = entry.succ()
-                if succ in unfi or ms.has(succ):
-                    continue
+            if skipexisting and ms.has(entry.succ()):
+                continue
             ms.add(entry)
             count += 1
     return count
 
 
-def lookup(repo, node, extra=None):
-    """Look up mutation information for the given node
-
-    For the fastpath case where the commit extras are already known, these
-    can optionally be passed in through the ``extra`` parameter.
-    """
+def lookup(repo, node):
+    """Look up mutation information for the given node"""
     return repo._mutationstore.get(node)
 
 
@@ -676,7 +645,7 @@ def toposort(repo, items, nodefn=None):
 
 
 def unbundle(repo, bundledata):
-    if recording(repo):
+    if enabled(repo):
         entries = mutationstore.unbundle(bundledata)
         recordentries(repo, entries, skipexisting=True)
 
@@ -699,7 +668,7 @@ def bundle(repo, nodes):
 
         entry = lookupsplit(repo, current)
         if entry is not None:
-            entries.append(entry.tostoreentry())
+            entries.append(entry)
             for nextnode in entry.preds():
                 if nextnode not in seen:
                     remaining.add(nextnode)
@@ -833,7 +802,7 @@ def convertfromobsmarkers(repo):
 
 
 def automigrate(repo):
-    if recording(repo) and repo.ui.configbool("mutation", "automigrate"):
+    if enabled(repo) and repo.ui.configbool("mutation", "automigrate"):
         msg = _(
             "checking for new obsmarkers to migrate to the mutation store (https://fburl.com/hgmutation)\n"
         )

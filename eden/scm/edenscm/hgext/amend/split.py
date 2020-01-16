@@ -112,9 +112,9 @@ def split(ui, repo, *revs, **opts):
         # originalchunks.
         shouldrecordmutation = [False]
 
-        def commitextra(extra):
+        def mutinfo(extra):
             if shouldrecordmutation[0]:
-                mutation.record(
+                return mutation.record(
                     repo,
                     extra,
                     [ctx.node()],
@@ -135,7 +135,7 @@ def split(ui, repo, *revs, **opts):
         msg += ctx.description()
         opts["message"] = msg
         opts["edit"] = True
-        opts["_commitextrafunc"] = commitextra
+        opts["_commitmutinfofunc"] = mutinfo
         try:
             while haschanges():
                 pats = ()

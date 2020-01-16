@@ -380,7 +380,7 @@ coreconfigitem(
 )
 coreconfigitem("mutation", "date", default=None)
 coreconfigitem("mutation", "enabled", default=False)
-coreconfigitem("mutation", "record", default=False)
+coreconfigitem("mutation", "record", default=True)
 coreconfigitem("mutation", "user", default=None)
 coreconfigitem("pager", "attend-.*", default=dynamicdefault, generic=True)
 coreconfigitem("pager", "ignore", default=list)

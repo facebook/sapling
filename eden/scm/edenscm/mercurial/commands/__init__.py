@@ -1742,9 +1742,10 @@ def _docommit(ui, repo, *pats, **opts):
             ui.status(_("nothing changed\n"))
             return 1
     else:
-        commitextrafunc = opts.get("_commitextrafunc")
-        if commitextrafunc is not None:
-            commitextrafunc(extra)
+        mutinfo = None
+        commitmutinfofunc = opts.get("_commitmutinfofunc")
+        if commitmutinfofunc is not None:
+            mutinfo = commitmutinfofunc(extra)
 
         def commitfunc(ui, repo, message, match, opts):
             editform = cmdutil.mergeeditform(repo[None], "commit.normal")
@@ -1758,6 +1759,7 @@ def _docommit(ui, repo, *pats, **opts):
                 match,
                 editor=editor,
                 extra=extra,
+                mutinfo=mutinfo,
             )
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)

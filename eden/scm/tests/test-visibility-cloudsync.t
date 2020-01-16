@@ -373,20 +373,3 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   |
   @  0: d20a80d4def3 'base'
   
-  $ tglogm -r 'predecessors(all())' --config mutation.enabled=true
-  o  7: 1ef69cfd595b 'F-amended'
-  |
-  | o  6: 6caded0e9807 'D'
-  | |
-  +---x  5: ba83c5428cb2 'F'  (Rewritten using amend into 1ef69cfd595b)
-  | |
-  | | o  4: dd114d9b2f9e 'X'
-  | |/
-  +---o  3: d8fc5ae9b7ef 'D'
-  | |
-  o |  2: c70a9bd6bfd1 'E'
-  |/
-  o  1: dae3b312bb78 'Z'
-  |
-  @  0: d20a80d4def3 'base'
-  

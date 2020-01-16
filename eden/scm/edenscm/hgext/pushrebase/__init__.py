@@ -512,10 +512,8 @@ def _push(orig, ui, repo, *args, **opts):
             if bmarkchanges:
                 bmarks.applychanges(repo, tr, bmarkchanges)
             visibility.remove(repo, tracker.mapping.keys())
-            if mutation.recording(repo):
-                # Landed commits require a mutation record, even if the server
-                # recorded the land within the commit, as the changelog isn't
-                # currently indexed by mutation information.
+            if mutation.enabled(repo):
+                # Convert the returned obsmarker into a mutation entry.
                 entries = []
                 for pred, succ in tracker.mapping.items():
                     entries.append(
@@ -548,18 +546,7 @@ class replacementtracker(object):
         that replace the commits we just pushed.
         """
         self.replacementsreceived = True
-        ret = orig(op, cg, tr, source, url, **kwargs)
-
-        clnode = op.repo.changelog.node
-        for rev in tr.changes["revs"]:
-            node = clnode(rev)
-            entry = mutation.createcommitentry(op.repo, node)
-            if entry is not None:
-                preds = entry.preds() or []
-                for pred in preds:
-                    if pred in self.pushnodes:
-                        self.mapping[pred] = node
-        return ret
+        return orig(op, cg, tr, source, url, **kwargs)
 
     def mergemarkers(self, orig, obsstore, transaction, data):
         """find replacements from obsmarkers
@@ -1216,7 +1203,7 @@ def _graft(op, rev, mapping, lastdestnode, getcommitdate):
     date = getcommitdate(repo.ui, rev.hex(), rev.date())
 
     extra = rev.extra().copy()
-    mutation.record(repo, extra, [rev.node()], "pushrebase")
+    mutinfo = mutation.record(repo, extra, [rev.node()], "pushrebase")
     loginfo = {"predecessors": rev.hex(), "mutation": "pushrebase"}
 
     return _commit(
@@ -1229,10 +1216,11 @@ def _graft(op, rev, mapping, lastdestnode, getcommitdate):
         date,
         extra,
         loginfo,
+        mutinfo,
     )
 
 
-def _commit(repo, parents, desc, files, filectx, user, date, extras, loginfo):
+def _commit(repo, parents, desc, files, filectx, user, date, extras, loginfo, mutinfo):
     """ Make a commit as defined by the passed in parameters in the repository.
     All the commits created by the pushrebase extension should ideally go
     through this method.
@@ -1243,7 +1231,16 @@ def _commit(repo, parents, desc, files, filectx, user, date, extras, loginfo):
     """
 
     return context.memctx(
-        repo, parents, desc, files, filectx, user, date, extras, loginfo=loginfo
+        repo,
+        parents,
+        desc,
+        files,
+        filectx,
+        user,
+        date,
+        extras,
+        loginfo=loginfo,
+        mutinfo=mutinfo,
     ).commit()
 
 

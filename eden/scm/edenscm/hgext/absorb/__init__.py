@@ -235,7 +235,9 @@ class overlaystore(patch.filestore):
         return content, mode, (renamed and renamed[0])
 
 
-def overlaycontext(memworkingcopy, ctx, parents=None, extra=None, loginfo=None):
+def overlaycontext(
+    memworkingcopy, ctx, parents=None, extra=None, loginfo=None, mutinfo=None
+):
     """({path: content}, ctx, (p1node, p2node)?, {}?) -> memctx
     memworkingcopy overrides file contents.
     """
@@ -260,6 +262,7 @@ def overlaycontext(memworkingcopy, ctx, parents=None, extra=None, loginfo=None):
         branch=None,
         extra=extra,
         loginfo=loginfo,
+        mutinfo=mutinfo,
     )
 
 
@@ -849,10 +852,10 @@ class fixupstate(object):
         """
         parents = p1 and (p1, node.nullid)
         extra = ctx.extra()
-        mutation.record(self.repo, extra, [ctx.node()], "absorb")
+        mutinfo = mutation.record(self.repo, extra, [ctx.node()], "absorb")
         loginfo = {"checkoutidentifier": self.checkoutidentifier}
         mctx = overlaycontext(
-            memworkingcopy, ctx, parents, extra=extra, loginfo=loginfo
+            memworkingcopy, ctx, parents, extra=extra, loginfo=loginfo, mutinfo=mutinfo
         )
         # preserve phase
         with mctx.repo().ui.configoverride({("phases", "new-commit"): ctx.phase()}):

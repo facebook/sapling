@@ -1347,11 +1347,12 @@ def concludememorynode(
     extra = {"rebase_source": ctx.hex()}
     preds = [ctx.node()]
     mutop = "rebase"
+    mutinfo = None
     if copypreds:
         preds.extend(repo.changelog.node(r) for r in copypreds)
         mutop = "rebase-copy"
     if not keepf:
-        mutation.record(repo, extra, preds, mutop)
+        mutinfo = mutation.record(repo, extra, preds, mutop)
     if extrafn:
         extrafn(ctx, extra)
     loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
@@ -1381,6 +1382,7 @@ def concludememorynode(
             branch=branch,
             editor=editor,
             loginfo=loginfo,
+            mutinfo=mutinfo,
         )
         commitres = repo.commitctx(memctx)
         wctx.clean()  # Might be reused
@@ -1413,11 +1415,12 @@ def concludenode(
         extra = {"rebase_source": ctx.hex()}
         preds = [ctx.node()]
         mutop = "rebase"
+        mutinfo = None
         if copypreds:
             preds.extend(repo.changelog.node(r) for r in copypreds)
             mutop = "rebase-copy"
         if not keepf:
-            mutation.record(repo, extra, preds, mutop)
+            mutinfo = mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
         loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
@@ -1435,6 +1438,7 @@ def concludenode(
                 extra=extra,
                 editor=editor,
                 loginfo=loginfo,
+                mutinfo=mutinfo,
             )
 
         repo.dirstate.setbranch(repo[newnode].branch())

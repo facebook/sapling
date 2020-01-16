@@ -102,7 +102,7 @@ def _cleanuplanded(repo, dryrun=False):
         return
     if not dryrun:
         with unfi.lock(), unfi.transaction("pullcreatemarkers"):
-            if mutation.recording(unfi):
+            if mutation.enabled(unfi):
                 mutation.recordentries(unfi, mutationentries, skipexisting=False)
             if visibility.tracking(unfi):
                 visibility.remove(unfi, tohide)
@@ -129,7 +129,7 @@ def extsetup(ui):
 def _pull(orig, ui, repo, *args, **opts):
     if (
         not obsolete.isenabled(repo, obsolete.createmarkersopt)
-        and not mutation.recording(repo)
+        and not mutation.enabled(repo)
         and not visibility.tracking(repo)
     ):
         return orig(ui, repo, *args, **opts)
@@ -164,7 +164,7 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
     with unfi.lock(), unfi.transaction("pullcreatemarkers"):
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             obsolete.createmarkers(unfi, tocreate)
-        if mutation.recording(repo) or visibility.tracking(repo):
+        if mutation.enabled(repo) or visibility.tracking(repo):
             mutationentries = []
             tohide = []
             for (pred, succs) in tocreate:
@@ -179,7 +179,7 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
                         )
                     )
                 tohide.append(pred.node())
-            if mutation.recording(unfi):
+            if mutation.enabled(unfi):
                 mutation.recordentries(unfi, mutationentries, skipexisting=False)
             if visibility.tracking(unfi):
                 visibility.remove(unfi, tohide)

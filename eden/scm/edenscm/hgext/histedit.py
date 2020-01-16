@@ -577,7 +577,7 @@ def commitfuncfor(repo, src):
         with repo.ui.configoverride(overrides, "histedit"):
             extra = kwargs.get(r"extra", {}).copy()
             extra["histedit_source"] = src.hex()
-            mutation.record(repo, extra, [src.node()], "histedit")
+            kwargs[r"mutinfo"] = mutation.record(repo, extra, [src.node()], "histedit")
             kwargs[r"extra"] = extra
             kwargs[r"loginfo"] = {"predecessors": src.hex(), "mutation": "histedit"}
             return repo.commit(**kwargs)
@@ -651,6 +651,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     user = commitopts.get("user")
     date = commitopts.get("date")
     extra = commitopts.get("extra")
+    mutinfo = commitopts.get("mutinfo")
 
     parents = (first.p1().node(), first.p2().node())
     editor = None
@@ -670,6 +671,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
         extra=extra,
         editor=editor,
         loginfo=loginfo,
+        mutinfo=mutinfo,
     )
     return repo.commitctx(new)
 
@@ -855,7 +857,7 @@ class fold(histeditaction):
         # mutation predecessors - ctx is likely an intermediate commit, but its
         # predecessors will refer to the original commits.
         preds = [ctx.node()] + internalchanges + [oldctx.node()]
-        mutation.record(repo, extra, preds, "histedit")
+        commitopts["mutinfo"] = mutation.record(repo, extra, preds, "histedit")
         commitopts["extra"] = extra
         phasemin = max(ctx.phase(), oldctx.phase())
         overrides = {("phases", "new-commit"): phasemin}

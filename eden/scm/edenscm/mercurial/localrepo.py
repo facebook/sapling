@@ -2127,6 +2127,7 @@ class localrepository(object):
         editor=False,
         extra=None,
         loginfo=None,
+        mutinfo=None,
     ):
         """Add a new revision to current repository.
 
@@ -2174,7 +2175,7 @@ class localrepository(object):
             loginfo.update({"checkoutidentifier": self.dirstate.checkoutidentifier})
 
             cctx = context.workingcommitctx(
-                self, status, text, user, date, extra, loginfo
+                self, status, text, user, date, extra, loginfo, mutinfo
             )
 
             # internal config: ui.allowemptycommit
@@ -2365,10 +2366,9 @@ class localrepository(object):
             # Newly committed commits should be visible.
             if targetphase > phases.public:
                 visibility.add(self, [n])
-            if mutation.recording(self) and "mutpred" in extra:
-                entry = mutation.mutationentry(n, extra).tostoreentry(
-                    mutation.ORIGIN_LOCAL
-                )
+            mutinfo = ctx.mutinfo()
+            if mutinfo is not None:
+                entry = mutation.createentry(n, mutinfo, mutation.ORIGIN_LOCAL)
                 mutation.recordentries(self, [entry], skipexisting=False)
             tr.close()
 

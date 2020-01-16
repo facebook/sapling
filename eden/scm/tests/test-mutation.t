@@ -1243,7 +1243,7 @@ Landing
 
 Simulate pushrebase happening remotely and stripping the mutation information.
 
-  $ drawdag --config mutation.record=false << EOS
+  $ drawdag --config mutation.enabled=false << EOS
   > X
   > |
   > $Y  $C  # rebase: $C -> X

@@ -3644,7 +3644,7 @@ def amend(ui, repo, old, extra, pats, opts):
 
         pureextra = extra.copy()
         extra["amend_source"] = old.hex()
-        mutation.record(repo, extra, [old.node()], "amend")
+        mutinfo = mutation.record(repo, extra, [old.node()], "amend")
 
         loginfo = {
             "checkoutidentifier": repo.dirstate.checkoutidentifier,
@@ -3663,6 +3663,7 @@ def amend(ui, repo, old, extra, pats, opts):
             extra=extra,
             editor=editor,
             loginfo=loginfo,
+            mutinfo=mutinfo,
         )
 
         newdesc = changelog.stripdesc(new.description())

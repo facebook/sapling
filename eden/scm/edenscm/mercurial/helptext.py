@@ -1769,12 +1769,14 @@ Supported arguments:
 
 Controls recording of commit mutation metadata.
 
-``record``
-    Set to true to enable recording of commit mutation metadata inside commits.
-
 ``enabled``
-    Set to true to enable usage of recorded commit mutation metadata in
-    preference to obsolescence markers.
+    Set to true to enable the usage of commit mutation metadata in preference
+    to obsolescence markers.
+
+``record``
+    Set to false to disable recording of commit mutation metadata in commit
+    extras.
+    (default: True)
 
 ``date``
     Override the date and time the commit was mutated at.  The default is the

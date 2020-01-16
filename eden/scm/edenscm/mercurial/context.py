@@ -665,7 +665,7 @@ class changectx(basectx):
 
     @propertycache
     def _mutationentry(self):
-        return mutation.lookup(self._repo, self._node, extra=self.extra())
+        return mutation.lookup(self._repo, self._node)
 
     def mutationpredecessors(self):
         if self._mutationentry:
@@ -1444,6 +1444,7 @@ class committablectx(basectx):
         extra=None,
         changes=None,
         loginfo=None,
+        mutinfo=None,
     ):
         self._repo = repo
         self._rev = None
@@ -1456,6 +1457,7 @@ class committablectx(basectx):
         if changes:
             self._status = changes
         self._loginfo = loginfo
+        self._mutinfo = mutinfo
 
         self._extra = {}
         if extra:
@@ -1666,6 +1668,9 @@ class committablectx(basectx):
     def loginfo(self):
         return self._loginfo or {}
 
+    def mutinfo(self):
+        return self._mutinfo
+
 
 class workingctx(committablectx):
     """A workingctx object makes access to data related to
@@ -1686,9 +1691,10 @@ class workingctx(committablectx):
         extra=None,
         changes=None,
         loginfo=None,
+        mutinfo=None,
     ):
         super(workingctx, self).__init__(
-            repo, text, user, date, extra, changes, loginfo
+            repo, text, user, date, extra, changes, loginfo, mutinfo
         )
 
     def __iter__(self):
@@ -2316,6 +2322,7 @@ class overlayworkingctx(committablectx):
         user=None,
         editor=None,
         loginfo=None,
+        mutinfo=None,
     ):
         """Converts this ``overlayworkingctx`` into a ``memctx`` ready to be
         committed.
@@ -2365,6 +2372,7 @@ class overlayworkingctx(committablectx):
             branch=branch,
             editor=editor,
             loginfo=loginfo,
+            mutinfo=mutinfo,
         )
 
     def isdirty(self, path):
@@ -2485,10 +2493,18 @@ class workingcommitctx(workingctx):
     """
 
     def __init__(
-        self, repo, changes, text="", user=None, date=None, extra=None, loginfo=None
+        self,
+        repo,
+        changes,
+        text="",
+        user=None,
+        date=None,
+        extra=None,
+        loginfo=None,
+        mutinfo=None,
     ):
         super(workingctx, self).__init__(
-            repo, text, user, date, extra, changes, loginfo
+            repo, text, user, date, extra, changes, loginfo, mutinfo
         )
 
     def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
@@ -2629,8 +2645,11 @@ class memctx(committablectx):
         branch=None,
         editor=False,
         loginfo=None,
+        mutinfo=None,
     ):
-        super(memctx, self).__init__(repo, text, user, date, extra, loginfo=loginfo)
+        super(memctx, self).__init__(
+            repo, text, user, date, extra, loginfo=loginfo, mutinfo=mutinfo
+        )
         self._rev = None
         self._node = None
         parents = [(p or nullid) for p in parents]
@@ -2864,11 +2883,12 @@ class metadataonlyctx(committablectx):
         extra=None,
         editor=False,
         loginfo=None,
+        mutinfo=None,
     ):
         if text is None:
             text = originalctx.description()
         super(metadataonlyctx, self).__init__(
-            repo, text, user, date, extra, loginfo=loginfo
+            repo, text, user, date, extra, loginfo=loginfo, mutinfo=mutinfo
         )
         self._rev = None
         self._node = None
