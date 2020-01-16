@@ -55,6 +55,18 @@ class DynamicEvent {
   DoubleMap doubles_;
 };
 
+struct ParentMismatch {
+  static constexpr const char* type = "parent_mismatch";
+
+  std::string mercurial_parent;
+  std::string eden_parent;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("mercurial_parent", mercurial_parent);
+    event.addString("eden_parent", eden_parent);
+  }
+};
+
 struct DaemonStart {
   static constexpr const char* type = "daemon_start";
 

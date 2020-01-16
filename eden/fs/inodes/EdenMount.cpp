@@ -949,6 +949,9 @@ Future<Unit> EdenMount::diff(
     }
 
     if (parentInfo->parents.parent1() != commitHash) {
+      // Log this occurrence to Scuba
+      getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
+          commitHash.toString(), parentInfo->parents.parent1().toString()});
       return makeFuture<Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
