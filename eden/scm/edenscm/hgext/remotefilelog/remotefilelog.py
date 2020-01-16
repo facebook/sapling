@@ -487,8 +487,31 @@ class remotefileslog(filelog.fileslog):
             )
             self.makeunionstores()
 
+    def makesharedonlyruststore(self, repo):
+        """Build non-local stores.
+
+        There are handful of cases where we need to force prefetch data
+        that is present in the local store, for this specific case, let's
+        build shared-only stores.
+
+        Do not use it except in the fileserverclient.prefetch method!
+        """
+
+        sharedonlyremotestore = revisionstore.pyremotestore(
+            fileserverclient.getpackclient(repo)
+        )
+        sharedonlycontentstore = revisionstore.contentstore(
+            None, repo.ui._rcfg, sharedonlyremotestore
+        )
+        sharedonlymetadatastore = revisionstore.metadatastore(
+            None, repo.ui._rcfg, sharedonlyremotestore
+        )
+
+        return sharedonlycontentstore, sharedonlymetadatastore
+
     def makeruststore(self, repo):
         remotestore = revisionstore.pyremotestore(fileserverclient.getpackclient(repo))
+
         self.contentstore = revisionstore.contentstore(
             repo.svfs.vfs.base, repo.ui._rcfg, remotestore
         )

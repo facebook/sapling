@@ -672,13 +672,31 @@ class fileserverclient(object):
 
         idstocheck = list(idstocheck)
         if repo.fileslog._ruststore:
+            if not force:
+                contentstore = repo.fileslog.contentstore
+                metadatastore = repo.fileslog.metadatastore
+            else:
+                contentstore, metadatastore = repo.fileslog.makesharedonlyruststore(
+                    repo
+                )
+
             if fetchdata:
-                repo.fileslog.contentstore.prefetch(idstocheck)
+                contentstore.prefetch(idstocheck)
             if fetchhistory:
-                repo.fileslog.metadatastore.prefetch(idstocheck)
+                metadatastore.prefetch(idstocheck)
 
             if batchlfsdownloads and dolfsprefetch:
                 self._lfsprefetch(fileids)
+
+            if force:
+                # Yay, since the shared-only stores and the regular ones aren't
+                # shared, we need to commit data to force the stores to be
+                # rebuilt. Forced prefetch are very rare and thus it is most
+                # likely OK to do this.
+                contentstore = None
+                metadatastore = None
+                repo.commitpending()
+
             return
 
         datastore = self.datastore

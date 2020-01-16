@@ -850,11 +850,20 @@ impl pyremotestore {
 py_class!(class contentstore |py| {
     data store: ContentStore;
 
-    def __new__(_cls, path: &PyBytes, config: config, remote: pyremotestore) -> PyResult<contentstore> {
-        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+    def __new__(_cls, path: Option<&PyBytes>, config: config, remote: pyremotestore) -> PyResult<contentstore> {
         let remotestore = remote.into_inner(py);
+        let config = config.get_cfg(py);
 
-        let contentstore = ContentStoreBuilder::new(&config.get_cfg(py)).local_path(path).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
+        let mut builder = ContentStoreBuilder::new(&config).remotestore(Box::new(remotestore));
+
+        builder = if let Some(path) = path {
+            let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+            builder.local_path(path)
+        } else {
+            builder.no_local_store()
+        };
+
+        let contentstore = builder.build().map_pyerr(py)?;
         contentstore::create_instance(py, contentstore)
     }
 
@@ -902,11 +911,20 @@ py_class!(class contentstore |py| {
 py_class!(class metadatastore |py| {
     data store: MetadataStore;
 
-    def __new__(_cls, path: &PyBytes, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
-        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+    def __new__(_cls, path: Option<&PyBytes>, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
         let remotestore = remote.into_inner(py);
+        let config = config.get_cfg(py);
 
-        let metadatastore = MetadataStoreBuilder::new(&config.get_cfg(py)).local_path(path).remotestore(Box::new(remotestore)).build().map_pyerr(py)?;
+        let mut builder = MetadataStoreBuilder::new(&config).remotestore(Box::new(remotestore));
+
+        builder = if let Some(path) = path {
+            let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+            builder.local_path(path)
+        } else {
+            builder.no_local_store()
+        };
+
+        let metadatastore = builder.build().map_pyerr(py)?;
         metadatastore::create_instance(py, metadatastore)
     }
 
