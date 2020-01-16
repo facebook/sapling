@@ -371,7 +371,10 @@ def gitupdatemeta(ui, repo):
             if gitsha is None:
                 gitsha = None
                 commitdata = clrevision(node)
-                if "convert_revision" in commitdata._rawextra:
+                if (
+                    commitdata._rawextra is not None
+                    and "convert_revision" in commitdata._rawextra
+                ):
                     gitsha = commitdata.extra.get("convert_revision")
 
                     # If there is no git sha, it may be a local commit. Just walk past

@@ -52,3 +52,14 @@ Update git-mapfile for a repo
   1fc117f64bf9ee3ae9b76e00d9cead51bce91e97 82e8585c3e4aa0dc511fc1c38c7382e4c728e58c
   9da56a563fafade1a5b50ae0c01292f91cd4ce34 f008e266042afb83012cda1e2cd65d108a51068f
   ad4fd0de4cb839a7d2d1c2497f8a2c230a2726e9 5b699970cd13b5f95f6af5f32781d80cfa2e813b
+
+# Create a new commit, verify that git-updatemeta does not crash even though it
+# does not have commit extras.
+  $ cd ../hgrepo2
+  $ touch c
+  $ hg ci -Aqm c
+  $ hg git-updatemeta
+  $ cat .hg/git-mapfile | sort
+  1fc117f64bf9ee3ae9b76e00d9cead51bce91e97 82e8585c3e4aa0dc511fc1c38c7382e4c728e58c
+  9da56a563fafade1a5b50ae0c01292f91cd4ce34 f008e266042afb83012cda1e2cd65d108a51068f
+  ad4fd0de4cb839a7d2d1c2497f8a2c230a2726e9 5b699970cd13b5f95f6af5f32781d80cfa2e813b
