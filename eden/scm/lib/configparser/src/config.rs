@@ -157,16 +157,16 @@ impl ConfigSet {
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
     /// `source` is some annotation about who set it, ex. "reporc", "userrc", "--config", etc.
-    pub fn set<T: Into<Bytes>, N: Into<Bytes>>(
+    pub fn set<T: Into<Bytes>, N: Into<Bytes>, V: Into<Bytes>>(
         &mut self,
         section: T,
         name: N,
-        value: Option<&[u8]>,
+        value: Option<V>,
         opts: &Options,
     ) {
         let section = section.into();
         let name = name.into();
-        let value = value.map(|v| Bytes::from(v));
+        let value = value.map(|v| v.into());
         self.set_internal(section, name, value, None, &opts)
     }
 
@@ -525,11 +525,11 @@ pub(crate) mod tests {
     #[test]
     fn test_set() {
         let mut cfg = ConfigSet::new();
-        cfg.set("y", "b", Some(b"1"), &"set1".into());
-        cfg.set("y", "b", Some(b"2"), &"set2".into());
-        cfg.set("y", "a", Some(b"3"), &"set3".into());
-        cfg.set("z", "p", Some(b"4"), &"set4".into());
-        cfg.set("z", "p", None, &"set5".into());
+        cfg.set("y", "b", Some("1"), &"set1".into());
+        cfg.set("y", "b", Some("2"), &"set2".into());
+        cfg.set("y", "a", Some("3"), &"set3".into());
+        cfg.set("z", "p", Some("4"), &"set4".into());
+        cfg.set("z", "p", None::<Bytes>, &"set5".into());
         assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("z")]);
         assert_eq!(cfg.keys("y"), vec![Bytes::from("b"), Bytes::from("a")]);
         assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
@@ -551,7 +551,7 @@ pub(crate) mod tests {
     fn test_clone() {
         let mut cfg = ConfigSet::new();
         assert!(cfg.clone().sections().is_empty());
-        cfg.set("x", "a", Some(b"1"), &"set1".into());
+        cfg.set("x", "a", Some("1"), &"set1".into());
         assert_eq!(cfg.clone().sections(), vec![Bytes::from("x")]);
         assert_eq!(cfg.clone().get("x", "a"), Some("1".into()));
     }

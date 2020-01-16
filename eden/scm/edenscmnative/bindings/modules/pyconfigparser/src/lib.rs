@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, collections::HashMap};
+use std::cell::RefCell;
 
 use cpython::exc::UnicodeDecodeError;
 use cpython::*;
@@ -16,13 +16,14 @@ use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
+use cpython_ext::Bytes;
 use encoding::{local_bytes_to_path, path_to_local_bytes};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<config>(py)?;
-    m.add(py, "parselist", py_fn!(py, parselist(value: PyBytes)))?;
+    m.add(py, "parselist", py_fn!(py, parselist(value: String)))?;
     Ok(m)
 }
 
@@ -41,60 +42,53 @@ py_class!(pub class config |py| {
     def readpath(
         &self,
         path: &PyBytes,
-        source: &PyBytes,
-        sections: Option<Vec<PyBytes>>,
-        remap: Option<Vec<(PyBytes, PyBytes)>>,
-        readonly_items: Option<Vec<(PyBytes, PyBytes)>>
-    ) -> PyResult<Vec<PyBytes>> {
+        source: String,
+        sections: Option<Vec<String>>,
+        remap: Option<Vec<(String, String)>>,
+        readonly_items: Option<Vec<(String, String)>>
+    ) -> PyResult<Vec<Bytes>> {
         let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
         let mut cfg = self.cfg(py).borrow_mut();
 
-        let mut opts = Options::new().source(source.data(py)).process_hgplain();
+        let mut opts = Options::new().source(source).process_hgplain();
         if let Some(sections) = sections {
-            let sections = sections.into_iter().map(|section| section.data(py).to_vec()).collect();
             opts = opts.whitelist_sections(sections);
         }
         if let Some(remap) = remap {
-            let mut map = HashMap::new();
-            for (key, value) in remap {
-                map.insert(key.data(py).to_vec(), value.data(py).to_vec());
-            }
+            let map = remap.into_iter().collect();
             opts = opts.remap_sections(map);
         }
         if let Some(readonly_items) = readonly_items {
-            let items: Vec<(Vec<u8>, Vec<u8>)> = readonly_items.iter()
-                .map(|&(ref section, ref name)| {
-                    (section.data(py).to_vec(), name.data(py).to_vec())
-                }).collect();
-            opts = opts.readonly_items(items);
+            opts = opts.readonly_items(readonly_items);
         }
 
         let errors = cfg.load_path(path, &opts);
-        Ok(errors_to_pybytes_vec(py, errors))
+        Ok(errors_to_bytes_vec(errors))
     }
 
-    def parse(&self, content: &PyBytes, source: &PyBytes) -> PyResult<Vec<PyBytes>> {
+    def parse(&self, content: String, source: String) -> PyResult<Vec<Bytes>> {
         let mut cfg = self.cfg(py).borrow_mut();
-        let opts = source.data(py).into();
-        let errors = cfg.parse(content.data(py), &opts);
-        Ok(errors_to_pybytes_vec(py, errors))
+        let opts = source.into();
+        let errors = cfg.parse(content, &opts);
+        Ok(errors_to_bytes_vec(errors))
     }
 
-    def get(&self, section: &PyBytes, name: &PyBytes) -> PyResult<Option<PyBytes>> {
+    def get(&self, section: String, name: String) -> PyResult<Option<Bytes>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.get(section.data(py), name.data(py)).map(|bytes| PyBytes::new(py, &bytes)))
+
+        Ok(cfg.get(section, name).map(|v| v.to_vec().into()))
     }
 
     def sources(
-        &self, section: &PyBytes, name: &PyBytes
-    ) -> PyResult<Vec<(Option<PyBytes>, Option<(PyBytes, usize, usize, usize)>, PyBytes)>> {
+        &self, section: String, name: String
+    ) -> PyResult<Vec<(Option<Bytes>, Option<(PyBytes, usize, usize, usize)>, Bytes)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
-        let sources = cfg.get_sources(section.data(py), name.data(py));
+        let sources = cfg.get_sources(section, name);
         let mut result = Vec::with_capacity(sources.len());
         for source in sources {
-            let value = source.value().clone().map(|bytes| PyBytes::new(py, &bytes));
+            let value = source.value().as_ref().map(|v| v.to_vec().into());
             let file = source.location().map(|(path, range)| {
                 // Calculate the line number - count "\n" till range.start
                 let file = source.file_content().unwrap();
@@ -109,37 +103,33 @@ py_class!(pub class config |py| {
                 };
                 (pypath, range.start, range.end, line)
             });
-            let source = PyBytes::new(py, source.source());
-            result.push((value, file, source));
+            let source = source.source().clone().to_vec().into();
+            result.push((value.into(), file, source));
         }
         Ok(result)
     }
 
     def set(
-        &self, section: &PyBytes, name: &PyBytes, value: Option<&PyBytes>, source: &PyBytes
+        &self, section: String, name: String, value: Option<String>, source: String
     ) -> PyResult<PyObject> {
         let mut cfg = self.cfg(py).borrow_mut();
-        let opts = source.data(py).into();
-        cfg.set(section.data(py), name.data(py), value.map(|v| v.data(py)), &opts);
+        let opts = source.into();
+        cfg.set(section, name, value, &opts);
         Ok(py.None())
     }
 
-    def sections(&self) -> PyResult<Vec<PyBytes>> {
+    def sections(&self) -> PyResult<Vec<Bytes>> {
         let cfg = self.cfg(py).borrow();
-        let sections: Vec<PyBytes> = cfg.sections()
-            .iter().map(|bytes| PyBytes::new(py, bytes)).collect();
-        Ok(sections)
+        Ok(cfg.sections().iter().map(|s| s.to_vec().into()).collect())
     }
 
-    def names(&self, section: &PyBytes) -> PyResult<Vec<PyBytes>> {
+    def names(&self, section: String) -> PyResult<Vec<Bytes>> {
         let cfg = self.cfg(py).borrow();
-        let keys: Vec<PyBytes> = cfg.keys(section.data(py))
-            .iter().map(|bytes| PyBytes::new(py, bytes)).collect();
-        Ok(keys)
+        Ok(cfg.keys(section).iter().map(|s| s.to_vec().into()).collect())
     }
 
     @staticmethod
-    def load() -> PyResult<(config, Vec<PyBytes>)> {
+    def load() -> PyResult<(config, Vec<Bytes>)> {
         let mut cfg = ConfigSet::new();
         let mut errors = Vec::new();
         // Only load builtin configs if HGRCPATH is not set.
@@ -148,7 +138,7 @@ py_class!(pub class config |py| {
         }
         errors.append(&mut cfg.load_system());
         errors.append(&mut cfg.load_user());
-        let errors = errors_to_pybytes_vec(py, errors);
+        let errors = errors_to_bytes_vec(errors);
         config::create_instance(py, RefCell::new(cfg)).map(|cfg| (cfg, errors))
     }
 });
@@ -159,10 +149,11 @@ impl config {
     }
 }
 
-fn parselist(py: Python, value: PyBytes) -> PyResult<Vec<PyBytes>> {
-    let value = value.data(py);
-    let list = parse_list(value);
-    Ok(list.into_iter().map(|v| PyBytes::new(py, &v)).collect())
+fn parselist(_py: Python, value: String) -> PyResult<Vec<Bytes>> {
+    Ok(parse_list(value)
+        .iter()
+        .map(|v| v.to_vec().into())
+        .collect())
 }
 
 fn encoding_error(py: Python, input: &PyBytes) -> PyErr {
@@ -174,10 +165,10 @@ fn encoding_error(py: Python, input: &PyBytes) -> PyErr {
     PyErr::from_instance(py, err)
 }
 
-fn errors_to_pybytes_vec(py: Python, errors: Vec<configparser::error::Error>) -> Vec<PyBytes> {
+fn errors_to_bytes_vec(errors: Vec<configparser::error::Error>) -> Vec<Bytes> {
     errors
-        .iter()
-        .map(|err| PyBytes::new(py, format!("{}", err).as_bytes()))
+        .into_iter()
+        .map(|err| format!("{}", err).into())
         .collect()
 }
 

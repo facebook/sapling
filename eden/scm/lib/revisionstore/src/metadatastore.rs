@@ -194,13 +194,13 @@ mod tests {
         config.set(
             "remotefilelog",
             "reponame",
-            Some(b"test"),
+            Some("test"),
             &Default::default(),
         );
         config.set(
             "remotefilelog",
             "cachepath",
-            Some(dir.as_ref().to_str().unwrap().as_bytes()),
+            Some(dir.as_ref().to_str().unwrap()),
             &Default::default(),
         );
 

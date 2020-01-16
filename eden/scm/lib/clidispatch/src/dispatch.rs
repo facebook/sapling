@@ -59,7 +59,7 @@ where
         let section = &section_name_pair[..dot_pos];
         let name = &section_name_pair[dot_pos + 1..];
 
-        config.set(section, name, Some(&Bytes::from(value)), &"--config".into());
+        config.set(section, name, Some(Bytes::from(value)), &"--config".into());
     }
 
     Ok(())
