@@ -2029,7 +2029,9 @@ Future<Unit> TreeInode::computeDiff(
       bool entryIgnored = isIgnored;
       auto entryPath = currentPath + scmEntry.getName();
       if (!isIgnored && (inodeEntry->isDirectory() || scmEntry.isTree())) {
-        auto ignoreStatus = ignore->match(entryPath, GitIgnore::TYPE_DIR);
+        auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
+                                                  : GitIgnore::TYPE_FILE;
+        auto ignoreStatus = ignore->match(entryPath, fileType);
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // This is rather unexpected.  We don't expect to find entries in
           // source control using reserved hidden names.

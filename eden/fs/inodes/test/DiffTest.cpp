@@ -1146,6 +1146,42 @@ TEST(DiffTest, ignoreHidden) {
           std::make_pair("a/c/1.txt", ScmFileStatus::MODIFIED)));
 }
 
+// Tests the case in which a tracked directory in source control is replaced by
+// a file locally, and the directory matches an ignore rule. In this case,
+// the file should be recorded as ADDED, since the ignore rule is specifically
+// for directories
+TEST(DiffTest, directoryToFileWithGitIgnore) {
+  DiffTest test({
+      {"a/b.txt", "test\n"},
+      {"a/b/c.txt", "test\n"},
+      {"a/b/d.txt", "test\n"},
+  });
+
+  test.getMount().deleteFile("a/b/c.txt");
+  test.getMount().deleteFile("a/b/d.txt");
+  test.getMount().rmdir("a/b");
+  test.getMount().addFile("a/b", "regular file");
+  test.getMount().addFile(".gitignore", "a/b/");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("a/b/c.txt", ScmFileStatus::REMOVED),
+          std::make_pair("a/b/d.txt", ScmFileStatus::REMOVED),
+          std::make_pair("a/b", ScmFileStatus::ADDED),
+          std::make_pair(".gitignore", ScmFileStatus::ADDED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("a/b/c.txt", ScmFileStatus::REMOVED),
+          std::make_pair("a/b/d.txt", ScmFileStatus::REMOVED),
+          std::make_pair("a/b", ScmFileStatus::ADDED),
+          std::make_pair(".gitignore", ScmFileStatus::ADDED)));
+}
+
 TEST(DiffTest, fileNotReady) {
   TestMount mount;
   auto backingStore = mount.getBackingStore();
