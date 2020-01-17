@@ -28,6 +28,7 @@ define_stats! {
     prefix = "mononoke.walker";
     walk_progress_walked: dynamic_timeseries("{}.progress.{}.walked", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_queued: dynamic_timeseries("{}.progress.{}.queued", (subcommand: &'static str, repo: String); Rate, Sum),
+    walk_progress_errors: dynamic_timeseries("{}.progress.{}.errors", (subcommand: &'static str, repo: String); Rate, Sum),
 }
 
 pub trait ProgressRecorderUnprotected<SS> {
@@ -83,6 +84,7 @@ where
 struct ProgressStateReporting {
     start_time: Instant,
     last_node_count: u64,
+    last_error_count: u64,
     last_reported: u64,
     last_update: Instant,
 }
@@ -139,6 +141,7 @@ where
             // Updated by report_*
             reporting_stats: ProgressStateReporting {
                 start_time: now,
+                last_error_count: 0,
                 last_node_count: 0,
                 last_reported: 0,
                 last_update: now,
@@ -148,14 +151,15 @@ where
 }
 impl ProgressStateCountByType<StepStats> {
     fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
-        let new_node_count = &self
+        let (new_node_count, new_error_count) = &self
             .work_stats
             .stats_by_type
             .values()
-            .map(|(_, ss)| ss.num_expanded_new as u64)
-            .sum();
+            .map(|(_, ss)| (ss.num_expanded_new as u64, ss.error_count as u64))
+            .fold((0, 0), |acc, v| (acc.0 + v.0, acc.1 + v.1));
         let delta_progress: u64 =
             self.work_stats.total_progress - self.reporting_stats.last_reported;
+        let delta_error_count: u64 = new_error_count - self.reporting_stats.last_error_count;
         let delta_node_count: u64 = new_node_count - self.reporting_stats.last_node_count;
         let detail = &self
             .params
@@ -196,20 +200,23 @@ impl ProgressStateCountByType<StepStats> {
 
         info!(
             self.params.logger,
-            "Walked/s,Children/s,Walked,Children,Time; Delta {:06}/s,{:06}/s,{},{},{}s; Run {:06}/s,{:06}/s,{},{},{}s; Type:Walked,Checks,Children {}",
+            "Walked/s,Children/s,Walked,Errors,Children,Time; Delta {:06}/s,{:06}/s,{},{},{},{}s; Run {:06}/s,{:06}/s,{},{},{},{}s; Type:Walked,Checks,Children {}",
             walked_per_s,
             queued_per_s,
             delta_progress,
+            delta_error_count,
             delta_node_count,
             delta_s,
             avg_walked_per_s,
             avg_queued_per_s,
             self.work_stats.total_progress,
+            new_error_count,
             new_node_count,
             total_time.as_secs(),
             detail,
         );
         self.reporting_stats.last_reported = self.work_stats.total_progress;
+        self.reporting_stats.last_error_count = *new_error_count;
         self.reporting_stats.last_node_count = *new_node_count;
 
         STATS::walk_progress_walked.add_value(
@@ -221,6 +228,13 @@ impl ProgressStateCountByType<StepStats> {
         );
         STATS::walk_progress_queued.add_value(
             delta_node_count as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+            ),
+        );
+        STATS::walk_progress_errors.add_value(
+            delta_error_count as i64,
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),

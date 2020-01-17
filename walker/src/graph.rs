@@ -211,6 +211,7 @@ pub enum FileContentData {
 /// The data from the walk - this is the "full" form but not necessarily fully loaded.
 /// e.g. file content streams are passed to you to read, they aren't pre-loaded to bytes.
 pub enum NodeData {
+    ErrorAsData(Node),
     Root,
     // Bonsai
     Bookmark(ChangesetId),

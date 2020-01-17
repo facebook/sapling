@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::graph::{EdgeType, FileContentData, Node, NodeData};
+use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType};
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -27,7 +27,8 @@ use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use phases::{Phase, SqlPhases};
-use std::{iter::IntoIterator, sync::Arc};
+use slog::warn;
+use std::{collections::HashSet, iter::IntoIterator, sync::Arc};
 use thiserror::Error;
 
 // Holds type of edge and target Node that we want to load in next step(s)
@@ -471,6 +472,8 @@ pub fn walk_exact<V, VOut>(
     walk_roots: Vec<OutgoingEdge>,
     visitor: V,
     scheduled_max: usize,
+    error_as_data_node_types: HashSet<NodeType>,
+    error_as_data_edge_types: HashSet<EdgeType>,
 ) -> BoxStream<VOut, Error>
 where
     V: 'static + Clone + WalkVisitor<VOut> + Send,
@@ -486,8 +489,9 @@ where
         // Each step returns the walk result, and next steps
         move |walk_item| {
             cloned!(ctx);
-            let edge_label = walk_item.label;
+            let logger = ctx.logger().clone();
             let node = walk_item.target.clone();
+            let edge_label = walk_item.label;
             let next = match node.clone() {
                 Node::Root => {
                     future::err(format_err!("Not expecting Roots to be generated")).boxify()
@@ -520,6 +524,35 @@ where
                 }
                 Node::AliasContentMapping(alias) => alias_content_mapping_step(ctx, &repo, alias),
             }
+            .then({
+                // Error as data logic
+                cloned!(
+                    logger,
+                    error_as_data_edge_types,
+                    error_as_data_node_types,
+                    walk_item,
+                );
+                move |r| match r {
+                    Ok(s) => Ok(s),
+                    Err(e) => {
+                        if error_as_data_node_types.contains(&walk_item.target.get_type()) {
+                            if error_as_data_edge_types.is_empty()
+                                || error_as_data_edge_types.contains(&walk_item.label)
+                            {
+                                warn!(
+                                    logger,
+                                    "Could not step to {:?}, due to: {:?}", &walk_item, e
+                                );
+                                Ok(StepOutput(NodeData::ErrorAsData(walk_item.target), vec![]))
+                            } else {
+                                Err(e)
+                            }
+                        } else {
+                            Err(e)
+                        }
+                    }
+                }
+            })
             .chain_err(ErrorKind::NotTraversable(walk_item))
             .from_err()
             .and_then({

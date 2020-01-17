@@ -47,6 +47,8 @@ where
                     walk_params.walk_roots.clone(),
                     walk_state,
                     walk_params.scheduled_max,
+                    walk_params.error_as_data_node_types.clone(),
+                    walk_params.error_as_data_edge_types.clone(),
                 );
                 make_sink(walk_output)
             }

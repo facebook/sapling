@@ -26,7 +26,7 @@ use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
 use phases::SqlPhases;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::{info, Logger};
+use slog::{info, warn, Logger};
 use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc, time::Duration};
 
 pub struct RepoWalkDatasources {
@@ -44,6 +44,8 @@ pub struct RepoWalkParams {
     pub tail_secs: Option<u64>,
     pub quiet: bool,
     pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats>>,
+    pub error_as_data_node_types: HashSet<NodeType>,
+    pub error_as_data_edge_types: HashSet<EdgeType>,
 }
 
 pub const PROGRESS_SAMPLE_RATE: u64 = 1000;
@@ -59,6 +61,8 @@ const QUIET_ARG: &'static str = "quiet";
 const ENABLE_REDACTION_ARG: &'static str = "enable-redaction";
 const SCHEDULED_MAX_ARG: &'static str = "scheduled-max";
 const TAIL_INTERVAL_ARG: &'static str = "tail-interval";
+const ERROR_AS_DATA_NODE_TYPE_ARG: &'static str = "error-as-data-node-type";
+const ERROR_AS_DATA_EDGE_TYPE_ARG: &'static str = "error-as-data-edge-type";
 const EXCLUDE_NODE_TYPE_ARG: &'static str = "exclude-node-type";
 const INCLUDE_NODE_TYPE_ARG: &'static str = "include-node-type";
 const EXCLUDE_EDGE_TYPE_ARG: &'static str = "exclude-edge-type";
@@ -401,6 +405,26 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Bookmark(s) to start traversal from"),
         )
         .arg(
+            Arg::with_name(ERROR_AS_DATA_NODE_TYPE_ARG)
+                .long(ERROR_AS_DATA_NODE_TYPE_ARG)
+                .short("e")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Use this to continue walking even walker found an error.  Types of nodes to allow the walker to convert an ErrorKind::NotTraversable to a NodeData::ErrorAsData(NotTraversable)"),
+        )
+        .arg(
+            Arg::with_name(ERROR_AS_DATA_EDGE_TYPE_ARG)
+                .long(ERROR_AS_DATA_EDGE_TYPE_ARG)
+                .short("E")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Types of edges to allow the walker to convert an ErrorKind::NotTraversable to a NodeData::ErrorAsData(NotTraversable). If empty then allow all edges for the nodes specified via error-as-data-node-type"),
+        )
+        .arg(
             Arg::with_name(INNER_BLOBSTORE_ID_ARG)
                 .long(INNER_BLOBSTORE_ID_ARG)
                 .takes_value(true)
@@ -425,14 +449,17 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
         );
 }
 
-fn parse_node_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<NodeType>, Error> {
-    let mut include_node_types: HashSet<NodeType> = match sub_m.values_of(INCLUDE_NODE_TYPE_ARG) {
-        None => Ok(HashSet::from_iter(
-            DEFAULT_INCLUDE_NODE_TYPES.iter().cloned(),
-        )),
+fn parse_node_types(
+    sub_m: &ArgMatches<'_>,
+    include_arg_name: &str,
+    exclude_arg_name: &str,
+    default: &[NodeType],
+) -> Result<HashSet<NodeType>, Error> {
+    let mut include_node_types: HashSet<NodeType> = match sub_m.values_of(include_arg_name) {
+        None => Ok(HashSet::from_iter(default.iter().cloned())),
         Some(values) => values.map(NodeType::from_str).collect(),
     }?;
-    let exclude_node_types: HashSet<NodeType> = match sub_m.values_of(EXCLUDE_NODE_TYPE_ARG) {
+    let exclude_node_types: HashSet<NodeType> = match sub_m.values_of(exclude_arg_name) {
         None => Ok(HashSet::new()),
         Some(values) => values.map(NodeType::from_str).collect(),
     }?;
@@ -551,7 +578,12 @@ pub fn setup_common(
         DEEP_INCLUDE_EDGE_TYPES,
     )?;
 
-    let include_node_types = parse_node_types(sub_m)?;
+    let include_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_NODE_TYPE_ARG,
+        EXCLUDE_NODE_TYPE_ARG,
+        DEFAULT_INCLUDE_NODE_TYPES,
+    )?;
 
     let bookmarks: Result<Vec<_>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
         None => Err(format_err!("No bookmark passed")),
@@ -582,8 +614,35 @@ pub fn setup_common(
         sort_by_string(&include_node_types)
     );
 
-    let myrouter_port = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
+
+    let error_as_data_node_types = parse_node_types(
+        sub_m,
+        ERROR_AS_DATA_NODE_TYPE_ARG,
+        EXCLUDE_NODE_TYPE_ARG,
+        &[],
+    )?;
+    let error_as_data_edge_types = parse_edge_types(
+        sub_m,
+        ERROR_AS_DATA_EDGE_TYPE_ARG,
+        EXCLUDE_EDGE_TYPE_ARG,
+        &[],
+    )?;
+    if !error_as_data_node_types.is_empty() || !error_as_data_edge_types.is_empty() {
+        if !readonly_storage.0 {
+            Err(format_err!(
+                "Error as data could mean internal state is invalid, run with --readonly-storage to ensure no risk of persisting it"
+            ))?
+        }
+        warn!(
+            logger,
+            "Error as data enabled, walk results may not be complete. Errors as data enabled for node types {:?} edge types {:?}",
+            sort_by_string(&error_as_data_node_types),
+            sort_by_string(&error_as_data_edge_types)
+        );
+    }
+
+    let myrouter_port = args::parse_mysql_options(&matches);
 
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let storage_config = match storage_id {
@@ -676,6 +735,8 @@ pub fn setup_common(
             tail_secs,
             quiet,
             progress_state,
+            error_as_data_node_types,
+            error_as_data_edge_types,
         },
     ))
 }

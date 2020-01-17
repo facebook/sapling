@@ -16,6 +16,7 @@ use std::{cmp, collections::HashSet, hash::Hash, ops::Add, sync::Arc};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
+    pub error_count: usize,
     pub num_direct: usize,
     pub num_direct_new: usize,
     pub num_expanded_new: usize,
@@ -26,6 +27,7 @@ impl Add<StepStats> for StepStats {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self {
+            error_count: self.error_count + other.error_count,
             num_direct: self.num_direct + other.num_direct,
             num_direct_new: self.num_direct_new + other.num_direct_new,
             num_expanded_new: self.num_expanded_new + other.num_expanded_new,
@@ -164,19 +166,20 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>)> for WalkStateCHash
         // Stats
         let num_expanded_new = outgoing.len();
         let node = source.node;
-        let node_data = source.data;
         let via = source.via;
-        let stats = via.map(|_via| {
-            let visited_of_type = self.get_visit_count(&node.get_type());
-            let stats = StepStats {
-                num_direct,
-                num_direct_new,
-                num_expanded_new,
-                visited_of_type,
-            };
-            stats
+        let (error_count, node_data) = match source.data {
+            NodeData::ErrorAsData(_key) => (1, None),
+            d => (0, Some(d)),
+        };
+        let stats = via.map(|_via| StepStats {
+            error_count,
+            num_direct,
+            num_direct_new,
+            num_expanded_new,
+            visited_of_type: self.get_visit_count(&node.get_type()),
         });
-        ((node, Some(node_data), stats), outgoing)
+
+        ((node, node_data, stats), outgoing)
     }
 }
 
