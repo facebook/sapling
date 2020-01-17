@@ -299,7 +299,10 @@ blame
   [
     {
       "author": "test",
-      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "commit": {
+        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
+      },
       "contents": "b",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 1,
@@ -307,7 +310,10 @@ blame
     },
     {
       "author": "test",
-      "commit": "c29e0e474e30ae40ed639fa6292797a7502bc590",
+      "commit": {
+        "bonsai": "d5ded5e738f4fc36b03c3e09db9cdd9259d167352a03fb6130f5ee138b52972f",
+        "hg": "c29e0e474e30ae40ed639fa6292797a7502bc590"
+      },
       "contents": "c",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 2,
@@ -315,7 +321,10 @@ blame
     },
     {
       "author": "test",
-      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "commit": {
+        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
+      },
       "contents": "d",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 3,
@@ -323,7 +332,10 @@ blame
     },
     {
       "author": "test",
-      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "commit": {
+        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
+      },
       "contents": "e",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 4,
@@ -331,7 +343,10 @@ blame
     },
     {
       "author": "test",
-      "commit": "323afe77a1b1e632e54e8d5a683ba2cc8511f299",
+      "commit": {
+        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
+      },
       "contents": "f",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 5,
