@@ -21,7 +21,8 @@ use futures_ext::FutureExt;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use scuba_ext::ScubaSampleBuilder;
 pub use session_id::SessionId;
-use slog::{debug, o, warn, Logger};
+use slog::{debug, o, warn, Drain, Level, Logger};
+use slog_glog_fmt::default_drain;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
@@ -350,21 +351,11 @@ impl CoreContext {
     }
 
     pub fn test_mock(fb: FacebookInit) -> Self {
-        let session = SessionContainer::new(
-            fb,
-            generate_session_id(),
-            TraceContext::default(),
-            None,
-            None,
-            None,
-            SshEnvVars::default(),
-            None,
-        );
+        let session = SessionContainer::new_with_defaults(fb);
 
-        session.new_context(
-            Logger::root(::slog::Discard, o!()),
-            ScubaSampleBuilder::with_discard(),
-        )
+        let drain = default_drain().filter_level(Level::Debug).ignore_res();
+        let logger = Logger::root(drain, o![]);
+        session.new_context(logger, ScubaSampleBuilder::with_discard())
     }
 
     pub fn clone_and_reset(&self) -> Self {

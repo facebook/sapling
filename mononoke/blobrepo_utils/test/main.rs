@@ -19,9 +19,6 @@ mod test {
 
                 use fbinit::FacebookInit;
                 use futures::{Future, Stream};
-                use slog::{Drain, Level, Logger};
-
-                use slog_glog_fmt::default_drain as glog_drain;
 
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
                 use context::CoreContext;
@@ -32,15 +29,13 @@ mod test {
                 fn test(fb: FacebookInit) {
                     async_unit::tokio_unit_test(move || {
                         let ctx = CoreContext::test_mock(fb);
-                        let drain = glog_drain().filter_level(Level::Debug).fuse();
-                        let logger = Logger::root(drain, slog::o![]);
 
                         let repo = $repo::getrepo(fb);
                         let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
 
                         let verify = BonsaiMFVerify {
                             ctx: ctx.clone(),
-                            logger,
+                            logger: ctx.logger().clone(),
                             repo,
                             follow_limit: 1024,
                             ignores: HashSet::new(),
