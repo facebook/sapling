@@ -672,6 +672,63 @@ where
         }
     }
 
+    /// Rewrite a commit and creates in target repo if parents are already created.
+    /// This is marked as unsafe since it might lead to repo corruption if used incorrectly.
+    /// At the moment it can be used to import a merge commit from a new repo:
+    ///     source repo:
+    ///
+    ///     O  <- master (common bookmark). Points to a merge commit that imports a new repo
+    ///     | \
+    ///     O   \
+    ///          O  <- merge commit in the new repo we are trying to merge into master.
+    ///         /  \   naive_sync_commit can be used to sync this commit
+    pub async fn unsafe_naive_sync_commit(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let (source_repo, target_repo, _) = self.get_source_target_mover();
+        let source_cs = source_repo
+            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+            .compat()
+            .await?;
+
+        match remap_parents_and_rewrite_commit(
+            ctx.clone(),
+            source_cs.clone().into_mut(),
+            self,
+            source_repo.clone(),
+        )
+        .await?
+        {
+            None => {
+                self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
+                    .await?;
+                Ok(None)
+            }
+            Some(rewritten) => {
+                // Sync commit
+                let frozen = rewritten.freeze()?;
+                let frozen_cs_id = frozen.get_changeset_id();
+                upload_commits(
+                    ctx.clone(),
+                    vec![frozen],
+                    source_repo.clone(),
+                    target_repo.clone(),
+                )
+                .await?;
+
+                update_mapping(
+                    ctx.clone(),
+                    hashmap! { source_cs_id => frozen_cs_id },
+                    &self,
+                )
+                .await?;
+                Ok(Some(frozen_cs_id))
+            }
+        }
+    }
+
     pub fn sync_commit_pushrebase_compat(
         self,
         ctx: CoreContext,
