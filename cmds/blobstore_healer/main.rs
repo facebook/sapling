@@ -17,9 +17,12 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
 use cloned::cloned;
-use cmdlib::{args, helpers::block_execute};
+use cmdlib::{
+    args::{self, get_scuba_sample_builder},
+    helpers::block_execute,
+};
 use configerator::ConfigeratorAPI;
-use context::CoreContext;
+use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
@@ -47,11 +50,10 @@ const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
 
 fn maybe_schedule_healer_for_storage(
-    fb: FacebookInit,
+    ctx: CoreContext,
     dry_run: bool,
     drain_only: bool,
     blobstore_sync_queue_limit: usize,
-    logger: Logger,
     storage_config: StorageConfig,
     myrouter_port: u16,
     replication_lag_db_regions: Vec<String>,
@@ -71,7 +73,7 @@ fn maybe_schedule_healer_for_storage(
         for (id, args) in blobstores_args {
             match args {
                 BlobConfig::Manifold { bucket, prefix } => {
-                    let blobstore = ThriftManifoldBlob::new(fb, bucket)
+                    let blobstore = ThriftManifoldBlob::new(ctx.fb, bucket)
                         .chain_err("While opening ThriftManifoldBlob")?;
                     let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", prefix));
                     let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
@@ -82,7 +84,7 @@ fn maybe_schedule_healer_for_storage(
                     shard_num,
                 } => {
                     let blobstore = Sqlblob::with_myrouter(
-                        fb,
+                        ctx.fb,
                         shard_map,
                         myrouter_port,
                         MysqlOptions::default().myrouter_read_service_type(),
@@ -102,7 +104,7 @@ fn maybe_schedule_healer_for_storage(
             blobstores
                 .into_iter()
                 .map(|(id, blobstore)| {
-                    let logger = logger.new(o!("blobstore" => format!("{:?}", id)));
+                    let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
                     let blobstore = blobstore
                         .map(move |blobstore| -> Arc<dyn Blobstore> {
                             Arc::new(DummyBlobstore::new(blobstore, logger))
@@ -113,6 +115,7 @@ fn maybe_schedule_healer_for_storage(
                 .collect()
         }
     };
+
     let blobstores = join_all(
         blobstores
             .into_iter()
@@ -131,7 +134,7 @@ fn maybe_schedule_healer_for_storage(
         if !dry_run {
             Arc::new(sync_queue)
         } else {
-            let logger = logger.new(o!("sync_queue" => ""));
+            let logger = ctx.logger().new(o!("sync_queue" => ""));
             Arc::new(DummyBlobstoreSyncQueue::new(sync_queue, logger))
         }
     };
@@ -152,7 +155,6 @@ fn maybe_schedule_healer_for_storage(
     let heal = blobstores.and_then(
         move |blobstores: HashMap<_, Arc<dyn Blobstore + 'static>>| {
             let repo_healer = Healer::new(
-                logger.clone(),
                 blobstore_sync_queue_limit,
                 sync_queue,
                 Arc::new(blobstores),
@@ -160,7 +162,7 @@ fn maybe_schedule_healer_for_storage(
                 drain_only,
             );
 
-            schedule_everlasting_healing(fb, logger, repo_healer, replication_lag_db_conns)
+            schedule_everlasting_healing(ctx, repo_healer, replication_lag_db_conns)
         },
     );
     Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
@@ -169,29 +171,26 @@ fn maybe_schedule_healer_for_storage(
 }
 
 fn schedule_everlasting_healing(
-    fb: FacebookInit,
-    logger: Logger,
+    ctx: CoreContext,
     repo_healer: Healer,
     replication_lag_db_conns: Vec<(String, Connection)>,
 ) -> BoxFuture<(), Error> {
     let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
 
     let fut = loop_fn((), move |()| {
-        let ctx = CoreContext::new_with_logger(fb, logger.clone());
+        let max_replication_lag_fn = max_replication_lag(replication_lag_db_conns.clone());
 
-        cloned!(logger, replication_lag_db_conns);
-        let max_replication_lag_fn = max_replication_lag(replication_lag_db_conns);
-
-        repo_healer
-            .heal(ctx)
-            .and_then(move |last_batch_full_sized| {
+        repo_healer.heal(ctx.clone()).and_then({
+            let logger = ctx.logger().clone();
+            move |last_batch_full_sized| {
                 ensure_small_db_replication_lag(
                     logger,
                     max_replication_lag_fn,
                     last_batch_full_sized,
                 )
                 .map(|_lag| Loop::Continue(()))
-            })
+            }
+        })
     });
 
     spawn_future(fut).boxify()
@@ -326,6 +325,7 @@ where
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app = args::MononokeApp::new(app_name)
+        .with_scuba_logging_args()
         .build()
         .version("0.0.0")
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
@@ -337,7 +337,7 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
             --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
         "#,
-    );
+        );
     args::add_fb303_args(app)
 }
 
@@ -372,13 +372,16 @@ fn main(fb: FacebookInit) -> Result<()> {
     let regions: Vec<String> = serde_json::from_str(&regions)?;
     info!(logger, "Monitoring regions: {:?}", regions);
 
+    let scuba = get_scuba_sample_builder(fb, &matches)?;
+
+    let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
+
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
-            fb,
+            ctx,
             dry_run,
             drain_only,
             blobstore_sync_queue_limit,
-            logger.clone(),
             storage_config,
             myrouter_port,
             regions,

@@ -19,7 +19,8 @@ use itertools::{Either, Itertools};
 use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
-use slog::{info, warn, Logger};
+use scuba_ext::ScubaSampleBuilderExt;
+use slog::{info, warn};
 use std::collections::{HashMap, HashSet};
 use std::iter::Sum;
 use std::ops::Add;
@@ -31,7 +32,6 @@ lazy_static! {
 }
 
 pub struct Healer {
-    logger: Logger,
     blobstore_sync_queue_limit: usize,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
@@ -41,7 +41,6 @@ pub struct Healer {
 
 impl Healer {
     pub fn new(
-        logger: Logger,
         blobstore_sync_queue_limit: usize,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
@@ -49,7 +48,6 @@ impl Healer {
         drain_only: bool,
     ) -> Self {
         Self {
-            logger,
             blobstore_sync_queue_limit,
             sync_queue,
             blobstores,
@@ -62,7 +60,6 @@ impl Healer {
     /// by ENTRY_HEALING_MIN_AGE) up to `blobstore_sync_queue_limit` at once.
     pub fn heal(&self, ctx: CoreContext) -> impl Future<Item = bool, Error = Error> {
         cloned!(
-            self.logger,
             self.blobstore_sync_queue_limit,
             self.sync_queue,
             self.blobstores,
@@ -80,6 +77,16 @@ impl Healer {
                 blobstore_sync_queue_limit,
             )
             .and_then(move |queue_entries: Vec<BlobstoreSyncQueueEntry>| {
+                let entries = queue_entries
+                    .iter()
+                    .map(|e| format!("{:?}", e))
+                    .collect::<Vec<_>>();
+
+                ctx.scuba()
+                    .clone()
+                    .add("entries", entries)
+                    .log_with_msg("Received Entries", None);
+
                 let healing_futures: Vec<_> = queue_entries
                     .into_iter()
                     .group_by(|entry| entry.blobstore_key.clone())
@@ -119,14 +126,15 @@ impl Healer {
                 let last_batch_size = healing_futures.len();
 
                 if last_batch_size == 0 {
-                    info!(logger, "All caught up, nothing to do");
+                    info!(ctx.logger(), "All caught up, nothing to do");
                     return futures::future::ok(false).left_future();
                 }
 
                 info!(
-                    logger,
+                    ctx.logger(),
                     "Found {} blobs to be healed... Doing it", last_batch_size
                 );
+
                 futures::stream::futures_unordered(healing_futures)
                     .collect()
                     .and_then(
@@ -135,7 +143,7 @@ impl Healer {
                                 heal_res.into_iter().unzip();
                             let summary_stats: HealStats = chunk_stats.into_iter().sum();
                             info!(
-                                logger,
+                                ctx.logger(),
                                 "For {} blobs did {:?}",
                                 processed_entries.len(),
                                 summary_stats
