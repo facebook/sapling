@@ -22,3 +22,11 @@ where we need to shore things up are:
 
 The current goal is to get Mononoke working on Linux. Other Unix-like OSes may
 be supported in the future
+
+## Contributing
+
+See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
+
+## License
+Mononoke is GNU General Public License licensed, as found in the
+[LICENSE](LICENSE) file.
