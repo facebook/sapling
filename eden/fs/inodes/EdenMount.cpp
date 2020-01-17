@@ -1122,7 +1122,7 @@ folly::Future<folly::File> EdenMount::fuseMount() {
                               XLOG(ERR)
                                   << "fuseMount was cancelled, but rollback (fuseUnmount) failed: "
                                   << unmountError.what();
-                              throw unmountError;
+                              throw std::move(unmountError);
                             })
                         .thenValue([mountPath, mountPromise](folly::Unit&&) {
                           auto error = FuseDeviceUnmountedDuringInitialization{
