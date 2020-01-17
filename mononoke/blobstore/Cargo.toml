@@ -1,0 +1,11 @@
+[package]
+name = "blobstore"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+edition = "2018"
+
+[dependencies]
+futures = "0.1.17"
+thiserror = "1.0.5"
+tokio-core = "0.1.17"

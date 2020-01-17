@@ -1,0 +1,21 @@
+[package]
+name = "hgcli"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+edition = "2018"
+
+[dependencies]
+bytes = "0.4.5"
+clap = "2.27.1"
+error-chain = "0.11.0"
+futures = "0.1.17"
+mio = "0.6.11"
+nix = "0.9.0"
+tokio-core = "0.1.10"
+tokio-io = "0.1.4"
+tokio-proto = "0.1.1"
+tokio-service = "0.1.0"
+tokio-uds = "0.1.7"
+
+futures_ext = { path = "../futures_ext" }

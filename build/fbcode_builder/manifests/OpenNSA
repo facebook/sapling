@@ -1,0 +1,18 @@
+[manifest]
+name = OpenNSA
+
+[git]
+repo_url = https://github.com/Broadcom-Network-Switching-Software/OpenNSA.git
+
+[build.os=linux]
+builder = OpenNSA
+
+[build.not(os=linux)]
+builder = nop
+
+[dependencies]
+git-lfs
+
+[install.files]
+lib/x86-64 = lib
+include = include

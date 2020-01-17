@@ -1,8 +1,0 @@
-{
-  "rustc": "$BUCKROOT/third-party-buck/platform007/build/rust/bin/rustc",
-  "cargo": "$BUCKROOT/third-party-buck/platform007/build/rust/bin/cargo",
-  "rls": "$BUCKROOT/common/rust/tools/common/rls_wrapper.sh",
-  "rustfmt": "$BUCKROOT/common/rust/tools/common/rustfmt_wrapper.sh",
-  "_0": "Following empty string will force rls to run cargo since mononoke is using RLS from https://fburl.com/autocargo",
-  "build_command": ""
-}

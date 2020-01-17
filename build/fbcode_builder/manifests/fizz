@@ -1,0 +1,24 @@
+[manifest]
+name = fizz
+fbsource_path = fbcode/fizz
+shipit_project = fizz
+shipit_fbcode_builder = true
+
+[git]
+repo_url = https://github.com/facebookincubator/fizz.git
+
+[build]
+builder = cmake
+subdir = fizz
+
+[cmake.defines]
+BUILD_EXAMPLES = OFF
+BUILD_TESTS = OFF
+
+[dependencies]
+folly
+libsodium
+
+[shipit.pathmap]
+fbcode/fizz/public_tld = .
+fbcode/fizz = fizz

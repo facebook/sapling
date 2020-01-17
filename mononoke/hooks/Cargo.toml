@@ -1,0 +1,16 @@
+[package]
+name = "hooks"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+edition = "2018"
+
+[dependencies]
+ascii = "0.8.6"
+error-chain = "0.11.0"
+futures = "0.1.17"
+hlua = "0.4.1"
+maplit = "1.0.0"
+thiserror = "1.0.5"
+
+blobrepo = { path = "../blobrepo" }

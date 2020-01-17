@@ -1,0 +1,21 @@
+[package]
+name = "mercurial"
+version = "0.0.1"
+authors = ["Facebook"]
+license = "GPLv2+"
+edition = "2018"
+
+[dependencies]
+error-chain = "0.11.0"
+futures = "0.1.17"
+itertools = "0.7.2"
+lz4 = "1.22.0"
+memmap = "0.6.1"
+nom = { version="3.2.1", features=["verbose-errors"] }
+thiserror = "1.0.5"
+time = "0.1.38"
+
+bookmarks = { path = "../bookmarks" }
+futures_ext = { path = "../futures_ext" }
+mercurial_types = { path = "../mercurial_types" }
+storage-types = { path = "../storage/types" }

@@ -1,0 +1,44 @@
+[manifest]
+name = boost
+
+[download.not(os=windows)]
+url = https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
+sha256 = 8f32d4617390d1c2d16f26a27ab60d97807b35440d45891fa340fc2648b04406
+
+[download.os=windows]
+url = https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.zip
+sha256 = d074bcbcc0501c4917b965fc890e303ee70d8b01ff5712bae4a6c54f2b6b4e52
+
+[build]
+builder = boost
+
+[b2.args]
+--with-atomic
+--with-chrono
+--with-container
+--with-context
+--with-contract
+--with-coroutine
+--with-date_time
+--with-exception
+--with-fiber
+--with-filesystem
+--with-graph
+--with-graph_parallel
+--with-iostreams
+--with-locale
+--with-log
+--with-math
+--with-mpi
+--with-program_options
+--with-python
+--with-random
+--with-regex
+--with-serialization
+--with-stacktrace
+--with-system
+--with-test
+--with-thread
+--with-timer
+--with-type_erasure
+--with-wave
