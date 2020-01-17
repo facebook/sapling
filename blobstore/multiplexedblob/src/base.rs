@@ -33,12 +33,38 @@ use tokio::timer::timeout::Error as TimeoutError;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
-const SAMPLE_RATE: i32 = 100;
-pub const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / (SAMPLE_RATE as f32));
 
 type BlobstoresWithEntry = HashSet<BlobstoreId>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
+
+#[derive(Copy, Clone)]
+enum Sampling {
+    Log(i32),
+    DoNotLog,
+}
+
+impl Sampling {
+    fn is_logged(&self) -> bool {
+        match self {
+            Self::Log(_) => true,
+            Self::DoNotLog => false,
+        }
+    }
+
+    fn roll() -> Self {
+        const SAMPLE_RATE: i32 = 100;
+        const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / (SAMPLE_RATE as f32));
+
+        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
+
+        if should_log {
+            Self::Log(SAMPLE_RATE)
+        } else {
+            Self::DoNotLog
+        }
+    }
+}
 
 #[derive(Error, Debug, Clone)]
 pub enum ErrorKind {
@@ -81,7 +107,6 @@ impl MultiplexedBlobstoreBase {
         mut scuba: ScubaSampleBuilder,
     ) -> Self {
         scuba.add_common_server_data();
-        scuba.add("sample_rate", SAMPLE_RATE);
 
         Self {
             blobstores: blobstores.into(),
@@ -95,8 +120,17 @@ impl MultiplexedBlobstoreBase {
         ctx: &CoreContext,
         key: &String,
         operation: &'static str,
-        should_log: bool,
+        sampling: Sampling,
     ) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreBytes>), (BlobstoreId, Error)>> {
+        let scuba = match sampling {
+            Sampling::Log(sample_rate) => {
+                let mut scuba = self.scuba.clone();
+                scuba.add("sample_rate", sample_rate);
+                Some(scuba)
+            }
+            Sampling::DoNotLog => None,
+        };
+
         self.blobstores
             .iter()
             .map(|&(blobstore_id, ref blobstore)| {
@@ -112,42 +146,41 @@ impl MultiplexedBlobstoreBase {
                         move |error| (blobstore_id, remap_timeout_error(error))
                     })
                     .timed({
-                        cloned!(key);
-                        {
-                            let session = ctx.session_id().clone();
-                            cloned!(mut self.scuba);
-                            move |stats, result| {
-                                if !should_log {
+                        cloned!(key, scuba);
+                        let session = ctx.session_id().clone();
+                        move |stats, result| {
+                            let mut scuba = match scuba {
+                                Some(scuba) => scuba,
+                                None => {
                                     return future::ok(());
                                 }
+                            };
 
-                                scuba
-                                    .add("key", key.clone())
-                                    .add("operation", operation)
-                                    .add("blobstore_id", blobstore_id)
-                                    .add(
-                                        "completion_time",
-                                        stats.completion_time.as_micros_unchecked(),
-                                    );
+                            scuba
+                                .add("key", key.clone())
+                                .add("operation", operation)
+                                .add("blobstore_id", blobstore_id)
+                                .add(
+                                    "completion_time",
+                                    stats.completion_time.as_micros_unchecked(),
+                                );
 
-                                // log session id only for slow requests
-                                if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                                    scuba.add("session", session.to_string());
-                                }
-
-                                match result {
-                                    Ok((_, Some(data))) => {
-                                        scuba.add("size", data.len());
-                                    }
-                                    Err((_, error)) => {
-                                        scuba.add("error", error.to_string());
-                                    }
-                                    Ok((_, None)) => {}
-                                }
-                                scuba.log();
-
-                                future::ok(())
+                            // log session id only for slow requests
+                            if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                                scuba.add("session", session.to_string());
                             }
+
+                            match result {
+                                Ok((_, Some(data))) => {
+                                    scuba.add("size", data.len());
+                                }
+                                Err((_, error)) => {
+                                    scuba.add("error", error.to_string());
+                                }
+                                Ok((_, None)) => {}
+                            }
+                            scuba.log();
+                            future::ok(())
                         }
                     })
             })
@@ -159,12 +192,11 @@ impl MultiplexedBlobstoreBase {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, ErrorKind> {
-        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-
         let requests = self
-            .get_from_all(&ctx, &key, "scrub_get", should_log)
+            .get_from_all(&ctx, &key, "scrub_get", Sampling::roll())
             .into_iter()
             .map(|f| f.then(|r| Ok(r)));
+
         future::join_all(requests)
             .and_then(|results| {
                 let (successes, errors): (HashMap<_, _>, HashMap<_, _>) =
@@ -223,7 +255,6 @@ fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
 pub fn inner_put(
     ctx: CoreContext,
     mut scuba: ScubaSampleBuilder,
-    should_log: bool,
     write_order: Arc<AtomicUsize>,
     blobstore_id: BlobstoreId,
     blobstore: Arc<dyn Blobstore>,
@@ -239,30 +270,28 @@ pub fn inner_put(
         .map_err(remap_timeout_error)
         .timed({
             move |stats, result| {
-                if should_log {
-                    scuba
-                        .add("key", key.clone())
-                        .add("operation", "put")
-                        .add("blobstore_id", blobstore_id)
-                        .add("size", size)
-                        .add(
-                            "completion_time",
-                            stats.completion_time.as_micros_unchecked(),
-                        );
+                scuba
+                    .add("key", key.clone())
+                    .add("operation", "put")
+                    .add("blobstore_id", blobstore_id)
+                    .add("size", size)
+                    .add(
+                        "completion_time",
+                        stats.completion_time.as_micros_unchecked(),
+                    );
 
-                    match result {
-                        Ok(_) => {
-                            scuba.add("write_order", write_order.fetch_add(1, Ordering::SeqCst))
-                        }
-                        Err(error) => scuba.add("error", error.to_string()),
-                    };
+                match result {
+                    Ok(_) => scuba.add("write_order", write_order.fetch_add(1, Ordering::SeqCst)),
+                    Err(error) => scuba.add("error", error.to_string()),
+                };
 
-                    // log session uuid only for slow requests
-                    if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                        scuba.add("session", session.to_string());
-                    }
-                    scuba.log();
+                // log session uuid only for slow requests
+                if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                    scuba.add("session", session.to_string());
                 }
+
+                scuba.log();
+
                 Ok(())
             }
         })
@@ -273,8 +302,9 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
-        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-        let requests = self.get_from_all(&ctx, &key, "get", should_log);
+        let sampling = Sampling::roll();
+
+        let requests = self.get_from_all(&ctx, &key, "get", sampling);
         let state = (
             requests,                             // pending requests
             HashMap::<BlobstoreId, Error>::new(), // previous errors
@@ -285,7 +315,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                 move |result| {
                     let requests = match result {
                         Ok(((_, value @ Some(_)), _, requests)) => {
-                            if should_log {
+                            if sampling.is_logged() {
                                 // Allow the other requests to complete so that we can record some
                                 // metrics for the blobstore.
                                 let requests_fut = future::join_all(
@@ -333,7 +363,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
         let write_order = Arc::new(AtomicUsize::new(0));
-        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
         let puts = self
             .blobstores
             .iter()
@@ -342,7 +371,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     inner_put(
                         ctx.clone(),
                         self.scuba.clone(),
-                        should_log,
                         write_order.clone(),
                         *blobstore_id,
                         blobstore.clone(),

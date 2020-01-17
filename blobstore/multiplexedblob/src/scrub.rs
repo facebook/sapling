@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use crate::base::{inner_put, ErrorKind, SAMPLING_THRESHOLD};
+use crate::base::{inner_put, ErrorKind};
 use crate::queue::MultiplexedBlobstore;
 
 use anyhow::Error;
@@ -18,7 +18,6 @@ use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::{BlobstoreId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
-use rand::{thread_rng, Rng};
 use scuba::ScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
@@ -171,27 +170,18 @@ impl Blobstore for ScrubBlobstore {
                     } else {
                         // inner_put to the stores that need it.
                         let order = Arc::new(AtomicUsize::new(0));
-                        let do_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
                         let mut repair_puts = vec![];
                         for (id, store) in needs_repair.into_iter() {
                             cloned!(ctx, scuba, key, value, order);
-                            let repair = inner_put(
-                                ctx.clone(),
-                                scuba,
-                                do_log,
-                                order,
-                                id,
-                                store,
-                                key.clone(),
-                                value,
-                            )
-                            .then({
-                                cloned!(ctx, scrub_handler, key);
-                                move |res| {
-                                    scrub_handler.on_repair(&ctx, id, &key, res.is_ok());
-                                    res
-                                }
-                            });
+                            let repair =
+                                inner_put(ctx.clone(), scuba, order, id, store, key.clone(), value)
+                                    .then({
+                                        cloned!(ctx, scrub_handler, key);
+                                        move |res| {
+                                            scrub_handler.on_repair(&ctx, id, &key, res.is_ok());
+                                            res
+                                        }
+                                    });
                             repair_puts.push(repair);
                         }
 
