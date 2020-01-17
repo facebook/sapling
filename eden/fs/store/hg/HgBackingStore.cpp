@@ -815,5 +815,13 @@ folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
       });
 }
 
+void HgBackingStore::periodicManagementTask() {
+#ifdef EDEN_HAVE_RUST_DATAPACK
+  if (datapackStore_) {
+    datapackStore_->refresh();
+  }
+#endif
+}
+
 } // namespace eden
 } // namespace facebook

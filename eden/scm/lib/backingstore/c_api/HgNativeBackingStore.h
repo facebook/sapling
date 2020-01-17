@@ -28,6 +28,8 @@ class HgNativeBackingStore {
 
   std::shared_ptr<RustTree> getTree(folly::ByteRange node);
 
+  void refresh();
+
  private:
   std::unique_ptr<RustBackingStore, std::function<void(RustBackingStore*)>>
       store_;

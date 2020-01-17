@@ -110,3 +110,11 @@ pub extern "C" fn rust_tree_free(tree: *mut Tree) {
     let tree = unsafe { Box::from_raw(tree) };
     drop(tree);
 }
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_refresh(store: *mut BackingStore) {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+
+    store.refresh();
+}

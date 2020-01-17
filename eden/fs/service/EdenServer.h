@@ -461,6 +461,11 @@ class EdenServer : private TakeoverHandler {
   // necessary
   void manageLocalStore();
 
+  // some backing store may require periodic maintenance, specifically rust
+  // datapack store needs to release file descriptor it holds every once in a
+  // while.
+  void refreshBackingStore();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -539,6 +544,10 @@ class EdenServer : private TakeoverHandler {
 #endif
   PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{this,
                                                                 "local_store"};
+
+  PeriodicFnTask<&EdenServer::refreshBackingStore> backingStoreTask_{
+      this,
+      "backing_store"};
 };
 } // namespace eden
 } // namespace facebook

@@ -12,7 +12,7 @@ use configparser::hg::ConfigSetHgExt;
 use edenapi::{EdenApi, EdenApiCurlClient};
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
-use revisionstore::{ContentStore, ContentStoreBuilder, DataStore, EdenApiRemoteStore};
+use revisionstore::{ContentStore, ContentStoreBuilder, DataStore, EdenApiRemoteStore, LocalStore};
 use std::path::Path;
 use std::sync::Arc;
 use types::{Key, Node, RepoPath};
@@ -82,6 +82,12 @@ impl BackingStore {
         let manifest = TreeManifest::durable(self.treestore.clone(), node);
 
         manifest.list(RepoPath::empty())
+    }
+
+    /// forces backing store to rescan pack files
+    pub fn refresh(&self) {
+        self.blobstore.get_missing(&[]).ok();
+        self.treestore.as_content_store().get_missing(&[]).ok();
     }
 }
 

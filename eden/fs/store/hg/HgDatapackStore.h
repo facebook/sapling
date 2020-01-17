@@ -33,6 +33,8 @@ class HgDatapackStore {
       const Hash& edenTreeId,
       LocalStore::WriteBatch* writeBatch);
 
+  void refresh();
+
  private:
   HgNativeBackingStore store_;
 };

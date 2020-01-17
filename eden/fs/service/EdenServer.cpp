@@ -383,6 +383,8 @@ void EdenServer::startPeriodicTasks() {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 #endif
+
+  backingStoreTask_.updateInterval(1min);
 }
 
 void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
@@ -1365,6 +1367,20 @@ void EdenServer::manageLocalStore() {
   auto config = serverState_->getReloadableConfig().getEdenConfig(
       ConfigReloadBehavior::NoReload);
   localStore_->periodicManagementTask(*config);
+}
+
+void EdenServer::refreshBackingStore() {
+  std::vector<shared_ptr<BackingStore>> backingStores;
+  {
+    auto lockedStores = backingStores_.wlock();
+    for (auto& entry : *lockedStores) {
+      backingStores.emplace_back(entry.second);
+    }
+  }
+
+  for (auto& store : backingStores) {
+    store->periodicManagementTask();
+  }
 }
 
 void EdenServer::reloadConfig() {

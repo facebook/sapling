@@ -48,6 +48,8 @@ class BackingStore {
     return folly::unit;
   }
 
+  virtual void periodicManagementTask() {}
+
  private:
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;

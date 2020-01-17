@@ -110,5 +110,9 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
 
   return nullptr;
 }
+
+void HgDatapackStore::refresh() {
+  store_.refresh();
+}
 } // namespace eden
 } // namespace facebook

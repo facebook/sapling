@@ -84,6 +84,8 @@ class HgBackingStore : public BackingStore {
   FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
+  void periodicManagementTask() override;
+
   /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.

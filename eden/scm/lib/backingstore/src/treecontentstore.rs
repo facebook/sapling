@@ -19,6 +19,10 @@ impl TreeContentStore {
     pub fn new(inner: ContentStore) -> Self {
         TreeContentStore { inner }
     }
+
+    pub fn as_content_store(&self) -> &ContentStore {
+        &self.inner
+    }
 }
 
 impl TreeStore for TreeContentStore {

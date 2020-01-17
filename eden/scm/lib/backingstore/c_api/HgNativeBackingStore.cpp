@@ -82,5 +82,11 @@ std::shared_ptr<RustTree> HgNativeBackingStore::getTree(folly::ByteRange node) {
 
   return manifest.unwrap();
 }
+
+void HgNativeBackingStore::refresh() {
+  XLOG(DBG7) << "Refreshing backing store";
+
+  rust_backingstore_refresh(store_.get());
+}
 } // namespace eden
 } // namespace facebook
