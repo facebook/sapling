@@ -25,7 +25,7 @@ use context::CoreContext;
 use futures::future;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};
 use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, SqlRedactedContentStore};
@@ -34,10 +34,17 @@ use slog::{info, warn, Logger};
 use sql_ext::MysqlOptions;
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::str::FromStr;
 
 use crate::error::SubcommandError;
 
-fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> Result<BlobConfig> {
+pub const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
+
+fn get_blobconfig(
+    blob_config: BlobConfig,
+    inner_blobstore_id: Option<u64>,
+    scrub_action: Option<ScrubAction>,
+) -> Result<BlobConfig> {
     match inner_blobstore_id {
         None => Ok(blob_config),
         Some(inner_blobstore_id) => match blob_config {
@@ -62,18 +69,27 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
             )),
         },
     }
+    .map(|mut config| {
+        scrub_action.map(|action| config.set_scrubbed(action));
+        config
+    })
 }
 
 fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
+    scrub_action: Option<ScrubAction>,
     mysql_options: MysqlOptions,
     logger: Logger,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
-    let blobconfig = try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
+    let blobconfig = try_boxfuture!(get_blobconfig(
+        storage_config.blobstore,
+        inner_blobstore_id,
+        scrub_action
+    ));
 
     make_sql_factory(
         fb,
@@ -106,6 +122,10 @@ pub fn subcommand_blobstore_fetch(
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
+    let scrub_action = try_boxfuture!(sub_m
+        .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
+        .map(ScrubAction::from_str)
+        .transpose());
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
@@ -113,6 +133,7 @@ pub fn subcommand_blobstore_fetch(
         fb,
         storage_config,
         inner_blobstore_id,
+        scrub_action,
         mysql_options,
         logger.clone(),
         readonly_storage,

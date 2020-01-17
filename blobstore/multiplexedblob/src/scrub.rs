@@ -52,12 +52,12 @@ impl ScrubHandler for LoggingScrubHandler {
             if is_repaired {
                 info!(
                     ctx.logger(),
-                    "scrub: blobstore_id {:?} repaired for {} ", &blobstore_id, &key
+                    "scrub: blobstore_id {:?} repaired for {}", &blobstore_id, &key
                 );
             } else {
                 warn!(
                     ctx.logger(),
-                    "scrub: blobstore_id {:?} not repaired for {} ", &blobstore_id, &key
+                    "scrub: blobstore_id {:?} not repaired for {}", &blobstore_id, &key
                 );
             }
         }

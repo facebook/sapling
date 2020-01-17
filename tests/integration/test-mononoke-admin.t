@@ -1,35 +1,17 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
-  $ cd $TESTTMP
+  $ MULTIPLEXED=1 default_setup_blobimport "blob_files"
+  hg repo
+  o  C [draft;rev=2;26805aba1e60]
+  |
+  o  B [draft;rev=1;112478962961]
+  |
+  o  A [draft;rev=0;426bada5c675]
+  $
+  blobimporting
 
-setup common configuration
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh="$DUMMYSSH"
-  > EOF
-
-setup repo
-  $ hg init repo-hg
-  $ cd repo-hg
-  $ setup_hg_server
-  $ drawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOF
-
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo-hg/.hg repo
-
+Check bookmarks
   $ mononoke_admin bookmarks log master_bookmark 2>&1 | grep master_bookmark
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
@@ -43,3 +25,29 @@ blobimport them into Mononoke storage and start Mononoke
 
   $ mononoke_admin bookmarks list --kind publishing 2> /dev/null
   another_bookmark	c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd	26805aba1e600a82e93661149f2313866a221a7b
+
+Check blobstore-fetch, normal
+  $ mononoke_admin blobstore-fetch changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
+  using blobstore: MultiplexedBlobstore* (glob)
+  Some(BlobstoreBytes(* (glob)
+
+Check blobstore-fetch, with scrub actions
+  $ ls blobstore/1/blobs | wc -l
+  30
+  $ rm blobstore/1/blobs/*changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd*
+  $ ls blobstore/1/blobs | wc -l
+  29
+
+  $ mononoke_admin blobstore-fetch --scrub-blobstore-action=ReportOnly changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
+  using blobstore: ScrubBlobstore* (glob)
+  scrub: blobstore_id BlobstoreId(1) not repaired for repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  Some(BlobstoreBytes(* (glob)
+  $ ls blobstore/1/blobs | wc -l
+  29
+
+  $ mononoke_admin blobstore-fetch --scrub-blobstore-action=Repair changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
+  using blobstore: ScrubBlobstore* (glob)
+  scrub: blobstore_id BlobstoreId(1) repaired for repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  Some(BlobstoreBytes(* (glob)
+  $ ls blobstore/1/blobs | wc -l
+  30

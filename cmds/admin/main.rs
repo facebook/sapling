@@ -95,6 +95,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
+        )
+        .arg(
+            Arg::with_name(blobstore_fetch::SCRUB_BLOBSTORE_ACTION_ARG)
+                .long(blobstore_fetch::SCRUB_BLOBSTORE_ACTION_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
         );
 
     let content_fetch = SubCommand::with_name(CONTENT_FETCH)
