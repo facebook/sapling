@@ -1322,21 +1322,6 @@ bail:
 }
 #endif
 
-#ifdef __APPLE__
-#include <ApplicationServices/ApplicationServices.h>
-
-static PyObject* isgui(PyObject* self) {
-  CFDictionaryRef dict = CGSessionCopyCurrentDictionary();
-
-  if (dict != NULL) {
-    CFRelease(dict);
-    Py_RETURN_TRUE;
-  } else {
-    Py_RETURN_FALSE;
-  }
-}
-#endif
-
 static char osutil_doc[] = "Native operating system services.";
 
 static PyMethodDef methods[] = {
@@ -1379,12 +1364,6 @@ static PyMethodDef methods[] = {
      METH_VARARGS,
      "change signal mask to unblock a given signal\n"},
 #endif /* ndef _WIN32 */
-#ifdef __APPLE__
-    {"isgui",
-     (PyCFunction)isgui,
-     METH_NOARGS,
-     "Is a CoreGraphics session available?"},
-#endif
     {NULL, NULL}};
 
 static const int version = 2;

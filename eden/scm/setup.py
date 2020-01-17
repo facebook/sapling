@@ -1495,7 +1495,6 @@ if library_dirs is None:
 extra_libs = get_env_path_list("EXTRA_LIBS", [])
 
 osutil_cflags = []
-osutil_ldflags = []
 
 # platform specific macros
 for plat, func in [("bsd", "setproctitle")]:
@@ -1536,9 +1535,6 @@ if "linux" in sys.platform and cancompile(
 else:
     havefanotify = False
 
-
-if sys.platform == "darwin":
-    osutil_ldflags += ["-framework", "ApplicationServices"]
 
 extmodules = [
     Extension(
@@ -1583,7 +1579,6 @@ extmodules = [
         ["edenscm/mercurial/cext/osutil.c"],
         include_dirs=include_dirs,
         extra_compile_args=osutil_cflags,
-        extra_link_args=osutil_ldflags,
         depends=common_depends,
     ),
     Extension(

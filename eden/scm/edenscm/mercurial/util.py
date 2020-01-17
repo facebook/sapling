@@ -1620,11 +1620,8 @@ def gui():
         if "SSH_CONNECTION" in encoding.environ:
             # handle SSH access to a box where the user is logged in
             return False
-        elif getattr(osutil, "isgui", None):
-            # check if a CoreGraphics session is available
-            return osutil.isgui()
         else:
-            # pure build; use a safe default
+            # pretend that GUI is available
             return True
     else:
         return pycompat.iswindows or encoding.environ.get("DISPLAY")
