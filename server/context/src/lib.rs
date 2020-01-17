@@ -14,20 +14,16 @@ use fbwhoami::FbWhoAmI;
 use identity::IdentitySet;
 use limits::types::{MononokeThrottleLimit, RateLimits};
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
-use std::{
-    fmt,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{fmt, sync::Arc, time::Duration};
 
 use futures::{self, Future, IntoFuture};
 use futures_ext::FutureExt;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use scuba_ext::ScubaSampleBuilder;
 pub use session_id::SessionId;
-use slog::{info, o, warn, Logger};
+use slog::{debug, o, warn, Logger};
 use sshrelay::SshEnvVars;
-use tracing::{generate_trace_id, TraceContext};
+use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 pub use perf_counters::{PerfCounterType, PerfCounters};
@@ -226,7 +222,7 @@ impl SessionContainer {
         Self::new(
             fb,
             generate_session_id(),
-            TraceContext::new(fb, generate_trace_id(), Instant::now()),
+            TraceContext::default(),
             None,
             None,
             None,
@@ -357,7 +353,7 @@ impl CoreContext {
         let session = SessionContainer::new(
             fb,
             generate_session_id(),
-            TraceContext::default(fb),
+            TraceContext::default(),
             None,
             None,
             None,
@@ -424,18 +420,25 @@ impl CoreContext {
         let logger = self.logger().clone();
         let id = self.trace().id().clone();
         self.trace()
-            .upload_to_manifold(RequestContext {
-                bucketName: "mononoke_prod".into(),
-                apiKey: "".into(),
-                ..Default::default()
-            })
+            .upload_to_manifold(
+                self.fb,
+                RequestContext {
+                    bucketName: "mononoke_prod".into(),
+                    apiKey: "".into(),
+                    ..Default::default()
+                },
+            )
             .then(move |result| match result {
                 Err(err) => {
                     warn!(&logger, "failed to upload trace: {:#?}", err);
                     Err(err)
                 }
                 Ok(()) => {
-                    info!(&logger, "trace uploaded: mononoke_prod/flat/{}.trace", id);
+                    debug!(
+                        &logger,
+                        "trace uploaded: https://our.intern.facebook.com/intern/mononoke/trace/{}",
+                        id
+                    );
                     Ok(())
                 }
             })

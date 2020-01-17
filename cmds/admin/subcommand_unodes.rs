@@ -91,7 +91,7 @@ pub fn subcommand_unodes(
 ) -> BoxFuture<(), SubcommandError> {
     let tracing_enable = sub_matches.is_present(ARG_TRACE);
     if tracing_enable {
-        tracing::enable(fb);
+        tracing::enable();
     }
 
     args::init_cachelib(fb, &matches);

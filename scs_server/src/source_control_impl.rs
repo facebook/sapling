@@ -100,7 +100,7 @@ impl SourceControlServiceImpl {
         let session = SessionContainer::new(
             self.fb,
             session_id,
-            TraceContext::default(self.fb),
+            TraceContext::default(),
             None,
             None,
             Some(identities),

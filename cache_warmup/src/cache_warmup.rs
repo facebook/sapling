@@ -21,7 +21,6 @@ use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info};
 use tracing::{trace_args, Traced};
-use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 mod errors {
     use bookmarks::BookmarkName;
@@ -178,27 +177,7 @@ fn do_cache_warmup(
         .map({
             let ctx = ctx.clone();
             move |_| {
-                tokio::spawn(future::lazy(move || {
-                    ctx.trace()
-                        .upload_to_manifold(RequestContext {
-                            bucketName: "mononoke_prod".into(),
-                            apiKey: "".into(),
-                            ..Default::default()
-                        })
-                        .then(move |upload_res| {
-                            match upload_res {
-                                Err(err) => {
-                                    info!(ctx.logger(), "warmup trace failed to upload: {:#?}", err)
-                                }
-                                Ok(()) => info!(
-                                    ctx.logger(),
-                                    "warmup trace uploaded: {}",
-                                    ctx.trace().id()
-                                ),
-                            }
-                            Ok(())
-                        })
-                }));
+                tokio::spawn(future::lazy(move || ctx.trace_upload().then(|_| Ok(()))));
             }
         })
 }

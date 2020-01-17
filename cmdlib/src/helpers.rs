@@ -18,7 +18,6 @@ use futures_ext::{BoxFuture, FutureExt};
 use panichandler::Fate;
 use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::{debug, error, info, Logger};
-use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 use crate::args;
 use crate::monitoring;
@@ -42,26 +41,7 @@ pub fn upload_and_show_trace(ctx: CoreContext) -> impl OldFuture<Item = (), Erro
         return Ok(()).into_future().left_future();
     }
 
-    let rc = RequestContext {
-        bucketName: "mononoke_prod".into(),
-        apiKey: "".into(),
-        ..Default::default()
-    };
-
-    ctx.trace()
-        .upload_to_manifold(rc)
-        .then(move |upload_res| {
-            match upload_res {
-                Err(err) => debug!(ctx.logger(), "Failed to upload trace: {:#?}", err),
-                Ok(()) => debug!(
-                    ctx.logger(),
-                    "Trace taken: https://our.intern.facebook.com/intern/mononoke/trace/{}",
-                    ctx.trace().id()
-                ),
-            }
-            Ok(())
-        })
-        .right_future()
+    ctx.trace_upload().then(|_| Ok(())).right_future()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
