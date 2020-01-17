@@ -157,3 +157,9 @@ void UnionDatapackStore::addStore(DataStore* store) {
 void UnionDatapackStore::removeStore(DataStore* store) {
   removeFromVector<DataStore*>(_stores, store);
 }
+
+void UnionDatapackStore::refresh() {
+  for (auto* store : _stores) {
+    store->refresh();
+  }
+}

@@ -821,6 +821,10 @@ void HgBackingStore::periodicManagementTask() {
     datapackStore_->refresh();
   }
 #endif
+
+  if (unionStore_) {
+    unionStore_->wlock()->refresh();
+  }
 }
 
 } // namespace eden

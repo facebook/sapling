@@ -72,6 +72,8 @@ class UnionDatapackStore : public Store {
 
   void addStore(DataStore* store);
   void removeStore(DataStore* store);
+
+  void refresh();
 };
 
 #endif // FBHGEXT_CSTORE_UNIONDATAPACKSTORE_H

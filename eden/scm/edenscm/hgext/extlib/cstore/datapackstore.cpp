@@ -130,8 +130,8 @@ std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key& key) {
   }
 
   // Check if there are new packs available
-  auto refreshed = refresh();
-  for (const auto& pack : refreshed) {
+  auto rescanned = rescan();
+  for (const auto& pack : rescanned) {
     auto chain = getdeltachain(pack.get(), (const uint8_t*)key.node);
     if (chain.code == GET_DELTA_CHAIN_OOM) {
       throw std::runtime_error("out of memory");
@@ -170,8 +170,8 @@ bool DatapackStore::contains(const Key& key) {
   }
 
   // Check if there are new packs available
-  auto refreshed = refresh();
-  for (auto& pack : refreshed) {
+  auto rescanned = rescan();
+  for (auto& pack : rescanned) {
     pack_index_entry_t packindex;
     if (find(pack.get(), (uint8_t*)key.node, &packindex)) {
       return true;
@@ -185,7 +185,7 @@ std::shared_ptr<KeyIterator> DatapackStore::getMissing(KeyIterator& missing) {
   return std::make_shared<DatapackStoreKeyIterator>(*this, missing);
 }
 
-std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh() {
+std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::rescan() {
   constexpr auto PACK_REFRESH_RATE = std::chrono::milliseconds(100);
   auto now = steady_clock::now();
 
@@ -222,6 +222,10 @@ std::vector<std::shared_ptr<datapack_handle_t>> DatapackStore::refresh() {
   }
 
   return newPacks;
+}
+
+void DatapackStore::refresh() {
+  rescan();
 }
 
 void DatapackStore::markForRefresh() {

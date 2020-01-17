@@ -32,6 +32,8 @@ class DataStore {
   virtual bool contains(const Key& key) = 0;
 
   virtual void markForRefresh() = 0;
+
+  virtual void refresh() {}
 };
 
 #endif // FBHGEXT_DATASTORE_H

@@ -48,13 +48,13 @@ class DatapackStore : public DataStore {
   std::unordered_map<std::string, std::shared_ptr<datapack_handle_t>> packs_;
 
   std::shared_ptr<datapack_handle_t> addPack(const std::string& path);
-  std::vector<std::shared_ptr<datapack_handle_t>> refresh();
+  std::vector<std::shared_ptr<datapack_handle_t>> rescan();
 
  public:
   ~DatapackStore();
   /** Initialize the store for the specified path.
    * If removeDeadPackFilesOnRefresh is set to true (NOT the default),
-   * then the refresh() method can choose to unmap pack files that
+   * then the rescan() method can choose to unmap pack files that
    * have been deleted.  Since the DataStore API doesn't provide
    * for propagating ownership out through the DeltaChain and DeltaChain
    * iterator, it is not safe to removeDeadPackFilesOnRefresh if the calling
@@ -76,6 +76,8 @@ class DatapackStore : public DataStore {
   bool contains(const Key& key) override;
 
   void markForRefresh() override;
+
+  void refresh() override;
 };
 
 #endif // FBHGEXT_DATAPACKSTORE_H
