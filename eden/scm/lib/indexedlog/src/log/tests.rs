@@ -787,7 +787,7 @@ fn test_repair_and_delete_content() {
         .create(true)
         .index("c", |_| vec![IndexOutput::Reference(0..1)]);
 
-    let long_lived_log = RefCell::new(open_opts.create_in_memory().unwrap());
+    let long_lived_log = RefCell::new(open_opts.open(()).unwrap());
     let open = || open_opts.open(path);
     let corrupt = |name: &str, offset: i64| pwrite(&path.join(name), offset, b"cc");
     let truncate = |name: &str| fs::write(path.join(name), "garbage").unwrap();
@@ -1361,7 +1361,7 @@ quickcheck! {
     fn test_roundtrip_entries(entries: Vec<(Vec<u8>, bool, bool)>) -> bool {
         let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), Vec::new()).unwrap();
-        let mut log_mem = OpenOptions::new().create_in_memory().unwrap();
+        let mut log_mem = OpenOptions::new().open(()).unwrap();
         for &(ref data, flush, reload) in &entries {
             log.append(data).expect("append");
             log_mem.append(data).expect("append");

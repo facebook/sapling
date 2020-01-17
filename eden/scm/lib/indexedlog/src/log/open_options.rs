@@ -309,9 +309,9 @@ impl OpenOptions {
     /// transaction.
     pub fn open(&self, dir: impl Into<GenericPath>) -> crate::Result<Log> {
         let dir = dir.into();
-        match dir {
-            GenericPath::Nothing => self.create_in_memory(),
-            GenericPath::Filesystem(ref fs_dir) => {
+        match dir.as_opt_path() {
+            None => self.create_in_memory(dir),
+            Some(ref fs_dir) => {
                 let span = debug_span!("Log::open", dir = &fs_dir.to_string_lossy().as_ref());
                 let _guard = span.enter();
                 self.open_internal(&dir, None, None)
@@ -322,14 +322,14 @@ impl OpenOptions {
 
     /// Construct an empty in-memory [`Log`] without side-effects on the
     /// filesystem. The in-memory [`Log`] cannot be [`sync`]ed.
-    pub(crate) fn create_in_memory(&self) -> crate::Result<Log> {
+    pub(crate) fn create_in_memory(&self, dir: GenericPath) -> crate::Result<Log> {
+        assert!(dir.as_opt_path().is_none());
         let result: crate::Result<_> = (|| {
             let meta = LogMetadata {
                 primary_len: PRIMARY_START_OFFSET,
                 indexes: BTreeMap::new(),
                 epoch: utils::epoch(),
             };
-            let dir = GenericPath::Nothing;
             let mem_buf = Box::pin(Vec::new());
             let (disk_buf, indexes) = Log::load_log_and_indexes(
                 &dir,

@@ -220,7 +220,7 @@ impl OpenOptions {
     /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`sync`].
     pub fn create_in_memory(&self) -> crate::Result<RotateLog> {
         let result: crate::Result<_> = (|| {
-            let cell = create_log_cell(self.log_open_options.create_in_memory()?);
+            let cell = create_log_cell(self.log_open_options.open(())?);
             let mut logs = Vec::with_capacity(1);
             logs.push(cell);
             Ok(RotateLog {
@@ -699,7 +699,7 @@ fn create_empty_log(
             utils::atomic_write(&latest_path, latest_str.as_bytes(), false)?;
             log
         }
-        None => open_options.log_open_options.clone().create_in_memory()?,
+        None => open_options.log_open_options.clone().open(())?,
     })
 }
 
