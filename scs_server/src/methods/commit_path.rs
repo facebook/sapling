@@ -184,7 +184,7 @@ impl SourceControlServiceImpl {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
 
-        let mut commit_ids = DedupMap::new();
+        let mut commit_ids = Vec::new();
         let mut commit_id_indexes = HashMap::new();
         let mut paths = DedupMap::new();
         let mut authors = DedupMap::new();
@@ -202,12 +202,20 @@ impl SourceControlServiceImpl {
         // which bonsai changeset ID corresponds to which mapped commit ID index, so we can look
         // them up later.
         let (content, blame) = path.blame().await?;
-        let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
+        let csids: Vec<_> = blame
+            .ranges()
+            .iter()
+            .map(|range| range.csid)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+
         for (id, mapped_ids) in map_commit_identities(&repo, csids.clone(), &identity_schemes)
             .await?
             .into_iter()
         {
-            let index = commit_ids.insert(Cow::Owned(mapped_ids));
+            let index = commit_ids.len();
+            commit_ids.push(mapped_ids);
             commit_id_indexes.insert(id, index);
         }
 
@@ -222,10 +230,6 @@ impl SourceControlServiceImpl {
                         MononokeError::InvalidRequest(format!("failed to resolve commit: {}", csid))
                     })?;
                 let date = changeset.author_date().await?;
-                let date = thrift::DateTime {
-                    timestamp: date.timestamp(),
-                    tz: date.offset().local_minus_utc(),
-                };
                 let author = changeset.author().await?;
                 Ok::<_, MononokeError>((csid, (author, date)))
             }
@@ -234,8 +238,9 @@ impl SourceControlServiceImpl {
         .into_iter()
         .collect();
 
-        let lines = String::from_utf8_lossy(content.as_ref())
-            .lines()
+        let lines = content
+            .as_ref()
+            .split(|c| *c == b'\n')
             .zip(blame.lines())
             .enumerate()
             .map(
@@ -248,7 +253,7 @@ impl SourceControlServiceImpl {
                     })?;
                     Ok(thrift::BlameCompactLine {
                         line: (line + 1) as i32,
-                        contents: contents.to_string(),
+                        contents: String::from_utf8_lossy(contents).into_owned(),
                         commit_id_index: *commit_id_index as i32,
                         path_index: paths.insert(&path.to_string()) as i32,
                         author_index: authors.insert(author) as i32,
@@ -257,12 +262,23 @@ impl SourceControlServiceImpl {
                 },
             )
             .collect::<Result<Vec<_>, _>>()?;
+
+        let paths = paths.into_items();
+        let authors = authors.into_items();
+        let dates = dates
+            .into_items()
+            .into_iter()
+            .map(|date| thrift::DateTime {
+                timestamp: date.timestamp(),
+                tz: date.offset().local_minus_utc(),
+            })
+            .collect();
         let blame = thrift::BlameCompact {
             lines,
-            commit_ids: commit_ids.into_items(),
-            paths: paths.into_items(),
-            authors: authors.into_items(),
-            dates: dates.into_items(),
+            commit_ids,
+            paths,
+            authors,
+            dates,
         };
 
         Ok(thrift::CommitPathBlameResponse {
