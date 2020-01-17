@@ -15,13 +15,13 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use deleted_files_manifest::{
-    iterate_entries, RootDeletedManifestId, RootDeletedManifestMapping, Status,
+    find_entries, list_all_entries, RootDeletedManifestId, RootDeletedManifestMapping,
 };
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
-use manifest::get_implicit_deletes;
+use manifest::{get_implicit_deletes, PathOrPrefix};
 use mercurial_types::HgManifestId;
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
@@ -130,31 +130,17 @@ fn subcommand_manifest(
             );
 
             let mf_id = root_manifest.deleted_manifest_id().clone();
-            iterate_entries(ctx.clone(), repo.clone(), mf_id).collect()
+            find_entries(
+                ctx.clone(),
+                repo.get_blobstore(),
+                mf_id,
+                Some(PathOrPrefix::Prefix(prefix)),
+            )
+            .collect()
         })
-        .map(move |path_states: Vec<_>| {
-            let mut paths = path_states
-                .into_iter()
-                .filter_map(move |(path, st, mf_id)| match st {
-                    Status::Deleted(_) => {
-                        if let Some(pref) = &prefix {
-                            let elems = MPath::iter_opt(path.as_ref());
-                            if pref.is_prefix_of(elems) {
-                                Some((path, mf_id))
-                            } else {
-                                None
-                            }
-                        } else {
-                            Some((path, mf_id))
-                        }
-                    }
-                    _ => None,
-                })
-                .collect::<Vec<_>>();
-
-            paths.sort_by_key(|(path, _)| path.clone());
-
-            for (path, mf_id) in paths {
+        .map(move |mut entries: Vec<_>| {
+            entries.sort_by_key(|(path, _)| path.clone());
+            for (path, mf_id) in entries {
                 println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
             }
         })
@@ -248,16 +234,13 @@ fn verify_single_commit(
                 cloned!(ctx, repo);
                 move |root_manifest| {
                     let mf_id = root_manifest.deleted_manifest_id().clone();
-                    iterate_entries(ctx.clone(), repo.clone(), mf_id).collect()
+                    list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id).collect()
                 }
             })
             .map(move |entries: Vec<_>| {
                 entries
                     .into_iter()
-                    .filter_map(move |(path_opt, st, ..)| match (path_opt, st) {
-                        (Some(path), Status::Deleted(_)) => Some(path),
-                        _ => None,
-                    })
+                    .filter_map(move |(path_opt, ..)| path_opt)
                     .collect::<BTreeSet<_>>()
             });
 

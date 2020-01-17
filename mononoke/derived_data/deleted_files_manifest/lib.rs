@@ -20,7 +20,6 @@ mod derive;
 mod mapping;
 mod ops;
 
-pub use derive::{iterate_entries, Status};
 pub use mapping::{RootDeletedManifestId, RootDeletedManifestMapping};
 pub use ops::{find_entries, find_entry, list_all_entries};
 
