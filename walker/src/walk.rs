@@ -7,6 +7,8 @@
  */
 
 use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType};
+use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
+
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -27,6 +29,7 @@ use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use phases::{Phase, SqlPhases};
+use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
 use std::{collections::HashSet, iter::IntoIterator, sync::Arc};
 use thiserror::Error;
@@ -474,6 +477,7 @@ pub fn walk_exact<V, VOut>(
     scheduled_max: usize,
     error_as_data_node_types: HashSet<NodeType>,
     error_as_data_edge_types: HashSet<EdgeType>,
+    scuba: ScubaSampleBuilder,
 ) -> BoxStream<VOut, Error>
 where
     V: 'static + Clone + WalkVisitor<VOut> + Send,
@@ -531,6 +535,7 @@ where
                     error_as_data_edge_types,
                     error_as_data_node_types,
                     walk_item,
+                    mut scuba,
                 );
                 move |r| match r {
                     Ok(s) => Ok(s),
@@ -543,6 +548,12 @@ where
                                     logger,
                                     "Could not step to {:?}, due to: {:?}", &walk_item, e
                                 );
+                                add_node_to_scuba(&walk_item.target, &mut scuba);
+                                scuba
+                                    .add(EDGE_TYPE, edge_label.to_string())
+                                    .add(CHECK_TYPE, "step")
+                                    .add(CHECK_FAIL, 1)
+                                    .log();
                                 Ok(StepOutput(NodeData::ErrorAsData(walk_item.target), vec![]))
                             } else {
                                 Err(e)

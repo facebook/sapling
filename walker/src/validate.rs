@@ -58,6 +58,9 @@ pub const PASS: &'static str = "pass";
 pub const FAIL: &'static str = "fail";
 pub const TOTAL: &'static str = "total";
 pub const NODE_KEY: &'static str = "node_key";
+pub const NODE_TYPE: &'static str = "node_type";
+pub const NODE_PATH: &'static str = "node_path";
+pub const EDGE_TYPE: &'static str = "edge_type";
 pub const CHECK_TYPE: &'static str = "check_type";
 pub const CHECK_FAIL: &'static str = "check_fail";
 pub const WALK_TYPE: &'static str = "walk_type";
@@ -371,6 +374,15 @@ impl ValidateProgressState {
     }
 }
 
+pub fn add_node_to_scuba(n: &Node, scuba: &mut ScubaSampleBuilder) {
+    scuba
+        .add(NODE_TYPE, n.get_type().to_string())
+        .add(NODE_KEY, n.stats_key());
+    if let Some(path) = n.stats_path() {
+        scuba.add(NODE_PATH, MPath::display_opt(path).to_string());
+    }
+}
+
 impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
     fn record_step(self: &mut Self, n: &Node, opt: Option<&CheckData>) {
         self.checked_nodes += 1;
@@ -399,19 +411,13 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                     stats.fail += 1;
                     // For failures log immediately
                     let mut scuba = self.scuba_builder.clone();
-                    if let Some(path) = n.stats_path() {
-                        scuba.add("node_path", MPath::display_opt(path).to_string());
-                    }
+                    add_node_to_scuba(n, &mut scuba);
                     scuba
-                        .add(WALK_TYPE, "validate")
-                        .add(REPO, self.repo_stats_key.to_string())
                         .add(CHECK_TYPE, k.stats_key())
                         .add(
                             CHECK_FAIL,
                             if c.status == CheckStatus::Pass { 0 } else { 1 },
                         )
-                        .add("node_type", n.get_type().to_string())
-                        .add(NODE_KEY, n.stats_key())
                         .log();
                     for json in scuba.get_sample().to_json() {
                         warn!(self.logger, "Validation failed: {}", json)

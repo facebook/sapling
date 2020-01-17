@@ -10,7 +10,7 @@ use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
 use crate::progress::{sort_by_string, ProgressStateCountByType, ProgressStateMutex};
 use crate::state::StepStats;
-use crate::validate::{CheckType, WALK_TYPE};
+use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::OutgoingEdge;
 
 use anyhow::{format_err, Error};
@@ -663,6 +663,7 @@ pub fn setup_common(
     let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
     scuba_builder.add_common_server_data();
     scuba_builder.add(WALK_TYPE, walk_stats_key);
+    scuba_builder.add(REPO, args::get_repo_name(fb, &matches)?);
 
     if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
         scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;

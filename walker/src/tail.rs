@@ -33,6 +33,7 @@ where
     WS: 'static + Clone + WalkVisitor<VOut> + Send,
     VOut: 'static + Send,
 {
+    let scuba_builder = datasources.scuba_builder;
     let datasources = datasources.blobrepo.join(datasources.phases_store);
     let traversal_fut = datasources.and_then(move |(repo, phases_store)| {
         cloned!(walk_params.tail_secs);
@@ -49,6 +50,7 @@ where
                     walk_params.scheduled_max,
                     walk_params.error_as_data_node_types.clone(),
                     walk_params.error_as_data_edge_types.clone(),
+                    scuba_builder.clone(),
                 );
                 make_sink(walk_output)
             }

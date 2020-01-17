@@ -46,7 +46,7 @@ Check error as data fails if not in readonly-storage mode
   Error: Execution failed
 
 Check counts with error-as-data-node-type
-  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping -I deep -q --bookmark master_bookmark --scuba-log-file=scuba.json 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
@@ -54,6 +54,14 @@ Check counts with error-as-data-node-type
   3 Could not step to
   1 Final count: (37, 34)
   1 Walked* (glob)
+
+Check scuba data
+  $ wc -l < scuba.json
+  3
+  $ jq -r '.int * .normal | [ .check_fail, .check_type, .edge_type, .node_key, .node_type, .repo, .walk_type ] | @csv' < scuba.json | sort
+  1,"step","FileContentMetadataToGitSha1Alias","alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","AliasContentMapping","repo","scrub"
+  1,"step","FileContentMetadataToGitSha1Alias","alias.gitsha1.8c7e5a667f1b771847fe88c01c3de34413a1b220","AliasContentMapping","repo","scrub"
+  1,"step","FileContentMetadataToGitSha1Alias","alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","AliasContentMapping","repo","scrub"
 
 Check error-as-data-edge-type, should get an error on FileContentMetadataToGitSha1Alias as have not converted its errors to data
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataToSha1Alias -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
