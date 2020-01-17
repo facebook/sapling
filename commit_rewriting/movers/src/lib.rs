@@ -13,7 +13,8 @@ use failure_ext::chain::ChainExt;
 use itertools::Itertools;
 use mercurial_types::{MPath, MPathElement};
 use metaconfig_types::{
-    CommitSyncConfig, DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
+    CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
+    SmallRepoCommitSyncConfig,
 };
 use mononoke_types::RepositoryId;
 use std::collections::{HashMap, HashSet};
@@ -42,6 +43,12 @@ pub enum ErrorKind {
 /// - `Err(e)` - the sync should fail, as this function
 ///   could not figure out how to rewrite path
 pub type Mover = Arc<dyn Fn(&MPath) -> Result<Option<MPath>> + Send + Sync + 'static>;
+
+/// A struct to contain forward and reverse `Mover`
+pub struct Movers {
+    pub mover: Mover,
+    pub reverse_mover: Mover,
+}
 
 /// An action, configured for a given prefix
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -319,12 +326,33 @@ pub fn get_large_to_small_mover(
     mover_factory(prefix_map, default_action)
 }
 
+/// Get a forward and a reverse `Mover`, stored in the `Movers` struct
+pub fn get_movers(
+    commit_sync_config: &CommitSyncConfig,
+    small_repo_id: RepositoryId,
+) -> Result<Movers> {
+    let small_repo_config = commit_sync_config
+        .small_repos
+        .get(&small_repo_id)
+        .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?;
+
+    match small_repo_config.direction {
+        CommitSyncDirection::LargeToSmall => Ok(Movers {
+            mover: get_large_to_small_mover(commit_sync_config, small_repo_id)?,
+            reverse_mover: get_small_to_large_mover(commit_sync_config, small_repo_id)?,
+        }),
+        CommitSyncDirection::SmallToLarge => Ok(Movers {
+            mover: get_small_to_large_mover(commit_sync_config, small_repo_id)?,
+            reverse_mover: get_large_to_small_mover(commit_sync_config, small_repo_id)?,
+        }),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use ascii::AsciiString;
     use maplit::hashmap;
-    use metaconfig_types::CommitSyncDirection;
 
     fn mp(s: &'static str) -> MPath {
         MPath::new(s).unwrap()

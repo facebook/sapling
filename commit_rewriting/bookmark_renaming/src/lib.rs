@@ -11,7 +11,7 @@
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::{CommitSyncConfig, CommitSyncDirection};
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;
 use std::iter::Iterator;
@@ -24,8 +24,15 @@ pub enum ErrorKind {
     SmallRepoNotFound(RepositoryId),
 }
 
+/// A function to modify bookmark names during the x-repo sync
 pub type BookmarkRenamer =
     Arc<dyn Fn(&BookmarkName) -> Option<BookmarkName> + Send + Sync + 'static>;
+
+/// Both forward and reverse `BookmarkRenamer`, encapsulated in a struct
+pub struct BookmarkRenamers {
+    pub bookmark_renamer: BookmarkRenamer,
+    pub reverse_bookmark_renamer: BookmarkRenamer,
+}
 
 fn get_prefix_and_common_bookmarks(
     commit_sync_config: &CommitSyncConfig,
@@ -83,14 +90,40 @@ pub fn get_large_to_small_renamer(
     }))
 }
 
+/// Get both forward and reverse bookmark renamer in the `BookmarkRenamers` struct
+pub fn get_bookmark_renamers(
+    commit_sync_config: &CommitSyncConfig,
+    small_repo_id: RepositoryId,
+) -> Result<BookmarkRenamers> {
+    let small_repo_config = commit_sync_config
+        .small_repos
+        .get(&small_repo_id)
+        .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?;
+
+    match small_repo_config.direction {
+        CommitSyncDirection::LargeToSmall => Ok(BookmarkRenamers {
+            bookmark_renamer: get_large_to_small_renamer(commit_sync_config, small_repo_id)?,
+            reverse_bookmark_renamer: get_small_to_large_renamer(
+                commit_sync_config,
+                small_repo_id,
+            )?,
+        }),
+        CommitSyncDirection::SmallToLarge => Ok(BookmarkRenamers {
+            bookmark_renamer: get_small_to_large_renamer(commit_sync_config, small_repo_id)?,
+            reverse_bookmark_renamer: get_large_to_small_renamer(
+                commit_sync_config,
+                small_repo_id,
+            )?,
+        }),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use maplit::hashmap;
     use mercurial_types::MPath;
-    use metaconfig_types::{
-        CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
-    };
+    use metaconfig_types::{DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig};
 
     fn mp(s: &'static str) -> MPath {
         MPath::new(s).unwrap()

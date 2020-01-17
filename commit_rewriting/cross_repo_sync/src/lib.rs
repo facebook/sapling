@@ -14,7 +14,10 @@ use std::collections::{BTreeMap, HashMap};
 use anyhow::{bail, format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
-use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer};
+use bookmark_renaming::{
+    get_bookmark_renamers, get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer,
+    BookmarkRenamers,
+};
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
@@ -30,11 +33,12 @@ use futures_preview::{
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
-use metaconfig_types::{CommitSyncConfig, PushrebaseParams};
+use metaconfig_types::{CommitSyncConfig, PushrebaseParams, RepoConfig};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
 use movers::{get_large_to_small_mover, get_small_to_large_mover, Mover};
+use movers::{get_movers, Movers};
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
 use slog::info;
 use sql_ext::TransactionResult;
@@ -335,39 +339,6 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
 }
 
-/// The state of a source repo commit in a target repo
-#[derive(Debug, PartialEq)]
-pub enum CommitSyncOutcome {
-    /// Not suitable for syncing to this repo
-    NotSyncCandidate,
-    /// This commit is a 1:1 semantic mapping, but sync process rewrote it to a new ID.
-    RewrittenAs(ChangesetId),
-    /// This commit is exactly identical in the target repo
-    Preserved,
-    /// This commit is removed by the sync process, and the commit with the given ID has same content
-    EquivalentWorkingCopyAncestor(ChangesetId),
-}
-
-#[derive(Clone)]
-pub enum CommitSyncRepos {
-    LargeToSmall {
-        large_repo: BlobRepo,
-        small_repo: BlobRepo,
-        mover: Mover,
-        reverse_mover: Mover,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
-    },
-    SmallToLarge {
-        small_repo: BlobRepo,
-        large_repo: BlobRepo,
-        mover: Mover,
-        reverse_mover: Mover,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
-    },
-}
-
 pub async fn find_toposorted_unsynced_ancestors<M>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
@@ -423,6 +394,101 @@ where
         .into_iter()
         .filter(|r| commits_to_backsync.contains_key(r))
         .collect())
+}
+
+/// The state of a source repo commit in a target repo
+#[derive(Debug, PartialEq)]
+pub enum CommitSyncOutcome {
+    /// Not suitable for syncing to this repo
+    NotSyncCandidate,
+    /// This commit is a 1:1 semantic mapping, but sync process rewrote it to a new ID.
+    RewrittenAs(ChangesetId),
+    /// This commit is exactly identical in the target repo
+    Preserved,
+    /// This commit is removed by the sync process, and the commit with the given ID has same content
+    EquivalentWorkingCopyAncestor(ChangesetId),
+}
+
+#[derive(Clone)]
+pub enum CommitSyncRepos {
+    LargeToSmall {
+        large_repo: BlobRepo,
+        small_repo: BlobRepo,
+        mover: Mover,
+        reverse_mover: Mover,
+        bookmark_renamer: BookmarkRenamer,
+        reverse_bookmark_renamer: BookmarkRenamer,
+    },
+    SmallToLarge {
+        small_repo: BlobRepo,
+        large_repo: BlobRepo,
+        mover: Mover,
+        reverse_mover: Mover,
+        bookmark_renamer: BookmarkRenamer,
+        reverse_bookmark_renamer: BookmarkRenamer,
+    },
+}
+
+impl CommitSyncRepos {
+    pub fn new(
+        source_repo: BlobRepo,
+        target_repo: BlobRepo,
+        repo_config: &RepoConfig,
+    ) -> Result<Self, Error> {
+        let commit_sync_config = repo_config
+            .commit_sync_config
+            .as_ref()
+            .ok_or_else(|| format_err!("missing CommitSyncMapping config"))?;
+
+        let small_repo_id = if commit_sync_config.large_repo_id == source_repo.get_repoid()
+            && commit_sync_config
+                .small_repos
+                .contains_key(&target_repo.get_repoid())
+        {
+            target_repo.get_repoid()
+        } else if commit_sync_config.large_repo_id == target_repo.get_repoid()
+            && commit_sync_config
+                .small_repos
+                .contains_key(&source_repo.get_repoid())
+        {
+            source_repo.get_repoid()
+        } else {
+            return Err(format_err!(
+                "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
+                source_repo.get_repoid(),
+                target_repo.get_repoid()
+            ));
+        };
+
+        let Movers {
+            mover,
+            reverse_mover,
+        } = get_movers(&commit_sync_config, small_repo_id)?;
+        let BookmarkRenamers {
+            bookmark_renamer,
+            reverse_bookmark_renamer,
+        } = get_bookmark_renamers(&commit_sync_config, small_repo_id)?;
+
+        if source_repo.get_repoid() == small_repo_id {
+            Ok(CommitSyncRepos::SmallToLarge {
+                large_repo: target_repo.clone(),
+                small_repo: source_repo.clone(),
+                mover,
+                reverse_mover,
+                bookmark_renamer,
+                reverse_bookmark_renamer,
+            })
+        } else {
+            Ok(CommitSyncRepos::LargeToSmall {
+                large_repo: source_repo.clone(),
+                small_repo: target_repo.clone(),
+                mover,
+                reverse_mover,
+                bookmark_renamer,
+                reverse_bookmark_renamer,
+            })
+        }
+    }
 }
 
 #[derive(Clone)]
