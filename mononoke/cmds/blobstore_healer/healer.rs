@@ -9,14 +9,12 @@
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
-use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
 use futures::{self, future::join_all, prelude::*};
 use futures_ext::FutureExt;
 use itertools::{Either, Itertools};
-use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba_ext::ScubaSampleBuilderExt;
@@ -25,11 +23,6 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Sum;
 use std::ops::Add;
 use std::sync::Arc;
-
-lazy_static! {
-    /// Minimal age of entry to consider if it has to be healed
-    static ref ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
-}
 
 pub struct Healer {
     blobstore_sync_queue_limit: usize,
@@ -57,16 +50,18 @@ impl Healer {
     }
 
     /// Heal one batch of entries. It selects a set of entries which are not too young (bounded
-    /// by ENTRY_HEALING_MIN_AGE) up to `blobstore_sync_queue_limit` at once.
-    pub fn heal(&self, ctx: CoreContext) -> impl Future<Item = bool, Error = Error> {
+    /// by healing_deadline) up to `blobstore_sync_queue_limit` at once.
+    pub fn heal(
+        &self,
+        ctx: CoreContext,
+        healing_deadline: DateTime,
+    ) -> impl Future<Item = bool, Error = Error> {
         cloned!(
             self.blobstore_sync_queue_limit,
             self.sync_queue,
             self.blobstores,
         );
 
-        let now = DateTime::now().into_chrono();
-        let healing_deadline = DateTime::new(now - *ENTRY_HEALING_MIN_AGE);
         let max_batch_size = self.blobstore_sync_queue_limit;
         let drain_only = self.drain_only;
         sync_queue
@@ -458,6 +453,7 @@ mod tests {
     use anyhow::format_err;
     use assert_matches::assert_matches;
     use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+    use bytes::Bytes;
     use fbinit::FacebookInit;
     use futures_ext::BoxFuture;
     use futures_util::compat::Future01CompatExt;
@@ -488,6 +484,10 @@ mod tests {
         pub fn fail_puts(&self) {
             let mut data = self.fail_puts.lock().expect("lock poison");
             *data = true;
+        }
+        pub fn unfail_puts(&self) {
+            let mut data = self.fail_puts.lock().expect("lock poison");
+            *data = false;
         }
     }
 
@@ -1061,5 +1061,65 @@ mod tests {
     ) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new()?;
         runtime.block_on_std(test_heal_blob_where_store_and_queue_mismatch_some_put_fails(fb))
+    }
+
+    async fn test_healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (bids, underlying_stores, stores) = make_empty_stores(2);
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+        underlying_stores.get(&bids[1]).unwrap().fail_puts();
+
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+
+        // Insert one entry in the queue for the blobstore that inserted successfully
+        let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
+        let entries = vec![BlobstoreSyncQueueEntry::new(
+            "specialk".to_string(),
+            bids[0],
+            t0,
+        )];
+        sync_queue
+            .add_many(ctx.clone(), Box::new(entries.into_iter()))
+            .compat()
+            .await?;
+
+        let healer = Healer::new(1000, sync_queue.clone(), stores, None, false);
+
+        healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+
+        // Insert to the second blobstore failed, there should be an entry in the queue
+        assert_eq!(
+            1,
+            sync_queue.len(ctx.clone()).compat().await?,
+            "expecting an entry that should be rehealed"
+        );
+
+        // Now blobstore is "fixed", run the heal again, queue should be empty, second blobstore
+        // should have an entry.
+        underlying_stores.get(&bids[1]).unwrap().unfail_puts();
+
+        println!("second heal");
+        healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+        assert_eq!(
+            0,
+            sync_queue.len(ctx.clone()).compat().await?,
+            "expecting everything to be healed"
+        );
+        assert_eq!(
+            underlying_stores
+                .get(&bids[1])
+                .unwrap()
+                .get(ctx.clone(), "specialk".to_string())
+                .compat()
+                .await?,
+            Some(BlobstoreBytes::from_bytes(Bytes::from("specialv"))),
+        );
+
+        Ok(())
+    }
+    #[fbinit::test]
+    fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio_compat::runtime::Runtime::new()?;
+        runtime.block_on_std(test_healer_heal_with_failing_blobstore(fb))
     }
 }

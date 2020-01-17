@@ -15,6 +15,7 @@ mod healer;
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
+use chrono::Duration as ChronoDuration;
 use clap::{value_t, App};
 use cloned::cloned;
 use cmdlib::{
@@ -33,8 +34,10 @@ use futures::{
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use futures_preview::compat::Future01CompatExt;
 use healer::Healer;
+use lazy_static::lazy_static;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
+use mononoke_types::DateTime;
 use prefixblob::PrefixBlobstore;
 use slog::{error, info, o, Logger};
 use sql::Connection;
@@ -48,6 +51,11 @@ use tokio_timer::Delay;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
+
+lazy_static! {
+    /// Minimal age of entry to consider if it has to be healed
+    static ref ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
+}
 
 fn maybe_schedule_healer_for_storage(
     ctx: CoreContext,
@@ -180,7 +188,9 @@ fn schedule_everlasting_healing(
     let fut = loop_fn((), move |()| {
         let max_replication_lag_fn = max_replication_lag(replication_lag_db_conns.clone());
 
-        repo_healer.heal(ctx.clone()).and_then({
+        let now = DateTime::now().into_chrono();
+        let healing_deadline = DateTime::new(now - *ENTRY_HEALING_MIN_AGE);
+        repo_healer.heal(ctx.clone(), healing_deadline).and_then({
             let logger = ctx.logger().clone();
             move |last_batch_full_sized| {
                 ensure_small_db_replication_lag(
