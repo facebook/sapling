@@ -115,29 +115,12 @@ function mononoke_walker {
     "$@"
 }
 
-function mononoke_x_repo_sync_once() {
+function mononoke_x_repo_sync() {
   source_repo_id=$1
   target_repo_id=$2
-  target_bookmark=$3
-  shift
   shift
   shift
   GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --source-repo-id "$source_repo_id" \
-    --target-repo-id "$target_repo_id" \
-    --target-bookmark "$target_bookmark" \
-    "$@"
-}
-
-
-function new_mononoke_x_repo_sync_once() {
-  source_repo_id=$1
-  target_repo_id=$2
-  shift
-  shift
-  GLOG_minloglevel=5 "$NEW_MONONOKE_X_REPO_SYNC" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --source-repo-id "$source_repo_id" \

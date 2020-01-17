@@ -157,7 +157,7 @@ At the same time, the tailed repo gets new commits
   $ hg ci -qm "Post-merge commit 1"
   $ REPONAME=small-mon-2 hgmn push --to master_bookmark -q
 -- tailer puts this commit into a large repo
-  $ new_mononoke_x_repo_sync_once $REPOIDSMALL2 $REPOIDLARGE once --target-bookmark master_bookmark --commit master_bookmark 2>&1 | grep "synced as"
+  $ mononoke_x_repo_sync $REPOIDSMALL2 $REPOIDLARGE once --target-bookmark master_bookmark --commit master_bookmark 2>&1 | grep "synced as"
   * changeset 46d7f49c05a72a305692183a11274a0fbbdc4f8a4b53ca759fb3d257ba54184e synced as 3a9ffb4771519f86b79729a543da084c6a70ff385933aed540e2112a049a0697 * (glob)
 
 Force pushrebase should fail, because it pushes to a shared bookmark
