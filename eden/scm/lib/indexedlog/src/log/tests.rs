@@ -604,7 +604,7 @@ fn test_sync_fast_paths() {
 fn test_auto_sync_threshold() {
     let dir = tempdir().unwrap();
     let open_opts = OpenOptions::new().create(true).auto_sync_threshold(100);
-    let mut log = open_opts.open(&dir).unwrap();
+    let mut log = open_opts.open(dir.path()).unwrap();
     log.append(vec![b'a'; 50]).unwrap();
     assert_eq!(log.iter_dirty().count(), 1);
 
@@ -616,11 +616,11 @@ fn test_auto_sync_threshold() {
 fn test_sync_missing_meta() {
     let dir = tempdir().unwrap();
     let open_opts = OpenOptions::new().create(true);
-    let mut log = open_opts.open(&dir).unwrap();
+    let mut log = open_opts.open(dir.path()).unwrap();
     log.append(vec![b'a'; 100]).unwrap();
     log.sync().unwrap();
 
-    let mut log2 = open_opts.open(&dir.path()).unwrap();
+    let mut log2 = open_opts.open(dir.path()).unwrap();
     fs::remove_file(&dir.path().join(META_FILE)).unwrap();
     log2.sync().unwrap(); // pretend to be a no-op
 
@@ -788,7 +788,7 @@ fn test_repair_and_delete_content() {
         .index("c", |_| vec![IndexOutput::Reference(0..1)]);
 
     let long_lived_log = RefCell::new(open_opts.create_in_memory().unwrap());
-    let open = || open_opts.open(&path);
+    let open = || open_opts.open(path);
     let corrupt = |name: &str, offset: i64| pwrite(&path.join(name), offset, b"cc");
     let truncate = |name: &str| fs::write(path.join(name), "garbage").unwrap();
     let delete = |name: &str| fs::remove_file(path.join(name)).unwrap();
@@ -837,7 +837,7 @@ fn test_repair_and_delete_content() {
         let _ = cloned_log.lookup(0, "z").unwrap().into_vec().unwrap();
     };
     let repair = || {
-        let message = open_opts.repair(&path).unwrap();
+        let message = open_opts.repair(path).unwrap();
         try_trigger_sigbus();
         message
                 .lines()
@@ -1080,7 +1080,7 @@ Rebuilt index "c""#
         assert_eq!(len(&index_file), 70);
     };
     let delete_content = || {
-        open_opts.delete_content(&path).unwrap();
+        open_opts.delete_content(path).unwrap();
         assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET);
         assert_eq!(len(&index_file), 10);
         // Check SIGBUS

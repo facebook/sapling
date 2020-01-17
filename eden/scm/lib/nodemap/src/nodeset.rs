@@ -47,7 +47,7 @@ impl NodeSet {
 
     pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
         Ok(NodeSet {
-            log: Self::default_open_options().open(dir)?,
+            log: Self::default_open_options().open(dir.as_ref())?,
         })
     }
 

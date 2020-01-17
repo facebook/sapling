@@ -8,13 +8,12 @@
 use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
-use crate::log::{Log, LogMetadata, PRIMARY_START_OFFSET};
+use crate::log::{GenericPath, Log, LogMetadata, PRIMARY_START_OFFSET};
 use crate::utils;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug};
 use std::ops::Range;
-use std::path::Path;
 
 use tracing::debug_span;
 
@@ -308,26 +307,32 @@ impl OpenOptions {
     /// always bounded to a transaction. [`Log::sync`] is like committing the
     /// transaction. Dropping the [`Log`] instance is like abandoning a
     /// transaction.
-    pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<Log> {
-        let dir = dir.as_ref();
-        let span = debug_span!("Log::open", dir = &dir.to_string_lossy().as_ref());
-        let _guard = span.enter();
-        self.open_internal(dir, None, None)
-            .context(|| format!("in log::OpenOptions::open({:?})", dir))
+    pub fn open(&self, dir: impl Into<GenericPath>) -> crate::Result<Log> {
+        let dir = dir.into();
+        match dir {
+            GenericPath::Nothing => self.create_in_memory(),
+            GenericPath::Filesystem(ref fs_dir) => {
+                let span = debug_span!("Log::open", dir = &fs_dir.to_string_lossy().as_ref());
+                let _guard = span.enter();
+                self.open_internal(&dir, None, None)
+                    .context(|| format!("in log::OpenOptions::open({:?})", &dir))
+            }
+        }
     }
 
     /// Construct an empty in-memory [`Log`] without side-effects on the
     /// filesystem. The in-memory [`Log`] cannot be [`sync`]ed.
-    pub fn create_in_memory(&self) -> crate::Result<Log> {
+    pub(crate) fn create_in_memory(&self) -> crate::Result<Log> {
         let result: crate::Result<_> = (|| {
             let meta = LogMetadata {
                 primary_len: PRIMARY_START_OFFSET,
                 indexes: BTreeMap::new(),
                 epoch: utils::epoch(),
             };
+            let dir = GenericPath::Nothing;
             let mem_buf = Box::pin(Vec::new());
             let (disk_buf, indexes) = Log::load_log_and_indexes(
-                None,
+                &dir,
                 &meta,
                 &self.index_defs,
                 &mem_buf,
@@ -336,7 +341,7 @@ impl OpenOptions {
             )?;
 
             Ok(Log {
-                dir: None,
+                dir,
                 disk_buf,
                 mem_buf,
                 meta,
@@ -349,7 +354,11 @@ impl OpenOptions {
         result.context("in log::OpenOptions::create_in_memory")
     }
 
-    pub(crate) fn open_with_lock(&self, dir: &Path, lock: &ScopedDirLock) -> crate::Result<Log> {
+    pub(crate) fn open_with_lock(
+        &self,
+        dir: &GenericPath,
+        lock: &ScopedDirLock,
+    ) -> crate::Result<Log> {
         self.open_internal(dir, None, Some(lock))
     }
 
@@ -358,7 +367,7 @@ impl OpenOptions {
     // can be reused.
     pub(crate) fn open_internal(
         &self,
-        dir: &Path,
+        dir: &GenericPath,
         reuse_indexes: Option<&Vec<Index>>,
         lock: Option<&ScopedDirLock>,
     ) -> crate::Result<Log> {
@@ -367,14 +376,14 @@ impl OpenOptions {
         // Do a lock-less load_or_create_meta to avoid the flock overhead.
         let meta = Log::load_or_create_meta(dir, false).or_else(|err| {
             if create {
-                utils::mkdir_p(dir)
+                dir.mkdir()
                     .context("cannot mkdir after failing to read metadata")
                     .source(err)?;
                 // Make sure check and write happens atomically.
                 if lock.is_some() {
                     Log::load_or_create_meta(dir, true)
                 } else {
-                    let _lock = ScopedDirLock::new(&dir)?;
+                    let _lock = dir.lock()?;
                     Log::load_or_create_meta(dir, true)
                 }
             } else {
@@ -384,7 +393,7 @@ impl OpenOptions {
 
         let mem_buf = Box::pin(Vec::new());
         let (disk_buf, indexes) = Log::load_log_and_indexes(
-            Some(dir),
+            dir,
             &meta,
             &self.index_defs,
             &mem_buf,
@@ -392,7 +401,7 @@ impl OpenOptions {
             self.fsync,
         )?;
         let mut log = Log {
-            dir: Some(dir.to_path_buf()),
+            dir: dir.clone(),
             disk_buf,
             mem_buf,
             meta,

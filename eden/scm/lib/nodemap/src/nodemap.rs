@@ -49,7 +49,7 @@ impl DefaultOpenOptions<log::OpenOptions> for NodeMap {
 impl NodeMap {
     pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
         Ok(NodeMap {
-            log: Self::default_open_options().open(dir)?,
+            log: Self::default_open_options().open(dir.as_ref())?,
         })
     }
 

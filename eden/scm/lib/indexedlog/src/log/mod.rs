@@ -46,7 +46,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
 use std::ops::RangeBounds;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use tracing::debug_span;
@@ -54,6 +54,7 @@ use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 mod meta;
 mod open_options;
+mod path;
 mod repair;
 #[cfg(test)]
 mod tests;
@@ -63,6 +64,7 @@ pub use open_options::{
     ChecksumType, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, IndexOutput,
     OpenOptions,
 };
+pub use path::GenericPath;
 
 // Constants about file names
 pub(crate) const PRIMARY_FILE: &str = "log";
@@ -96,7 +98,7 @@ const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 1u64 << INDEX_CHECKSUM_CHUNK_SIZE_LOG;
 /// Writes are buffered in memory. Flushing in-memory parts to
 /// disk requires taking a flock on the directory.
 pub struct Log {
-    pub dir: Option<PathBuf>,
+    pub dir: GenericPath,
     disk_buf: Arc<Mmap>,
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     meta: LogMetadata,
@@ -199,7 +201,7 @@ impl Log {
         OpenOptions::new()
             .index_defs(index_defs)
             .create(true)
-            .open(dir)
+            .open(dir.as_ref())
     }
 
     /// Append an entry in-memory. Update related indexes in-memory.
@@ -399,12 +401,12 @@ impl Log {
     pub fn sync(&mut self) -> crate::Result<u64> {
         let result: crate::Result<_> = (|| {
             let span = debug_span!("Log::sync", dirty_bytes = self.mem_buf.len());
-            if let Some(dir) = &self.dir {
+            if let Some(dir) = &self.dir.as_opt_path() {
                 span.record("dir", &dir.to_string_lossy().as_ref());
             }
             let _guard = span.enter();
 
-            if self.dir.is_none() {
+            if self.dir.as_opt_path().is_none() {
                 // See Index::flush for why this is not an Err.
                 return Ok(0);
             }
@@ -412,7 +414,7 @@ impl Log {
             fn check_append_only(this: &Log, new_meta: &LogMetadata) -> crate::Result<()> {
                 let old_meta = &this.meta;
                 if old_meta.primary_len > new_meta.primary_len {
-                    Err(crate::Error::path(this.dir.as_ref().unwrap(), format!(
+                    Err(crate::Error::path(this.dir.as_opt_path().unwrap(), format!(
                     "on-disk log is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
                     new_meta.primary_len, old_meta.primary_len
                 )))
@@ -423,7 +425,7 @@ impl Log {
 
             // Read-only fast path - no need to take directory lock.
             if self.mem_buf.is_empty() {
-                if let Ok(meta) = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false) {
+                if let Ok(meta) = Self::load_or_create_meta(&self.dir, false) {
                     let changed = self.meta != meta;
                     let truncated = self.meta.epoch != meta.epoch;
                     if !truncated {
@@ -436,7 +438,7 @@ impl Log {
                         // entries, and the on-disk primary log is append-only (so data
                         // already present in the indexes is valid).
                         *self = self.open_options.clone().open_internal(
-                            self.dir.as_ref().unwrap(),
+                            &self.dir,
                             if truncated { None } else { Some(&self.indexes) },
                             None,
                         )?;
@@ -455,11 +457,11 @@ impl Log {
 
             // Take the lock so no other `flush` runs for this directory. Then reload meta, append
             // log, then update indexes.
-            let dir = self.dir.clone().unwrap();
+            let dir = self.dir.as_opt_path().unwrap().to_path_buf();
             let lock = ScopedDirLock::new(&dir)?;
 
             // Step 1: Reload metadata to get the latest view of the files.
-            let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
+            let mut meta = Self::load_or_create_meta(&self.dir, false)?;
             let changed = self.meta != meta;
             let truncated = self.meta.epoch != meta.epoch;
             if !truncated {
@@ -474,7 +476,7 @@ impl Log {
                 let mut log = self
                     .open_options
                     .clone()
-                    .open_with_lock(self.dir.as_ref().unwrap(), &lock)
+                    .open_with_lock(&self.dir, &lock)
                     .context("re-open to run flush_filter")?;
 
                 for entry in self.iter_dirty() {
@@ -497,7 +499,7 @@ impl Log {
                 let mut log = self
                     .open_options
                     .clone()
-                    .open_with_lock(self.dir.as_ref().unwrap(), &lock)
+                    .open_with_lock(&self.dir, &lock)
                     .context(|| {
                         format!(
                             "re-open since epoch has changed ({} to {})",
@@ -515,7 +517,7 @@ impl Log {
             }
 
             // Step 2: Append to the primary log.
-            let primary_path = self.dir.as_ref().unwrap().join(PRIMARY_FILE);
+            let primary_path = self.dir.as_opt_path().unwrap().join(PRIMARY_FILE);
             let mut primary_file = fs::OpenOptions::new()
                 .read(true)
                 .write(true)
@@ -582,7 +584,7 @@ impl Log {
 
             // Step 3: Reload primary log and indexes to get the latest view.
             let (disk_buf, indexes) = Self::load_log_and_indexes(
-                Some(self.dir.as_ref().unwrap()),
+                &self.dir,
                 &meta,
                 &self.open_options.index_defs,
                 &self.mem_buf,
@@ -618,8 +620,7 @@ impl Log {
             }
 
             // Step 5: Write the updated meta file.
-            let meta_path = self.dir.as_ref().unwrap().join(META_FILE);
-            self.meta.write_file(&meta_path, self.open_options.fsync)?;
+            self.dir.write_meta(&self.meta, self.open_options.fsync)?;
 
             Ok(self.meta.primary_len)
         })();
@@ -631,15 +632,9 @@ impl Log {
 
     /// Check if the log is changed on disk.
     pub fn is_changed(&self) -> bool {
-        match &self.dir {
-            None => false,
-            Some(dir) => {
-                let meta_path = dir.join(META_FILE);
-                match LogMetadata::read_file(&meta_path) {
-                    Ok(meta) => meta != self.meta,
-                    Err(_) => true,
-                }
-            }
+        match self.dir.read_meta() {
+            Ok(meta) => meta != self.meta,
+            Err(_) => true,
         }
     }
 
@@ -655,7 +650,8 @@ impl Log {
     /// complate indexes before rotating.
     pub(crate) fn finalize_indexes(&mut self) -> crate::Result<()> {
         let result: crate::Result<_> = (|| {
-            if let Some(ref dir) = self.dir {
+            let dir = self.dir.clone();
+            if let Some(ref dir) = dir.as_opt_path() {
                 let dir = dir.clone();
                 if !self.mem_buf.is_empty() {
                     return Err(crate::Error::programming(
@@ -665,7 +661,7 @@ impl Log {
 
                 let _lock = ScopedDirLock::new(&dir)?;
 
-                let meta = Self::load_or_create_meta(&dir, false)?;
+                let meta = Self::load_or_create_meta(&self.dir, false)?;
                 if self.meta != meta {
                     return Err(crate::Error::programming(
                         "race detected, callsite responsible for preventing races",
@@ -680,8 +676,7 @@ impl Log {
                     self.meta.indexes.insert(name, new_length);
                 }
 
-                let meta_path = dir.join(META_FILE);
-                self.meta.write_file(&meta_path, self.open_options.fsync)?;
+                self.dir.write_meta(&self.meta, self.open_options.fsync)?;
             }
             Ok(())
         })();
@@ -705,7 +700,7 @@ impl Log {
     pub fn rebuild_indexes(self, force: bool) -> crate::Result<String> {
         let dir = self.dir.clone();
         let result: crate::Result<_> = (|this: Log| {
-            if let Some(dir) = this.dir.clone() {
+            if let Some(dir) = this.dir.clone().as_opt_path() {
                 let lock = ScopedDirLock::new(&dir)?;
                 this.rebuild_indexes_with_lock(force, &lock)
             } else {
@@ -725,7 +720,7 @@ impl Log {
     ) -> crate::Result<String> {
         let mut message = String::new();
         {
-            if let Some(ref dir) = self.dir {
+            if let Some(ref dir) = self.dir.as_opt_path() {
                 for (i, def) in self.open_options.index_defs.iter().enumerate() {
                     let name = def.name;
 
@@ -1053,7 +1048,7 @@ impl Log {
     }
 
     fn update_index_for_on_disk_entry_unchecked(
-        path: &Option<PathBuf>,
+        path: &GenericPath,
         index: &mut Index,
         def: &IndexDef,
         disk_buf: &Mmap,
@@ -1106,11 +1101,11 @@ impl Log {
     ///
     /// The caller should ensure the directory exists and take a lock on it to
     /// avoid filesystem races.
-    fn load_or_create_meta(dir: &Path, create: bool) -> crate::Result<LogMetadata> {
-        let meta_path = dir.join(META_FILE);
-        match LogMetadata::read_file(&meta_path) {
+    fn load_or_create_meta(path: &GenericPath, create: bool) -> crate::Result<LogMetadata> {
+        match path.read_meta() {
             Err(err) => {
-                if err.kind() == io::ErrorKind::NotFound && create {
+                if err.io_error_kind() == io::ErrorKind::NotFound && create {
+                    let dir = path.as_opt_path().unwrap();
                     // Create (and truncate) the primary log and indexes.
                     let primary_path = dir.join(PRIMARY_FILE);
                     let mut primary_file =
@@ -1126,10 +1121,10 @@ impl Log {
                         epoch: utils::epoch(),
                     };
                     // An empty meta file is easy to recreate. No need to use fsync.
-                    meta.write_file(&meta_path, false)?;
+                    path.write_meta(&meta, false)?;
                     Ok(meta)
                 } else {
-                    Err(err).context(&meta_path, "cannot read")
+                    Err(err)
                 }
             }
             Ok(meta) => Ok(meta),
@@ -1142,14 +1137,14 @@ impl Log {
     /// order. This should only be used in `sync` code path when the on-disk `meta` matches
     /// the in-memory `meta`. Otherwise it is not a sound use.
     fn load_log_and_indexes(
-        dir: Option<&Path>,
+        dir: &GenericPath,
         meta: &LogMetadata,
         index_defs: &[IndexDef],
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<&Vec<Index>>,
         fsync: bool,
     ) -> crate::Result<(Arc<Mmap>, Vec<Index>)> {
-        let primary_buf = match dir {
+        let primary_buf = match dir.as_opt_path() {
             Some(dir) => Arc::new(mmap_len(&dir.join(PRIMARY_FILE), meta.primary_len)?),
             None => Arc::new(mmap_empty().infallible()?),
         };
@@ -1202,15 +1197,20 @@ impl Log {
         Ok((primary_buf, indexes))
     }
 
+    /// Return the reference to the [`GenericPath`] used to crate the [`Log`].
+    pub fn path(&self) -> &GenericPath {
+        &self.dir
+    }
+
     /// Load a single index.
     fn load_index(
-        dir: Option<&Path>,
+        dir: &GenericPath,
         name: &str,
         len: u64,
         buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
         fsync: bool,
     ) -> crate::Result<Index> {
-        match dir {
+        match dir.as_opt_path() {
             Some(dir) => {
                 let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
                 index::OpenOptions::new()
@@ -1249,12 +1249,12 @@ impl Log {
     /// data, the real data offset, and the next entry offset. Return None if the offset is at
     /// the end of the buffer.  Raise errors if there are integrity check issues.
     fn read_entry_from_buf<'a>(
-        path: &Option<PathBuf>,
+        path: &GenericPath,
         buf: &'a [u8],
         offset: u64,
     ) -> crate::Result<Option<EntryResult<'a>>> {
         let data_error = |msg: String| -> crate::Error {
-            match path {
+            match path.as_opt_path() {
                 Some(path) => crate::Error::corruption(path, msg),
                 None => crate::Error::path(Path::new("<memory>"), msg),
             }
@@ -1427,7 +1427,7 @@ impl Log {
     }
 
     fn corruption(&self, message: String) -> crate::Error {
-        let path: &Path = match self.dir {
+        let path: &Path = match self.dir.as_opt_path() {
             Some(ref path) => &path,
             None => Path::new("<memory>"),
         };

@@ -8,7 +8,8 @@
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedDirLock;
 use crate::log::{
-    LogMetadata, OpenOptions, META_FILE, PRIMARY_FILE, PRIMARY_HEADER, PRIMARY_START_OFFSET,
+    GenericPath, LogMetadata, OpenOptions, META_FILE, PRIMARY_FILE, PRIMARY_HEADER,
+    PRIMARY_START_OFFSET,
 };
 use crate::repair::OpenOptionsRepair;
 use crate::utils::{self, atomic_write, mmap_len};
@@ -28,9 +29,15 @@ impl OpenOptions {
     /// Backup files are written for further investigation.
     ///
     /// Return message useful for human consumption.
-    pub fn repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
-        let dir = dir.as_ref();
+    pub fn repair(&self, dir: impl Into<GenericPath>) -> crate::Result<String> {
+        let dir = dir.into();
         let mut message = String::new();
+
+        let dir = match dir.as_opt_path() {
+            Some(dir) => dir,
+            None => return Ok(format!("{:?} is not on disk. Nothing to repair.\n", &dir)),
+        };
+
         let result: crate::Result<_> = (|| {
             if !dir.exists() {
                 return Ok(format!("{:?} does not exist. Nothing to repair.\n", dir));
@@ -128,8 +135,12 @@ impl OpenOptions {
             // Try to open it with indexes so we might reuse them. If that
             // fails, retry with all indexes disabled.
             let mut log = self
-                .open_with_lock(dir, &lock)
-                .or_else(|_| self.clone().index_defs(Vec::new()).open(dir))
+                .open_with_lock(&dir.into(), &lock)
+                .or_else(|_| {
+                    self.clone()
+                        .index_defs(Vec::new())
+                        .open(GenericPath::from(dir))
+                })
                 .context("cannot open log for repair")?;
 
             let mut iter = log.iter();
@@ -234,8 +245,12 @@ impl OpenOptions {
     /// empty and hopefully recovers from some corrupted state.
     ///
     /// Warning: This deletes data, and there is no backup!
-    pub fn delete_content(&self, dir: impl AsRef<Path>) -> crate::Result<()> {
-        let dir = dir.as_ref();
+    pub fn delete_content(&self, dir: impl Into<GenericPath>) -> crate::Result<()> {
+        let dir = dir.into();
+        let dir = match dir.as_opt_path() {
+            Some(dir) => dir,
+            None => return Ok(()),
+        };
         let result: crate::Result<()> = (|| {
             // Ensure the directory exist.
             utils::mkdir_p(dir)?;
@@ -260,7 +275,7 @@ impl OpenOptions {
             let log = self
                 .clone()
                 .create(true)
-                .open_with_lock(dir, &lock)
+                .open_with_lock(&dir.into(), &lock)
                 .context("cannot open")?;
             log.rebuild_indexes_with_lock(true, &lock)?;
 

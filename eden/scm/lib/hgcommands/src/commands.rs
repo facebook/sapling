@@ -252,7 +252,7 @@ pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
         io.write(format!("Repairing {:?}\n", path))?;
         io.write(format!(
             "{}\n",
-            indexedlog::log::OpenOptions::new().repair(path)?
+            indexedlog::log::OpenOptions::new().repair(Path::new(&path))?
         ))?;
         io.write("Done\n")?;
     }
