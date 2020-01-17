@@ -449,10 +449,11 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
     use fbinit::FacebookInit;
-    use futures::Future;
     use futures_ext::BoxFuture;
+    use futures_util::compat::Future01CompatExt;
     use std::iter::FromIterator;
     use std::sync::{Mutex, RwLock};
+    use tokio_preview as tokio;
 
     // In-memory "blob store"
     ///
@@ -595,7 +596,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn fetch_blob_missing_all(fb: FacebookInit) {
+    async fn fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, _underlying_stores, stores) = make_empty_stores(3);
         let fut = fetch_blob(
@@ -604,20 +605,21 @@ mod tests {
             "specialk".to_string(),
             HashSet::from_iter(bids.into_iter()),
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         let msg = r.err().and_then(|e| e.source().map(ToString::to_string));
         assert_eq!(
             Some("None of the blobstores to fetch responded".to_string()),
             msg
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_missing_all_stores(fb: FacebookInit) {
+    async fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
@@ -631,7 +633,7 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         let msg = r.err().and_then(|e| e.source().map(ToString::to_string));
         assert_eq!(
             Some("None of the blobstores to fetch responded".to_string()),
@@ -657,17 +659,20 @@ mod tests {
             underlying_stores.get(&bids[2]).unwrap().len(),
             "Should still be empty as no healing possible"
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) {
+    async fn heal_blob_where_queue_and_stores_match_on_missing(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
@@ -681,7 +686,7 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
@@ -696,10 +701,11 @@ mod tests {
             sync_queue.len(),
             "expecting 0 entries to write to queue for reheal as we just healed the last one"
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn fetch_blob_missing_none(fb: FacebookInit) {
+    async fn fetch_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, _underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -711,19 +717,20 @@ mod tests {
             "specialk".to_string(),
             HashSet::from_iter(bids.into_iter()),
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         let foundv = r.ok().unwrap().blob;
         assert_eq!(make_value("specialv"), foundv);
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_entry_too_recent(fb: FacebookInit) {
+    async fn heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2019-07-01T11:59:59.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2019-07-01T11:59:59.00Z")?;
         // too recent,  its after the healing deadline
-        let t1 = DateTime::from_rfc3339("2019-07-01T12:00:35.00Z").unwrap();
+        let t1 = DateTime::from_rfc3339("2019-07-01T12:00:35.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t1),
@@ -738,24 +745,25 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_eq!(None, r.unwrap(), "expecting that no entries processed");
         assert_eq!(0, sync_queue.len());
         assert_eq!(0, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(0, underlying_stores.get(&bids[1]).unwrap().len());
         assert_eq!(0, underlying_stores.get(&bids[2]).unwrap().len());
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_missing_none(fb: FacebookInit) {
+    async fn heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
@@ -770,23 +778,24 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(0, sync_queue.len());
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[2]).unwrap().len());
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_only_unknown_queue_entry(fb: FacebookInit) {
+    async fn heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(2);
         let (bids_from_different_config, _, _) = make_empty_stores(5);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![BlobstoreSyncQueueEntry::new(
             "specialk".to_string(),
             bids_from_different_config[4],
@@ -801,7 +810,7 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, sync_queue.len(), "expecting 1 new entries on queue");
@@ -810,16 +819,17 @@ mod tests {
             underlying_stores.get(&bids[1]).unwrap().len(),
             "Expected no change"
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) {
+    async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(2);
         let (bids_from_different_config, _, _) = make_empty_stores(5);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids_from_different_config[4], t0),
@@ -833,19 +843,20 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
-        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
+        assert_matches!(r?, Some(_), "expecting to delete entries");
         assert_eq!(3, sync_queue.len(), "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
         assert_eq!(
             1,
             underlying_stores.get(&bids[1]).unwrap().len(),
             "Expected put to complete"
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn fetch_blob_missing_some(fb: FacebookInit) {
+    async fn fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, _underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -855,24 +866,27 @@ mod tests {
             "specialk".to_string(),
             HashSet::from_iter(bids.clone().into_iter()),
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         let mut fetch_data: FetchData = r.ok().unwrap();
         assert_eq!(make_value("specialv"), fetch_data.blob);
         fetch_data.good_sources.sort();
         assert_eq!(fetch_data.good_sources, &bids[0..1]);
         fetch_data.missing_sources.sort();
         assert_eq!(fetch_data.missing_sources, &bids[1..3]);
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_where_queue_and_stores_mismatch_on_missing(fb: FacebookInit) {
+    async fn heal_blob_where_queue_and_stores_mismatch_on_missing(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], t0),
@@ -886,7 +900,7 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
@@ -905,17 +919,20 @@ mod tests {
             sync_queue.len(),
             "expecting 0 entries to write to queue for reheal as all heal puts succeeded"
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_where_store_and_queue_match_all_put_fails(fb: FacebookInit) {
+    async fn heal_blob_where_store_and_queue_match_all_put_fails(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
@@ -930,7 +947,7 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
@@ -954,17 +971,20 @@ mod tests {
             sync_queue.len(),
             "expecting 2 known good entries to write to queue for reheal as there was a put failure"
         );
+        Ok(())
     }
 
     #[fbinit::test]
-    fn heal_blob_where_store_and_queue_mismatch_some_put_fails(fb: FacebookInit) {
+    async fn heal_blob_where_store_and_queue_mismatch_some_put_fails(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "dummyk", "dummyk");
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
-        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
-        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let entries = vec![
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
             BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
@@ -979,7 +999,7 @@ mod tests {
             "specialk".to_string(),
             &entries,
         );
-        let r = fut.wait();
+        let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
@@ -1003,5 +1023,6 @@ mod tests {
             sync_queue.len(),
             "expecting 2 known good entries to write to queue for reheal as there was a put failure"
         );
+        Ok(())
     }
 }
