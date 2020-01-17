@@ -169,6 +169,12 @@ setconfig() {
   python "$RUNTESTDIR/setconfig.py" "$@"
 }
 
+# Set config items that enable modern features.
+setmodernconfig() {
+  enable remotenames amend
+  setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution=obsolete remotenames.rename.default=remote
+}
+
 # Create a new extension
 newext() {
   extname="$1"

@@ -8,6 +8,8 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+sh.setmodernconfig()
+
 # Test turning zstore-commit-data on and off
 
 sh % "setconfig format.use-zstore-commit-data=off"
@@ -85,3 +87,39 @@ desc(B)
 
 sh % "setconfig format.use-zstore-commit-data=on"
 sh % 'hg log -r "$H" -T "{desc}\\n"' == "H"
+
+# Test the revlog-fallback mode migrates draft commits.
+
+sh.setconfig("format.use-zstore-commit-data=off")
+
+sh % "newrepo"
+sh % "drawdag" << r"""
+B
+|
+A
+""" == ""
+
+# Make A public.
+sh.hg("debugremotebookmark", "master", "desc(A)")
+sh % "hg log -r 'public()' -T '{desc} '" == "A"
+sh % "hg log -r 'draft()' -T '{desc} '" == "B"
+
+# Migrate.
+sh.setconfig(
+    "format.use-zstore-commit-data=on",
+    "format.use-zstore-commit-data-revlog-fallback=on",
+)
+
+sh % "hg log -r 'desc(A)' -T '{desc}'" == "A"
+sh % "hg log -r 'desc(B)' -T '{desc}'" == "B"
+
+# Break revlog.
+
+sh % "mv .hg/store/00changelog.d .hg/store/00changelog.d.bak"
+
+# "$A" can no longer be accessed because it was public.
+
+sh % "hg log -r $A -T '{desc}'" == r"""
+    abort:*00changelog.d* (glob)
+    [255]"""
+sh % "hg log -r $B -T '{desc}'" == "B"

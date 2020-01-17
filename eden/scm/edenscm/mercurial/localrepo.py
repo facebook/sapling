@@ -678,10 +678,12 @@ class localrepository(object):
         if self.ui.configbool(
             "format", "use-zstore-commit-data-revlog-fallback"
         ) or self.ui.configbool("format", "use-zstore-commit-data-server-fallback"):
-            return
+            revs = list(self.unfiltered().revs("not public()"))
+        else:
+            revs = self
 
         with progress.bar(
-            self.ui, _("migrating commit data"), _("commits"), len(self)
+            self.ui, _("migrating commit data"), _("commits"), len(revs)
         ) as prog:
             cl = self.changelog
             cl.zstore = None
@@ -691,7 +693,7 @@ class localrepository(object):
             clnode = cl.node
             insert = zstore.insert
             contains = zstore.__contains__
-            for rev in self:
+            for rev in revs:
                 prog.value += 1
                 node = clnode(rev)
                 if contains(node):

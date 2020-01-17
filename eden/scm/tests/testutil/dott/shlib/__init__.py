@@ -342,6 +342,19 @@ def setconfig(*args):
         util.appendfile(hgrcpath, content)
 
 
+def setmodernconfig():
+    enable("remotenames", "amend")
+    setconfig(
+        "experimental.narrow-heads=true",
+        "visibility.enabled=true",
+        "mutation.record=true",
+        "mutation.enabled=true",
+        "mutation.date=0 0",
+        "experimental.evolution=obsolete",
+        "remotenames.rename.default=remote",
+    )
+
+
 _newrepoid = 0
 
 
