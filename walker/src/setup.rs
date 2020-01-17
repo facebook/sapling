@@ -74,7 +74,8 @@ pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
 pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
 pub const EXCLUDE_CHECK_TYPE_ARG: &'static str = "exclude-check-type";
 pub const INCLUDE_CHECK_TYPE_ARG: &'static str = "include-check-type";
-pub const SCUBA_TABLE_ARG: &'static str = "scuba-table";
+const SCUBA_TABLE_ARG: &'static str = "scuba-table";
+const SCUBA_LOG_FILE_ARG: &'static str = "scuba-log-file";
 
 const SHALLOW_VALUE_ARG: &'static str = "shallow";
 const DEEP_VALUE_ARG: &'static str = "deep";
@@ -413,6 +414,14 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(false)
                 .required(false)
                 .help("Scuba table for logging nodes with issues. e.g. mononoke_walker"),
+        )
+        .arg(
+            Arg::with_name(SCUBA_LOG_FILE_ARG)
+                .long(SCUBA_LOG_FILE_ARG)
+                .takes_value(true)
+                .multiple(false)
+                .required(false)
+                .help("A log file to write Scuba logs to (primarily useful in testing)"),
         );
 }
 
@@ -595,6 +604,10 @@ pub fn setup_common(
     let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
     scuba_builder.add_common_server_data();
     scuba_builder.add(WALK_TYPE, walk_stats_key);
+
+    if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
+        scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
+    }
 
     let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
