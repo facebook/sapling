@@ -2092,6 +2092,13 @@ have a definite end point.
     Default to False, when True allow creating divergence when performing
     rebase of obsolete changesets.
 
+``remotenames``
+----------
+
+``important-names``
+    A list of names that will be written to ``remotenames`` on pull.
+    (default: master)
+
 ``revsetalias``
 ---------------
 

@@ -117,7 +117,7 @@ pull
   1 new obsolescence markers
   pre-close-tip:24b6387c8c8c draft 
   postclose-tip:24b6387c8c8c draft 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -140,7 +140,7 @@ pull empty (with phase movement)
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
   $ hg -R other log -G
   o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -159,7 +159,7 @@ pull empty
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
-  txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=0 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=file:$TESTTMP/main
   $ hg -R other log -G
   o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |

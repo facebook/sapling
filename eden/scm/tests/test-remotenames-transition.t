@@ -95,6 +95,8 @@ Test message
   $ hg pull -q
   Test transition message
   with newline
+  Test transition message
+  with newline
 
 Test transition bookmark disallowed
   $ echo "[remotenames]" >> $HGRCPATH

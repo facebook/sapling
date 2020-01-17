@@ -1914,7 +1914,15 @@ def _recordbookmarksupdate(repo, changes):
         repo.journal.recordmany(journalremotebookmarktype, changes)
 
 
-def saveremotenames(repo, remotebookmarks):
+def saveremotenames(repo, remotebookmarks, override=True):
+    """
+    remotebookmarks has the format {name: {name: hexnode | None}}.
+    For example: {"remote": {"master": "0" * 40}}
+
+    If override is False, update existing entries.
+    If override is True, bookmarks with the same "remote" name (ex. "remote")
+    will be replaced.
+    """
     if not remotebookmarks:
         return
 
@@ -1938,6 +1946,8 @@ def saveremotenames(repo, remotebookmarks):
                 _writesingleremotename(f, remote, nametype, rname, node)
             elif nametype == "bookmarks":
                 oldbooks[(remote, rname)] = node
+                if not override and rname not in remotebookmarks[remote]:
+                    _writesingleremotename(f, remote, nametype, rname, node)
 
         journal = []
         nm = repo.unfiltered().changelog.nodemap
@@ -1960,7 +1970,8 @@ def saveremotenames(repo, remotebookmarks):
         f.close()
 
         # Old paths have been deleted, refresh remotenames
-        repo._remotenames.clearnames()
+        if util.safehasattr(repo, "_remotenames"):
+            repo._remotenames.clearnames()
 
         # If narrowheads is enabled, updating remotenames can affect phases
         # (and other revsets). Therefore invalidate them.

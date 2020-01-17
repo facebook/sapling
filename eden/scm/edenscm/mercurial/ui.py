@@ -26,6 +26,7 @@ import sys
 import tempfile
 import time
 import traceback
+from typing import Optional
 
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import configparser
@@ -1475,7 +1476,7 @@ class ui(object):
         return self._uiconfig.logmeasuredtimes
 
 
-class paths(dict):
+class paths(util.sortdict):
     """Represents a collection of paths and their configs.
 
     Data is initially derived from ui instances and the config files they have
@@ -1483,7 +1484,8 @@ class paths(dict):
     """
 
     def __init__(self, ui):
-        dict.__init__(self)
+        super(paths, self).__init__(self)
+        self._uiconfig = ui.uiconfig()
 
         for name, loc in ui.configitems("paths", ignoresub=True):
             # No location is the same as not existing.
@@ -1528,6 +1530,38 @@ class paths(dict):
                 return path(None, None, rawloc=name)
             except ValueError:
                 raise error.RepoError(_("repository %s does not exist") % name)
+
+    def getname(self, rawloc):
+        # type: (str) -> Optional[str]
+        """Return name from a raw location.
+
+        If this function is about to return $name, and
+        'remotenames.rename.$name' config exists, return the value of that
+        config instead.
+
+        Return `None` if path is unknown.
+        """
+
+        def normalize(rawloc):
+            rawloc = rawloc.split("?", 1)[0]
+            if rawloc.startswith("file:"):
+                rawloc = rawloc[5:]
+            if pycompat.iswindows:
+                rawloc = rawloc.replace("\\", "/")
+            return rawloc
+
+        rawloc = normalize(rawloc)
+        result = None
+        for name, path in self.items():
+            if normalize(path.rawloc) == rawloc:
+                result = name
+                break
+
+        if result:
+            renamed = self._uiconfig.config("remotenames", "rename.%s" % result)
+            if renamed:
+                result = renamed
+        return result
 
 
 _pathsuboptions = {}

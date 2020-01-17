@@ -1705,6 +1705,23 @@ def _pullbookmarks(pullop):
     pullop.stepsdone.add("bookmarks")
     repo = pullop.repo
     ui = repo.ui
+
+    # Update important remotenames (ex. remote/master) unconditionally.
+    remotename = ui.paths.getname(pullop.remote.url())  # ex. 'default' or 'remote'
+    if remotename is not None:
+        importantnames = ui.configlist("remotenames", "important-names")
+        remotebookmarks = pullop.remotebookmarks
+        newnames = {}  # ex. {"master": hexnode}
+        for name in importantnames:
+            node = remotebookmarks.get(name)
+            if node is not None:
+                # The remotenames.saveremotenames API wants hexnames.
+                newnames[name] = hex(node)
+
+        from ..hgext.remotenames import saveremotenames
+
+        saveremotenames(repo, {remotename: newnames}, override=False)
+
     # XXX: Ideally we update remotenames right here to avoid race
     # conditions. See racy-pull-on-push in remotenames.py.
     if ui.configbool("ui", "skip-local-bookmarks-on-pull"):

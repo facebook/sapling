@@ -589,3 +589,6 @@ coreconfigitem("commands", "rebase.requiredest", default=False)
 coreconfigitem("experimental", "rebaseskipobsolete", default=True)
 coreconfigitem("rebase", "singletransaction", default=False)
 coreconfigitem("rebase", "experimental.inmemory", default=False)
+
+# Remote names.
+coreconfigitem("remotenames", "important-names", default=["master"])
