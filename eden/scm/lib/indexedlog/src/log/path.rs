@@ -10,6 +10,7 @@ use crate::lock::ScopedDirLock;
 use crate::log::{LogMetadata, META_FILE};
 use crate::utils;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 /// Abstract Path for [`Log`].
 ///
@@ -18,6 +19,12 @@ use std::path::PathBuf;
 pub enum GenericPath {
     /// The [`Log`] is backed by a directory on filesystem.
     Filesystem(PathBuf),
+
+    /// Metadata is shared. Other parts still use `path`.
+    SharedMeta {
+        path: Box<GenericPath>,
+        meta: Arc<Mutex<LogMetadata>>,
+    },
 
     /// From nothing. Indicates creating from memory.
     Nothing,
@@ -58,6 +65,7 @@ impl GenericPath {
     pub fn as_opt_path(&self) -> Option<&std::path::Path> {
         match self {
             GenericPath::Filesystem(path) => Some(&path),
+            GenericPath::SharedMeta { path, .. } => path.as_opt_path(),
             GenericPath::Nothing => None,
         }
     }
@@ -86,6 +94,10 @@ impl GenericPath {
                 let meta_path = dir.join(META_FILE);
                 LogMetadata::read_file(&meta_path).context(&meta_path, "when reading LogMetadata")
             }
+            GenericPath::SharedMeta { meta, .. } => {
+                let meta = meta.lock().unwrap();
+                Ok(meta.clone())
+            }
             GenericPath::Nothing => Err(crate::Error::programming(
                 "read_meta() does not support GenericPath::Nothing",
             )),
@@ -97,6 +109,13 @@ impl GenericPath {
             GenericPath::Filesystem(dir) => {
                 let meta_path = dir.join(META_FILE);
                 meta.write_file(&meta_path, fsync)?;
+                Ok(())
+            }
+            GenericPath::SharedMeta {
+                meta: shared_meta, ..
+            } => {
+                let mut shared_meta = shared_meta.lock().unwrap();
+                *shared_meta = meta.clone();
                 Ok(())
             }
             GenericPath::Nothing => Err(crate::Error::programming(
