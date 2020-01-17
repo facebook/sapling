@@ -130,7 +130,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- sync fbsource
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 2)";
-  $ new_mononoke_x_repo_sync_once 1 0 master_bookmark tail --catch-up-once |& grep processing
+  $ new_mononoke_x_repo_sync_once 1 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
   * processing log entry * (glob)
   * processing log entry * (glob)
@@ -140,7 +140,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- sync ovrsource
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)";
-  $ new_mononoke_x_repo_sync_once 2 0 master_bookmark tail --catch-up-once |& grep processing
+  $ new_mononoke_x_repo_sync_once 2 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
   * processing log entry * (glob)
   $ REPOIDLARGE=0 REPOIDSMALL=2 verify_wc master_bookmark
@@ -151,7 +151,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ createfile fbcode/resume
   $ hg -q ci -m "fbsource commit resume"
   $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark -q
-  $ new_mononoke_x_repo_sync_once 1 0 master_bookmark tail --catch-up-once |& grep processing
+  $ new_mononoke_x_repo_sync_once 1 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
 
   $ cd "$TESTTMP/meg-hg-cnt"

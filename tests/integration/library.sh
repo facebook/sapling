@@ -135,8 +135,6 @@ function mononoke_x_repo_sync_once() {
 function new_mononoke_x_repo_sync_once() {
   source_repo_id=$1
   target_repo_id=$2
-  target_bookmark=$3
-  shift
   shift
   shift
   GLOG_minloglevel=5 "$NEW_MONONOKE_X_REPO_SYNC" \
