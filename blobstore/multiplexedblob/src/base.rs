@@ -281,7 +281,7 @@ pub fn inner_put(
                     );
 
                 match result {
-                    Ok(_) => scuba.add("write_order", write_order.fetch_add(1, Ordering::SeqCst)),
+                    Ok(_) => scuba.add("write_order", write_order.fetch_add(1, Ordering::Relaxed)),
                     Err(error) => scuba.add("error", error.to_string()),
                 };
 
