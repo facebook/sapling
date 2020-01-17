@@ -346,22 +346,22 @@ impl Log {
         let mem_buf = if copy_dirty {
             self.mem_buf.clone()
         } else {
-            let mem_buf = Box::pin(Vec::new());
-            {
-                // Update external key buffer of indexes to point to the new mem_buf.
-                let mem_buf: &Vec<u8> = &mem_buf;
-                let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
-                let index_key_buf = Arc::new(ExternalKeyBuffer {
-                    disk_buf: disk_buf.clone(),
-                    disk_len: self.meta.primary_len,
-                    mem_buf,
-                });
-                for index in indexes.iter_mut() {
-                    index.key_buf = index_key_buf.clone();
-                }
-            }
-            mem_buf
+            Box::pin(Vec::new())
         };
+
+        {
+            // Update external key buffer of indexes to point to the new mem_buf.
+            let mem_buf: &Vec<u8> = &mem_buf;
+            let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
+            let index_key_buf = Arc::new(ExternalKeyBuffer {
+                disk_buf: disk_buf.clone(),
+                disk_len: self.meta.primary_len,
+                mem_buf,
+            });
+            for index in indexes.iter_mut() {
+                index.key_buf = index_key_buf.clone();
+            }
+        }
 
         // Create the new Log.
         let mut log = Log {

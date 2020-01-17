@@ -1268,13 +1268,18 @@ fn test_clone() {
         log.sync().unwrap();
         log.append([b'b'; 10]).unwrap();
 
-        let log2 = log.try_clone().unwrap();
+        let mut log2 = log.try_clone().unwrap();
         assert_eq!(log2.iter().collect::<Result<Vec<_>, _>>().unwrap().len(), 2);
         assert_eq!(log2.lookup_range(0, ..).unwrap().count(), 2);
+        // Check the external key buffer works after clone.
+        log2.append(&[b'c'; 40960][..]).unwrap();
+        log2.append(&[b'd'; 40960][..]).unwrap();
 
-        let log2 = log.try_clone_without_dirty().unwrap();
+        let mut log2 = log.try_clone_without_dirty().unwrap();
         assert_eq!(log2.iter().collect::<Result<Vec<_>, _>>().unwrap().len(), 1);
         assert_eq!(log2.lookup_range(0, ..).unwrap().count(), 1);
+        log2.append(&[b'e'; 40960][..]).unwrap();
+        log2.append(&[b'f'; 40960][..]).unwrap();
     }
 }
 
