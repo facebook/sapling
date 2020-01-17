@@ -10,6 +10,7 @@
 //! See [`Error`] for the main type.
 
 use std::fmt;
+use std::io;
 use std::path::Path;
 
 // Error design goals:
@@ -36,6 +37,7 @@ struct Inner {
     sources: Vec<Box<dyn std::error::Error + Send + Sync + 'static>>,
     messages: Vec<String>,
     is_corruption: bool,
+    io_error_kind: Option<io::ErrorKind>,
 }
 
 impl Error {
@@ -75,6 +77,10 @@ impl Error {
     /// time" are expected to not cause data corruption (but only data loss).
     pub fn is_corruption(&self) -> bool {
         self.inner.is_corruption
+    }
+
+    pub(crate) fn io_error_kind(&self) -> io::ErrorKind {
+        self.inner.io_error_kind.unwrap_or(io::ErrorKind::Other)
     }
 
     // Following methods are used by this crate only.
@@ -264,14 +270,15 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
     fn context<TS: LazyToString>(self, path: &Path, message: TS) -> Result<T> {
         self.map_err(|err| {
             use std::io::ErrorKind;
-            let corruption = match err.kind() {
+            let kind = err.kind().clone();
+            let corruption = match kind {
                 // For example, try to mmap 200 bytes, but the file
                 // only has 100 bytes. This is unlikely caused by
                 // non-data-corruption issues.
                 ErrorKind::UnexpectedEof | ErrorKind::InvalidData => true,
                 _ => false,
             };
-            let is_eperm = err.kind() == ErrorKind::PermissionDenied;
+            let is_eperm = kind == ErrorKind::PermissionDenied;
 
             let mut err = Error::blank().source(err).message(format!(
                 "{:?}: {}",
@@ -281,6 +288,7 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
             if corruption {
                 err = err.mark_corruption();
             }
+            err.inner.io_error_kind = Some(kind);
 
             // Provide more context for PermissionDenied
             if is_eperm {
