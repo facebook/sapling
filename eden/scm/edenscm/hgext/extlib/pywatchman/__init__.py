@@ -973,7 +973,7 @@ class client(object):
         binpath=None,
     ):
         if sockpath is not None and not isinstance(sockpath, SockPath):
-            sockpath = SockPath(sockpath=sockpath, tcpAddress=tcpAddress)
+            sockpath = SockPath(sockpath=sockpath, tcp_address=tcpAddress)
         self.sockpath = sockpath
         self.timeout = timeout
         self.useImmutableBser = useImmutableBser
