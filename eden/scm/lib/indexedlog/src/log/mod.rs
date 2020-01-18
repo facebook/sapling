@@ -1100,7 +1100,23 @@ impl Log {
     ///
     /// The caller should ensure the directory exists and take a lock on it to
     /// avoid filesystem races.
-    fn load_or_create_meta(path: &GenericPath, create: bool) -> crate::Result<LogMetadata> {
+    pub(crate) fn load_or_create_meta(
+        path: &GenericPath,
+        create: bool,
+    ) -> crate::Result<LogMetadata> {
+        Self::load_or_create_meta_internal(path, create, false)
+    }
+
+    /// Used by MultiLog. Write a dummy "meta" file that prevents accidental reading.
+    pub(crate) fn load_or_create_shared_meta(path: &GenericPath) -> crate::Result<LogMetadata> {
+        Self::load_or_create_meta_internal(path, true, true)
+    }
+
+    pub(crate) fn load_or_create_meta_internal(
+        path: &GenericPath,
+        create: bool,
+        is_shared: bool,
+    ) -> crate::Result<LogMetadata> {
         match path.read_meta() {
             Err(err) => {
                 if err.io_error_kind() == io::ErrorKind::NotFound && create {
@@ -1117,6 +1133,25 @@ impl Log {
                     let meta = LogMetadata::new_with_primary_len(PRIMARY_START_OFFSET);
                     // An empty meta file is easy to recreate. No need to use fsync.
                     path.write_meta(&meta, false)?;
+                    if is_shared {
+                        // If meta is intended to be shared, write a poisoned one to the
+                        // filesystem to prevent loading. But return the clean one.
+                        // The filesystem layout looks like:
+                        // - multilog/this-log/meta # poisoned
+                        // - multilog/multimeta     # the right one to use
+                        let poisoned_meta = LogMetadata::new_poisoned(
+                            "This Log is managed by MultiLog. Direct access is forbidden!",
+                        );
+                        if let GenericPath::SharedMeta { .. } = path {
+                            // This path being poisoned should be the path being wrapped in
+                            // a `GenericPath::SharedMeta`, not the shared path itself.
+                            panic!("bug: GenericPath::SharedMeta shouldn't be used here.");
+                        }
+                        path.write_meta(&poisoned_meta, false)?;
+                    } else {
+                        // An empty meta file is easy to recreate. No need to use fsync.
+                        path.write_meta(&meta, false)?;
+                    }
                     Ok(meta)
                 } else {
                     Err(err)

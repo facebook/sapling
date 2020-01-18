@@ -25,6 +25,7 @@ mod errors;
 pub mod index;
 pub mod lock;
 pub mod log;
+pub mod multi;
 mod repair;
 pub mod rotate;
 pub mod utils;
