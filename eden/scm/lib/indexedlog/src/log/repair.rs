@@ -13,7 +13,6 @@ use crate::log::{
 };
 use crate::repair::OpenOptionsRepair;
 use crate::utils::{self, atomic_write, mmap_len};
-use std::collections::BTreeMap;
 use std::fs::{self};
 use std::io::{self, BufRead, Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -113,11 +112,7 @@ impl OpenOptions {
                     }
                     Err(meta_err) => {
                         // Attempt to rebuild metadata.
-                        let meta = LogMetadata {
-                            primary_len,
-                            indexes: BTreeMap::new(),
-                            epoch: utils::epoch(),
-                        };
+                        let meta = LogMetadata::new_with_primary_len(primary_len);
                         meta.write_file(&meta_path, self.fsync)
                             .context("while recreating meta")
                             .source(meta_err)?;
@@ -259,11 +254,7 @@ impl OpenOptions {
             let lock = ScopedDirLock::new(dir)?;
 
             // Replace the metadata to an empty state.
-            let meta = LogMetadata {
-                primary_len: PRIMARY_START_OFFSET,
-                indexes: BTreeMap::new(),
-                epoch: utils::epoch(),
-            };
+            let meta = LogMetadata::new_with_primary_len(PRIMARY_START_OFFSET);
             let meta_path = dir.join(META_FILE);
             meta.write_file(&meta_path, self.fsync)?;
 

@@ -41,7 +41,6 @@ use crate::utils::{self, mmap_empty, mmap_len, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use memmap::Mmap;
 use std::borrow::Cow;
-use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
@@ -1115,11 +1114,7 @@ impl Log {
                         .context(&primary_path, "cannot write")?;
                     let _ = utils::fix_perm_file(&primary_file, false);
                     // Start from empty file and indexes.
-                    let meta = LogMetadata {
-                        primary_len: PRIMARY_START_OFFSET,
-                        indexes: BTreeMap::new(),
-                        epoch: utils::epoch(),
-                    };
+                    let meta = LogMetadata::new_with_primary_len(PRIMARY_START_OFFSET);
                     // An empty meta file is easy to recreate. No need to use fsync.
                     path.write_meta(&meta, false)?;
                     Ok(meta)

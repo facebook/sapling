@@ -6,7 +6,7 @@
  */
 
 use crate::errors::IoResultExt;
-use crate::utils::{atomic_write, xxhash};
+use crate::utils::{self, atomic_write, xxhash};
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, Cursor, Read, Write};
@@ -112,6 +112,18 @@ impl LogMetadata {
         self.write(&mut buf).infallible()?;
         atomic_write(path, &buf, fsync)?;
         Ok(())
+    }
+
+    /// Create a new LogMetadata that matches the primary length with
+    /// empty indexes.
+    /// The caller must make sure the primary log is consistent (exists,
+    /// and covered the length).
+    pub(crate) fn new_with_primary_len(len: u64) -> Self {
+        Self {
+            primary_len: len,
+            indexes: BTreeMap::new(),
+            epoch: utils::epoch(),
+        }
     }
 }
 

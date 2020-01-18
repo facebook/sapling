@@ -9,9 +9,7 @@ use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
 use crate::log::{GenericPath, Log, LogMetadata, PRIMARY_START_OFFSET};
-use crate::utils;
 use std::borrow::Cow;
-use std::collections::BTreeMap;
 use std::fmt::{self, Debug};
 use std::ops::Range;
 
@@ -325,11 +323,7 @@ impl OpenOptions {
     pub(crate) fn create_in_memory(&self, dir: GenericPath) -> crate::Result<Log> {
         assert!(dir.as_opt_path().is_none());
         let result: crate::Result<_> = (|| {
-            let meta = LogMetadata {
-                primary_len: PRIMARY_START_OFFSET,
-                indexes: BTreeMap::new(),
-                epoch: utils::epoch(),
-            };
+            let meta = LogMetadata::new_with_primary_len(PRIMARY_START_OFFSET);
             let mem_buf = Box::pin(Vec::new());
             let (disk_buf, indexes) = Log::load_log_and_indexes(
                 &dir,
