@@ -11,7 +11,7 @@ import ctypes
 import getpass
 import os
 
-from edenscm.mercurial import blackbox, progress, pycompat, util
+from edenscm.mercurial import blackbox, encoding, progress, pycompat, util
 from edenscm.mercurial.node import hex
 
 from .. import pywatchman
@@ -74,12 +74,19 @@ class client(object):
 
         self._sockpath = None
 
-        sockpath = repo.ui.config("fsmonitor", "sockpath")
-        if sockpath and self._user:
-            sockpath = sockpath.replace("%i", self._user)
+        # When spawned indirectly by watchman, or the watchman/eden integration
+        # tests, the appropriate sockpath is passed down to us via the environment
+        # and must take precedence over other configuration
+        sockpath = encoding.environ.get("WATCHMAN_SOCK", None)
+        if sockpath is None:
+            sockpath = repo.ui.config("fsmonitor", "sockpath")
+            if sockpath and self._user:
+                sockpath = sockpath.replace("%i", self._user)
+                repo.ui.debug("watchman sockpath is set as %s\n" % sockpath)
+
+        if sockpath:
             if os.path.exists(sockpath):
                 self._sockpath = sockpath
-                repo.ui.debug("watchman sockpath is set as %s\n" % sockpath)
 
         self._transport = None
         if repo.ui.configbool("fsmonitor", "tcp", False):
