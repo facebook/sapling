@@ -40,7 +40,10 @@
 
 import errno
 import json
+from typing import Optional
 
+# pyre-fixme[21]: Could not find `bindings`.
+import bindings
 from edenscm.mercurial import (
     bundle2,
     encoding,
@@ -125,6 +128,34 @@ def _dolookup(repo, key):
         fromextra = ctx.extra().get("convert_revision", "")
         if fromextra:
             return fromextra
+
+    # Do not lookup for uninteresting names like "gfoobar".
+    if len(sha) != 40:
+        return None
+
+    # Attempt to use the nodemap index.
+    # internal config: gitlookup.useindex
+    if repo.ui.configbool("gitlookup", "useindex", False):
+        nodemap = gitnodemap(repo)
+        uptodate = False
+        try:
+            nodemap.build(repo)
+            uptodate = True
+        except Exception as ex:
+            # Not fatal. But fallback to flat mapfile if nothing found.
+            repo.ui.write_err(_("failed to update git nodemap: %s\n") % ex)
+        node = bin(sha)
+        if direction == "togit":
+            result = nodemap.getgitnode(node)
+        else:
+            result = nodemap.gethgnode(node)
+        if result:
+            return hex(result)
+        if uptodate:
+            # The nodemap is complete. No need to try the flat mapfile.
+            return None
+
+    # Flat mapfile - can be very slow.
     hggitmap = open(mapfile, "rb")
     for line in hggitmap:
         gitsha, hgsha = line.strip().split(" ", 1)
@@ -160,9 +191,81 @@ def gitgetmeta(ui, repo, source="default"):
     ui.status(_("wrote %d files (%d bytes)\n") % (len(writebytes), sum(writebytes)))
 
 
+@command("debugbuildgitnodemap")
+def debugbuildgitnodemap(ui, repo):
+    """build indexes for git <-> hg commit translation"""
+    nodemap = gitnodemap(repo)
+    count = nodemap.build(repo)
+    ui.write(_("%s new commits are indexed\n") % count)
+
+
 hgheadsfile = "git-synced-hgheads"
 gitmapfile = "git-mapfile"
 gitmetafiles = set([gitmapfile, "git-named-branches", "git-tags", "git-remote-refs"])
+
+LASTREVFILE = "git-nodemap-lastrev"
+MAPFILE = "git-nodemap"
+
+
+class gitnodemap(object):
+    def __init__(self, repo):
+        self.lastrev = int(repo.localvfs.tryread(LASTREVFILE) or "0")
+        self.map = bindings.nodemap.nodemap(repo.localvfs.join(MAPFILE))
+
+    def build(self, repo):
+        # type: (...) -> int
+        """Build the nodemap incrementally.
+        Assume there is no changelog truncation.
+        Return number of revs built.
+        """
+        repolen = len(repo)
+        if self.lastrev >= repolen:
+            return 0
+        with repo.wlock():
+            self.map.flush()  # reload data
+            self.lastrev = int(repo.localvfs.tryread(LASTREVFILE) or "0")
+            if self.lastrev >= repolen:
+                return 0
+            ui = repo.ui
+            mapadd = self.map.add
+            maplookup = self.map.lookupbysecond
+            mapfile = repo.ui.configpath("gitlookup", "mapfile") or repo.localvfs.join(
+                gitmapfile
+            )
+            if self.lastrev == 0 and repolen > 0 and mapfile:
+                # Initial import from flat mapfile
+                ui.status(_("importing git nodemap from flat mapfile\n"))
+                for line in open(mapfile, "r"):
+                    githexnode, hghexnode = line.split()
+                    mapadd(bin(githexnode), bin(hghexnode))
+            unfi = repo.unfiltered()
+            clnode = unfi.changelog.node
+            clrevision = unfi.changelog.changelogrevision
+            # Read git hashes from commit extras.
+            # Assume the initial import covers all commits without using commit extras.
+            revs = range(self.lastrev, repolen)
+            if revs:
+                ui.status(_("building git nodemap for %s commits\n") % (len(revs),))
+                for rev in revs:
+                    hgnode = clnode(rev)
+                    if maplookup(hgnode):
+                        continue
+                    githexnode = clrevision(rev).extra.get("convert_revision")
+                    if githexnode:
+                        gitnode = bin(githexnode)
+                        mapadd(gitnode, hgnode)
+            self.map.flush()
+            repo.localvfs.write(LASTREVFILE, str(repolen))
+            self.lastrev = repolen
+            return len(revs)
+
+    def gethgnode(self, gitnode):
+        # type: (bytes) -> Optional[bytes]
+        return self.map.lookupbyfirst(gitnode)
+
+    def getgitnode(self, hgnode):
+        # type: (bytes) -> Optional[bytes]
+        return self.map.lookupbyfirst(hgnode)
 
 
 def _getfile(repo, filename):
