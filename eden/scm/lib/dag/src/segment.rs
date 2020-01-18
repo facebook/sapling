@@ -93,7 +93,25 @@ impl IdDag {
     /// Open [`IdDag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-        let log = log::OpenOptions::new()
+        let log = Self::log_open_options().open(path)?;
+        Self::open_from_log(log)
+    }
+
+    pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
+        let path = log.path().as_opt_path().unwrap().to_path_buf();
+        let max_level = Self::max_level_from_log(&log)?;
+        let mut dag = Self {
+            log,
+            path,
+            max_level,
+            new_seg_size: 16, // see D16660078 for this default setting
+        };
+        dag.build_all_high_level_segments(false)?;
+        Ok(dag)
+    }
+
+    pub(crate) fn log_open_options() -> log::OpenOptions {
+        log::OpenOptions::new()
             .create(true)
             .index("level-head", |data| {
                 // (level, high)
@@ -147,16 +165,6 @@ impl IdDag {
                 }
                 result
             })
-            .open(path)?;
-        let max_level = Self::max_level_from_log(&log)?;
-        let mut dag = Self {
-            log,
-            path: path.to_path_buf(),
-            max_level,
-            new_seg_size: 16, // see D16660078 for this default setting
-        };
-        dag.build_all_high_level_segments(false)?;
-        Ok(dag)
     }
 
     fn max_level_from_log(log: &log::Log) -> Result<Level> {

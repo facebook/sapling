@@ -54,7 +54,22 @@ impl IdMap {
     /// access, call [`IdMap::make_writable`] to get a writable instance.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-        let log = log::OpenOptions::new()
+        let log = Self::log_open_options().open(path)?;
+        Self::open_from_log(log)
+    }
+
+    pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
+        let path = log.path().as_opt_path().unwrap().to_path_buf();
+        Ok(Self {
+            log,
+            path,
+            cached_next_free_ids: Default::default(),
+            need_rebuild_non_master: false,
+        })
+    }
+
+    pub(crate) fn log_open_options() -> log::OpenOptions {
+        log::OpenOptions::new()
             .create(true)
             .index("id", |data| {
                 assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < 8);
@@ -81,14 +96,6 @@ impl IdMap {
             .flush_filter(Some(|_, _| {
                 panic!("programming error: idmap changed by other process")
             }))
-            .open(path)?;
-        let path = path.to_path_buf();
-        Ok(Self {
-            log,
-            path,
-            cached_next_free_ids: Default::default(),
-            need_rebuild_non_master: false,
-        })
     }
 
     /// Return a [`SyncableIdMap`] instance that provides race-free

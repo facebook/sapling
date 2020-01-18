@@ -17,6 +17,7 @@ use crate::idmap::SyncableIdMap;
 use crate::segment::IdDag;
 use crate::segment::SyncableIdDag;
 use anyhow::{anyhow, bail, ensure, Result};
+use indexedlog::multi;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
@@ -28,6 +29,8 @@ pub struct NameDag {
     pub(crate) dag: IdDag,
     pub(crate) map: IdMap,
 
+    mlog: multi::MultiLog,
+
     /// Heads added via `add_heads` that are not flushed yet.
     pending_heads: Vec<VertexName>,
 }
@@ -35,16 +38,20 @@ pub struct NameDag {
 impl NameDag {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-        let mut map = IdMap::open(path.join("idmap"))?;
-        // Take a lock so map and dag are loaded consistently.  A better (lock-free) way to ensure
-        // this is to use a single "meta" file for both indexedlogs. However that requires some
-        // API changes on the indexedlog side.
-        let _locked = map.prepare_filesystem_sync()?;
-        map.reload()?;
-        let dag = IdDag::open(path.join("segments"))?;
+        let opts = multi::OpenOptions::from_name_opts(vec![
+            ("idmap", IdMap::log_open_options()),
+            ("iddag", IdDag::log_open_options()),
+        ]);
+        let mut mlog = opts.open(path)?;
+        let mut logs = mlog.detach_logs();
+        let dag_log = logs.pop().unwrap();
+        let map_log = logs.pop().unwrap();
+        let map = IdMap::open_from_log(map_log)?;
+        let dag = IdDag::open_from_log(dag_log)?;
         Ok(Self {
             dag,
             map,
+            mlog,
             pending_heads: Default::default(),
         })
     }
@@ -81,6 +88,10 @@ impl NameDag {
         }
 
         // Take lock.
+        //
+        // Reload meta. This drops in-memory changes, which is fine because we have
+        // checked there are no in-memory changes at the beginning.
+        let lock = self.mlog.lock()?;
         let mut map = self.map.prepare_filesystem_sync()?;
         let mut dag = self.dag.prepare_filesystem_sync()?;
 
@@ -96,6 +107,7 @@ impl NameDag {
         // Write to disk.
         map.sync()?;
         dag.sync(std::iter::once(&mut self.dag))?;
+        self.mlog.write_meta(&lock)?;
         Ok(())
     }
 
