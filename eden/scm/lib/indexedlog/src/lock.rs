@@ -9,7 +9,7 @@ use crate::errors::IoResultExt;
 use fs2::FileExt;
 use std::fs::File;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// RAII style file locking.
 pub struct ScopedFileLock<'a> {
@@ -45,16 +45,27 @@ impl<'a> Drop for ScopedFileLock<'a> {
     }
 }
 
+/// Prove that a directory was locked.
 pub struct ScopedDirLock {
     file: File,
+    path: PathBuf,
 }
 
 impl ScopedDirLock {
+    /// Lock the given directory.
     pub fn new(path: &Path) -> crate::Result<Self> {
         let file = crate::utils::open_dir(path).context(path, "cannot open for locking")?;
         file.lock_exclusive().context(path, "cannot lock")?;
-        let result = Self { file };
+        let result = Self {
+            file,
+            path: path.to_path_buf(),
+        };
         Ok(result)
+    }
+
+    /// Get the path to the directory being locked.
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 }
 
