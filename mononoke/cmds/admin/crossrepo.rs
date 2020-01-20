@@ -228,6 +228,15 @@ async fn subcommand_verify_bookmarks(
                             target_bookmark,
                         );
                     }
+                    NoSyncOutcome { target_bookmark } => {
+                        warn!(
+                            ctx.logger(),
+                            "target repo has a bookmark {} but it points to a commit that has no \
+                             equivalent in source repo. If it's a shared bookmark (e.g. master) \
+                             that might mean that it points to a commit from another repository",
+                            target_bookmark,
+                        );
+                    }
                 }
             }
             Err(format_err!("found {} inconsistencies", diff.len()).into())
@@ -309,6 +318,14 @@ async fn update_large_repo_bookmarks(
                 let reason = BookmarkUpdateReason::XRepoSync;
                 info!(ctx.logger(), "deleting {}", large_bookmark);
                 book_txn.force_delete(&large_bookmark, reason)?;
+            }
+            NoSyncOutcome { target_bookmark } => {
+                warn!(
+                    ctx.logger(),
+                    "Not updating {} because it points to a commit that has no \
+                     equivalent in source repo.",
+                    target_bookmark,
+                );
             }
         }
     }

@@ -18,7 +18,7 @@ use context::CoreContext;
 use futures_preview::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt};
 use futures_util::{
     stream::{self as new_stream, StreamExt as NewStreamExt},
-    try_join, TryStreamExt,
+    try_join,
 };
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgFileNodeId, HgManifestId};
@@ -130,7 +130,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
 
     // 'renamed_source_bookmarks' - take all the source bookmarks, rename the bookmarks, remap
     // the commits.
-    let renamed_source_bookmarks = {
+    let (renamed_source_bookmarks, no_sync_outcome) = {
         let source_bookmarks = source_repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
@@ -144,6 +144,12 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
 
     let mut diff = vec![];
     for (target_book, target_cs_id) in &target_bookmarks {
+        if no_sync_outcome.contains(&target_book) {
+            diff.push(BookmarkDiff::NoSyncOutcome {
+                target_bookmark: target_book.clone(),
+            });
+            continue;
+        }
         let actual_target_cs_id = renamed_source_bookmarks.get(target_book);
         let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer();
         if actual_target_cs_id.is_none() && reverse_bookmark_renamer(target_book).is_none() {
@@ -347,6 +353,9 @@ pub enum BookmarkDiff {
     ShouldBeDeleted {
         target_bookmark: BookmarkName,
     },
+    NoSyncOutcome {
+        target_bookmark: BookmarkName,
+    },
 }
 
 impl BookmarkDiff {
@@ -357,6 +366,7 @@ impl BookmarkDiff {
                 target_bookmark, ..
             } => target_bookmark,
             ShouldBeDeleted { target_bookmark } => target_bookmark,
+            NoSyncOutcome { target_bookmark } => target_bookmark,
         }
     }
 }
@@ -365,7 +375,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     bookmarks: impl IntoIterator<Item = (BookmarkName, ChangesetId)>,
-) -> Result<HashMap<BookmarkName, ChangesetId>, Error> {
+) -> Result<(HashMap<BookmarkName, ChangesetId>, HashSet<BookmarkName>), Error> {
     let bookmark_renamer = commit_syncer.get_bookmark_renamer();
 
     let mut renamed_and_remapped_bookmarks = vec![];
@@ -376,29 +386,40 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
                 .map(move |maybe_sync_outcome| {
                     let maybe_sync_outcome = maybe_sync_outcome?;
                     use CommitSyncOutcome::*;
-                    let remapped_cs_id = match maybe_sync_outcome {
-                        Some(Preserved) => cs_id,
+                    let maybe_remapped_cs_id = match maybe_sync_outcome {
+                        Some(Preserved) => Some(cs_id),
                         Some(RewrittenAs(cs_id)) | Some(EquivalentWorkingCopyAncestor(cs_id)) => {
-                            cs_id
+                            Some(cs_id)
                         }
                         Some(NotSyncCandidate) => {
                             return Err(format_err!("{} is not a sync candidate", cs_id));
                         }
-                        None => {
-                            return Err(format_err!("{} is not remapped for {}", cs_id, bookmark));
-                        }
+                        None => None,
                     };
-                    Ok((renamed_bookmark, remapped_cs_id))
+                    Ok((renamed_bookmark, maybe_remapped_cs_id))
                 })
                 .boxed();
             renamed_and_remapped_bookmarks.push(maybe_sync_outcome);
         }
     }
 
-    new_stream::iter(renamed_and_remapped_bookmarks)
-        .buffer_unordered(100)
-        .try_collect::<HashMap<_, _>>()
-        .await
+    let mut s = new_stream::iter(renamed_and_remapped_bookmarks).buffer_unordered(100);
+    let mut remapped_bookmarks = HashMap::new();
+    let mut no_sync_outcome = HashSet::new();
+
+    while let Some(item) = s.next().await {
+        let (renamed_bookmark, maybe_remapped_cs_id) = item?;
+        match maybe_remapped_cs_id {
+            Some(remapped_cs_id) => {
+                remapped_bookmarks.insert(renamed_bookmark, remapped_cs_id);
+            }
+            None => {
+                no_sync_outcome.insert(renamed_bookmark);
+            }
+        }
+    }
+
+    Ok((remapped_bookmarks, no_sync_outcome))
 }
 
 #[cfg(test)]
@@ -417,7 +438,7 @@ mod test {
     use std::sync::Arc;
     // To support async tests
     use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
-    use tests_utils::bookmark;
+    use tests_utils::{bookmark, CreateCommitContext};
     use tokio_preview as tokio;
 
     fn identity_mover(v: &MPath) -> Result<Option<MPath>, Error> {
@@ -510,6 +531,37 @@ mod test {
 
         let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
         assert_eq!(actual_diff, vec![]);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_bookmark_no_sync_outcome(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let commit_syncer = init(
+            fb,
+            get_small_to_large_renamer(),
+            get_large_to_small_renamer(),
+            CommitSyncDirection::LargeToSmall,
+        )
+        .await?;
+
+        let large_repo = commit_syncer.get_large_repo();
+
+        let commit = CreateCommitContext::new(ctx.clone(), large_repo.clone(), vec!["master"])
+            .add_file("somefile", "ololo")
+            .commit()
+            .await?;
+        // This bookmark is not present in the small repo, and it shouldn't be.
+        // In that case
+        bookmark(&ctx, &large_repo, "master").set_to(commit).await?;
+
+        let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
+        assert_eq!(
+            actual_diff,
+            vec![BookmarkDiff::NoSyncOutcome {
+                target_bookmark: BookmarkName::new("master")?,
+            }]
+        );
         Ok(())
     }
 
