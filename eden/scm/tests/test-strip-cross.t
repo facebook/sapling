@@ -3,8 +3,6 @@
   $ disable treemanifest
 test stripping of filelogs where the linkrev doesn't always increase
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo 'strip =' >> $HGRCPATH
   $ hg init orig
   $ cd orig
   $ commit()

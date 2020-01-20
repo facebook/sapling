@@ -33,10 +33,7 @@ setting up base repo
   > done
 
 set up verbosemmap extension
-  $ cat << EOF >> $HGRCPATH
-  > [extensions]
-  > verbosemmap=$TESTTMP/verbosemmap.py
-  > EOF
+  $ setconfig extensions.verbosemmap="$TESTTMP/verbosemmap.py"
 
 mmap index which is now more than 4k long
   $ hg log -l 5 -T '{rev}\n' --config experimental.mmapindexthreshold=4k

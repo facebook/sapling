@@ -3,15 +3,9 @@
   $ disable treemanifest
 test sparse
 
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > sparse=
-  > purge=
-  > rebase=
-  > EOF
+  $ configure dummyssh
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
+  $ enable sparse purge rebase
 
   $ hg init myrepo
   $ cd myrepo

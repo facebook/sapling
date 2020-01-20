@@ -1,10 +1,9 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=" >> $HGRCPATH
+TODO: configure mutation
+  $ configure noevolution
+  $ enable remotenames
 
   $ mkcommit()
   > {
@@ -36,8 +35,7 @@ Make sure to enable tracking
   [255]
 
 Tests 'hg pull --rebase' rebases from the active tracking bookmark onto the appropriate remote changes.
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "rebase=" >> $HGRCPATH
+  $ setglobalconfig extensions.rebase=
   $ cd ../remoterepo
 
 Create remote changes

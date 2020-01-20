@@ -10,14 +10,10 @@
 
 Set up extension and repos to clone over wire protocol
 
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
-  > [phases]
-  > publish = False
-  > [extensions]
-  > remotenames=
-  > EOF
+  $ configure dummyssh
+  $ enable remotenames
+  $ setconfig phases.publish=false
+
   $ hg init repo1
   $ hg clone  ssh://user@dummy/repo1 repo2
   no changes found
@@ -130,8 +126,7 @@ remote or local repo
 
 Test pushrev configuration option
 
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "pushrev = ." >> $HGRCPATH
+  $ setglobalconfig remotenames.pushrev=.
   $ echo d >> a
   $ hg commit -qm 'da'
   $ hg push

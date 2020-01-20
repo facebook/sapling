@@ -2,10 +2,7 @@
 
 This test tries to exercise the ssh functionality with a dummy script
 
-  $ cat <<EOF >> $HGRCPATH
-  > [format]
-  > usegeneraldelta=yes
-  > EOF
+  $ setconfig format.usegeneraldelta=yes
 
 creating 'remote' repo
 
@@ -17,10 +14,8 @@ creating 'remote' repo
 
 configure for serving
 
-  $ cat <<EOF > .hg/hgrc
-  > [server]
-  > uncompressed = True
-  > 
+  $ setconfig server.uncompressed=true
+  $ readconfig <<EOF
   > [hooks]
   > changegroup = sh -c "printenv.py changegroup-in-remote 0 ../dummylog"
   > EOF

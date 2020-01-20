@@ -3,7 +3,7 @@ end of process.
 
 Attach an object with `__del__` to learn whether repo, ui are dropped on not.
 
-  $ cat > $TESTTMP/printondel.py << EOF
+  $ newext printondel <<EOF
   > class printondel(object):
   >     def __del__(self):
   >         print("__del__ called")
@@ -12,8 +12,6 @@ Attach an object with `__del__` to learn whether repo, ui are dropped on not.
   >     repo._deltest = obj
   >     ui._deltest = obj
   > EOF
-
-  $ setconfig extensions.leakdetect=$TESTTMP/printondel.py
 
 No leak without extensions
 

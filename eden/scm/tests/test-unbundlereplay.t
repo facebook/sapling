@@ -8,24 +8,12 @@
 #testcases respondlightly respondfully
 
 Do some initial setup
-  $ CACHEDIR=`pwd`/hgcache
-  $ cat >> $HGRCPATH <<CONFIG
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > sendunbundlereplay=
-  > smartlog=
-  > treemanifest=
-  > remotefilelog=
-  > pushrebase=
-  > remotenames=
-  > [remotefilelog]
-  > reponame=testrepo
-  > cachepath=$CACHEDIR
-  > [treemanifest]
-  > sendtrees=True
-  > CONFIG
+  $ CACHEDIR="$TESTTMP/hgcache"
+  $ configure dummyssh
+  $ enable sendunbundlereplay smartlog treemanifest remotefilelog pushrebase remotenames
+  $ setconfig remotefilelog.reponame=testrepo remotefilelog.cachepath="$CACHEDIR"
+  $ setconfig treemanifest.sendtrees=true
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
 Setup helpers
   $ log() {
@@ -224,7 +212,7 @@ Send unbundlereplay batch 2 (second has a wrong hash)
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server --debug --reports $TESTTMP/reports.txt
   creating a peer took: * (glob)
-  running python * 'hg -R server serve --stdio' (glob)
+  running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
@@ -263,7 +251,7 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   > --debug --reports $TESTTMP/reports.txt
   creating a peer took: * (glob)
   single wireproto command took: * (glob)
-  running python * 'hg -R server serve --stdio' (glob)
+  running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
@@ -316,7 +304,7 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   > --config sendunbundlereplay.respondlightly=off
   creating a peer took: * (glob)
   single wireproto command took: * (glob)
-  running python * 'hg -R server serve --stdio' (glob)
+  running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)

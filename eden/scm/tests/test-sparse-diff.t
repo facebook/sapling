@@ -2,10 +2,7 @@
 
   $ hg init repo
   $ cd repo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > EOF
+  $ enable sparse
   $ mkdir show hide
   $ echo show-modify-1 > show/modify
   $ echo show-remove-1 > show/remove

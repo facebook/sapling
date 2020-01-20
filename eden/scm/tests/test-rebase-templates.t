@@ -4,12 +4,8 @@ Testing templating for rebase command
 
 Setup
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
+  $ configure evolution
+  $ enable rebase
 
   $ hg init repo
   $ cd repo

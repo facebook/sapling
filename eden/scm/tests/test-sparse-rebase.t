@@ -2,11 +2,7 @@
 
   $ hg init repo
   $ cd repo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > rebase=
-  > EOF
+  $ enable sparse rebase
 
   $ hg debugdrawdag <<'EOS'
   >   D

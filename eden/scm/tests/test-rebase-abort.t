@@ -1,14 +1,9 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > 
-  > [phases]
-  > publish=False
-  > EOF
+TODO: configure mutation
+  $ configure noevolution
+  $ enable rebase
+  $ setconfig phases.publish=false
 
   $ hg init a
   $ cd a

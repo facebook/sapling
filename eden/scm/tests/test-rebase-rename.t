@@ -1,12 +1,10 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > 
+TODO: configure mutation
+  $ configure noevolution
+  $ enable rebase
+  $ readconfig <<EOF
   > [alias]
   > tlog  = log --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF

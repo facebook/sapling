@@ -12,12 +12,8 @@ Revert interactive tests
 9 make workdir match 7
 10 run the same test than 8 from within folder1 and check same expectations
 
-  $ cat <<EOF >> $HGRCPATH
-  > [ui]
-  > interactive = true
-  > [extensions]
-  > purge = 
-  > EOF
+  $ enable purge
+  $ setconfig ui.interactive=true
 
 
   $ mkdir -p a/folder1 a/folder2

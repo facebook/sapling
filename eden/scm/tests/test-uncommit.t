@@ -2,11 +2,7 @@
 
 Test uncommit - set up the config
 
-  $ cat >> $HGRCPATH <<EOF
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > EOF
+  $ configure evolution
 
 Build up a repo
 

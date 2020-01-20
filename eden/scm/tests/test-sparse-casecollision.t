@@ -15,10 +15,7 @@ profile.
 
   $ hg init myrepo
   $ cd myrepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > EOF
+  $ enable sparse
 
   $ mkdir profiles
   $ cat > profiles/sparse_profile <<EOF
@@ -42,9 +39,7 @@ profile.
 
 The case collision is ignored when the sparse profile is enabled:
 
-  $ cat >> .hg/hgrc <<EOF
-  > force_case_insensitivity=../force_case_insensitivity.py
-  > EOF
+  $ setconfig extensions.force_case_insensitivity=../force_case_insensitivity.py
   $ hg up -r 1
   abort: case-folding collision between colliding_dir/[Aa] and colliding_dir/[aA] (re)
   [255]

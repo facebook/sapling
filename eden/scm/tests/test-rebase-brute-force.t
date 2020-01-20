@@ -1,12 +1,7 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > bruterebase=$TESTDIR/bruterebase.py
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > EOF
+  $ configure evolution
+  $ setconfig extensions.bruterebase="$TESTDIR/bruterebase.py"
   $ init() {
   >   N=`expr ${N:-0} + 1`
   >   cd $TESTTMP && hg init repo$N && cd repo$N

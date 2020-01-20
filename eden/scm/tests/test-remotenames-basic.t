@@ -1,8 +1,5 @@
-  > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=" >> $HGRCPATH
-
-  > FILTERPWD="sed s%`pwd`/%%g"
-
+  $ enable remotenames
+  $ FILTERPWD="sed s%`pwd`/%%g"
   > mkcommit()
   > {
   >    echo $1 > $1
@@ -235,10 +232,7 @@ Test clone --mirror
 Test loading with hggit
 
   $ . "$TESTDIR/hggit/testutil"
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "hggit=" >> $HGRCPATH
-  $ echo "[devel]" >> $HGRCPATH
-  $ echo "all-warnings=no" >> $HGRCPATH
+  $ setglobalconfig extensions.hggit= devel.all-warnings=no
   $ hg help bookmarks  | egrep -- '--(un){0,1}track'
    -t --track BOOKMARK     track this bookmark or remote name
    -u --untrack            remove tracking for this bookmark

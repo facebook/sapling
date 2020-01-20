@@ -1,21 +1,9 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > undo=
-  > remotenames=
-  > extralog=$TESTDIR/extralog.py
-  > [experimental]
-  > evolution=
-  > narrow-heads=true
-  > [visibility]
-  > enabled=true
-  > [mutation]
-  > enabled=true
-  > date=0 0
-  > [ui]
-  > interactive = true
-  > EOF
+  $ configure mutation
+  $ enable undo remotenames
+  $ setconfig extensions.extralog="$TESTDIR/extralog.py"
+  $ setconfig experimental.narrow-heads=true ui.interactive=true
 
   $ newrepo
   $ drawdag << 'EOS'

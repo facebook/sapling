@@ -1,13 +1,9 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > 
-  > [phases]
-  > publish=False
-  > 
+  $ enable rebase
+  $ setconfig phases.publish=false
+  $ readconfig <<EOF
   > [alias]
   > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF

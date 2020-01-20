@@ -4,9 +4,9 @@
   $ LOGDIR=$TESTTMP/logs
   $ mkdir $LOGDIR
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable remotenames
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
 
   $ enable sampling
   $ setconfig sampling.filepath=$LOGDIR/samplingpath.txt
@@ -121,10 +121,7 @@ Check pulling unknown bookmark
 Add second remote to the paths and update to the first master
 
   $ cd ../localrepo
-  $ cat >> $HGRCPATH << EOF
-  > [paths]
-  > secondremote=ssh://user@dummy/secondremoterepo
-  > EOF
+  $ setglobalconfig paths.secondremote=ssh://user@dummy/secondremoterepo
   $ hg pull secondremote -q
   $ hg book --list-subscriptions
      default/A_bookmark        2:01c036b602a8

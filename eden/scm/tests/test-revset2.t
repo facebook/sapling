@@ -8,7 +8,7 @@
 
   $ HGENCODING=utf-8
   $ export HGENCODING
-  $ cat > testrevset.py << EOF
+  $ newext testrevset << EOF
   > import edenscm.mercurial.revset
   > 
   > baseset = edenscm.mercurial.revset.baseset
@@ -25,10 +25,6 @@
   >     return baseset([3,3,2,2])
   > 
   > edenscm.mercurial.revset.symbols['r3232'] = r3232
-  > EOF
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > testrevset=$TESTTMP/testrevset.py
   > EOF
 
   $ try() {

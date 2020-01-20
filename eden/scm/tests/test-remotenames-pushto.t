@@ -3,14 +3,12 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
 Set up extension and repos
 
-  $ echo "[phases]" >> $HGRCPATH
-  $ echo "publish = False" >> $HGRCPATH
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=" >> $HGRCPATH
+  $ enable remotenames
+  $ setconfig phases.publish=false
   $ hg init repo1
   $ hg clone repo1 repo2
   updating to branch default
@@ -67,8 +65,7 @@ Test that config allows anonymous heads to be pushed
 
 Test that forceto works
 
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "forceto = True" >> $HGRCPATH
+  $ setglobalconfig remotenames.forceto=true
   $ hg push
   abort: must specify --to when pushing
   (see configuration option remotenames.forceto)

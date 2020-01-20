@@ -1,8 +1,8 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable amend directaccess commitcloud infinitepush rebase remotenames undo
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
   $ setconfig visibility.enabled=true

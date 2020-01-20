@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ cat >> $HGRCPATH <<EOF
+  $ readconfig <<EOF
   > [alias]
   > tlog = log --template "{rev}:{node|short}: '{desc}'\n"
   > tout = out --template "{rev}:{node|short}: '{desc}'\n"

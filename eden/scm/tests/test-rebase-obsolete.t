@@ -9,16 +9,12 @@ Test rebase with obsolete
 
 Enable obsolete
 
-  $ cat >> $HGRCPATH << EOF
+  $ configure evolution
+  $ enable rebase
+  $ setconfig phases.publish=false
+  $ readconfig <<EOF
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}{if(obsolete,' ({obsfate})')}
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > [phases]
-  > publish=False
-  > [extensions]
-  > rebase=
   > EOF
 
 Setup rebase canonical repo

@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH<<EOF
-  > [extensions]
-  > rebase=
-  > EOF
+  $ enable rebase
 
   $ hg init non-merge
   $ cd non-merge

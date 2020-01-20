@@ -1,7 +1,6 @@
 #chg-compatible
 
-  > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=" >> $HGRCPATH
+  $ enable remotenames
 
 Init a repo
 

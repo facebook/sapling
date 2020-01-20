@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ cat >> $TESTTMP/testcommands.py << EOF
+  $ newext testcommands <<EOF
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -33,9 +33,7 @@
   >     ui.status("other test command alpha/beta called\n")
   > EOF
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > testcommands=$TESTTMP/testcommands.py
+  $ readconfig <<EOF
   > [alias]
   > xt = test
   > xt1 = test one

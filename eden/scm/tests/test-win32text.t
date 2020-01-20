@@ -12,13 +12,11 @@
   >     data = data.replace('\n', '\r\n')
   >     file(path, 'wb').write(data)
   > EOF
-  $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'pretxncommit.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
-  $ echo 'pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
-  $ cat .hg/hgrc
-  [hooks]
-  pretxncommit.crlf = python:hgext.win32text.forbidcrlf
-  pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
+  $ readconfig <<EOF
+  > [hooks]
+  > pretxncommit.crlf = python:hgext.win32text.forbidcrlf
+  > pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
+  > EOF
 
   $ echo hello > f
   $ hg add f

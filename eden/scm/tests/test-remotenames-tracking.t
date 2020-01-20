@@ -1,14 +1,12 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
 Set up extension and repos
 
-  $ echo "[phases]" >> $HGRCPATH
-  $ echo "publish = False" >> $HGRCPATH
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=" >> $HGRCPATH
+  $ enable remotenames
+  $ setconfig phases.publish=false
   $ hg init repo1
 
 Make sure we don't fail when rebase doesn't exist
@@ -17,7 +15,7 @@ Make sure we don't fail when rebase doesn't exist
   unknown command 'rebase'
   (use 'hg help' to get help)
   [255]
-  $ echo "rebase=" >> $HGRCPATH
+  $ setglobalconfig extensions.rebase=
 
 Create a tracking bookmark
 
@@ -123,8 +121,7 @@ Test push with explicit default path
 
 Test that we don't try to push if tracking bookmark isn't a remote bookmark
 
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "forceto = True" >> $HGRCPATH
+  $ setglobalconfig remotenames.forceto=true
   $ hg book c -t foo
   $ hg push
   abort: must specify --to when pushing
@@ -134,8 +131,7 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
 Test renaming a remote and tracking
 
   $ hg dbsh -c "with repo.lock(), repo.transaction('tr'): repo.svfs.write('remotenames', '')"
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "rename.default = remote" >> $HGRCPATH
+  $ setglobalconfig remotenames.rename.default=remote
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes

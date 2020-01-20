@@ -2,8 +2,7 @@
 
   $ hg init
 
-  $ echo "[merge]" >> .hg/hgrc
-  $ echo "followcopies = 1" >> .hg/hgrc
+  $ setconfig merge.followcopies=1
 
   $ echo foo > a
   $ echo foo > a2

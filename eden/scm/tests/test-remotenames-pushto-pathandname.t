@@ -1,11 +1,8 @@
 #chg-compatible
 
   $ disable treemanifest
-  > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=" >> $HGRCPATH
-  > echo "[remotenames]" >> $HGRCPATH
-  > echo "rename.default = remote" >> $HGRCPATH
-  > echo "disallowedto = ^remote/" >> $HGRCPATH
+  $ enable remotenames
+  $ setconfig remotenames.rename.default=remote remotenames.disallowedto="^remote/"
 
 Init the original "remote" repo
 

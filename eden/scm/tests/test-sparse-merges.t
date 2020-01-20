@@ -4,10 +4,7 @@ test merging things outside of the sparse checkout
 
   $ hg init myrepo
   $ cd myrepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > EOF
+  $ enable sparse
 
   $ echo foo > foo
   $ hg commit -m initial -A foo

@@ -1,13 +1,8 @@
 #chg-compatible
 
-  $ cat <<EOF >> $HGRCPATH
-  > [ui]
-  > color = always
-  > [color]
-  > mode = ansi
-  > EOF
+  $ setconfig ui.color=always color.mode=ansi
 Terminfo codes compatibility fix
-  $ echo "color.none=0" >> $HGRCPATH
+  $ setconfig color.color.none=0
 
   $ hg init repo1
   $ cd repo1

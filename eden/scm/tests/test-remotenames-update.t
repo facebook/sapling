@@ -2,10 +2,7 @@
 
 Set up repo
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > remotenames=
-  > EOF
+  $ enable remotenames
 
   $ hg init repo
   $ cd repo

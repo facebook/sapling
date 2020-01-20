@@ -7,13 +7,8 @@ Skip if journal is not available in mercurial
 
   $ hg help -e journal &>/dev/null || exit 80
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > journal=
-  > remotenames=
-  > [remotenames]
-  > rename.default=remote
-  > EOF
+  $ enable journal remotenames
+  $ setconfig remotenames.rename.default=remote
 
   $ hg init remote
   $ cd remote

@@ -2,8 +2,7 @@
 
   $ disable treemanifest
 Set up extension and repos
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=" >> $HGRCPATH
+  $ enable remotenames
   $ hg init repo1
   $ cd repo1
   $ echo a > a
@@ -16,8 +15,7 @@ Set up extension and repos
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
-  $ echo "[paths]" >> .hg/hgrc
-  $ echo "default-push=$TESTTMP/repo1" >> .hg/hgrc
+  $ setconfig paths.default-push="$TESTTMP/repo1"
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
@@ -28,8 +26,7 @@ Set up extension and repos
 Test renaming
 
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "rename.default = remote" >> $HGRCPATH
+  $ setglobalconfig remotenames.rename.default=remote
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
@@ -44,8 +41,7 @@ Test hoisting basics
   default
   remote/bm1
   remote/bm2
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "hoist = remote" >> $HGRCPATH
+  $ setglobalconfig remotenames.hoist=remote
   $ hg debugnamecomplete
   bm1
   bm2
@@ -78,8 +74,7 @@ Test transition bookmark deletion
    * master                    1:d2ae7f538514
      notdeleted                1:d2ae7f538514
      stable                    0:cb9a9f314b8b
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "transitionbookmarks = master, stable, other" >> $HGRCPATH
+  $ setglobalconfig remotenames.transitionbookmarks="master, stable, other"
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
@@ -89,9 +84,11 @@ Test transition bookmark deletion
 
 Test message
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "transitionmessage = Test transition message" >> $HGRCPATH
-  $ echo "    with newline" >> $HGRCPATH
+  $ readglobalconfig <<EOF
+  > [remotenames]
+  > transitionmessage = Test transition message
+  >                     with newline
+  > EOF
   $ hg pull -q
   Test transition message
   with newline
@@ -99,8 +96,7 @@ Test message
   with newline
 
 Test transition bookmark disallowed
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "disallowedbookmarks = master, stable, other, notdeleted" >> $HGRCPATH
+  $ setglobalconfig remotenames.disallowedbookmarks="master, stable, other, notdelete"
   $ hg book master
   abort: bookmark 'master' not allowed by configuration
   [255]

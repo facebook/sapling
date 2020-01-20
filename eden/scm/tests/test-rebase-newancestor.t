@@ -1,13 +1,11 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-  $ cat >> $HGRCPATH <<EOF
-  > [format]
-  > usegeneraldelta=yes
-  > [extensions]
-  > rebase=
+TODO: configure mutation
+  $ configure noevolution
+  $ enable rebase
+  $ setconfig format.usegeneraldelta=yes
+  $ readconfig <<EOF
   > [revsetalias]
   > dev=desc("dev")
   > def=desc("def")

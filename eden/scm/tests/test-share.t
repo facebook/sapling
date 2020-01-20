@@ -3,8 +3,7 @@
   $ disable treemanifest
 #require killdaemons
 
-  $ echo "[extensions]"      >> $HGRCPATH
-  $ echo "share = "          >> $HGRCPATH
+  $ enable share
 
 prepare repo1
 

@@ -1,7 +1,7 @@
 #chg-compatible
 
 
-  $ cat > adddrop.py <<EOF
+  $ newext adddrop <<EOF
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -27,9 +27,6 @@
   >   finally:
   >     wlock.release()
   > EOF
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "debugadddrop=`pwd`/adddrop.py" >> $HGRCPATH
 
 basic test for hg debugrebuildstate
 

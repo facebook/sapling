@@ -9,10 +9,7 @@
   >     hg up -C
   > }
 
-  $ cat >> $HGRCPATH <<EOF
-  > [progress]
-  > debug=True
-  > EOF
+  $ setconfig progress.debug=true
 
   $ hg init a
   $ cd a

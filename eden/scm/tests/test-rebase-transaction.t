@@ -1,22 +1,14 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > 
-  > [phases]
-  > publish=False
-  > EOF
+TODO: configure mutation
+  $ configure noevolution
+  $ enable rebase
+  $ setconfig phases.publish=false
 
 Rebasing using a single transaction
 
   $ hg init singletr && cd singletr
-  $ cat >> .hg/hgrc <<EOF
-  > [rebase]
-  > singletransaction=True
-  > EOF
+  $ setconfig rebase.singletransaction=true
   $ hg debugdrawdag <<'EOF'
   >   Z
   >   |

@@ -1,8 +1,8 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable remotenames
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
 
 Set up repos
   $ hg init remoterepo
@@ -98,10 +98,7 @@ Create second remote
 
 Add second remote repo path in localrepo
   $ cd localrepo
-  $ cat >> $HGRCPATH << EOF
-  > [paths]
-  > secondremote=ssh://user@dummy/secondremoterepo
-  > EOF
+  $ setglobalconfig paths.secondremote="ssh://user@dummy/secondremoterepo"
   $ hg pull secondremote
   pulling from ssh://user@dummy/secondremoterepo
   no changes found

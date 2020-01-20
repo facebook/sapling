@@ -1,13 +1,8 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > 
-  > [extensions]
-  > EOF
+TODO: configure mutation
+  $ configure noevolution
+  $ enable rebase
 
 Rebasing D onto B detaching from C (one commit):
 

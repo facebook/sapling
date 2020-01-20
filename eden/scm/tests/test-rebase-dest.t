@@ -1,15 +1,11 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
 Require a destination
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase =
-  > [commands]
-  > rebase.requiredest = True
-  > EOF
+  $ enable rebase
+  $ setconfig commands.rebase.requiredest=true
   $ hg init repo
   $ cd repo
   $ echo a >> a
@@ -108,18 +104,12 @@ Setup rebase with multiple destinations
   >     return smartset.baseset(revs)
   > EOF
 
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > allowemptycommit=1
-  > [extensions]
-  > [phases]
-  > publish=False
+  $ setglobalconfig ui.allowemptycommit=1 phases.publish=false
+  $ setglobalconfig experimental.evolution=true
+  $ setglobalconfig extensions.maprevset="$TESTTMP/maprevset.py"
+  $ readglobalconfig <<EOF
   > [alias]
   > tglog = log -G --template "{rev}: {node|short} {desc} {instabilities}" -r 'sort(all(), topo)'
-  > [extensions]
-  > maprevset=$TESTTMP/maprevset.py
-  > [experimental]
-  > evolution=true
   > EOF
 
   $ rebasewithdag() {

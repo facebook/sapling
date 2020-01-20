@@ -3,14 +3,8 @@
 Tests rebasing with part of the rebase set already in the
 destination (issue5422)
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > 
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > EOF
+  $ configure evolution
+  $ enable rebase
 
   $ rebasewithdag() {
   >   N=`$PYTHON -c "print($N+1)"`
