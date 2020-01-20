@@ -1,3 +1,9 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree.
+
 This is the test to cover tricky case in the discovery logic.
 Previously Mononoke's known() wireproto method returned `true` for both public and
 draft commits. The problem was in that it affects pushrebase. If Mononoke

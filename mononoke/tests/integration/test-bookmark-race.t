@@ -1,3 +1,9 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree.
+
 Test that bookmark updates during discovery don't cause problems for pulls
 running concurrently. See the comment in mononoke/server/src/repo.rs:bundle2caps
 for more.
