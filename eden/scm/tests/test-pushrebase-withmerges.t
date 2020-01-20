@@ -5,17 +5,9 @@
 
 Setup
 
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > strip =
-  > remotenames =
-  > pushrebase =
-  > [experimental]
-  > evolution = createmarkers
-  > EOF
+  $ configure dummyssh evolution
+  $ enable remotenames pushrebase
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ commit() {
   >   echo $1 > $1

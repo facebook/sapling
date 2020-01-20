@@ -12,17 +12,10 @@
 Create server
   $ hginit master
   $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > infinitepush=
-  > [remotefilelog]
-  > server=True
-  > [infinitepush]
-  > server=True
-  > branchpattern=re:scratch/.+
-  > indextype=disk
-  > storetype=disk
-  > EOF
+  $ enable infinitepush
+  $ setconfig remotefilelog.server=true infinitepush.server=true
+  $ setconfig infinitepush.branchpattern="re:scratch/.+"
+  $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
   $ cd ..
 
 Create first client
@@ -34,25 +27,17 @@ Create first client
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd shallow1
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > infinitepush=
-  > [infinitepush]
-  > server=False
-  > branchpattern=re:scratch/.+
-  > EOF
+  $ enable infinitepush
+  $ setconfig infinitepush.server=false
+  $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ cd ..
 
 Create second client
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   $ cd shallow2
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > infinitepush=
-  > [infinitepush]
-  > server=False
-  > branchpattern=re:scratch/.+
-  > EOF
+  $ enable infinitepush
+  $ setconfig infinitepush.server=false
+  $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ cd ..
 
 First client: make commit and push to scratch branch

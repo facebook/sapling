@@ -1,8 +1,9 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable amend rebase
-  $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\"" ui.interactive=true
+  $ setconfig ui.interactive=true
 
 Create a commit graph using obsmarkers.
 

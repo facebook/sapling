@@ -2,12 +2,7 @@
 
 Set up repo
 
-  $ cat << EOF >> $HGRCPATH
-  > [ui]
-  > origbackuppath=.hg/origbackups
-  > [merge]
-  > checkunknown=warn
-  > EOF
+  $ setconfig ui.origbackuppath=.hg/origbackups merge.checkunknown=warn
   $ hg init repo
   $ cd repo
   $ echo base > base

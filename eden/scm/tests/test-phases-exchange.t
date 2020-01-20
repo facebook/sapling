@@ -3,11 +3,7 @@
   $ disable treemanifest
 #require killdaemons
 
-
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > phasereport=$TESTDIR/testlib/ext-phase-report.py
-  > EOF
+  $ setconfig extensions.phasereport="$TESTDIR/testlib/ext-phase-report.py"
 
   $ hgph() { hg log -G --template "{rev} {phase} {desc} - {node|short}\n" $*; }
 

@@ -1,13 +1,12 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable pushrebase amend remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
-  $ setconfig ui.ssh="python \"$RUNTESTDIR/dummyssh\""
-
   $ setconfig pushrebase.trystackpush=true
 
 Set up server repository

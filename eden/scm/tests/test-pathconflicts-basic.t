@@ -6,10 +6,7 @@ Turn on treestate
 Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.
 
-  $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > merge.checkpathconflicts=True
-  > EOF
+  $ setconfig experimental.merge.checkpathconflicts=True
 
   $ hg init repo
   $ cd repo

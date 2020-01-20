@@ -2,14 +2,8 @@
 
   $ disable treemanifest
 
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
-  > [extensions]
-  > tweakdefaults=
-  > remotenames=
-  > rebase=
-  > EOF
+  $ configure dummyssh
+  $ enable tweakdefaults remotenames rebase
 
   $ hg init master
   $ cd master

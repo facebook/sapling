@@ -1,9 +1,9 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable infinitepush remotenames
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ newrepo server
   $ echo base > base
   $ hg commit -Aqm base

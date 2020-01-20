@@ -1,8 +1,9 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
   $ enable amend rebase histedit fbhistedit phabdiff absorb
-  $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\"" ui.interactive=true
+  $ setconfig ui.interactive=true
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"

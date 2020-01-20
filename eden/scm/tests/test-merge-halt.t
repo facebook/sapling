@@ -2,13 +2,9 @@
 
   $ . helpers-usechg.sh
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > [phases]
-  > publish=False
-  > [merge]
-  > EOF
+  $ enable rebase
+  $ setconfig phases.publish=false
+  $ echo "[merge]" >> $HGRCPATH
 
   $ hg init repo
   $ cd repo

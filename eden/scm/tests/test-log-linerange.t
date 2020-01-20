@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [diff]
-  > git = true
-  > EOF
+  $ setconfig diff.git=true
 
   $ hg init
   $ cat > foo << EOF

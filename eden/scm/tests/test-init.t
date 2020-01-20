@@ -4,10 +4,7 @@ This test tries to exercise the ssh functionality with a dummy script
 
 (enable general delta early)
 
-  $ cat << EOF >> $HGRCPATH
-  > [format]
-  > usegeneraldelta=yes
-  > EOF
+  $ setconfig format.usegeneraldelta=yes
 
   $ checknewrepo()
   > {

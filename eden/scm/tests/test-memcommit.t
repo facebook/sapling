@@ -191,7 +191,7 @@ is not the case.
   >   initclient "$1"
   >   ( \
   >     cd "$1" && enable memcommit pushrebase remotenames && \
-  >     setconfig experimental.evolution=
+  >     configure noevolution
   >   )
   > }
 

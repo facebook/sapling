@@ -1,15 +1,9 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > infinitepush=
-  > remotenames=
-  > [infinitepush]
-  > branchpattern=re:scratch/.+
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > EOF
+  $ enable infinitepush remotenames
+  $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"

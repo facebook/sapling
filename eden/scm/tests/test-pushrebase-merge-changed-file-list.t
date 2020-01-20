@@ -6,14 +6,8 @@
 
 Setup
 
-
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > strip =
-  > EOF
+  $ configure dummyssh
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ log() {
   >   hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}" "$@"

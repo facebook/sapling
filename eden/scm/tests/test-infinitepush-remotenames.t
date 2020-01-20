@@ -1,14 +1,9 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ disable treemanifest
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > infinitepush=
-  > [infinitepush]
-  > branchpattern=re:scratch/.+
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > EOF
+  $ enable infinitepush
+  $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -24,19 +19,11 @@
   >        echo "${bookmark##*/bookmarkmap/} `cat $bookmark`"
   >    done
   > }
-  $ enableremotenames() {
-  >    printf '[extensions]\nremotenames=\n' >> .hg/hgrc
-  > }
 
 Create server repo with one commit and one remote bookmark
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc << EOF
-  > [infinitepush]
-  > server=yes
-  > indextype=disk
-  > storetype=disk
-  > EOF
+  $ setconfig infinitepush.server=yes infinitepush.indextype=disk infinitepush.storetype=disk
   $ mkcommit servercommit
 Let's make server bookmark to match scratch pattern and
 check that it won't be handled like scratch bookmark
@@ -46,7 +33,7 @@ check that it won't be handled like scratch bookmark
 Clone server and enable remotenames
   $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client -q
   $ cd client
-  $ enableremotenames
+  $ enable remotenames
   $ hg book --remote
      default/scratch/serverbook 0:ac312cb08db5
 
@@ -78,7 +65,7 @@ Push scratch commit and scratch bookmark
 Clone server one more time and pull scratch bookmark. Make sure it is remote
   $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client2 -q
   $ cd client2
-  $ enableremotenames
+  $ enable remotenames
   $ hg book --remote
      default/scratch/serverbook 0:ac312cb08db5
   $ hg pull -B scratch/mybranch

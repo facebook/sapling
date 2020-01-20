@@ -1,19 +1,10 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > progress=
-  > progressfile=
-  > progresstest=$TESTDIR/progresstest.py
-  > [progress]
-  > delay = 0
-  > changedelay = 2
-  > refresh = 1
-  > assume-tty = true
-  > statefile = $TESTTMP/progressstate
-  > statefileappend = true
-  > fakedpid = 42
-  > EOF
+  $ enable progress progressfile
+  $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
+  $ setconfig progress.delay=0 progress.changedelay=2 progress.refresh=1 progress.assume-tty=true
+  $ setconfig progress.statefile="$TESTTMP/progressstate" progress.statefileappend=true
+  $ setconfig progress.fakedpid=42
 
   $ withprogress() {
   >   "$@"

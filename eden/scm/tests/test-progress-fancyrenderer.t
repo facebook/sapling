@@ -1,20 +1,9 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > color=
-  > progress=
-  > progresstest=$TESTDIR/progresstest.py
-  > [progress]
-  > delay = 0
-  > changedelay = 2
-  > refresh = 1
-  > renderer = fancy
-  > assume-tty = true
-  > width = 60
-  > [ui]
-  > color = debug
-  > EOF
+  $ enable progress color
+  $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
+  $ setconfig progress.delay=0 progress.changedelay=2 progress.refresh=1 progress.assume-tty=true
+  $ setconfig progress.renderer=fancy progress.width=60 ui.color=debug
 
 simple test
   $ hg progresstest 4 4

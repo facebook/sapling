@@ -1,31 +1,20 @@
   $ . "$TESTDIR/helpers-wireprotologging.sh"
   $ disable treemanifest
-  $ CACHEDIR=`pwd`/hgcache
+  $ CACHEDIR="$TESTTMP/hgcache"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > remotefilelog=
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > [remotefilelog]
-  > cachepath=$CACHEDIR
-  > EOF
+  $ configure dummyssh
+  $ enable remotefilelog
+  $ setconfig remotefilelog.cachepath="$CACHEDIR"
 
   $ hg init repo
   $ capturewireprotologs
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > server=True
-  > EOF
+  $ setconfig remotefilelog.server=true
   $ cd ..
   $ hg clone ssh://user@dummy/repo --shallow repo-clone -q
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
-  > [wireproto]
-  > logrequests=batch,branchmap,getbundle,hello,listkeys,lookup,between,unbundle
-  > loggetfiles=true
-  > EOF
+  $ setconfig wireproto.logrequests=batch,branchmap,getbundle,hello,listkeys,lookup,between,unbundle
+  $ setconfig wireproto.loggetfiles=true
   $ echo a > a && hg add a && hg ci -m a
   $ cd ../repo-clone
   $ hg pull 2>&1 | grep wireproto_requests

@@ -11,13 +11,7 @@
 Enable ui.formatted because pager won't fire without it, and set up
 pager and tell it to use our fake pager that lets us see when the
 pager was running.
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > formatted = yes
-  > color = no
-  > [pager]
-  > pager = $PYTHON $TESTTMP/fakepager.py
-  > EOF
+  $ setconfig ui.formatted=yes ui.color=no pager.pager="$PYTHON $TESTTMP/fakepager.py"
 
   $ hg init repo
   $ cd repo

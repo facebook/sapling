@@ -2,7 +2,7 @@
 
 Tests for the journal extension; records bookmark locations.
 
-  $ cat >> testmocks.py << EOF
+  $ newext testmocks <<EOF
   > # mock out util.getuser() and util.makedate() to supply testable values
   > import os
   > from edenscm.mercurial import util
@@ -24,11 +24,7 @@ Tests for the journal extension; records bookmark locations.
   > util.makedate = mockmakedate
   > EOF
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > journal=
-  > testmocks=`pwd`/testmocks.py
-  > EOF
+  $ enable journal
 
 Setup repo
 

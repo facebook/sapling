@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat <<EOF >> $HGRCPATH
-  > [extensions]
-  > purge =
-  > EOF
+  $ enable purge
 
 init
 

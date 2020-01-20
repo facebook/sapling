@@ -5,10 +5,7 @@
 Test disabling the case conflict check (only fails on case sensitive systems)
   $ hg init casecheck
   $ cd casecheck
-  $ cat >> .hg/hgrc <<EOF
-  > [perftweaks]
-  > disablecasecheck=True
-  > EOF
+  $ setconfig perftweaks.disablecasecheck=true
   $ touch a
   $ hg add a
   $ hg commit -m a

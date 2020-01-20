@@ -9,8 +9,7 @@
   >     print('--binary found !')
   > EOF
 
-  $ echo "[ui]" >> $HGRCPATH
-  $ echo "patch=$PYTHON ../patchtool.py" >> $HGRCPATH
+  $ setconfig ui.patch="$PYTHON $TESTTMP/patchtool.py"
 
   $ hg init a
   $ cd a

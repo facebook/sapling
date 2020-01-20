@@ -5,9 +5,8 @@
   > echo "test-hook-close-phase: $HG_NODE:  $HG_OLDPHASE -> $HG_PHASE"
   > EOF
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > phasereport=$TESTDIR/testlib/ext-phase-report.py
+  $ setconfig extensions.phasereport="$TESTDIR/testlib/ext-phase-report.py"
+  $ readconfig <<EOF
   > [hooks]
   > txnclose-phase.test = sh $TESTTMP/hook.sh
   > EOF
