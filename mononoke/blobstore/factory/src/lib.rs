@@ -21,6 +21,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use blobstore::ErrorKind;
 use blobstore::{Blobstore, DisabledBlob};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+use chaosblob::ChaosBlobstore;
 use fileblob::Fileblob;
 use itertools::Either;
 use manifoldblob::ThriftManifoldBlob;
@@ -50,16 +51,21 @@ pub enum Scrubbing {
     Disabled,
 }
 
+pub use chaosblob::ChaosOptions;
 pub use throttledblob::ThrottleOptions;
 
 #[derive(Clone, Debug)]
 pub struct BlobstoreOptions {
+    pub chaos_options: ChaosOptions,
     pub throttle_options: ThrottleOptions,
 }
 
 impl BlobstoreOptions {
-    pub fn new(throttle_options: ThrottleOptions) -> Self {
-        Self { throttle_options }
+    pub fn new(chaos_options: ChaosOptions, throttle_options: ThrottleOptions) -> Self {
+        Self {
+            chaos_options,
+            throttle_options,
+        }
     }
 }
 
@@ -272,7 +278,10 @@ pub fn make_blobstore_no_sql(
         None,
         MysqlOptions::default(),
         readonly_storage,
-        BlobstoreOptions::new(ThrottleOptions::new(None, None)),
+        BlobstoreOptions::new(
+            ChaosOptions::new(None, None),
+            ThrottleOptions::new(None, None),
+        ),
     )
 }
 
@@ -307,7 +316,7 @@ fn make_blobstore_impl(
     blobstore_options: BlobstoreOptions,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
-
+    let mut has_components = false;
     let store = match blobconfig {
         Disabled => {
             Ok(Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn Blobstore>)
@@ -377,33 +386,39 @@ fn make_blobstore_impl(
         Multiplexed {
             scuba_table,
             blobstores,
-        } => make_blobstore_multiplexed(
-            fb,
-            scuba_table,
-            blobstores,
-            sql_factory,
-            mysql_options,
-            readonly_storage,
-            None,
-            blobstore_options.clone(),
-        ),
+        } => {
+            has_components = true;
+            make_blobstore_multiplexed(
+                fb,
+                scuba_table,
+                blobstores,
+                sql_factory,
+                mysql_options,
+                readonly_storage,
+                None,
+                blobstore_options.clone(),
+            )
+        }
         Scrub {
             scuba_table,
             blobstores,
             scrub_action,
-        } => make_blobstore_multiplexed(
-            fb,
-            scuba_table,
-            blobstores,
-            sql_factory,
-            mysql_options,
-            readonly_storage,
-            Some((
-                Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
-                *scrub_action,
-            )),
-            blobstore_options.clone(),
-        ),
+        } => {
+            has_components = true;
+            make_blobstore_multiplexed(
+                fb,
+                scuba_table,
+                blobstores,
+                sql_factory,
+                mysql_options,
+                readonly_storage,
+                Some((
+                    Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+                    *scrub_action,
+                )),
+                blobstore_options.clone(),
+            )
+        }
         ManifoldWithTtl {
             bucket,
             prefix,
@@ -430,11 +445,26 @@ fn make_blobstore_impl(
 
     let store = if blobstore_options.throttle_options.has_throttle() {
         store
+            .map({
+                cloned!(blobstore_options);
+                move |inner| {
+                    Arc::new(ThrottledBlob::new(
+                        inner,
+                        blobstore_options.throttle_options.clone(),
+                    )) as Arc<dyn Blobstore>
+                }
+            })
+            .boxify()
+    } else {
+        store
+    };
+
+    // For stores with components only set chaos on their components
+    let store = if !has_components && blobstore_options.chaos_options.has_chaos() {
+        store
             .map(move |inner| {
-                Arc::new(ThrottledBlob::new(
-                    inner,
-                    blobstore_options.throttle_options,
-                )) as Arc<dyn Blobstore>
+                Arc::new(ChaosBlobstore::new(inner, blobstore_options.chaos_options))
+                    as Arc<dyn Blobstore>
             })
             .boxify()
     } else {
@@ -460,11 +490,22 @@ pub fn make_blobstore_multiplexed(
         _ => readonly_storage,
     };
 
+    let mut applied_chaos = false;
     let components: Vec<_> = inner_config
         .iter()
         .map({
             move |(blobstoreid, config)| {
-                cloned!(blobstoreid, blobstore_options);
+                cloned!(blobstoreid, mut blobstore_options);
+                if blobstore_options.chaos_options.has_chaos() {
+                    if applied_chaos {
+                        blobstore_options = BlobstoreOptions {
+                            chaos_options: ChaosOptions::new(None, None),
+                            ..blobstore_options
+                        };
+                    } else {
+                        applied_chaos = true;
+                    }
+                }
                 make_blobstore_impl(
                     // force per line for easier merges
                     fb,

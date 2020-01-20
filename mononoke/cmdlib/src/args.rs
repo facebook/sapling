@@ -30,7 +30,7 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
-use blobstore_factory::{BlobstoreOptions, Scrubbing, ThrottleOptions};
+use blobstore_factory::{BlobstoreOptions, ChaosOptions, Scrubbing, ThrottleOptions};
 use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{
@@ -70,6 +70,8 @@ const READONLY_STORAGE: &str = "readonly-storage";
 
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
+const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
+const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -771,6 +773,20 @@ pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .required(false)
             .help("Write QPS limit to ThrottledBlob"),
     )
+    .arg(
+        Arg::with_name(READ_CHAOS_ARG)
+            .long(READ_CHAOS_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Rate of errors on reads. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
+    )
+    .arg(
+        Arg::with_name(WRITE_CHAOS_ARG)
+            .long(WRITE_CHAOS_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Rate of errors on writes. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
+    )
 }
 
 pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -1038,7 +1054,18 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
         .value_of(WRITE_QPS_ARG)
         .map(|v| v.parse().expect("Provided qps is not u32"));
 
-    BlobstoreOptions::new(ThrottleOptions::new(read_qps, write_qps))
+    let read_chaos: Option<NonZeroU32> = matches
+        .value_of(READ_CHAOS_ARG)
+        .map(|v| v.parse().expect("Provided chaos is not u32"));
+
+    let write_chaos: Option<NonZeroU32> = matches
+        .value_of(WRITE_CHAOS_ARG)
+        .map(|v| v.parse().expect("Provided chaos is not u32"));
+
+    BlobstoreOptions::new(
+        ChaosOptions::new(read_chaos, write_chaos),
+        ThrottleOptions::new(read_qps, write_qps),
+    )
 }
 
 pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) {
