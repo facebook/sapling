@@ -2,7 +2,8 @@
 
   $ . helpers-usechg.sh
 
-  $ enable mutation-norecord amend rebase
+  $ configure mutation-norecord
+  $ enable amend rebase
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"

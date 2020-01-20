@@ -1,7 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ enable mutation-norecord amend rebase
+  $ configure mutation-norecord
+  $ enable amend rebase
   $ showgraph() {
   >   hg log --graph -T "{rev} {bookmarks} {desc|firstline}" | sed \$d
   > }

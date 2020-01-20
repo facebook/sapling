@@ -1,27 +1,15 @@
 #chg-compatible
 
   $ . helpers-usechg.sh
-  $ enable obsstore
+  $ configure evolution
+  $ enable rebase shelve
 
 Test for the heuristic copytracing algorithm
 ============================================
 
-  $ cat >> $TESTTMP/copytrace.sh << '__EOF__'
-  > initclient() {
-  > cat >> $1/.hg/hgrc <<EOF
-  > [experimental]
-  > copytrace = heuristics
-  > copytrace.sourcecommitlimit = -1
-  > EOF
+  $ initclient() {
+  >   setconfig experimental.copytrace=heuristics experimental.copytrace.sourcecommitlimit=-1
   > }
-  > __EOF__
-  $ . "$TESTTMP/copytrace.sh"
-
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > rebase=
-  > shelve=
-  > EOF
 
 NOTE: calling initclient() set copytrace.sourcecommitlimit=-1 as we want to
 prevent the full copytrace algorithm to run and test the heuristic algorithm

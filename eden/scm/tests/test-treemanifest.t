@@ -1,14 +1,9 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ configure evolution dummyssh
+  $ disable treemanifest
 #require killdaemons
-  $ enable obsstore
-  $ cat << EOF >> $HGRCPATH
-  > [format]
-  > usegeneraldelta=yes
-  > [ui]
-  > ssh=$PYTHON "$TESTDIR/dummyssh"
-  > EOF
+  $ setconfig format.usegeneraldelta=yes
 
 Set up repo
 

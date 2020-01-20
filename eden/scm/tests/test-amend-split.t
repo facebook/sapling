@@ -1,7 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ enable mutation-norecord amend rebase
+  $ configure mutation-norecord
+  $ enable amend rebase
   $ setconfig ui.interactive=true amend.safestrip=false hint.ack-hint-ack=true
   $ mkcommit() {
   >    echo "${1}1" > "${1}1"

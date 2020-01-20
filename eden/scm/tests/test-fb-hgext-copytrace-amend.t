@@ -1,16 +1,13 @@
 #chg-compatible
 
-  $ . "$TESTDIR/copytrace.sh"
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > copytrace=
-  > rebase=
-  > shelve=
-  > [experimental]
-  > copytrace=off
-  > evolution=createmarkers
-  > EOF
+  $ configure evolution
+  $ enable amend copytrace rebase shelve
+  $ setconfig experimental.copytrace=off
+
+  $ initclient() {
+  >   setconfig copytrace.remote=false copytrace.enablefilldb=true copytrace.fastcopytrace=true
+  >   setconfig experimental.copytrace=off
+  > }
 
 Test amend copytrace
   $ hg init repo

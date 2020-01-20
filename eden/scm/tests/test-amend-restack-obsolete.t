@@ -1,7 +1,8 @@
 #chg-compatible
 
   $ . helpers-usechg.sh
-  $ enable mutation-norecord amend rebase
+  $ configure mutation-norecord
+  $ enable amend rebase
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.singletransaction=True
   $ setconfig amend.autorestack=no-conflict

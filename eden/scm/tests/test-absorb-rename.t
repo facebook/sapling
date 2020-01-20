@@ -1,6 +1,6 @@
 #chg-compatible
 
-TODO: enable obsstore
+TODO: configure mutation
   $ cat >> $HGRCPATH << EOF
   > [diff]
   > git=1

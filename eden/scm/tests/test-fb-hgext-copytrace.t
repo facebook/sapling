@@ -1,18 +1,15 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ configure evolution
+  $ disable treemanifest
+  $ enable copytrace rebase shelve
+  $ setconfig experimental.copytrace=off
   $ . helpers-usechg.sh
-  $ enable obsstore
 
-  $ . "$TESTDIR/copytrace.sh"
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > copytrace=
-  > rebase=
-  > shelve=
-  > [experimental]
-  > copytrace=off
-  > EOF
+  $ initclient() {
+  >   setconfig copytrace.remote=false copytrace.enablefilldb=true copytrace.fastcopytrace=true
+  >   setconfig experimental.copytrace=off
+  > }
 
 Check filename heuristics (same dirname and same basename)
   $ hg init server

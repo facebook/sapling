@@ -12,13 +12,13 @@
   > EOF
 
 #if obsstore-on
-  $ setconfig experimental.evolution=createmarkers
+  $ configure evolution
 #endif
 #if obsstore-off
-  $ setconfig experimental.evolution=
+  $ configure noevolution
 #endif
 #if mutation
-  $ enable mutation-norecord
+  $ configure mutation-norecord
 #endif
 
 Basic amend

@@ -1,7 +1,7 @@
 #chg-compatible
 
-  $ enable mutation-norecord
-  $ setconfig extensions.treemanifest=!
+  $ configure mutation-norecord
+  $ disable treemanifest
   $ newrepo
   $ drawdag << 'EOS'
   > B  # B/B=B\n

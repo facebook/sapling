@@ -1,7 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ enable mutation-norecord amend directaccess histedit rebase
+  $ configure mutation-norecord
+  $ enable amend directaccess histedit rebase
 Test that amend --to option
   $ hg init repo && cd repo
   $ mkcommit() {

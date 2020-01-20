@@ -1,6 +1,7 @@
 #chg-compatible
 
-  $ enable rebase obsstore
+  $ configure evolution
+  $ enable rebase
   $ setconfig experimental.evolution.allowdivergence=1
 
   $ newrepo

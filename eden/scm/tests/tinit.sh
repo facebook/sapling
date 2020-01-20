@@ -29,24 +29,11 @@ newserver() {
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
     hg init --config extensions.lz4revlog=
-
-    cat >> ".hg/hgrc" <<EOF
-[extensions]
-lz4revlog=
-remotefilelog=
-remotenames=
-treemanifest=
-
-[remotefilelog]
-reponame=$reponame
-server=True
-
-[treemanifest]
-flatcompat=False
-rustmanifest=True
-server=True
-treeonly=True
-EOF
+    enable lz4revlog remotefilelog remotenames treemanifest
+    setconfig \
+       remotefilelog.reponame="$reponame" remotefilelog.server=True \
+       treemanifest.flatcompat=False treemanifest.rustmanifest=True \
+       treemanifest.server=True treemanifiest.treeonly=True
   fi
 }
 
@@ -109,37 +96,56 @@ switchrepo() {
     cd $TESTTMP/$reponame
 }
 
-# Enable extensions or features
+# Set configuration for feature
+configure() {
+  for name in "$@"
+  do
+    case "$name" in
+      dummyssh)
+        setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\""
+        ;;
+      mutation)
+        setconfig \
+            experimental.evolution=obsolete \
+            mutation.enabled=true mutation.record=true \
+            visibility.enabled=true
+        ;;
+      mutation-norecord)
+        setconfig \
+            experimental.evolution=obsolete \
+            mutation.enabled=true mutation.record=false \
+            visibility.enabled=true
+        ;;
+      evolution)
+         setconfig \
+            experimental.evolution="createmarkers, allowunstable" \
+            mutation.enabled=false \
+            visibility.enabled=false
+        ;;
+      noevolution)
+         setconfig \
+            experimental.evolution=obsolete \
+            mutation.enabled=false \
+            visibility.enabled=false
+        ;;
+        
+    esac
+  done
+}
+
+# Enable extensions
 enable() {
-  local rcpath
-  # .hg/hgrc may not exist yet, so just check for requires
-  if [ -f .hg/requires ]; then
-    rcpath=.hg/hgrc
-  else
-    rcpath="$HGRCPATH"
-  fi
-  for name in "$@"; do
-    if [ "$name" = "mutation-norecord" ]; then
-      cat >> $rcpath << EOF
-[experimental]
-evolution = obsolete
-[mutation]
-enabled=true
-record=false
-[visibility]
-enabled=true
-EOF
-    elif [ "$name" = obsstore ]; then
-      cat >> $rcpath << EOF
-[experimental]
-evolution = createmarkers, allowunstable
-EOF
-    else
-      cat >> $rcpath << EOF
-[extensions]
-$name=
-EOF
-    fi
+  for name in "$@"
+  do
+    setconfig "extensions.$name="
+  done
+}
+
+# Disable extensions
+disable() {
+  for name in "$@"
+  do
+    setconfig "extensions.$name=!"
   done
 }
 
@@ -169,10 +175,32 @@ setconfig() {
   python "$RUNTESTDIR/setconfig.py" "$@"
 }
 
+# Set config item, but always in the main hgrc
+setglobalconfig() {
+  ( cd "$TESTTMP" ; setconfig "$@" )
+}
+
 # Set config items that enable modern features.
 setmodernconfig() {
   enable remotenames amend
   setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution=obsolete remotenames.rename.default=remote
+}
+
+# Read config from stdin (usually a heredoc).
+readconfig() {
+  local hgrcpath
+  if [ -e ".hg" ]
+  then
+    hgrcpath=".hg/hgrc"
+  else
+    hgrcpath="$HGRCPATH"
+  fi
+  cat >> "$hgrcpath"
+}
+
+# Read global config from stdin (usually a heredoc).
+readglobalconfig() {
+  cat >> "$HGRCPATH"
 }
 
 # Create a new extension

@@ -1,16 +1,8 @@
 #chg-compatible
 
-  $ enable obsstore
-  $ cat >> $HGRCPATH << EOF
-  > [morestatus]
-  > show=True
-  > [extensions]
-  > morestatus=
-  > fbhistedit=
-  > histedit=
-  > rebase=
-  > reset=
-  > EOF
+  $ configure evolution
+  $ enable morestatus fbhistedit histedit rebase reset
+  $ setconfig morestatus.show=true
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys
   > from edenscm.mercurial import merge
@@ -18,16 +10,10 @@
   >     merge.applyupdates = lambda *args, **kwargs: sys.exit()
   > EOF
   $ breakupdate() {
-  >   cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > breakupdate=$TESTTMP/breakupdate.py
-  > EOF
+  >   setconfig extensions.breakupdate="$TESTTMP/breakupdate.py"
   > }
   $ unbreakupdate() {
-  >   cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > breakupdate=!
-  > EOF
+  >   disable breakupdate
   > }
 
 Test An empty repo should return no extra output
@@ -105,7 +91,7 @@ Test hg status is normal after graft abort
   $ rm a.orig
 
 Test unshelve state
-  $ echo "shelve=" >> $HGRCPATH
+  $ enable shelve
   $ hg reset ".^" -q
   $ hg shelve -q
   $ hg up -r 2977a57 -q
