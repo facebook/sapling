@@ -1,19 +1,12 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > histedit=
-  > rebase=
-  > tweakdefaults=
-  > [experimental]
-  > updatecheck=noconflict
-  > EOF
+  $ enable amend histedit rebase tweakdefaults
+  $ setconfig experimental.updatecheck=noconflict
   $ setconfig ui.suggesthgprev=True
 
 Setup repo

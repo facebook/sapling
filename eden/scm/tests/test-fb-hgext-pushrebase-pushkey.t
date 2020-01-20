@@ -3,7 +3,7 @@
 
 Setup
 
-  $ setconfig ui.ssh="python $RUNTESTDIR/dummyssh"
+  $ configure dummyssh
   $ enable pushrebase remotenames
 
   $ cat >> "$TESTTMP/commit.sh" << EOF

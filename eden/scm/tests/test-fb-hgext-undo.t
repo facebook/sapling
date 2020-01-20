@@ -1,14 +1,8 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > undo=
-  > extralog=$TESTDIR/extralog.py
-  > [experimental]
-  > evolution=createmarkers
-  > [ui]
-  > interactive = true
-  > EOF
+  $ configure evolution
+  $ enable undo
+  $ setconfig extensions.extralog="$TESTDIR/extralog.py" ui.interactive=true
 
 Build up a repo
 

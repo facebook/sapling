@@ -1,16 +1,10 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > grpcheck=
-  > EOF
-
-  $ hg init repo
-  $ cd repo
+  $ enable grpcheck
 
 mock os.getgroups and grp.getgrnam
 
-  $ cat >> $TESTTMP/mockgrp.py << EOF
+  $ newext mockgrp <<EOF
   > import os, grp
   > def _getgroups():
   >     return map(int, os.environ.get('HGMOCKGRPS', '1000').split())
@@ -29,8 +23,7 @@ mock os.getgroups and grp.getgrnam
   > grp.getgrnam = _getgrnam
   > EOF
 
-  $ cat >> $HGRCPATH << EOF
-  > mockgrp = $TESTTMP/mockgrp.py
+  $ readconfig <<EOF
   > [grpcheck]
   > groups = users, devs
   > warning = You should be in %s group.
@@ -40,6 +33,8 @@ mock os.getgroups and grp.getgrnam
 
 when the user is not in those groups, warnings are printed
 
+  $ newrepo
+  You should be in devs group.
   $ hg log
   You should be in devs group.
   $ HGMOCKGRPS=100 hg log

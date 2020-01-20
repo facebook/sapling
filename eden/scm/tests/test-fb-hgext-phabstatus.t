@@ -2,12 +2,8 @@
 
 Setup
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > arcconfig=$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py
-  > phabstatus=
-  > smartlog=
-  > EOF
+  $ enable phabstatus smartlog
+  $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
   $ hg init repo
   $ cd repo
   $ touch foo

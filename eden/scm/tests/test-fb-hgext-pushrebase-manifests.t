@@ -19,13 +19,8 @@ This way we can prevent regressions on manifest reads and test improvements.
 manifest.read() is wrapped by an extension that prints a short trace. read calls
 inside the lock are marked with a ":(".
 
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > strip =
-  > EOF
+  $ configure dummyssh
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ commit() {
   >   hg commit -A -m "$@"
@@ -35,10 +30,8 @@ inside the lock are marked with a ":(".
   >   hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}" "$@"
   > }
   $ config() {
-  >   echo "[experimental]" >> .hg/hgrc
-  >   echo "bundle2lazylocking=True" >> .hg/hgrc
-  >   echo "[extensions]" >> .hg/hgrc
-  >   echo "pushrebase =" >> .hg/hgrc
+  >   enable pushrebase
+  >   setconfig experimental.bundle2lazylocking=true
   > }
 
   $ clone() {

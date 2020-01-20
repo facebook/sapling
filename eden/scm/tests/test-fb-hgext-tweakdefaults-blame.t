@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > tweakdefaults=
-  > EOF
+  $ enable tweakdefaults
 
 Test wrapped blame to be able to handle the usual command line attributes
   $ hg init repo

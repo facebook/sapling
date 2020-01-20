@@ -1,13 +1,7 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > tweakdefaults=
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
+  $ enable amend rebase tweakdefaults
+  $ configure evolution
 
 Setup repo
   $ hg init opawarerepo

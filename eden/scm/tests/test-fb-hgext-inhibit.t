@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
+  $ configure evolution
 
   $ hg init inhibit
   $ cd inhibit

@@ -1,12 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > blackbox=
-  > rage=
-  > smartlog=
-  > sparse=
-  > EOF
+  $ enable blackbox rage smartlog sparse
 
   $ hg init repo
   $ cd repo
@@ -20,10 +14,7 @@
   hg cloud status
 
 Test with shared repo
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > share=
-  > EOF
+  $ setglobalconfig extensions.share=
   $ cd ..
   $ hg share repo repo2
   updating working directory

@@ -1,9 +1,9 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ enable tweakdefaults remotenames
 
 Setup
-
 
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
   > #!/bin/sh
@@ -11,10 +11,8 @@ Setup
   > exit 0
   > EOF
   $ chmod +x $TESTTMP/pretxnchangegroup.sh
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > tweakdefaults=
-  > remotenames=
+
+  $ readconfig <<EOF
   > [hooks]
   > pretxnchangegroup = $TESTTMP/pretxnchangegroup.sh
   > EOF

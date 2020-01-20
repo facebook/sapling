@@ -3,18 +3,8 @@
   $ disable treemanifest
   $ . "$TESTDIR/histedit-helpers.sh"
 
-Setup
-
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > fbhistedit=
-  > histedit=
-  > rebase=
-  > [experimental]
-  > evolution = createmarkers
-  > EOF
+  $ configure evolution
+  $ enable amend fbhistedit histedit rebase
 
   $ initrepo ()
   > {

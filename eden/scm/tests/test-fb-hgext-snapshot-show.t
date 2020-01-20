@@ -1,10 +1,7 @@
 #chg-compatible
 
 # Initial setup
-  $ setconfig extensions.amend=
-  $ setconfig extensions.rebase=
-  $ setconfig extensions.snapshot=
-  $ setconfig extensions.smartlog=
+  $ enable amend rebase snapshot smartlog
   $ disable treemanifest
   $ setconfig smartlog.hide-before="0 0"
   $ setconfig visibility.enabled=true

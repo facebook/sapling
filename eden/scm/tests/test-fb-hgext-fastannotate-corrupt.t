@@ -1,10 +1,7 @@
 #chg-compatible
 
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fastannotate=
-  > EOF
+  $ enable fastannotate
 
   $ hg init repo
   $ cd repo

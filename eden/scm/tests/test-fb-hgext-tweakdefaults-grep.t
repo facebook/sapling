@@ -1,10 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > tweakdefaults=
-  > rebase=
-  > EOF
+  $ enable tweakdefaults rebase
 
 Set up the repository with some simple files.
 This is coupled with the files dictionary in

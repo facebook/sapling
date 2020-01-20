@@ -1,12 +1,5 @@
   $ disable treemanifest
-  $ setconfig experimental.evolution= mutation.enabled=1 visibility.enabled=1 mutation.record=1 mutation.date='0 0'
-
-Setup
-
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > EOF
+  $ configure mutation dummyssh
 
 Set up server repository
 

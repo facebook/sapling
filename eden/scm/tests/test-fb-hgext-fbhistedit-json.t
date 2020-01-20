@@ -4,14 +4,8 @@ Tests JSON Input support for histedit
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > fbhistedit=
-  > histedit=
-  > rebase=
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
+  $ configure evolution
+  $ enable fbhistedit histedit rebase
 
   $ initrepo ()
   > {

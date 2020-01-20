@@ -2,14 +2,8 @@
 
 Set up test environment.
 This test confirms cacheinvalidation in hg fold.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > undo=
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > EOF
+  $ configure evolution
+  $ enable amend rebase undo
   $ reset() {
   >   cd ..
   >   rm -rf repo

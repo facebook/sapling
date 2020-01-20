@@ -1,15 +1,13 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
+  $ enable conflictinfo rebase
+
 1) Make the repo
   $ mkdir basic
   $ cd basic
   $ hg init
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > conflictinfo=
-  > EOF
 
 2) Can't run dumpjson outside a conflict
   $ hg resolve --tool internal:dumpjson
@@ -104,11 +102,6 @@ Setup
   $ rm -rf basic
   $ mkdir cornercases
   $ cd cornercases
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase=
-  > conflictinfo=
-  > EOF
 
   $ reset() {
   >   rm -rf foo

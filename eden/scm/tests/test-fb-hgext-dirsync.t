@@ -1,15 +1,11 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > dirsync=
-  > EOF
+  $ enable dirsync
 
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
-  > [ui]
-  > verbose=true
+  $ setconfig ui.verbose=true
+  $ readconfig <<EOF
   > [dirsync]
   > sync1.1=dir1/
   > sync1.2=dir2/subdir/
@@ -234,7 +230,7 @@ Test syncing multiple mirror groups across more than 2 directories
   $ rm -rf repo
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -289,7 +285,7 @@ Test that rebasing applies the same change to both
   $ rm -rf repo
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -329,7 +325,7 @@ Test committing part of the working copy
   $ rm -rf repo
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -440,7 +436,7 @@ Test deleting file with missing mirror
   $ hg add dir1
   adding dir1/a
   $ hg commit -m 'add dir1/a'
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -469,7 +465,7 @@ Test modifying file with missing mirror
   $ hg add dir1
   adding dir1/a
   $ hg commit -m 'add dir1/a'
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -506,7 +502,7 @@ Test updating missing mirror
   $ hg add dir1
   adding dir1/a
   $ hg commit -m 'add dir1/a'
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -539,11 +535,8 @@ Dont mirror during shelve
   $ rm -rf repo
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > shelve=
-  > [experimental]
-  > evolution=createmarkers
+  $ enable shelve
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
@@ -571,7 +564,7 @@ Test .hgdirsync in the working copy
   $ rm -rf repo
   $ hg init repo
   $ cd repo
-  $ cat >> .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/

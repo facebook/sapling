@@ -1,7 +1,6 @@
 #chg-compatible
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "grepdiff=" >> $HGRCPATH
+  $ enable grepdiff
 
 Setup repo
 

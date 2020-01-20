@@ -5,13 +5,8 @@
 
 Setup the extension
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > simplecache=
-  > [simplecache]
-  > showdebug=true
-  > cachedir=$TESTTMP/hgsimplecache
-  > EOF
+  $ enable simplecache
+  $ setconfig simplecache.showdebug=true simplecache.cachedir="$TESTTMP/hgsimplecache"
 
 Initialize the repo
 

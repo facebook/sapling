@@ -1,11 +1,10 @@
 #chg-compatible
 
 TODO: Make this test work with obsstore
+  $ configure dummyssh noevolution
   $ disable treemanifest
-  $ setconfig experimental.evolution=
   $ . "$TESTDIR/hgsql/library.sh"
 
-  $ setconfig ui.ssh='python "$RUNTESTDIR/dummyssh"'
   $ commit() {
   >   hg commit -Aq -m "$@"
   > }

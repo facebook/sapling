@@ -1,9 +1,8 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > smartlog=
+  $ enable smartlog
+  $ readconfig <<EOF
   > [experimental]
   > graphstyle.grandparent=|
   > graphstyle.missing=|

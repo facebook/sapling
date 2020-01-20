@@ -6,10 +6,7 @@
 #if withpytz
   $ hg debugshell -c "import pytz; pytz.__name__" || exit 80
 #endif
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > smartlog=
-  > EOF
+  $ enable smartlog
   $ TZ=UTC
   $ export TZ
 

@@ -1,17 +1,11 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
-Check for remotenames and skip if not present
+TODO: configure mutation
+  $ configure noevolution
 
 Set up
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > rebase=
-  > remotenames=
-  > tweakdefaults=
-  > EOF
+  $ enable rebase remotenames tweakdefaults
 
   $ hg init repo
   $ echo a > repo/a

@@ -1,15 +1,7 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > crdump=
-  > remotenames=
-  > [experimental]
-  > evolution.createmarkers=True
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
-  > EOF
+  $ configure evolution dummyssh
+  $ enable amend crdump remotenames
   $ showgraph() {
   >   hg log --graph --hidden -T "{rev} {desc|firstline}" | sed \$d
   > }

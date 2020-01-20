@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ cat > $TESTTMP/crash.py << EOF
+  $ newext crash <<EOF
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -8,12 +8,8 @@
   > def crash(ui, repo):
   >     raise 'crash'
   > EOF
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > errorredirect=
-  > crash=$TESTTMP/crash.py
-  > mock=$TESTDIR/mockblackbox.py
-  > EOF
+  $ enable errorredirect
+  $ setconfig extensions.mock="$TESTDIR/mockblackbox.py"
 
 Test errorredirect will respect original behavior by default
   $ hg init

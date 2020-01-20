@@ -3,25 +3,15 @@
   $ disable treemanifest
 Setup
 
-
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > strip =
-  > EOF
+  $ configure dummyssh
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
 Setup pushrebase required repo
 
   $ hg init server
   $ cd server
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > pushrebase=
-  > [pushrebase]
-  > blocknonpushrebase = True
-  > EOF
+  $ enable pushrebase
+  $ setconfig pushrebase.blocknonpushrebase=true
   $ echo a > a && hg commit -Aqm a
   $ cd ..
 

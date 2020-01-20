@@ -4,24 +4,12 @@
 
 Setup
 
+  $ configure evolution dummyssh
+  $ enable amend pullcreatemarkers pushrebase rebase remotenames
+  $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
+  $ setconfig remotenames.allownonfastforward=true
 
 Test that hg pull creates obsolescence markers for landed diffs
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > username = nobody <no.reply@fb.com>
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > [experimental]
-  > evolution= createmarkers
-  > rebaseskipobsolete=True
-  > [extensions]
-  > amend=
-  > pullcreatemarkers=
-  > pushrebase=
-  > rebase=
-  > remotenames =
-  > [remotenames]
-  > allownonfastforward=True
-  > EOF
   $ hg init server
   $ mkcommit() {
   >    echo "$1" > "$1"

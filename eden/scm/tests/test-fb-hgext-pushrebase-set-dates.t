@@ -4,7 +4,7 @@
 
 #testcases nostackpush stackpush
   $ disable treemanifest
-  $ setconfig experimental.evolution=
+  $ configure noevolution dummyssh
   $ . helpers-usechg.sh
 
   $ . "$TESTDIR/library.sh"
@@ -13,13 +13,7 @@
 
 Setup
 
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > strip =
-  > EOF
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
 #if nostackpush
   $ setconfig pushrebase.trystackpush=false

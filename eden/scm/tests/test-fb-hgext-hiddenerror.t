@@ -1,11 +1,7 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > hiddenerror=
-  > [experimental]
-  > evolution=all
-  > EOF
+  $ configure evolution
+  $ enable hiddenerror
 
 Create hidden changeset.
   $ hg init repo && cd repo
@@ -19,7 +15,7 @@ Test default error message.
   [255]
 
 Test custom error message without hash.
-  $ cat >> $HGRCPATH << EOF
+  $ readglobalconfig <<EOF
   > [hiddenerror]
   > message = message without hash
   > hint = hint without hash
@@ -30,7 +26,7 @@ Test custom error message without hash.
   [255]
 
 Test custom error message with hash.
-  $ cat >> $HGRCPATH << EOF
+  $ readglobalconfig <<EOF
   > [hiddenerror]
   > message = message with hash {0}
   > hint = hint with hash {0}

@@ -1,20 +1,13 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution dummyssh
   $ . helpers-usechg.sh
 
 Setup
 
-
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > strip =
-  > EOF
+  $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ commit() {
   >   hg commit -d "0 0" -A -m "$@"

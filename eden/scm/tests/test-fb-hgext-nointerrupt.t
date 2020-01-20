@@ -1,7 +1,7 @@
 #chg-compatible
 
 Dummy extension simulating long running command
-  $ cat > sleepext.py <<EOF
+  $ newext sleepext <<EOF
   > import time
   > import itertools
   > 
@@ -23,10 +23,6 @@ Dummy extension simulating long running command
 Set up repository
   $ hg init repo
   $ cd repo
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > sleepext = ../sleepext.py
-  > EOF
 
 #if osx
   $ TIMEOUT=gtimeout
@@ -46,7 +42,8 @@ Test ctrl-c
   interrupted!
   [124]
 
-  $ cat >> $HGRCPATH << EOF
+  $ readglobalconfig <<EOF
+  > [extensions]
   > nointerrupt=
   > [alias]
   > slum = sleep
@@ -59,7 +56,8 @@ Test ctrl-c
   interrupted!
   [124]
 
-  $ cat >> $HGRCPATH << EOF
+  $ readglobalconfig <<EOF
+  > [nointerrupt]
   > interactiveonly = False
   > EOF
 

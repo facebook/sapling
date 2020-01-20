@@ -11,10 +11,7 @@ UTILS:
 TEST: incomplete requirements handling (required extension excluded)
   $ hg init a
   $ cd a
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > drop=
-  > EOF
+  $ enable drop
 
   $ hg drop 1
   extension rebase not found
@@ -22,13 +19,7 @@ TEST: incomplete requirements handling (required extension excluded)
   [255]
 
 SETUP: Properly setup all required extensions
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > rebase=
-  > drop=
-  > [experimental]
-  > evolution=all
-  > EOF
+  $ enable rebase drop
 
 TEST: handling no revision provided to drop
   $ hg drop
@@ -49,13 +40,7 @@ TEST: aborting when drop called on root changeset
   
 RESET and SETUP
   $ reset
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > rebase=
-  > drop=
-  > [experimental]
-  > evolution=all
-  > EOF
+  $ enable rebase drop
 
 TEST: dropping changeset in the middle of the stack
   $ hg debugbuilddag +4 -m
@@ -86,13 +71,7 @@ TEST: abort when more than one revision provided
 
 RESET and SETUP
   $ reset
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > rebase=
-  > drop=
-  > [experimental]
-  > evolution=all
-  > EOF
+  $ enable rebase drop
 
 TEST: dropping a changest with child changesets
   $ hg debugbuilddag -m "+5 *3 +2"
@@ -178,13 +157,7 @@ TEST: abort when dropping a public changeset
 
 RESET and SETUP
   $ reset
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > rebase=
-  > drop=
-  > [experimental]
-  > evolution=all
-  > EOF
+  $ enable rebase drop
 
 TEST: dropping a changeset with merge conflict
   $ hg debugbuilddag -o +4

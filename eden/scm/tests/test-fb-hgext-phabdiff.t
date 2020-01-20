@@ -1,7 +1,6 @@
 #chg-compatible
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "phabdiff=" >> $HGRCPATH
+  $ enable phabdiff
 
 Setup repo
 

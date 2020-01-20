@@ -4,12 +4,9 @@ Set up repository
 
   $ hg init repo
   $ cd repo
-  $ echo "[extensions]" >> .hg/hgrc
-  $ echo "extorder=" >> .hg/hgrc
-  $ echo "rebase =" >> .hg/hgrc
-  $ echo "dummyext1 = $TESTDIR/dummyext1.py" >> .hg/hgrc
-  $ echo "dummyext2 = $TESTDIR/dummyext2.py" >> .hg/hgrc
-  $ echo "histedit =" >> .hg/hgrc
+  $ enable extorder rebase histedit
+  $ setconfig extensions.dummyext1="$TESTDIR/dummyext1.py"
+  $ setconfig extensions.dummyext2="$TESTDIR/dummyext2.py"
 
 Simple Dependency
 
@@ -20,7 +17,7 @@ Simple Dependency
   ext2: extsetup
   000000000000
 
-  $ cat >> .hg/hgrc << EOF
+  $ readconfig <<EOF
   > [extorder]
   > dummyext1 = dummyext2
   > preferfirst = histedit
@@ -36,7 +33,7 @@ Simple Dependency
 
 Conflicting deps
 
-  $ echo "dummyext2 = dummyext1" >> .hg/hgrc
+  $ setconfig extorder.dummyext2=dummyext1
   $ hg id > out.txt 2>&1
   [1]
   $ grep MercurialExtOrderException: < out.txt

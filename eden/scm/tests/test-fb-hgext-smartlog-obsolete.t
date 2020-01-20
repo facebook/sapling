@@ -1,20 +1,8 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > histedit=
-  > rebase=
-  > smartlog=
-  > tweakdefaults=
-  > [tweakdefaults]
-  > histeditkeepdate = true
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > evolution.allowdivergence = on
-  > [ui]
-  > interactive = true
-  > EOF
+  $ configure evolution
+  $ enable amend histedit rebase smartlog tweakdefaults
+  $ setconfig experimental.evolution.allowdivergence=on tweakdefaults.histeditkeepdate=true ui.interactive=true
   $ mkcommit() {
   >    echo $1 > $1
   >    hg add $1

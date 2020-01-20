@@ -4,15 +4,8 @@
 (this file is backported from core hg tests/test-annotate.t)
 
 
-  $ cat >> $HGRCPATH << EOF
-  > [diff]
-  > git=1
-  > [extensions]
-  > fastannotate=
-  > [fastannotate]
-  > modes=fctx
-  > mainbranch=.
-  > EOF
+  $ enable fastannotate
+  $ setconfig diff.git=1 fastannotate.modes=fctx fastannotate.mainbranch=.
 
   $ HGMERGE=true; export HGMERGE
 

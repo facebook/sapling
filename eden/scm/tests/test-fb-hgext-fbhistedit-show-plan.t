@@ -2,12 +2,7 @@
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > fbhistedit=
-  > histedit=
-  > rebase=
-  > EOF
+  $ enable fbhistedit histedit rebase
 
   $ initrepo ()
   > {

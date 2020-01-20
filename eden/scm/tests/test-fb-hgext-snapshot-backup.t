@@ -1,8 +1,7 @@
 #chg-compatible
 
 # Initial setup
-  $ setconfig extensions.rebase=
-  $ setconfig extensions.snapshot=
+  $ enable rebase snapshot
   $ disable treemanifest
   $ setconfig visibility.enabled=true
   $ . "$TESTDIR/library.sh"

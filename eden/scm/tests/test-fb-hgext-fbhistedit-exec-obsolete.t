@@ -2,21 +2,9 @@
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > fbhistedit=
-  > histedit=
-  > rebase=
-  > EOF
+  $ configure evolution
+  $ enable fbhistedit histedit rebase
 
-Enable obsolete
-
-  $ cat > ${TESTTMP}/obs.py << EOF
-  > import edenscm.mercurial.obsolete
-  > edenscm.mercurial.obsolete._enabled = True
-  > EOF
-
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
   $ initrepo ()
   > {
   >     hg init r

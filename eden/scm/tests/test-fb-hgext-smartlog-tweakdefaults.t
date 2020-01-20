@@ -1,15 +1,8 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > smartlog=
-  > tweakdefaults=
-  > [experimental]
-  > evolution=createmarkers
-  > evolution.allowdivergence=on
-  > EOF
+  $ configure evolution
+  $ enable amend rebase smartlog tweakdefaults
+  $ setconfig experimental.evolution.allowdivergence=on
 
 Prepare a repo for amend checks
   $ hg init repo

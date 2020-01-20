@@ -5,12 +5,8 @@
   $ disable treemanifest
 #testcases onlymapdelta.true onlymapdelta.false
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup=" >> $HGRCPATH
-  $ echo "gitrevset=" >> $HGRCPATH
-  $ echo "strip = " >> $HGRCPATH
-  $ echo "[ui]" >> $HGRCPATH
-  $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH
+  $ configure dummyssh
+  $ enable gitlookup gitrevset
 
 Set up the hg-git files
 -----------------------

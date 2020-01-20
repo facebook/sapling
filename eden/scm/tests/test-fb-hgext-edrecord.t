@@ -1,11 +1,7 @@
 #chg-compatible
 
-  $ cat << '__EOF__' >> $HGRCPATH
-  > [ui]
-  > interface=editor
-  > [extensions]
-  > edrecord=
-  > __EOF__
+  $ setconfig ui.interface=editor
+  $ enable edrecord
 
   $ hg init repo
   $ cd repo

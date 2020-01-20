@@ -1,6 +1,6 @@
   $ setconfig treemanifest.flatcompat=False
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
 
   $ . "$TESTDIR/library.sh"
 

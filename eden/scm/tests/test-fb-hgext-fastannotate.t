@@ -2,10 +2,7 @@
 
   $ disable treemanifest
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fastannotate=
-  > EOF
+  $ enable fastannotate
 
   $ HGMERGE=true; export HGMERGE
 

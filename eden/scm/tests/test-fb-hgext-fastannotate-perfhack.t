@@ -2,12 +2,8 @@
 
   $ disable treemanifest
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fastannotate=
-  > [fastannotate]
-  > perfhack=1
-  > EOF
+  $ enable fastannotate
+  $ setconfig fastannotate.perfhack=1
 
   $ HGMERGE=true; export HGMERGE
 

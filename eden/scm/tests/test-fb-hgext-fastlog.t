@@ -1,14 +1,11 @@
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > tweakdefaults=
-  > fastlog=
+  $ enable tweakdefaults fastlog
+  $ setconfig fastlog.enabled=true
+  $ readconfig <<EOF
   > [fbscmquery]
   > host=our.intern.facebook.com
   > protocol=http
   > reponame=fbsource
   > path=/intern/conduit/
-  > [fastlog]
-  > enabled=True
   > EOF
 
 Log on empty repo

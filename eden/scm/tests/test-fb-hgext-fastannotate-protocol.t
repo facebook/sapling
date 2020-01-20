@@ -2,14 +2,9 @@
 
   $ disable treemanifest
 
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh = $PYTHON "$TESTDIR/dummyssh"
-  > [extensions]
-  > fastannotate=
-  > [fastannotate]
-  > mainbranch=@
-  > EOF
+  $ configure dummyssh
+  $ enable fastannotate
+  $ setconfig fastannotate.mainbranch=@
 
   $ HGMERGE=true; export HGMERGE
 
@@ -17,10 +12,7 @@ setup the server repo
 
   $ hg init repo-server
   $ cd repo-server
-  $ cat >> .hg/hgrc << EOF
-  > [fastannotate]
-  > server=1
-  > EOF
+  $ setconfig fastannotate.server=1
   $ for i in 1 2 3 4; do
   >   echo $i >> a
   >   hg commit -A -m $i a
@@ -34,11 +26,7 @@ setup the local repo
 
   $ hg clone 'ssh://user@dummy/repo-server' repo-local -q
   $ cd repo-local
-  $ cat >> .hg/hgrc << EOF
-  > [fastannotate]
-  > client=1
-  > clientfetchthreshold=0
-  > EOF
+  $ setconfig fastannotate.client=1 fastannotate.clientfetchthreshold=0
   $ [ -d .hg/fastannotate ]
   [1]
   $ hg fastannotate a --debug

@@ -1,13 +1,13 @@
 #chg-compatible
 
 # Initial setup
+  $ configure dummyssh
   $ enable amend commitcloud infinitepush rebase snapshot
   $ disable treemanifest
   $ setconfig visibility.enabled=true
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
   $ setconfig infinitepushbackup.hostname=testhost

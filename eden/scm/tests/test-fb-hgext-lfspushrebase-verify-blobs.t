@@ -4,18 +4,13 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > lfs=
-  > pushrebase=
+  $ enable lfs pushrebase
+  $ setconfig diff.git=1 pushrebase.rewritedates=true
+  $ readconfig <<EOF
   > [lfs]
   > threshold=10B
   > url=file:$TESTTMP/dummy-remote/
   > verify=existance
-  > [pushrebase]
-  > rewritedates = True
-  > [diff]
-  > git=1
   > EOF
 
 # prepare a full repo with lfs metadata

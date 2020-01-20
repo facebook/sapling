@@ -3,13 +3,13 @@
 Demonstrates the "cannot rebase public commits" issue seen using hgsql and
 pushrebase.
 
+  $ configure dummyssh
   $ disable treemanifest
   $ . "$TESTDIR/hgsql/library.sh"
   $ setconfig hgsql.verbose=True
   $ setconfig pushrebase.verbose=True
   $ enable pushrebase
   $ enable strip
-  $ setconfig ui.ssh='python "$RUNTESTDIR/dummyssh"'
   $ commit() {
   >   hg commit -Aq -m "$@"
   > }

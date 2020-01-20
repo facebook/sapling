@@ -1,5 +1,5 @@
 
-  $ cat >> $TESTTMP/signal.py << EOF
+  $ newext signal <<EOF
   > from edenscm.mercurial import registrar
   > import os, signal
   > cmdtable = {}
@@ -9,13 +9,8 @@
   >     os.kill(os.getpid(), getattr(signal, 'SIG' + pats[0]))
   > EOF
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > sigtrace=
-  > signal=$TESTTMP/signal.py
-  > [sigtrace]
-  > pathformat=$TESTTMP/dump-%(pid)s-%(time)s.log
-  > EOF
+  $ enable sigtrace
+  $ setconfig sigtrace.pathformat="$TESTTMP/dump-%(pid)s-%(time)s.log"
 
 Test the default SIGUSR1 signal
 

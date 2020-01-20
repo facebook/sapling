@@ -2,10 +2,7 @@
 
 Setup
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > myparent=
-  > EOF
+  $ enable myparent
   $ hg init repo
   $ cd repo
   $ touch foo

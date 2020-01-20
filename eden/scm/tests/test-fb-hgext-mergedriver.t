@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > mergedriver=
-  > EOF
+  $ enable mergedriver
 
 basic merge driver: just lists out files and contents, doesn't resolve any files
 

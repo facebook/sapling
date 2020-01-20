@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > tweakdefaults=
-  > EOF
+  $ enable tweakdefaults
 
 Setup repo
 

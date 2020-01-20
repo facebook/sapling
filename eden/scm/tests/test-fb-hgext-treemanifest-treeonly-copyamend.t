@@ -1,7 +1,7 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
   $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 

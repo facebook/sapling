@@ -1,9 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > stat=
-  > EOF
+  $ enable stat
 
 Setup repo
 

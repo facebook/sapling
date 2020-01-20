@@ -23,9 +23,8 @@ Basic functionality.
   $ hg init basic
   $ cd basic
   $ echo {} > .arcconfig
+  $ enable fbscmquery
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fbscmquery=
   > [fbscmquery]
   > reponame = basic
   > host = localhost:$CONDUIT_PORT
