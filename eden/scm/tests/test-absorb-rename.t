@@ -1,14 +1,9 @@
 #chg-compatible
 
 TODO: configure mutation
-  $ cat >> $HGRCPATH << EOF
-  > [diff]
-  > git=1
-  > [extensions]
-  > absorb=
-  > [experimental]
-  > evolution=
-  > EOF
+  $ configure noevolution
+  $ enable absorb
+  $ setconfig diff.git=1
 
   $ sedi() { # workaround check-code
   > pattern="$1"

@@ -1,7 +1,6 @@
 #chg-compatible
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "churn=" >> $HGRCPATH
+  $ enable churn
 
 create test repository
 

@@ -2,6 +2,7 @@
 
 #require serve
 
+  $ enable share
   $ hg init test
   $ cd test
   $ echo foo>foo
@@ -14,11 +15,6 @@
   $ echo bletch>baz/bletch
   $ hg commit -Am 3 -d '1000000000 0'
   adding baz/bletch
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > share =
-  > EOF
 
   $ echo "[web]" >> .hg/hgrc
   $ echo "name = test-archive" >> .hg/hgrc

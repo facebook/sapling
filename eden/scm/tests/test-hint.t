@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ cat > showhint.py << EOF
+  $ newext showhint << EOF
   > from edenscm.mercurial import (
   >     cmdutil,
   >     hintutil,
@@ -26,8 +26,6 @@
   >     hintutil.trigger('next', 'X', 'Y')
   >     hintutil.trigger('export', 'Q')
   > EOF
-
-  $ setconfig extensions.showhint=$TESTTMP/showhint.py
 
   $ hg showhint
   hint[export]: use 'hg export P' to show commit content

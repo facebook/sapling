@@ -1,9 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ configure mutation-norecord
+  $ configure mutation
   $ enable amend rebase tweakdefaults
-  $ setconfig mutation.date="0 0"
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"

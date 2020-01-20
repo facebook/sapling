@@ -4,13 +4,8 @@
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > crdump=
-  > remotenames=
-  > [crdump]
-  > commitcloud=True
-  > EOF
+  $ enable crdump remotenames
+  $ setconfig crdump.commitcloud=true
 
 Setup server
   $ hg init repo

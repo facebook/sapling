@@ -1,6 +1,8 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH <<EOF
+  $ configure mutation-norecord
+  $ enable amend rebase
+  $ readconfig <<EOF
   > [defaults]
   > fold=--date "0 0"
   > metaedit=--date "0 0"
@@ -14,16 +16,6 @@
   > [diff]
   > git = 1
   > unified = 0
-  > [extensions]
-  > amend=
-  > rebase=
-  > [experimental]
-  > evolution=obsolete
-  > [mutation]
-  > enabled=true
-  > record=false
-  > [visibility]
-  > enabled=true
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"

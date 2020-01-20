@@ -1,10 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > EOF
+  $ enable histedit
 
   $ initrepos ()
   > {

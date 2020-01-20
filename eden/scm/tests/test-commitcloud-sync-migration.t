@@ -1,19 +1,8 @@
 #chg-compatible
 
+  $ configure dummyssh evolution
   $ disable treemanifest
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend =
-  > directaccess=
-  > commitcloud =
-  > infinitepush =
-  > rebase =
-  > remotenames =
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > EOF
+  $ enable amend directaccess commitcloud infinitepush rebase remotenames
   $ setconfig remotefilelog.reponame=server
 
   $ mkcommit() {

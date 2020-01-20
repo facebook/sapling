@@ -1,7 +1,6 @@
 #chg-compatible
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "extdiff=" >> $HGRCPATH
+  $ enable extdiff
 
   $ hg init a
   $ cd a

@@ -2,12 +2,9 @@
 
   $ . helpers-usechg.sh
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > convert=
-  > [convert]
-  > hg.saverev=False
-  > EOF
+  $ enable convert
+  $ setconfig convert.hg.saverev=False
+
   $ hg help convert
   hg convert [OPTION]... SOURCE [DEST [REVMAP]]
   

@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ hg init
+  $ newrepo
 
 audit of .hg
 
@@ -73,8 +73,7 @@ Test that hg cat does not do anything wrong the working copy has 'b' as a symlin
 
 unbundle tampered bundle
 
-  $ hg init target
-  $ cd target
+  $ newrepo target
   $ hg unbundle "$TESTDIR/bundles/tampered.hg"
   adding changesets
   adding manifests
@@ -134,8 +133,6 @@ attack /tmp/test
   abort: path contains illegal component: /tmp/test
   [255]
 
-  $ cd ..
-
 Test symlink traversal on merge:
 --------------------------------
 
@@ -143,6 +140,7 @@ Test symlink traversal on merge:
 
 set up symlink hell
 
+  $ cd "$TESTTMP"
   $ mkdir merge-symlink-out
   $ hg init merge-symlink
   $ cd merge-symlink
@@ -179,11 +177,10 @@ and the rebase should fail (issue5628)
   [255]
   $ ls ../merge-symlink-out
 
-  $ cd ..
-
 Test symlink traversal on update:
 ---------------------------------
 
+  $ cd "$TESTTMP"
   $ mkdir update-symlink-out
   $ hg init update-symlink
   $ cd update-symlink
@@ -231,7 +228,5 @@ a symlink.
   abort: path 'a/b' traverses symbolic link 'a'
   [255]
   $ ls ../update-symlink-out
-
-  $ cd ..
 
 #endif

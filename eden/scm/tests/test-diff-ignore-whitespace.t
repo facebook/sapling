@@ -4,8 +4,7 @@ GNU diff is the reference for all of these results.
 
 Prepare tests:
 
-  $ echo '[alias]' >> $HGRCPATH
-  $ echo 'ndiff = diff --nodates' >> $HGRCPATH
+  $ setconfig alias.ndiff='diff --nodates'
 
   $ hg init
   $ printf 'hello world\ngoodbye world\n' >foo

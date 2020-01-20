@@ -1,19 +1,8 @@
 #chg-compatible
 
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend=
-  > rebase=
-  > [experimental]
-  > evolution=
-  > [mutation]
-  > record=true
-  > enabled=true
-  > date=0 0
-  > [visibility]
-  > enabled=true
-  > EOF
+  $ configure mutation
+  $ enable amend rebase
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"

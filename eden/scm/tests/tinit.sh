@@ -107,7 +107,7 @@ configure() {
       mutation)
         setconfig \
             experimental.evolution=obsolete \
-            mutation.enabled=true mutation.record=true \
+            mutation.enabled=true mutation.record=true mutation.date="0 0" \
             visibility.enabled=true
         ;;
       mutation-norecord)

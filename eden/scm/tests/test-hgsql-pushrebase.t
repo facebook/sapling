@@ -3,12 +3,8 @@
   $ . "$TESTDIR/hgsql/library.sh"
   $ disable treemanifest
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > pushrebase=
-  > [experimental]
-  > bundle2lazylocking=True
-  > EOF
+  $ enable pushrebase
+  $ setconfig experimental.bundle2lazylocking=True
 
 Test verify sql lock is not held during prelockrebase and txnclose hooks
 

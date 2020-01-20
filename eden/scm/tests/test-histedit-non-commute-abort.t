@@ -2,10 +2,7 @@
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > EOF
+  $ enable histedit
 
   $ initrepo ()
   > {

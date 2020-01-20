@@ -1,20 +1,12 @@
 #chg-compatible
 
+TODO: configure mutation
+  $ configure noevolution
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
 #require symlink execbit
-  $ cat << EOF >> $HGRCPATH
-  > [extensions]
-  > amend=
-  > perfsuite=
-  > rebase=
-  > [perfsuite]
-  > rebase.masterdistance=1
-  > immrebase.masterdistance=0
-  > [remotefilelog]
-  > reponame=test
-  > EOF
+  $ enable amend perfsuite rebase
+  $ setconfig perfsuite.rebase.masterdistance=1 perfsuite.immrebase.masterdistance=0
+  $ setconfig remotefilelog.reponame=test
 
   $ hg init repo1
   $ hg -R repo1 debugdrawdag <<'EOS'

@@ -2,10 +2,7 @@
 
 Do not strip innocent children. See https://bitbucket.org/facebook/hg-experimental/issues/6/hg-absorb-merges-diverged-commits
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > absorb=
-  > EOF
+  $ enable absorb
 
   $ hg init
   $ hg debugdrawdag << EOF

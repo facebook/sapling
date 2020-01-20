@@ -3,8 +3,8 @@
   $ disable treemanifest
   $ . helpers-usechg.sh
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "convert=" >> $HGRCPATH
+  $ enable convert
+
   $ glog()
   > {
   >     hg log -G --template '{rev}:{node|short} "{desc|firstline}"\

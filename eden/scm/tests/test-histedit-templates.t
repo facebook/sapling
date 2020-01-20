@@ -4,12 +4,8 @@ Testing templating for histedit command
 
 Setup
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
+  $ configure evolution
+  $ enable histedit
 
   $ hg init repo
   $ cd repo

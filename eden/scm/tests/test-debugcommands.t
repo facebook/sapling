@@ -1,10 +1,5 @@
   $ disable treemanifest
-  $ cat << EOF >> $HGRCPATH
-  > [ui]
-  > interactive=yes
-  > [format]
-  > usegeneraldelta=yes
-  > EOF
+  $ setconfig ui.interactive=yes format.usegeneraldelta=yes
 
   $ hg init debugrevlog
   $ cd debugrevlog

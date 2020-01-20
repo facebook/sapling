@@ -1,5 +1,5 @@
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
 Test that extra metadata (renames, copies, and other extra metadata) roundtrips
 across from hg to git
   $ . "$TESTDIR/hggit/testutil"

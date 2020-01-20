@@ -2,12 +2,7 @@
 
 #require execbit
 
-  $ cat <<EOF >> $HGRCPATH
-  > [extensions]
-  > autodiff = $TESTDIR/autodiff.py
-  > [diff]
-  > nodates = 1
-  > EOF
+  $ setconfig extensions.autodiff="$TESTDIR/autodiff.py" diff.nodates=1
 
   $ hg init repo
   $ cd repo

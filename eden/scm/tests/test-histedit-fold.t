@@ -1,8 +1,9 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
+
 Test histedit extension: Fold commands
 ======================================
 
@@ -12,14 +13,12 @@ case.
 Initialization
 ---------------
 
-
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
+  $ enable histedit
+  $ readconfig <<EOF
   > [alias]
   > logt = log --template '{rev}:{node|short} {desc|firstline}\n'
-  > [extensions]
-  > histedit=
   > EOF
 
 

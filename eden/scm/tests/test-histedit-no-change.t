@@ -1,16 +1,14 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
+
 test for old histedit issue #6:
 editing a changeset without any actual change would corrupt the repository
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > EOF
+  $ enable histedit
 
   $ initrepo ()
   > {

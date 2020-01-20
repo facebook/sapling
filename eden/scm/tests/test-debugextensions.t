@@ -5,22 +5,12 @@
   $ disable treemanifest
   $ hg debugextensions --excludedefault
 
-  $ debugpath=`pwd`/extwithoutinfos.py
-
-  $ cat > extwithoutinfos.py <<EOF
+  $ enable histedit rebase
+  $ newext ext1 <<EOF
   > EOF
-  $ cat > extwithinfos.py <<EOF
+  $ newext ext2 <<EOF
   > testedwith = '3.0 3.1 3.2.1'
   > buglink = 'https://example.org/bts'
-  > EOF
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > rebase=
-  > mq=
-  > ext1 = $debugpath
-  > ext2 = `pwd`/extwithinfos.py
   > EOF
 
   $ hg debugextensions --excludedefault
@@ -31,10 +21,10 @@
 
   $ hg debugextensions -v --excludedefault
   ext1
-    location: */extwithoutinfos.py* (glob)
+    location: $TESTTMP/ext1.py* (glob)
     bundled: no
   ext2
-    location: */extwithinfos.py* (glob)
+    location: $TESTTMP/ext2.py* (glob)
     bundled: no
     tested with: 3.0 3.1 3.2.1
     bug reporting: https://example.org/bts
@@ -51,14 +41,14 @@
     "buglink": "",
     "bundled": false,
     "name": "ext1",
-    "source": "*/extwithoutinfos.py*", (glob)
+    "source": "*/ext1.py*", (glob)
     "testedwith": []
    },
    {
     "buglink": "https://example.org/bts",
     "bundled": false,
     "name": "ext2",
-    "source": "*/extwithinfos.py*", (glob)
+    "source": "*/ext2.py*", (glob)
     "testedwith": ["3.0", "3.1", "3.2.1"]
    },
    {

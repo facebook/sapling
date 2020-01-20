@@ -1,7 +1,7 @@
 #chg-compatible
 
 Setup:
-  $ cat > eval.py <<EOF
+  $ newext eval <<EOF
   > from __future__ import absolute_import
   > import filecmp
   > from edenscm.mercurial import commands, context, registrar
@@ -13,9 +13,6 @@ Setup:
   >     res = str(eval(cmd, globals(), locals()))
   >     ui.warn("%s" % res)
   > EOF
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "eval=`pwd`/eval.py" >> $HGRCPATH
 
 Arbitraryfilectx.cmp does not follow symlinks:
   $ mkdir case1

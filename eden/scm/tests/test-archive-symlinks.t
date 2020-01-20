@@ -2,10 +2,7 @@
 
 #require symlink
 
-  $ origdir=`pwd`
-
-  $ hg init repo
-  $ cd repo
+  $ newrepo repo
   $ ln -s nothing dangling
 
 avoid tar warnings about old timestamp
@@ -18,14 +15,14 @@ avoid tar warnings about old timestamp
 
 files
 
-  $ cd "$origdir"
+  $ cd "$TESTTMP"
   $ cd archive
   $ readlink.py dangling
   dangling -> nothing
 
 tar
 
-  $ cd "$origdir"
+  $ cd "$TESTTMP"
   $ tar xf archive.tar
   $ cd tar
   $ readlink.py dangling
@@ -34,7 +31,7 @@ tar
 #if unziplinks
 zip
 
-  $ cd "$origdir"
+  $ cd "$TESTTMP"
   $ unzip archive.zip > /dev/null 2>&1
   $ cd zip
   $ readlink.py dangling

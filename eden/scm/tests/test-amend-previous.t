@@ -4,7 +4,7 @@ Set up test environment.
   $ configure mutation-norecord
   $ enable amend rebase
   $ setconfig ui.disallowemptyupdate=true
-  $ hg init amendprevious && cd amendprevious
+  $ newrepo amendprevious
 
 Check help text for new options and removal of unsupported options.
   $ hg previous --help

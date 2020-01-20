@@ -3,14 +3,9 @@
   $ . "$TESTDIR/hgsql/library.sh"
 
 Do some initial setup
-  $ cat >> $HGRCPATH <<CONFIG
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > username = nobody <no.reply@fb.com>
-  > [extensions]
-  > checkserverbookmark=
-  > smartlog=
-  > CONFIG
+  $ configure dummyssh
+  $ enable checkserverbookmark smartlog
+  $ setconfig ui.user="nobody <no.reply@fb.com>"
 
 Setup helpers
   $ log() {

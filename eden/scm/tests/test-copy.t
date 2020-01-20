@@ -1,12 +1,9 @@
 #chg-compatible
 
   $ disable treemanifest
-# enable bundle2 in advance
 
-  $ cat << EOF >> $HGRCPATH
-  > [format]
-  > usegeneraldelta=yes
-  > EOF
+# enable bundle2 in advance
+  $ setconfig format.usegeneraldelta=yes
 
   $ mkdir part1
   $ cd part1

@@ -1,11 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-
-  $ cat << EOF >> $HGRCPATH
-  > [format]
-  > usegeneraldelta=yes
-  > EOF
+  $ setconfig format.usegeneraldelta=yes
 
 Setting up test
 

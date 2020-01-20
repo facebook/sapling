@@ -1,8 +1,8 @@
 #chg-compatible
 
+TODO: configure mutation
+  $ configure noevolution
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
   $ . helpers-usechg.sh
 
   $ setconfig format.usegeneraldelta=yes

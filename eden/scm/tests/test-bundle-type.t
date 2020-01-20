@@ -1,12 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-
-  $ cat << EOF >> $HGRCPATH
-  > [format]
-  > allowbundle1=True
-  > usegeneraldelta=yes
-  > EOF
+  $ setconfig format.allowbundle1=true format.usegeneraldelta=yes
 
 bundle w/o type option
 

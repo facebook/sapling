@@ -1,10 +1,6 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH<<EOF
-  > [extensions]
-  > [experimental]
-  > evolution=true
-  > EOF
+  $ configure evolution
 
   $ reinit () {
   >   rm -rf .hg && hg init

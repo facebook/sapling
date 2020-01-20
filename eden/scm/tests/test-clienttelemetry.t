@@ -1,13 +1,8 @@
 #chg-compatible
 
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh = $PYTHON "$TESTDIR/dummyssh"
-  > [extensions]
-  > clienttelemetry=
-  > [clienttelemetry]
-  > announceremotehostname=true
-  > EOF
+  $ configure dummyssh
+  $ enable clienttelemetry
+  $ setconfig clienttelemetry.announceremotehostname=true
 
 set up the server repo
   $ hg init server

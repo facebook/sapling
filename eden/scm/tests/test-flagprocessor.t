@@ -4,19 +4,13 @@
 # Create server
   $ hg init server
   $ cd server
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > extension=$TESTDIR/flagprocessorext.py
-  > EOF
+  $ setconfig extensions.flagprocessorext="$TESTDIR/flagprocessorext.py"
   $ cd ../
 
 # Clone server and enable extensions
   $ hg clone -q server client
   $ cd client
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > extension=$TESTDIR/flagprocessorext.py
-  > EOF
+  $ setconfig extensions.flagprocessorext="$TESTDIR/flagprocessorext.py"
 
 # Commit file that will trigger the noop extension
   $ echo '[NOOP]' > noop
@@ -95,12 +89,8 @@
   $ cd ..
   $ hg init client2
   $ cd client2
-  $ cat >> .hg/hgrc << EOF
-  > [paths]
-  > default = $TESTTMP/server
-  > [extensions]
-  > extension=$TESTDIR/flagprocessorext.py
-  > EOF
+  $ setconfig paths.default="$TESTTMP/server"
+  $ setconfig extensions.flagprocessorext="$TESTDIR/flagprocessorext.py"
 
 # Pull from server and update to latest revision
   $ hg pull default
@@ -157,11 +147,8 @@
   $ rm fail-base64-gzip-noop
 
 # TEST: ensure we cannot register several flag processors on the same flag
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > extension=$TESTDIR/flagprocessorext.py
-  > duplicate=$TESTDIR/flagprocessorext.py
-  > EOF
+  $ setconfig extensions.flagprocessorext="$TESTDIR/flagprocessorext.py"
+  $ setconfig extensions.duplicate="$TESTDIR/flagprocessorext.py"
   $ hg debugrebuilddirstate 2>&1 | grep 'multiple processors'
       # msg = "cannot register multiple processors on flag '0x8'."
   Abort: cannot register multiple processors on flag '0x8'.
@@ -179,10 +166,7 @@
   $ hg init bundletest
   $ cd bundletest
 
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > flagprocessor=$TESTDIR/flagprocessorext.py
-  > EOF
+  $ setconfig extensions.flagprocessorext="$TESTDIR/flagprocessorext.py"
 
   $ for i in 0 single two three 4; do
   >   echo '[BASE64]a-bit-longer-'$i > base64

@@ -3,12 +3,8 @@
   $ disable treemanifest
   $ . helpers-usechg.sh
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > convert =
-  > [convert]
-  > hg.saverev = yes
-  > EOF
+  $ enable convert
+  $ setconfig convert.hg.saverev=yes
 
   $ glog()
   > {

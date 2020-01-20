@@ -2,7 +2,7 @@
 
   $ disable treemanifest
   $ HGFOO=BAR; export HGFOO
-  $ cat >> $HGRCPATH <<'EOF'
+  $ readconfig <<'EOF'
   > [alias]
   > # should clobber ci but not commit (issue2993)
   > ci = version

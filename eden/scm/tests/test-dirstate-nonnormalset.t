@@ -18,7 +18,7 @@
   $ setconfig format.dirstate=2
 #endif
 
-  $ cat >> $HGRCPATH << EOF
+  $ readconfig <<EOF
   > [ui]
   > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
   > [extensions]

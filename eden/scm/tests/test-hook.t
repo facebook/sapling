@@ -10,7 +10,7 @@ commit hooks can see env vars
 
   $ hg init a
   $ cd a
-  $ cat > .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [hooks]
   > commit = sh -c "HG_LOCAL= HG_TAG= printenv.py commit"
   > commit.b = sh -c "HG_LOCAL= HG_TAG= printenv.py commit.b"

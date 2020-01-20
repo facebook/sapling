@@ -1,15 +1,9 @@
 #chg-compatible
 
+  $ configure evolution
+  $ enable amend
   $ disable treemanifest
 
-  $ setup() {
-  > cat << EOF >> .hg/hgrc
-  > [extensions]
-  > amend=
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
-  > }
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
@@ -22,14 +16,10 @@ Setup server
 
 Setup the first client
   $ hg clone ssh://user@dummy/repo first_client -q
-  $ cd first_client
-  $ setup
-  $ cd ..
 
 Setup the second client
   $ hg clone ssh://user@dummy/repo second_client -q
   $ cd second_client
-  $ setup
   $ mkcommit commit
   $ hg log -r . -T '{node}\n'
   7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455

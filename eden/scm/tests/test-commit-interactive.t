@@ -1,10 +1,7 @@
   $ disable treemanifest
 Set up a repo
 
-  $ cat <<EOF >> $HGRCPATH
-  > [ui]
-  > interactive = true
-  > EOF
+  $ setconfig ui.interactive=true
 
   $ hg init a
   $ cd a

@@ -7,17 +7,11 @@ different, so this is a different test script.
 
   $ hginit master
   $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > server=True
-  > EOF
+  $ setconfig remotefilelog.server=true
 
   $ hgcloneshallow ssh://user@dummy/master client -q
   $ cd client
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > usefastdatapack=True
-  > EOF
+  $ setconfig remotefilelog.usefastdatapack=true
 
   $ sorted() {
   >   "$@" > $TESTTMP/out

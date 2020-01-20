@@ -1,16 +1,11 @@
 #chg-compatible
 
-TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+TODO: configure mutation
+  $ configure noevolution
 Test argument handling and various data parsing
 ==================================================
 
-
-Enable extensions used by this test.
-  $ cat >>$HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > EOF
+  $ enable histedit
 
 Repo setup.
   $ hg init foo

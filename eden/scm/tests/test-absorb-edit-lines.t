@@ -1,10 +1,7 @@
 #chg-compatible
 
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > absorb=
-  > EOF
+  $ enable absorb
 
   $ hg init repo1
   $ cd repo1

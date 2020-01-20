@@ -1,5 +1,5 @@
 
-  $ cat << EOF > buggylocking.py
+  $ newext buggylocking <<EOF
   > """A small extension that tests our developer warnings
   > """
   > 
@@ -76,12 +76,7 @@
   >     raise error.ProgrammingError('something went wrong', hint='try again')
   > EOF
 
-  $ cat << EOF >> $HGRCPATH
-  > [extensions]
-  > buggylocking=$TESTTMP/buggylocking.py
-  > [devel]
-  > all-warnings=1
-  > EOF
+  $ setconfig devel.all-warnings=1
 
   $ hg init lock-checker
   $ cd lock-checker

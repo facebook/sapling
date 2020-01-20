@@ -3,7 +3,7 @@
 Test encode/decode filters
 
   $ hg init
-  $ cat > .hg/hgrc <<EOF
+  $ readconfig <<EOF
   > [encode]
   > not.gz = tr [:lower:] [:upper:]
   > *.gz = gzip -d

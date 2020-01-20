@@ -2,7 +2,7 @@
 #require no-fsmonitor
 
 setup
-  $ cat >> $HGRCPATH <<EOF
+  $ readconfig <<EOF
   > [alias]
   > blackbox = blackbox --no-timestamp --no-sid
   > confuse = log --limit 3

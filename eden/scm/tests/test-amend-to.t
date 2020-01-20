@@ -4,7 +4,7 @@ Set up test environment.
   $ configure mutation-norecord
   $ enable amend directaccess histedit rebase
 Test that amend --to option
-  $ hg init repo && cd repo
+  $ newrepo repo
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"

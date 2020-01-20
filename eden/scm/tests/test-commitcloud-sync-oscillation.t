@@ -1,23 +1,11 @@
 #chg-compatible
 
+  $ configure dummyssh evolution
   $ disable treemanifest
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > amend =
-  > commitcloud =
-  > infinitepush =
-  > rebase =
-  > remotenames =
-  > share =
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > [infinitepush]
-  > branchpattern = re:scratch/.*
-  > [commitcloud]
-  > hostname = testhost
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > EOF
+  $ enable amend commitcloud infinitepush rebase remotenames share smartlog
+
+  $ setconfig infinitepush.branchpattern="re:scratch/.*"
+  $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
 
   $ hg init server

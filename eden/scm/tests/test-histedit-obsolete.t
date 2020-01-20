@@ -1,21 +1,14 @@
 #chg-compatible
 
+  $ configure evolution
   $ disable treemanifest
   $ . "$TESTDIR/histedit-helpers.sh"
 
-Enable obsolete
-
-  $ cat >> $HGRCPATH << EOF
+  $ enable histedit rebase
+  $ setconfig phases.publish=false
+  $ readconfig <<EOF
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}
-  > [phases]
-  > publish=False
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > [extensions]
-  > histedit=
-  > rebase=
   > EOF
 
 Test that histedit learns about obsolescence not stored in histedit state

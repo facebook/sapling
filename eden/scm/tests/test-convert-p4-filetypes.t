@@ -4,8 +4,7 @@
 
 #require p4 execbit symlink
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "convert = " >> $HGRCPATH
+  $ enable convert
 
 create p4 depot
   $ P4ROOT=`pwd`/depot; export P4ROOT

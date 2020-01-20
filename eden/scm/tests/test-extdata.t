@@ -9,7 +9,7 @@
 
 test revset support
 
-  $ cat <<'EOF' >> .hg/hgrc
+  $ readconfig <<'EOF'
   > [extdata]
   > filedata = file:extdata.txt
   > notes = notes.txt

@@ -2,14 +2,8 @@
 
 Setup
 
-  $ cat <<EOF >> $HGRCPATH
-  > [ui]
-  > color = yes
-  > formatted = always
-  > paginate = never
-  > [color]
-  > mode = ansi
-  > EOF
+  $ setconfig ui.color=yes ui.formatted=always ui.paginate=never
+  $ setconfig color.mode=ansi
   $ hg init repo
   $ cd repo
   $ cat > a <<EOF
