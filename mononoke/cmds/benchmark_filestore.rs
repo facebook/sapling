@@ -224,7 +224,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (CMD_MANIFOLD, Some(sub)) => {
             let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
             let manifold =
-                ThriftManifoldBlob::new(fb, bucket).map_err(|e| -> Error { e.into() })?;
+                ThriftManifoldBlob::new(fb, bucket, None).map_err(|e| -> Error { e.into() })?;
             let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
             Arc::new(blobstore)
         }

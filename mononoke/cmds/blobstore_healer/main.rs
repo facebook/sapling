@@ -81,7 +81,7 @@ fn maybe_schedule_healer_for_storage(
         for (id, args) in blobstores_args {
             match args {
                 BlobConfig::Manifold { bucket, prefix } => {
-                    let blobstore = ThriftManifoldBlob::new(ctx.fb, bucket)
+                    let blobstore = ThriftManifoldBlob::new(ctx.fb, bucket, None)
                         .chain_err("While opening ThriftManifoldBlob")?;
                     let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", prefix));
                     let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);

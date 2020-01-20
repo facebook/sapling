@@ -371,7 +371,8 @@ fn populate_healer_queue(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let config = Arc::new(parse_args(fb)?);
-    let manifold = ThriftManifoldBlob::new(fb, config.manifold_args.bucket.clone())?.into_inner();
+    let manifold =
+        ThriftManifoldBlob::new(fb, config.manifold_args.bucket.clone(), None)?.into_inner();
     let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
         config.db_address.clone(),
         config.myrouter_port,

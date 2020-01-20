@@ -54,6 +54,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
     let app = cmdlib::args::add_disabled_hooks_args(app);
     let app = cmdlib::args::add_logger_args(app);
+    let app = cmdlib::args::add_blobstore_args(app);
     app
 }
 

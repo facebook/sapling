@@ -72,6 +72,7 @@ const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
 const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
+const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -787,6 +788,13 @@ pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .required(false)
             .help("Rate of errors on writes. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
     )
+    .arg(
+        Arg::with_name(MANIFOLD_API_KEY_ARG)
+            .long(MANIFOLD_API_KEY_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Manifold API key"),
+    )
 }
 
 pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -1062,9 +1070,14 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
         .value_of(WRITE_CHAOS_ARG)
         .map(|v| v.parse().expect("Provided chaos is not u32"));
 
+    let manifold_api_key: Option<String> = matches
+        .value_of(MANIFOLD_API_KEY_ARG)
+        .map(|api_key| api_key.to_string());
+
     BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
         ThrottleOptions::new(read_qps, write_qps),
+        manifold_api_key,
     )
 }
 

@@ -58,13 +58,19 @@ pub use throttledblob::ThrottleOptions;
 pub struct BlobstoreOptions {
     pub chaos_options: ChaosOptions,
     pub throttle_options: ThrottleOptions,
+    pub manifold_api_key: Option<String>,
 }
 
 impl BlobstoreOptions {
-    pub fn new(chaos_options: ChaosOptions, throttle_options: ThrottleOptions) -> Self {
+    pub fn new(
+        chaos_options: ChaosOptions,
+        throttle_options: ThrottleOptions,
+        manifold_api_key: Option<String>,
+    ) -> Self {
         Self {
             chaos_options,
             throttle_options,
+            manifold_api_key,
         }
     }
 }
@@ -281,6 +287,7 @@ pub fn make_blobstore_no_sql(
         BlobstoreOptions::new(
             ChaosOptions::new(None, None),
             ThrottleOptions::new(None, None),
+            None,
         ),
     )
 }
@@ -348,16 +355,20 @@ fn make_blobstore_impl(
             .into_future()
             .boxify(),
 
-        Manifold { bucket, prefix } => ThriftManifoldBlob::new(fb, bucket.clone())
-            .map({
-                cloned!(prefix);
-                move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
-            })
-            .chain_err(ErrorKind::StateOpen)
-            .map_err(Error::from)
-            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
-            .into_future()
-            .boxify(),
+        Manifold { bucket, prefix } => ThriftManifoldBlob::new(
+            fb,
+            bucket.clone(),
+            blobstore_options.clone().manifold_api_key,
+        )
+        .map({
+            cloned!(prefix);
+            move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
+        })
+        .chain_err(ErrorKind::StateOpen)
+        .map_err(Error::from)
+        .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+        .into_future()
+        .boxify(),
 
         Mysql {
             shard_map,
@@ -423,16 +434,21 @@ fn make_blobstore_impl(
             bucket,
             prefix,
             ttl,
-        } => ThriftManifoldBlob::new_with_ttl(fb, bucket.clone(), *ttl)
-            .map({
-                cloned!(prefix);
-                move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
-            })
-            .chain_err(ErrorKind::StateOpen)
-            .map_err(Error::from)
-            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
-            .into_future()
-            .boxify(),
+        } => ThriftManifoldBlob::new_with_ttl(
+            fb,
+            bucket.clone(),
+            *ttl,
+            blobstore_options.clone().manifold_api_key,
+        )
+        .map({
+            cloned!(prefix);
+            move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
+        })
+        .chain_err(ErrorKind::StateOpen)
+        .map_err(Error::from)
+        .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+        .into_future()
+        .boxify(),
     };
 
     let store = if readonly_storage.0 {
