@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #testcases vfscachestore simplecachestore
 
   $ . "$TESTDIR/library.sh"

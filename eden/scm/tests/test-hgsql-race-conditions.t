@@ -2,7 +2,7 @@
 
 no-check-code
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/hgsql/library.sh"
 
 # Populate the db with an initial commit

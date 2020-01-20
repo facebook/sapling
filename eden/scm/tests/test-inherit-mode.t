@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #require unix-permissions
 
 test that new files created in .hg inherit the permissions from .hg/store

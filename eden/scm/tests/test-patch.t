@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ cat > patchtool.py <<EOF
   > from __future__ import absolute_import, print_function
   > import sys

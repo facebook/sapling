@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/histedit-helpers.sh"
 
 Setup

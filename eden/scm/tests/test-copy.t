@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 # enable bundle2 in advance
 
   $ cat << EOF >> $HGRCPATH

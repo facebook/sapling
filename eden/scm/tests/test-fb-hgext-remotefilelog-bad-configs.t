@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 no-check-code
   $ . "$TESTDIR/library.sh"

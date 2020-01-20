@@ -4,7 +4,7 @@
   $ LOGDIR=$TESTTMP/logs
   $ mkdir $LOGDIR
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable remotenames
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
 

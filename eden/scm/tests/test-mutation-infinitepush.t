@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable amend rebase histedit fbhistedit remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true

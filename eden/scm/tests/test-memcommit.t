@@ -4,7 +4,7 @@
 
 #testcases hgsql.true hgsql.false
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/hgsql/library.sh"
 
 #if hgsql.false

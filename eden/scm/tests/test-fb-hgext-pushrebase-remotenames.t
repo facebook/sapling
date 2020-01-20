@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig experimental.evolution= mutation.enabled=1 visibility.enabled=1 mutation.record=1 mutation.date='0 0'
 
 Setup

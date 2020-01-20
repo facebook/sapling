@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 test sparse
 
   $ cat >> $HGRCPATH << EOF

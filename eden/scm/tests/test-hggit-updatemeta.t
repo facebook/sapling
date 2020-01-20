@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/hggit/testutil"
 
   $ git init -q gitrepo

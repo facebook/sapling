@@ -1,5 +1,5 @@
 #require no-symlink
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 # The following script was used to create the bundle:
 #

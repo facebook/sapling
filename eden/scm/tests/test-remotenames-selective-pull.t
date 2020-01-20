@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable remotenames
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
 

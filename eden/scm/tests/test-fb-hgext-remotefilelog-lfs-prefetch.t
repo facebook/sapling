@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ LFSPATH=$TESTTMP/lfs
   $ export LFSPATH
   $ mkdir $LFSPATH

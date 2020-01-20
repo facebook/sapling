@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #require git
 
   $ echo "[core]" >> $HOME/.gitconfig

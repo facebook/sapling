@@ -11,7 +11,7 @@
 #endif
 
   $ . "$TESTDIR/hgsql/library.sh"
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig hgsql.verbose=1
 
 # Populate the db with an initial commit

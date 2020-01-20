@@ -3,7 +3,7 @@
 #chg-compatible
 
 #testcases nostackpush stackpush
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig experimental.evolution=
   $ . helpers-usechg.sh
 

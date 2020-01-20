@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ HGMERGE=true; export HGMERGE
 
   $ hg init r1

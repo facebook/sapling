@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable amend rebase
   $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\"" ui.interactive=true
 

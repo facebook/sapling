@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable amend rebase histedit fbhistedit phabdiff absorb
   $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\"" ui.interactive=true
   $ setconfig experimental.evolution=obsolete

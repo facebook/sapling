@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 Corrupt an hg repo with a pull started during an aborted commit
 Create two repos, so that one of them can pull from the other one.
 

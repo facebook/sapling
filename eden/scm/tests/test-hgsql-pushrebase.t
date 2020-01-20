@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ . "$TESTDIR/hgsql/library.sh"
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

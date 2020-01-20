@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 # Initial setup
 
   $ cat >> $HGRCPATH << EOF

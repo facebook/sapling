@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
 Check for remotenames and skip if not present

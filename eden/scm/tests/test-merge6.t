@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . helpers-usechg.sh
 
   $ cat <<EOF > merge

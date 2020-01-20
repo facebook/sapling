@@ -10,7 +10,7 @@
   >    hg ci -m "add $1"
   > }
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 Test that remotenames works on a repo without any names file
 

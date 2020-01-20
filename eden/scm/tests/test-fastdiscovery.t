@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig discovery.fastdiscovery=True
   $ . $TESTDIR/library.sh
   $ . "$TESTDIR/infinitepush/library.sh"

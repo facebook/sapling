@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 

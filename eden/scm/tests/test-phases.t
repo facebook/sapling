@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ cat > $TESTTMP/hook.sh << 'EOF'
   > echo "test-hook-close-phase: $HG_NODE:  $HG_OLDPHASE -> $HG_PHASE"
   > EOF

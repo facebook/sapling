@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ . "$TESTDIR/hgsql/library.sh"
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 Populate the db with an initial commit
 

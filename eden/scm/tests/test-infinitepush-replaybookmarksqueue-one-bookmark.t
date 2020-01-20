@@ -1,7 +1,7 @@
 #chg-compatible
 
 #if no-windows no-osx
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"

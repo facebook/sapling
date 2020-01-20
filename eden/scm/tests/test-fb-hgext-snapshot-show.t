@@ -5,7 +5,7 @@
   $ setconfig extensions.rebase=
   $ setconfig extensions.snapshot=
   $ setconfig extensions.smartlog=
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig smartlog.hide-before="0 0"
   $ setconfig visibility.enabled=true
 

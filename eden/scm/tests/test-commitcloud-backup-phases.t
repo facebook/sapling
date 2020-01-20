@@ -1,7 +1,7 @@
 #chg-compatible
 
 Create an ondisk bundlestore in .hg/scratchbranches
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ cp $HGRCPATH $TESTTMP/defaulthgrc

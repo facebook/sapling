@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ . helpers-usechg.sh
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

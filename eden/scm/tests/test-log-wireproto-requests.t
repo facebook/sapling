@@ -1,5 +1,5 @@
   $ . "$TESTDIR/helpers-wireprotologging.sh"
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ CACHEDIR=`pwd`/hgcache
 
   $ cat >> $HGRCPATH <<EOF

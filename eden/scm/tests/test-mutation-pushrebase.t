@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable pushrebase amend remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true

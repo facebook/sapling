@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 Set up extension and repos
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "remotenames=" >> $HGRCPATH

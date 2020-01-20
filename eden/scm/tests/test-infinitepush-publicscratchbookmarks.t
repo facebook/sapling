@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable infinitepush remotenames
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""

@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
 Set up extension and repos

@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ enable amend commitcloud infinitepush rebase remotenames pullcreatemarkers
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server

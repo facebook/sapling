@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ HGFOO=BAR; export HGFOO
   $ cat >> $HGRCPATH <<'EOF'
   > [alias]

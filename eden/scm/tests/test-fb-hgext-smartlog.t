@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > smartlog=

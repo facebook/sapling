@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 Verify works on revlog repos. It is incompatible with zstore-backed changelog.d:
 

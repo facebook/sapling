@@ -3,7 +3,7 @@
 Demonstrates the "cannot rebase public commits" issue seen using hgsql and
 pushrebase.
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/hgsql/library.sh"
   $ setconfig hgsql.verbose=True
   $ setconfig pushrebase.verbose=True

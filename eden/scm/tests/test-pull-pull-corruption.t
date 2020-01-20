@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 Corrupt an hg repo with two pulls.
 create one repo with a long history
 

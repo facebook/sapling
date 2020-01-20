@@ -1,7 +1,7 @@
 #chg-compatible
 
 TODO: Make this test work with obsstore
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig experimental.evolution=
   $ . "$TESTDIR/hgsql/library.sh"
 

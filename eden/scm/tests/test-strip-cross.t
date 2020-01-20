@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 test stripping of filelogs where the linkrev doesn't always increase
 
   $ echo '[extensions]' >> $HGRCPATH

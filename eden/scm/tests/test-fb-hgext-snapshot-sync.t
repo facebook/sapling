@@ -2,7 +2,7 @@
 
 # Initial setup
   $ enable amend commitcloud infinitepush rebase snapshot
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig visibility.enabled=true
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

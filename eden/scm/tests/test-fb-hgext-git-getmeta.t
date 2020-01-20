@@ -2,7 +2,7 @@
 
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #testcases onlymapdelta.true onlymapdelta.false
 
   $ echo "[extensions]" >> $HGRCPATH

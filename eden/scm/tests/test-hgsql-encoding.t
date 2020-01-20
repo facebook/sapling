@@ -3,7 +3,7 @@
 #chg-compatible
 
 #testcases case-innodb case-rocksdb
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 #if case-rocksdb
   $ DBENGINE=rocksdb

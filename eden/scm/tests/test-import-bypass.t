@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "purge=" >> $HGRCPATH
 

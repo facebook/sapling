@@ -2,7 +2,7 @@
 
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #require symlink
 #testcases treestate-on treestate-off
 

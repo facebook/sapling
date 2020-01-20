@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
   $ setconfig treemanifest.treeonly=False

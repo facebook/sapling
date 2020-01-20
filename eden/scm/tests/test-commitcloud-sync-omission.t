@@ -1,7 +1,7 @@
 #chg-compatible
 
 #require jq
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable smartlog
 
   $ cat >> $HGRCPATH << EOF

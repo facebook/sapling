@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ SKIPREMOTEFILELOGCHECK=1
   $ export SKIPREMOTEFILELOGCHECK
 

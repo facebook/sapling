@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 Create an extension to test bundle2 with multiple changegroups
 
   $ cat > bundle2.py <<EOF

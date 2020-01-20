@@ -3,7 +3,7 @@
 # Initial setup
   $ setconfig extensions.rebase=
   $ setconfig extensions.snapshot=
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ setconfig visibility.enabled=true
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

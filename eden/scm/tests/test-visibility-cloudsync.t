@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ enable amend directaccess commitcloud infinitepush rebase remotenames undo
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig infinitepush.branchpattern="re:scratch/.*"

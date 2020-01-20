@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #require killdaemons
 
 Test wire protocol unbundle with hashed heads (capability: unbundlehash)

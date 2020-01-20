@@ -2,7 +2,7 @@
 
   $ enable amend
   $ setconfig infinitepushbackup.hostname=testhost
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

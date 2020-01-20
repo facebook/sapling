@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #require killdaemons
 
 Create an extension to test bundle2 remote-changegroup parts

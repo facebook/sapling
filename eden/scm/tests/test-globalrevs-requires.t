@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ . "$TESTDIR/hgsql/library.sh"
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 
 Add common configuration for the client and server.
 

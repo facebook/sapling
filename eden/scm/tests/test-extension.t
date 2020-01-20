@@ -1,4 +1,4 @@
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
 #require no-fsmonitor
 
 Test basic extension support

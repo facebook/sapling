@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ hg init test
   $ cd test
   $ hg unbundle "$TESTDIR/bundles/remote.hg"

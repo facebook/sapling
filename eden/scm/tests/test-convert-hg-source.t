@@ -1,7 +1,7 @@
 #chg-compatible
 #require execbit
 
-  $ setconfig extensions.treemanifest=!
+  $ disable treemanifest
   $ . helpers-usechg.sh
 
   $ cat >> $HGRCPATH <<EOF
