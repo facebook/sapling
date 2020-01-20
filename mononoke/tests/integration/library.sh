@@ -473,16 +473,18 @@ function setup_mononoke_storage_config {
   local blobstorepath="$TESTTMP/$blobstorename"
 
   if [[ -v MULTIPLEXED ]]; then
-    mkdir -p "$blobstorepath/0" "$blobstorepath/1"
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
 [$blobstorename.blobstore.multiplexed]
 components = [
-  { blobstore_id = 0, blobstore = { $underlyingstorage = { path = "$blobstorepath/0" } } },
-  { blobstore_id = 1, blobstore = { $underlyingstorage = { path = "$blobstorepath/1" } } },
-]
 CONFIG
+    local i
+    for ((i=0; i<=MULTIPLEXED; i++)); do
+      mkdir -p "$blobstorepath/$i"
+      echo "  { blobstore_id = $i, blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } }," >> common/storage.toml
+    done
+    echo ']' >> common/storage.toml
   else
     mkdir -p "$blobstorepath"
     cat >> common/storage.toml <<CONFIG
