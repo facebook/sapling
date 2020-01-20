@@ -114,23 +114,7 @@ impl AddScubaParams for thrift::CommitLookupXRepoParams {
 impl AddScubaParams for thrift::CommitPathBlameParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());
-        if self.format == thrift::BlameFormat::VERBOSE {
-            if let Some(identity_scheme) = &self.identity_scheme {
-                // Blame VERBOSE format only supports a single
-                // identity scheme, but still log this as a normvector
-                // for consistency.
-                scuba.add(
-                    "identity_schemes",
-                    Some(identity_scheme.to_string())
-                        .iter()
-                        .collect::<ScubaValue>(),
-                );
-            }
-        } else {
-            if let Some(identity_schemes) = &self.identity_schemes {
-                identity_schemes.add_scuba_params(scuba);
-            }
-        }
+        self.identity_schemes.add_scuba_params(scuba);
     }
 }
 
