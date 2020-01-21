@@ -40,7 +40,7 @@ impl Globalrev {
         Ok(result)
     }
 
-    pub fn from_bcs(bcs: BonsaiChangeset) -> Result<Self> {
+    pub fn from_bcs(bcs: &BonsaiChangeset) -> Result<Self> {
         match (
             bcs.extra().find(|(key, _)| key == &"global_rev"),
             bcs.extra().find(|(key, _)| key == &"convert_revision"),

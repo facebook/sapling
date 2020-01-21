@@ -27,7 +27,7 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
-use bonsai_globalrev_mapping::{upload_globalrevs, BonsaiGlobalrevMapping};
+use bonsai_globalrev_mapping::{bulk_import_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -185,11 +185,11 @@ impl Blobimport {
                                     };
 
                                 let globalrevs_work = if has_globalrev {
-                                    upload_globalrevs(
+                                    bulk_import_globalrevs(
                                         ctx.clone(),
                                         repo_id,
                                         globalrevs_store.clone(),
-                                        chunk.into_iter().map(|(_, cs)| cs).collect(),
+                                        chunk.into_iter().map(|(_, cs)| cs),
                                     )
                                     .left_future()
                                 } else {

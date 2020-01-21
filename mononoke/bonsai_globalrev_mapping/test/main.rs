@@ -8,9 +8,8 @@
 
 #![deny(warnings)]
 
-use assert_matches::assert_matches;
 use bonsai_globalrev_mapping::{
-    BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs, ErrorKind,
+    BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs,
     SqlBonsaiGlobalrevMapping, SqlConstructors,
 };
 use futures::Future;
@@ -24,20 +23,11 @@ fn add_and_get<M: BonsaiGlobalrevMapping>(mapping: M) {
         bcs_id: bonsai::ONES_CSID,
         globalrev: GLOBALREV_ZERO,
     };
-    assert_eq!(
-        true,
-        mapping
-            .add(entry.clone())
-            .wait()
-            .expect("Adding new entry failed")
-    );
-    assert_eq!(
-        false,
-        mapping
-            .add(entry.clone())
-            .wait()
-            .expect("Adding same entry failed")
-    );
+
+    mapping
+        .bulk_import(&vec![entry.clone()])
+        .wait()
+        .expect("Adding new entry failed");
 
     let result = mapping
         .get(
@@ -57,23 +47,9 @@ fn add_and_get<M: BonsaiGlobalrevMapping>(mapping: M) {
         .wait()
         .expect("Failed to get bonsai changeset by its globalrev counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
-
-    let same_bc_entry = BonsaiGlobalrevMappingEntry {
-        repo_id: REPO_ZERO,
-        bcs_id: bonsai::ONES_CSID,
-        globalrev: GLOBALREV_ONE, // different than entry.globalrev
-    };
-    let result = mapping
-        .add(same_bc_entry.clone())
-        .wait()
-        .expect_err("Conflicting entries should haved produced an error");
-    assert_matches!(
-        result.downcast::<ErrorKind>(),
-        Ok(ErrorKind::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_bc_entry
-    );
 }
 
-fn add_many<M: BonsaiGlobalrevMapping>(mapping: M) {
+fn bulk_import<M: BonsaiGlobalrevMapping>(mapping: M) {
     let entry1 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
@@ -93,7 +69,7 @@ fn add_many<M: BonsaiGlobalrevMapping>(mapping: M) {
     assert_eq!(
         (),
         mapping
-            .add_many(vec![entry1.clone(), entry2.clone(), entry3.clone()])
+            .bulk_import(&vec![entry1.clone(), entry2.clone(), entry3.clone()])
             .wait()
             .expect("Adding new entries vector failed")
     );
@@ -120,7 +96,7 @@ fn test_add_and_get() {
 #[fbinit::test]
 fn test_add_many() {
     async_unit::tokio_unit_test(move || {
-        add_many(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
+        bulk_import(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
     });
 }
 

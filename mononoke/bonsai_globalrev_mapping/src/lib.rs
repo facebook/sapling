@@ -24,10 +24,6 @@ use slog::warn;
 use sql::queries;
 use std::sync::Arc;
 
-mod errors;
-
-pub use crate::errors::ErrorKind;
-
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingEntry {
     pub repo_id: RepositoryId,
@@ -84,9 +80,7 @@ impl From<Vec<Globalrev>> for BonsaisOrGlobalrevs {
 }
 
 pub trait BonsaiGlobalrevMapping: Send + Sync {
-    fn add(&self, entry: BonsaiGlobalrevMappingEntry) -> BoxFuture<bool, Error>;
-
-    fn add_many(&self, entries: Vec<BonsaiGlobalrevMappingEntry>) -> BoxFuture<(), Error>;
+    fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error>;
 
     fn get(
         &self,
@@ -108,12 +102,8 @@ pub trait BonsaiGlobalrevMapping: Send + Sync {
 }
 
 impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
-    fn add(&self, entry: BonsaiGlobalrevMappingEntry) -> BoxFuture<bool, Error> {
-        (**self).add(entry)
-    }
-
-    fn add_many(&self, entries: Vec<BonsaiGlobalrevMappingEntry>) -> BoxFuture<(), Error> {
-        (**self).add_many(entries)
+    fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error> {
+        (**self).bulk_import(entries)
     }
 
     fn get(
@@ -142,7 +132,7 @@ impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
 }
 
 queries! {
-    write InsertMapping(values: (
+    write BulkImportGlobalrevs(values: (
         repo_id: RepositoryId,
         bcs_id: ChangesetId,
         globalrev: Globalrev,
@@ -198,54 +188,7 @@ impl SqlConstructors for SqlBonsaiGlobalrevMapping {
 }
 
 impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
-    fn add(&self, entry: BonsaiGlobalrevMappingEntry) -> BoxFuture<bool, Error> {
-        let BonsaiGlobalrevMappingEntry {
-            repo_id,
-            bcs_id,
-            globalrev,
-        } = entry;
-        cloned!(self.read_master_connection);
-
-        InsertMapping::query(&self.write_connection, &[(&repo_id, &bcs_id, &globalrev)])
-            .and_then(move |result| {
-                if result.affected_rows() == 1 {
-                    Ok(true).into_future().boxify()
-                } else {
-                    select_mapping(
-                        &read_master_connection,
-                        repo_id,
-                        &BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]),
-                    )
-                    .and_then(move |mappings| match mappings.into_iter().next() {
-                        Some(BonsaiGlobalrevMappingEntry {
-                            repo_id,
-                            bcs_id,
-                            globalrev,
-                        }) => {
-                            if globalrev == entry.globalrev {
-                                Ok(false)
-                            } else {
-                                Err(ErrorKind::ConflictingEntries(
-                                    BonsaiGlobalrevMappingEntry {
-                                        repo_id,
-                                        bcs_id,
-                                        globalrev,
-                                    },
-                                    entry,
-                                )
-                                .into())
-                            }
-                        }
-                        None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
-                    })
-                    .map(move |_| false)
-                    .boxify()
-                }
-            })
-            .boxify()
-    }
-
-    fn add_many(&self, entries: Vec<BonsaiGlobalrevMappingEntry>) -> BoxFuture<(), Error> {
+    fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error> {
         let entries: Vec<_> = entries
             .iter()
             .map(
@@ -257,7 +200,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             )
             .collect();
 
-        InsertMapping::query(&self.write_connection, &entries[..])
+        BulkImportGlobalrevs::query(&self.write_connection, &entries[..])
             .from_err()
             .map(|_| ())
             .boxify()
@@ -381,15 +324,17 @@ fn select_mapping(
         .boxify()
 }
 
-pub fn upload_globalrevs(
+/// This method is for importing Globalrevs in bulk from a set of BonsaiChangesets where you know
+/// they are correct. Don't use this to assign new Globalrevs.
+pub fn bulk_import_globalrevs(
     ctx: CoreContext,
     repo_id: RepositoryId,
     globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
-    cs_ids: Vec<BonsaiChangeset>,
+    changesets: impl IntoIterator<Item = BonsaiChangeset>,
 ) -> BoxFuture<(), Error> {
     let mut entries = vec![];
-    for bcs in cs_ids {
-        match Globalrev::from_bcs(bcs.clone()) {
+    for bcs in changesets.into_iter() {
+        match Globalrev::from_bcs(&bcs) {
             Ok(globalrev) => {
                 let entry =
                     BonsaiGlobalrevMappingEntry::new(repo_id, bcs.get_changeset_id(), globalrev);
@@ -403,5 +348,5 @@ pub fn upload_globalrevs(
             }
         }
     }
-    globalrevs_store.add_many(entries).boxify()
+    globalrevs_store.bulk_import(&entries)
 }

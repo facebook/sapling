@@ -9,7 +9,7 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::{
-    upload_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
+    bulk_import_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
 };
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
@@ -58,7 +58,7 @@ pub fn upload<P: AsRef<Path>>(
                 .buffered(chunk_size)
                 .chunks(chunk_size)
                 .and_then(move |chunk| {
-                    upload_globalrevs(
+                    bulk_import_globalrevs(
                         ctx.clone(),
                         repo.get_repoid(),
                         globalrevs_store.clone(),
