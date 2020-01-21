@@ -21,7 +21,7 @@ use clap::{value_t, App, Arg};
 use cloned::cloned;
 use cmdlib::{
     args::{self, get_scuba_sample_builder},
-    helpers::block_execute,
+    helpers::{block_execute, open_sql_with_config_and_mysql_options},
 };
 use configerator::ConfigeratorAPI;
 use context::{CoreContext, SessionContainer};
@@ -461,7 +461,12 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
 
-    let sync_queue = args::open_sql::<SqlBlobstoreSyncQueue>(fb, &matches);
+    let sync_queue = open_sql_with_config_and_mysql_options::<SqlBlobstoreSyncQueue>(
+        fb,
+        storage_config.dbconfig.clone(),
+        mysql_options,
+        readonly_storage,
+    );
 
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
