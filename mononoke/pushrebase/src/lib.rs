@@ -54,9 +54,8 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt as Futures01StreamExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all},
-    stream::TryStream,
+    stream::{StreamExt, TryStream, TryStreamExt},
 };
-use futures_util::stream::{StreamExt, TryStreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
@@ -1297,9 +1296,9 @@ mod tests {
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures_preview::{
         compat::Future01CompatExt,
+        future::{try_join_all, FutureExt as _, TryFutureExt},
         stream::{self, TryStreamExt},
     };
-    use futures_util::future::{try_join_all, FutureExt as _, TryFutureExt};
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types::FileType;
