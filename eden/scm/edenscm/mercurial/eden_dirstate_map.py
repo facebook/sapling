@@ -6,16 +6,24 @@
 """Eden implementation for the dirstatemap class."""
 
 import errno
+import stat
 
 import eden.dirstate as eden_dirstate_serializer
 
-from . import EdenThriftClient as thrift, dirstate, util
+from . import dirstate, pycompat, util
 
 
 MERGE_STATE_NOT_APPLICABLE = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
 MERGE_STATE_BOTH_PARENTS = eden_dirstate_serializer.MERGE_STATE_BOTH_PARENTS
 MERGE_STATE_OTHER_PARENT = eden_dirstate_serializer.MERGE_STATE_OTHER_PARENT
 DUMMY_MTIME = 0
+
+modefromflag = {
+    "": stat.S_IFREG | 0o644,
+    "x": stat.S_IFREG | 0o755,
+    "l": (stat.S_IFREG if pycompat.iswindows else stat.S_IFLNK) | 0o755,
+    "t": stat.S_IFDIR | 0o755,
+}
 
 
 class eden_dirstate_map(dirstate.dirstatemap):
@@ -104,13 +112,12 @@ class eden_dirstate_map(dirstate.dirstatemap):
             status, mode, merge_state = entry
             return (status, mode, merge_state, DUMMY_MTIME)
 
-        try:
-            # TODO: Consider fetching this from the commit context rather than
-            # querying Eden for this information.
-            manifest_entry = self._thrift_client.getManifestEntry(filename)
-            return ["n", manifest_entry.mode, MERGE_STATE_NOT_APPLICABLE, DUMMY_MTIME]
-        except thrift.NoValueForKeyError as e:
-            raise KeyError(e.key)
+        # edenfs only tracks one parent
+        commitctx = self._repo["."]
+        node, flag = commitctx._fileinfo(filename)
+
+        mode = modefromflag[flag]
+        return ["n", mode, MERGE_STATE_NOT_APPLICABLE, DUMMY_MTIME]
 
     def hastrackeddir(self, d):  # override
         # TODO(mbolin): Unclear whether it is safe to hardcode this to False.
