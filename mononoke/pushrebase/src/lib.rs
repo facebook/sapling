@@ -254,7 +254,7 @@ pub async fn do_pushrebase_bonsai(
 
     let (client_cf, client_bcs) = try_join(
         find_changed_files(ctx.clone(), &repo, root, head).compat(),
-        fetch_bonsai_range(ctx.clone(), &repo, root, head).compat(),
+        fetch_bonsai_range(ctx, &repo, root, head),
     )
     .await?;
 
@@ -389,12 +389,11 @@ async fn rebase_in_loop(
             .await?;
 
         let server_bcs = fetch_bonsai_range(
-            ctx.clone(),
+            &ctx,
             &repo,
             latest_rebase_attempt,
             bookmark_val.unwrap_or(root),
         )
-        .compat()
         .await?;
 
         if config.casefolding_check {
@@ -701,23 +700,38 @@ fn id_to_manifestid(
 }
 
 // from larger generation number to smaller
-fn fetch_bonsai_range(
-    ctx: CoreContext,
+async fn fetch_bonsai_range(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
-    cloned!(repo);
-    RangeNodeStream::new(
+) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
+    let stream = RangeNodeStream::new(
         ctx.clone(),
         repo.get_changeset_fetcher(),
         ancestor,
         descendant,
     )
-    .map(move |id| repo.get_bonsai_changeset(ctx.clone(), id))
-    .buffered(100)
-    .collect()
-    .from_err()
+    .compat();
+
+    let nodes = stream
+        .map(|res| {
+            async move {
+                match res {
+                    Ok(bcs_id) => {
+                        repo.get_bonsai_changeset(ctx.clone(), bcs_id)
+                            .compat()
+                            .await
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+        })
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    Ok(nodes)
 }
 
 fn find_changed_files(
@@ -1154,25 +1168,7 @@ async fn find_rebased_set(
     root: ChangesetId,
     head: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
-    let stream =
-        RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), root, head).compat();
-
-    let nodes = stream
-        .map(|res| {
-            async move {
-                match res {
-                    Ok(bcs_id) => {
-                        repo.get_bonsai_changeset(ctx.clone(), bcs_id)
-                            .compat()
-                            .await
-                    }
-                    Err(e) => Err(e),
-                }
-            }
-        })
-        .buffered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
+    let nodes = fetch_bonsai_range(&ctx, &repo, root, head).await?;
 
     let nodes = nodes
         .into_iter()
