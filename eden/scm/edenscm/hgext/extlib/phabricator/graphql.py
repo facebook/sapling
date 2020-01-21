@@ -21,6 +21,8 @@ from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_
 
 urlreq = util.urlreq
 
+GLOBAL_REV_TYPE = "GLOBAL_REV"
+
 
 class ClientError(Exception):
     def __init__(self, code, msg):
@@ -394,6 +396,9 @@ class Client(object):
         if not reponame:
             return {}
 
+        fromenc, fromdec = _getencodedecodefromcommittype(fromtype)
+        _toenc, todec = _getencodedecodefromcommittype(totype)
+
         query = self._getmirroredrevsquery()
         params = {
             "params": {
@@ -402,14 +407,14 @@ class Client(object):
                 "from_scm_type": fromtype,
                 "to_repo": reponame,
                 "to_scm_type": totype,
-                "revs": map(hex, nodes),
+                "revs": map(fromenc, nodes),
             }
         }
         ret = self._client.query(timeout, query, json.dumps(params))
         self._raise_errors(ret)
         result = {}
         for pair in ret["data"]["query"]["rev_map"]:
-            result[bin(pair["from_rev"])] = bin(pair["to_rev"])
+            result[fromdec(pair["from_rev"])] = todec(pair["to_rev"])
         return result
 
     def _getmirroredrevsquery(self):
@@ -481,3 +486,17 @@ class Client(object):
                 raise ClientError(None, errormsg)
         except (KeyError, TypeError):
             pass
+
+
+def _getencodedecodefromcommittype(committype):
+    if committype == GLOBAL_REV_TYPE:
+        encode = str
+
+        def decode(x):
+            return x
+
+    else:
+        # GraphQL wants hex, not bin
+        encode = hex
+        decode = bin
+    return encode, decode
