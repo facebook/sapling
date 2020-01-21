@@ -49,9 +49,9 @@ use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{err, join_all, loop_fn, ok, Loop};
+use futures::future::{err, loop_fn, ok, Loop};
 use futures::{stream, Future, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt as Futures01StreamExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt as Futures01StreamExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all},
@@ -413,7 +413,7 @@ async fn rebase_in_loop(
             head,
             &bookmark_val,
             &onto_bookmark,
-            maybe_hg_replay_data.clone(),
+            maybe_hg_replay_data,
         )
         .await?;
 
@@ -440,7 +440,7 @@ async fn do_rebase(
     head: ChangesetId,
     bookmark_val: &Option<ChangesetId>,
     onto_bookmark: &OntoBookmarkParams,
-    maybe_hg_replay_data: Option<HgReplayData>,
+    maybe_hg_replay_data: &Option<HgReplayData>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let (new_head, rebased_changesets) = create_rebased_changesets(
         &ctx,
@@ -460,10 +460,9 @@ async fn do_rebase(
                 &onto_bookmark,
                 *bookmark_val,
                 new_head,
-                maybe_hg_replay_data,
+                &maybe_hg_replay_data,
                 rebased_changesets,
             )
-            .compat()
             .await
         }
         None => {
@@ -472,7 +471,7 @@ async fn do_rebase(
                 &repo,
                 &onto_bookmark,
                 new_head,
-                maybe_hg_replay_data,
+                &maybe_hg_replay_data,
                 rebased_changesets,
             )
             .await
@@ -1182,51 +1181,41 @@ async fn find_rebased_set(
     Ok(nodes)
 }
 
-fn try_update_bookmark(
+async fn try_update_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark: &OntoBookmarkParams,
     old_value: ChangesetId,
     new_value: ChangesetId,
-    maybe_hg_replay_data: Option<HgReplayData>,
+    maybe_hg_replay_data: &Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
-) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let bookmark_name = &bookmark.bookmark;
     let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
-    let bookmark_update_reason =
-        create_bookmark_update_reason(maybe_hg_replay_data, rebased_changesets.clone());
-    bookmark_update_reason
-        .from_err()
-        .and_then({
-            cloned!(bookmark_name);
-            move |reason| {
-                try_boxfuture!(txn.update(&bookmark_name, new_value, old_value, reason));
-                let commit_fut = match maybe_sql_txn_factory {
-                    Some(sql_txn_factory) => {
-                        let factory = Arc::new({
-                            cloned!(rebased_changesets);
-                            move || sql_txn_factory(rebased_changesets.clone())
-                        });
-                        txn.commit_into_txn(factory).boxify()
-                    }
-                    None => txn.commit().boxify(),
-                };
+    let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
 
-                commit_fut
-                    .map(move |success| {
-                        if success {
-                            Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
-                        } else {
-                            None
-                        }
-                    })
-                    .from_err()
-                    .boxify()
-            }
-        })
-        .boxify()
+    txn.update(&bookmark_name, new_value, old_value, reason)?;
+
+    let success = match maybe_sql_txn_factory {
+        Some(sql_txn_factory) => {
+            let factory = Arc::new({
+                cloned!(rebased_changesets);
+                move || sql_txn_factory(rebased_changesets.clone())
+            });
+            txn.commit_into_txn(factory).compat().await?
+        }
+        None => txn.commit().compat().await?,
+    };
+
+    let ret = if success {
+        Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
+    } else {
+        None
+    };
+
+    Ok(ret)
 }
 
 async fn try_create_bookmark(
@@ -1234,16 +1223,14 @@ async fn try_create_bookmark(
     repo: &BlobRepo,
     bookmark: &OntoBookmarkParams,
     new_value: ChangesetId,
-    maybe_hg_replay_data: Option<HgReplayData>,
+    maybe_hg_replay_data: &Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let bookmark_name = &bookmark.bookmark;
     let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
-    let reason = create_bookmark_update_reason(maybe_hg_replay_data, rebased_changesets.clone())
-        .compat()
-        .await?;
+    let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
 
     txn.create(&bookmark_name, new_value, reason)?;
 
@@ -1267,38 +1254,42 @@ async fn try_create_bookmark(
     Ok(ret)
 }
 
-fn create_bookmark_update_reason(
-    maybe_hg_replay_data: Option<HgReplayData>,
-    rebased_changesets: RebasedChangesets,
-) -> BoxFuture<BookmarkUpdateReason, Error> {
-    match maybe_hg_replay_data {
-        Some(HgReplayData {
-            bundle2_id,
-            cs_id_convertor,
-        }) => {
-            let bundle_replay_data = BundleReplayData::new(bundle2_id);
-            let timestamps = rebased_changesets
-                .into_iter()
-                .map(|(id_old, (_, datetime))| (id_old, datetime.into()))
-                .map({
-                    move |(id_old, timestamp)| {
-                        cs_id_convertor(id_old).map(move |hg_cs_id| (hg_cs_id, timestamp))
-                    }
-                });
-            join_all(timestamps)
-                .map(move |timestamps| {
-                    let timestamps = timestamps.into_iter().collect();
-                    BookmarkUpdateReason::Pushrebase {
-                        bundle_replay_data: Some(bundle_replay_data.with_timestamps(timestamps)),
-                    }
-                })
-                .boxify()
+async fn create_bookmark_update_reason(
+    maybe_hg_replay_data: &Option<HgReplayData>,
+    rebased_changesets: &RebasedChangesets,
+) -> Result<BookmarkUpdateReason, Error> {
+    let hg_replay_data = match maybe_hg_replay_data {
+        Some(hg_replay_data) => hg_replay_data,
+        None => {
+            return Ok(BookmarkUpdateReason::Pushrebase {
+                bundle_replay_data: None,
+            });
         }
-        None => ok(BookmarkUpdateReason::Pushrebase {
-            bundle_replay_data: None,
-        })
-        .boxify(),
-    }
+    };
+
+    let HgReplayData {
+        bundle2_id,
+        cs_id_convertor,
+    } = hg_replay_data;
+
+    let bundle_replay_data = BundleReplayData::new(*bundle2_id);
+
+    let timestamps = rebased_changesets.iter().map({
+        |(id_old, (_, timestamp))| {
+            async move {
+                let hg_cs_id = cs_id_convertor(*id_old).compat().await?;
+                Result::<_, Error>::Ok((hg_cs_id, *timestamp))
+            }
+        }
+    });
+
+    let timestamps = try_join_all(timestamps).await?.into_iter().collect();
+
+    let reason = BookmarkUpdateReason::Pushrebase {
+        bundle_replay_data: Some(bundle_replay_data.with_timestamps(timestamps)),
+    };
+
+    Ok(reason)
 }
 
 #[cfg(test)]
