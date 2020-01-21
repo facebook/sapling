@@ -14,9 +14,19 @@
 namespace facebook {
 namespace eden {
 
-enum class Persistence : bool {
-  Ephemeral = false,
-  Persistent = true,
+enum class Persistence : uint8_t {
+  /**
+   * Safe to clear at any moment.
+   */
+  Ephemeral,
+  /**
+   * Not safe to delete.
+   */
+  Persistent,
+  /**
+   * No longer used - clear on startup.
+   */
+  Deprecated,
 };
 
 /**
@@ -29,6 +39,10 @@ struct KeySpaceRecord {
   uint8_t index;
   folly::StringPiece name;
   Persistence persistence;
+
+  constexpr bool isDeprecated() const noexcept {
+    return persistence == Persistence::Deprecated;
+  }
 };
 
 class KeySpace {
@@ -66,10 +80,9 @@ class KeySpace {
   static constexpr KeySpaceRecord HgCommitToTreeFamily{4,
                                                        "hgcommit2tree",
                                                        Persistence::Ephemeral};
-  // Deprecated. TODO: Clear at startup.
   static constexpr KeySpaceRecord BlobSizeFamily{5,
                                                  "blobsize",
-                                                 Persistence::Ephemeral};
+                                                 Persistence::Deprecated};
 
   static constexpr const KeySpaceRecord* kAll[] = {&BlobFamily,
                                                    &BlobMetaDataFamily,

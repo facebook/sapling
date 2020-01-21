@@ -257,6 +257,7 @@ RocksDbLocalStore::RocksDbLocalStore(
   // Publish fb303 stats once when we first open the DB.
   // These will be kept up-to-date later by the periodicManagementTask() call.
   computeStats(/*publish=*/true);
+  clearDeprecatedKeySpaces();
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {

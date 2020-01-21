@@ -103,24 +103,28 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
 
 SqliteLocalStore::SqliteLocalStore(AbsolutePathPiece pathToDb)
     : db_(SqliteDatabase(pathToDb)) {
-  auto db = db_.lock();
+  {
+    auto db = db_.lock();
 
-  // Write ahead log for faster perf
-  // https://www.sqlite.org/wal.html
-  SqliteStatement(db, "PRAGMA journal_mode=WAL").step();
+    // Write ahead log for faster perf
+    // https://www.sqlite.org/wal.html
+    SqliteStatement(db, "PRAGMA journal_mode=WAL").step();
 
-  for (const auto& ks : KeySpace::kAll) {
-    SqliteStatement(
-        db,
-        "CREATE TABLE IF NOT EXISTS ",
-        ks->name,
-        "(",
-        "key BINARY NOT NULL,",
-        "value BINARY NOT NULL,"
-        "PRIMARY KEY (key)",
-        ")")
-        .step();
+    for (const auto& ks : KeySpace::kAll) {
+      SqliteStatement(
+          db,
+          "CREATE TABLE IF NOT EXISTS ",
+          ks->name,
+          "(",
+          "key BINARY NOT NULL,",
+          "value BINARY NOT NULL,"
+          "PRIMARY KEY (key)",
+          ")")
+          .step();
+    }
   }
+
+  clearDeprecatedKeySpaces();
 }
 
 void SqliteLocalStore::close() {

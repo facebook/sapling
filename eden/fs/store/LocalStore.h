@@ -57,6 +57,11 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   virtual void close() = 0;
 
   /**
+   * Iterate through every KeySpace, clearing the ones that are deprecated.
+   */
+  void clearDeprecatedKeySpaces();
+
+  /**
    * Iterate through every KeySpace, clearing the ones that are safe to forget
    * and compacting all of them.
    */

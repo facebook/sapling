@@ -33,6 +33,15 @@ using std::string;
 namespace facebook {
 namespace eden {
 
+void LocalStore::clearDeprecatedKeySpaces() {
+  for (auto& ks : KeySpace::kAll) {
+    if (ks->isDeprecated()) {
+      clearKeySpace(ks);
+      compactKeySpace(ks);
+    }
+  }
+}
+
 void LocalStore::clearCachesAndCompactAll() {
   for (auto& ks : KeySpace::kAll) {
     if (ks->persistence == Persistence::Ephemeral) {
@@ -193,6 +202,8 @@ void LocalStore::put(
     KeySpace keySpace,
     const Hash& id,
     folly::ByteRange value) {
+  CHECK(!keySpace->isDeprecated())
+      << "Write to deprecated keyspace " << keySpace->name;
   put(keySpace, id.getBytes(), value);
 }
 
@@ -200,6 +211,8 @@ void LocalStore::WriteBatch::put(
     KeySpace keySpace,
     const Hash& id,
     folly::ByteRange value) {
+  CHECK(!keySpace->isDeprecated())
+      << "Write to deprecated keyspace " << keySpace->name;
   put(keySpace, id.getBytes(), value);
 }
 
