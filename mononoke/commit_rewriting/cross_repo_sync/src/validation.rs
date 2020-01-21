@@ -547,7 +547,7 @@ mod test {
 
         let large_repo = commit_syncer.get_large_repo();
 
-        let commit = CreateCommitContext::new(ctx.clone(), large_repo.clone(), vec!["master"])
+        let commit = CreateCommitContext::new(&ctx, &large_repo, vec!["master"])
             .add_file("somefile", "ololo")
             .commit()
             .await?;
