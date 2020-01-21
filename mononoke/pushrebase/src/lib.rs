@@ -376,9 +376,7 @@ async fn rebase_in_loop(
     let mut latest_rebase_attempt = root;
 
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
-        let bookmark_val = get_onto_bookmark_value(ctx.clone(), &repo, &onto_bookmark)
-            .compat()
-            .await?;
+        let bookmark_val = get_onto_bookmark_value(&ctx, &repo, &onto_bookmark).await?;
 
         let server_bcs = fetch_bonsai_range(
             &ctx,
@@ -530,9 +528,7 @@ async fn find_closest_root(
     bookmark: &OntoBookmarkParams,
     roots: &HashMap<ChangesetId, ChildIndex>,
 ) -> Result<ChangesetId, PushrebaseError> {
-    let maybe_id = get_bookmark_value(ctx.clone(), repo, &bookmark.bookmark)
-        .compat()
-        .await?;
+    let maybe_id = get_bookmark_value(&ctx, &repo, &bookmark.bookmark).await?;
 
     if let Some(id) = maybe_id {
         return find_closest_ancestor_root(
@@ -880,25 +876,27 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
 
 /// Returns Some(ChangesetId) if bookmarks exists.
 /// Returns None if bookmarks does not exists
-fn get_onto_bookmark_value(
-    ctx: CoreContext,
+async fn get_onto_bookmark_value(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     onto_bookmark: &OntoBookmarkParams,
-) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
-    get_bookmark_value(ctx.clone(), &repo, &onto_bookmark.bookmark).and_then(
-        move |maybe_bookmark_value| match maybe_bookmark_value {
-            Some(bookmark_value) => ok(Some(bookmark_value)),
-            None => ok(None),
-        },
-    )
+) -> Result<Option<ChangesetId>, PushrebaseError> {
+    let maybe_cs_id = get_bookmark_value(&ctx, &repo, &onto_bookmark.bookmark).await?;
+
+    Ok(maybe_cs_id)
 }
 
-fn get_bookmark_value(
-    ctx: CoreContext,
+async fn get_bookmark_value(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_name: &BookmarkName,
-) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
-    repo.get_bonsai_bookmark(ctx, bookmark_name).from_err()
+) -> Result<Option<ChangesetId>, PushrebaseError> {
+    let maybe_cs_id = repo
+        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
+        .compat()
+        .await?;
+
+    Ok(maybe_cs_id)
 }
 
 async fn create_rebased_changesets(
@@ -3183,14 +3181,13 @@ mod tests {
         .wait()
         .unwrap();
 
-        let new_master = get_bookmark_value(
-            ctx.clone(),
-            &repo.clone(),
-            &BookmarkName::new("master").unwrap(),
-        )
-        .wait()
-        .unwrap()
-        .unwrap();
+        let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master").unwrap())
+            .boxed()
+            .compat()
+            .wait()
+            .unwrap()
+            .unwrap();
+
         let master_hg = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
             .wait()?;
@@ -3295,14 +3292,12 @@ mod tests {
         .wait()
         .unwrap();
 
-        let new_master = get_bookmark_value(
-            ctx.clone(),
-            &repo.clone(),
-            &BookmarkName::new("master").unwrap(),
-        )
-        .wait()
-        .unwrap()
-        .unwrap();
+        let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master").unwrap())
+            .boxed()
+            .compat()
+            .wait()
+            .unwrap()
+            .unwrap();
         let master_hg = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
             .wait()?;
@@ -3431,14 +3426,13 @@ mod tests {
         .wait()
         .unwrap();
 
-        let new_master = get_bookmark_value(
-            ctx.clone(),
-            &repo.clone(),
-            &BookmarkName::new("master").unwrap(),
-        )
-        .wait()
-        .unwrap()
-        .unwrap();
+        let new_master =
+            get_bookmark_value(&ctx, &repo.clone(), &BookmarkName::new("master").unwrap())
+                .boxed()
+                .compat()
+                .wait()
+                .unwrap()
+                .unwrap();
         let master_hg = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
             .wait()?;
