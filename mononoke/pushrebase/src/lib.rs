@@ -252,13 +252,12 @@ pub fn do_pushrebase_bonsai(
     let roots = find_roots(&pushed);
 
     head.and_then(move |head| {
-        find_closest_root(
-            ctx.clone(),
-            &repo,
-            config.clone(),
-            onto_bookmark.clone(),
-            roots,
-        )
+        {
+            cloned!(ctx, repo, config, onto_bookmark);
+            async move { find_closest_root(&ctx, &repo, &config, &onto_bookmark, &roots).await }
+        }
+        .boxed()
+        .compat()
         .map(move |root| (head, root))
         .and_then({
             cloned!(ctx, repo);
@@ -555,37 +554,52 @@ fn find_roots(commits: &HashSet<BonsaiChangeset>) -> HashMap<ChangesetId, ChildI
     roots
 }
 
-fn find_closest_root(
-    ctx: CoreContext,
+async fn find_closest_root(
+    ctx: &CoreContext,
     repo: &BlobRepo,
-    config: PushrebaseParams,
-    bookmark: OntoBookmarkParams,
-    roots: HashMap<ChangesetId, ChildIndex>,
-) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    get_bookmark_value(ctx.clone(), repo, &bookmark.bookmark).and_then({
-        cloned!(repo);
-        move |maybe_id| match maybe_id {
-            Some(id) => {
-                find_closest_ancestor_root(ctx.clone(), repo, config, bookmark.bookmark, roots, id)
-            }
-            None => join_all(roots.into_iter().map(move |(root, _)| {
-                repo.get_generation_number_by_bonsai(ctx.clone(), root)
-                    .and_then(move |maybe_gen_num| {
-                        maybe_gen_num.ok_or(ErrorKind::RootNotFound(root).into())
-                    })
-                    .map(move |gen_num| (root, gen_num))
-            }))
-            .and_then(|roots_with_gen_nums| {
-                roots_with_gen_nums
-                    .into_iter()
-                    .max_by_key(|(_, gen_num)| gen_num.clone())
-                    .ok_or(ErrorKind::NoRoots.into())
-            })
-            .map(|(cs_id, _)| cs_id)
-            .from_err()
-            .boxify(),
+    config: &PushrebaseParams,
+    bookmark: &OntoBookmarkParams,
+    roots: &HashMap<ChangesetId, ChildIndex>,
+) -> Result<ChangesetId, PushrebaseError> {
+    let maybe_id = get_bookmark_value(ctx.clone(), repo, &bookmark.bookmark)
+        .compat()
+        .await?;
+
+    if let Some(id) = maybe_id {
+        return find_closest_ancestor_root(
+            ctx.clone(),
+            repo.clone(),
+            config.clone(),
+            bookmark.bookmark.clone(),
+            roots.clone(),
+            id,
+        )
+        .compat()
+        .await;
+    }
+
+    let roots = roots.iter().map(|(root, _)| {
+        let repo = &repo;
+
+        async move {
+            let gen_num = repo
+                .get_generation_number_by_bonsai(ctx.clone(), *root)
+                .compat()
+                .await?
+                .ok_or(PushrebaseError::from(ErrorKind::RootNotFound(*root)))?;
+
+            Result::<_, PushrebaseError>::Ok((*root, gen_num))
         }
-    })
+    });
+
+    let roots = try_join_all(roots).await?;
+
+    let (cs_id, _) = roots
+        .into_iter()
+        .max_by_key(|(_, gen_num)| gen_num.clone())
+        .ok_or(PushrebaseError::from(ErrorKind::NoRoots))?;
+
+    Ok(cs_id)
 }
 
 fn find_closest_ancestor_root(
@@ -1803,12 +1817,14 @@ mod tests {
             let root = root1;
             assert_eq!(
                 find_closest_root(
-                    ctx.clone(),
+                    &ctx,
                     &repo,
-                    config.clone(),
-                    book.clone(),
-                    hashmap! {root0 => ChildIndex(0), root1 => ChildIndex(0) },
+                    &config,
+                    &book,
+                    &hashmap! {root0 => ChildIndex(0), root1 => ChildIndex(0) },
                 )
+                .boxed()
+                .compat()
                 .wait()
                 .unwrap(),
                 root,
