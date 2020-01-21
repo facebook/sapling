@@ -49,7 +49,6 @@ use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{err, loop_fn, ok, Loop};
 use futures::{stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt as Futures01StreamExt};
 use futures_preview::{
@@ -529,16 +528,8 @@ async fn find_closest_root(
     let maybe_id = get_bookmark_value(&ctx, &repo, &bookmark.bookmark).await?;
 
     if let Some(id) = maybe_id {
-        return find_closest_ancestor_root(
-            ctx.clone(),
-            repo.clone(),
-            config.clone(),
-            bookmark.bookmark.clone(),
-            roots.clone(),
-            id,
-        )
-        .compat()
-        .await;
+        return find_closest_ancestor_root(&ctx, &repo, &config, &bookmark.bookmark, &roots, id)
+            .await;
     }
 
     let roots = roots.iter().map(|(root, _)| {
@@ -565,67 +556,65 @@ async fn find_closest_root(
     Ok(cs_id)
 }
 
-fn find_closest_ancestor_root(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    config: PushrebaseParams,
-    bookmark: BookmarkName,
-    roots: HashMap<ChangesetId, ChildIndex>,
+async fn find_closest_ancestor_root(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    config: &PushrebaseParams,
+    bookmark: &BookmarkName,
+    roots: &HashMap<ChangesetId, ChildIndex>,
     onto_bookmark_cs_id: ChangesetId,
-) -> BoxFuture<ChangesetId, PushrebaseError> {
+) -> Result<ChangesetId, PushrebaseError> {
     let mut queue = VecDeque::new();
     queue.push_back(onto_bookmark_cs_id);
-    loop_fn(
-        (queue, HashSet::new(), 0),
-        move |(mut queue, mut visited, depth)| {
-            if depth > 0 && depth % 1000 == 0 {
-                info!(ctx.logger(), "pushrebase recursion depth: {}", depth);
+
+    let mut queued = HashSet::new();
+    let mut depth = 0;
+
+    loop {
+        if depth > 0 && depth % 1000 == 0 {
+            info!(ctx.logger(), "pushrebase recursion depth: {}", depth);
+        }
+
+        if let Some(recursion_limit) = config.recursion_limit {
+            if depth >= recursion_limit {
+                return Err(PushrebaseError::RootTooFarBehind);
             }
-            if let Some(recursion_limit) = config.recursion_limit {
-                if depth >= recursion_limit {
-                    return err(PushrebaseError::RootTooFarBehind).boxify();
-                }
+        }
+
+        depth += 1;
+
+        let id = queue.pop_front().ok_or_else(|| {
+            PushrebaseError::Error(
+                ErrorKind::PushrebaseNoCommonRoot(
+                    bookmark.clone(),
+                    roots.keys().cloned().collect(),
+                )
+                .into(),
+            )
+        })?;
+
+        if let Some(index) = roots.get(&id) {
+            if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
+                let hgcs = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), id)
+                    .compat()
+                    .await?;
+
+                return Err(PushrebaseError::Error(
+                    ErrorKind::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
+                ));
             }
-            match queue.pop_front() {
-                None => err(PushrebaseError::Error(
-                    ErrorKind::PushrebaseNoCommonRoot(
-                        bookmark.clone(),
-                        roots.keys().cloned().collect(),
-                    )
-                    .into(),
-                ))
-                .boxify(),
-                Some(id) => match roots.get(&id) {
-                    Some(index) => {
-                        if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
-                            repo.get_hg_from_bonsai_changeset(ctx.clone(), id)
-                                .from_err()
-                                .and_then({
-                                    cloned!(bookmark);
-                                    move |hgcs| {
-                                        err(PushrebaseError::Error(
-                                            ErrorKind::P2RootRebaseForbidden(hgcs, bookmark).into(),
-                                        ))
-                                    }
-                                })
-                                .boxify()
-                        } else {
-                            ok(Loop::Break(id)).boxify()
-                        }
-                    }
-                    None => repo
-                        .get_changeset_parents_by_bonsai(ctx.clone(), id)
-                        .from_err()
-                        .map(move |parents| {
-                            queue.extend(parents.into_iter().filter(|p| visited.insert(*p)));
-                            Loop::Continue((queue, visited, depth + 1))
-                        })
-                        .boxify(),
-                },
-            }
-        },
-    )
-    .boxify()
+
+            return Ok(id);
+        }
+
+        let parents = repo
+            .get_changeset_parents_by_bonsai(ctx.clone(), id)
+            .compat()
+            .await?;
+
+        queue.extend(parents.into_iter().filter(|p| queued.insert(*p)));
+    }
 }
 
 /// find changed files by comparing manifests of `ancestor` and `descendant`
