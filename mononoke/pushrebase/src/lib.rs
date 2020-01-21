@@ -340,9 +340,7 @@ async fn backfill_filenodes<'a>(
             let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id).compat();
             let (hg_cs_id, bcs) = try_join(hg_cs_id_fut, bcs_fut).await?;
 
-            let parents = bcs
-                .parents()
-                .map(|p| id_to_manifestid(ctx.clone(), repo.clone(), p).compat());
+            let parents = bcs.parents().map(|p| id_to_manifestid(&ctx, &repo, p));
 
             let parent_mfs = try_join_all(parents).await?;
 
@@ -667,8 +665,8 @@ async fn find_bonsai_diff(
     descendant: ChangesetId,
 ) -> Result<impl TryStream<Ok = BonsaiDiffFileChange<HgFileNodeId>, Error = Error>> {
     let (d_mf, a_mf) = try_join(
-        id_to_manifestid(ctx.clone(), repo.clone(), descendant).compat(),
-        id_to_manifestid(ctx.clone(), repo.clone(), ancestor).compat(),
+        id_to_manifestid(&ctx, &repo, descendant),
+        id_to_manifestid(&ctx, &repo, ancestor),
     )
     .await?;
 
@@ -683,17 +681,20 @@ async fn find_bonsai_diff(
     Ok(stream)
 }
 
-fn id_to_manifestid(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn id_to_manifestid(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     bcs_id: ChangesetId,
-) -> impl Future<Item = HgManifestId, Error = Error> {
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .and_then({
-            cloned!(ctx, repo);
-            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
-        })
-        .map(|cs| cs.manifestid())
+) -> Result<HgManifestId, Error> {
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+        .compat()
+        .await?;
+    let hg_cs = repo
+        .get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+        .compat()
+        .await?;
+    Ok(hg_cs.manifestid())
 }
 
 // from larger generation number to smaller
@@ -1096,9 +1097,7 @@ async fn generate_additional_bonsai_file_changes(
             .try_collect::<Vec<_>>()
             .await?;
 
-        let mf_id = id_to_manifestid(ctx.clone(), repo.clone(), cs_id)
-            .compat()
-            .await?;
+        let mf_id = id_to_manifestid(ctx, repo, cs_id).await?;
 
         let mut paths = vec![];
         for res in &bonsai_diff {
