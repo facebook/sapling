@@ -50,15 +50,17 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::{err, join_all, loop_fn, ok, Loop};
-use futures::{stream, Future, IntoFuture, Stream};
-use futures_ext::{
-    try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt as Futures01StreamExt,
-};
+use futures::{stream, Future, Stream};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt as Futures01StreamExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all},
+    stream::TryStream,
 };
-use futures_util::stream::{StreamExt, TryStreamExt};
+use futures_util::{
+    future::{FutureExt as _, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
@@ -639,46 +641,46 @@ fn find_closest_ancestor_root(
 }
 
 /// find changed files by comparing manifests of `ancestor` and `descendant`
-fn find_changed_files_between_manfiests(
-    ctx: CoreContext,
+async fn find_changed_files_between_manifests(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
-    find_bonsai_diff(ctx, repo, ancestor, descendant)
-        .map(|diff| match diff {
+) -> Result<Vec<MPath>, PushrebaseError> {
+    let paths = find_bonsai_diff(ctx, repo, ancestor, descendant)
+        .await?
+        .map_ok(|diff| match diff {
             BonsaiDiffFileChange::Changed(path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(path, ..)
             | BonsaiDiffFileChange::Deleted(path) => path,
         })
-        .collect()
-        .from_err()
+        .try_collect()
+        .await?;
+
+    Ok(paths)
 }
 
-fn find_bonsai_diff(
-    ctx: CoreContext,
+async fn find_bonsai_diff(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> BoxStream<BonsaiDiffFileChange<HgFileNodeId>, Error> {
-    (
-        id_to_manifestid(ctx.clone(), repo.clone(), descendant),
-        id_to_manifestid(ctx.clone(), repo.clone(), ancestor),
+) -> Result<impl TryStream<Ok = BonsaiDiffFileChange<HgFileNodeId>, Error = Error>> {
+    let (d_mf, a_mf) = try_join(
+        id_to_manifestid(ctx.clone(), repo.clone(), descendant).compat(),
+        id_to_manifestid(ctx.clone(), repo.clone(), ancestor).compat(),
     )
-        .into_future()
-        .map({
-            cloned!(ctx, repo);
-            move |(d_mf, a_mf)| {
-                bonsai_diff(
-                    ctx,
-                    repo.get_blobstore(),
-                    d_mf,
-                    Some(a_mf).into_iter().collect(),
-                )
-            }
-        })
-        .flatten_stream()
-        .boxify()
+    .await?;
+
+    let stream = bonsai_diff(
+        ctx.clone(),
+        repo.get_blobstore(),
+        d_mf,
+        Some(a_mf).into_iter().collect(),
+    )
+    .compat();
+
+    Ok(stream)
 }
 
 fn id_to_manifestid(
@@ -775,7 +777,13 @@ fn find_changed_files(
                                 // one of the parents is not in the rebase set, to calculate
                                 // changed files in this case we will compute manifest diff
                                 // between elements that are in rebase set.
-                                find_changed_files_between_manfiests(ctx.clone(), &repo, id, *p_id)
+                                cloned!(ctx, repo, p_id);
+                                async move {
+                                    find_changed_files_between_manifests(&ctx, &repo, id, p_id)
+                                        .await
+                                }
+                                    .boxed()
+                                    .compat()
                                     .right_future()
                             }
                             (None, None) => panic!(
@@ -966,8 +974,7 @@ async fn rebase_changeset(
 ) -> Result<BonsaiChangeset> {
     let orig_cs_id = bcs.get_changeset_id();
     let new_file_changes =
-        generate_additional_bonsai_file_changes(ctx.clone(), &bcs, root, onto, repo, rebased_set)
-            .await?;
+        generate_additional_bonsai_file_changes(&ctx, &bcs, root, onto, repo, rebased_set).await?;
     let mut bcs = bcs.into_mut();
 
     bcs.parents = bcs
@@ -1073,7 +1080,7 @@ async fn rebase_changeset(
 // |/
 // B
 async fn generate_additional_bonsai_file_changes(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     bcs: &BonsaiChangeset,
     root: &ChangesetId,
     onto: &ChangesetId,
@@ -1084,9 +1091,9 @@ async fn generate_additional_bonsai_file_changes(
     let parents: Vec<_> = bcs.parents().collect();
 
     if parents.len() > 1 && parents.iter().any(|p| !rebased_set.contains(p)) {
-        let bonsai_diff = find_bonsai_diff(ctx.clone(), repo, *root, *onto)
-            .collect()
-            .compat()
+        let bonsai_diff = find_bonsai_diff(&ctx, &repo, *root, *onto)
+            .await?
+            .try_collect::<Vec<_>>()
             .await?;
 
         let mf_id = id_to_manifestid(ctx.clone(), repo.clone(), cs_id)
@@ -1317,7 +1324,6 @@ mod tests {
     use futures::future::join_all;
     use futures_ext::spawn_future;
     use futures_preview::compat::Future01CompatExt;
-    use futures_preview::future::{FutureExt as _, TryFutureExt};
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
