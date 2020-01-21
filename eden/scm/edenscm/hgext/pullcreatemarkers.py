@@ -25,7 +25,7 @@ from ..mercurial import (
     registrar,
     visibility,
 )
-from ..mercurial.i18n import _
+from ..mercurial.i18n import _, _n
 from ..mercurial.node import short
 from .extlib.phabricator import diffprops, graphql
 from .phabstatus import COMMITTEDSTATUS, getdiffstatus
@@ -76,6 +76,7 @@ def _cleanuplanded(repo, dryrun=False):
     unfi = repo.unfiltered()
     mutationentries = []
     tohide = set()
+    markedcount = 0
     for diffid, draftnodes in sorted(difftodraft.items()):
         publicnode = difftopublic.get(diffid)
         if publicnode is None or publicnode not in unfi:
@@ -87,10 +88,12 @@ def _cleanuplanded(repo, dryrun=False):
         if diffprops.parserevfromcommitmsg(unfi[publicnode].description()) != diffid:
             continue
         draftnodestr = ", ".join(short(d) for d in draftnodes)
-        ui.debug(
-            _("marking D%s (%s) as landed as %s\n")
-            % (diffid, draftnodestr, short(publicnode))
-        )
+        if ui.verbose:
+            ui.write(
+                _("marking D%s (%s) as landed as %s\n")
+                % (diffid, draftnodestr, short(publicnode))
+            )
+        markedcount += len(draftnodes)
         for draftnode in draftnodes:
             tohide.add(draftnode)
             mutationentries.append(
@@ -98,6 +101,15 @@ def _cleanuplanded(repo, dryrun=False):
                     unfi, mutation.ORIGIN_SYNTHETIC, [draftnode], publicnode, "land"
                 )
             )
+    if markedcount:
+        ui.status(
+            _n(
+                "marked %d commit as landed\n",
+                "marked %d commits as landed\n",
+                markedcount,
+            )
+            % markedcount
+        )
     if not tohide:
         return
     if not dryrun:
