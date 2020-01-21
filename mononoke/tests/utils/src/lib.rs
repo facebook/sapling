@@ -29,7 +29,8 @@ pub struct CreateCommitContext<'a> {
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     parents: Vec<CommitIdentifier>,
-    files: BTreeMap<String, (String, FileType, Option<(MPath, CommitIdentifier)>)>,
+    files: BTreeMap<String, CreateFileContext>,
+    author_date: Option<DateTime>,
 }
 
 impl<'a> CreateCommitContext<'a> {
@@ -44,6 +45,7 @@ impl<'a> CreateCommitContext<'a> {
             repo,
             parents,
             files: BTreeMap::new(),
+            author_date: None,
         }
     }
 
@@ -55,6 +57,7 @@ impl<'a> CreateCommitContext<'a> {
             repo,
             parents: vec![],
             files: BTreeMap::new(),
+            author_date: None,
         }
     }
 
@@ -63,17 +66,29 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn add_file(mut self, path: &str, content: impl AsRef<str>) -> Self {
+    pub fn add_file(mut self, path: impl Into<String>, content: impl AsRef<str>) -> Self {
         self.files.insert(
-            path.to_string(),
-            (content.as_ref().to_string(), FileType::Regular, None),
+            path.into(),
+            CreateFileContext::FromHelper(content.as_ref().to_string(), FileType::Regular, None),
         );
         self
     }
 
-    pub fn add_file_with_type(mut self, path: &str, content: impl AsRef<str>, t: FileType) -> Self {
-        self.files
-            .insert(path.to_string(), (content.as_ref().to_string(), t, None));
+    pub fn delete_file(mut self, path: impl Into<String>) -> Self {
+        self.files.insert(path.into(), CreateFileContext::Deleted);
+        self
+    }
+
+    pub fn add_file_with_type(
+        mut self,
+        path: impl Into<String>,
+        content: impl AsRef<str>,
+        t: FileType,
+    ) -> Self {
+        self.files.insert(
+            path.into(),
+            CreateFileContext::FromHelper(content.as_ref().to_string(), t, None),
+        );
         self
     }
 
@@ -85,14 +100,25 @@ impl<'a> CreateCommitContext<'a> {
     ) -> Result<Self, Error> {
         let copy_info = (MPath::new(parent_path)?, parent.into());
         self.files.insert(
-            path.to_string(),
-            (
+            path.into(),
+            CreateFileContext::FromHelper(
                 content.as_ref().to_string(),
                 FileType::Regular,
                 Some(copy_info),
             ),
         );
         Ok(self)
+    }
+
+    pub fn add_file_change(mut self, path: impl Into<String>, file_change: FileChange) -> Self {
+        self.files
+            .insert(path.into(), CreateFileContext::FromFileChange(file_change));
+        self
+    }
+
+    pub fn set_author_date(mut self, author_date: DateTime) -> Self {
+        self.author_date = Some(author_date);
+        self
     }
 
     pub async fn commit(self) -> Result<ChangesetId, Error> {
@@ -107,35 +133,27 @@ impl<'a> CreateCommitContext<'a> {
             let ctx = &self.ctx;
             let repo = &self.repo;
             let parents = &parents;
-            move |(path, (content, file_type, copy_info))| {
+            move |(path, create_file_context)| {
                 async move {
-                    let copy_info = match copy_info {
-                        Some((path, cs_id)) => {
-                            let cs_id = resolve_cs_id(&ctx, &repo, cs_id).await?;
+                    let file_change = create_file_context
+                        .into_file_change(&ctx, &repo, &parents)
+                        .await?;
 
-                            if !parents.contains(&cs_id) {
-                                return Err(format_err!(
-                                    "CopyInfo at {:?} references invalid parent: {:?}",
-                                    &path,
-                                    &cs_id
-                                ));
-                            }
-
-                            Some((path, cs_id))
-                        }
-                        None => None,
-                    };
-
-                    Ok((path, (content, file_type, copy_info)))
+                    Result::<_, Error>::Ok((path, file_change))
                 }
             }
         }))
         .await?;
 
+        let author_date = match self.author_date {
+            Some(author_date) => author_date,
+            None => DateTime::from_timestamp(0, 0)?,
+        };
+
         let mut bcs = BonsaiChangesetMut {
             parents,
             author: "author".to_string(),
-            author_date: DateTime::from_timestamp(0, 0)?,
+            author_date,
             committer: None,
             committer_date: None,
             message: "message".to_string(),
@@ -143,17 +161,9 @@ impl<'a> CreateCommitContext<'a> {
             file_changes: btreemap! {},
         };
 
-        for (path, (content, file_type, copy_info)) in files {
+        for (path, file_change) in files {
             let path = MPath::new(path)?;
-            let size = content.len();
-            let content = FileContents::new_bytes(Bytes::from(content));
-            let content_id = content
-                .into_blob()
-                .store(self.ctx.clone(), self.repo.blobstore())
-                .compat()
-                .await?;
-            let file_change = FileChange::new(content_id, file_type, size as u64, copy_info);
-            bcs.file_changes.insert(path, Some(file_change));
+            bcs.file_changes.insert(path, file_change);
         }
 
         let bcs = bcs.freeze()?;
@@ -163,6 +173,61 @@ impl<'a> CreateCommitContext<'a> {
             .compat()
             .await?;
         Ok(bcs_id)
+    }
+}
+
+enum CreateFileContext {
+    FromHelper(String, FileType, Option<(MPath, CommitIdentifier)>),
+    FromFileChange(FileChange),
+    Deleted,
+}
+
+impl CreateFileContext {
+    async fn into_file_change(
+        self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        parents: &[ChangesetId],
+    ) -> Result<Option<FileChange>, Error> {
+        let file_change = match self {
+            Self::FromHelper(content, file_type, copy_info) => {
+                let size = content.len();
+                let content = FileContents::new_bytes(Bytes::from(content));
+                let content_id = content
+                    .into_blob()
+                    .store(ctx.clone(), repo.blobstore())
+                    .compat()
+                    .await?;
+
+                let copy_info = match copy_info {
+                    Some((path, cs_id)) => {
+                        let cs_id = resolve_cs_id(&ctx, &repo, cs_id).await?;
+
+                        if !parents.contains(&cs_id) {
+                            return Err(format_err!(
+                                "CopyInfo at {:?} references invalid parent: {:?}",
+                                &path,
+                                &cs_id
+                            ));
+                        }
+
+                        Some((path, cs_id))
+                    }
+                    None => None,
+                };
+
+                Some(FileChange::new(
+                    content_id,
+                    file_type,
+                    size as u64,
+                    copy_info,
+                ))
+            }
+            Self::FromFileChange(file_change) => Some(file_change),
+            Self::Deleted => None,
+        };
+
+        Ok(file_change)
     }
 }
 

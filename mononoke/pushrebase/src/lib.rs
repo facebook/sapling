@@ -1295,7 +1295,10 @@ mod tests {
     use dbbookmarks::SqlBookmarks;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
-    use futures_preview::compat::Future01CompatExt;
+    use futures_preview::{
+        compat::Future01CompatExt,
+        stream::{self, TryStreamExt},
+    };
     use futures_util::future::{try_join_all, FutureExt as _, TryFutureExt};
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
@@ -1305,10 +1308,7 @@ mod tests {
     use sql::{rusqlite::Connection as SqliteConnection, Connection};
     use sql_ext::SqlConstructors;
     use std::{collections::BTreeMap, str::FromStr};
-    use tests_utils::{
-        bookmark, create_commit, create_commit_with_date, resolve_cs_id, store_files, store_rename,
-        CreateCommitContext,
-    };
+    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
     async fn fetch_bonsai_changesets(
         ctx: &CoreContext,
@@ -1407,12 +1407,17 @@ mod tests {
         content: BTreeMap<&str, Option<&str>>,
         should_succeed: bool,
     ) -> Result<(), Error> {
-        let cs_id = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            vec![parent],
-            store_files(ctx.clone(), content, repo.clone()),
-        );
+        let mut commit_ctx = CreateCommitContext::new(&ctx, &repo, vec![parent]);
+
+        for (path, maybe_content) in content.iter() {
+            let path: &str = path.as_ref();
+            commit_ctx = match maybe_content {
+                Some(content) => commit_ctx.add_file(path, content),
+                None => commit_ctx.delete_file(path),
+            };
+        }
+
+        let cs_id = commit_ctx.commit().await?;
 
         let hgcss = hashset![
             repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
@@ -1618,27 +1623,14 @@ mod tests {
                     .compat()
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
-                let bcs_id_1 = create_commit(
-                    // TODO
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![p],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("content")},
-                        repo.clone(),
-                    ),
-                );
-                let bcs_id_2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_1],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file2" => Some("content")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
+                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                    .add_file("file2", "content")
+                    .commit()
+                    .await?;
 
                 assert_eq!(
                     find_changed_files(&ctx, &repo, p, bcs_id_2).await?,
@@ -1693,28 +1685,14 @@ mod tests {
                     .compat()
                     .await?
                     .ok_or(Error::msg("p is missing"))?;
-                let bcs_id_1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![p],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("content")},
-                        repo.clone(),
-                    ),
-                );
-
-                let rename = store_rename(
-                    ctx.clone(),
-                    (MPath::new("file")?, bcs_id_1),
-                    "file_renamed",
-                    "content",
-                    repo.clone(),
-                );
-
-                let file_changes = btreemap! {rename.0 => rename.1};
-                let bcs_id_2 =
-                    create_commit(ctx.clone(), repo.clone(), vec![bcs_id_1], file_changes);
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
+                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                    .add_file_with_copy_info("file_renamed", "content", (bcs_id_1, "file"))?
+                    .commit()
+                    .await?;
 
                 assert_eq!(
                     find_changed_files(&ctx, &repo, p, bcs_id_2).await?,
@@ -1797,28 +1775,19 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("root0 is missing"))?;
 
-                let bcs_id_1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root0],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"f0" => Some("f0"), "files" => None},
-                        repo.clone(),
-                    ),
-                );
-                let bcs_id_2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root1, bcs_id_1],
-                    store_files(ctx.clone(), btreemap! {"f1" => Some("f1")}, repo.clone()),
-                );
-                let bcs_id_3 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_2],
-                    store_files(ctx.clone(), btreemap! {"f2" => Some("f2")}, repo.clone()),
-                );
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root0])
+                    .add_file("f0", "f0")
+                    .delete_file("files")
+                    .commit()
+                    .await?;
+                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![root1, bcs_id_1])
+                    .add_file("f1", "f1")
+                    .commit()
+                    .await?;
+                let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
+                    .add_file("f2", "f2")
+                    .commit()
+                    .await?;
 
                 let book = master_bookmark();
                 set_bookmark(
@@ -1919,28 +1888,18 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
 
-                let bcs_id_1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(ctx.clone(), btreemap! {"f0" => Some("f0")}, repo.clone()),
-                );
-                let bcs_id_2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_1],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"9/file" => Some("file")},
-                        repo.clone(),
-                    ),
-                );
-                let bcs_id_3 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_2],
-                    store_files(ctx.clone(), btreemap! {"f1" => Some("f1")}, repo.clone()),
-                );
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("f0", "f0")
+                    .commit()
+                    .await?;
+                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                    .add_file("9/file", "file")
+                    .commit()
+                    .await?;
+                let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
+                    .add_file("f1", "f1")
+                    .commit()
+                    .await?;
 
                 let book = master_bookmark();
                 set_bookmark(
@@ -2007,32 +1966,19 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
 
-                let bcs_id_1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"FILE" => Some("file")},
-                        repo.clone(),
-                    ),
-                );
-                let bcs_id_2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_1],
-                    store_files::<String>(ctx.clone(), btreemap! {"FILE" => None}, repo.clone()),
-                );
-                let bcs_id_3 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_2],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("file")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("FILE", "file")
+                    .commit()
+                    .await?;
+                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                    .delete_file("FILE")
+                    .commit()
+                    .await?;
+                let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
+                    .add_file("file", "file")
+                    .commit()
+                    .await?;
+
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                         .compat()
@@ -2079,26 +2025,17 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
 
-                let bcs_id_1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"DIR/a" => Some("a"), "DIR/b" => Some("b")},
-                        repo.clone(),
-                    ),
-                );
-                let bcs_id_2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_1],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"dir/a" => Some("a"), "DIR/a" => None, "DIR/b" => None},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("DIR/a", "a")
+                    .add_file("DIR/b", "b")
+                    .commit()
+                    .await?;
+                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                    .add_file("dir/a", "a")
+                    .delete_file("DIR/a")
+                    .delete_file("DIR/b")
+                    .commit()
+                    .await?;
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                         .compat()
@@ -2143,32 +2080,27 @@ mod tests {
                     .ok_or(Error::msg("Root is missing"))?;
 
                 // create a lot of commits
-                let mut bcss = Vec::new();
-                (0..128).fold(root, |head, index| {
-                    let file = format!("f{}", index);
-                    let content = format!("{}", index);
-                    let bcs = create_commit(
-                        ctx.clone(),
-                        repo.clone(),
-                        vec![head],
-                        store_files(
-                            ctx.clone(),
-                            btreemap! {file.as_ref() => Some(content)},
-                            repo.clone(),
-                        ),
-                    );
-                    bcss.push(bcs);
-                    bcs
-                });
+                let (_, bcss) = stream::iter((0..128usize).map(Ok))
+                    .try_fold((root, vec![]), |(head, mut bcss), index| {
+                        let ctx = &ctx;
+                        let repo = &repo;
+                        async move {
+                            let file = format!("f{}", index);
+                            let content = format!("{}", index);
+                            let bcs = CreateCommitContext::new(&ctx, &repo, vec![head])
+                                .add_file(&file, content)
+                                .commit()
+                                .await?;
+                            bcss.push(bcs);
+                            Result::<_, Error>::Ok((bcs, bcss))
+                        }
+                    })
+                    .await?;
 
-                let hgcss = try_join_all(
-                    bcss.iter()
-                        .map(|bcs| {
-                            repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)
-                                .compat()
-                        })
-                        .collect::<Vec<_>>(),
-                )
+                let hgcss = try_join_all(bcss.iter().map(|bcs| {
+                    repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)
+                        .compat()
+                }))
                 .await?;
                 let book = master_bookmark();
                 set_bookmark(
@@ -2188,16 +2120,10 @@ mod tests {
                 )
                 .await?;
 
-                let bcs = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("data")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("file", "data")
+                    .commit()
+                    .await?;
 
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
@@ -2245,16 +2171,10 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
                 let book = master_bookmark();
-                let bcs = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("data")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("file", "data")
+                    .commit()
+                    .await?;
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                         .compat()
@@ -2325,16 +2245,10 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
 
-                let bcs = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"Dir1/file_1_in_dir1" => Some("data")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("Dir1/file_1_in_dir1", "data")
+                    .commit()
+                    .await?;
 
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
@@ -2457,12 +2371,10 @@ mod tests {
                     /* copy_from */ None,
                 );
 
-                let bcs = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    btreemap! {path_1.clone() => Some(file_1_exec.clone())},
-                );
+                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file_change(path_1.to_string(), file_1_exec.clone())
+                    .commit()
+                    .await?;
 
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
@@ -2587,16 +2499,10 @@ mod tests {
                 let mut futs = vec![];
                 for i in 0..num_pushes {
                     let f = format!("file{}", i);
-                    let bcs_id = create_commit(
-                        ctx.clone(),
-                        repo.clone(),
-                        parents.clone(),
-                        store_files(
-                            ctx.clone(),
-                            btreemap! { f.as_ref() => Some("content")},
-                            repo.clone(),
-                        ),
-                    );
+                    let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
+                        .add_file(&f, "content")
+                        .commit()
+                        .await?;
                     let hg_cs = repo
                         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                         .compat()
@@ -2662,16 +2568,10 @@ mod tests {
                     .ok_or(Error::msg("Root is missing"))?;
                 let parents = vec![p];
 
-                let bcs_id = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    parents,
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("content")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
 
                 let hg_cs = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
@@ -2719,16 +2619,10 @@ mod tests {
                 let mut futs = vec![];
                 for i in 0..num_pushes {
                     let f = format!("file{}", i);
-                    let bcs_id = create_commit(
-                        ctx.clone(),
-                        repo.clone(),
-                        parents.clone(),
-                        store_files(
-                            ctx.clone(),
-                            btreemap! { f.as_ref() => Some("content")},
-                            repo.clone(),
-                        ),
-                    );
+                    let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
+                        .add_file(&f, "content")
+                        .commit()
+                        .await?;
                     let hg_cs = repo
                         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                         .compat()
@@ -2790,16 +2684,10 @@ mod tests {
                     .ok_or(Error::msg("Root is missing"))?;
                 let parents = vec![p];
 
-                let bcs_id = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    parents,
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("content")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
                 let hg_cs = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                     .compat()
@@ -2854,18 +2742,11 @@ mod tests {
                 let parents = vec![p];
 
                 let tz_offset_secs = 100;
-                let bcs_id = create_commit_with_date(
-                    // TODO
-                    ctx.clone(),
-                    repo.clone(),
-                    parents,
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("content")},
-                        repo.clone(),
-                    ),
-                    DateTime::from_timestamp(0, 100)?,
-                );
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                    .add_file("file", "content")
+                    .set_author_date(DateTime::from_timestamp(0, 100)?)
+                    .commit()
+                    .await?;
                 let hg_cs = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                     .compat()
@@ -2932,26 +2813,14 @@ mod tests {
                     .await?
                     .ok_or(Error::msg("Root is missing"))?;
 
-                let bcs_id_0 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    Vec::new(),
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"merge_file" => Some("merge content")},
-                        repo.clone(),
-                    ),
-                );
-                let bcs_id_1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_0, root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"file" => Some("content")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_0 = CreateCommitContext::new_root(&ctx, &repo)
+                    .add_file("merge_file", "merge content")
+                    .commit()
+                    .await?;
+                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_0, root])
+                    .add_file("file", "content")
+                    .commit()
+                    .await?;
                 let hgcss = hashset![
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0)
                         .compat()
@@ -3003,38 +2872,20 @@ mod tests {
                 let ctx = CoreContext::test_mock(fb);
                 let repo = blobrepo_factory::new_memblob_empty(None)?;
 
-                let p1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"p1" => Some("some content")},
-                        repo.clone(),
-                    ),
-                );
+                let p1 = CreateCommitContext::new_root(&ctx, &repo)
+                    .add_file("p1", "some content")
+                    .commit()
+                    .await?;
 
-                let p2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"p2" => Some("some content")},
-                        repo.clone(),
-                    ),
-                );
+                let p2 = CreateCommitContext::new_root(&ctx, &repo)
+                    .add_file("p2", "some content")
+                    .commit()
+                    .await?;
 
-                let merge = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![p1, p2],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"merge" => Some("some content")},
-                        repo.clone(),
-                    ),
-                );
+                let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+                    .add_file("merge", "some content")
+                    .commit()
+                    .await?;
 
                 let book = master_bookmark();
 
@@ -3120,27 +2971,15 @@ mod tests {
                     .ok_or(Error::msg("Root is missing"))?;
 
                 // Modifies the same file "branch" - pushrebase should fail because of conflicts
-                let bcs_id_should_fail = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"branch" => Some("some content")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_should_fail = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("branch", "some content")
+                    .commit()
+                    .await?;
 
-                let bcs_id_should_succeed = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![root],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"randomfile" => Some("some content")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_should_succeed = CreateCommitContext::new(&ctx, &repo, vec![root])
+                    .add_file("randomfile", "some content")
+                    .commit()
+                    .await?;
 
                 let book = master_bookmark();
 
@@ -3194,64 +3033,38 @@ mod tests {
 
                 // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
                 // on top of master
-                let bcs_id_base = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"base" => Some("base")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+                    .add_file("base", "base")
+                    .commit()
+                    .await?;
 
-                let bcs_id_p1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_base],
-                    store_files(ctx.clone(), btreemap! {"p1" => Some("p1")}, repo.clone()),
-                );
+                let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                    .add_file("p1", "p1")
+                    .commit()
+                    .await?;
 
-                let bcs_id_p2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_base],
-                    store_files(ctx.clone(), btreemap! {"p2" => Some("p2")}, repo.clone()),
-                );
+                let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                    .add_file("p2", "p2")
+                    .commit()
+                    .await?;
 
-                let bcs_id_first_merge = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_p1, bcs_id_p2],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"merge" => Some("merge")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_first_merge =
+                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+                        .add_file("merge", "merge")
+                        .commit()
+                        .await?;
 
-                let bcs_id_second_merge = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_first_merge, bcs_id_p2],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"merge2" => Some("merge")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_second_merge =
+                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_first_merge, bcs_id_p2])
+                        .add_file("merge2", "merge")
+                        .commit()
+                        .await?;
 
                 // Modify base file again
-                let bcs_id_master = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_p1],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"base" => Some("base2")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+                    .add_file("base", "base2")
+                    .commit()
+                    .await?;
 
                 let hg_cs = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
@@ -3325,53 +3138,33 @@ mod tests {
 
                 // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
                 // on top of master
-                let bcs_id_base = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"base" => Some("base")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+                    .add_file("base", "base")
+                    .commit()
+                    .await?;
 
-                let bcs_id_p1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_base],
-                    store_files(ctx.clone(), btreemap! {"p1" => Some("p1")}, repo.clone()),
-                );
+                let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                    .add_file("p1", "p1")
+                    .commit()
+                    .await?;
 
-                let bcs_id_p2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_base],
-                    store_files(ctx.clone(), btreemap! {"p2" => Some("p2")}, repo.clone()),
-                );
+                let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                    .add_file("p2", "p2")
+                    .commit()
+                    .await?;
 
-                let bcs_id_merge = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_p1, bcs_id_p2],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"merge" => Some("merge")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_merge =
+                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+                        .add_file("merge", "merge")
+                        .commit()
+                        .await?;
 
                 // Modify base file again
-                let bcs_id_master = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_p1],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"base" => None, "anotherfile" => Some("anotherfile")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+                    .delete_file("base")
+                    .add_file("anotherfile", "anotherfile")
+                    .commit()
+                    .await?;
 
                 let hg_cs = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
@@ -3441,78 +3234,48 @@ mod tests {
 
                 // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
                 // on top of master
-                let bcs_id_base = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"base" => Some("base")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+                    .add_file("base", "base")
+                    .commit()
+                    .await?;
 
-                let bcs_id_p1 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_base],
-                    store_files(ctx.clone(), btreemap! {"p1" => Some("p1")}, repo.clone()),
-                );
+                let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                    .add_file("p1", "p1")
+                    .commit()
+                    .await?;
 
-                let bcs_id_p2 = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_base],
-                    store_files(ctx.clone(), btreemap! {"p2" => Some("p2")}, repo.clone()),
-                );
+                let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                    .add_file("p2", "p2")
+                    .commit()
+                    .await?;
 
-                let bcs_id_merge = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_p1, bcs_id_p2],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"merge" => Some("merge")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_merge =
+                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+                        .add_file("merge", "merge")
+                        .commit()
+                        .await?;
 
-                let removal: BTreeMap<&str, Option<&str>> = btreemap! {"base" => None};
                 // Remove base file
-                let bcs_id_pre_pre_master = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_p1],
-                    store_files(ctx.clone(), removal, repo.clone()),
-                );
+                let bcs_id_pre_pre_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+                    .delete_file("base")
+                    .commit()
+                    .await?;
 
                 // Move to base file
-                let (path, rename) = store_rename(
-                    ctx.clone(),
-                    (MPath::new("p1")?, bcs_id_pre_pre_master),
-                    "base",
-                    "somecontent",
-                    repo.clone(),
-                );
-                let bcs_id_pre_master = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_pre_pre_master],
-                    btreemap! {
-                        path => rename,
-                    },
-                );
+                let bcs_id_pre_master =
+                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_pre_master])
+                        .add_file_with_copy_info(
+                            "base",
+                            "somecontent",
+                            (bcs_id_pre_pre_master, "p1"),
+                        )?
+                        .commit()
+                        .await?;
 
-                let bcs_id_master = create_commit(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![bcs_id_pre_master],
-                    store_files(
-                        ctx.clone(),
-                        btreemap! {"somefile" => Some("somecontent")},
-                        repo.clone(),
-                    ),
-                );
+                let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_master])
+                    .add_file("somefile", "somecontent")
+                    .commit()
+                    .await?;
 
                 let hg_cs = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
