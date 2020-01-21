@@ -20,7 +20,6 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
-#include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
@@ -34,28 +33,26 @@ using std::string;
 namespace facebook {
 namespace eden {
 
-LocalStore::LocalStore() noexcept {}
-
 void LocalStore::clearCachesAndCompactAll() {
-  for (auto ks : kKeySpaceRecords) {
-    if (ks.persistence == Persistence::Ephemeral) {
-      clearKeySpace(ks.keySpace);
+  for (auto& ks : KeySpace::kAll) {
+    if (ks->persistence == Persistence::Ephemeral) {
+      clearKeySpace(ks);
     }
-    compactKeySpace(ks.keySpace);
+    compactKeySpace(ks);
   }
 }
 
 void LocalStore::clearCaches() {
-  for (auto ks : kKeySpaceRecords) {
-    if (ks.persistence == Persistence::Ephemeral) {
-      clearKeySpace(ks.keySpace);
+  for (auto& ks : KeySpace::kAll) {
+    if (ks->persistence == Persistence::Ephemeral) {
+      clearKeySpace(ks);
     }
   }
 }
 
 void LocalStore::compactStorage() {
-  for (auto ks : kKeySpaceRecords) {
-    compactKeySpace(ks.keySpace);
+  for (auto& ks : KeySpace::kAll) {
+    compactKeySpace(ks);
   }
 }
 
@@ -181,9 +178,7 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
   auto hashBytes = id.getBytes();
   SerializedBlobMetadata metadataBytes(metadata);
 
-  put(LocalStore::KeySpace::BlobMetaDataFamily,
-      hashBytes,
-      metadataBytes.slice());
+  put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
 
   return metadata;
 }
@@ -195,14 +190,14 @@ BlobMetadata LocalStore::getMetadataFromBlob(const Blob* blob) {
 }
 
 void LocalStore::put(
-    LocalStore::KeySpace keySpace,
+    KeySpace keySpace,
     const Hash& id,
     folly::ByteRange value) {
   put(keySpace, id.getBytes(), value);
 }
 
 void LocalStore::WriteBatch::put(
-    LocalStore::KeySpace keySpace,
+    KeySpace keySpace,
     const Hash& id,
     folly::ByteRange value) {
   put(keySpace, id.getBytes(), value);
@@ -229,11 +224,10 @@ void LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
     cursor.skip(bytes.size());
   }
 
-  put(LocalStore::KeySpace::BlobFamily, hashSlice, bodySlices);
+  put(KeySpace::BlobFamily, hashSlice, bodySlices);
 }
 
 LocalStore::WriteBatch::~WriteBatch() {}
-LocalStore::~LocalStore() {}
 
 void LocalStore::periodicManagementTask(const EdenConfig& /* config */) {
   // Individual store subclasses can provide their own implementations for

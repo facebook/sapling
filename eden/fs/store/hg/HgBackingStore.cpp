@@ -57,7 +57,6 @@ using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
 using std::unique_ptr;
-using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 DEFINE_int32(
     num_hg_import_threads,

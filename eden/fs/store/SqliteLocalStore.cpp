@@ -12,7 +12,6 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/sqlite/Sqlite.h"
-#include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/StoreResult.h"
 
 namespace facebook {
@@ -38,19 +37,16 @@ namespace {
 class SqliteWriteBatch : public LocalStore::WriteBatch {
  public:
   explicit SqliteWriteBatch(SqliteDatabase& db) : db_(db) {
-    buffer_.resize(LocalStore::KeySpace::End);
+    buffer_.resize(KeySpace::kTotalCount);
   }
 
-  void put(LocalStore::KeySpace keySpace, ByteRange key, ByteRange value)
-      override {
-    buffer_[keySpace].emplace_back(
+  void put(KeySpace keySpace, ByteRange key, ByteRange value) override {
+    buffer_[keySpace->index].emplace_back(
         StringPiece(key).str(), StringPiece(value).str());
   }
 
-  void put(
-      LocalStore::KeySpace keySpace,
-      ByteRange key,
-      std::vector<ByteRange> valueSlices) override {
+  void put(KeySpace keySpace, ByteRange key, std::vector<ByteRange> valueSlices)
+      override {
     string value;
     for (auto& slice : valueSlices) {
       value.append(reinterpret_cast<const char*>(slice.data()), slice.size());
@@ -75,7 +71,7 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
         SqliteStatement stmt(
             db,
             "insert or ignore into ",
-            kKeySpaceRecords[i].name,
+            KeySpace::kAll[i]->name,
             " VALUES(?, ?)");
 
         for (const auto& item : items) {
@@ -113,11 +109,11 @@ SqliteLocalStore::SqliteLocalStore(AbsolutePathPiece pathToDb)
   // https://www.sqlite.org/wal.html
   SqliteStatement(db, "PRAGMA journal_mode=WAL").step();
 
-  for (const auto& ks : kKeySpaceRecords) {
+  for (const auto& ks : KeySpace::kAll) {
     SqliteStatement(
         db,
         "CREATE TABLE IF NOT EXISTS ",
-        ks.name,
+        ks->name,
         "(",
         "key BINARY NOT NULL,",
         "value BINARY NOT NULL,"
@@ -134,21 +130,17 @@ void SqliteLocalStore::close() {
 void SqliteLocalStore::clearKeySpace(KeySpace keySpace) {
   auto db = db_.lock();
 
-  SqliteStatement stmt(db, "delete from ", kKeySpaceRecords[keySpace].name);
+  SqliteStatement stmt(db, "delete from ", keySpace->name);
   stmt.step();
 }
 
 void SqliteLocalStore::compactKeySpace(KeySpace) {}
 
-StoreResult SqliteLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
-    const {
+StoreResult SqliteLocalStore::get(KeySpace keySpace, ByteRange key) const {
   auto db = db_.lock();
 
   SqliteStatement stmt(
-      db,
-      "select value from ",
-      kKeySpaceRecords[keySpace].name,
-      " where key = ?");
+      db, "select value from ", keySpace->name, " where key = ?");
 
   // Bind the key; parameters are 1-based
   stmt.bind(1, key);
@@ -162,21 +154,16 @@ StoreResult SqliteLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
   return StoreResult();
 }
 
-bool SqliteLocalStore::hasKey(LocalStore::KeySpace keySpace, ByteRange key)
-    const {
+bool SqliteLocalStore::hasKey(KeySpace keySpace, ByteRange key) const {
   auto db = db_.lock();
 
-  SqliteStatement stmt(
-      db, "select 1 from ", kKeySpaceRecords[keySpace].name, " where key = ?");
+  SqliteStatement stmt(db, "select 1 from ", keySpace->name, " where key = ?");
 
   stmt.bind(1, key);
   return stmt.step();
 }
 
-void SqliteLocalStore::put(
-    LocalStore::KeySpace keySpace,
-    ByteRange key,
-    ByteRange value) {
+void SqliteLocalStore::put(KeySpace keySpace, ByteRange key, ByteRange value) {
   auto db = db_.lock();
 
   SqliteStatement stmt(
@@ -185,7 +172,7 @@ void SqliteLocalStore::put(
       // when running our integration tests.  This implies that we're
       // over-fetching and that we have a perf improvement opportunity.
       "insert or ignore into ",
-      kKeySpaceRecords[keySpace].name,
+      keySpace->name,
       " VALUES(?, ?)");
 
   stmt.bind(1, key);

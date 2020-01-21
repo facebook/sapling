@@ -71,7 +71,7 @@ TEST_F(
       tree1->getEntryNames(),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
-  localStore->clearKeySpace(LocalStore::TreeFamily);
+  localStore->clearKeySpace(KeySpace::TreeFamily);
   auto tree2 = objectStore->getTreeForCommit(commit1).get(0ms);
   EXPECT_TRUE(tree2);
   ASSERT_THAT(

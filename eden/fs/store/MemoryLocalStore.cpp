@@ -17,18 +17,16 @@ namespace {
 class MemoryWriteBatch : public LocalStore::WriteBatch {
  public:
   explicit MemoryWriteBatch(MemoryLocalStore* store) : store_(store) {
-    storage_.resize(LocalStore::KeySpace::End);
+    storage_.resize(KeySpace::kTotalCount);
+  }
+
+  void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value)
+      override {
+    storage_[keySpace->index][StringPiece(key)] = StringPiece(value).str();
   }
 
   void put(
-      LocalStore::KeySpace keySpace,
-      folly::ByteRange key,
-      folly::ByteRange value) override {
-    storage_[keySpace][StringPiece(key)] = StringPiece(value).str();
-  }
-
-  void put(
-      LocalStore::KeySpace keySpace,
+      KeySpace keySpace,
       folly::ByteRange key,
       std::vector<folly::ByteRange> valueSlices) override {
     std::string value;
@@ -39,14 +37,11 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
   }
 
   void flush() override {
-    for (size_t keySpace = 0; keySpace < storage_.size(); ++keySpace) {
-      for (const auto& it : storage_[keySpace]) {
-        store_->put(
-            static_cast<LocalStore::KeySpace>(keySpace),
-            folly::StringPiece(it.first),
-            StringPiece(it.second));
+    for (auto& ks : KeySpace::kAll) {
+      for (const auto& it : storage_[ks->index]) {
+        store_->put(ks, folly::StringPiece(it.first), StringPiece(it.second));
       }
-      storage_[keySpace].clear();
+      storage_[ks->index].clear();
     }
   }
 
@@ -57,41 +52,39 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
 } // namespace
 
 MemoryLocalStore::MemoryLocalStore() {
-  storage_.wlock()->resize(KeySpace::End);
+  storage_.wlock()->resize(KeySpace::kTotalCount);
 }
 
 void MemoryLocalStore::close() {}
 
 void MemoryLocalStore::clearKeySpace(KeySpace keySpace) {
-  (*storage_.wlock())[keySpace].clear();
+  (*storage_.wlock())[keySpace->index].clear();
 }
 
 void MemoryLocalStore::compactKeySpace(KeySpace) {}
 
-StoreResult MemoryLocalStore::get(
-    LocalStore::KeySpace keySpace,
-    folly::ByteRange key) const {
+StoreResult MemoryLocalStore::get(KeySpace keySpace, folly::ByteRange key)
+    const {
   auto store = storage_.rlock();
-  auto it = (*store)[keySpace].find(StringPiece(key));
-  if (it == (*store)[keySpace].end()) {
+  auto it = (*store)[keySpace->index].find(StringPiece(key));
+  if (it == (*store)[keySpace->index].end()) {
     return StoreResult();
   }
   return StoreResult(std::string(it->second));
 }
 
-bool MemoryLocalStore::hasKey(
-    LocalStore::KeySpace keySpace,
-    folly::ByteRange key) const {
+bool MemoryLocalStore::hasKey(KeySpace keySpace, folly::ByteRange key) const {
   auto store = storage_.rlock();
-  auto it = (*store)[keySpace].find(StringPiece(key));
-  return it != (*store)[keySpace].end();
+  auto it = (*store)[keySpace->index].find(StringPiece(key));
+  return it != (*store)[keySpace->index].end();
 }
 
 void MemoryLocalStore::put(
-    LocalStore::KeySpace keySpace,
+    KeySpace keySpace,
     folly::ByteRange key,
     folly::ByteRange value) {
-  (*storage_.wlock())[keySpace][StringPiece(key)] = StringPiece(value).str();
+  (*storage_.wlock())[keySpace->index][StringPiece(key)] =
+      StringPiece(value).str();
 }
 
 std::unique_ptr<LocalStore::WriteBatch> MemoryLocalStore::beginWrite(size_t) {

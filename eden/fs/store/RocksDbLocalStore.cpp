@@ -13,7 +13,6 @@
 #include <fb303/ServiceData.h>
 #include <folly/Format.h>
 #include <folly/String.h>
-#include <folly/container/Enumerate.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -27,7 +26,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
-#include "eden/fs/store/KeySpaces.h"
+#include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -58,7 +57,7 @@ rocksdb::ColumnFamilyOptions makeColumnOptions(uint64_t LRUblockCacheSizeMB) {
 
 /**
  * The different key spaces that we desire.
- * The ordering is coupled with the values of the LocalStore::KeySpace enum.
+ * The ordering is coupled with the values of the KeySpace enum.
  */
 const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
   auto makeColumnFamilyDescriptors = [] {
@@ -71,10 +70,10 @@ const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
 
     // Meyers singleton to avoid SIOF issues
     std::vector<rocksdb::ColumnFamilyDescriptor> families;
-    for (size_t ks = 0; ks < kKeySpaceRecords.size(); ++ks) {
+    for (auto& ks : KeySpace::kAll) {
       families.emplace_back(
-          kKeySpaceRecords[ks].name.str(),
-          (ks == LocalStore::BlobFamily) ? blobOptions : options);
+          ks->name.str(),
+          (ks->index == KeySpace::BlobFamily.index) ? blobOptions : options);
     }
     // Put the default column family last.
     // This way the KeySpace enum values can be used directly as indexes
@@ -113,12 +112,10 @@ rocksdb::Slice _createSlice(folly::ByteRange bytes) {
 
 class RocksDbWriteBatch : public LocalStore::WriteBatch {
  public:
+  void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value)
+      override;
   void put(
-      LocalStore::KeySpace keySpace,
-      folly::ByteRange key,
-      folly::ByteRange value) override;
-  void put(
-      LocalStore::KeySpace keySpace,
+      KeySpace keySpace,
       folly::ByteRange key,
       std::vector<folly::ByteRange> valueSlices) override;
   void flush() override;
@@ -179,11 +176,11 @@ RocksDbWriteBatch::~RocksDbWriteBatch() {
 }
 
 void RocksDbWriteBatch::put(
-    LocalStore::KeySpace keySpace,
+    KeySpace keySpace,
     folly::ByteRange key,
     folly::ByteRange value) {
   writeBatch_.Put(
-      lockedDB_->columns[keySpace].get(),
+      lockedDB_->columns[keySpace->index].get(),
       _createSlice(key),
       _createSlice(value));
 
@@ -191,7 +188,7 @@ void RocksDbWriteBatch::put(
 }
 
 void RocksDbWriteBatch::put(
-    LocalStore::KeySpace keySpace,
+    KeySpace keySpace,
     folly::ByteRange key,
     std::vector<folly::ByteRange> valueSlices) {
   std::vector<Slice> slices;
@@ -203,7 +200,7 @@ void RocksDbWriteBatch::put(
   auto keySlice = _createSlice(key);
   SliceParts keyParts(&keySlice, 1);
   writeBatch_.Put(
-      lockedDB_->columns[keySpace].get(),
+      lockedDB_->columns[keySpace->index].get(),
       keyParts,
       SliceParts(slices.data(), slices.size()));
 
@@ -293,7 +290,7 @@ void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
 
 void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   auto handles = getHandles();
-  auto columnFamily = handles->columns[keySpace].get();
+  auto columnFamily = handles->columns[keySpace->index].get();
   std::unique_ptr<rocksdb::Iterator> it{
       handles->db->NewIterator(ReadOptions(), columnFamily)};
   XLOG(DBG2) << "clearing column family \"" << columnFamily->GetName() << "\"";
@@ -332,7 +329,7 @@ void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
   auto handles = getHandles();
   auto options = rocksdb::CompactRangeOptions{};
   options.allow_write_stall = true;
-  auto columnFamily = handles->columns[keySpace].get();
+  auto columnFamily = handles->columns[keySpace->index].get();
   XLOG(DBG2) << "compacting column family \"" << columnFamily->GetName()
              << "\"";
   auto status = handles->db->CompactRange(
@@ -346,13 +343,12 @@ void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
   }
 }
 
-StoreResult RocksDbLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
-    const {
+StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
   auto handles = getHandles();
   string value;
   auto status = handles->db->Get(
       ReadOptions(),
-      handles->columns[keySpace].get(),
+      handles->columns[keySpace->index].get(),
       _createSlice(key),
       &value);
   if (!status.ok()) {
@@ -425,7 +421,7 @@ RocksDbLocalStore::getBatch(
               std::vector<rocksdb::ColumnFamilyHandle*> columns;
               for (auto& key : *keys) {
                 keySlices.emplace_back(key);
-                columns.emplace_back(handles->columns[keySpace].get());
+                columns.emplace_back(handles->columns[keySpace->index].get());
               }
               auto statuses = handles->db->MultiGet(
                   ReadOptions(), columns, keySlices, &values);
@@ -472,14 +468,12 @@ RocksDbLocalStore::getBatch(
       });
 }
 
-bool RocksDbLocalStore::hasKey(
-    LocalStore::KeySpace keySpace,
-    folly::ByteRange key) const {
+bool RocksDbLocalStore::hasKey(KeySpace keySpace, folly::ByteRange key) const {
   string value;
   auto handles = getHandles();
   auto status = handles->db->Get(
       ReadOptions(),
-      handles->columns[keySpace].get(),
+      handles->columns[keySpace->index].get(),
       _createSlice(key),
       &value);
   if (!status.ok()) {
@@ -504,19 +498,18 @@ std::unique_ptr<LocalStore::WriteBatch> RocksDbLocalStore::beginWrite(
 }
 
 void RocksDbLocalStore::put(
-    LocalStore::KeySpace keySpace,
+    KeySpace keySpace,
     folly::ByteRange key,
     folly::ByteRange value) {
   auto handles = getHandles();
   handles->db->Put(
       WriteOptions(),
-      handles->columns[keySpace].get(),
+      handles->columns[keySpace->index].get(),
       _createSlice(key),
       _createSlice(value));
 }
 
-uint64_t RocksDbLocalStore::getApproximateSize(
-    LocalStore::KeySpace keySpace) const {
+uint64_t RocksDbLocalStore::getApproximateSize(KeySpace keySpace) const {
   auto handles = getHandles();
   uint64_t size = 0;
 
@@ -527,14 +520,14 @@ uint64_t RocksDbLocalStore::getApproximateSize(
   // report that.
   uint64_t sstFilesSize;
   auto result = handles->db->GetIntProperty(
-      handles->columns[keySpace].get(),
+      handles->columns[keySpace->index].get(),
       rocksdb::DB::Properties::kLiveSstFilesSize,
       &sstFilesSize);
   if (result) {
     size += sstFilesSize;
   } else {
     XLOG(WARN) << "unable to retrieve SST file size from RocksDB for key space "
-               << handles->columns[keySpace]->GetName();
+               << handles->columns[keySpace->index]->GetName();
   }
 
   // kSizeAllMemTables reports the size of the memtables.
@@ -548,14 +541,14 @@ uint64_t RocksDbLocalStore::getApproximateSize(
   // having no uncompacted on-disk data.
   uint64_t memtableSize;
   result = handles->db->GetIntProperty(
-      handles->columns[keySpace].get(),
+      handles->columns[keySpace->index].get(),
       rocksdb::DB::Properties::kSizeAllMemTables,
       &memtableSize);
   if (result) {
     size += memtableSize;
   } else {
     XLOG(WARN) << "unable to retrieve memtable size from RocksDB for key space "
-               << handles->columns[keySpace]->GetName();
+               << handles->columns[keySpace->index]->GetName();
   }
 
   return size;
@@ -581,14 +574,13 @@ void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
 
 RocksDbLocalStore::SizeSummary RocksDbLocalStore::computeStats(bool publish) {
   SizeSummary result;
-  for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
-    auto size =
-        getApproximateSize(static_cast<LocalStore::KeySpace>(iter.index));
+  for (const auto& ks : KeySpace::kAll) {
+    auto size = getApproximateSize(ks);
     if (publish) {
       fb303::fbData->setCounter(
-          folly::to<string>(statsPrefix_, iter->name, ".size"), size);
+          folly::to<string>(statsPrefix_, ks->name, ".size"), size);
     }
-    if (iter->persistence == Persistence::Ephemeral) {
+    if (ks->persistence == Persistence::Ephemeral) {
       result.ephemeral += size;
     } else {
       result.persistent += size;

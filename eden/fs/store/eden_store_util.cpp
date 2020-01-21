@@ -23,7 +23,7 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenStateDir.h"
-#include "eden/fs/store/KeySpaces.h"
+#include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -40,22 +40,16 @@ DEFINE_string(keySpace, "", "operate on just a single key space");
 
 namespace {
 
-LocalStore::KeySpace stringToKeySpace(StringPiece name) {
-  if (name == "blob") {
-    return LocalStore::BlobFamily;
-  } else if (name == "blobmeta") {
-    return LocalStore::BlobMetaDataFamily;
-  } else if (name == "tree") {
-    return LocalStore::TreeFamily;
-  } else if (name == "hgproxyhash") {
-    return LocalStore::HgProxyHashFamily;
-  } else if (name == "hgcommit2tree") {
-    return LocalStore::HgCommitToTreeFamily;
+KeySpace stringToKeySpace(StringPiece name) {
+  for (auto& ks : KeySpace::kAll) {
+    if (name == ks->name) {
+      return ks;
+    }
   }
   throw ArgumentError("unknown key space \"", name, "\"");
 }
 
-optional<LocalStore::KeySpace> getKeySpace() {
+optional<KeySpace> getKeySpace() {
   if (FLAGS_keySpace.empty()) {
     return std::nullopt;
   }
@@ -201,11 +195,10 @@ class ShowSizesCommand : public Command {
   void run() override {
     auto localStore = openLocalStore(RocksDBOpenMode::ReadOnly);
 
-    for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
-      LOG(INFO) << "Column family \"" << iter->name << "\": "
+    for (const auto& ks : KeySpace::kAll) {
+      LOG(INFO) << "Column family \"" << ks->name << "\": "
                 << folly::prettyPrint(
-                       localStore->getApproximateSize(
-                           static_cast<LocalStore::KeySpace>(iter.index)),
+                       localStore->getApproximateSize(ks),
                        folly::PRETTY_BYTES_METRIC);
     }
   }

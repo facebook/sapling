@@ -21,7 +21,6 @@ using folly::IOBuf;
 using folly::StringPiece;
 using folly::io::Appender;
 using std::string;
-using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 namespace facebook {
 namespace eden {

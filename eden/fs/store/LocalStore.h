@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/store/KeySpace.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -47,36 +48,8 @@ class Tree;
  */
 class LocalStore : public std::enable_shared_from_this<LocalStore> {
  public:
-  virtual ~LocalStore();
-  explicit LocalStore() noexcept;
-
-  /**
-   * Which key space (and thus column family for the RocksDbLocalStore)
-   * should be used to store a specific key.  The values of these are
-   * coupled to the ordering of the columnFamilies descriptor in
-   * RocksDbLocalStore.cpp and tableNames in SqliteLocalStore.cpp */
-  enum KeySpace : uint8_t {
-    BlobFamily = 0,
-    BlobMetaDataFamily = 1,
-    TreeFamily = 2,
-    HgProxyHashFamily = 3,
-    HgCommitToTreeFamily = 4,
-    // TODO: Clear this keyspace at startup.
-    BlobSizeFamily = 5,
-
-    End, // must be last!
-  };
-
-  enum class Persistence : bool {
-    Ephemeral = false,
-    Persistent = true,
-  };
-
-  struct KeySpaceRecord {
-    LocalStore::KeySpace keySpace;
-    Persistence persistence;
-    folly::StringPiece name;
-  };
+  LocalStore() = default;
+  virtual ~LocalStore() = default;
 
   /**
    * Close the underlying store.

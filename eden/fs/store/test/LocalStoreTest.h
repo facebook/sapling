@@ -42,7 +42,6 @@ class LocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
   std::unique_ptr<LocalStore> store_;
 
   using StringPiece = folly::StringPiece;
-  using KeySpace = LocalStore::KeySpace;
 };
 
 } // namespace eden

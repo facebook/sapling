@@ -25,14 +25,10 @@ class MemoryLocalStore : public LocalStore {
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;
-  StoreResult get(LocalStore::KeySpace keySpace, folly::ByteRange key)
-      const override;
-  bool hasKey(LocalStore::KeySpace keySpace, folly::ByteRange key)
-      const override;
-  void put(
-      LocalStore::KeySpace keySpace,
-      folly::ByteRange key,
-      folly::ByteRange value) override;
+  StoreResult get(KeySpace keySpace, folly::ByteRange key) const override;
+  bool hasKey(KeySpace keySpace, folly::ByteRange key) const override;
+  void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value)
+      override;
   std::unique_ptr<LocalStore::WriteBatch> beginWrite(
       size_t bufSize = 0) override;
 

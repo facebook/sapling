@@ -37,20 +37,16 @@ class RocksDbLocalStore : public LocalStore {
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;
-  StoreResult get(LocalStore::KeySpace keySpace, folly::ByteRange key)
-      const override;
+  StoreResult get(KeySpace keySpace, folly::ByteRange key) const override;
   FOLLY_NODISCARD folly::Future<StoreResult> getFuture(
       KeySpace keySpace,
       folly::ByteRange key) const override;
   FOLLY_NODISCARD folly::Future<std::vector<StoreResult>> getBatch(
       KeySpace keySpace,
       const std::vector<folly::ByteRange>& keys) const override;
-  bool hasKey(LocalStore::KeySpace keySpace, folly::ByteRange key)
-      const override;
-  void put(
-      LocalStore::KeySpace keySpace,
-      folly::ByteRange key,
-      folly::ByteRange value) override;
+  bool hasKey(KeySpace keySpace, folly::ByteRange key) const override;
+  void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value)
+      override;
   std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) override;
 
   // Call RocksDB's RepairDB() function on the DB at the specified location
