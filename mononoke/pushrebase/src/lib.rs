@@ -291,6 +291,8 @@ pub fn do_pushrebase_bonsai(
                                 client_bcs,
                                 maybe_hg_replay_data,
                             )
+                            .boxed()
+                            .compat()
                             // If commits weren't pushrebased, then we need to backfill
                             // filenodes for them as well. That's quite a rare case, and most likely
                             // it happens only in tests. Note also since we backfill after "onto"
@@ -384,7 +386,7 @@ fn backfill_filenodes<'a>(
         .boxify()
 }
 
-fn rebase_in_loop(
+async fn rebase_in_loop(
     ctx: CoreContext,
     repo: BlobRepo,
     config: PushrebaseParams,
@@ -394,90 +396,69 @@ fn rebase_in_loop(
     client_cf: Vec<MPath>,
     client_bcs: Vec<BonsaiChangeset>,
     maybe_hg_replay_data: Option<HgReplayData>,
-) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
-    loop_fn(
-        (root.clone(), 0),
-        move |(latest_rebase_attempt, retry_num)| {
-            get_onto_bookmark_value(ctx.clone(), &repo, onto_bookmark.clone()).and_then({
-                cloned!(
-                    ctx,
-                    client_cf,
-                    client_bcs,
-                    maybe_hg_replay_data,
-                    onto_bookmark,
-                    repo,
-                    config
-                );
-                move |bookmark_val| {
-                    fetch_bonsai_range(
-                        ctx.clone(),
-                        &repo,
-                        latest_rebase_attempt,
-                        bookmark_val.unwrap_or(root),
-                    )
-                    .and_then({
-                        let casefolding_check = config.casefolding_check;
-                        move |server_bcs| {
-                            if casefolding_check {
-                                match check_case_conflicts(
-                                    server_bcs.iter().rev().chain(client_bcs.iter().rev()),
-                                ) {
-                                    Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
-                                    None => Ok(()),
-                                }
-                            } else {
-                                Ok(())
-                            }
-                        }
-                    })
-                    .and_then({
-                        cloned!(ctx, repo);
-                        move |()| {
-                            find_changed_files(
-                                ctx.clone(),
-                                &repo,
-                                latest_rebase_attempt.clone(),
-                                bookmark_val.unwrap_or(root),
-                            )
-                        }
-                    })
-                    .and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
-                    .and_then(move |()| {
-                        do_rebase(
-                            ctx.clone(),
-                            repo,
-                            config,
-                            root.clone(),
-                            head,
-                            bookmark_val,
-                            onto_bookmark,
-                            maybe_hg_replay_data.clone(),
-                        )
-                        .and_then(move |update_res| match update_res {
-                            Some((head, rebased_changesets)) => {
-                                ok(Loop::Break(PushrebaseSuccessResult {
-                                    head,
-                                    retry_num,
-                                    rebased_changesets,
-                                }))
-                            }
-                            None => {
-                                if retry_num < MAX_REBASE_ATTEMPTS {
-                                    ok(Loop::Continue((
-                                        bookmark_val.unwrap_or(root),
-                                        retry_num + 1,
-                                    )))
-                                } else {
-                                    err(ErrorKind::TooManyRebaseAttempts.into())
-                                }
-                            }
-                        })
-                    })
-                }
-            })
-        },
-    )
-    .boxify()
+) -> Result<PushrebaseSuccessResult, PushrebaseError> {
+    let mut latest_rebase_attempt = root;
+
+    for retry_num in 0..MAX_REBASE_ATTEMPTS {
+        let bookmark_val = get_onto_bookmark_value(ctx.clone(), &repo, &onto_bookmark)
+            .compat()
+            .await?;
+
+        let server_bcs = fetch_bonsai_range(
+            ctx.clone(),
+            &repo,
+            latest_rebase_attempt,
+            bookmark_val.unwrap_or(root),
+        )
+        .compat()
+        .await?;
+
+        if config.casefolding_check {
+            let conflict =
+                check_case_conflicts(server_bcs.iter().rev().chain(client_bcs.iter().rev()));
+            if let Some(conflict) = conflict {
+                return Err(PushrebaseError::PotentialCaseConflict(conflict));
+            }
+        }
+
+        let server_cf = find_changed_files(
+            ctx.clone(),
+            &repo,
+            latest_rebase_attempt.clone(),
+            bookmark_val.unwrap_or(root),
+        )
+        .compat()
+        .await?;
+
+        // TODO: Avoid this clone
+        intersect_changed_files(server_cf, client_cf.clone())?;
+
+        let rebase_outcome = do_rebase(
+            ctx.clone(),
+            repo.clone(),
+            config.clone(),
+            root.clone(),
+            head,
+            bookmark_val,
+            onto_bookmark.clone(),
+            maybe_hg_replay_data.clone(),
+        )
+        .compat()
+        .await?;
+
+        if let Some((head, rebased_changesets)) = rebase_outcome {
+            let res = PushrebaseSuccessResult {
+                head,
+                retry_num,
+                rebased_changesets,
+            };
+            return Ok(res);
+        }
+
+        latest_rebase_attempt = bookmark_val.unwrap_or(root);
+    }
+
+    Err(ErrorKind::TooManyRebaseAttempts.into())
 }
 
 fn do_rebase(
@@ -876,7 +857,7 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
 fn get_onto_bookmark_value(
     ctx: CoreContext,
     repo: &BlobRepo,
-    onto_bookmark: OntoBookmarkParams,
+    onto_bookmark: &OntoBookmarkParams,
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
     get_bookmark_value(ctx.clone(), &repo, &onto_bookmark.bookmark).and_then(
         move |maybe_bookmark_value| match maybe_bookmark_value {
