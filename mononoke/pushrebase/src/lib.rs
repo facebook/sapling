@@ -434,16 +434,15 @@ async fn rebase_in_loop(
         intersect_changed_files(server_cf, client_cf.clone())?;
 
         let rebase_outcome = do_rebase(
-            ctx.clone(),
-            repo.clone(),
-            config.clone(),
-            root.clone(),
+            &ctx,
+            &repo,
+            &config,
+            root,
             head,
-            bookmark_val,
-            onto_bookmark.clone(),
+            &bookmark_val,
+            &onto_bookmark,
             maybe_hg_replay_data.clone(),
         )
-        .compat()
         .await?;
 
         if let Some((head, rebased_changesets)) = rebase_outcome {
@@ -461,18 +460,17 @@ async fn rebase_in_loop(
     Err(ErrorKind::TooManyRebaseAttempts.into())
 }
 
-fn do_rebase(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    config: PushrebaseParams,
+async fn do_rebase(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    config: &PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
-    bookmark_val: Option<ChangesetId>,
-    onto_bookmark: OntoBookmarkParams,
+    bookmark_val: &Option<ChangesetId>,
+    onto_bookmark: &OntoBookmarkParams,
     maybe_hg_replay_data: Option<HgReplayData>,
-) -> impl Future<Item = Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, Error = PushrebaseError>
-{
-    create_rebased_changesets(
+) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+    let (new_head, rebased_changesets) = create_rebased_changesets(
         ctx.clone(),
         repo.clone(),
         config,
@@ -480,29 +478,35 @@ fn do_rebase(
         head,
         bookmark_val.unwrap_or(root),
     )
-    .boxed()
-    .compat()
-    .and_then({
-        move |(new_head, rebased_changesets)| match bookmark_val {
-            Some(bookmark_val) => try_update_bookmark(
-                ctx,
+    .await?;
+
+    match bookmark_val {
+        Some(bookmark_val) => {
+            try_update_bookmark(
+                ctx.clone(),
                 &repo,
                 &onto_bookmark,
-                bookmark_val,
+                *bookmark_val,
                 new_head,
                 maybe_hg_replay_data,
                 rebased_changesets,
-            ),
-            None => try_create_bookmark(
-                ctx,
-                &repo,
-                &onto_bookmark,
-                new_head,
-                maybe_hg_replay_data,
-                rebased_changesets,
-            ),
+            )
+            .compat()
+            .await
         }
-    })
+        None => {
+            try_create_bookmark(
+                ctx.clone(),
+                &repo,
+                &onto_bookmark,
+                new_head,
+                maybe_hg_replay_data,
+                rebased_changesets,
+            )
+            .compat()
+            .await
+        }
+    }
 }
 
 // There should only be one head in the pushed set
@@ -878,7 +882,7 @@ fn get_bookmark_value(
 async fn create_rebased_changesets(
     ctx: CoreContext,
     repo: BlobRepo,
-    config: PushrebaseParams,
+    config: &PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
