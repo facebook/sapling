@@ -468,14 +468,13 @@ async fn do_rebase(
         }
         None => {
             try_create_bookmark(
-                ctx.clone(),
+                &ctx,
                 &repo,
                 &onto_bookmark,
                 new_head,
                 maybe_hg_replay_data,
                 rebased_changesets,
             )
-            .compat()
             .await
         }
     }
@@ -1230,51 +1229,42 @@ fn try_update_bookmark(
         .boxify()
 }
 
-fn try_create_bookmark(
-    ctx: CoreContext,
+async fn try_create_bookmark(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark: &OntoBookmarkParams,
     new_value: ChangesetId,
     maybe_hg_replay_data: Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
-) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let bookmark_name = &bookmark.bookmark;
     let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
-    let bookmark_update_reason =
-        create_bookmark_update_reason(maybe_hg_replay_data, rebased_changesets.clone());
+    let reason = create_bookmark_update_reason(maybe_hg_replay_data, rebased_changesets.clone())
+        .compat()
+        .await?;
 
-    bookmark_update_reason
-        .from_err()
-        .and_then({
-            cloned!(bookmark_name);
-            move |reason| {
-                try_boxfuture!(txn.create(&bookmark_name, new_value, reason));
-                let commit_fut = match maybe_sql_txn_factory {
-                    Some(sql_txn_factory) => {
-                        let factory = Arc::new({
-                            cloned!(rebased_changesets);
-                            move || sql_txn_factory(rebased_changesets.clone())
-                        });
-                        txn.commit_into_txn(factory).boxify()
-                    }
-                    None => txn.commit().boxify(),
-                };
+    txn.create(&bookmark_name, new_value, reason)?;
 
-                commit_fut
-                    .map(move |success| {
-                        if success {
-                            Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
-                        } else {
-                            None
-                        }
-                    })
-                    .from_err()
-                    .boxify()
-            }
-        })
-        .boxify()
+    let success = match maybe_sql_txn_factory {
+        Some(sql_txn_factory) => {
+            let factory = Arc::new({
+                cloned!(rebased_changesets);
+                move || sql_txn_factory(rebased_changesets.clone())
+            });
+            txn.commit_into_txn(factory).compat().await?
+        }
+        None => txn.commit().compat().await?,
+    };
+
+    let ret = if success {
+        Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
+    } else {
+        None
+    };
+
+    Ok(ret)
 }
 
 fn create_bookmark_update_reason(
