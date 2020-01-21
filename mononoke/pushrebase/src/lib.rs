@@ -60,7 +60,6 @@ use futures_preview::{
     future::{try_join, try_join_all},
 };
 use futures_util::{
-    future::FutureExt as _,
     future::TryFutureExt,
     stream::{StreamExt, TryStreamExt},
 };
@@ -240,93 +239,73 @@ impl OntoBookmarkParams {
 /// Does a pushrebase of a list of commits `pushed` onto `onto_bookmark`
 /// The commits from the pushed set should already be committed to the blobrepo
 /// Returns updated bookmark value.
-pub fn do_pushrebase_bonsai(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    config: PushrebaseParams,
-    onto_bookmark: OntoBookmarkParams,
-    pushed: HashSet<BonsaiChangeset>,
-    maybe_hg_replay_data: Option<HgReplayData>,
-) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
-    let head = find_only_head_or_fail(&pushed).into_future();
+pub async fn do_pushrebase_bonsai(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    config: &PushrebaseParams,
+    onto_bookmark: &OntoBookmarkParams,
+    pushed: &HashSet<BonsaiChangeset>,
+    maybe_hg_replay_data: &Option<HgReplayData>,
+) -> Result<PushrebaseSuccessResult, PushrebaseError> {
+    let head = find_only_head_or_fail(&pushed)?;
     let roots = find_roots(&pushed);
 
-    head.and_then(move |head| {
-        {
-            cloned!(ctx, repo, config, onto_bookmark);
-            async move { find_closest_root(&ctx, &repo, &config, &onto_bookmark, &roots).await }
-        }
-        .boxed()
-        .compat()
-        .map(move |root| (head, root))
-        .and_then({
-            cloned!(ctx, repo);
-            move |(head, root)| {
-                // Calculate client changed files only once, since they won't change
-                (
-                    find_changed_files(ctx.clone(), &repo, root, head),
-                    fetch_bonsai_range(ctx.clone(), &repo, root, head),
-                )
-                    .into_future()
-                    .and_then(move |(client_cf, client_bcs)| {
-                        backfill_filenodes(
-                            ctx.clone(),
-                            repo.clone(),
-                            pushed.into_iter().filter_map({
-                                cloned!(client_bcs);
-                                move |bcs| {
-                                    if !client_bcs.contains(&bcs) {
-                                        Some(bcs.get_changeset_id())
-                                    } else {
-                                        None
-                                    }
-                                }
-                            }),
-                        )
-                        .from_err()
-                        .and_then(move |()| {
-                            rebase_in_loop(
-                                ctx.clone(),
-                                repo.clone(),
-                                config,
-                                onto_bookmark,
-                                head,
-                                root,
-                                client_cf,
-                                client_bcs,
-                                maybe_hg_replay_data,
-                            )
-                            .boxed()
-                            .compat()
-                            // If commits weren't pushrebased, then we need to backfill
-                            // filenodes for them as well. That's quite a rare case, and most likely
-                            // it happens only in tests. Note also since we backfill after "onto"
-                            // bookmark was updated readers might already fetch commits with
-                            // missing filenodes.
-                            .and_then(move |res| {
-                                backfill_filenodes(
-                                    ctx.clone(),
-                                    repo,
-                                    res.rebased_changesets
-                                        .clone()
-                                        .into_iter()
-                                        .filter_map(|pair| {
-                                            if pair.id_old == pair.id_new {
-                                                Some(pair.id_old.clone())
-                                            } else {
-                                                None
-                                            }
-                                        })
-                                )
-                                .map(move |()| res)
-                                .from_err()
-                            })
-                        })
-                    })
+    let root = find_closest_root(&ctx, &repo, &config, &onto_bookmark, &roots).await?;
+
+    let (client_cf, client_bcs) = try_join(
+        find_changed_files(ctx.clone(), &repo, root, head).compat(),
+        fetch_bonsai_range(ctx.clone(), &repo, root, head).compat(),
+    )
+    .await?;
+
+    backfill_filenodes(
+        ctx.clone(),
+        repo.clone(),
+        pushed.into_iter().filter_map({
+            cloned!(client_bcs);
+            move |bcs| {
+                if !client_bcs.contains(&bcs) {
+                    Some(bcs.get_changeset_id())
+                } else {
+                    None
+                }
             }
-        })
-        .boxify()
-    })
+        }),
+    )
+    .compat()
+    .await?;
+
+    let res = rebase_in_loop(
+        ctx,
+        repo,
+        config,
+        onto_bookmark,
+        head,
+        root,
+        client_cf,
+        &client_bcs,
+        maybe_hg_replay_data,
+    )
+    .await?;
+
+    backfill_filenodes(
+        ctx.clone(),
+        repo.clone(),
+        res.rebased_changesets
+            .clone()
+            .into_iter()
+            .filter_map(|pair| {
+                if pair.id_old == pair.id_new {
+                    Some(pair.id_old.clone())
+                } else {
+                    None
+                }
+            }),
+    )
+    .compat()
+    .await?;
+
+    Ok(res)
 }
 
 // We have a hack that intentionally doesn't generate filenodes for "pushed" set of commits.
@@ -392,15 +371,15 @@ fn backfill_filenodes<'a>(
 }
 
 async fn rebase_in_loop(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    config: PushrebaseParams,
-    onto_bookmark: OntoBookmarkParams,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    config: &PushrebaseParams,
+    onto_bookmark: &OntoBookmarkParams,
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
-    client_bcs: Vec<BonsaiChangeset>,
-    maybe_hg_replay_data: Option<HgReplayData>,
+    client_bcs: &Vec<BonsaiChangeset>,
+    maybe_hg_replay_data: &Option<HgReplayData>,
 ) -> Result<PushrebaseSuccessResult, PushrebaseError> {
     let mut latest_rebase_attempt = root;
 
@@ -1346,6 +1325,7 @@ mod tests {
     use futures::future::join_all;
     use futures_ext::spawn_future;
     use futures_preview::compat::Future01CompatExt;
+    use futures_preview::future::FutureExt as _;
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
@@ -1395,14 +1375,19 @@ mod tests {
             .and_then({
                 cloned!(ctx);
                 move |pushed| {
-                    do_pushrebase_bonsai(
-                        ctx,
-                        repo,
-                        config,
-                        onto_bookmark,
-                        pushed,
-                        maybe_hg_replay_data,
-                    )
+                    async move {
+                        do_pushrebase_bonsai(
+                            &ctx,
+                            &repo,
+                            &config,
+                            &onto_bookmark,
+                            &pushed,
+                            &maybe_hg_replay_data,
+                        )
+                        .await
+                    }
+                        .boxed()
+                        .compat()
                 }
             })
             .traced(&ctx.trace(), "do_pushrebase", trace_args!())

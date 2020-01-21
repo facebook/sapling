@@ -843,14 +843,13 @@ where
                     }),
                 );
                 let pushrebase_res = do_pushrebase_bonsai(
-                    ctx.clone(),
-                    target_repo,
-                    pushrebase_params,
-                    bookmark,
-                    rewritten_list,
-                    None,
+                    &ctx,
+                    &target_repo,
+                    &pushrebase_params,
+                    &bookmark,
+                    &rewritten_list,
+                    &None,
                 )
-                .compat()
                 .await;
                 let pushrebase_res =
                     pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;

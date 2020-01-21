@@ -19,8 +19,9 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, ok};
 use futures::{future, Future, IntoFuture};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
 use futures_stats::Timed;
+use futures_util::future::{FutureExt, TryFutureExt};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use phases::Phases;
@@ -390,14 +391,19 @@ fn normal_pushrebase(
         cloned!(repo, pushrebase, onto_bookmark, ctx);
         move || {
             ctx.scuba().clone().log_with_msg("pushrebase started", None);
-            pushrebase::do_pushrebase_bonsai(
-                ctx,
-                repo,
-                pushrebase,
-                onto_bookmark,
-                changesets,
-                maybe_hg_replay_data,
-            )
+            async move {
+                pushrebase::do_pushrebase_bonsai(
+                    &ctx,
+                    &repo,
+                    &pushrebase,
+                    &onto_bookmark,
+                    &changesets,
+                    &maybe_hg_replay_data,
+                )
+                .await
+            }
+                .boxed()
+                .compat()
         }
     })
     .map_err(|err| match err {
