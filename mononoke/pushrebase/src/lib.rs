@@ -57,10 +57,7 @@ use futures_preview::{
     future::{try_join, try_join_all},
     stream::TryStream,
 };
-use futures_util::{
-    future::{FutureExt as _, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
-};
+use futures_util::stream::{StreamExt, TryStreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
@@ -251,7 +248,7 @@ pub async fn do_pushrebase_bonsai(
     let root = find_closest_root(&ctx, &repo, &config, &onto_bookmark, &roots).await?;
 
     let (client_cf, client_bcs) = try_join(
-        find_changed_files(ctx.clone(), &repo, root, head).compat(),
+        find_changed_files(&ctx, &repo, root, head),
         fetch_bonsai_range(ctx, &repo, root, head),
     )
     .await?;
@@ -400,12 +397,11 @@ async fn rebase_in_loop(
         }
 
         let server_cf = find_changed_files(
-            ctx.clone(),
+            &ctx,
             &repo,
-            latest_rebase_attempt.clone(),
+            latest_rebase_attempt,
             bookmark_val.unwrap_or(root),
         )
-        .compat()
         .await?;
 
         // TODO: Avoid this clone
@@ -732,44 +728,58 @@ async fn fetch_bonsai_range(
     Ok(nodes)
 }
 
-fn find_changed_files(
-    ctx: CoreContext,
+async fn find_changed_files(
+    ctx: &CoreContext,
     repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
-    cloned!(repo);
-    RangeNodeStream::new(
+) -> Result<Vec<MPath>, PushrebaseError> {
+    let stream = RangeNodeStream::new(
         ctx.clone(),
         repo.get_changeset_fetcher(),
         ancestor,
         descendant,
     )
-    .map({
-        cloned!(ctx, repo);
-        move |bcs_id| {
-            repo.get_bonsai_changeset(ctx.clone(), bcs_id)
-                .map(move |bcs| (bcs_id, bcs))
-        }
-    })
-    .buffered(100)
-    .collect()
-    .from_err()
-    .and_then(move |id_to_bcs| {
-        let ids: HashSet<_> = id_to_bcs.iter().map(|(id, _)| *id).collect();
-        let file_changes_fut: Vec<_> = id_to_bcs
-            .into_iter()
-            .filter(|(id, _)| *id != ancestor)
-            .map(move |(id, bcs)| {
+    .compat();
+
+    let id_to_bcs = stream
+        .map(|res| {
+            async move {
+                match res {
+                    Ok(bcs_id) => {
+                        let bcs = repo
+                            .get_bonsai_changeset(ctx.clone(), bcs_id)
+                            .compat()
+                            .await?;
+
+                        Ok((bcs_id, bcs))
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+        })
+        .buffered(100)
+        .try_collect::<HashMap<_, _>>()
+        .await?;
+
+    let ids: HashSet<_> = id_to_bcs.iter().map(|(id, _)| *id).collect();
+
+    let file_changes_futs: Vec<_> = id_to_bcs
+        .into_iter()
+        .filter(|(id, _)| *id != ancestor)
+        .map(|(id, bcs)| {
+            let ids = &ids;
+
+            async move {
                 let parents: Vec<_> = bcs.parents().collect();
                 match *parents {
-                    [] | [_] => ok(extract_conflict_files_from_bonsai_changeset(bcs)).left_future(),
+                    [] | [_] => Ok(extract_conflict_files_from_bonsai_changeset(bcs)),
                     [p0_id, p1_id] => {
                         match (ids.get(&p0_id), ids.get(&p1_id)) {
                             (Some(_), Some(_)) => {
                                 // both parents are in the rebase set, so we can just take
                                 // filechanges from bonsai changeset
-                                ok(extract_conflict_files_from_bonsai_changeset(bcs)).left_future()
+                                Ok(extract_conflict_files_from_bonsai_changeset(bcs))
                             }
                             (Some(p_id), None) | (None, Some(p_id)) => {
                                 // TODO(stash, T40460159) - include copy sources in the list of
@@ -778,14 +788,7 @@ fn find_changed_files(
                                 // one of the parents is not in the rebase set, to calculate
                                 // changed files in this case we will compute manifest diff
                                 // between elements that are in rebase set.
-                                cloned!(ctx, repo, p_id);
-                                async move {
-                                    find_changed_files_between_manifests(&ctx, &repo, id, p_id)
-                                        .await
-                                }
-                                    .boxed()
-                                    .compat()
-                                    .right_future()
+                                find_changed_files_between_manifests(&ctx, &repo, id, *p_id).await
                             }
                             (None, None) => panic!(
                                 "`RangeNodeStream` produced invalid result for: ({}, {})",
@@ -795,19 +798,21 @@ fn find_changed_files(
                     }
                     _ => panic!("pushrebase supports only two parents"),
                 }
-            })
-            .collect();
-        join_all(file_changes_fut).map(|file_changes| {
-            let mut file_changes_union = file_changes
+            }
+        })
+        .collect();
+
+    let file_changes = try_join_all(file_changes_futs).await?;
+
+    let mut file_changes_union = file_changes
                     .into_iter()
                     .flat_map(|v| v)
                     .collect::<HashSet<_>>()  // compute union
                     .into_iter()
                     .collect::<Vec<_>>();
-            file_changes_union.sort_unstable();
-            file_changes_union
-        })
-    })
+    file_changes_union.sort_unstable();
+
+    Ok(file_changes_union)
 }
 
 fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPath> {
@@ -1323,6 +1328,7 @@ mod tests {
     use futures::future::join_all;
     use futures_ext::spawn_future;
     use futures_preview::compat::Future01CompatExt;
+    use futures_util::future::{FutureExt as _, TryFutureExt};
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
@@ -1613,9 +1619,14 @@ mod tests {
             );
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2)
-                    .wait()
-                    .unwrap(),
+                {
+                    cloned!(ctx, repo);
+                    async move { find_changed_files(&ctx, &repo, p, bcs_id_2).await }
+                }
+                .boxed()
+                .compat()
+                .wait()
+                .unwrap(),
                 make_paths(&["file", "file2"]),
             );
 
@@ -1683,9 +1694,14 @@ mod tests {
             let bcs_id_2 = create_commit(ctx.clone(), repo.clone(), vec![bcs_id_1], file_changes);
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2)
-                    .wait()
-                    .unwrap(),
+                {
+                    cloned!(ctx, repo);
+                    async move { find_changed_files(&ctx, &repo, p, bcs_id_2).await }
+                }
+                .boxed()
+                .compat()
+                .wait()
+                .unwrap(),
                 make_paths(&["file", "file_renamed"]),
             );
 
@@ -1813,9 +1829,14 @@ mod tests {
             );
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo, root, bcs_id_3)
-                    .wait()
-                    .unwrap(),
+                {
+                    cloned!(ctx, repo);
+                    async move { find_changed_files(&ctx, &repo, root, bcs_id_3).await }
+                }
+                .boxed()
+                .compat()
+                .wait()
+                .unwrap(),
                 make_paths(&["f0", "f1", "f2"]),
             );
 
