@@ -17,11 +17,11 @@ use futures::{
     future::{self, Either},
     Future, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
-    HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, Type,
+    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, Type,
 };
 use mononoke_types::{DateTime, FileType};
 use slog::{debug, Logger};
@@ -193,54 +193,43 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 
         debug!(logger, "Starting bonsai diff computation");
 
-        let parents_fut = repo
-            .get_changeset_parents(ctx.clone(), changeset_id)
-            .and_then({
-                cloned!(ctx, repo);
-                move |parent_hashes| {
-                    let changesets = parent_hashes.into_iter().map(move |parent_id| {
-                        repo.get_changeset_by_changesetid(ctx.clone(), parent_id)
-                    });
-                    future::join_all(changesets)
-                }
-            });
+        let mut parents = vec![];
+        parents.extend(changeset.p1());
+        parents.extend(changeset.p2());
+        parents.extend(try_boxfuture!(changeset.step_parents()));
 
+        let parents = parents
+            .into_iter()
+            .map(|p| {
+                repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(p))
+                    .map(|cs| cs.manifestid())
+            })
+            .collect::<Vec<_>>();
+
+        // TODO: Update this to support stepparents
         // Convert to bonsai first.
-        let bonsai_diff_fut = parents_fut.and_then({
+        let bonsai_diff_fut = future::join_all(parents).and_then({
             cloned!(ctx, repo);
             move |parents| {
-                let mut xx = parents.iter().cloned();
-                let p1: Option<_> = xx.next();
-                let p2: Option<_> = xx.next();
-
-                let root_entry = get_root_entry(&repo, &changeset);
-                let p1_entry = p1.map(|parent| get_root_entry(&repo, &parent));
-                let p2_entry = p2.map(|parent| get_root_entry(&repo, &parent));
-                let manifest_p1 = p1_entry
-                    .as_ref()
-                    .map(|entry| entry.get_hash().into_nodehash());
-                let manifest_p2 = p2_entry
-                    .as_ref()
-                    .map(|entry| entry.get_hash().into_nodehash());
-
-                // Also fetch the manifest as we're interested in the computed node id.
-                let root_mf_id = HgManifestId::new(root_entry.get_hash().into_nodehash());
-                let root_mf_fut =
-                    BlobManifest::load(ctx.clone(), repo.get_blobstore().boxed(), root_mf_id);
+                let root_mf_fut = BlobManifest::load(
+                    ctx.clone(),
+                    repo.get_blobstore().boxed(),
+                    changeset.manifestid(),
+                );
 
                 bonsai_diff(
                     ctx.clone(),
                     repo.get_blobstore(),
                     changeset.manifestid(),
-                    parents.into_iter().map(|p| p.manifestid()).collect(),
+                    parents.iter().cloned().collect(),
                 )
                 .collect()
                 .join(root_mf_fut)
                 .and_then(move |(diff, root_mf)| match root_mf {
-                    Some(root_mf) => Ok((diff, root_mf, manifest_p1, manifest_p2)),
+                    Some(root_mf) => Ok((diff, root_mf, parents)),
                     None => bail!(
                         "internal error: didn't find root manifest id {}",
-                        root_mf_id
+                        changeset.manifestid()
                     ),
                 })
             }
@@ -249,7 +238,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
         bonsai_diff_fut
             .and_then({
                 let logger = logger.clone();
-                move |(diff_result, root_mf, manifest_p1, manifest_p2)| {
+                move |(diff_result, root_mf, manifestids)| {
                     let diff_count = diff_result.len();
                     debug!(
                         logger,
@@ -266,8 +255,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                         logger.clone(),
                         repo.clone(),
                         diff_result,
-                        manifest_p1,
-                        manifest_p2,
+                        manifestids,
                     )
                     .and_then(move |roundtrip_mf_id| {
                         let lookup_mf_id = root_mf.node_id();
@@ -342,8 +330,7 @@ fn apply_diff(
     _logger: Logger,
     repo: BlobRepo,
     diff_result: Vec<BonsaiDiffFileChange<HgFileNodeId>>,
-    manifest_p1: Option<HgNodeHash>,
-    manifest_p2: Option<HgNodeHash>,
+    manifestids: Vec<HgManifestId>,
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
     let changes: Vec<_> = diff_result
         .into_iter()
@@ -353,10 +340,7 @@ fn apply_diff(
         ctx,
         repo.get_blobstore().boxed(),
         IncompleteFilenodes::new(),
-        vec![manifest_p1, manifest_p2]
-            .into_iter()
-            .flatten()
-            .map(HgManifestId::new),
+        manifestids,
         changes,
     )
     .map(|manifest_id| manifest_id.into_nodehash())
@@ -378,10 +362,4 @@ fn make_entry(
         }
         Deleted(_path) => None,
     }
-}
-
-#[inline]
-fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<dyn HgEntry + Sync> {
-    let manifest_id = changeset.manifestid();
-    Box::new(repo.get_root_entry(manifest_id))
 }

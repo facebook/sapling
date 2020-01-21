@@ -13,7 +13,7 @@ use mercurial_types::{
     blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
     HgParents, MPath, RepoPath, Type,
 };
-use mononoke_types::{hash::Sha256, ChangesetId};
+use mononoke_types::{hash::Sha256, ChangesetId, FileType};
 use std::fmt;
 use thiserror::Error;
 
@@ -89,8 +89,8 @@ pub enum ErrorKind {
     InconsistentChangesetHash(HgNodeHash, HgNodeHash, HgBlobChangeset),
     #[error("Bookmark {0} does not exist")]
     BookmarkNotFound(AsciiString),
-    #[error("Unresolved conflicts when converting BonsaiChangeset to Manifest")]
-    UnresolvedConflicts,
+    #[error("Unresolved conflict at {0} with parents: {1:?}")]
+    UnresolvedConflicts(MPath, Vec<(FileType, HgFileNodeId)>),
     #[error("Manifest without parents did not get changed by a BonsaiChangeset")]
     UnchangedManifest,
     #[error("Saving empty manifest which is not a root: {0}")]
@@ -122,6 +122,4 @@ pub enum ErrorKind {
     },
     #[error("Case conflict in a commit")]
     CaseConflict(MPath),
-    #[error("Mercurial entry can not have more than two parents")]
-    TooManyParents,
 }

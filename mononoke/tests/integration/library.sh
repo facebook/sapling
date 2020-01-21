@@ -1420,3 +1420,12 @@ function summarize_scuba_json() {
   done
   jq -S "if (.normal.log_tag | match(\"^($interesting_tags)\$\")) then ${key_spec:3} else empty end"
 }
+
+function regenerate_hg_filenodes() {
+  "$MONONOKE_REGENERATE_HG_FILENODES" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --i-know-what-i-am-doing \
+    "$@"
+}

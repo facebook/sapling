@@ -393,10 +393,8 @@ fn backfill_filenodes<'a>(
 
             let parent_mfs = try_join_all(parents).await?;
 
-            let p1_mf = parent_mfs.get(0).cloned();
-            let p2_mf = parent_mfs.get(1).cloned();
             let (_, incomplete_filenodes) = repo
-                .get_manifest_from_bonsai(ctx.clone(), bcs, p1_mf, p2_mf)
+                .get_manifest_from_bonsai(ctx.clone(), bcs, parent_mfs)
                 .compat()
                 .await?;
 
@@ -1435,7 +1433,7 @@ mod tests {
                 let repo = linear::getrepo(fb);
                 // Bottom commit of the repo
                 let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
-                let bcs_id = CreateCommitContext::new(ctx.clone(), repo.clone(), parents)
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
                     .add_file("file", "content")
                     .commit()
                     .await?;
@@ -1492,7 +1490,7 @@ mod tests {
                 let repo = linear::getrepo(fb);
                 // Bottom commit of the repo
                 let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
-                let bcs_id = CreateCommitContext::new(ctx.clone(), repo.clone(), parents)
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
                     .add_file("file", "content")
                     .commit()
                     .await?;

@@ -19,10 +19,10 @@ use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, Either},
+    future::{self, join_all, Either},
     Future, IntoFuture, Stream,
 };
-use futures_ext::FutureExt;
+use futures_ext::{try_boxfuture, FutureExt};
 use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;
 use revset::AncestorsNodeStream;
@@ -136,7 +136,10 @@ fn subcommand_round_trip(
         repo
             .map_err({
                 let logger = logger.clone();
-                move |err| { error!(logger, "ERROR: Failed to create repo: {}", err); }
+                move |err| {
+                    println!("{:?}", err);
+                    error!(logger, "ERROR: Failed to create repo: {}", err);
+                }
             })
             .and_then(move |repo| {
             let bonsai_verify = BonsaiMFVerify {
@@ -346,49 +349,42 @@ fn subcommmand_hg_manifest_verify(
                                 })
                                 .and_then({
                                     cloned!(ctx, repo);
-                                    move |hgchangeset| {
-                                        let hg_csid = hgchangeset.get_changeset_id();
-                                        let expected = hgchangeset.manifestid();
-                                        let (p1, p2) = hgchangeset.parents().get_nodes();
+                                    move |blob_cs| {
+                                        let hg_csid = blob_cs.get_changeset_id();
 
-                                        let p1_fetch = match p1 {
-                                            None => future::ok(None).left_future(),
-                                            Some(p1) => repo
-                                                .get_changeset_by_changesetid(
+                                        let mut parents = vec![];
+                                        parents.extend(blob_cs.p1());
+                                        parents.extend(blob_cs.p2());
+                                        parents.extend(try_boxfuture!(blob_cs.step_parents()));
+
+                                        let parents = parents
+                                            .into_iter()
+                                            .map(|p| {
+                                                repo.get_changeset_by_changesetid(
                                                     ctx.clone(),
-                                                    HgChangesetId::new(p1),
+                                                    HgChangesetId::new(p),
                                                 )
-                                                .map(|cs| Some(cs.manifestid()))
-                                                .right_future(),
-                                        };
+                                                .map(|cs| cs.manifestid())
+                                            })
+                                            .collect::<Vec<_>>();
 
-                                        let p2_fetch = match p2 {
-                                            None => future::ok(None).left_future(),
-                                            Some(p2) => repo
-                                                .get_changeset_by_changesetid(
-                                                    ctx.clone(),
-                                                    HgChangesetId::new(p2),
-                                                )
-                                                .map(|cs| Some(cs.manifestid()))
-                                                .right_future(),
-                                        };
+                                        let expected = blob_cs.manifestid();
 
-                                        p1_fetch
-                                            .join(p2_fetch)
-                                            .map(move |(p1, p2)| (hg_csid, expected, p1, p2))
+                                        join_all(parents)
+                                            .map(move |parents| (hg_csid, expected, parents))
+                                            .boxify()
                                     }
                                 }),
                         )
                             .into_future()
                             .and_then({
                                 cloned!(ctx, repo, bad, total, total_millis);
-                                move |(bonsai, (hg_csid, expected, p1, p2))| {
+                                move |(bonsai, (hg_csid, expected, parents))| {
                                     let start = Instant::now();
                                     repo.get_manifest_from_bonsai(
                                         ctx.clone(),
                                         bonsai.clone(),
-                                        p1,
-                                        p2,
+                                        parents,
                                     )
                                     .map(move |(result, _)| {
                                         if result != expected {

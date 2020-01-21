@@ -21,11 +21,32 @@ use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
 use std::{collections::BTreeMap, io::Write};
 
+const STEP_PARENTS_METADATA_KEY: &str = "stepparents";
+
 pub struct ChangesetMetadata {
     pub user: String,
     pub time: DateTime,
     pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
     pub comments: String,
+}
+
+impl ChangesetMetadata {
+    pub fn record_step_parents(&mut self, step_parents: impl Iterator<Item = HgChangesetId>) {
+        let mut meta = Vec::new();
+
+        for (idx, parent) in step_parents.enumerate() {
+            if idx > 0 {
+                write!(meta, ",").expect("writes to memory don't fail");
+            }
+            write!(meta, "{}", parent).expect("writes to memory don't fail");
+        }
+
+        if meta.len() == 0 {
+            return;
+        }
+
+        self.extra.insert(STEP_PARENTS_METADATA_KEY.into(), meta);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -257,6 +278,20 @@ impl HgBlobChangeset {
     pub fn parents(&self) -> HgParents {
         // XXX Change this to return p1 and p2 directly.
         HgParents::new(self.content.p1(), self.content.p2())
+    }
+
+    pub fn step_parents(&self) -> Result<Vec<HgNodeHash>> {
+        let mut ret = vec![];
+
+        if let Some(step_parents) = self.extra().get(STEP_PARENTS_METADATA_KEY.as_bytes()) {
+            let step_parents = std::str::from_utf8(step_parents)?;
+            for csid in step_parents.split(",") {
+                let csid = csid.parse()?;
+                ret.push(csid);
+            }
+        }
+
+        Ok(ret)
     }
 }
 

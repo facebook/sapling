@@ -25,17 +25,17 @@ use mononoke_types::{
 use std::{collections::BTreeMap, str::FromStr};
 
 /// Helper to create bonsai changesets in a BlobRepo
-pub struct CreateCommitContext {
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub struct CreateCommitContext<'a> {
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     parents: Vec<CommitIdentifier>,
-    files: BTreeMap<String, String>,
+    files: BTreeMap<String, (String, FileType, Option<(MPath, CommitIdentifier)>)>,
 }
 
-impl CreateCommitContext {
+impl<'a> CreateCommitContext<'a> {
     pub fn new(
-        ctx: CoreContext,
-        repo: BlobRepo,
+        ctx: &'a CoreContext,
+        repo: &'a BlobRepo,
         parents: Vec<impl Into<CommitIdentifier>>,
     ) -> Self {
         let parents: Vec<_> = parents.into_iter().map(|x| x.into()).collect();
@@ -49,7 +49,7 @@ impl CreateCommitContext {
 
     /// Creates commit with no parents (this is created to avoid specifying generic parameters
     /// in CreateCommitContext::new() when `parents` parameter is an empty vector)
-    pub fn new_root(ctx: CoreContext, repo: BlobRepo) -> Self {
+    pub fn new_root(ctx: &'a CoreContext, repo: &'a BlobRepo) -> Self {
         Self {
             ctx,
             repo,
@@ -58,21 +58,80 @@ impl CreateCommitContext {
         }
     }
 
-    pub fn add_file(mut self, path: &str, content: impl AsRef<str>) -> Self {
-        self.files
-            .insert(path.to_string(), content.as_ref().to_string());
+    pub fn add_parent(mut self, id: impl Into<CommitIdentifier>) -> Self {
+        self.parents.push(id.into());
         self
     }
 
+    pub fn add_file(mut self, path: &str, content: impl AsRef<str>) -> Self {
+        self.files.insert(
+            path.to_string(),
+            (content.as_ref().to_string(), FileType::Regular, None),
+        );
+        self
+    }
+
+    pub fn add_file_with_type(mut self, path: &str, content: impl AsRef<str>, t: FileType) -> Self {
+        self.files
+            .insert(path.to_string(), (content.as_ref().to_string(), t, None));
+        self
+    }
+
+    pub fn add_file_with_copy_info(
+        mut self,
+        path: &str,
+        content: impl AsRef<str>,
+        (parent, parent_path): (impl Into<CommitIdentifier>, &str),
+    ) -> Result<Self, Error> {
+        let copy_info = (MPath::new(parent_path)?, parent.into());
+        self.files.insert(
+            path.to_string(),
+            (
+                content.as_ref().to_string(),
+                FileType::Regular,
+                Some(copy_info),
+            ),
+        );
+        Ok(self)
+    }
+
     pub async fn commit(self) -> Result<ChangesetId, Error> {
-        let ctx = self.ctx.clone();
-        let repo = self.repo.clone();
-        let parents = future::try_join_all(
-            self.parents
-                .into_iter()
-                .map(|p| resolve_cs_id(&ctx, &repo, p)),
-        )
+        let parents = future::try_join_all(self.parents.into_iter().map({
+            let ctx = &self.ctx;
+            let repo = &self.repo;
+            move |p| resolve_cs_id(&ctx, &repo, p)
+        }))
         .await?;
+
+        let files = future::try_join_all(self.files.into_iter().map({
+            let ctx = &self.ctx;
+            let repo = &self.repo;
+            let parents = &parents;
+            move |(path, (content, file_type, copy_info))| {
+                async move {
+                    let copy_info = match copy_info {
+                        Some((path, cs_id)) => {
+                            let cs_id = resolve_cs_id(&ctx, &repo, cs_id).await?;
+
+                            if !parents.contains(&cs_id) {
+                                return Err(format_err!(
+                                    "CopyInfo at {:?} references invalid parent: {:?}",
+                                    &path,
+                                    &cs_id
+                                ));
+                            }
+
+                            Some((path, cs_id))
+                        }
+                        None => None,
+                    };
+
+                    Ok((path, (content, file_type, copy_info)))
+                }
+            }
+        }))
+        .await?;
+
         let mut bcs = BonsaiChangesetMut {
             parents,
             author: "author".to_string(),
@@ -84,7 +143,7 @@ impl CreateCommitContext {
             file_changes: btreemap! {},
         };
 
-        for (path, content) in self.files {
+        for (path, (content, file_type, copy_info)) in files {
             let path = MPath::new(path)?;
             let size = content.len();
             let content = FileContents::new_bytes(Bytes::from(content));
@@ -93,14 +152,14 @@ impl CreateCommitContext {
                 .store(self.ctx.clone(), self.repo.blobstore())
                 .compat()
                 .await?;
-            let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
+            let file_change = FileChange::new(content_id, file_type, size as u64, copy_info);
             bcs.file_changes.insert(path, Some(file_change));
         }
 
         let bcs = bcs.freeze()?;
 
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], self.ctx, self.repo.clone())
+        save_bonsai_changesets(vec![bcs], self.ctx.clone(), self.repo.clone())
             .compat()
             .await?;
         Ok(bcs_id)

@@ -998,7 +998,14 @@ impl BlobRepo {
         copy_from: Option<(MPath, HgFileNodeId)>,
     ) -> impl Future<Item = (HgBlobEntry, Option<IncompleteFilenodeInfo>), Error = Error> + Send
     {
-        assert!(change.copy_from().is_some() == copy_from.is_some());
+        // If we produced a hg change that has copy info, then the Bonsai should have copy info
+        // too. However, we could have Bonsai copy info without having copy info in the hg change
+        // if we stripped it out to produce a hg changeset for an Octopus merge and the copy info
+        // references a step-parent (i.e. neither p1, not p2).
+        if copy_from.is_some() {
+            assert!(change.copy_from().is_some());
+        }
+
         // we can reuse same HgFileNodeId if we have only one parent with same
         // file content but different type (Regular|Executable)
         match (p1, p2) {
@@ -1265,23 +1272,28 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         bcs: BonsaiChangeset,
-        manifest_p1: Option<HgManifestId>,
-        manifest_p2: Option<HgManifestId>,
+        parent_manifests: Vec<HgManifestId>,
     ) -> BoxFuture<(HgManifestId, IncompleteFilenodes), Error> {
         let repo = self.clone();
         let event_id = EventId::new();
         let incomplete_filenodes = IncompleteFilenodes::new();
 
+        // NOTE: We ignore further parents beyond p1 and p2 for the purposed of tracking copy info
+        // or filenode parents. This is because hg supports just 2 parents at most, so we track
+        // copy info & filenode parents relative to the first 2 parents, then ignore other parents.
+
+        let (manifest_p1, manifest_p2) = {
+            let mut manifests = parent_manifests.iter();
+            (manifests.next().copied(), manifests.next().copied())
+        };
+
         let (p1, p2) = {
             let mut parents = bcs.parents();
             let p1 = parents.next();
             let p2 = parents.next();
-            assert!(
-                parents.next().is_none(),
-                "mercurial only supports two parents"
-            );
             (p1, p2)
         };
+
         // paths *modified* by changeset or *copied from parents*
         let mut p1_paths = Vec::new();
         let mut p2_paths = Vec::new();
@@ -1391,7 +1403,7 @@ impl BlobRepo {
                     ctx.clone(),
                     repo.get_blobstore().boxed(),
                     incomplete_filenodes,
-                    vec![manifest_p1, manifest_p2].into_iter().flatten(),
+                    parent_manifests,
                     changes,
                 )
                 .traced_with_id(
@@ -1511,6 +1523,13 @@ impl BlobRepo {
         bcs: BonsaiChangeset,
         parents: Vec<HgBlobChangeset>,
     ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
+        let parent_manifests = parents.iter().map(|p| p.manifestid()).collect();
+
+        // NOTE: We're special-casing the first 2 parents here, since that's all Mercurial
+        // supports. Producing the Manifest (in get_manifest_from_bonsai) will consider all
+        // parents, but everything else is only presented with the first 2 parents, because that's
+        // all Mercurial knows about for now. This lets us produce a meaningful Hg changeset for a
+        // Bonsai changeset with > 2 parents (which might be one we imported from Git).
         let mut parents = parents.into_iter();
         let p1 = parents.next();
         let p2 = parents.next();
@@ -1521,30 +1540,30 @@ impl BlobRepo {
         let mf_p1 = p1.map(|p| p.manifestid());
         let mf_p2 = p2.map(|p| p.manifestid());
 
-        assert!(
-            parents.next().is_none(),
-            "more than 2 parents are not supported by hg"
-        );
         let hg_parents = HgParents::new(
             p1_hash.map(|h| h.into_nodehash()),
             p2_hash.map(|h| h.into_nodehash()),
         );
+
+        // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
+        let step_parents = parents;
+
         let repo = self.clone();
-        repo.get_manifest_from_bonsai(ctx.clone(), bcs.clone(), mf_p1.clone(), mf_p2.clone())
+        repo.get_manifest_from_bonsai(ctx.clone(), bcs.clone(), parent_manifests)
             .and_then({
                 cloned!(ctx, repo);
                 move |(manifest_id, incomplete_filenodes)| {
                 compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1, mf_p2)
                     .map(move |files| {
-                        (manifest_id, incomplete_filenodes, hg_parents, files)
+                        (manifest_id, incomplete_filenodes, files)
                     })
 
             }})
             // create changeset
             .and_then({
                 cloned!(ctx, repo, bcs);
-                move |(manifest_id, incomplete_filenodes, parents, files)| {
-                    let metadata = ChangesetMetadata {
+                move |(manifest_id, incomplete_filenodes, files)| {
+                    let mut metadata = ChangesetMetadata {
                         user: bcs.author().to_string(),
                         time: *bcs.author_date(),
                         extra: bcs.extra()
@@ -1554,8 +1573,11 @@ impl BlobRepo {
                             .collect(),
                         comments: bcs.message().to_string(),
                     };
+
+                    metadata.record_step_parents(step_parents.into_iter().map(|blob| blob.get_changeset_id()));
+
                     let content = HgChangesetContent::new_from_parts(
-                        parents,
+                        hg_parents,
                         manifest_id,
                         metadata,
                         files,
