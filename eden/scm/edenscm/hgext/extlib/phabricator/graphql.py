@@ -174,7 +174,7 @@ class Client(object):
             "latest_phabricator_version"
         ]
 
-    def getlandednodes(self, diffids, timeout=10):
+    def getlandednodes(self, repo, diffids, timeout=10):
         """Get landed nodes for diffids. Return {diffid: node}"""
         if not diffids:
             return {}
@@ -207,6 +207,7 @@ class Client(object):
         #                 "nodes": [
         #                   { "commit_identifier": "9396e4a63208eb034b8b9cca909f9914cb2fbe85" } ] } } ] } } ] } }
         difftonode = {}
+        difftoglobalrev = {}
         for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
             try:
                 diffid = "%s" % result["number"]
@@ -217,9 +218,28 @@ class Client(object):
                     # them.
                     if len(identifier) == 40:
                         difftonode[diffid] = bin(identifier)
+                    elif identifier.isdigit():
+                        # This is probably a globalrev.
+                        difftoglobalrev[diffid] = identifier
             except (KeyError, IndexError, TypeError):
                 # Not fatal.
                 continue
+
+        # Translate global revs to nodes.
+        if difftoglobalrev:
+            totranslate = [
+                globalrev
+                for diffid, globalrev in difftoglobalrev.items()
+                if diffid not in difftonode
+            ]
+            if totranslate:
+                globalrevtonode = self.getmirroredrevmap(
+                    repo, totranslate, GLOBAL_REV_TYPE, "hg"
+                )
+                for diffid, globalrev in difftoglobalrev.items():
+                    node = globalrevtonode.get(globalrev)
+                    if node:
+                        difftonode[diffid] = node
 
         return difftonode
 

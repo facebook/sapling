@@ -50,7 +50,7 @@ def _cleanuplanded(repo, dryrun=False):
     ui = repo.ui
     try:
         client = graphql.Client(repo=repo)
-        difftopublic = client.getlandednodes(list(difftodraft.keys()))
+        difftopublic = client.getlandednodes(repo, list(difftodraft.keys()))
         if ui.configbool("pullcreatemarkers", "convert-git"):
             git2hg = client.getmirroredrevmap(
                 repo, list(difftopublic.values()), "git", "hg"
