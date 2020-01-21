@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "mononoke/server/session_id",
+    "mononoke/sshrelay",
+]

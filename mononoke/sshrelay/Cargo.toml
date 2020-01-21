@@ -1,0 +1,21 @@
+[package]
+name = "sshrelay"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+session_id = { path = "../server/session_id" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master"}
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master"}
+netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master"}
+anyhow = "1.0"
+bytes = { version = "0.4", features = ["serde"] }
+futures = "0.1" # todo: rename to "futures-old"
+maplit = "1.0"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+serde_json = "1.0"
+tokio-io = "0.1"
