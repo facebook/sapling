@@ -43,13 +43,12 @@
 ///
 ///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{
@@ -59,10 +58,7 @@ use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all},
 };
-use futures_util::{
-    future::TryFutureExt,
-    stream::{StreamExt, TryStreamExt},
-};
+use futures_util::stream::{StreamExt, TryStreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
@@ -259,8 +255,8 @@ pub async fn do_pushrebase_bonsai(
     .await?;
 
     backfill_filenodes(
-        ctx.clone(),
-        repo.clone(),
+        &ctx,
+        &repo,
         pushed.into_iter().filter_map({
             cloned!(client_bcs);
             move |bcs| {
@@ -272,7 +268,6 @@ pub async fn do_pushrebase_bonsai(
             }
         }),
     )
-    .compat()
     .await?;
 
     let res = rebase_in_loop(
@@ -289,8 +284,8 @@ pub async fn do_pushrebase_bonsai(
     .await?;
 
     backfill_filenodes(
-        ctx.clone(),
-        repo.clone(),
+        &ctx,
+        &repo,
         res.rebased_changesets
             .clone()
             .into_iter()
@@ -302,7 +297,6 @@ pub async fn do_pushrebase_bonsai(
                 }
             }),
     )
-    .compat()
     .await?;
 
     Ok(res)
@@ -329,15 +323,15 @@ pub async fn do_pushrebase_bonsai(
 //           might be missing.
 //
 // The function below can be used to backfill filenodes for these commits.
-fn backfill_filenodes<'a>(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn backfill_filenodes<'a>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     to_backfill: impl IntoIterator<Item = ChangesetId>,
-) -> BoxFuture<(), Error> {
+) -> Result<(), Error> {
     let mut futs = vec![];
+
     for bcs_id in to_backfill {
-        cloned!(ctx, repo);
-        let closure = async move {
+        let fut = async move {
             let hg_cs_id_fut = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                 .compat();
@@ -360,14 +354,15 @@ fn backfill_filenodes<'a>(
                 .compat()
                 .await
         };
-        futs.push(closure);
+
+        futs.push(fut);
     }
 
     try_join_all(futs)
-        .map_ok(|_| ())
-        .compat()
-        .context("While backfilling filenodes")
-        .boxify()
+        .await
+        .context("While backfilling filenodes")?;
+
+    Ok(())
 }
 
 async fn rebase_in_loop(
@@ -1316,12 +1311,13 @@ mod tests {
     use bookmarks::Bookmarks;
     use cmdlib::helpers::create_runtime;
     use dbbookmarks::SqlBookmarks;
+    use failure_ext::FutureFailureErrorExt;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
     use futures_ext::spawn_future;
     use futures_preview::compat::Future01CompatExt;
-    use futures_preview::future::FutureExt as _;
+    use futures_preview::future::{FutureExt as _, TryFutureExt};
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
