@@ -84,6 +84,7 @@ impl Healer {
 
                 let healing_futures: Vec<_> = queue_entries
                     .into_iter()
+                    .sorted_by_key(|entry| entry.blobstore_key.clone())
                     .group_by(|entry| entry.blobstore_key.clone())
                     .into_iter()
                     .filter_map(|(key, entries)| {
@@ -282,7 +283,7 @@ fn heal_blob(
         // If any puts fail make sure we put a good source blobstore_id for that blob
         // back on the queue
         join_all(heal_puts).and_then(move |heal_results| {
-            let (mut healed_stores, unhealed_stores): (HashSet<_>, HashSet<_>) =
+            let (mut healed_stores, mut unhealed_stores): (HashSet<_>, Vec<_>) =
                 heal_results.into_iter().partition_map(|(id, put_ok)| {
                     if put_ok {
                         Either::Left(id)
@@ -313,12 +314,14 @@ fn heal_blob(
                 for b in unknown_seen_blobstores {
                     healed_stores.insert(b);
                 }
+                unhealed_stores.sort();
                 warn!(
                     ctx.logger(),
                     "Adding source blobstores {:?} to the queue so that failed \
-                     destination blob stores {:?} will be retried later",
-                    healed_stores,
-                    unhealed_stores
+                     destination blob stores {:?} will be retried later for {:?}",
+                    healed_stores.iter().sorted().collect::<Vec<_>>(),
+                    unhealed_stores,
+                    key,
                 );
                 requeue_partial_heal(ctx, sync_queue, key, healed_stores)
                     .map(|()| heal_stats)

@@ -14,9 +14,10 @@ mod healer;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
+use blobstore_factory::{make_blobstore, make_sql_factory, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use chrono::Duration as ChronoDuration;
-use clap::{value_t, App};
+use clap::{value_t, App, Arg};
 use cloned::cloned;
 use cmdlib::{
     args::{self, get_scuba_sample_builder},
@@ -25,25 +26,21 @@ use cmdlib::{
 use configerator::ConfigeratorAPI;
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use futures::{
-    future::{join_all, loop_fn, ok, Loop},
+    future::{self, join_all, loop_fn, ok, Loop},
     prelude::*,
 };
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use futures_preview::compat::Future01CompatExt;
 use healer::Healer;
 use lazy_static::lazy_static;
-use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use mononoke_types::DateTime;
-use prefixblob::PrefixBlobstore;
 use slog::{error, info, o, Logger};
 use sql::Connection;
-use sql_ext::MysqlOptions;
-use sql_facebook::{ext::ConnectionFbExt, myrouter};
-use sqlblob::Sqlblob;
+use sql_ext::{open_sqlite_path, MysqlOptions};
+use sql_facebook::{ext::ConnectionFbExt, myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -51,156 +48,210 @@ use tokio_timer::Delay;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
+const QUIET_ARG: &'static str = "quiet";
+const ITER_LIMIT_ARG: &'static str = "iteration-limit";
+const HEAL_MIN_AGE_ARG: &'static str = "heal-min-age-secs";
 
 lazy_static! {
     /// Minimal age of entry to consider if it has to be healed
-    static ref ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
+    static ref DEFAULT_ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
 }
 
 fn maybe_schedule_healer_for_storage(
+    fb: FacebookInit,
     ctx: CoreContext,
     dry_run: bool,
     drain_only: bool,
     blobstore_sync_queue_limit: usize,
     storage_config: StorageConfig,
-    myrouter_port: u16,
-    replication_lag_db_regions: Vec<String>,
+    mysql_options: MysqlOptions,
     source_blobstore_key: Option<String>,
-    readonly_storage: bool,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: BlobstoreOptions,
+    sync_queue: BoxFuture<SqlBlobstoreSyncQueue, Error>,
+    iter_limit: Option<u64>,
+    heal_min_age: ChronoDuration,
 ) -> Result<BoxFuture<(), Error>> {
-    let (db_address, blobstores_args) = match &storage_config {
+    let blobstore_configs = match &storage_config {
         StorageConfig {
-            dbconfig: MetadataDBConfig::Mysql { db_address, .. },
             blobstore: BlobConfig::Multiplexed { blobstores, .. },
-        } => (db_address.clone(), blobstores.clone()),
-        _ => bail!("Repo doesn't use Multiplexed blobstore"),
+            ..
+        } => blobstores.clone(),
+        s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
 
-    let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
-        let mut blobstores = HashMap::new();
-        for (id, args) in blobstores_args {
-            match args {
-                BlobConfig::Manifold { bucket, prefix } => {
-                    let blobstore = ThriftManifoldBlob::new(ctx.fb, bucket, None)
-                        .chain_err("While opening ThriftManifoldBlob")?;
-                    let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", prefix));
-                    let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
-                    blobstores.insert(id, ok(blobstore).boxify());
-                }
-                BlobConfig::Mysql {
-                    shard_map,
-                    shard_num,
-                } => {
-                    let blobstore = Sqlblob::with_myrouter(
-                        ctx.fb,
-                        shard_map,
-                        myrouter_port,
-                        MysqlOptions::default().myrouter_read_service_type(),
-                        shard_num,
+    let blobstores = make_sql_factory(
+        fb,
+        storage_config.dbconfig.clone(),
+        mysql_options,
+        readonly_storage,
+        ctx.logger().clone(),
+    )
+    .and_then({
+        cloned!(ctx);
+        move |sql_factory| {
+            let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
+                let mut blobstores = HashMap::new();
+                for (id, blobconfig) in blobstore_configs {
+                    let blobstore = make_blobstore(
+                        fb,
+                        &blobconfig,
+                        &sql_factory,
+                        mysql_options,
                         readonly_storage,
-                    )
-                    .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
+                        blobstore_options.clone(),
+                    );
                     blobstores.insert(id, blobstore.boxify());
                 }
-                unsupported => bail!("Unsupported blobstore type {:?}", unsupported),
-            }
-        }
 
-        if !dry_run {
-            blobstores
-        } else {
-            blobstores
-                .into_iter()
-                .map(|(id, blobstore)| {
-                    let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
-                    let blobstore = blobstore
-                        .map(move |blobstore| -> Arc<dyn Blobstore> {
-                            Arc::new(DummyBlobstore::new(blobstore, logger))
+                if !dry_run {
+                    blobstores
+                } else {
+                    blobstores
+                        .into_iter()
+                        .map(|(id, blobstore)| {
+                            let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
+                            let blobstore = blobstore
+                                .map(move |blobstore| -> Arc<dyn Blobstore> {
+                                    Arc::new(DummyBlobstore::new(blobstore, logger))
+                                })
+                                .boxify();
+                            (id, blobstore)
                         })
-                        .boxify();
-                    (id, blobstore)
-                })
-                .collect()
+                        .collect()
+                }
+            };
+
+            join_all(
+                blobstores
+                    .into_iter()
+                    .map(|(key, value)| value.map(move |value| (key, value))),
+            )
+            .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>())
+        }
+    });
+
+    let sync_queue = if !dry_run {
+        sync_queue
+            .map(|q| Arc::new(q) as Arc<dyn BlobstoreSyncQueue>)
+            .boxify()
+    } else {
+        sync_queue
+            .map({
+                cloned!(ctx);
+                move |sync_queue| {
+                    let logger = ctx.logger().new(o!("sync_queue" => ""));
+                    Arc::new(DummyBlobstoreSyncQueue::new(sync_queue, logger))
+                        as Arc<dyn BlobstoreSyncQueue>
+                }
+            })
+            .boxify()
+    };
+
+    let mut regional_conns = Vec::new();
+    match storage_config.dbconfig {
+        MetadataDBConfig::LocalDB { path } => {
+            regional_conns.push(
+                open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
+                    .into_future()
+                    .map(|c| ("sqlite_region".to_string(), Connection::with_sqlite(c)))
+                    .boxify(),
+            );
+        }
+        MetadataDBConfig::Mysql { db_address, .. } => {
+            if let Some(myrouter_port) = mysql_options.myrouter_port {
+                let cfgr = ConfigeratorAPI::new(fb)?;
+                let regions = cfgr
+                    .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
+                    .contents;
+                let regions: Vec<String> = serde_json::from_str(&regions)?;
+                info!(ctx.logger(), "Monitoring regions: {:?}", regions);
+
+                let mut conn_builder = myrouter::Builder::new();
+                conn_builder
+                    .service_type(myrouter::ServiceType::SLAVE)
+                    .locality(myrouter::DbLocality::EXPLICIT)
+                    .tier(db_address.clone(), None)
+                    .port(myrouter_port);
+                for region in regions {
+                    conn_builder.explicit_region(region.clone());
+                    let conn: Connection = conn_builder.build_read_only().into();
+                    let conn_fut = future::ok((region, conn)).boxify();
+                    regional_conns.push(conn_fut);
+                }
+            } else {
+                // Raw mode rust bindings don't have explicit region yet,  so request
+                // a replica.
+                let tier: &str = &db_address;
+                let mut builder = raw::Builder::new(tier, raw::InstanceRequirement::ReplicaOnly);
+                builder.role_override("scriptro");
+                regional_conns.push(
+                    builder
+                        .build(fb)
+                        .map(|c| ("raw_replica_region".to_string(), Connection::Mysql(c)))
+                        .boxify(),
+                )
+            };
         }
     };
 
-    let blobstores = join_all(
-        blobstores
-            .into_iter()
-            .map(|(key, value)| value.map(move |value| (key, value))),
-    )
-    .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
-
-    let sync_queue: Arc<dyn BlobstoreSyncQueue> = {
-        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(
-            db_address.clone(),
-            myrouter_port,
-            MysqlOptions::default().myrouter_read_service_type(),
-            readonly_storage,
+    let heal = join_all(regional_conns)
+        .join3(blobstores, sync_queue)
+        .and_then(
+            move |(regional_conns, blobstores, sync_queue): (
+                Vec<(String, Connection)>,
+                HashMap<_, Arc<dyn Blobstore + 'static>>,
+                Arc<dyn BlobstoreSyncQueue>,
+            )| {
+                let repo_healer = Healer::new(
+                    blobstore_sync_queue_limit,
+                    sync_queue,
+                    Arc::new(blobstores),
+                    source_blobstore_key,
+                    drain_only,
+                );
+                schedule_healing(ctx, repo_healer, regional_conns, iter_limit, heal_min_age)
+            },
         );
 
-        if !dry_run {
-            Arc::new(sync_queue)
-        } else {
-            let logger = ctx.logger().new(o!("sync_queue" => ""));
-            Arc::new(DummyBlobstoreSyncQueue::new(sync_queue, logger))
-        }
-    };
-
-    let mut replication_lag_db_conns = Vec::new();
-    let mut conn_builder = myrouter::Builder::new();
-    conn_builder
-        .service_type(myrouter::ServiceType::SLAVE)
-        .locality(myrouter::DbLocality::EXPLICIT)
-        .tier(db_address.clone(), None)
-        .port(myrouter_port);
-
-    for region in replication_lag_db_regions {
-        conn_builder.explicit_region(region.clone());
-        replication_lag_db_conns.push((region, conn_builder.build_read_only().into()));
-    }
-
-    let heal = blobstores.and_then(
-        move |blobstores: HashMap<_, Arc<dyn Blobstore + 'static>>| {
-            let repo_healer = Healer::new(
-                blobstore_sync_queue_limit,
-                sync_queue,
-                Arc::new(blobstores),
-                source_blobstore_key,
-                drain_only,
-            );
-
-            schedule_everlasting_healing(ctx, repo_healer, replication_lag_db_conns)
-        },
-    );
-    Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
-        .and_then(|_| heal)
-        .boxify())
+    Ok(heal.boxify())
 }
 
-fn schedule_everlasting_healing(
+// Pass None as iter_limit for never ending run
+fn schedule_healing(
     ctx: CoreContext,
     repo_healer: Healer,
-    replication_lag_db_conns: Vec<(String, Connection)>,
+    regional_conns: Vec<(String, Connection)>,
+    iter_limit: Option<u64>,
+    heal_min_age: ChronoDuration,
 ) -> BoxFuture<(), Error> {
-    let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
-
-    let fut = loop_fn((), move |()| {
-        let max_replication_lag_fn = max_replication_lag(replication_lag_db_conns.clone());
-
-        let now = DateTime::now().into_chrono();
-        let healing_deadline = DateTime::new(now - *ENTRY_HEALING_MIN_AGE);
-        repo_healer.heal(ctx.clone(), healing_deadline).and_then({
-            let logger = ctx.logger().clone();
-            move |last_batch_full_sized| {
-                ensure_small_db_replication_lag(
-                    logger,
-                    max_replication_lag_fn,
-                    last_batch_full_sized,
-                )
-                .map(|_lag| Loop::Continue(()))
+    let regional_conns = Arc::new(regional_conns);
+    let fut = loop_fn(0, move |count: u64| {
+        match iter_limit {
+            Some(limit) => {
+                if count >= limit {
+                    return future::ok(Loop::Break(())).left_future();
+                }
             }
-        })
+            _ => (),
+        }
+        let max_replication_lag_fn = max_replication_lag(regional_conns.clone());
+        let now = DateTime::now().into_chrono();
+        let healing_deadline = DateTime::new(now - heal_min_age);
+        repo_healer
+            .heal(ctx.clone(), healing_deadline)
+            .and_then({
+                let logger = ctx.logger().clone();
+                move |last_batch_full_sized| {
+                    ensure_small_db_replication_lag(
+                        logger,
+                        max_replication_lag_fn,
+                        last_batch_full_sized,
+                    )
+                    .map(move |_lag| Loop::Continue(count + 1))
+                }
+            })
+            .right_future()
     });
 
     spawn_future(fut).boxify()
@@ -210,13 +261,11 @@ fn max_replication_lag(
     replication_lag_db_conns: Arc<Vec<(String, Connection)>>,
 ) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
     move || {
-        // Check what max replication lag on replicas, and sleep for that long.
-        // This is done in order to avoid overloading the db.
+        // Check what max replication lag on replicas
         let lag_secs_futs: Vec<_> = replication_lag_db_conns
             .iter()
             .map(|(region, conn)| {
                 cloned!(region);
-
                 conn.show_replica_lag_secs()
                     .or_else(|err| match err.downcast_ref::<sql::error::ServerError>() {
                         Some(server_error) => {
@@ -230,13 +279,16 @@ fn max_replication_lag(
                         }
                         None => Err(err),
                     })
-                    .and_then(|maybe_secs| {
-                        let err = format_err!(
-                    "Could not fetch db replication lag for {}. Failing to avoid overloading db",
-                    region
-                );
-
-                        maybe_secs.ok_or(err).map(|lag_secs| (region, lag_secs))
+                    .and_then({
+                        cloned!(conn);
+                        move |maybe_secs| {
+                            match (&conn, maybe_secs) {
+                                (Connection::Sqlite(_), None) => Ok((region, 0)),
+                                (Connection::Sqlite(_), Some(x)) => Ok((region, x)),
+                                (_, Some(lag_secs)) =>  Ok((region, lag_secs)),
+                                (_, None) => Err(format_err!("Could not fetch db replication lag for {}. Failing to avoid overloading db", region)),
+                            }
+                        }
                     })
             })
             .collect();
@@ -347,6 +399,28 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
             --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
         "#,
+        )
+        .arg(
+            Arg::with_name(QUIET_ARG)
+                .long(QUIET_ARG)
+                .short("q")
+                .takes_value(false)
+                .required(false)
+                .help("Log a lot less"),
+        )
+        .arg(
+            Arg::with_name(ITER_LIMIT_ARG)
+                .long(ITER_LIMIT_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("If specified, only perform the given number of iterations"),
+        )
+        .arg(
+            Arg::with_name(HEAL_MIN_AGE_ARG)
+                .long(HEAL_MIN_AGE_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Seconds. If specified, override default minimum age to heal of 120 seconds"),
         );
     args::add_fb303_args(app)
 }
@@ -360,10 +434,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         .value_of("storage-id")
         .ok_or(Error::msg("Missing storage-id"))?;
     let logger = args::init_logging(fb, &matches);
-    let myrouter_port = args::parse_mysql_options(&matches)
-        .myrouter_port
-        .ok_or(Error::msg("Missing --myrouter-port"))?;
+    let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches);
     let storage_config = args::read_storage_configs(fb, &matches)?
         .remove(storage_id)
         .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
@@ -374,29 +447,37 @@ fn main(fb: FacebookInit) -> Result<()> {
     if drain_only && source_blobstore_key.is_none() {
         bail!("Missing --blobstore-key-like restriction for --drain-only");
     }
-    info!(logger, "Using storage_config {:#?}", storage_config);
-    let cfgr = ConfigeratorAPI::new(fb)?;
-    let regions = cfgr
-        .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
-        .contents;
-    let regions: Vec<String> = serde_json::from_str(&regions)?;
-    info!(logger, "Monitoring regions: {:?}", regions);
+
+    let iter_limit = args::get_u64_opt(&matches, ITER_LIMIT_ARG);
+    let healing_min_age = args::get_i64_opt(&matches, HEAL_MIN_AGE_ARG)
+        .map(|s| ChronoDuration::seconds(s))
+        .unwrap_or(*DEFAULT_ENTRY_HEALING_MIN_AGE);
+    let quiet = matches.is_present(QUIET_ARG);
+    if !quiet {
+        info!(logger, "Using storage_config {:#?}", storage_config);
+    }
 
     let scuba = get_scuba_sample_builder(fb, &matches)?;
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
 
+    let sync_queue = args::open_sql::<SqlBlobstoreSyncQueue>(fb, &matches);
+
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
+            fb,
             ctx,
             dry_run,
             drain_only,
             blobstore_sync_queue_limit,
             storage_config,
-            myrouter_port,
-            regions,
+            mysql_options,
             source_blobstore_key.map(|s| s.to_string()),
-            readonly_storage.0,
+            readonly_storage,
+            blobstore_options,
+            sync_queue,
+            iter_limit,
+            healing_min_age,
         );
 
         match scheduled {
@@ -404,10 +485,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 error!(logger, "Did not schedule, because of: {:#?}", err);
                 return Err(err);
             }
-            Ok(scheduled) => {
-                info!(logger, "Successfully scheduled");
-                scheduled
-            }
+            Ok(scheduled) => scheduled,
         }
     };
 
