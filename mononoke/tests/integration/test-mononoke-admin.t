@@ -17,6 +17,14 @@ setup configuration
   $
   blobimporting
 
+Drain the healer queue
+  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog
+  Found 30 blobs to be healed... Doing it
+  For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 0, put_failure: 0 }
+  Deleting 60 actioned queue entries
+  Max replication lag is *, *s (glob)
+  As the last batch was not full sized, wait at least one second
+
 Check bookmarks
   $ mononoke_admin bookmarks log master_bookmark 2>&1 | grep master_bookmark
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)

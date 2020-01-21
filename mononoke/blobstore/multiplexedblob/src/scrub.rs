@@ -120,7 +120,7 @@ impl Blobstore for ScrubBlobstore {
                     self.queue,
                 );
                 move |result| {
-                    let (needs_repair, value) = match result {
+                    let needs_repair = match result {
                         Ok(value) => return future::ok(value).left_future(),
                         Err(error) => match error.clone() {
                             ErrorKind::SomeFailedOthersNone(_) => {
@@ -141,40 +141,61 @@ impl Blobstore for ScrubBlobstore {
                                     .right_future();
                             }
                             ErrorKind::SomeMissingItem(missing_reads, value) => {
-                                let mut needs_repair: HashMap<BlobstoreId, Arc<dyn Blobstore>> =
-                                    HashMap::new();
-                                for k in missing_reads.iter() {
-                                    match scrub_stores.get(k) {
-                                        Some(s) => {
-                                            needs_repair.insert(*k, s.clone());
-                                        }
-                                        None => (),
-                                    }
-                                }
-                                match value {
-                                    Some(value) => (needs_repair, value),
+                                let value = match value {
+                                    // If there is no value no chance of repair
                                     None => {
                                         return future::err(error.into()).boxify().right_future()
                                     }
-                                }
+                                    Some(value) => value,
+                                };
+                                queue.get(ctx.clone(), key.clone()).map(move |entries| {
+                                    let mut needs_repair: HashMap<BlobstoreId, Arc<dyn Blobstore>> =
+                                        HashMap::new();
+
+                                    for k in missing_reads.iter() {
+                                        match scrub_stores.get(k) {
+                                            Some(s) => {
+                                                // If key has no entries on the queue it needs repair.
+                                                // Don't check individual stores in entries as that is a race vs multiplexed_put().
+                                                //
+                                                // TODO compare timestamp vs original_timestamp to still repair on
+                                                // really old entries, will need schema change.
+                                                if entries.is_empty() {
+                                                    needs_repair.insert(*k, s.clone());
+                                                }
+                                            }
+                                            None => (),
+                                        }
+                                    }
+                                    (needs_repair, value)
+                                })
                             }
                             _ => return future::err(error.into()).boxify().right_future(),
                         },
                     };
 
-                    if scrub_action == ScrubAction::ReportOnly {
-                        for id in needs_repair.keys() {
-                            scrub_handler.on_repair(&ctx, *id, &key, false);
-                        }
-                        future::ok(Some(value)).left_future()
-                    } else {
-                        // inner_put to the stores that need it.
-                        let order = Arc::new(AtomicUsize::new(0));
-                        let mut repair_puts = vec![];
-                        for (id, store) in needs_repair.into_iter() {
-                            cloned!(ctx, scuba, key, value, order);
-                            let repair =
-                                inner_put(ctx.clone(), scuba, order, id, store, key.clone(), value)
+                    needs_repair
+                        .and_then(move |(needs_repair, value)| {
+                            if scrub_action == ScrubAction::ReportOnly {
+                                for id in needs_repair.keys() {
+                                    scrub_handler.on_repair(&ctx, *id, &key, false);
+                                }
+                                future::ok(Some(value)).left_future()
+                            } else {
+                                // inner_put to the stores that need it.
+                                let order = Arc::new(AtomicUsize::new(0));
+                                let mut repair_puts = vec![];
+                                for (id, store) in needs_repair.into_iter() {
+                                    cloned!(ctx, scuba, key, value, order);
+                                    let repair = inner_put(
+                                        ctx.clone(),
+                                        scuba,
+                                        order,
+                                        id,
+                                        store,
+                                        key.clone(),
+                                        value,
+                                    )
                                     .then({
                                         cloned!(ctx, scrub_handler, key);
                                         move |res| {
@@ -182,14 +203,16 @@ impl Blobstore for ScrubBlobstore {
                                             res
                                         }
                                     });
-                            repair_puts.push(repair);
-                        }
+                                    repair_puts.push(repair);
+                                }
 
-                        future::join_all(repair_puts)
-                            .map(|_| Some(value))
-                            .boxify()
-                            .right_future()
-                    }
+                                future::join_all(repair_puts)
+                                    .map(|_| Some(value))
+                                    .right_future()
+                            }
+                        })
+                        .boxify()
+                        .right_future()
                 }
             })
             .boxify()
