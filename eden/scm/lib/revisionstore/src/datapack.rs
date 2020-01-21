@@ -341,6 +341,13 @@ impl DataStore for DataPack {
             Some(entry) => entry,
         };
         loop {
+            // Due to either storage corruption, or wrongly added data to the datapack, we could
+            // end up in an unbounded loop due to a never ending delta chain. Let's avoid this and
+            // thus error out if the delta chain is overly long.
+            if chain.len() > 1000 {
+                return Err(format_err!("Delta chain too long"));
+            }
+
             let data_entry = self.read_entry(next_entry.pack_entry_offset())?;
             chain.push(Delta {
                 data: data_entry.delta()?,
