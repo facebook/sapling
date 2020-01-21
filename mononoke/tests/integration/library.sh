@@ -1251,7 +1251,7 @@ CONFIG
 
 function get_bonsai_bookmark() {
   local bookmark repoid_backup
-  repoid_backup=$REPOID
+  repoid_backup="$REPOID"
   export REPOID="$1"
   bookmark="$2"
   mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
@@ -1289,15 +1289,6 @@ EOF
 fi
 }
 
-function get_bonsai_bookmark() {
-   local bookmark repoid_backup
-   repoid_backup=$REPOID
-   export REPOID="$1"
-   bookmark="$2"
-   mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
-   export REPOID=$repoid_backup
-}
-
 function add_synced_commit_mapping_entry() {
   local small_repo_id large_repo_id small_bcs_id large_bcs_id
   small_repo_id="$1"
@@ -1325,15 +1316,6 @@ function read_blobstore_sync_queue_size() {
   done
 
   return 1
-}
-
-function get_bonsai_bookmark() {
-  local bookmark repoid_backup
-  repoid_backup=$REPOID
-  export REPOID="$1"
-  bookmark="$2"
-  mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
-  export REPOID=$repoid_backup
 }
 
 function log() {
