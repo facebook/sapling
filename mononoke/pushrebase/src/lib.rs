@@ -74,7 +74,6 @@ use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
-use tracing::{trace_args, Traced};
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
@@ -230,34 +229,6 @@ impl OntoBookmarkParams {
             sql_txn_factory: Some(sql_txn_factory),
         }
     }
-}
-
-/// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
-/// The commits from the pushed set should already be committed to the blobrepo
-/// Returns updated bookmark value.
-pub fn do_pushrebase(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    config: PushrebaseParams,
-    onto_bookmark: OntoBookmarkParams,
-    pushed_set: HashSet<HgChangesetId>,
-    maybe_hg_replay_data: Option<HgReplayData>,
-) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
-    fetch_bonsai_changesets(ctx.clone(), repo.clone(), pushed_set)
-        .and_then({
-            cloned!(ctx);
-            move |pushed| {
-                do_pushrebase_bonsai(
-                    ctx,
-                    repo,
-                    config,
-                    onto_bookmark,
-                    pushed,
-                    maybe_hg_replay_data,
-                )
-            }
-        })
-        .traced(&ctx.trace(), "do_pushrebase", trace_args!())
 }
 
 /// Does a pushrebase of a list of commits `pushed` onto `onto_bookmark`
@@ -551,28 +522,6 @@ fn do_rebase(
             ),
         }
     })
-}
-
-fn fetch_bonsai_changesets(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    commit_ids: HashSet<HgChangesetId>,
-) -> impl Future<Item = HashSet<BonsaiChangeset>, Error = PushrebaseError> {
-    join_all(commit_ids.into_iter().map(move |hg_cs| {
-        repo.get_bonsai_from_hg(ctx.clone(), hg_cs)
-            .and_then({
-                cloned!(hg_cs);
-                move |bcs_cs| bcs_cs.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(hg_cs).into())
-            })
-            .and_then({
-                cloned!(ctx, repo);
-                move |bcs_id| repo.get_bonsai_changeset(ctx, bcs_id).from_err()
-            })
-            .context("While intitial bonsai changesets fetching")
-            .map_err(Error::from)
-            .from_err()
-    }))
-    .map(|vec| vec.into_iter().collect())
 }
 
 // There should only be one head in the pushed set
@@ -1393,6 +1342,56 @@ mod tests {
         bookmark, create_commit, create_commit_with_date, resolve_cs_id, store_files, store_rename,
         CreateCommitContext,
     };
+    use tracing::{trace_args, Traced};
+
+    fn fetch_bonsai_changesets(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        commit_ids: HashSet<HgChangesetId>,
+    ) -> impl Future<Item = HashSet<BonsaiChangeset>, Error = PushrebaseError> {
+        join_all(commit_ids.into_iter().map(move |hg_cs| {
+            repo.get_bonsai_from_hg(ctx.clone(), hg_cs)
+                .and_then({
+                    cloned!(hg_cs);
+                    move |bcs_cs| {
+                        bcs_cs.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(hg_cs).into())
+                    }
+                })
+                .and_then({
+                    cloned!(ctx, repo);
+                    move |bcs_id| repo.get_bonsai_changeset(ctx, bcs_id).from_err()
+                })
+                .context("While intitial bonsai changesets fetching")
+                .map_err(Error::from)
+                .from_err()
+        }))
+        .map(|vec| vec.into_iter().collect())
+    }
+
+    fn do_pushrebase(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        config: PushrebaseParams,
+        onto_bookmark: OntoBookmarkParams,
+        pushed_set: HashSet<HgChangesetId>,
+        maybe_hg_replay_data: Option<HgReplayData>,
+    ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
+        fetch_bonsai_changesets(ctx.clone(), repo.clone(), pushed_set)
+            .and_then({
+                cloned!(ctx);
+                move |pushed| {
+                    do_pushrebase_bonsai(
+                        ctx,
+                        repo,
+                        config,
+                        onto_bookmark,
+                        pushed,
+                        maybe_hg_replay_data,
+                    )
+                }
+            })
+            .traced(&ctx.trace(), "do_pushrebase", trace_args!())
+    }
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
