@@ -52,12 +52,18 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{stream, Future, IntoFuture, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{
+    try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt as Futures01StreamExt,
+};
 use futures_preview::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all},
 };
-use futures_util::{future::FutureExt as _, future::TryFutureExt};
+use futures_util::{
+    future::FutureExt as _,
+    future::TryFutureExt,
+    stream::{StreamExt, TryStreamExt},
+};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
@@ -471,8 +477,8 @@ async fn do_rebase(
     maybe_hg_replay_data: Option<HgReplayData>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let (new_head, rebased_changesets) = create_rebased_changesets(
-        ctx.clone(),
-        repo.clone(),
+        &ctx,
+        &repo,
         config,
         root,
         head,
@@ -880,16 +886,14 @@ fn get_bookmark_value(
 }
 
 async fn create_rebased_changesets(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     config: &PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
 ) -> Result<(ChangesetId, RebasedChangesets), PushrebaseError> {
-    let rebased_set = find_rebased_set(ctx.clone(), repo.clone(), root, head.clone())
-        .compat()
-        .await?;
+    let rebased_set = find_rebased_set(&ctx, &repo, root, head).await?;
 
     let rebased_set_ids: HashSet<_> = rebased_set
         .clone()
@@ -928,7 +932,7 @@ async fn create_rebased_changesets(
         rebased.push(bcs_new);
     }
 
-    save_bonsai_changesets(rebased, ctx, repo)
+    save_bonsai_changesets(rebased, ctx.clone(), repo.clone())
         .map(move |_| {
             (
                 remapping
@@ -949,7 +953,7 @@ async fn create_rebased_changesets(
 }
 
 async fn rebase_changeset(
-    ctx: CoreContext,
+    ctx: CoreContext, // TODO
     bcs: BonsaiChangeset,
     remapping: &HashMap<ChangesetId, (ChangesetId, Timestamp)>,
     timestamp: Option<&Timestamp>,
@@ -1151,27 +1155,39 @@ async fn generate_additional_bonsai_file_changes(
 }
 
 // Order - from lowest generation number to highest
-fn find_rebased_set(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn find_rebased_set(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     root: ChangesetId,
     head: ChangesetId,
-) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
-    RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), root, head)
-        .map({
-            cloned!(repo);
-            move |bcs_id| repo.get_bonsai_changeset(ctx.clone(), bcs_id)
+) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
+    let stream =
+        RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), root, head).compat();
+
+    let nodes = stream
+        .map(|res| {
+            async move {
+                match res {
+                    Ok(bcs_id) => {
+                        repo.get_bonsai_changeset(ctx.clone(), bcs_id)
+                            .compat()
+                            .await
+                    }
+                    Err(e) => Err(e),
+                }
+            }
         })
         .buffered(100)
-        .collect()
-        .map(move |nodes| {
-            nodes
-                .into_iter()
-                .filter(|node| node.get_changeset_id() != root)
-                .rev()
-                .collect()
-        })
-        .from_err()
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let nodes = nodes
+        .into_iter()
+        .filter(|node| node.get_changeset_id() != root)
+        .rev()
+        .collect();
+
+    Ok(nodes)
 }
 
 fn try_update_bookmark(
@@ -1829,7 +1845,9 @@ mod tests {
             .expect("pushrebase failed");
 
             // should only rebase {bcs2, bcs3}
-            let rebased = find_rebased_set(ctx, repo, bcs_id_master, bcs_id_rebased.head)
+            let rebased = find_rebased_set(&ctx, &repo, bcs_id_master, bcs_id_rebased.head)
+                .boxed()
+                .compat()
                 .wait()
                 .unwrap();
             assert_eq!(rebased.len(), 2);
