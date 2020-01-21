@@ -338,7 +338,7 @@ where
                                 .then(move |result| {
                                     if leased {
                                         lease
-                                            .release_lease(&lease_key, result.is_ok())
+                                            .release_lease(&lease_key)
                                             .then(|_| result)
                                             .right_future()
                                     } else {
@@ -746,7 +746,7 @@ mod test {
 
         // release lease
         runtime
-            .block_on(lease.release_lease(&lease_key, false))
+            .block_on(lease.release_lease(&lease_key))
             .map_err(|_| Error::msg("failed to release a lease"))?;
 
         runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
@@ -775,7 +775,7 @@ mod test {
             result
         );
         runtime
-            .block_on(lease.release_lease(&lease_key, false))
+            .block_on(lease.release_lease(&lease_key))
             .map_err(|_| Error::msg("failed to release a lease"))?;
 
         Ok(())
@@ -793,7 +793,7 @@ mod test {
             future::err(()).boxify()
         }
 
-        fn release_lease(&self, _key: &str, _put_success: bool) -> BoxFuture<(), ()> {
+        fn release_lease(&self, _key: &str) -> BoxFuture<(), ()> {
             future::err(()).boxify()
         }
     }

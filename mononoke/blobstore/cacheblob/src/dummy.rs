@@ -26,7 +26,7 @@ impl LeaseOps for DummyLease {
         Ok(()).into_future().boxify()
     }
 
-    fn release_lease(&self, _key: &str, _put_success: bool) -> BoxFuture<(), ()> {
+    fn release_lease(&self, _key: &str) -> BoxFuture<(), ()> {
         Ok(()).into_future().boxify()
     }
 }

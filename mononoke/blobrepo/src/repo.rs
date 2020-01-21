@@ -1483,7 +1483,7 @@ impl BlobRepo {
                             maybe_hg_cs
                                 .and_then(move |maybe_hg_cs| match maybe_hg_cs {
                                     Some(hg_cs) => repo
-                                        .release_hg_generation_lease(bcs_id, true)
+                                        .release_hg_generation_lease(bcs_id)
                                         .then(move |_| Ok(Loop::Break(Some(hg_cs))))
                                         .left_future(),
                                     None => future::ok(Loop::Break(None)).right_future(),
@@ -1510,10 +1510,9 @@ impl BlobRepo {
     fn release_hg_generation_lease(
         &self,
         bcs_id: ChangesetId,
-        put_success: bool,
     ) -> impl Future<Item = (), Error = ()> + Send {
         let key = self.generate_lease_key(&bcs_id);
-        self.derived_data_lease.release_lease(&key, put_success)
+        self.derived_data_lease.release_lease(&key)
     }
 
     fn generate_hg_changeset(
@@ -1745,7 +1744,7 @@ impl BlobRepo {
                                         }
                                     })
                                     .then(move |res| {
-                                        repo.release_hg_generation_lease(bcs_id, res.is_ok())
+                                        repo.release_hg_generation_lease(bcs_id)
                                             .then(move |_| res.map(|hg_cs_id| (hg_cs_id, true)))
                                     })
                                     .right_future()

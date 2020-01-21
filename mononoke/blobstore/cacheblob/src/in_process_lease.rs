@@ -54,7 +54,7 @@ impl LeaseOps for InProcessLease {
         }
     }
 
-    fn release_lease(&self, key: &str, _put_success: bool) -> BoxFuture<(), ()> {
+    fn release_lease(&self, key: &str) -> BoxFuture<(), ()> {
         let mut in_flight_leases = self.leases.lock().expect("lock poisoned");
 
         if let Some((sender, _)) = in_flight_leases.remove(key) {

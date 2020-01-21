@@ -93,10 +93,8 @@ pub trait LeaseOps: fmt::Debug + Send + Sync + 'static {
     /// It is acceptable to return from this future without checking the state of the cache entry.
     fn wait_for_other_leases(&self, key: &str) -> BoxFuture<(), ()>;
 
-    /// Releases any leases held on `key`. `put_success` is a hint; if it is `true`, the entry
-    /// can transition from Leased to either Present or Empty, while if it is `false`, the entry
-    /// must transition from Leased to Empty.
-    fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()>;
+    /// Releases any leases held on `key`. The entry must transition from Leased to Empty.
+    fn release_lease(&self, key: &str) -> BoxFuture<(), ()>;
 }
 
 impl<C> CacheOps for Arc<C>
@@ -128,8 +126,8 @@ where
         self.as_ref().wait_for_other_leases(key)
     }
 
-    fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()> {
-        self.as_ref().release_lease(key, put_success)
+    fn release_lease(&self, key: &str) -> BoxFuture<(), ()> {
+        self.as_ref().release_lease(key)
     }
 }
 
@@ -271,31 +269,23 @@ where
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let can_put = self.take_put_lease(&key);
-        let cache_put = CacheOpsUtil::put(&self.cache, &key, value.clone())
-            .join(future::lazy({
-                let lease = self.lease.clone();
-                let key = key.clone();
-                move || lease.release_lease(&key, true).or_else(|_| Ok(()))
-            }))
-            .then(|_| Ok(()));
+        let cache_put = CacheOpsUtil::put(&self.cache, &key, value.clone());
 
         let blobstore_put = future::lazy({
-            let blobstore = self.blobstore.clone();
-            let lease = self.lease.clone();
-            let key = key.clone();
-            move || {
-                blobstore
-                    .put(ctx, key.clone(), value)
-                    .or_else(move |r| lease.release_lease(&key, false).then(|_| Err(r)))
-            }
+            cloned!(self.blobstore, key);
+            move || blobstore.put(ctx, key, value)
         });
 
+        cloned!(self.lease);
         can_put
             .and_then(move |can_put| {
                 if can_put {
-                    Either::A(blobstore_put.and_then(move |_| cache_put))
+                    blobstore_put
+                        .and_then(|_| cache_put)
+                        .then(move |res| lease.release_lease(&key).then(move |_| res))
+                        .left_future()
                 } else {
-                    Either::B(Ok(()).into_future())
+                    Ok(()).into_future().right_future()
                 }
             })
             .boxify()

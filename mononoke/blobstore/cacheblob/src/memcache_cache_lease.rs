@@ -9,9 +9,13 @@
 use std::time::Duration;
 
 use anyhow::Error;
+use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{future::Either, Future, IntoFuture};
+use futures::{
+    future::{self, Either},
+    Future, IntoFuture,
+};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 
@@ -55,7 +59,10 @@ mod LEASE_STATS {
         wait_ms: dynamic_timeseries("{}.wait_ms", (lease_type: &'static str); Rate, Sum),
         release: dynamic_timeseries("{}.release", (lease_type: &'static str); Rate, Sum),
         release_good: dynamic_timeseries("{}.release_good", (lease_type: &'static str); Rate, Sum),
-        release_bad: dynamic_timeseries("{}.release_bad", (lease_type: &'static str); Rate, Sum),
+        release_held_by_other: dynamic_timeseries("{}.release_held_by_other", (lease_type: &'static str); Rate, Sum),
+        release_bad_key: dynamic_timeseries("{}.release_bad_key", (lease_type: &'static str); Rate, Sum),
+        release_key_set: dynamic_timeseries("{}.release_key_set", (lease_type: &'static str); Rate, Sum),
+        release_no_lease: dynamic_timeseries("{}.release_no_lease", (lease_type: &'static str); Rate, Sum),
     }
     pub use self::STATS::*;
 }
@@ -84,20 +91,25 @@ fn mc_raw_put(
     let uploaded = compact_protocol::serialize(&LockState::uploaded_key(orig_key));
 
     STATS::presence_put.add_value(1);
-    memcache.set(presence_key, uploaded).then(move |res| {
-        if let Err(_) = res {
-            STATS::presence_put_err.add_value(1);
-        }
-        if value.len() < MEMCACHE_MAX_SIZE {
-            STATS::blob_put.add_value(1);
-            Either::A(memcache.set(key, value.into_bytes()).or_else(|_| {
-                STATS::blob_put_err.add_value(1);
-                Ok(()).into_future()
-            }))
-        } else {
-            Either::B(Ok(()).into_future())
-        }
-    })
+    // This cache key is read by leases, and if it's set then lease can't be reacquired.
+    // To be on the safe side let's add a ttl on this memcache key.
+    let lock_ttl = Duration::from_secs(50);
+    memcache
+        .set_with_ttl(presence_key, uploaded, lock_ttl)
+        .then(move |res| {
+            if let Err(_) = res {
+                STATS::presence_put_err.add_value(1);
+            }
+            if value.len() < MEMCACHE_MAX_SIZE {
+                STATS::blob_put.add_value(1);
+                Either::A(memcache.set(key, value.into_bytes()).or_else(|_| {
+                    STATS::blob_put_err.add_value(1);
+                    Ok(()).into_future()
+                }))
+            } else {
+                Either::B(Ok(()).into_future())
+            }
+        })
 }
 
 impl MemcacheOps {
@@ -285,17 +297,72 @@ impl LeaseOps for MemcacheOps {
         tokio_timer::sleep(retry_delay).map_err(|_| ()).boxify()
     }
 
-    fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()> {
+    fn release_lease(&self, key: &str) -> BoxFuture<(), ()> {
         let mc_key = self.presence_keygen.key(key);
         LEASE_STATS::release.add_value(1, (self.lease_type,));
-        if put_success {
-            let uploaded = compact_protocol::serialize(&LockState::uploaded_key(key.to_string()));
-            LEASE_STATS::release_good.add_value(1, (self.lease_type,));
+        cloned!(self.memcache, self.hostname, self.lease_type);
 
-            self.memcache.set(mc_key, uploaded).boxify()
-        } else {
-            LEASE_STATS::release_bad.add_value(1, (self.lease_type,));
-            self.memcache.del(mc_key).boxify()
-        }
+        // This future checks the state of the lease, and releases it only
+        // if it's locked by us right now.
+        let f = future::lazy(move || {
+            memcache
+                .get(mc_key.clone())
+                .and_then(move |maybe_data| match maybe_data {
+                    Some(bytes) => {
+                        let state: Result<LockState, Error> =
+                            compact_protocol::deserialize(Vec::from(bytes));
+                        match state {
+                            Ok(state) => match state {
+                                LockState::locked_by(locked_by) => {
+                                    if locked_by == hostname {
+                                        LEASE_STATS::release_good.add_value(1, (lease_type,));
+                                        // The lease is held by us - just remove it
+                                        memcache.del(mc_key).left_future()
+                                    } else {
+                                        LEASE_STATS::release_held_by_other
+                                            .add_value(1, (lease_type,));
+                                        // Someone else grabbed a lease, leave it alone
+                                        future::ok(()).right_future()
+                                    }
+                                }
+                                LockState::uploaded_key(up_key) => {
+                                    if up_key != mc_key {
+                                        LEASE_STATS::release_bad_key.add_value(1, (lease_type,));
+                                        // Invalid key - fix it up. Normally that shouldn't
+                                        // ever occur
+                                        memcache.del(mc_key).left_future()
+                                    } else {
+                                        LEASE_STATS::release_key_set.add_value(1, (lease_type,));
+                                        // Key is valid, and is most likely set by
+                                        // cache.put(...). Lease is already release,
+                                        // no need to do anything here
+                                        future::ok(()).right_future()
+                                    }
+                                }
+                                LockState::UnknownField(_) => {
+                                    LEASE_STATS::release_bad_key.add_value(1, (lease_type,));
+                                    // Possibly a newer version of the server enabled it?
+                                    // Don't touch it just in case
+                                    future::ok(()).right_future()
+                                }
+                            },
+                            Err(_) => {
+                                LEASE_STATS::release_bad_key.add_value(1, (lease_type,));
+                                // Fix up invalid value
+                                memcache.del(mc_key).left_future()
+                            }
+                        }
+                    }
+                    None => {
+                        LEASE_STATS::release_no_lease.add_value(1, (lease_type,));
+                        future::ok(()).right_future()
+                    }
+                })
+        });
+        // We don't have to wait for the releasing to finish, it can be done in background
+        // because leases have a timeout. So even if they haven't been released explicitly they
+        // will be released after a timeout.
+        tokio::spawn(f);
+        future::ok(()).boxify()
     }
 }
