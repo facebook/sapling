@@ -14,6 +14,7 @@ use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
 use futures_preview::compat::Future01CompatExt;
+use futures_preview::TryFutureExt;
 use std::process::ExitCode;
 
 use cmdlib::args;
@@ -24,7 +25,7 @@ use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
     ADD_PUBLIC_PHASES, BLAME, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO,
-    DELETED_MANIFEST, FETCH_PHASE, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET,
+    DELETED_MANIFEST, DERIVED_DATA, FETCH_PHASE, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET,
     HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE,
     HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, LIST_PUBLIC, PHASES,
     REDACTION, REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD,
@@ -47,6 +48,7 @@ mod cmdargs;
 mod common;
 mod content_fetch;
 mod crossrepo;
+mod derived_data;
 mod error;
 mod filenodes;
 mod filestore;
@@ -382,6 +384,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(
             subcommand_deleted_manifest::subcommand_deleted_manifest_build(DELETED_MANIFEST),
         )
+        .subcommand(derived_data::build_subcommand(DERIVED_DATA))
 }
 
 #[fbinit::main]
@@ -416,6 +419,11 @@ fn main(fb: FacebookInit) -> ExitCode {
         (BLAME, Some(sub_m)) => subcommand_blame::subcommand_blame(fb, logger, &matches, sub_m),
         (DELETED_MANIFEST, Some(sub_m)) => {
             subcommand_deleted_manifest::subcommand_deleted_manifest(fb, logger, &matches, sub_m)
+        }
+        (DERIVED_DATA, Some(sub_m)) => {
+            derived_data::subcommand_derived_data(fb, logger, &matches, sub_m)
+                .compat()
+                .boxify()
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };

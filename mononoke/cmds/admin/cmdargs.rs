@@ -12,6 +12,7 @@ pub const BONSAI_FETCH: &'static str = "bonsai-fetch";
 pub const BOOKMARKS: &'static str = "bookmarks";
 pub const CONTENT_FETCH: &'static str = "content-fetch";
 pub const CROSSREPO: &'static str = "crossrepo";
+pub const DERIVED_DATA: &'static str = "derived-data";
 pub const FETCH_PHASE: &'static str = "fetch";
 pub const FILENODES: &'static str = "filenodes";
 pub const FILESTORE: &'static str = "filestore";
