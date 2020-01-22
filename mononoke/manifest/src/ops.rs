@@ -437,13 +437,38 @@ where
     <TreeId as StoreLoadable<Store>>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
     LeafId: Clone + Send + Eq + 'static,
 {
+    find_intersection_of_diffs_and_parents(ctx, store, mf_id, diff_against)
+        .map(|(path, entry, _)| (path, entry))
+}
+
+/// Like `find_intersection_of_diffs` but for each returned entry it also returns diff_against
+/// entries with the same path.
+pub fn find_intersection_of_diffs_and_parents<TreeId, LeafId, Store>(
+    ctx: CoreContext,
+    store: Store,
+    mf_id: TreeId,
+    diff_against: Vec<TreeId>,
+) -> impl Stream<
+    Item = (
+        Option<MPath>,
+        Entry<TreeId, LeafId>,
+        Vec<Entry<TreeId, LeafId>>,
+    ),
+    Error = Error,
+>
+where
+    Store: Sync + Send + Clone + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Eq + 'static,
+    <TreeId as StoreLoadable<Store>>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
+    LeafId: Clone + Send + Eq + 'static,
+{
     match diff_against.get(0) {
         Some(parent) => (*parent)
             .diff(ctx.clone(), store.clone(), mf_id)
             .filter_map(|diff_entry| match diff_entry {
-                Diff::Added(path, entry) => Some((path, entry)),
+                Diff::Added(path, entry) => Some((path, entry, vec![])),
                 Diff::Removed(..) => None,
-                Diff::Changed(path, _, entry) => Some((path, entry)),
+                Diff::Changed(path, parent_entry, entry) => Some((path, entry, vec![parent_entry])),
             })
             .collect()
             .and_then({
@@ -452,7 +477,7 @@ where
                     let paths: Vec<_> = new_entries
                         .clone()
                         .into_iter()
-                        .map(|(path, _)| path)
+                        .map(|(path, _, _)| path)
                         .collect();
 
                     let futs = diff_against.into_iter().skip(1).map(move |p| {
@@ -463,17 +488,21 @@ where
                     future::join_all(futs).map(move |entries_in_parents| {
                         let mut res = vec![];
 
-                        for (path, unode) in new_entries {
+                        for (path, unode, mut parent_entries) in new_entries {
                             let mut new_entry = true;
                             for p in &entries_in_parents {
-                                if p.get(&path) == Some(&unode) {
-                                    new_entry = false;
-                                    break;
+                                if let Some(parent_entry) = p.get(&path) {
+                                    if parent_entry == &unode {
+                                        new_entry = false;
+                                        break;
+                                    } else {
+                                        parent_entries.push(parent_entry.clone());
+                                    }
                                 }
                             }
 
                             if new_entry {
-                                res.push((path, unode));
+                                res.push((path, unode, parent_entries));
                             }
                         }
 
@@ -486,6 +515,7 @@ where
             .left_stream(),
         None => mf_id
             .list_all_entries(ctx.clone(), store.clone())
+            .map(|(path, entry)| (path, entry, vec![]))
             .right_stream(),
     }
 }
