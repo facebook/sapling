@@ -14,14 +14,19 @@ use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches};
 use fbinit::FacebookInit;
 use futures::future;
-use futures_ext::FutureExt;
+use futures_ext::FutureExt as OldFutureExt;
+use futures_preview::{
+    channel::oneshot,
+    compat::Future01CompatExt,
+    future::{lazy, select, FutureExt, TryFutureExt},
+};
 use gotham::{bind_server, state::State};
 use openssl::ssl::SslAcceptor;
-use slog::Logger;
+use slog::{error, Logger};
 use tokio::{net::TcpListener, prelude::*};
 use tokio_openssl::SslAcceptorExt;
 
-use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
+use cmdlib::{args, helpers::serve_forever, monitoring::start_fb303_server};
 use secure_utils::SslConfig;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -165,10 +170,33 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    let mut runtime = args::init_runtime(&matches)?;
-    start_fb303_and_stats_agg(fb, &mut runtime, SERVICE_NAME, &logger, &matches)?;
-    slog::info!(logger, "Listening for requests at {}://{}", scheme, addr);
-    let _ = runtime.block_on(server);
+    start_fb303_server(fb, SERVICE_NAME, &logger, &matches)?;
 
-    Ok(())
+    let runtime = args::init_runtime(&matches)?;
+
+    slog::info!(logger, "Listening for requests at {}://{}", scheme, addr);
+    let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+    serve_forever(
+        runtime,
+        select(
+            server.compat().map_err({
+                let logger = logger.clone();
+                move |e| error!(&logger, "Unhandled error: {:?}", e)
+            }),
+            shutdown_rx,
+        )
+        .map(|_| ()),
+        &logger,
+        || {},
+        args::get_shutdown_grace_period(&matches)?,
+        lazy(move |_| {
+            let _ = shutdown_tx.send(());
+            // Currently we kill off in-flight requests as soon as we've closed the listener.
+            // If this is a problem in prod, this would be the point at which to wait
+            // for all connections to shut down.
+            // To do this properly, we'd need to track the `Connection` futures that Gotham
+            // gets from Hyper, tell them to gracefully shutdown, then wait for them to complete
+        }),
+        args::get_shutdown_timeout(&matches)?,
+    )
 }
