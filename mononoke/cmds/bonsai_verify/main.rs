@@ -23,6 +23,7 @@ use futures::{
     Future, IntoFuture, Stream,
 };
 use futures_ext::{try_boxfuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;
 use revset::AncestorsNodeStream;
@@ -428,5 +429,5 @@ fn subcommmand_hg_manifest_verify(
         });
 
     let mut runtime = args::init_runtime(&matches)?;
-    runtime.block_on(run)
+    runtime.block_on_std(run.compat())
 }
