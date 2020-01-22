@@ -7,7 +7,7 @@
  */
 
 #![deny(warnings)]
-#![type_length_limit = "5383355"]
+#![type_length_limit = "21533355"]
 
 use anyhow::{format_err, Error};
 use clap::Arg;
@@ -17,10 +17,11 @@ use fbinit::FacebookInit;
 use futures::future::Future;
 use futures::stream;
 use futures::stream::Stream;
+use futures_preview::compat::Future01CompatExt;
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use std::str::FromStr;
 
-use cmdlib::args;
+use cmdlib::{args, helpers::block_execute};
 
 const NAME: &str = "rechunker";
 const DEFAULT_NUM_JOBS: usize = 10;
@@ -90,8 +91,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .for_each(|_| Ok(()))
     });
 
-    let mut runtime = args::init_runtime(&matches)?;
-    let result = runtime.block_on(rechunk);
-    runtime.shutdown_on_idle();
-    result
+    block_execute(rechunk.compat(), fb, "rechunker", &logger, &matches)
 }

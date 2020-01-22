@@ -38,7 +38,8 @@
 # Check that the rechunker complains about an unknown filenode
   $ mononoke_rechunker "ffffffffffffffffffffffffffffffffffffffff"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  Error: Mercurial content missing for node ffffffffffffffffffffffffffffffffffffffff (type regular)
+  E* Execution error: Mercurial content missing for node ffffffffffffffffffffffffffffffffffffffff (type regular) (glob)
+  Error: Execution failed
   [1]
 
 # Create a new config with the filestore configured
