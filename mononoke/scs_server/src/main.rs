@@ -21,7 +21,7 @@ use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures_ext::FutureExt as Futures01Ext;
-use futures_preview::{FutureExt, TryFutureExt};
+use futures_preview::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use metaconfig_parser::RepoConfigs;
 use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
@@ -31,6 +31,7 @@ use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
 use srserver::{ThriftServer, ThriftServerBuilder};
+use tokio_preview::task;
 
 mod commit_id;
 mod errors;
@@ -168,16 +169,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .expect("failed to start thrift service");
     serve_forever(
         runtime,
-        monitoring_forever.discard(),
+        monitoring_forever.discard().compat().map(|_| ()),
         &logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
-        move || {
-            // Calling `stop` blocks until the service has completed all requests.
-            service_framework.stop();
-
-            // Runtime should shutdown now.
-            false
+        async {
+            // Note that async blocks are lazy, so this isn't called until first poll
+            let _ = task::spawn_blocking(move || {
+                // Calling `stop` blocks until the service has completed all requests.
+                service_framework.stop();
+            })
+            .await;
         },
         args::get_shutdown_timeout(&matches)?,
     )?;

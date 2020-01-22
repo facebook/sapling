@@ -17,10 +17,16 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
-use futures_preview::TryFutureExt;
-use futures_util::{compat::Future01CompatExt, future::try_join_all, try_join};
+use futures_preview::{
+    channel::oneshot,
+    compat::Future01CompatExt,
+    future::{lazy, select, try_join_all},
+    FutureExt, TryFutureExt,
+};
+// TODO: When we get rid of old futures, this can come from `futures` (can't while new futures is called `futures_preview`)
+use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_pre_state};
-use slog::{info, warn};
+use slog::{error, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
@@ -285,7 +291,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = args::init_runtime(&matches)?;
 
     let repos: HashMap<_, _> = runtime
-        .block_on(try_join_all(futs).compat())?
+        .block_on_std(try_join_all(futs))?
         .into_iter()
         .collect();
 
@@ -410,20 +416,28 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     info!(&logger, "Listening on {:?}", addr);
+    let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     serve_forever(
         runtime,
-        server,
+        select(
+            server.compat().map_err({
+                let logger = logger.clone();
+                move |e| error!(&logger, "Unhandled error: {:?}", e)
+            }),
+            shutdown_rx,
+        )
+        .map(|_| ()),
         &logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
-        move || {
-            // Currently we rely on `shutdown_on_idle` waiting for all
-            // in-flight requests to complete.
-            //
-            // TODO: in preparation for migration to Tokio 0.2, wait
-            // until all requests have completed.
-            true
-        },
+        lazy(move |_| {
+            let _ = shutdown_tx.send(());
+            // Currently we kill off in-flight requests as soon as we've closed the listener.
+            // If this is a problem in prod, this would be the point at which to wait
+            // for all connections to shut down.
+            // To do this properly, we'd need to track the `Connection` futures that Gotham
+            // gets from Hyper, tell them to gracefully shutdown, then wait for them to complete
+        }),
         args::get_shutdown_timeout(&matches)?,
     )?;
 
