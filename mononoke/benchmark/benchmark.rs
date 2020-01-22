@@ -22,6 +22,7 @@ use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use futures_stats::Timed;
 use mononoke_types::ChangesetId;
 use rand::SeedableRng;
@@ -158,5 +159,5 @@ fn main(fb: FacebookInit) -> Result<()> {
     let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of(ARG_TYPE))?;
 
     let mut runtime = Runtime::new()?;
-    runtime.block_on(run(ctx, repo, seed, stack_size, derive))
+    runtime.block_on_std(run(ctx, repo, seed, stack_size, derive).compat())
 }
