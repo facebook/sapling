@@ -21,13 +21,14 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use slog::{debug, info, Logger};
 use tokio::prelude::stream::iter_ok;
 
 use blobrepo::BlobRepo;
 use blobstore::Storable;
 use changesets::SqlChangesets;
-use cmdlib::args;
+use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use filestore::{self, Alias, AliasBlob, FetchKey};
 use mononoke_types::{
@@ -362,16 +363,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     let repoid = args::get_repo_id(fb, &matches).expect("Need repo id");
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
-    let aliasimport = blobrepo
-        .join(sqlchangesets)
-        .and_then(move |(blobrepo, sqlchangesets)| {
+    let aliasimport = blobrepo.join(sqlchangesets).and_then({
+        let logger = logger.clone();
+        move |(blobrepo, sqlchangesets)| {
             AliasVerification::new(logger, blobrepo, repoid, Arc::new(sqlchangesets), mode)
                 .verify_all(ctx, step, min_cs_db_id)
-        });
+        }
+    });
 
-    let mut runtime = args::init_runtime(&matches)?;
-    let result = runtime.block_on(aliasimport);
-    // Let the runtime finish remaining work - uploading logs etc
-    runtime.shutdown_on_idle();
-    result
+    block_execute(aliasimport.compat(), fb, "aliasverify", &logger, &matches)
 }
