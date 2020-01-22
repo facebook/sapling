@@ -15,12 +15,16 @@ use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bytes::Bytes;
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::{args, helpers::upload_and_show_trace};
+use cmdlib::{
+    args,
+    helpers::{block_execute, upload_and_show_trace},
+};
 use context::CoreContext;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use manifold::{ObjectMeta, PayloadDesc, StoredObject};
 use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
 use mercurial_revlog::revlog::RevIdx;
@@ -318,9 +322,5 @@ fn main(fb: FacebookInit) -> Result<()> {
             },
         );
 
-    let mut runtime = args::init_runtime(&matches)?;
-    let result = runtime.block_on(blobimport);
-    // Let the runtime finish remaining work - uploading logs etc
-    runtime.shutdown_on_idle();
-    result
+    block_execute(blobimport.compat(), fb, "blobimport", &logger, &matches)
 }

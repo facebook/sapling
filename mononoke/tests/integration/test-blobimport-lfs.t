@@ -56,7 +56,8 @@
   * root cause: Os { code: 2, kind: NotFound, message: "No such file or directory" } (glob)
   * error while blobimporting, Root cause: "failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5" (glob)
   * Error: failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
-  Error: blobimport exited with a failure
+  E* Execution error: blobimport exited with a failure (glob)
+  Error: Execution failed
   [1]
 
 # Create the blobimport LFS helper

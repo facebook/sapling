@@ -35,7 +35,8 @@ blobimport --no-create with no storage present, should fail due to missing direc
   $ cd ..
   $ blobimport --log repo-hg/.hg repo --no-create
   * using repo "repo" repoid RepositoryId(0)* (glob)
-  Error: "$TESTTMP/blobstore/blobs" not found in ExistingOnly mode
+  E* Execution error: "$TESTTMP/blobstore/blobs" not found in ExistingOnly mode (glob)
+  Error: Execution failed
   [1]
 
 blobimport, succeeding, creates directory if not existing
