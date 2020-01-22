@@ -31,6 +31,13 @@ Setup the second client
   $ mkcommit onemorecommit
   $ hg log -r . -T '{node}\n'
   94f1e8b68592fbdd8e8606b6426bbd075a59c94c
+  $ hg up -q null
+  $ mkcommit commitonemorebookmark
+  $ hg push -r . --to scratch/commit2 --create -q
+  $ mkcommit commitfullhash
+  $ FULLHASH="$(hg log -r . -T '{node}')"
+  $ echo "$FULLHASH"
+  d15d0da9f84a9bebe6744eba3ec1dd86e2d46818
   $ hg cloud backup -q
   $ cd ..
 
@@ -71,3 +78,38 @@ Now change the paths again try pull with no parameters. It should use default pa
   pulling from ssh://user@dummy/repo
   searching for changes
   no changes found
+
+Now try infinitepushbookmark path
+  $ cat << EOF >> .hg/hgrc
+  > [paths]
+  > default=ssh://user@dummy/broken
+  > infinitepush=ssh://user@dummy/broken
+  > infinitepushbookmark=ssh://user@dummy/repo
+  > EOF
+  $ hg pull -B scratch/commit2
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+Update by full hash - infinitepush path should be used
+  $ cat << EOF >> .hg/hgrc
+  > [paths]
+  > default=ssh://user@dummy/broken
+  > infinitepush=ssh://user@dummy/repo
+  > infinitepushbookmark=ssh://user@dummy/broken
+  > EOF
+  $ hg update "$FULLHASH"
+  'd15d0da9f84a9bebe6744eba3ec1dd86e2d46818' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 2 files
+  'd15d0da9f84a9bebe6744eba3ec1dd86e2d46818' found remotely
+  pull finished in * sec (glob)
+  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  (leaving bookmark scratch/commit)

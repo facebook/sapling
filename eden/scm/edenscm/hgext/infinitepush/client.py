@@ -34,6 +34,8 @@ from . import bookmarks, constants
 
 
 _maybehash = re.compile(r"^[a-f0-9]+$").search
+# Technically it can still be a bookmark, but we consider it unlikely
+_definitelyhash = re.compile(r"^[a-f0-9]{40}$").search
 
 
 def extsetup(ui):
@@ -332,16 +334,18 @@ def _pull(orig, ui, repo, source="default", **opts):
     # This is useful for dogfooding other hg backend that stores only public commits
     # (e.g. Mononoke)
     if opts.get("rev") or opts.get("bookmark"):
-        with _resetinfinitepushpath(ui):
+        with _resetinfinitepushpath(ui, **opts):
             return _dopull(orig, ui, repo, source, **opts)
 
     return _dopull(orig, ui, repo, source, **opts)
 
 
 @contextlib.contextmanager
-def _resetinfinitepushpath(ui):
+def _resetinfinitepushpath(ui, **opts):
     """
-    Sets "default" path to "infinitepush" path and deletes "infinitepush" path.
+    Sets "default" path to "infinitepush" or "infinitepushbookmark" path and
+    deletes "infinitepush"/"infinitepushbookmark" path ("infinitepushbookmark"
+    is always preferred if it's set unless a single commit hash is requested).
     In some cases (e.g. when testing new hg backend which doesn't have commit cloud
     commits) we want to do normal `hg pull` from "default" path but `hg pull -r HASH`
     from "infinitepush" path if it's present. This is better than just setting
@@ -351,13 +355,33 @@ def _resetinfinitepushpath(ui):
     """
 
     overrides = {}
-    if "infinitepush" in ui.paths:
-        overrides[("paths", "default")] = ui.paths["infinitepush"].loc
-        overrides[("paths", "infinitepush")] = "!"
+    infinitepushpath = "infinitepush"
+    infinitepushbookmarkpath = "infinitepushbookmark"
+
+    pullingsinglecommithash = False
+    if opts.get("rev"):
+        revs = opts.get("rev")
+        if isinstance(revs, list) and len(revs) == 1 and _definitelyhash(revs[0]):
+            pullingsinglecommithash = True
+
+    if not pullingsinglecommithash and infinitepushbookmarkpath in ui.paths:
+        path = infinitepushbookmarkpath
+    elif infinitepushpath in ui.paths:
+        path = infinitepushpath
+    else:
+        path = None
+
+    if path is not None:
+        overrides[("paths", "default")] = ui.paths[path].loc
+        overrides[("paths", infinitepushpath)] = "!"
+        overrides[("paths", infinitepushbookmarkpath)] = "!"
         with ui.configoverride(overrides, "infinitepush"):
             loc, sub = ui.configsuboptions("paths", "default")
             ui.paths["default"] = uimod.path(ui, "default", rawloc=loc, suboptions=sub)
-            del ui.paths["infinitepush"]
+            if infinitepushpath in ui.paths:
+                del ui.paths[infinitepushpath]
+            if infinitepushbookmarkpath in ui.paths:
+                del ui.paths[infinitepushbookmarkpath]
             yield
     else:
         yield
@@ -487,7 +511,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                 # revisions, so pulling from it is safer.
                 # This is useful for dogfooding other hg backend that stores
                 # only public commits (e.g. Mononoke)
-                with _resetinfinitepushpath(ui):
+                with _resetinfinitepushpath(ui, **pullopts):
                     pullcmd(ui, unfi, **pullopts)
             except Exception:
                 remoteerror = str(sys.exc_info()[1])
