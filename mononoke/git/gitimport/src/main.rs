@@ -16,6 +16,7 @@ use futures::{
     stream::{self, Stream},
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_preview::compat::Future01CompatExt;
 use git2::{ObjectType, Oid, Repository, Sort};
 use std::collections::HashSet;
 use std::collections::{BTreeMap, HashMap};
@@ -190,7 +191,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = runtime.block_on(args::create_repo(fb, &logger, &matches))?;
+    let repo = runtime.block_on_std(args::create_repo(fb, &logger, &matches).compat())?;
     let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
 
     let derive_trees = matches.is_present(ARG_DERIVE_TREES);
@@ -247,12 +248,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let file_changes = runtime.block_on(find_file_changes(
-            ctx.clone(),
-            repo.get_blobstore().boxed(),
-            store_repo.clone(),
-            diff,
-        ))?;
+        let file_changes = runtime.block_on_std(
+            find_file_changes(
+                ctx.clone(),
+                repo.get_blobstore().boxed(),
+                store_repo.clone(),
+                diff,
+            )
+            .compat(),
+        )?;
 
         let time = commit.time();
 
@@ -285,11 +289,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         println!("Created {:?} => {:?}", commit.id(), bcs_id);
     }
 
-    runtime.block_on(save_bonsai_changesets(
-        changesets,
-        ctx.clone(),
-        repo.clone(),
-    ))?;
+    runtime.block_on_std(save_bonsai_changesets(changesets, ctx.clone(), repo.clone()).compat())?;
 
     for reference in walk_repo.references()? {
         let reference = reference?;
@@ -304,12 +304,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let commit = walk_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
 
-            let derived_tree = runtime.block_on(TreeHandle::derive(
-                ctx.clone(),
-                repo.clone(),
-                tree_mapping.clone(),
-                *bcs_id,
-            ))?;
+            let derived_tree = runtime.block_on_std(
+                TreeHandle::derive(ctx.clone(), repo.clone(), tree_mapping.clone(), *bcs_id)
+                    .compat(),
+            )?;
 
             let derived_tree_id = Oid::from_bytes(derived_tree.oid().as_ref())?;
 
