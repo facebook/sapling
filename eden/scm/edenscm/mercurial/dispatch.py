@@ -288,7 +288,6 @@ def _preimportmodules():
         "phrevset",
         "progressfile",
         "pullcreatemarkers",
-        "purge",
         "pushrebase",
         "rage",
         "rebase",
