@@ -9,12 +9,12 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
-use blame::{fetch_file_full_content, BlameRoot, BlameRootMapping};
+use blame::{fetch_file_full_content, BlameRoot};
 use blobrepo::{BlobRepo, DangerousOverride};
 use blobstore::{Blobstore, Loadable};
 use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
 use bytes::Bytes;
-use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
+use cacheblob::{dummy::DummyLease, LeaseOps};
 use changesets::{
     deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, Changesets, SqlChangesets,
 };
@@ -23,11 +23,12 @@ use cloned::cloned;
 use cmdlib::{args, helpers, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
-use fastlog::{fetch_parent_root_unodes, RootFastlog, RootFastlogMapping};
+use deleted_files_manifest::RootDeletedManifestId;
+use derived_data::BonsaiDerived;
+use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
+use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
-use fsnodes::{RootFsnodeId, RootFsnodeMapping};
+use fsnodes::RootFsnodeId;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
 use futures_preview::{compat::Future01CompatExt, future::try_join3, stream::FuturesUnordered};
@@ -39,7 +40,6 @@ use futures_util::{
 };
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
-use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
@@ -74,15 +74,6 @@ const SUBCOMMAND_PREFETCH_COMMITS: &'static str = "prefetch-commits";
 const SUBCOMMAND_SINGLE: &'static str = "single";
 
 const CHUNK_SIZE: usize = 4096;
-
-const POSSIBLE_TYPES: &[&str] = &[
-    RootUnodeManifestId::NAME,
-    RootFastlog::NAME,
-    MappedHgChangesetId::NAME,
-    RootFsnodeId::NAME,
-    BlameRoot::NAME,
-    RootDeletedManifestId::NAME,
-];
 
 /// Derived data types that are permitted to access redacted files. This list
 /// should be limited to those data types that need access to the content of
@@ -132,7 +123,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     Arg::with_name(ARG_DERIVED_DATA_TYPE)
                         .required(true)
                         .index(1)
-                        .possible_values(POSSIBLE_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
                         .help("derived data type for which backfill will be run"),
                 )
                 .arg(
@@ -162,7 +153,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .required(true)
                         .multiple(true)
                         .index(1)
-                        .possible_values(POSSIBLE_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
                         .help("comma separated list of derived data types"),
                 ),
         )
@@ -184,7 +175,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     Arg::with_name(ARG_DERIVED_DATA_TYPE)
                         .required(true)
                         .index(1)
-                        .possible_values(POSSIBLE_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
                         .help("derived data type for which backfill will be run"),
                 )
                 .arg(
@@ -321,237 +312,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     };
     runtime.block_on_std(run.compat())
-}
-
-trait DerivedUtils: Send + Sync + 'static {
-    /// Derive data for changeset
-    fn derive(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csid: ChangesetId,
-    ) -> BoxFuture<String, Error>;
-
-    fn derive_batch(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csids: Vec<ChangesetId>,
-    ) -> BoxFuture<(), Error>;
-
-    /// Find pending changeset (changesets for which data have not been derived)
-    fn pending(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetId>, Error>;
-
-    /// Regenerate derived data for specified set of commits
-    fn regenerate(&self, csids: &Vec<ChangesetId>);
-
-    /// Get a name for this type of derived data
-    fn name(&self) -> &'static str;
-}
-
-#[derive(Clone)]
-struct DerivedUtilsFromMapping<M> {
-    mapping: RegenerateMapping<M>,
-}
-
-impl<M> DerivedUtilsFromMapping<M> {
-    fn new(mapping: M) -> Self {
-        let mapping = RegenerateMapping::new(mapping);
-        Self { mapping }
-    }
-}
-
-impl<M> DerivedUtils for DerivedUtilsFromMapping<M>
-where
-    M: BonsaiDerivedMapping + Clone + 'static,
-    M::Value: BonsaiDerived + std::fmt::Debug,
-{
-    fn derive(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csid: ChangesetId,
-    ) -> BoxFuture<String, Error> {
-        <M::Value as BonsaiDerived>::derive(ctx.clone(), repo, self.mapping.clone(), csid)
-            .map(|result| format!("{:?}", result))
-            .boxify()
-    }
-
-    fn derive_batch(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csids: Vec<ChangesetId>,
-    ) -> BoxFuture<(), Error> {
-        let orig_mapping = self.mapping.clone();
-        // With InMemoryMapping we can ensure that mapping entries are written only after
-        // all corresponding blobs were successfully saved
-        let in_memory_mapping = InMemoryMapping::new(self.mapping.clone());
-
-        // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
-        // `::persist` is later used to bulk write all pending data.
-        let mut memblobstore = None;
-        let repo = repo
-            .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>)
-            .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-                let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
-                memblobstore = Some(blobstore.clone());
-                blobstore
-            });
-        let memblobstore = memblobstore.expect("memblobstore should have been updated");
-
-        stream::iter_ok(csids)
-            .for_each({
-                cloned!(ctx, in_memory_mapping, repo);
-                move |csid| {
-                    // create new context so each derivation would have its own trace
-                    let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-
-                    <M::Value as BonsaiDerived>::derive(
-                        ctx.clone(),
-                        repo.clone(),
-                        in_memory_mapping.clone(),
-                        csid,
-                    )
-                    .map(|_| ())
-                }
-            })
-            .and_then({
-                cloned!(ctx, memblobstore);
-                move |_| memblobstore.persist(ctx)
-            })
-            .and_then(move |_| {
-                let buffer = in_memory_mapping.into_buffer();
-                let buffer = buffer.lock().unwrap();
-                let mut futs = vec![];
-                for (cs_id, value) in buffer.iter() {
-                    futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
-                }
-                stream::futures_unordered(futs).for_each(|_| Ok(()))
-            })
-            .boxify()
-    }
-
-    fn pending(
-        &self,
-        ctx: CoreContext,
-        _repo: BlobRepo,
-        mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        self.mapping
-            .get(ctx, csids.clone())
-            .map(move |derived| {
-                csids.retain(|csid| !derived.contains_key(&csid));
-                csids
-            })
-            .boxify()
-    }
-
-    fn regenerate(&self, csids: &Vec<ChangesetId>) {
-        self.mapping.regenerate(csids.iter().copied())
-    }
-
-    fn name(&self) -> &'static str {
-        M::Value::NAME
-    }
-}
-
-#[derive(Clone)]
-struct InMemoryMapping<M: BonsaiDerivedMapping + Clone> {
-    mapping: M,
-    buffer: Arc<Mutex<HashMap<ChangesetId, M::Value>>>,
-}
-
-impl<M> InMemoryMapping<M>
-where
-    M: BonsaiDerivedMapping + Clone,
-    <M as BonsaiDerivedMapping>::Value: Clone,
-{
-    fn new(mapping: M) -> Self {
-        Self {
-            mapping,
-            buffer: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-
-    fn into_buffer(self) -> Arc<Mutex<HashMap<ChangesetId, M::Value>>> {
-        self.buffer
-    }
-}
-
-impl<M> BonsaiDerivedMapping for InMemoryMapping<M>
-where
-    M: BonsaiDerivedMapping + Clone,
-    <M as BonsaiDerivedMapping>::Value: Clone,
-{
-    type Value = M::Value;
-
-    fn get(
-        &self,
-        ctx: CoreContext,
-        mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
-        let buffer = self.buffer.lock().unwrap();
-        let mut ans = HashMap::new();
-        csids.retain(|cs_id| {
-            if let Some(v) = buffer.get(cs_id) {
-                ans.insert(*cs_id, v.clone());
-                false
-            } else {
-                true
-            }
-        });
-
-        self.mapping
-            .get(ctx, csids)
-            .map(move |fetched| ans.into_iter().chain(fetched.into_iter()).collect())
-            .boxify()
-    }
-
-    fn put(&self, _ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
-        let mut buffer = self.buffer.lock().unwrap();
-        buffer.insert(csid, id);
-        future::ok(()).boxify()
-    }
-}
-
-fn derived_data_utils(
-    _ctx: CoreContext,
-    repo: BlobRepo,
-    name: impl AsRef<str>,
-) -> Result<Arc<dyn DerivedUtils>, Error> {
-    match name.as_ref() {
-        RootUnodeManifestId::NAME => {
-            let mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
-        }
-        RootFastlog::NAME => {
-            let mapping = RootFastlogMapping::new(repo.get_blobstore().boxed());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
-        }
-        MappedHgChangesetId::NAME => {
-            let mapping = HgChangesetIdMapping::new(&repo);
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
-        }
-        RootFsnodeId::NAME => {
-            let mapping = RootFsnodeMapping::new(repo.get_blobstore());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
-        }
-        BlameRoot::NAME => {
-            let mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
-        }
-        RootDeletedManifestId::NAME => {
-            let mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
-        }
-        name => Err(format_err!("Unsupported derived data type: {}", name)),
-    }
 }
 
 fn windows(start: u64, stop: u64, step: u64) -> impl Iterator<Item = (u64, u64)> {
