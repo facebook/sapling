@@ -320,7 +320,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             return Err(format_err!("unhandled subcommand: {}", name));
         }
     };
-    runtime.block_on(run)
+    runtime.block_on_std(run.compat())
 }
 
 trait DerivedUtils: Send + Sync + 'static {
