@@ -16,13 +16,14 @@ use blobrepo_factory::open_blobrepo;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
-use cmdlib::args::init_runtime;
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::{err, ok, Future};
 use futures::stream::repeat;
 use futures::Stream;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -184,8 +185,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     });
 
-    let mut runtime = init_runtime(&matches)?;
-    runtime.block_on(fut)
+    block_execute(fut.compat(), fb, "hook_tailer", &logger, &matches)
 }
 
 fn process_hook_results(
