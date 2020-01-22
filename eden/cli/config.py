@@ -525,7 +525,7 @@ Do you want to run `eden mount %s` instead?"""
                     os.environ.get("EDEN_HG_BINARY", "hg"),
                     "debugedenrunpostupdatehook",
                     "-R",
-                    checkout.path,
+                    str(checkout.path),
                 ]
             )
 
