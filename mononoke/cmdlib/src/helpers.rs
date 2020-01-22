@@ -342,6 +342,14 @@ where
     ShutdownFut: Future<Output = ()>,
 {
     runtime.block_on_std(async {
+        // We want to prevent Folly's signal handlers overriding our
+        // intended action with a termination signal. Mononoke server,
+        // in particular, depends on this - otherwise our attempts to
+        // catch and handle SIGTERM turn into Folly backtracing and killing us.
+        unsafe {
+            libc::signal(libc::SIGTERM, libc::SIG_DFL);
+        }
+
         let mut terminate = signal(SignalKind::terminate())?;
         let mut interrupt = signal(SignalKind::interrupt())?;
         // This future becomes ready when we receive a termination signal

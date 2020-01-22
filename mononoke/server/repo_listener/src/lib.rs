@@ -18,6 +18,8 @@ mod errors;
 mod repo_handlers;
 mod request_handler;
 
+pub use crate::connection_acceptor::wait_for_connections_closed;
+
 use anyhow::Error;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use configerator_cached::ConfigStore;
@@ -28,7 +30,7 @@ use openssl::ssl::SslAcceptor;
 use slog::Logger;
 use sql_ext::MysqlOptions;
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::AtomicBool;
+use std::sync::{atomic::AtomicBool, Arc};
 
 use metaconfig_types::{CommonConfig, RepoConfig};
 
@@ -45,7 +47,7 @@ pub fn create_repo_listeners(
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
-    terminate_process: &'static AtomicBool,
+    terminate_process: Arc<AtomicBool>,
     config_store: Option<ConfigStore>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,

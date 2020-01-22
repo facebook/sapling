@@ -55,6 +55,12 @@ lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }
 
+pub async fn wait_for_connections_closed() {
+    while OPEN_CONNECTIONS.load(Ordering::Relaxed) > 0 {
+        tokio_preview::time::delay_for(Duration::new(1, 0)).await;
+    }
+}
+
 /// This function accepts connections, reads Preamble and routes request to a thread responsible for
 /// a particular repo
 pub fn connection_acceptor(
@@ -64,7 +70,7 @@ pub fn connection_acceptor(
     root_log: Logger,
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
-    terminate_process: &'static AtomicBool,
+    terminate_process: Arc<AtomicBool>,
     config_store: Option<ConfigStore>,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
@@ -129,16 +135,6 @@ pub fn connection_acceptor(
                 })
             }));
             Ok(())
-        })
-        .and_then(|()| {
-            // A termination signal was sent to the server, and we give open
-            // connections time to finish. Note that some connections can be
-            // very long, so the best scenario is to send SIGTERM first, then
-            // wait for some time and send SIGKILL if server is still alive.
-            stream::repeat(())
-                .and_then(|()| tokio_timer::sleep(Duration::new(1, 0)).from_err())
-                .take_while(|()| Ok(OPEN_CONNECTIONS.load(Ordering::Relaxed) != 0))
-                .for_each(|()| Ok(()))
         })
         .boxify()
 }
@@ -441,11 +437,11 @@ fn split_bytes_in_chunk<E>(blob: Bytes, chunksize: usize) -> impl Stream<Item = 
 struct TakeUntilNotSet<T> {
     periodic_checker: BoxStream<(), Error>,
     input: BoxStream<T, Error>,
-    flag: &'static AtomicBool,
+    flag: Arc<AtomicBool>,
 }
 
 impl<T> TakeUntilNotSet<T> {
-    fn new(input: BoxStream<T, Error>, flag: &'static AtomicBool) -> Self {
+    fn new(input: BoxStream<T, Error>, flag: Arc<AtomicBool>) -> Self {
         Self {
             periodic_checker: tokio_timer::Interval::new_interval(Duration::new(1, 0))
                 .map(|_| ())
