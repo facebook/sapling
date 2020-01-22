@@ -240,7 +240,7 @@ Test rebasing treeonly commits
 
 Test histedit treeonly commits
   $ hg up -q bb62fe710976
-  $ hg purge --config extensions.purge=
+  $ hg purge
   $ echo y > y
   $ hg commit -Aqm 'add y'
   $ hg histedit --config extensions.histedit= --commands - <<EOF

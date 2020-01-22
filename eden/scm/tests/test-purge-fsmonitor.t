@@ -1,7 +1,6 @@
 #require fsmonitor
 
   $ newrepo
-  $ enable purge
   $ touch x
 
 Watchman clock is set after "status"

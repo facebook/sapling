@@ -206,7 +206,7 @@ Directory/file case-folding collision:
 Directory case-folding collision:
 
   $ hg up -qC null
-  $ hg --config extensions.purge= purge
+  $ hg purge
   $ mkdir 0A0
   $ touch 0A0/f # test: starts as '0a'
   $ mkdir Aa

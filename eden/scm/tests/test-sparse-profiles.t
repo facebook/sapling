@@ -2,7 +2,7 @@
 
 test sparse
 
-  $ enable sparse purge rebase
+  $ enable sparse rebase
   $ hg init myrepo
   $ cd myrepo
 

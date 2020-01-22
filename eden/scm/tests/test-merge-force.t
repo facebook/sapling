@@ -782,7 +782,7 @@ Re-resolve and check status
 Set up working directory again
 
   $ hg -q update --clean 2
-  $ hg --config extensions.purge= purge
+  $ hg purge
   $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 wc
   $ hg addremove -q --similarity 0
   $ hg forget *_*_*_*-untracked

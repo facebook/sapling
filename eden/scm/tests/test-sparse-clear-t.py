@@ -15,7 +15,6 @@ sh % "cd myrepo"
 sh % "cat" << r"""
 [extensions]
 sparse=
-purge=
 rebase=
 """ >> "$HGRCPATH"
 

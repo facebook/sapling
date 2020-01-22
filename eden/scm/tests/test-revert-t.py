@@ -386,7 +386,7 @@ sh % "hg revert --all" == r"""
     forgetting allyour
     forgetting base
     undeleting ignored"""
-sh % "hg purge --all --config 'extensions.purge='"
+sh % "hg purge --all"
 
 # Adds a new commit
 

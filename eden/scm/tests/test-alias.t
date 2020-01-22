@@ -13,7 +13,7 @@
   > unknown = bargle
   > ambiguous = s
   > recursive = recursive
-  > disabled = purge
+  > disabled = extorder
   > nodefinition =
   > noclosingquotation = '
   > no--cwd = status --cwd elsewhere
@@ -105,11 +105,11 @@ recursive
 disabled
 
   $ hg disabled
-  unknown command 'purge'
+  unknown command 'extorder'
   (use 'hg help' to get help)
   [255]
   $ hg help disabled
-  alias for: purge
+  alias for: extorder
   
   abort: no such help topic: disabled
   (try 'hg help --keyword disabled')

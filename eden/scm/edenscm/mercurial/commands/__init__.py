@@ -87,6 +87,7 @@ with hgdemandimport.disabled():
         doctor,
         eden,
         fs,
+        purge,
         uncommit,
     )
 

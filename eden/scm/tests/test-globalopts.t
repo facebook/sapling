@@ -286,6 +286,7 @@ Testing -h/--help:
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   
@@ -342,6 +343,7 @@ Testing -h/--help:
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   

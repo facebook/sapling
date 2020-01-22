@@ -32,6 +32,7 @@ Short help:
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   
@@ -86,6 +87,7 @@ Short help:
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   
@@ -140,6 +142,7 @@ Short help:
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   
@@ -194,6 +197,7 @@ Short help:
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   
@@ -352,8 +356,6 @@ Test extension help:
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
        pullcreatemarkers
-       purge         command to delete untracked files from the working
-                     directory
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
@@ -899,6 +901,7 @@ Test that default list of commands omits extension commands
    remove        delete the specified tracked files
    forget        stop tracking the specified files
    revert        change the specified files to match a commit
+   purge         delete untracked files
   
   Commit changes and modify commits:
   

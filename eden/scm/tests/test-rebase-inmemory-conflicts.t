@@ -3,7 +3,7 @@
 Test new conflict switching:
 
   $ newrepo
-  $ enable amend morestatus purge rebase
+  $ enable amend morestatus rebase
   $ setconfig morestatus.show=True
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True

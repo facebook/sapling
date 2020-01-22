@@ -5,7 +5,7 @@ TODO: configure mutation
   $ configure noevolution
 #require symlink execbit
 
-  $ enable amend morestatus purge rebase
+  $ enable amend morestatus rebase
   $ setconfig morestatus.show=True
   $ setconfig diff.git=True
   $ setconfig rebase.singletransaction=True

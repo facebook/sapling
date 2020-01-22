@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ enable purge
-
 init
 
   $ hg init t

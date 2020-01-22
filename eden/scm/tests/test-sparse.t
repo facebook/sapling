@@ -182,7 +182,7 @@ Verify adding sparseness hides files
   M show
 
   $ hg up -qC .
-  $ hg purge --all --config extensions.purge=
+  $ hg purge --all
   $ ls
   show
   show2

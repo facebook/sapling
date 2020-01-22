@@ -144,7 +144,6 @@ Somehow problematic: With many extensions
   > phrevset=
   > progressfile=
   > pullcreatemarkers=
-  > purge=
   > pushrebase =
   > pushrebase=
   > rage=

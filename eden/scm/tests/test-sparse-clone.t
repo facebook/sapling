@@ -5,7 +5,7 @@ test sparse
 
   $ configure dummyssh
   $ setconfig ui.username="nobody <no.reply@fb.com>"
-  $ enable sparse purge rebase
+  $ enable sparse rebase
 
   $ hg init myrepo
   $ cd myrepo

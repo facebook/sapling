@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ enable purge
 
   $ shortlog() {
   >     hg log -G --template '{rev}:{node|short} {author} {date|hgdate} - {desc|firstline}\n'

@@ -53,6 +53,7 @@ _ignoreextensions = {
     "morecolors",
     "mq",
     "perftweaks",
+    "purge",
     "obsshelve",
     "parentrevspec",
     "progress",

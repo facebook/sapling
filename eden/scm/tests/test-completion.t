@@ -47,6 +47,7 @@ Show all commands except debug commands
   paths
   phase
   pull
+  purge
   push
   record
   recover
@@ -386,6 +387,7 @@ Show all commands + options
   paths: template
   phase: public, draft, secret, force, rev
   pull: update, force, rev, bookmark, ssh, remotecmd, insecure
+  purge: abort-on-err, all, dirs, files, print, print0, include, exclude
   push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd, insecure
   record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude
   recover: 

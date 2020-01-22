@@ -1568,7 +1568,7 @@ Test automatic pattern replacement
   >   $ hg -R test-config-opt purge
   > EOF
 
-  $ rt --extra-config-opt extensions.purge= test-config-opt.t
+  $ rt --extra-config-opt extensions.rebase= test-config-opt.t
   .
   # Ran 1 tests, 0 skipped, 0 failed.
 
