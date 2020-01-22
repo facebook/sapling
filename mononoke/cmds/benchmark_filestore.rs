@@ -18,8 +18,9 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{future::lazy, stream::iter_ok, Future, IntoFuture, Stream};
+use futures::{stream::iter_ok, Future, IntoFuture, Stream};
 use futures_ext::{FutureExt, StreamExt};
+use futures_preview::{compat::Future01CompatExt, future::lazy};
 use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
@@ -252,7 +253,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     false,
                 ),
             };
-            let blobstore = runtime.block_on(fut)?;
+            let blobstore = runtime.block_on_std(fut.compat())?;
             Arc::new(blobstore)
         }
         _ => unreachable!(),
@@ -293,10 +294,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|v| v.parse())
         .transpose()?;
 
-    let blob: Arc<dyn Blobstore> = runtime.block_on(lazy(move || -> Result<_, Error> {
+    let blob: Arc<dyn Blobstore> = runtime.block_on_std(lazy(move |_| {
         let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps));
-        Ok(Arc::new(blob))
-    }))?;
+        Arc::new(blob)
+    }));
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
@@ -357,7 +358,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             move |res| read(blob, ctx, res)
         });
 
-    runtime.block_on(fut)?;
+    runtime.block_on_std(fut.compat())?;
 
     Ok(())
 }
