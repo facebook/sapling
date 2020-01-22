@@ -15,13 +15,14 @@ use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::{Future, IntoFuture};
 use futures::stream;
 use futures::stream::Stream;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -80,10 +81,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
 
-    let mut runtime = args::init_runtime(&matches)?;
     let run = args::open_repo(fb, &logger, &matches)
         .join(globalrevs_store)
         .and_then({
+            let matches = matches.clone();
             move |(repo, globalrevs_store)| {
                 let in_filename = matches.value_of("IN_FILENAME").unwrap();
                 let globalrevs_store = Arc::new(globalrevs_store);
@@ -91,7 +92,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
         });
 
-    runtime.block_on(run)?;
-    runtime.shutdown_on_idle();
-    Ok(())
+    block_execute(run.compat(), fb, "upload_globalrevs", &logger, &matches)
 }
