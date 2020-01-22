@@ -14,7 +14,7 @@ use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, monitoring};
+use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -24,6 +24,7 @@ use futures::stream;
 use futures::stream::Stream;
 use futures_ext::FutureExt;
 use futures_ext::{BoxFuture, BoxStream};
+use futures_preview::compat::Future01CompatExt;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
@@ -628,18 +629,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     });
 
-    let mut runtime = args::init_runtime(&matches)?;
-    monitoring::start_fb303_and_stats_agg(
-        fb,
-        &mut runtime,
-        "statistics_collector",
-        &logger,
-        &matches,
-    )?;
-
-    runtime.block_on(run)?;
-    runtime.shutdown_on_idle();
-    Ok(())
+    block_execute(run.compat(), fb, "statistics_collector", &logger, &matches)
 }
 
 #[cfg(test)]
