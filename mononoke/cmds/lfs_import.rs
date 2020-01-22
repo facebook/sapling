@@ -9,11 +9,12 @@
 use anyhow::{Error, Result};
 use bytes::Bytes;
 use clap::Arg;
-use cmdlib::args;
+use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 
@@ -95,8 +96,5 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .for_each(|_| Ok(()))
         });
 
-    let mut runtime = args::init_runtime(&matches)?;
-    let result = runtime.block_on(import);
-    runtime.shutdown_on_idle();
-    result
+    block_execute(import.compat(), fb, NAME, &logger, &matches)
 }
