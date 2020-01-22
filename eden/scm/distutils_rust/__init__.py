@@ -424,8 +424,16 @@ distutils.dist.Distribution.rust_ext_modules = ()
 distutils.dist.Distribution.rust_ext_binaries = ()
 distutils.dist.Distribution.rust_vendored_crates = ()
 distutils.command.build.build.sub_commands.append(
-    ("build_rust_ext", lambda self: bool(self.distribution.rust_ext_modules))
+    (
+        "build_rust_ext",
+        lambda self: bool(self.distribution.rust_ext_modules)
+        or bool(self.distribution.rust_ext_binaries),
+    )
 )
 distutils.command.install.install.sub_commands.append(
-    ("install_rust_ext", lambda self: bool(self.distribution.rust_ext_modules))
+    (
+        "install_rust_ext",
+        lambda self: bool(self.distribution.rust_ext_modules)
+        or bool(self.distribution.rust_ext_binaries),
+    )
 )
