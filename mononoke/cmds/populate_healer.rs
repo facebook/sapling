@@ -14,6 +14,7 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 
@@ -380,6 +381,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         config.readonly_storage,
     ));
     let mut runtime = runtime::Runtime::new()?;
-    runtime.block_on(populate_healer_queue(manifold, queue, config))?;
+    runtime.block_on_std(populate_healer_queue(manifold, queue, config).compat())?;
     Ok(())
 }
