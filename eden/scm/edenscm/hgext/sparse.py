@@ -423,15 +423,12 @@ def _setuplog(ui):
 def _tracksparseprofiles(runcommand, lui, repo, *args):
     res = runcommand(lui, repo, *args)
     if repo is not None and repo.local():
-        # config override is used to prevent duplicated "profile not found"
-        # messages. This code flow is purely for hints/reporting, it makes
-        # no sense for it to warn user about the profiles for the second time
-        with repo.ui.configoverride({("sparse", "missingwarning"): False}):
-            if util.safehasattr(repo, "getactiveprofiles"):
-                profiles = repo.getactiveprofiles()
-                lui.log(
-                    "sparse_profiles", "", active_profiles=",".join(sorted(profiles))
-                )
+        # Reading the sparse profile from the repo can potentially trigger
+        # tree or file fetchings that are quite expensive. Do not read
+        # them. Only read the sparse file on the filesystem.
+        if util.safehasattr(repo, "getactiveprofiles"):
+            profile = repo.localvfs.tryread("sparse")
+            lui.log("sparse_profiles", "", active_profiles=profile)
     return res
 
 
