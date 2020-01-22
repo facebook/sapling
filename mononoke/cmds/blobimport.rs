@@ -20,6 +20,7 @@ use cmdlib::{
     helpers::{block_execute, upload_and_show_trace},
 };
 use context::CoreContext;
+use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
@@ -38,6 +39,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use tracing::{trace_args, Traced};
+
+const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("revlog to blob importer")
@@ -84,6 +87,15 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                      while Mononoke doesn't ignore it. That might result in different bonsai hashes for the same \
                      Mercurial commit. Using --fix-parent-order allows to fix order of the parents."
                  )
+        )
+        .arg(
+            Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                .long(ARG_DERIVED_DATA_TYPE)
+                .takes_value(true)
+                .multiple(true)
+                .required(false)
+                .possible_values(POSSIBLE_DERIVED_TYPES)
+                .help("Derived data type to be backfilled")
         )
 }
 
@@ -253,6 +265,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         HashMap::new()
     };
 
+    let derived_data_types = matches
+        .values_of(ARG_DERIVED_DATA_TYPE)
+        .map(|v| v.map(|d| d.to_string()).collect())
+        .unwrap_or(vec![]);
+
     let has_globalrev = matches.is_present("has-globalrev");
 
     let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
@@ -284,6 +301,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     fixed_parent_order,
                     has_globalrev,
                     small_repo_id,
+                    derived_data_types,
                 }
                 .import()
                 .and_then({

@@ -326,15 +326,15 @@ fn select_mapping(
 
 /// This method is for importing Globalrevs in bulk from a set of BonsaiChangesets where you know
 /// they are correct. Don't use this to assign new Globalrevs.
-pub fn bulk_import_globalrevs(
+pub fn bulk_import_globalrevs<'a>(
     ctx: CoreContext,
     repo_id: RepositoryId,
     globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
-    changesets: impl IntoIterator<Item = BonsaiChangeset>,
+    changesets: impl IntoIterator<Item = &'a BonsaiChangeset>,
 ) -> BoxFuture<(), Error> {
     let mut entries = vec![];
     for bcs in changesets.into_iter() {
-        match Globalrev::from_bcs(&bcs) {
+        match Globalrev::from_bcs(bcs) {
             Ok(globalrev) => {
                 let entry =
                     BonsaiGlobalrevMappingEntry::new(repo_id, bcs.get_changeset_id(), globalrev);

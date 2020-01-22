@@ -24,18 +24,50 @@ use ascii::AsciiString;
 use cloned::cloned;
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{ready, Future as NewFuture, FutureExt as _, TryFutureExt},
+    stream::futures_unordered::FuturesUnordered,
+    TryStreamExt,
+};
 use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::{bulk_import_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
+use derived_data_utils::derived_data_utils;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use phases::Phases;
 use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 
 use crate::changeset::UploadChangesets;
+
+fn derive_data_for_csids(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    csids: Vec<ChangesetId>,
+    derived_data_types: &[String],
+) -> Result<impl NewFuture<Output = Result<(), Error>>, Error> {
+    let derivations = FuturesUnordered::new();
+
+    for data_type in derived_data_types {
+        let derived_utils = derived_data_utils(ctx.clone(), repo.clone(), data_type)?;
+
+        derivations.push(
+            derived_utils
+                .derive_batch(ctx.clone(), repo.clone(), csids.clone())
+                .map(|_| ())
+                .compat(),
+        );
+    }
+
+    Ok(async move {
+        derivations.try_for_each(|_| ready(Ok(()))).await?;
+        Ok(())
+    })
+}
 
 // What to do with bookmarks when blobimporting a repo
 pub enum BookmarkImportPolicy {
@@ -64,6 +96,7 @@ pub struct Blobimport {
     pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
     pub has_globalrev: bool,
     pub small_repo_id: Option<RepositoryId>,
+    pub derived_data_types: Vec<String>,
 }
 
 impl Blobimport {
@@ -87,6 +120,7 @@ impl Blobimport {
             fixed_parent_order,
             has_globalrev,
             small_repo_id,
+            derived_data_types,
         } = self;
 
         let repo_id = blobrepo.get_repoid();
@@ -157,12 +191,18 @@ impl Blobimport {
         stale_bookmarks
             .join(mononoke_bookmarks.collect())
             .and_then({
-                cloned!(ctx);
+                cloned!(ctx, blobrepo, logger);
                 move |(stale_bookmarks, mononoke_bookmarks)| {
                     upload_changesets
                         .chunks(chunk_size)
                         .and_then({
-                            cloned!(ctx, globalrevs_store, synced_commit_mapping);
+                            cloned!(
+                                ctx,
+                                globalrevs_store,
+                                synced_commit_mapping,
+                                blobrepo,
+                                logger
+                            );
                             move |chunk| {
                                 let max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
                                 let synced_commit_mapping_work =
@@ -184,20 +224,38 @@ impl Blobimport {
                                         future::ok(()).right_future()
                                     };
 
+                                let changesets: Vec<_> =
+                                    chunk.into_iter().map(|(_, cs)| cs).collect();
+
                                 let globalrevs_work = if has_globalrev {
                                     bulk_import_globalrevs(
                                         ctx.clone(),
                                         repo_id,
                                         globalrevs_store.clone(),
-                                        chunk.into_iter().map(|(_, cs)| cs),
+                                        changesets.iter(),
                                     )
                                     .left_future()
                                 } else {
                                     future::ok(()).right_future()
                                 };
 
+                                if !derived_data_types.is_empty() {
+                                    info!(logger, "Deriving data for: {:?}", derived_data_types);
+                                }
+
+                                let derivation_work = derive_data_for_csids(
+                                    ctx.clone(),
+                                    blobrepo.clone(),
+                                    changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
+                                    &derived_data_types[..],
+                                );
+
+                                let derivation_work =
+                                    async move { derivation_work?.await }.boxed().compat();
+
                                 globalrevs_work
                                     .join(synced_commit_mapping_work)
+                                    .join(derivation_work)
                                     .map(move |_| max_rev)
                             }
                         })
@@ -212,7 +270,10 @@ impl Blobimport {
                 }
             })
             .and_then(move |(max_rev, stale_bookmarks, mononoke_bookmarks)| {
-                info!(logger, "finished uploading changesets and globalrevs");
+                info!(
+                    logger,
+                    "finished uploading changesets, globalrevs and deriving data"
+                );
                 let f = match bookmark_import_policy {
                     BookmarkImportPolicy::Ignore => {
                         info!(

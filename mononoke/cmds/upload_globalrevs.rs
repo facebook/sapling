@@ -63,7 +63,7 @@ pub fn upload<P: AsRef<Path>>(
                         ctx.clone(),
                         repo.get_repoid(),
                         globalrevs_store.clone(),
-                        chunk,
+                        chunk.iter(),
                     )
                 })
                 .for_each(|_| Ok(()))
