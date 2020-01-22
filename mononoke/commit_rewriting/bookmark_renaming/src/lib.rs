@@ -94,13 +94,9 @@ pub fn get_large_to_small_renamer(
 pub fn get_bookmark_renamers(
     commit_sync_config: &CommitSyncConfig,
     small_repo_id: RepositoryId,
+    direction: CommitSyncDirection,
 ) -> Result<BookmarkRenamers> {
-    let small_repo_config = commit_sync_config
-        .small_repos
-        .get(&small_repo_id)
-        .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?;
-
-    match small_repo_config.direction {
+    match direction {
         CommitSyncDirection::LargeToSmall => Ok(BookmarkRenamers {
             bookmark_renamer: get_large_to_small_renamer(commit_sync_config, small_repo_id)?,
             reverse_bookmark_renamer: get_small_to_large_renamer(

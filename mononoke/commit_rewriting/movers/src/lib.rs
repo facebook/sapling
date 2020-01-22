@@ -330,13 +330,9 @@ pub fn get_large_to_small_mover(
 pub fn get_movers(
     commit_sync_config: &CommitSyncConfig,
     small_repo_id: RepositoryId,
+    direction: CommitSyncDirection,
 ) -> Result<Movers> {
-    let small_repo_config = commit_sync_config
-        .small_repos
-        .get(&small_repo_id)
-        .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?;
-
-    match small_repo_config.direction {
+    match direction {
         CommitSyncDirection::LargeToSmall => Ok(Movers {
             mover: get_large_to_small_mover(commit_sync_config, small_repo_id)?,
             reverse_mover: get_small_to_large_mover(commit_sync_config, small_repo_id)?,

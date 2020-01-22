@@ -33,7 +33,7 @@ use futures_preview::{
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
-use metaconfig_types::{CommitSyncConfig, PushrebaseParams, RepoConfig};
+use metaconfig_types::{CommitSyncConfig, CommitSyncDirection, PushrebaseParams, RepoConfig};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -460,14 +460,20 @@ impl CommitSyncRepos {
             ));
         };
 
+        let direction = if source_repo.get_repoid() == small_repo_id {
+            CommitSyncDirection::SmallToLarge
+        } else {
+            CommitSyncDirection::LargeToSmall
+        };
         let Movers {
             mover,
             reverse_mover,
-        } = get_movers(&commit_sync_config, small_repo_id)?;
+        } = get_movers(&commit_sync_config, small_repo_id, direction)?;
+
         let BookmarkRenamers {
             bookmark_renamer,
             reverse_bookmark_renamer,
-        } = get_bookmark_renamers(&commit_sync_config, small_repo_id)?;
+        } = get_bookmark_renamers(&commit_sync_config, small_repo_id, direction)?;
 
         if source_repo.get_repoid() == small_repo_id {
             Ok(CommitSyncRepos::SmallToLarge {
