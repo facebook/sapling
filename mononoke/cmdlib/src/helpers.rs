@@ -306,7 +306,7 @@ pub fn create_runtime(
     core_threads: Option<usize>,
 ) -> io::Result<tokio_compat::runtime::Runtime> {
     let mut builder = tokio_compat::runtime::Builder::new();
-    builder.name_prefix(log_thread_name_prefix.unwrap_or("tk-"));
+    builder.name_prefix(log_thread_name_prefix.unwrap_or("tk"));
     if let Some(core_threads) = core_threads {
         builder.core_threads(core_threads);
     }
