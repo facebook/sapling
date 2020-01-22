@@ -7,27 +7,33 @@
 
 #pragma once
 
-#include <assert.h>
 #include <folly/Range.h>
 #include <glog/logging.h>
+#include <variant>
+#include "eden/fs/config/EdenConfig.h"
 
 namespace facebook {
 namespace eden {
 
-enum class Persistence : uint8_t {
-  /**
-   * Safe to clear at any moment.
-   */
-  Ephemeral,
-  /**
-   * Not safe to delete.
-   */
-  Persistent,
-  /**
-   * No longer used - clear on startup.
-   */
-  Deprecated,
+/**
+ * Indicates the key space is safe to clear at any moment. The key space's disk
+ * usage should be kept under the size specified by `cacheLimit`.
+ */
+struct Ephemeral {
+  ConfigSetting<uint64_t> EdenConfig::*cacheLimit;
 };
+
+/**
+ * Indicates the key space contains persistent data and should never be cleared.
+ */
+struct Persistent {};
+
+/**
+ * The key space is no longer used. It should be cleared on startup.
+ */
+struct Deprecated {};
+
+using Persistence = std::variant<Ephemeral, Persistent, Deprecated>;
 
 /**
  * Which key space (and thus column family for the RocksDbLocalStore) should be
@@ -40,8 +46,12 @@ struct KeySpaceRecord {
   folly::StringPiece name;
   Persistence persistence;
 
+  constexpr bool isEphemeral() const noexcept {
+    return std::holds_alternative<Ephemeral>(persistence);
+  }
+
   constexpr bool isDeprecated() const noexcept {
-    return persistence == Persistence::Deprecated;
+    return std::holds_alternative<Deprecated>(persistence);
   }
 };
 
@@ -58,10 +68,14 @@ class KeySpace {
     return record_;
   }
 
-  static constexpr KeySpaceRecord BlobFamily{0, "blob", Persistence::Ephemeral};
-  static constexpr KeySpaceRecord BlobMetaDataFamily{1,
-                                                     "blobmeta",
-                                                     Persistence::Ephemeral};
+  static constexpr KeySpaceRecord BlobFamily{
+      0,
+      "blob",
+      Ephemeral{&EdenConfig::localStoreBlobSizeLimit}};
+  static constexpr KeySpaceRecord BlobMetaDataFamily{
+      1,
+      "blobmeta",
+      Ephemeral{&EdenConfig::localStoreBlobMetaSizeLimit}};
   // It is too costly to have trees be deleted by automatic
   // background GC when there are programs that cause every
   // tree in the repo to be fetched. Make ephemeral when GC
@@ -69,20 +83,17 @@ class KeySpace {
   // the hg cache.  This would also be better if programs
   // weren't scanning the entire repo for filenames, causing
   // every tree to be loaded.
-  static constexpr KeySpaceRecord TreeFamily{2,
-                                             "tree",
-                                             Persistence::Persistent};
+  static constexpr KeySpaceRecord TreeFamily{2, "tree", Persistent{}};
   // Proxy hashes are required to fetch objects from hg from a hash.
   // Deleting them breaks re-importing after an inode is unloaded.
   static constexpr KeySpaceRecord HgProxyHashFamily{3,
                                                     "hgproxyhash",
-                                                    Persistence::Persistent};
-  static constexpr KeySpaceRecord HgCommitToTreeFamily{4,
-                                                       "hgcommit2tree",
-                                                       Persistence::Ephemeral};
-  static constexpr KeySpaceRecord BlobSizeFamily{5,
-                                                 "blobsize",
-                                                 Persistence::Deprecated};
+                                                    Persistent{}};
+  static constexpr KeySpaceRecord HgCommitToTreeFamily{
+      4,
+      "hgcommit2tree",
+      Ephemeral{&EdenConfig::localStoreHgCommit2TreeSizeLimit}};
+  static constexpr KeySpaceRecord BlobSizeFamily{5, "blobsize", Deprecated{}};
 
   static constexpr const KeySpaceRecord* kAll[] = {&BlobFamily,
                                                    &BlobMetaDataFamily,

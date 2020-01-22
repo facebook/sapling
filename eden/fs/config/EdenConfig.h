@@ -240,15 +240,30 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(1),
       this};
 
-  /**
-   * The size limit for ephemeral sections of the local store.
+  /*
+   * The following settings control the maximum sizes of the local store's
+   * caches, per object type.
    *
-   * Automatic garbage collection will be triggered when the size exceeds this
-   * threshold.
+   * Automatic garbage collection will be triggered when the size exceeds the
+   * thresholds.
    */
-  ConfigSetting<size_t> localStoreEphemeralSizeLimit{
-      "store:ephemeral-size-limit",
-      20'000'000'000,
+
+  ConfigSetting<uint64_t> localStoreBlobSizeLimit{"store:blob-size-limit",
+                                                  15'000'000'000,
+                                                  this};
+
+  ConfigSetting<uint64_t> localStoreBlobMetaSizeLimit{
+      "store:blobmeta-size-limit",
+      1'000'000'000,
+      this};
+
+  ConfigSetting<uint64_t> localStoreTreeSizeLimit{"store:tree-size-limit",
+                                                  3'000'000'000,
+                                                  this};
+
+  ConfigSetting<uint64_t> localStoreHgCommit2TreeSizeLimit{
+      "store:hgcommit2tree-size-limit",
+      20'000'000,
       this};
 
   /**

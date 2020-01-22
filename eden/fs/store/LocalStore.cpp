@@ -44,7 +44,7 @@ void LocalStore::clearDeprecatedKeySpaces() {
 
 void LocalStore::clearCachesAndCompactAll() {
   for (auto& ks : KeySpace::kAll) {
-    if (ks->persistence == Persistence::Ephemeral) {
+    if (ks->isEphemeral()) {
       clearKeySpace(ks);
     }
     compactKeySpace(ks);
@@ -53,7 +53,7 @@ void LocalStore::clearCachesAndCompactAll() {
 
 void LocalStore::clearCaches() {
   for (auto& ks : KeySpace::kAll) {
-    if (ks->persistence == Persistence::Ephemeral) {
+    if (ks->isEphemeral()) {
       clearKeySpace(ks);
     }
   }

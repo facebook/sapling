@@ -93,7 +93,10 @@ stats-interval = "100ms"
             self.eden.user_rc_path.write_text(
                 initial_config
                 + """
-ephemeral-size-limit = "1"
+blob-size-limit = "1"
+blobmeta-size-limit = "1"
+tree-size-limit = "1"
+hgcommit2tree-size-limit = "1"
 """
             )
 

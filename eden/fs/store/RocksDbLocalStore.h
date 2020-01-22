@@ -6,8 +6,10 @@
  */
 
 #pragma once
+
 #include <folly/CppAttributes.h>
 #include <folly/Synchronized.h>
+#include <bitset>
 
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/LocalStore.h"
@@ -89,17 +91,28 @@ class RocksDbLocalStore : public LocalStore {
   };
 
   struct SizeSummary {
+    /**
+     * Total size of ephemeral columns.
+     */
     uint64_t ephemeral = 0;
+    /**
+     * Total size of all persistent columns.
+     */
     uint64_t persistent = 0;
+    /**
+     * Which keyspace indices exceed their configured size limit and should be
+     * cleared.
+     */
+    std::bitset<KeySpace::kTotalCount> excessiveKeySpaces;
   };
 
   /**
    * Publish fb303 counters.
    * Returns the approximate sizes of all column families.
    */
-  SizeSummary computeStats(bool publish);
+  SizeSummary computeStats(bool publish, const EdenConfig* config);
 
-  void triggerAutoGC(uint64_t ephemeralSize);
+  void triggerAutoGC(SizeSummary before);
   void autoGCFinished(bool successful, uint64_t ephemeralSizeBefore);
 
   std::shared_ptr<StructuredLogger> structuredLogger_;
