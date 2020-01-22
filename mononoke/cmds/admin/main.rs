@@ -13,6 +13,7 @@ use clap::{App, Arg, SubCommand};
 use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use std::process::ExitCode;
 
 use cmdlib::args;
@@ -422,7 +423,7 @@ fn main(fb: FacebookInit) -> ExitCode {
     let debug = matches.is_present("debug");
 
     let mut runtime = args::init_runtime(&matches).expect("failed to initialize Tokio runtime");
-    let res = runtime.block_on(future);
+    let res = runtime.block_on_std(future.compat());
 
     match res {
         Ok(_) => ExitCode::SUCCESS,
