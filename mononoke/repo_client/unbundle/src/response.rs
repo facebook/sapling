@@ -14,9 +14,10 @@ use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use futures::{Future, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_stats::Timed;
-use getbundle_response::create_getbundle_response;
+use futures_util::{FutureExt, TryFutureExt};
+use getbundle_response::{create_getbundle_response, PhasesPart};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartId};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
@@ -164,7 +165,20 @@ impl UnbundleResponse {
                     heads.push(onto_head);
                 }
                 heads.push(pushrebased_hg_rev);
-                create_getbundle_response(ctx, repo, common, heads, lca_hint, Some(phases))
+                async move {
+                    create_getbundle_response(
+                        ctx,
+                        repo,
+                        common,
+                        heads,
+                        lca_hint,
+                        phases,
+                        PhasesPart::Yes,
+                    )
+                    .await
+                }
+                    .boxed()
+                    .compat()
             })
             .and_then(move |mut cg_part_builder| {
                 cg_part_builder.extend(bookmark_reply_part.into_iter());

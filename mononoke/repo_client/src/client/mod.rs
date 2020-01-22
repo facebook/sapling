@@ -21,11 +21,12 @@ use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{
-    select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt,
-    StreamExt, StreamTimeoutError,
+    select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
+    FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
 };
 use futures_stats::{Timed, TimedStreamTrait};
-use getbundle_response::create_getbundle_response;
+use futures_util::{FutureExt, TryFutureExt};
+use getbundle_response::{create_getbundle_response, PhasesPart};
 use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::{HookExecution, HookManager};
 use itertools::Itertools;
@@ -369,18 +370,22 @@ impl RepoClient {
         }
     }
 
-    fn create_bundle(
-        &self,
-        ctx: CoreContext,
-        args: GetbundleArgs,
-    ) -> Result<BoxStream<Bytes, Error>> {
-        let blobrepo = self.repo.blobrepo();
+    fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
+        let blobrepo = self.repo.blobrepo().clone();
         let mut bundle2_parts = vec![];
 
-        let mut use_phases = args.phases;
+        let GetbundleArgs {
+            bundlecaps,
+            common,
+            heads,
+            phases,
+            listkeys,
+        } = args;
+
+        let mut use_phases = phases;
         if use_phases {
-            for cap in args.bundlecaps {
-                if let Some((cap_name, caps)) = parse_utf8_getbundle_caps(&cap) {
+            for cap in &bundlecaps {
+                if let Some((cap_name, caps)) = parse_utf8_getbundle_caps(cap) {
                     if cap_name != "bundle2" {
                         continue;
                     }
@@ -391,35 +396,47 @@ impl RepoClient {
                 }
             }
         }
-
-        bundle2_parts.append(&mut create_getbundle_response(
-            ctx.clone(),
-            blobrepo.clone(),
-            args.common,
-            args.heads,
-            self.repo.lca_hint().clone(),
-            if use_phases {
-                Some(self.repo.phases_hint().clone())
-            } else {
-                None
-            },
-        )?);
-
-        // listkeys bookmarks part is added separately.
-
-        // TODO: generalize this to other listkey types
-        // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
-        if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let items = self
-                .get_pull_default_bookmarks_maybe_stale(ctx)
-                .map(|bookmarks| stream::iter_ok(bookmarks))
-                .flatten_stream();
-            bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
+        let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
+        let lca_hint = self.repo.lca_hint().clone();
+        let phases_hint = self.repo.phases_hint().clone();
+        async move {
+            create_getbundle_response(
+                ctx.clone(),
+                blobrepo.clone(),
+                common,
+                heads,
+                lca_hint,
+                phases_hint,
+                if use_phases {
+                    PhasesPart::Yes
+                } else {
+                    PhasesPart::No
+                },
+            )
+            .await
         }
-        // TODO(stash): handle includepattern= and excludepattern=
+            .boxed()
+            .compat()
+            .and_then(move |mut getbundle_response| {
+                bundle2_parts.append(&mut getbundle_response);
 
-        let compression = None;
-        Ok(create_bundle_stream(bundle2_parts, compression).boxify())
+                // listkeys bookmarks part is added separately.
+
+                // TODO: generalize this to other listkey types
+                // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
+                if listkeys.contains(&b"bookmarks".to_vec()) {
+                    let items = pull_default_bookmarks
+                        .map(|bookmarks| stream::iter_ok(bookmarks))
+                        .flatten_stream();
+                    bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
+                }
+                // TODO(stash): handle includepattern= and excludepattern=
+
+                let compression = None;
+                Ok(create_bundle_stream(bundle2_parts, compression).boxify())
+            })
+            .flatten_stream()
+            .boxify()
     }
 
     fn gettreepack_untimed(
@@ -1056,19 +1073,17 @@ impl HgCommands for RepoClient {
         });
         let value = json!(vec![value]);
 
-        let s = match self.create_bundle(ctx.clone(), args) {
-            Ok(res) => res.boxify(),
-            Err(err) => stream::once(Err(err)).boxify(),
-        }
-        .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
-        .map_err(process_stream_timeout_error)
-        .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
-        .timed(move |stats, _| {
-            STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            command_logger.finalize_command(ctx, &stats, Some(&value));
-            Ok(())
-        })
-        .boxify();
+        let s = self
+            .create_bundle(ctx.clone(), args)
+            .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
+            .map_err(process_stream_timeout_error)
+            .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
+            .timed(move |stats, _| {
+                STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+                command_logger.finalize_command(ctx, &stats, Some(&value));
+                Ok(())
+            })
+            .boxify();
 
         throttle_stream(
             &self.session,

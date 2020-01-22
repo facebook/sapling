@@ -13,7 +13,8 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
 use futures::{future, stream, Future, Stream};
-use futures_ext::FutureExt;
+use futures_ext::FutureExt as OldFutureExt;
+use futures_util::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
@@ -29,30 +30,51 @@ use std::{
 
 mod errors;
 
-pub fn create_getbundle_response(
+#[derive(PartialEq, Eq)]
+pub enum PhasesPart {
+    Yes,
+    No,
+}
+
+pub async fn create_getbundle_response(
     ctx: CoreContext,
     blobrepo: BlobRepo,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases_hint: Option<Arc<dyn Phases>>,
+    phases_hint: Arc<dyn Phases>,
+    return_phases: PhasesPart,
 ) -> Result<Vec<PartEncodeBuilder>> {
+    let return_phases = return_phases == PhasesPart::Yes;
+
+    let mut parts = vec![];
+    let maybe_cs_part = create_changeset_part(&ctx, &blobrepo, common, &heads, lca_hint)?;
+    parts.extend(maybe_cs_part);
+
+    // Phases part has to be after the changegroup part.
+    if return_phases {
+        let phases = prepare_phases(ctx.clone(), blobrepo.clone(), heads.clone(), phases_hint)
+            .compat()
+            .await?;
+        parts.push(parts::phases_part(ctx.clone(), stream::iter_ok(phases))?);
+    }
+
+    Ok(parts)
+}
+
+fn create_changeset_part<'a>(
+    ctx: &'a CoreContext,
+    blobrepo: &'a BlobRepo,
+    common: Vec<HgChangesetId>,
+    heads: &'a Vec<HgChangesetId>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+) -> Result<Option<PartEncodeBuilder>> {
     if common.is_empty() {
         bail!("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead");
     }
 
     let changesets_buffer_size = 1000; // TODO(stash): make it configurable
     let heads_len = heads.len();
-
-    let phases_part = if let Some(phases_hint) = phases_hint {
-        // Phases were requested
-        Some(parts::phases_part(
-            ctx.clone(),
-            prepare_phases_stream(ctx.clone(), blobrepo.clone(), heads.clone(), phases_hint),
-        ))
-    } else {
-        None
-    };
 
     let blobrepo = Arc::new(blobrepo.clone());
     let common_heads: HashSet<_> = HashSet::from_iter(common.iter());
@@ -110,7 +132,7 @@ pub fn create_getbundle_response(
 
     let changelogentries = nodes_to_send
         .map({
-            cloned!(blobrepo);
+            cloned!(blobrepo, ctx);
             move |bonsai| {
                 blobrepo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bonsai)
@@ -145,23 +167,13 @@ pub fn create_getbundle_response(
             ))
         });
 
-    let mut parts = vec![];
     if heads_len != 0 {
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
-        parts.push(parts::changegroup_part(
-            changelogentries,
-            None,
-            CgVersion::Cg2Version,
-        ));
+        parts::changegroup_part(changelogentries, None, CgVersion::Cg2Version).map(Some)
+    } else {
+        Ok(None)
     }
-
-    // Phases part has to be after the changegroup part.
-    if let Some(phases_part) = phases_part {
-        parts.push(phases_part);
-    }
-
-    parts.into_iter().collect::<Result<Vec<_>>>()
 }
 
 fn hg_to_bonsai_stream(
@@ -185,12 +197,12 @@ fn hg_to_bonsai_stream(
 
 /// Calculate phases for the heads.
 /// If client is pulling non-public changesets phases for public roots should be included.
-fn prepare_phases_stream(
+fn prepare_phases(
     ctx: CoreContext,
     repo: BlobRepo,
     heads: Vec<HgChangesetId>,
     phases: Arc<dyn Phases>,
-) -> impl Stream<Item = (HgChangesetId, HgPhase), Error = Error> {
+) -> impl Future<Item = Vec<(HgChangesetId, HgPhase)>, Error = Error> {
     // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
     // heads that are not known by the server will be skipped
     repo.get_hg_bonsai_mapping(ctx.clone(), heads)
@@ -237,11 +249,11 @@ fn prepare_phases_stream(
                             public_roots
                                 .into_iter()
                                 .map(|(hg_csid, _)| (hg_csid, HgPhase::Public)),
-                        );
-                    stream::iter_ok(phases)
+                        )
+                        .collect();
+                    phases
                 })
         })
-        .flatten_stream()
 }
 
 /// Calculate public roots for the set of draft changesets
