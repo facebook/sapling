@@ -1,0 +1,31 @@
+[package]
+name = "dag-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+bindag = { path = "../bindag" }
+dag = { path = ".." }
+lazy_static = "1"
+
+[dependencies.libfuzzer-sys]
+git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = true
+
+[[bin]]
+name = "gca"
+path = "fuzz_targets/gca.rs"
+
+[[bin]]
+name = "gca_small"
+path = "fuzz_targets/gca_small.rs"

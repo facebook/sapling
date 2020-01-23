@@ -1,0 +1,14 @@
+Steps to run the fuzz tests with OSS toolchain:
+
+1. Install rustup.
+2. `rustup install nightly` to install nightly toolchain.
+3. From `eden/scm`, run `rustup override set nightly && make local` to use the nightly toolchain.
+4. From `dag` (parent directory of `fuzz`), run `cargo fuzz run $TEST_NAME`. For example, `$TEST_NAME` can be `dag`.
+
+`cargo fuzz` supports some options. For example:
+
+    cargo fuzz run --release -j 16 gca -- -max_len=20
+
+will build in release mode, fork into 16 processes, and generate at most 20-byte input.
+
+See also https://rust-fuzz.github.io/book/cargo-fuzz.html.
