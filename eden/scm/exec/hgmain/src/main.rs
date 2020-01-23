@@ -18,6 +18,7 @@ mod windows;
 #[cfg(windows)]
 use windows::disable_standard_handle_inheritability;
 
+#[cfg_attr(fbcode_build, fbinit::main)]
 fn main() {
     let mut full_args = match dispatch::args() {
         Ok(args) => args,

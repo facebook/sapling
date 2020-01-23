@@ -1,10 +1,12 @@
 from __future__ import absolute_import
 
 import os
+import signal
 import sys
 
 # Make sure we use sshaskpass.py in this repo, unaffected by PYTHONPATH
 from edenscm.hgext import sshaskpass
+from edenscm.mercurial import error
 
 
 if not sys.platform.startswith("linux"):
@@ -21,6 +23,14 @@ if pid:
         sys.stdout.write("pty receives: %r" % f.read())
     os.waitpid(pid, 0)
     sys.exit(0)
+
+sigterm = getattr(signal, "SIGTERM", None)
+if sigterm:
+
+    def catchterm(*args):
+        raise error.SignalInterrupt
+
+    signal.signal(sigterm, catchterm)
 
 # child, start a ttyserver and do some I/O
 ttysrvpid, sockpath = sshaskpass._startttyserver()
