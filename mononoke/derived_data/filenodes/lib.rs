@@ -10,23 +10,168 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use cloned::cloned;
 use context::CoreContext;
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::FilenodeInfo;
-use futures::Future;
-use futures_ext::FutureExt;
-use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_util::{future::try_join_all, try_join, TryStreamExt};
+use futures::{future as old_future, stream as old_stream, Future};
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt, StreamExt as OldStreamExt};
+use futures_preview::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::try_join_all,
+    stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
+use futures_util::try_join;
+use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
 use mercurial_types::{
     blobs::{fetch_file_envelope, File},
     fetch_manifest_envelope, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestEnvelope,
-    HgManifestId,
+    HgManifestId, NULL_HASH,
 };
-use mononoke_types::{ChangesetId, MPath, RepoPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
+use std::{collections::HashMap, convert::TryFrom};
 
-pub async fn generate_all_filenodes(
-    ctx: CoreContext,
-    repo: BlobRepo,
+#[derive(Clone, Debug)]
+struct RootFilenodeInfo {
+    pub filenode: HgFileNodeId,
+    pub p1: Option<HgFileNodeId>,
+    pub p2: Option<HgFileNodeId>,
+    pub copyfrom: Option<(RepoPath, HgFileNodeId)>,
+    pub linknode: HgChangesetId,
+}
+
+impl From<RootFilenodeInfo> for FilenodeInfo {
+    fn from(root_filenode: RootFilenodeInfo) -> Self {
+        let RootFilenodeInfo {
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        } = root_filenode;
+
+        FilenodeInfo {
+            path: RepoPath::RootPath,
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        }
+    }
+}
+
+impl TryFrom<FilenodeInfo> for RootFilenodeInfo {
+    type Error = Error;
+
+    fn try_from(filenode: FilenodeInfo) -> Result<Self, Self::Error> {
+        let FilenodeInfo {
+            path,
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        } = filenode;
+
+        if path != RepoPath::RootPath {
+            return Err(format_err!("unexpected path for root filenode: {:?}", path));
+        }
+        Ok(Self {
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        })
+    }
+}
+
+/// Derives filenodes that are stores in Filenodes object (usually in a database).
+/// Note: that should be called only for public commits!
+#[derive(Clone, Debug)]
+pub struct FilenodesOnlyPublic {
+    root_filenode: Option<RootFilenodeInfo>,
+}
+
+impl BonsaiDerived for FilenodesOnlyPublic {
+    const NAME: &'static str = "filenodes";
+
+    fn derive_from_parents(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        bonsai: BonsaiChangeset,
+        _parents: Vec<Self>,
+    ) -> BoxFuture<Self, Error> {
+        async move {
+            let filenodes = generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
+
+            if filenodes.is_empty() {
+                // This commit didn't create any new filenodes, and it's root manifest is the
+                // same as one of the parents (that can happen if this commit is empty).
+                // In that case
+                Ok(FilenodesOnlyPublic {
+                    root_filenode: None,
+                })
+            } else {
+                let (roots, non_roots): (Vec<_>, Vec<_>) =
+                    filenodes.into_iter().partition_map(classify_filenode);
+                let mut roots = roots.into_iter();
+
+                match (roots.next(), roots.next()) {
+                    (Some(root_filenode), None) => {
+                        let filenodes = repo.get_filenodes();
+                        let repo_id = repo.get_repoid();
+                        filenodes
+                            .add_filenodes(
+                                ctx.clone(),
+                                old_stream::iter_ok(non_roots).boxify(),
+                                repo_id,
+                            )
+                            .compat()
+                            .await?;
+
+                        Ok(FilenodesOnlyPublic {
+                            root_filenode: Some(root_filenode),
+                        })
+                    }
+                    _ => Err(format_err!("expected exactly one root, found {:?}", roots)),
+                }
+            }
+        }
+            .boxed()
+            .compat()
+            .boxify()
+    }
+}
+
+fn classify_filenode(filenode: FilenodeInfo) -> Either<RootFilenodeInfo, FilenodeInfo> {
+    if filenode.path == RepoPath::RootPath {
+        let FilenodeInfo {
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+            ..
+        } = filenode;
+
+        Either::Left(RootFilenodeInfo {
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        })
+    } else {
+        Either::Right(filenode)
+    }
+}
+
+async fn generate_all_filenodes(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<Vec<FilenodeInfo>, Error> {
     let parents = repo
@@ -37,12 +182,11 @@ pub async fn generate_all_filenodes(
     // Mercurial commits can have only 2 parents, however bonsai commits can have more
     // In that case p3, p4, ... are ignored (they are called step parents)
     let cs_parents: Vec<_> = parents.into_iter().take(2).collect();
-    let root_mf = fetch_root_manifest_id(ctx.clone(), cs_id, &repo);
+    let root_mf = fetch_root_manifest_id(&ctx, &cs_id, &repo);
     let parents = try_join_all(
         cs_parents
-            .clone()
-            .into_iter()
-            .map(|p| fetch_root_manifest_id(ctx.clone(), p, &repo)),
+            .iter()
+            .map(|p| fetch_root_manifest_id(&ctx, p, &repo)),
     );
 
     let linknode = repo
@@ -142,13 +286,112 @@ fn create_file_filenode(
     })
 }
 
-async fn fetch_root_manifest_id(
-    ctx: CoreContext,
+#[derive(Clone)]
+pub struct FilenodesOnlyPublicMapping {
+    repo: BlobRepo,
+}
+
+impl FilenodesOnlyPublicMapping {
+    pub fn new(repo: BlobRepo) -> Self {
+        Self { repo }
+    }
+}
+
+impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
+    type Value = FilenodesOnlyPublic;
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+        cloned!(self.repo);
+        async move {
+            stream::iter(csids.into_iter())
+                .map({
+                    let repo = &repo;
+                    let ctx = &ctx;
+                    move |cs_id| {
+                        async move {
+                            let maybe_root_filenode =
+                                fetch_root_filenode(&ctx, cs_id, &repo).await?;
+
+                            Ok(maybe_root_filenode.map(move |filenode| {
+                                (
+                                    cs_id,
+                                    FilenodesOnlyPublic {
+                                        root_filenode: Some(filenode),
+                                    },
+                                )
+                            }))
+                        }
+                    }
+                })
+                .buffer_unordered(100)
+                .try_filter_map(|x| async { Ok(x) })
+                .try_collect()
+                .await
+        }
+            .boxed()
+            .compat()
+            .boxify()
+    }
+
+    fn put(&self, ctx: CoreContext, _csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+        let filenodes = self.repo.get_filenodes();
+        let repo_id = self.repo.get_repoid();
+        match id.root_filenode {
+            Some(root_filenode) => filenodes
+                .add_filenodes(
+                    ctx.clone(),
+                    old_stream::once(Ok(root_filenode.into())).boxify(),
+                    repo_id,
+                )
+                .boxify(),
+            None => old_future::ok(()).boxify(),
+        }
+    }
+}
+
+async fn fetch_root_filenode(
+    ctx: &CoreContext,
     cs_id: ChangesetId,
+    repo: &BlobRepo,
+) -> Result<Option<RootFilenodeInfo>, Error> {
+    let mf_id = fetch_root_manifest_id(ctx, &cs_id, repo).await?;
+
+    // Special case null manifest id if we run into it
+    let mf_id = mf_id.into_nodehash();
+    let filenodes = repo.get_filenodes();
+    if mf_id == NULL_HASH {
+        Ok(Some(RootFilenodeInfo {
+            filenode: HgFileNodeId::new(NULL_HASH),
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: HgChangesetId::new(NULL_HASH),
+        }))
+    } else {
+        let maybe_filenode = filenodes
+            .get_filenode(
+                ctx.clone(),
+                &RepoPath::RootPath,
+                HgFileNodeId::new(mf_id),
+                repo.get_repoid(),
+            )
+            .compat()
+            .await?;
+        maybe_filenode.map(RootFilenodeInfo::try_from).transpose()
+    }
+}
+
+async fn fetch_root_manifest_id(
+    ctx: &CoreContext,
+    cs_id: &ChangesetId,
     repo: &BlobRepo,
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .get_hg_from_bonsai_changeset(ctx.clone(), *cs_id)
         .compat()
         .await?;
 
@@ -173,7 +416,7 @@ mod tests {
         cs_id: ChangesetId,
         expected_paths: Vec<RepoPath>,
     ) -> Result<(), Error> {
-        let filenodes = generate_all_filenodes(ctx.clone(), repo.clone(), cs_id).await?;
+        let filenodes = generate_all_filenodes(&ctx, &repo, cs_id).await?;
 
         assert_eq!(filenodes.len(), expected_paths.len());
         for path in expected_paths {
@@ -312,5 +555,64 @@ mod tests {
     fn many_parents(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new()?;
         runtime.block_on_std(test_many_parents(fb))
+    }
+
+    async fn test_derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+
+        let child_empty = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "content")
+            .commit()
+            .await?;
+
+        let mapping = FilenodesOnlyPublicMapping::new(repo.clone());
+        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), mapping.clone(), child_empty)
+            .compat()
+            .await?;
+
+        // Make sure they are in the mapping
+        let maps = mapping
+            .get(ctx.clone(), vec![parent_empty, child_empty])
+            .compat()
+            .await?;
+        assert_eq!(maps.len(), 2);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio_compat::runtime::Runtime::new()?;
+        runtime.block_on_std(test_derive_empty_commits(fb))
+    }
+
+    async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+        let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
+            .commit()
+            .await?;
+
+        let mapping = FilenodesOnlyPublicMapping::new(repo.clone());
+        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), mapping.clone(), child_empty)
+            .compat()
+            .await?;
+
+        // Make sure they are in the mapping
+        let maps = mapping
+            .get(ctx.clone(), vec![child_empty, parent_empty])
+            .compat()
+            .await?;
+        assert_eq!(maps.len(), 2);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio_compat::runtime::Runtime::new()?;
+        runtime.block_on_std(test_derive_only_empty_commits(fb))
     }
 }
