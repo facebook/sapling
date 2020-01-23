@@ -76,13 +76,13 @@ struct FakeRemoteDataStore {
 }
 
 impl RemoteDataStore for FakeRemoteDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         for k in keys {
             let data = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
             let delta = Delta {
                 data: data.clone(),
                 base: None,
-                key: k,
+                key: k.clone(),
             };
             self.store.add(&delta, &Default::default())?;
         }
@@ -97,21 +97,21 @@ impl DataStore for FakeRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_delta(key),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_delta_chain(key),
         }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_meta(key),
         }
@@ -130,7 +130,7 @@ struct FakeRemoteHistoryStore {
 }
 
 impl RemoteHistoryStore for FakeRemoteHistoryStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         for k in keys {
             self.store
                 .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?
@@ -142,7 +142,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
 
 impl HistoryStore for FakeRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_node_info(key),
         }

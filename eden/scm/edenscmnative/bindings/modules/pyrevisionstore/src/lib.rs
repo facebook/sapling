@@ -692,7 +692,7 @@ struct PyRemoteStore {
 }
 
 impl PyRemoteStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -745,7 +745,7 @@ impl RemoteStore for PyRemoteStore {
 }
 
 impl RemoteDataStore for PyRemoteDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         self.0.prefetch(keys)
     }
 }
@@ -756,7 +756,7 @@ impl DataStore for PyRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self
                 .0
                 .inner
@@ -770,7 +770,7 @@ impl DataStore for PyRemoteDataStore {
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self
                 .0
                 .inner
@@ -784,7 +784,7 @@ impl DataStore for PyRemoteDataStore {
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self
                 .0
                 .inner
@@ -805,14 +805,14 @@ impl LocalStore for PyRemoteDataStore {
 }
 
 impl RemoteHistoryStore for PyRemoteHistoryStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         self.0.prefetch(keys)
     }
 }
 
 impl HistoryStore for PyRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self
                 .0
                 .inner

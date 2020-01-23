@@ -192,7 +192,7 @@ impl<T: RemoteHistoryStore + ?Sized> RemoteHistoryStorePyExt for T {
             .iter(py)
             .map(|tuple| from_tuple_to_key(py, &tuple))
             .collect::<PyResult<Vec<Key>>>()?;
-        self.prefetch(keys).map_pyerr(py)?;
+        self.prefetch(&keys).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 }

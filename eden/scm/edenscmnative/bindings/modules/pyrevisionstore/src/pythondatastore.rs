@@ -147,7 +147,7 @@ impl DataStore for PythonDataStore {
 }
 
 impl RemoteDataStore for PythonDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let keys = keys

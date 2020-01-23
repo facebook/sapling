@@ -52,7 +52,7 @@ impl<T: DataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestStore<
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        self.underlying.prefetch(keys)
+        self.underlying.prefetch(&keys)
     }
 }
 

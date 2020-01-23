@@ -75,11 +75,11 @@ struct EdenApiRemoteDataStore {
 }
 
 impl RemoteDataStore for EdenApiRemoteDataStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let edenapi = &self.inner.edenapi;
         let (entries, _) = match edenapi.kind {
-            EdenApiRemoteStoreKind::File => edenapi.edenapi.get_files(keys, None)?,
-            EdenApiRemoteStoreKind::Tree => edenapi.edenapi.get_trees(keys, None)?,
+            EdenApiRemoteStoreKind::File => edenapi.edenapi.get_files(keys.to_vec(), None)?,
+            EdenApiRemoteStoreKind::Tree => edenapi.edenapi.get_trees(keys.to_vec(), None)?,
         };
         for entry in entries {
             let key = entry.0.clone();
@@ -105,21 +105,21 @@ impl DataStore for EdenApiRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.inner.store.get_delta(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.inner.store.get_delta_chain(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(vec![key.clone()]) {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.inner.store.get_meta(key),
             Err(_) => Ok(None),
         }

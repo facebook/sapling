@@ -35,7 +35,7 @@ pub trait RemoteHistoryStore: HistoryStore + Send + Sync {
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
     /// everything that was asked. On a higher level store, such as the `MetadataStore`, this will
     /// avoid fetching data that is already present locally.
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()>;
+    fn prefetch(&self, keys: &[Key]) -> Result<()>;
 }
 
 /// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.

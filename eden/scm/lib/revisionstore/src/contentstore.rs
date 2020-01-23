@@ -68,13 +68,13 @@ impl DataStore for ContentStore {
 }
 
 impl RemoteDataStore for ContentStore {
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
         if let Some(remote_store) = self.inner.remote_store.as_ref() {
-            let missing = self.get_missing(&keys)?;
+            let missing = self.get_missing(keys)?;
             if missing == vec![] {
                 Ok(())
             } else {
-                remote_store.prefetch(missing)
+                remote_store.prefetch(&missing)
             }
         } else {
             // There is no remote store, let's pretend everything is fine.
