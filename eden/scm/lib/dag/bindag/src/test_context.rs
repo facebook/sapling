@@ -9,6 +9,7 @@ use crate::{parse_bindag, ParentRevs};
 use anyhow::Result;
 use dag::{namedag::LowLevelAccess, spanset::SpanSet, Id, IdDag, NameDag, VertexName};
 use std::collections::HashSet;
+use std::ops::Range;
 use tempfile::TempDir;
 
 /// Context for testing purpose.
@@ -29,8 +30,13 @@ pub struct TestContext {
 
 impl TestContext {
     pub fn from_bin(bin: &[u8]) -> Self {
+        Self::from_bin_sliced(bin, 0..usize::max_value())
+    }
+
+    pub fn from_bin_sliced(bin: &[u8], range: Range<usize>) -> Self {
         // Prepare the plain DAG (parents)
         let parents = parse_bindag(bin);
+        let parents = crate::slice_parents(parents, range);
 
         // Prepare NameDag
         let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {

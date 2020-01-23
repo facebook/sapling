@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::ops::Deref;
+use std::ops::{Deref, Range};
 use vlqencoding::VLQDecode;
 
 mod gca;
@@ -103,4 +103,30 @@ pub fn parse_bindag(bindag: &[u8]) -> Vec<ParentRevs> {
     }
 
     parents
+}
+
+/// Slice a graph. Remove unrefered edges.
+pub fn slice_parents(parents: Vec<ParentRevs>, range: Range<usize>) -> Vec<ParentRevs> {
+    let start: usize = range.start;
+    let end: usize = range.end;
+    if start == 0 && end >= parents.len() {
+        return parents;
+    }
+
+    let mut result = Vec::with_capacity(end - start);
+    for i in &parents[range] {
+        let new_parents: Vec<usize> = i
+            .as_ref()
+            .iter()
+            .filter_map(|&p| {
+                if p < start || p >= end {
+                    None
+                } else {
+                    Some(p - start)
+                }
+            })
+            .collect();
+        result.push(new_parents.into())
+    }
+    result
 }
