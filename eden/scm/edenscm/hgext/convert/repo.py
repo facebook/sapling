@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import datetime
 import functools
 import os
@@ -20,6 +21,11 @@ from edenscm.mercurial import error, node as nodemod, pycompat
 from edenscm.mercurial.i18n import _
 
 from . import common
+
+
+commitspec = collections.namedtuple(
+    "commitspec", ["project", "commithash", "timestamp"]
+)
 
 
 class gitutil(object):
@@ -497,18 +503,17 @@ class repo(object):
 
                 for line in outputlines:
                     commithash, timestamp = line.split(":")
-                    unifiedprojectcommits.append(
-                        (projectpath, commithash, int(timestamp))
-                    )
+                    cs = commitspec(projectpath, commithash, int(timestamp))
+                    unifiedprojectcommits.append(cs)
 
             # Sort the commits by date
             unifiedprojectcommits = sorted(
-                unifiedprojectcommits, key=lambda projectcommit: projectcommit[2]
+                unifiedprojectcommits, key=lambda projectcommit: projectcommit.timestamp
             )
             previoushash = nodemod.nullhex
-            for project, commithash, timestamp in unifiedprojectcommits:
-                self.unifiedprevioushashes[commithash] = previoushash
-                previoushash = commithash
+            for commit in unifiedprojectcommits:
+                self.unifiedprevioushashes[commit.commithash] = previoushash
+                previoushash = commit.commithash
             self.unifiedcommits[repobranch] = unifiedprojectcommits
 
     def _parsemanifestxmlfile(self, manifestpath):
@@ -793,7 +798,7 @@ class repo_source(common.converter_source):
 
         # self.repo.getbranches()
         unifiedheads = [
-            self.repo.unifiedcommits[branchname][-1][1]
+            self.repo.unifiedcommits[branchname][-1].commithash
             for branchname, commithash in self.repo.manifestbranchcommithashes.items()
             if branchname in self.repo.unifiedcommits
         ]
@@ -1055,7 +1060,9 @@ class repo_source(common.converter_source):
         """See common.converter_source.getbookmarks"""
         # self.repo.getbranches()
         bookmarks = {
-            branchname: self._joinrevfields(self.VARIANT_UNIFIED, commithashes[-1][1])
+            branchname: self._joinrevfields(
+                self.VARIANT_UNIFIED, commithashes[-1].commithash
+            )
             for branchname, commithashes in self.repo.unifiedcommits.items()
         }
         return bookmarks
