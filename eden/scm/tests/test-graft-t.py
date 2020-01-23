@@ -124,7 +124,7 @@ sh % "hg status --rev '2^1' --rev 2" == r"""
     A b
     R a"""
 sh % "'HGEDITOR=cat' hg graft 2 -u foo --edit" == r"""
-    grafting 2:5c095ad7e90f "2"
+    grafting 5c095ad7e90f "2"
     merging a and b to b
     2
 
@@ -172,16 +172,16 @@ sh % "hg log --debug -r tip" == r"""
 sh % "hg graft 1 5 4 3 'merge()' 2 -n" == r'''
     skipping ungraftable merge revision 6
     skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
-    grafting 1:5d205f8b35b6 "1"
-    grafting 5:5345cd5c0f38 "5"
-    grafting 4:9c233e8e184d "4"
-    grafting 3:4c60f11aa304 "3"'''
+    grafting 5d205f8b35b6 "1"
+    grafting 5345cd5c0f38 "5"
+    grafting 9c233e8e184d "4"
+    grafting 4c60f11aa304 "3"'''
 
 sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.backgroundclose=False" == r"""
     skipping ungraftable merge revision 6
     scanning for duplicate grafts
     skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
-    grafting 1:5d205f8b35b6 "1"
+    grafting 5d205f8b35b6 "1"
       searching for copies back to rev 1
       unmatched files in local:
        b
@@ -201,7 +201,7 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.background
     b
     committing manifest
     committing changelog
-    grafting 5:5345cd5c0f38 "5"
+    grafting 5345cd5c0f38 "5"
       searching for copies back to rev 1
       unmatched files in other (from topological common ancestor):
        c
@@ -216,7 +216,7 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.background
     committing changelog"""
 sh % "'HGEDITOR=cat' hg graft 4 3 --log --debug" == r"""
     scanning for duplicate grafts
-    grafting 4:9c233e8e184d "4"
+    grafting 9c233e8e184d "4"
       searching for copies back to rev 1
       unmatched files in other (from topological common ancestor):
        c
@@ -291,7 +291,7 @@ sh % "hg graft 1 5 4 3 'merge()' 2" == r"""
     skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
     skipping revision 1:5d205f8b35b6 (already grafted to 8:6b9e5368ca4e)
     skipping revision 5:5345cd5c0f38 (already grafted to 9:9436191a062e)
-    grafting 4:9c233e8e184d "4"
+    grafting 9c233e8e184d "4"
     merging e
     warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
     abort: unresolved conflicts, can't continue
@@ -301,7 +301,7 @@ sh % "hg graft 1 5 4 3 'merge()' 2" == r"""
 # Continue without resolve should fail:
 
 sh % "hg continue" == r"""
-    grafting 4:9c233e8e184d "4"
+    grafting 9c233e8e184d "4"
     abort: unresolved merge conflicts (see 'hg help resolve')
     [255]"""
 
@@ -329,8 +329,8 @@ sh % "hg graft --abort -r 6" == r"""
 # Continue for real, clobber usernames
 
 sh % "hg graft -c -U" == r'''
-    grafting 4:9c233e8e184d "4"
-    grafting 3:4c60f11aa304 "3"'''
+    grafting 9c233e8e184d "4"
+    grafting 4c60f11aa304 "3"'''
 
 # Compare with original:
 
@@ -381,7 +381,7 @@ sh % "hg up -q 0"
 sh % "echo g" > "g"
 sh % "hg add g" == ""
 sh % "hg ci -m 7" == ""
-sh % "hg graft 7" == 'grafting 7:ef0ef43d49e7 "2"'
+sh % "hg graft 7" == 'grafting ef0ef43d49e7 "2"'
 
 sh % "hg log -r 7 --template '{rev}:{node}\\n'" == "7:ef0ef43d49e79e81ddafdc7997401ba0041efc82"
 sh % "hg log -r 2 --template '{rev}:{node}\\n'" == "2:5c095ad7e90f871700f02dd1fa5012cb4498a2d4"
@@ -443,7 +443,7 @@ sh % "hg graft tip" == r"""
 
 sh % "hg up -Cq 1"
 sh % "hg graft 3 --log -u foo" == r"""
-    grafting 3:4c60f11aa304 "3"
+    grafting 4c60f11aa304 "3"
     warning: can't find ancestor for 'c' copied from 'b'!"""
 sh % "hg log --template '{rev}:{node|short} {parents} {desc}\\n' -r tip" == r"""
     14:0c921c65ef1e 1:5d205f8b35b6  3
@@ -456,7 +456,7 @@ sh % "hg ci -m 8"
 sh % "echo c" > "a"
 sh % "hg ci -m 9"
 sh % "hg graft 1 --tool 'internal:fail'" == r"""
-    grafting 1:5d205f8b35b6 "1"
+    grafting 5d205f8b35b6 "1"
     abort: unresolved conflicts, can't continue
     (use 'hg resolve' and 'hg graft --continue')
     [255]"""
@@ -474,7 +474,7 @@ sh % "echo b" > "a"
 sh % "hg resolve -m a" == r"""
     (no more unresolved files)
     continue: hg graft --continue"""
-sh % "hg graft -c" == 'grafting 1:5d205f8b35b6 "1"'
+sh % "hg graft -c" == 'grafting 5d205f8b35b6 "1"'
 sh % "hg export tip --git" == r"""
     # HG changeset patch
     # User bar
@@ -495,7 +495,7 @@ sh % "hg export tip --git" == r"""
 sh % "echo c" > "a"
 sh % "hg ci -m 10"
 sh % "hg graft 2 --tool 'internal:fail'" == r"""
-    grafting 2:5c095ad7e90f "2"
+    grafting 5c095ad7e90f "2"
     abort: unresolved conflicts, can't continue
     (use 'hg resolve' and 'hg graft --continue')
     [255]"""
@@ -503,7 +503,7 @@ sh % "hg resolve --all" == r"""
     merging a and b to b
     (no more unresolved files)
     continue: hg graft --continue"""
-sh % "hg graft -c" == 'grafting 2:5c095ad7e90f "2"'
+sh % "hg graft -c" == 'grafting 5c095ad7e90f "2"'
 sh % "hg export tip --git" == r"""
     # HG changeset patch
     # User test
@@ -526,7 +526,7 @@ C D
 A B
 """
 sh % "hg update -q $C"
-sh % "hg graft $B" == 'grafting 1:fc2b737bb2e5 "B"'
+sh % "hg graft $B" == 'grafting fc2b737bb2e5 "B"'
 sh % "hg rm A B C"
 sh % "hg commit -m remove-all"
 sh % "hg graft $B $A $D" == r"""
@@ -536,8 +536,8 @@ sh % "hg graft $B $A $D" == r"""
     [255]"""
 sh % "hg graft $B $A $D --force" == r'''
     skipping ungraftable merge revision 3
-    grafting 1:fc2b737bb2e5 "B"
-    grafting 0:426bada5c675 "A"'''
+    grafting fc2b737bb2e5 "B"
+    grafting 426bada5c675 "A"'''
 
 # graft --force after backout
 
@@ -551,7 +551,7 @@ sh % "hg graft to-backout" == r"""
     skipping ancestor revision 8:b2fde3ce6adf
     [255]"""
 sh % "hg graft to-backout --force" == r"""
-    grafting 8:b2fde3ce6adf "to-backout" (to-backout)
+    grafting b2fde3ce6adf "to-backout" (to-backout)
     merging A"""
 sh % "cat A" == "abc"
 
@@ -560,13 +560,13 @@ sh % "cat A" == "abc"
 sh % "echo def" > "A"
 sh % "hg ci -m 31"
 sh % "hg graft to-backout --force --tool 'internal:fail'" == r"""
-    grafting 8:b2fde3ce6adf "to-backout" (to-backout)
+    grafting b2fde3ce6adf "to-backout" (to-backout)
     abort: unresolved conflicts, can't continue
     (use 'hg resolve' and 'hg graft --continue')
     [255]"""
 sh % "echo abc" > "A"
 sh % "hg resolve -qm A" == "continue: hg graft --continue"
-sh % "hg graft -c" == 'grafting 8:b2fde3ce6adf "to-backout" (to-backout)'
+sh % "hg graft -c" == 'grafting b2fde3ce6adf "to-backout" (to-backout)'
 sh % "cat A" == "abc"
 
 # Empty graft
@@ -577,7 +577,7 @@ A  B  # B/A=A
 """
 sh % "hg up -qr $B"
 sh % "hg graft $A" == r"""
-    grafting 0:426bada5c675 "A"
+    grafting 426bada5c675 "A"
     note: graft of 0:426bada5c675 created no changes to commit"""
 
 # Graft to duplicate a commit
@@ -592,7 +592,7 @@ sh % "hg log -G -T '{rev}\\n'" == r"""
     |
     o  0"""
 sh % "hg up -q 0"
-sh % "hg graft -r 1" == 'grafting 1:0e067c57feba "b"'
+sh % "hg graft -r 1" == 'grafting 0e067c57feba "b"'
 sh % "hg log -G -T '{rev}\\n'" == r"""
     @  2
     |
@@ -602,7 +602,7 @@ sh % "hg log -G -T '{rev}\\n'" == r"""
 # Graft to duplicate a commit twice
 
 sh % "hg up -q 0"
-sh % "hg graft -r 2" == 'grafting 2:044ec77f6389 "b"'
+sh % "hg graft -r 2" == 'grafting 044ec77f6389 "b"'
 sh % "hg log -G -T '{rev}\\n'" == r"""
     @  3
     |
@@ -711,7 +711,7 @@ sh % "hg log -G" == r"""
 
 sh % "hg up -q 'desc(\"A0\")'"
 sh % "'HGEDITOR=echo C1 >' hg graft -r 'desc(\"C0\")' --edit" == r"""
-    grafting 2:f58c7e2b28fa "C0"
+    grafting f58c7e2b28fa "C0"
     merging f1a and f1b to f1a
     merging f5a
     warning: can't find ancestor for 'f5a' copied from 'f5b'!"""
@@ -728,7 +728,7 @@ sh % "hg cat f1b" == r"""
 # Test the cases A.0 (f4x) and A.6 (f3x)
 
 sh % "'HGEDITOR=echo D1 >' hg graft -r 'desc(\"D0\")' --edit" == r"""
-    grafting 3:b69f5839d2d9 "D0"
+    grafting b69f5839d2d9 "D0"
     note: possible conflict - f3b was renamed multiple times to:
      f3d
      f3a
@@ -785,7 +785,7 @@ sh % "hg log -G" == r"""
 # and A.3 with a local content change to be preserved (f2x).
 
 sh % "'HGEDITOR=echo C2 >' hg graft -r 'desc(\"C0\")' --edit" == r"""
-    grafting 2:f58c7e2b28fa "C0"
+    grafting f58c7e2b28fa "C0"
     merging f1e and f1b to f1e
     merging f2a and f2c to f2c
     merging f5b and f5a to f5a"""
@@ -793,7 +793,7 @@ sh % "'HGEDITOR=echo C2 >' hg graft -r 'desc(\"C0\")' --edit" == r"""
 # Test the cases A.1 (f4x) and A.7 (f3x).
 
 sh % "'HGEDITOR=echo D2 >' hg graft -r 'desc(\"D0\")' --edit" == r"""
-    grafting 3:b69f5839d2d9 "D0"
+    grafting b69f5839d2d9 "D0"
     note: possible conflict - f3b was renamed multiple times to:
      f3e
      f3d
@@ -1095,7 +1095,7 @@ sh % "hg up -qCr 4"
 sh % "hg graft --tool ':local' -r '2::5'" == r'''
     skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
     skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
-    grafting 2:42127f193bcd "b"'''
+    grafting 42127f193bcd "b"'''
 
 # Extending the graft range to include a (skipped) merge of 3 will not prevent us from
 # also detecting that both 3 and 5 should be skipped:
@@ -1105,8 +1105,8 @@ sh % "hg graft --tool ':local' -r '2::7'" == r"""
     skipping ungraftable merge revision 6
     skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
     skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
-    grafting 2:42127f193bcd "b"
-    grafting 7:d3c3f2b38ecc "xx"
+    grafting 42127f193bcd "b"
+    grafting d3c3f2b38ecc "xx"
     note: graft of 7:d3c3f2b38ecc created no changes to commit"""
 
 sh % "cd .."

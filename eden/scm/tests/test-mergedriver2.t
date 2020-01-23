@@ -64,7 +64,7 @@ and add B_add and C_add. Note: there are no conflicts.
 Do the merge:
 
   $ hg graft $C
-  grafting 3:cb95dc195621 "C"
+  grafting cb95dc195621 "C"
   merge driver preprocess
   merge driver conclude
 

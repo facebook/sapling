@@ -683,7 +683,7 @@ create history with a filerev whose linkrev points to another branch
   $ hg commit -Am 'unrelated'
   adding unrelated
   $ hg graft -r 'desc(contentB)'
-  grafting 1:fd27c222e3e6 "contentB"
+  grafting fd27c222e3e6 "contentB"
   $ echo C >> a
   $ hg commit -m 'contentC'
   $ echo W >> a

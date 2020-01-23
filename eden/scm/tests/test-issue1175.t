@@ -71,7 +71,7 @@ https://bz.mercurial-scm.org/show_bug.cgi?id=4476
   $ echo b2 >> b
   $ hg ci -Aqm b2
   $ hg graft 1
-  grafting 1:5974126fad84 "b1"
+  grafting 5974126fad84 "b1"
   merging b
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
@@ -83,7 +83,7 @@ https://bz.mercurial-scm.org/show_bug.cgi?id=4476
   (no more unresolved files)
   continue: hg graft --continue
   $ hg graft --continue
-  grafting 1:5974126fad84 "b1"
+  grafting 5974126fad84 "b1"
   warning: can't find ancestor for 'b' copied from 'a'!
   $ hg log -f b -T 'changeset:   {rev}:{node|short}\nsummary:     {desc}\n\n'
   changeset:   3:376d30ccffc0

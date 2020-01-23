@@ -41,7 +41,7 @@ sh % "hg bookmark -i book-B"
 # Do the merge:
 
 sh % "hg up -q $C"
-sh % "hg graft book-B" == 'grafting 4:b55db8435dc2 "B2" (book-B)'
+sh % "hg graft book-B" == 'grafting b55db8435dc2 "B2" (book-B)'
 
 sh % "hg status"
 sh % "hg log -r . -T '{desc}\\n' --stat" == r"""
@@ -56,4 +56,4 @@ sh % "hg log -r . -T '{desc}\\n' --stat" == r"""
 sh % "setconfig 'extensions.copytrace=!' 'experimental.copytrace=on' 'copytrace.fastcopytrace=0'"
 
 sh % "hg up -q $C"
-sh % "hg graft book-B" == 'grafting 4:b55db8435dc2 "B2" (book-B)'
+sh % "hg graft book-B" == 'grafting b55db8435dc2 "B2" (book-B)'

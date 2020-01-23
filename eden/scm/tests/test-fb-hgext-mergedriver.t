@@ -653,7 +653,7 @@ test merge with automatic commit afterwards -- e.g. graft
   $ hg debugmergestate
   no merge state found
   $ hg graft 1
-  grafting 1:e0cfe070a2bb "b"
+  grafting e0cfe070a2bb "b"
   * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
@@ -704,7 +704,7 @@ graft with failing merge
   > mergedriver = python:$TESTTMP/mergedriver-auto1.py
   > EOF
   $ hg graft 1
-  grafting 1:e0cfe070a2bb "b"
+  grafting e0cfe070a2bb "b"
   * preprocess called
   merging bar.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
@@ -717,7 +717,7 @@ graft with failing merge
   $ hg resolve --mark bar.txt
   (no more unresolved files -- run "hg resolve --all" to conclude)
   $ hg graft --continue
-  grafting 1:e0cfe070a2bb "b"
+  grafting e0cfe070a2bb "b"
   abort: driver-resolved merge conflicts
   (run "hg resolve --all" to resolve)
   [255]
@@ -734,7 +734,7 @@ XXX hg resolve --unmark --all doesn't cause the merge driver to be rerun
   (no more unresolved files)
   continue: hg graft --continue
   $ hg graft --continue
-  grafting 1:e0cfe070a2bb "b"
+  grafting e0cfe070a2bb "b"
   $ hg export
   # HG changeset patch
   # User test
@@ -781,7 +781,7 @@ delete all the files
   > mergedriver = python:$TESTTMP/mergedriver-delete.py
   > EOF
   $ hg graft 1
-  grafting 1:e0cfe070a2bb "b"
+  grafting e0cfe070a2bb "b"
   * preprocess called
   * conclude called
   $ hg status --change .

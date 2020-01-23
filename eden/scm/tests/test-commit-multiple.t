@@ -46,9 +46,9 @@ transplant bug fixes onto release branch
   $ hg update 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg graft 2
-  grafting 2:1f6b59d373ef "fix 1"
+  grafting 1f6b59d373ef "fix 1"
   $ hg graft 3
-  grafting 3:a53b02101490 "fix 2"
+  grafting a53b02101490 "fix 2"
   $ hg log -G --template="$template"
   @  5  fix 2  [default]
   |

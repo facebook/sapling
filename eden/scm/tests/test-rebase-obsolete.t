@@ -122,8 +122,8 @@ We make a copy of both the first changeset in the rebased and some other in the
 set.
 
   $ hg graft 42ccdea3bb16 32af7686d403
-  grafting 1:42ccdea3bb16 "B"
-  grafting 3:32af7686d403 "D"
+  grafting 42ccdea3bb16 "B"
+  grafting 32af7686d403 "D"
   $ hg rebase  -s 42ccdea3bb16 -d .
   rebasing 42ccdea3bb16 "B"
   note: rebase of 1:42ccdea3bb16 created no changes to commit
@@ -251,7 +251,7 @@ More complex case where part of the rebase set were already rebased
   
   $ hg up -qr 'desc(G)'
   $ hg graft 4596109a6a4328c398bde3a4a3b6737cfade3003
-  grafting 11:4596109a6a43 "D"
+  grafting 4596109a6a43 "D"
   $ hg up -qr 'desc(E)'
   $ hg rebase -s tip -d .
   rebasing 9e36056a46e3 "D"

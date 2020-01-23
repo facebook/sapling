@@ -87,7 +87,7 @@ Test histedit
 
 Test graft
   $ cmd hg graft 775bfdddc842
-  grafting 1:775bfdddc842 "c2" (rebase)
+  grafting 775bfdddc842 "c2" (rebase)
   merging b
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
@@ -100,7 +100,7 @@ Test graft
   continue: hg graft --continue
   (4b6cc7d5|GRAFT)
   $ cmd hg graft --continue
-  grafting 1:775bfdddc842 "c2" (rebase)
+  grafting 775bfdddc842 "c2" (rebase)
   (42eaf5ca)
 
 Test bisect

@@ -2529,7 +2529,7 @@ def _dograft(ui, repo, *revs, **opts):
             return -1
 
     for pos, ctx in enumerate(repo.set("%ld", revs)):
-        desc = '%d:%s "%s"' % (ctx.rev(), ctx, ctx.description().split("\n", 1)[0])
+        desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
         names = repo.nodebookmarks(ctx.node())
         if names:
             desc += " (%s)" % " ".join(names)

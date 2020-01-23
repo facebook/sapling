@@ -1873,7 +1873,7 @@ sh % "hg commit -m content2"
 sh % "hg up --rev 'desc(content1)'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "echo unrelated" > "unrelated"
 sh % "hg commit -Am unrelated" == "adding unrelated"
-sh % "hg graft -r 'desc(content2)'" == 'grafting 1:2294ae80ad84 "content2"'
+sh % "hg graft -r 'desc(content2)'" == 'grafting 2294ae80ad84 "content2"'
 sh % "echo 3" > "a"
 sh % "hg commit -m content3"
 sh % "hg log -G" == r"""

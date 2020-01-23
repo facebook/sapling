@@ -61,10 +61,10 @@ when a diff is landed with landcastle.
   $ hg update -r 1
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg graft -r 2
-  grafting 2:948715751816 "add b"
+  grafting 948715751816 "add b"
   $ land_amend
   $ hg graft -r 3
-  grafting 3:0e229072f723 "add c"
+  grafting 0e229072f723 "add c"
   $ land_amend
   $ hg push -r . --to master
   pushing rev cc68f5e5f8d6 to destination ssh://user@dummy/server bookmark master
@@ -124,7 +124,7 @@ Now land the last diff.
   $ hg update -r 7
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg graft -r 4
-  grafting 4:e4b5974890c0 "add d"
+  grafting e4b5974890c0 "add d"
   $ land_amend
   $ hg push -r . --to master
   pushing rev 296f9d37d5c1 to destination ssh://user@dummy/server bookmark master

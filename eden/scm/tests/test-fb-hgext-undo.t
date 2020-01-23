@@ -253,7 +253,7 @@ hg undo command tests
   |    c2
   ~
   $ hg graft 296fda51a303
-  grafting 6:296fda51a303 "d" (feature2)
+  grafting 296fda51a303 "d" (feature2)
   $ hg log -G -T compact -l2
   @  11:8   f007a7cf4c3d   1970-01-01 00:00 +0000   test
   |    d
