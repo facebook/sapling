@@ -10,8 +10,6 @@ use dag::{idmap::IdMap, segment::IdDag, spanset::SpanSet, Group, Id, VertexName}
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
-mod bindag;
-
 fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 

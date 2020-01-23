@@ -18,6 +18,7 @@ serde = { version = "1", features = ["derive"] }
 tempfile = "3.0.7"
 
 [dev-dependencies]
+bindag = { path = "bindag" }
 drawdag = { path = "../drawdag" }
 minibench = { path = "../minibench" }
 quickcheck = "0.9"

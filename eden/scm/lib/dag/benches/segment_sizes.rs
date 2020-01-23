@@ -13,8 +13,6 @@ use minibench::{
 };
 use tempfile::tempdir;
 
-mod bindag;
-
 fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
