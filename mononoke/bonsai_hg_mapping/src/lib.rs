@@ -28,11 +28,9 @@ use stats::prelude::*;
 
 mod caching;
 mod errors;
-mod mem_writes;
 
 pub use crate::caching::CachingBonsaiHgMapping;
 pub use crate::errors::ErrorKind;
-pub use crate::mem_writes::MemWritesBonsaiHgMapping;
 
 define_stats! {
     prefix = "mononoke.bonsai_hg_mapping";

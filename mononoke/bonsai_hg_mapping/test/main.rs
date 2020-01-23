@@ -16,7 +16,7 @@ use futures::Future;
 use assert_matches::assert_matches;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
-    ErrorKind, MemWritesBonsaiHgMapping, SqlBonsaiHgMapping, SqlConstructors,
+    ErrorKind, SqlBonsaiHgMapping, SqlConstructors,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -105,83 +105,6 @@ fn missing<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         .wait()
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert_eq!(result, vec![]);
-}
-
-fn mem_writes<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
-    let ctx = CoreContext::test_mock(fb);
-    let entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
-        hg_cs_id: hg::ONES_CSID,
-        bcs_id: bonsai::ONES_CSID,
-    };
-    assert_eq!(
-        true,
-        mapping
-            .add(ctx.clone(), entry.clone())
-            .wait()
-            .expect("Adding new entry failed")
-    );
-
-    let mapping = Arc::new(mapping);
-    let mem_mapping = MemWritesBonsaiHgMapping::new(mapping);
-
-    assert_eq!(
-        false,
-        mem_mapping
-            .add(ctx.clone(), entry.clone())
-            .wait()
-            .expect("Adding same entry failed")
-    );
-
-    let first_entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
-        hg_cs_id: hg::TWOS_CSID,
-        bcs_id: bonsai::TWOS_CSID,
-    };
-    assert_eq!(
-        true,
-        mem_mapping
-            .add(ctx.clone(), first_entry.clone())
-            .wait()
-            .expect("Adding new entry failed")
-    );
-
-    let result = mem_mapping
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .wait()
-        .expect("Failed to get bonsai changeset by its hg counterpart");
-    assert_eq!(result, Some(bonsai::ONES_CSID));
-
-    let result = mem_mapping
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
-        .wait()
-        .expect("Failed to get bonsai changeset by its hg counterpart");
-    assert_eq!(result, Some(bonsai::TWOS_CSID));
-
-    let result = mem_mapping.get_ordered_inserts();
-    assert_eq!(result, vec![first_entry.clone()]);
-
-    let second_entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
-        hg_cs_id: hg::THREES_CSID,
-        bcs_id: bonsai::THREES_CSID,
-    };
-    assert_eq!(
-        true,
-        mem_mapping
-            .add(ctx.clone(), second_entry.clone())
-            .wait()
-            .expect("Adding new entry failed")
-    );
-    let result = mem_mapping.get_ordered_inserts();
-    assert_eq!(result, vec![first_entry, second_entry]);
-
-    let inner = mem_mapping.get_inner();
-    let result = inner
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
-        .wait()
-        .expect("Failed to get bonsai changeset by its hg counterpart");
-    assert_eq!(result, None);
 }
 
 struct CountedBonsaiHgMapping {
@@ -274,13 +197,6 @@ fn test_add_and_get(fb: FacebookInit) {
 fn test_missing(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
         missing(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
-    });
-}
-
-#[fbinit::test]
-fn test_mem_writes(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        mem_writes(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }
 
