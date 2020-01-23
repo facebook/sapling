@@ -71,8 +71,8 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         _ctx: CoreContext,
         entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
     ) -> BoxFuture<(), Error> {
-        let entries: Vec<_> = entries.collect();
-        info!(self.logger, "I would have written {:#?}", entries);
+        let entries: Vec<_> = entries.map(|e| format!("{:?}", e)).collect();
+        info!(self.logger, "I would have written {}", entries.join(",\n"));
         Ok(()).into_future().boxify()
     }
 
@@ -91,7 +91,8 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         _ctx: CoreContext,
         entries: Vec<BlobstoreSyncQueueEntry>,
     ) -> BoxFuture<(), Error> {
-        info!(self.logger, "I would have deleted {:#?}", entries);
+        let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        info!(self.logger, "I would have deleted {}", entries.join(",\n"));
         Ok(()).into_future().boxify()
     }
 

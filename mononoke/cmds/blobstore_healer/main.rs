@@ -454,7 +454,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .unwrap_or(*DEFAULT_ENTRY_HEALING_MIN_AGE);
     let quiet = matches.is_present(QUIET_ARG);
     if !quiet {
-        info!(logger, "Using storage_config {:#?}", storage_config);
+        info!(logger, "Using storage_config {:?}", storage_config);
     }
 
     let scuba = get_scuba_sample_builder(fb, &matches)?;

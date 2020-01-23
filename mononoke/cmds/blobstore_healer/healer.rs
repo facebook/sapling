@@ -237,14 +237,18 @@ fn heal_blob(
     if stores_to_heal.is_empty() || seen_blobstores.is_empty() {
         // All blobstores have been synchronized or all are unknown to be requeued
         return Some(
-            requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores)
-                .map(move |()| HealStats {
-                    queue_del: num_entries,
-                    queue_add: num_unknown_entries,
-                    put_success: 0,
-                    put_failure: 0,
-                })
-                .left_future(),
+            if unknown_seen_blobstores.is_empty() {
+                futures::future::ok(()).left_future()
+            } else {
+                requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores).right_future()
+            }
+            .map(move |()| HealStats {
+                queue_del: num_entries,
+                queue_add: num_unknown_entries,
+                put_success: 0,
+                put_failure: 0,
+            })
+            .left_future(),
         );
     }
 
