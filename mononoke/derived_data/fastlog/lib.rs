@@ -23,38 +23,14 @@
 ///
 /// RootFastlog is a derived data which derives FastlogBatch for each unode
 /// that was created or modified in this commit.
-use anyhow::Error;
-use blobrepo::BlobRepo;
-use context::CoreContext;
-use futures::Future;
-use manifest::Entry;
-use mononoke_types::{ChangesetId, FileUnodeId, ManifestUnodeId};
-use std::sync::Arc;
-
 mod fastlog_impl;
 mod mapping;
+mod ops;
 mod thrift {
     pub use mononoke_types_thrift::*;
 }
 
-use fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
-
 pub use mapping::{
     fetch_parent_root_unodes, ErrorKind, FastlogParent, RootFastlog, RootFastlogMapping,
 };
-
-/// Returns history for a given unode if it exists.
-/// This is the public API of this crate i.e. what clients should use if they want to
-/// fetch the history
-pub fn prefetch_history(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
-) -> impl Future<Item = Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
-    let blobstore = Arc::new(repo.get_blobstore());
-    fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), unode_entry).and_then(
-        move |maybe_fastlog_batch| {
-            maybe_fastlog_batch.map(|fastlog_batch| fetch_flattened(&fastlog_batch, ctx, blobstore))
-        },
-    )
-}
+pub use ops::{list_file_history, prefetch_history};
