@@ -8,6 +8,10 @@
 use std::ops::Deref;
 use vlqencoding::VLQDecode;
 
+mod gca;
+
+pub use gca::gca;
+
 pub static MOZILLA: &[u8] = include_bytes!("mozilla-central.bindag");
 pub static GIT: &[u8] = include_bytes!("git.bindag");
 
