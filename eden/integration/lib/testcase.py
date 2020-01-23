@@ -35,23 +35,6 @@ from . import edenclient, gitrepo, hgrepo, repobase
 from .find_executables import FindExe
 
 
-try:
-    from eden.test_support.hypothesis import set_up_hypothesis
-    import hypothesis.internal.detection
-
-    set_up_hypothesis()
-
-    def is_hypothesis_test(test):
-        return hypothesis.internal.detection.is_hypothesis_test(test)
-        return False
-
-
-except ImportError:
-    # Continue even if the hypothesis module is not available
-    def is_hypothesis_test(test):
-        return False
-
-
 if not FindExe.is_buck_build() or os.environ.get("EDENFS_SUFFIX", "") != "":
     _build_flavor = "open_source"
 else:
@@ -79,34 +62,6 @@ class EdenTestCase(
     enable_fault_injection: bool = False
 
     enable_logview: bool = True
-
-    # The current typeshed library claims unittest.TestCase.run() returns a TestCase,
-    # but it really returns Optional[TestResult].
-    # We declare it to return Any here just to make the type checkers happy.
-    def run(self, result: Optional[unittest.TestResult] = None) -> Any:
-        """ Some slightly awful magic here to arrange for setUp and
-            tearDown to be called at the appropriate times when hypothesis
-            is enabled for a test case.
-            This can be removed once a future version of hypothesis
-            ships with support for this baked in. """
-        if is_hypothesis_test(getattr(self, self._testMethodName)):
-            try:
-                old_setUp = self.setUp
-                old_tearDown = self.tearDown
-                self.setUp = lambda: None  # type: ignore # (mypy issue 2427)
-                self.tearDown = lambda: None  # type: ignore # (mypy issue 2427)
-                # pyre-fixme[16]: `EdenTestCase` has no attribute `setup_example`.
-                self.setup_example = old_setUp
-                # pyre-fixme[16]: `EdenTestCase` has no attribute `teardown_example`.
-                self.teardown_example = lambda _: old_tearDown()
-                return super(EdenTestCase, self).run(result)
-            finally:
-                self.setUp = old_setUp  # type: ignore # (mypy issue 2427)
-                self.tearDown = old_tearDown  # type: ignore # (mypy issue 2427)
-                del self.setup_example
-                del self.teardown_example
-        else:
-            return super(EdenTestCase, self).run(result)
 
     def report_time(self, event: str) -> None:
         """

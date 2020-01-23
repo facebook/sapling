@@ -9,17 +9,11 @@ import pathlib
 import typing
 import unittest
 
-import hypothesis
-import hypothesis.strategies
 from eden.cli.systemd import (
     SystemdEnvironmentFile,
     escape_dbus_address,
     systemd_escape_path,
 )
-from eden.test_support.hypothesis import fast_hypothesis_test, set_up_hypothesis
-
-
-set_up_hypothesis()
 
 
 class SystemdEscapeTest(unittest.TestCase):
@@ -217,31 +211,6 @@ class SystemdEnvironmentFileDumpTest(unittest.TestCase):
                 ):
                     self.dumps(variables)
 
-    @fast_hypothesis_test()
-    @hypothesis.given(hypothesis.strategies.binary())
-    def test_arbitrary_variable_value_round_trips_through_dump_and_load(
-        self, value: bytes
-    ) -> None:
-        self.hypothesis_assume_variable_value_is_valid(value)
-        self.assert_variable_dumps_and_loads(b"var", value)
-
-    @fast_hypothesis_test()
-    @hypothesis.given(hypothesis.strategies.binary())
-    def test_arbitrary_variable_name_round_trips_through_dump_and_load(
-        self, name: bytes
-    ) -> None:
-        self.hypothesis_assume_variable_name_is_valid(name)
-        self.assert_variable_dumps_and_loads(name, b"value")
-
-    @fast_hypothesis_test()
-    @hypothesis.given(hypothesis.strategies.binary(), hypothesis.strategies.binary())
-    def test_arbitrary_variable_name_and_value_round_trips_through_dump_and_load(
-        self, name: bytes, value: bytes
-    ) -> None:
-        self.hypothesis_assume_variable_name_is_valid(name)
-        self.hypothesis_assume_variable_value_is_valid(value)
-        self.assert_variable_dumps_and_loads(name, value)
-
     def assert_variable_dumps_and_loads(self, name: bytes, value: bytes) -> None:
         self.assertEqual(self.dump_and_load({name: value}).entries, [(name, value)])
 
@@ -255,21 +224,6 @@ class SystemdEnvironmentFileDumpTest(unittest.TestCase):
 
     def loads(self, content: bytes) -> SystemdEnvironmentFile:
         return SystemdEnvironmentFile.loads(content)
-
-    def hypothesis_assume_variable_name_is_valid(self, name: bytes) -> None:
-        lower_alphabet = b"abcdefghijklmnopqrstuvwxyz"
-        upper_alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        digits = b"0123456789"
-        allowed_characters = b"".join([b"_", lower_alphabet, upper_alphabet, digits])
-        hypothesis.assume(len(name) > 0)
-        hypothesis.assume(all(c in allowed_characters for c in name))
-        hypothesis.assume(name[0] not in digits)
-
-    def hypothesis_assume_variable_value_is_valid(self, value: bytes) -> None:
-        invalid_control_characters = bytes(range(0, b"\n"[0])) + bytes(
-            range(b"\n"[0] + 1, b" "[0])
-        )
-        hypothesis.assume(all(c not in invalid_control_characters for c in value))
 
 
 class SystemdEnvironmentFileLoadTest(unittest.TestCase):
@@ -616,13 +570,6 @@ class SystemdEnvironmentFileLoadTest(unittest.TestCase):
         self.assertEqual(
             self.loads(b"name=hello\x00world").entries, [(b"name", b"hello")]
         )
-
-    @fast_hypothesis_test()
-    @hypothesis.given(hypothesis.strategies.binary())
-    def test_loading_arbitrary_file_does_not_crash_or_hang(
-        self, content: bytes
-    ) -> None:
-        self.loads(content)
 
     def loads(self, content: bytes) -> SystemdEnvironmentFile:
         return SystemdEnvironmentFile.loads(content)
