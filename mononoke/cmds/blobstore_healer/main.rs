@@ -37,7 +37,7 @@ use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use mononoke_types::DateTime;
-use slog::{error, info, o, Logger};
+use slog::{error, info, o, warn, Logger};
 use sql::Connection;
 use sql_ext::{open_sqlite_path, MysqlOptions};
 use sql_facebook::{ext::ConnectionFbExt, myrouter, raw};
@@ -55,6 +55,57 @@ const HEAL_MIN_AGE_ARG: &'static str = "heal-min-age-secs";
 lazy_static! {
     /// Minimal age of entry to consider if it has to be healed
     static ref DEFAULT_ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
+}
+
+fn open_mysql_raw_replicas(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    db_address: String,
+    regions: Vec<String>,
+) -> BoxFuture<Vec<(String, Connection)>, Error> {
+    let raw_conns = regions.into_iter().map({
+        cloned!(ctx);
+        move |region| {
+            let tier: &str = &db_address;
+            let mut conn_builder = raw::Builder::new(tier, raw::InstanceRequirement::ReplicaOnly);
+            conn_builder.role_override("scriptro");
+            conn_builder.explicit_region(&region);
+            conn_builder
+                .build(fb)
+                .then({
+                    cloned!(ctx);
+                    move |r| match r {
+                        Ok(c) =>
+                            Ok((region, Some(Connection::Mysql(c)))),
+                        Err(_e) => {
+                            warn!(ctx.logger(),
+                                "Could not connect to a replica in {}, likely that region does not have one.", region);
+                            Ok((region, None))
+                        }
+                    }
+                })
+        }
+    });
+    join_all(raw_conns)
+        .map({
+            cloned!(ctx);
+            move |raw_conns| {
+                let filtered: Vec<_> = raw_conns
+                    .into_iter()
+                    .filter_map(|(region, conn)| match conn {
+                        Some(conn) => Some((region, conn)),
+                        None => None,
+                    })
+                    .collect::<Vec<_>>();
+                info!(
+                    ctx.logger(),
+                    "Monitoring regions: {:?}",
+                    filtered.iter().map(|(r, _)| r).collect::<Vec<_>>()
+                );
+                filtered
+            }
+        })
+        .boxify()
 }
 
 fn maybe_schedule_healer_for_storage(
@@ -148,71 +199,57 @@ fn maybe_schedule_healer_for_storage(
             .boxify()
     };
 
-    let mut regional_conns = Vec::new();
-    match storage_config.dbconfig {
+    let regional_conns = match storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => {
-            regional_conns.push(
-                open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
-                    .into_future()
-                    .map(|c| ("sqlite_region".to_string(), Connection::with_sqlite(c)))
-                    .boxify(),
-            );
+            open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
+                .into_future()
+                .map(|c| vec![("sqlite_region".to_string(), Connection::with_sqlite(c))])
+                .boxify()
         }
         MetadataDBConfig::Mysql { db_address, .. } => {
+            let cfgr = ConfigeratorAPI::new(fb)?;
+            let regions = cfgr
+                .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
+                .contents;
+            let regions: Vec<String> = serde_json::from_str(&regions)?;
             if let Some(myrouter_port) = mysql_options.myrouter_port {
-                let cfgr = ConfigeratorAPI::new(fb)?;
-                let regions = cfgr
-                    .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
-                    .contents;
-                let regions: Vec<String> = serde_json::from_str(&regions)?;
                 info!(ctx.logger(), "Monitoring regions: {:?}", regions);
-
                 let mut conn_builder = myrouter::Builder::new();
                 conn_builder
                     .service_type(myrouter::ServiceType::SLAVE)
                     .locality(myrouter::DbLocality::EXPLICIT)
                     .tier(db_address.clone(), None)
                     .port(myrouter_port);
+                let mut myrouter_conns = vec![];
                 for region in regions {
                     conn_builder.explicit_region(region.clone());
                     let conn: Connection = conn_builder.build_read_only().into();
-                    let conn_fut = future::ok((region, conn)).boxify();
-                    regional_conns.push(conn_fut);
+                    let conn_fut = future::ok((region, conn));
+                    myrouter_conns.push(conn_fut);
                 }
+                join_all(myrouter_conns).boxify()
             } else {
-                // Raw mode rust bindings don't have explicit region yet,  so request
-                // a replica.
-                let tier: &str = &db_address;
-                let mut builder = raw::Builder::new(tier, raw::InstanceRequirement::ReplicaOnly);
-                builder.role_override("scriptro");
-                regional_conns.push(
-                    builder
-                        .build(fb)
-                        .map(|c| ("raw_replica_region".to_string(), Connection::Mysql(c)))
-                        .boxify(),
-                )
-            };
+                open_mysql_raw_replicas(fb, ctx.clone(), db_address, regions)
+            }
         }
     };
 
-    let heal = join_all(regional_conns)
-        .join3(blobstores, sync_queue)
-        .and_then(
-            move |(regional_conns, blobstores, sync_queue): (
-                Vec<(String, Connection)>,
-                HashMap<_, Arc<dyn Blobstore + 'static>>,
-                Arc<dyn BlobstoreSyncQueue>,
-            )| {
-                let repo_healer = Healer::new(
-                    blobstore_sync_queue_limit,
-                    sync_queue,
-                    Arc::new(blobstores),
-                    source_blobstore_key,
-                    drain_only,
-                );
-                schedule_healing(ctx, repo_healer, regional_conns, iter_limit, heal_min_age)
-            },
-        );
+    let heal = regional_conns.join3(blobstores, sync_queue).and_then(
+        move |(regional_conns, blobstores, sync_queue): (
+            Vec<(String, Connection)>,
+            HashMap<_, Arc<dyn Blobstore + 'static>>,
+            Arc<dyn BlobstoreSyncQueue>,
+        )| {
+            let repo_healer = Healer::new(
+                blobstore_sync_queue_limit,
+                sync_queue,
+                Arc::new(blobstores),
+                source_blobstore_key,
+                drain_only,
+            );
+            schedule_healing(ctx, repo_healer, regional_conns, iter_limit, heal_min_age)
+        },
+    );
 
     Ok(heal.boxify())
 }
