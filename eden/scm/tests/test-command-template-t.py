@@ -2194,7 +2194,7 @@ sh % "hg '--color=debug' log -T status -C -r 10 --quiet" == "[log.node|10:0f9759
 # Check the bisect template
 
 sh % "hg bisect -g 1"
-sh % "hg bisect -b 3 --noupdate" == "Testing changeset 2:97054abb4ab8 (2 changesets remaining, ~1 tests)"
+sh % "hg bisect -b 3 --noupdate" == "Testing changeset 97054abb4ab8 (2 changesets remaining, ~1 tests)"
 sh % "hg log -T bisect -r '0:4'" == r"""
     changeset:   0:1e4e1b8f71e0
     bisect:      good (implicit)

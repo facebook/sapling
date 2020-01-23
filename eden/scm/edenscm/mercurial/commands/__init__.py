@@ -1064,8 +1064,8 @@ the sparse profile from the known %s changeset %d:%s\n"
         while size <= changesets:
             tests, size = tests + 1, size * 2
         ui.write(
-            _("Testing changeset %d:%s " "(%d changesets remaining, ~%d tests)\n")
-            % (rev, short(node), changesets, tests)
+            _("Testing changeset %s " "(%d changesets remaining, ~%d tests)\n")
+            % (short(node), changesets, tests)
         )
 
     # update to next check

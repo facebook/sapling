@@ -72,13 +72,13 @@ mark changesets
   $ hg bisect --good 4
   $ hg bisect --good 6
   $ hg bisect --bad 12
-  Testing changeset 9:2197c557e14c (6 changesets remaining, ~2 tests)
+  Testing changeset 2197c557e14c (6 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bisect --bad 10
-  Testing changeset 8:e74a86251f58 (4 changesets remaining, ~2 tests)
+  Testing changeset e74a86251f58 (4 changesets remaining, ~2 tests)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bisect --skip 7
-  Testing changeset 8:e74a86251f58 (4 changesets remaining, ~2 tests)
+  Testing changeset e74a86251f58 (4 changesets remaining, ~2 tests)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test template

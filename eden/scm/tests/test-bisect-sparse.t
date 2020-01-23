@@ -75,7 +75,7 @@ verify bisect skips empty sparse commits (2,3)
   the sparse profile from the known good changeset 0:a75e20cc7b2a
   Skipping changeset 6:6b9461e31152 as there are no changes inside
   the sparse profile from the known bad changeset 9:d910e57b873b
-  Testing changeset 5:2ecc2db0df15 (2 changesets remaining, ~1 tests)
+  Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   The first bad revision is:
@@ -90,13 +90,13 @@ check --nosparseskip flag
   $ hg bisect --reset
   $ hg bisect -g 0
   $ hg bisect -b 9 -S
-  Testing changeset 4:e116419d642b (9 changesets remaining, ~3 tests)
+  Testing changeset e116419d642b (9 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good --nosparseskip
-  Testing changeset 6:6b9461e31152 (5 changesets remaining, ~2 tests)
+  Testing changeset 6b9461e31152 (5 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad --nosparseskip
-  Testing changeset 5:2ecc2db0df15 (2 changesets remaining, ~1 tests)
+  Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   The first bad revision is:
@@ -190,7 +190,7 @@ New test set
   $ hg bisect -b 14
   Skipping changeset 9:d910e57b873b as there are no changes inside
   the sparse profile from the known good changeset 8:a6b1a23ad56a
-  Testing changeset 13:a41c9f2666a8 (2 changesets remaining, ~1 tests)
+  Testing changeset a41c9f2666a8 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
   The first bad revision is:
@@ -213,7 +213,7 @@ New test set
   Extending search to changeset 7:94c6ab768eff
   Skipping changeset 7:94c6ab768eff as there are no changes inside
   the sparse profile from the known good changeset 9:d910e57b873b
-  Testing changeset 11:7038c7a4f757 (4 changesets remaining, ~2 tests)
+  Testing changeset 7038c7a4f757 (4 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   Skipping changeset 12:e694d9484bb8 as there are no changes inside

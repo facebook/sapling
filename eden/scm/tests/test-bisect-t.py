@@ -201,25 +201,25 @@ sh % "hg summary" == r"""
     commit: (clean)
     phases: 32 draft"""
 sh % "hg bisect -g 1" == r"""
-    Testing changeset 16:a2e6ea4973e9 (30 changesets remaining, ~4 tests)
+    Testing changeset a2e6ea4973e9 (30 changesets remaining, ~4 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
-    Testing changeset 23:5ec79163bff4 (15 changesets remaining, ~3 tests)
+    Testing changeset 5ec79163bff4 (15 changesets remaining, ~3 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
 # skip
 
 sh % "hg bisect -s" == r"""
-    Testing changeset 24:10e0acd3809e (15 changesets remaining, ~3 tests)
+    Testing changeset 10e0acd3809e (15 changesets remaining, ~3 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
-    Testing changeset 27:288867a866e9 (7 changesets remaining, ~2 tests)
+    Testing changeset 288867a866e9 (7 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
-    Testing changeset 29:b5bd63375ab9 (4 changesets remaining, ~2 tests)
+    Testing changeset b5bd63375ab9 (4 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -b" == r"""
-    Testing changeset 28:8e0c2264c8af (2 changesets remaining, ~1 tests)
+    Testing changeset 8e0c2264c8af (2 changesets remaining, ~1 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
     The first bad revision is:
@@ -234,7 +234,7 @@ sh % "hg bisect -r"
 sh % "hg bisect -b '0::3'"
 sh % "hg bisect -s '13::16'"
 sh % "hg bisect -g '26::tip'" == r"""
-    Testing changeset 12:1941b52820a5 (23 changesets remaining, ~4 tests)
+    Testing changeset 1941b52820a5 (23 changesets remaining, ~4 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cat .hg/bisect.state" == r"""
     bad b99c7b9c8e11558adef3fad9af211c58d46f325b
@@ -258,25 +258,25 @@ sh % "cat .hg/bisect.state" == r"""
 sh % "hg bisect -r"
 sh % "hg bisect -b null"
 sh % "hg bisect -g tip" == r"""
-    Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
+    Testing changeset e7fa0811edb0 (32 changesets remaining, ~5 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
-    Testing changeset 7:03750880c6b5 (16 changesets remaining, ~4 tests)
+    Testing changeset 03750880c6b5 (16 changesets remaining, ~4 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
 # skip
 
 sh % "hg bisect -s" == r"""
-    Testing changeset 6:a3d5c6fdf0d3 (16 changesets remaining, ~4 tests)
+    Testing changeset a3d5c6fdf0d3 (16 changesets remaining, ~4 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
-    Testing changeset 2:db07c04beaca (7 changesets remaining, ~2 tests)
+    Testing changeset db07c04beaca (7 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
-    Testing changeset 0:b99c7b9c8e11 (3 changesets remaining, ~1 tests)
+    Testing changeset b99c7b9c8e11 (3 changesets remaining, ~1 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -b" == r"""
-    Testing changeset 1:5cd978ea5149 (2 changesets remaining, ~1 tests)
+    Testing changeset 5cd978ea5149 (2 changesets remaining, ~1 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
     The first good revision is:
@@ -293,7 +293,7 @@ sh % "hg bisect -b tip" == r"""
 
 sh % "hg bisect -r"
 sh % "hg bisect -g null"
-sh % "hg bisect -bU tip" == "Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)"
+sh % "hg bisect -bU tip" == "Testing changeset e7fa0811edb0 (32 changesets remaining, ~5 tests)"
 sh % "hg id" == "5cd978ea5149"
 
 
@@ -303,13 +303,13 @@ sh % "hg id" == "5cd978ea5149"
 sh % "hg bisect -r"
 sh % "hg bisect -b 4"
 sh % "hg bisect -g 0" == r"""
-    Testing changeset 2:db07c04beaca (4 changesets remaining, ~2 tests)
+    Testing changeset db07c04beaca (4 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
-    Testing changeset 1:5cd978ea5149 (4 changesets remaining, ~2 tests)
+    Testing changeset 5cd978ea5149 (4 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
-    Testing changeset 3:b53bea5e2fcb (4 changesets remaining, ~2 tests)
+    Testing changeset b53bea5e2fcb (4 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
     Due to skipped revisions, the first bad revision could be any of:
@@ -339,7 +339,7 @@ sh % "hg bisect -s" == r"""
 sh % "hg bisect -r"
 sh % "hg bisect -g 0"
 sh % "hg bisect -b 2" == r"""
-    Testing changeset 1:5cd978ea5149 (2 changesets remaining, ~1 tests)
+    Testing changeset 5cd978ea5149 (2 changesets remaining, ~1 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
     Due to skipped revisions, the first bad revision could be any of:
@@ -367,19 +367,19 @@ sh % "hg bisect" == r"""
 sh % "hg bisect -r"
 sh % "hg bisect -b 6"
 sh % "hg bisect -g 0" == r"""
-    Testing changeset 3:b53bea5e2fcb (6 changesets remaining, ~2 tests)
+    Testing changeset b53bea5e2fcb (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
-    Testing changeset 2:db07c04beaca (6 changesets remaining, ~2 tests)
+    Testing changeset db07c04beaca (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
-    Testing changeset 4:9b2ba8336a65 (6 changesets remaining, ~2 tests)
+    Testing changeset 9b2ba8336a65 (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
-    Testing changeset 1:5cd978ea5149 (6 changesets remaining, ~2 tests)
+    Testing changeset 5cd978ea5149 (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
-    Testing changeset 5:7874a09ea728 (6 changesets remaining, ~2 tests)
+    Testing changeset 7874a09ea728 (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
     The first bad revision is:
@@ -492,7 +492,7 @@ test "$rev" -ge 6
 sh % "chmod +x script.sh"
 sh % "hg bisect -r"
 sh % "hg bisect --good tip --noupdate"
-sh % "hg bisect --bad 0 --noupdate" == "Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)"
+sh % "hg bisect --bad 0 --noupdate" == "Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)"
 sh % "hg bisect --command 'sh script.sh and some params' --noupdate" == r"""
     changeset 15:e7fa0811edb0: good
     changeset 7:03750880c6b5: good
@@ -564,7 +564,7 @@ sh % "hg debugobsolete {}".format(cln) == "obsoleted 1 changesets"
 sh % "hg bisect --reset"
 sh % "hg bisect --good 15"
 sh % "hg bisect --bad 30" == r"""
-    Testing changeset 22:06c7993750ce (15 changesets remaining, ~3 tests)
+    Testing changeset 06c7993750ce (15 changesets remaining, ~3 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect --command true" == r"""
     changeset 22:06c7993750ce: good
@@ -586,7 +586,7 @@ sh % "hg ci -m 'msg 32' -d '32 0'"
 sh % "hg bisect --reset"
 sh % "hg bisect --good ."
 sh % "hg bisect --bad 25" == r"""
-    Testing changeset 28:8e0c2264c8af (6 changesets remaining, ~2 tests)
+    Testing changeset 8e0c2264c8af (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect --command true" == r"""
     changeset 28:8e0c2264c8af: good

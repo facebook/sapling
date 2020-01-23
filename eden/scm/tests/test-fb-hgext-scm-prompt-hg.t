@@ -107,7 +107,7 @@ Test bisect
   $ cmd hg bisect -b .
   (42eaf5ca|BISECT)
   $ cmd hg bisect -g ".^^"
-  Testing changeset 2:4b6cc7d5194b (2 changesets remaining, ~1 tests)
+  Testing changeset 4b6cc7d5194b (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (4b6cc7d5|BISECT)
   $ cmd hg bisect -r
