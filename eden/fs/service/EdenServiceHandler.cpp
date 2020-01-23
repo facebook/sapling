@@ -366,7 +366,6 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   for (const auto& edenMount : server_->getAllMountPoints()) {
     MountInfo info;
@@ -375,9 +374,6 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
     info.state = edenMount->getState();
     results.push_back(info);
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::checkOutRevision(
