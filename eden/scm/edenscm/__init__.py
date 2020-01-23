@@ -69,10 +69,11 @@ def run(args=None, fin=None, fout=None, ferr=None):
 
         traceimport.enable()
 
-        # enable demandimport after enabling traceimport
-        from . import hgdemandimport
+        if sys.version_info[0] < 3:
+            # enable demandimport after enabling traceimport
+            from . import hgdemandimport
 
-        hgdemandimport.enable()
+            hgdemandimport.enable()
 
         # demandimport has side effect on importing dispatch.
         # so 'import dispatch' happens after demandimport
