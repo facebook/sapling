@@ -9,10 +9,13 @@
 use async_trait::async_trait;
 use futures_util::try_join;
 use mononoke_api::{
-    ChangesetPathContext, ChangesetPathDiffContext, FileMetadata, FileType, TreeEntry, UnifiedDiff,
+    ChangesetContext, ChangesetPathContext, ChangesetPathDiffContext, FileMetadata, FileType,
+    MononokeError, RepoContext, TreeEntry, UnifiedDiff,
 };
 use source_control as thrift;
+use std::collections::{BTreeMap, BTreeSet};
 
+use crate::commit_id::{map_commit_identities, map_commit_identity};
 use crate::errors;
 
 pub(crate) trait IntoResponse<T> {
@@ -146,6 +149,56 @@ impl AsyncIntoResponse<thrift::CommitCompareFile> for ChangesetPathDiffContext {
             base_file,
             other_file,
             copy_info,
+        })
+    }
+}
+
+#[async_trait]
+impl AsyncIntoResponse<thrift::CommitInfo>
+    for (
+        &RepoContext,
+        ChangesetContext,
+        &BTreeSet<thrift::CommitIdentityScheme>,
+    )
+{
+    async fn into_response(self) -> Result<thrift::CommitInfo, errors::ServiceError> {
+        let (repo, changeset, identity_schemes) = self;
+        async fn map_parent_identities(
+            repo: &RepoContext,
+            changeset: &ChangesetContext,
+            identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
+        ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, MononokeError>
+        {
+            let parents = changeset.parents().await?;
+            let parent_id_mapping =
+                map_commit_identities(&repo, parents.clone(), identity_schemes).await?;
+            Ok(parents
+                .iter()
+                .map(|parent_id| {
+                    parent_id_mapping
+                        .get(parent_id)
+                        .map(Clone::clone)
+                        .unwrap_or_else(BTreeMap::new)
+                })
+                .collect())
+        }
+
+        let (ids, message, date, author, parents, extra) = try_join!(
+            map_commit_identity(&changeset, identity_schemes),
+            changeset.message(),
+            changeset.author_date(),
+            changeset.author(),
+            map_parent_identities(&repo, &changeset, identity_schemes),
+            changeset.extras(),
+        )?;
+        Ok(thrift::CommitInfo {
+            ids,
+            message,
+            date: date.timestamp(),
+            tz: date.offset().local_minus_utc(),
+            author,
+            parents,
+            extra: extra.into_iter().collect(),
         })
     }
 }
