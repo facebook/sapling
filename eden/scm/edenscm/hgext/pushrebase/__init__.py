@@ -1117,9 +1117,9 @@ def _getmanifest(op, rev):
     else:
         store = repo.manifestlog.datastore
         # pyre-fixme[21]: Could not find `edenscmnative`.
-        from edenscmnative import cstore
+        from bindings import manifest
 
-        m = cstore.treemanifest(store, rev.manifestnode())
+        m = manifest.treemanifest(store, rev.manifestnode())
         if store.getmissing([("", rev.manifestnode())]):
             raise error.Abort(
                 _(

@@ -135,14 +135,6 @@ trees for new draft roots added to the repository.
     [treemanifest]
     prefetchdraftparents = True
 
-`treemanifest.rustmanifest` causes treemanifest to use the Rust
-implementation rather than the C++ one.
-
-::
-
-    [treemanifest]
-    rustmanifest = True
-
 `treemanifest.bfsprefetch` causes the client to perform a BFS over the
 tree to be prefetched and manually request all missing nodes from the
 server, rather than relying on the server to perform this computation.
@@ -201,9 +193,6 @@ from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscm.mercurial.pycompat import range
 
-# pyre-fixme[21]: Could not find `edenscmnative`.
-from edenscmnative import cstore
-
 from ..extutil import flock
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
@@ -242,9 +231,6 @@ configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "usehttp", default=False)
 configitem("treemanifest", "prefetchdraftparents", default=True)
-configitem("treemanifest", "rustmanifest", default=False)
-
-nativemanifesttype = (cstore.treemanifest, rustmanifest.treemanifest)
 
 PACK_CATEGORY = "manifests"
 
@@ -1079,18 +1065,11 @@ def _usehttp(ui):
     return edenapi.enabled(ui) and ui.configbool("treemanifest", "usehttp")
 
 
-def _userustmanifest(manifestlog):
-    return manifestlog.ui.configbool("treemanifest", "rustmanifest")
-
-
 def _buildtree(manifestlog, node=None):
     # this code seems to belong in manifestlog but I have no idea how
     # manifestlog objects work
     store = manifestlog.datastore
-    if _userustmanifest(manifestlog):
-        initfn = rustmanifest.treemanifest
-    else:
-        initfn = cstore.treemanifest
+    initfn = rustmanifest.treemanifest
     if node is not None and node != nullid:
         return initfn(store, node)
     else:
@@ -1504,10 +1483,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
                 _("unable to find tree parent nodes %s %s") % (hex(p1node), hex(p2node))
             )
     else:
-        if _userustmanifest(mfl):
-            parenttree = rustmanifest.treemanifest(tmfl.datastore)
-        else:
-            parenttree = cstore.treemanifest(tmfl.datastore)
+        parenttree = rustmanifest.treemanifest(tmfl.datastore)
 
     added, removed = _getflatdiff(mfl, mfctx)
     newtree = _getnewtree(parenttree, added, removed)
@@ -2054,11 +2030,7 @@ def _registerbundle2parts():
 
             for node in rootnodes:
                 p1, p2, linknode, copyfrom = wirepackstore.getnodeinfo("", node)
-                userustmanifest = mfl.ui.configbool("treemanifest", "rustmanifest")
-                if userustmanifest:
-                    newtree = rustmanifest.treemanifest(datastore, node)
-                else:
-                    newtree = cstore.treemanifest(datastore, node)
+                newtree = rustmanifest.treemanifest(datastore, node)
 
                 mfl.add(mfl.ui, newtree, p1, p2, linknode, tr=tr)
             return
@@ -2483,16 +2455,8 @@ def _generatepackstream(
 
         # Only use the first two base trees, since the current tree
         # implementation cannot handle more yet.
-        userustmanifest = repo.ui.configbool("treemanifest", "rustmanifest")
-        if userustmanifest:
-            basenodes = [mybasenode for (_path, mybasenode) in basetrees]
-            subtrees = rustmanifest.subdirdiff(
-                datastore, rootdir, node, basenodes, depth
-            )
-        else:
-            subtrees = cstore.treemanifest.walksubdirtrees(
-                (rootdir, node), datastore, comparetrees=basetrees[:2], depth=depth
-            )
+        basenodes = [mybasenode for (_path, mybasenode) in basetrees]
+        subtrees = rustmanifest.subdirdiff(datastore, rootdir, node, basenodes, depth)
         rootlinknode = None
         if linknodefixup is not None:
             validlinknodes, linknodemap = linknodefixup
@@ -2663,7 +2627,7 @@ class ondemandtreedatastore(generatingdatastore):
 def _debugcmdfindtreemanifest(orig, ctx):
     manifest = ctx.manifest()
     # Check if the manifest we have is a treemanifest.
-    if isinstance(manifest, nativemanifesttype):
+    if isinstance(manifest, rustmanifest.treemanifest):
         return manifest
     try:
         # Look up the treemanifest in the treemanifestlog.  There might not be
