@@ -249,6 +249,8 @@ class obsoletecache(object):
 
     def isobsolete(self, repo, node):
         """Returns true if the node is obsolete in the repository."""
+        if node is None:
+            return False
         if node not in repo:
             return False
         obsolete = self.obsolete[repo.filtername]
