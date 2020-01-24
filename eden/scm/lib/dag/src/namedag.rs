@@ -11,11 +11,11 @@
 
 use crate::id::Group;
 use crate::id::VertexName;
+use crate::iddag::IdDag;
+use crate::iddag::SyncableIdDag;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapLike;
 use crate::idmap::SyncableIdMap;
-use crate::segment::IdDag;
-use crate::segment::SyncableIdDag;
 use anyhow::{anyhow, bail, ensure, Result};
 use indexedlog::multi;
 use std::collections::{HashMap, HashSet};

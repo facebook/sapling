@@ -17,10 +17,10 @@
 //! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
 use crate::id::VertexName;
+use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::idmap::IdMapLike;
-use crate::segment::FirstAncestorConstraint;
 use crate::spanset::SpanSet;
-use crate::{segment::IdDag, Id, IdMap};
+use crate::{Id, IdMap};
 use anyhow::{format_err, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt;

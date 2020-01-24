@@ -6,10 +6,10 @@
  */
 
 use crate::id::{Group, Id, VertexName};
+use crate::iddag::FirstAncestorConstraint;
+use crate::iddag::IdDag;
 use crate::idmap::IdMap;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
-use crate::segment::FirstAncestorConstraint;
-use crate::segment::IdDag;
 use crate::spanset::SpanSet;
 use crate::NameDag;
 use anyhow::Result;
@@ -161,8 +161,8 @@ Lv2: R0-11[]"#
     );
 
     assert_eq!(
-            build_segments(ASCII_DAG2, "W", 3).ascii[0],
-            r#"
+        build_segments(ASCII_DAG2, "W", 3).ascii[0],
+        r#"
                       19/---------------13-14--\           19
                      / /                        \           \
                /----4-5-\    /-------11-12-------15-\     18-20--\
@@ -172,7 +172,7 @@ Lv0: RH0-3[] 4-5[1] H6-10[3, 5] 11-12[7] 13-14[5, 9] 15-15[12, 14] H16-17[10, 15
 Lv1: R0-10[] 11-15[7, 5, 9] 16-17[10, 15] R18-20[4] 21-22[17, 20]
 Lv2: R0-17[] R18-22[4, 17]
 Lv3: R0-22[]"#
-        );
+    );
 
     assert_eq!(
         build_segments(ASCII_DAG3, "G", 3).ascii[0],
@@ -219,7 +219,9 @@ Lv2: R0-6[]"#
                       X--R--U--V
                        \  \  \  \
                         A--N--S--Y"#;
-    assert_eq!(build_segments(ascii_dag, "Y", 3).ascii[0], r#"
+    assert_eq!(
+        build_segments(ascii_dag, "Y", 3).ascii[0],
+        r#"
             0---1--6--11-16
                  \  \  \  \
                   2--7--12-17
@@ -232,7 +234,8 @@ Lv2: R0-6[]"#
 Lv0: RH0-5[] 6-6[1] 7-7[6, 2] 8-8[3, 7] 9-9[8, 4] H10-10[5, 9] 11-11[6] 12-12[11, 7] 13-13[12, 8] 14-14[13, 9] H15-15[10, 14] 16-16[11] 17-17[16, 12] 18-18[17, 13] 19-19[14, 18] H20-20[15, 19]
 Lv1: R0-5[] 6-8[1, 2, 3] 9-10[8, 4, 5] 11-13[6, 7, 8] 14-15[13, 9, 10] 16-18[11, 12, 13] 19-20[14, 18, 15]
 Lv2: R0-10[] 11-15[6, 7, 8, 9, 10] 16-20[11, 12, 13, 14, 15]
-Lv3: R0-20[]"#);
+Lv3: R0-20[]"#
+    );
 
     // If a graph looks like this, it's hard to optimize anyway.
     let ascii_dag = r#"

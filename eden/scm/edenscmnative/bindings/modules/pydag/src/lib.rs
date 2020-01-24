@@ -13,8 +13,8 @@ use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::{
     id::{Group, Id, VertexName},
     idmap::IdMap,
-    segment::IdDag,
     spanset::{SpanSet, SpanSetIter},
+    IdDag,
 };
 use encoding::local_bytes_to_path;
 use std::cell::RefCell;
