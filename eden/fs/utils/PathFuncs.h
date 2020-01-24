@@ -1781,19 +1781,21 @@ struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
 namespace fmt {
 template <typename Storage>
 struct formatter<facebook::eden::detail::PathComponentBase<Storage>>
-    : formatter<folly::StringPiece> {
+    : formatter<string_view> {
   using Path = facebook::eden::detail::PathComponentBase<Storage>;
   auto format(const Path& p, format_context& ctx) {
-    return formatter<folly::StringPiece>::format(p.stringPiece(), ctx);
+    auto sp = p.stringPiece();
+    return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
   }
 };
 
 template <typename Storage>
 struct formatter<facebook::eden::detail::AbsolutePathBase<Storage>>
-    : formatter<folly::StringPiece> {
+    : formatter<string_view> {
   using Path = facebook::eden::detail::AbsolutePathBase<Storage>;
   auto format(const Path& p, format_context& ctx) {
-    return formatter<folly::StringPiece>::format(p.stringPiece(), ctx);
+    auto sp = p.stringPiece();
+    return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
   }
 };
 } // namespace fmt
