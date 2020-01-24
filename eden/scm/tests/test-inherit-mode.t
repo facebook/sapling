@@ -110,6 +110,7 @@ new directories are setgid
   00660 ./.hg/store/undo.backupfiles
   00660 ./.hg/store/undo.bookmarks
   00660 ./.hg/store/undo.phaseroots
+  00660 ./.hg/store/undo.visibleheads
   00700 ./.hg/treestate/
   00600 ./.hg/treestate/* (glob)
   00660 ./.hg/undo.backup.dirstate
@@ -177,6 +178,7 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/undo.backupfiles
   00660 ../push/.hg/store/undo.bookmarks
   00660 ../push/.hg/store/undo.phaseroots
+  00660 ../push/.hg/store/undo.visibleheads
   00700 ../push/.hg/treestate/
   00600 ../push/.hg/treestate/* (glob)
   00660 ../push/.hg/undo.branch

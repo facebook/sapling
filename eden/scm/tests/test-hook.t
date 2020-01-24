@@ -164,6 +164,7 @@ more there after
   hgcommits
   journal.bookmarks
   journal.phaseroots
+  journal.visibleheads
   metalog
   phaseroots
   requires
@@ -172,6 +173,7 @@ more there after
   undo.backupfiles
   undo.bookmarks
   undo.phaseroots
+  undo.visibleheads
 
 
 precommit hook can prevent commit

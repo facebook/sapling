@@ -1520,6 +1520,7 @@ class localrepository(object):
             (self.localvfs, "journal.desc"),
             (self.svfs, "journal.bookmarks"),
             (self.svfs, "journal.phaseroots"),
+            (self.svfs, "journal.visibleheads"),
         )
 
     def undofiles(self):
@@ -1534,6 +1535,7 @@ class localrepository(object):
         self.localvfs.write("journal.desc", "%d\n%s\n" % (len(self), desc))
         self.svfs.write("journal.bookmarks", self.svfs.tryread("bookmarks"))
         self.svfs.write("journal.phaseroots", self.svfs.tryread("phaseroots"))
+        self.svfs.write("journal.visibleheads", self.svfs.tryread("visibleheads"))
 
     def recover(self):
         with self.lock():
@@ -1615,6 +1617,8 @@ class localrepository(object):
             self.svfs.rename("undo.bookmarks", "bookmarks", checkambig=True)
         if self.svfs.exists("undo.phaseroots"):
             self.svfs.rename("undo.phaseroots", "phaseroots", checkambig=True)
+        if self.svfs.exists("undo.visibleheads"):
+            self.svfs.rename("undo.visibleheads", "visibleheads", checkambig=True)
         self.invalidate()
 
         parentgone = (
