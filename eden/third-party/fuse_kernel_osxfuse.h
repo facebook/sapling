@@ -231,7 +231,7 @@ struct fuse_file_lock {
 #  define FUSE_EXCHANGE_DATA	(1 << 28)
 #  define FUSE_CASE_INSENSITIVE	(1 << 29)
 #  define FUSE_VOL_RENAME	(1 << 30)
-#  define FUSE_XTIMES		(1 << 31)
+#  define FUSE_XTIMES		(1u << 31)
 #endif
 
 /**

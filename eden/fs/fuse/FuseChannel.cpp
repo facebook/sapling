@@ -1774,6 +1774,8 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
           // Opt into readdir caching.
           out.open_flags |= FOPEN_KEEP_CACHE | FOPEN_CACHE_DIR;
         }
+#else
+        (void)minorVersion;
 #endif
         out.fh = fh;
         RequestData::get().sendReply(out);

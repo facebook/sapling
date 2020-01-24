@@ -346,9 +346,9 @@ HgBackingStore::initializeCurlMononokeBackingStore() {
 #endif
 
 std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
+#if EDEN_HAVE_MONONOKE
   const auto& connectionType =
       config_->getEdenConfig()->mononokeConnectionType.getValue();
-#if EDEN_HAVE_MONONOKE
   if (connectionType == "http") {
     return initializeHttpMononokeBackingStore();
   } else if (connectionType == "thrift") {
