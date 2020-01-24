@@ -46,6 +46,7 @@ class SystemdTest(
         def test(start_args: typing.List[str]) -> None:
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
+                    # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
                     FindExe.EDEN_CLI,
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
@@ -73,6 +74,7 @@ class SystemdTest(
         def test(start_args: typing.List[str]) -> None:
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
+                    # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
                     FindExe.EDEN_CLI,
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
@@ -202,6 +204,7 @@ class SystemdTest(
         self, extra_args: typing.Sequence[str] = ()
     ) -> "pexpect.spawn[str]":
         return pexpect.spawn(
+            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
             FindExe.EDEN_CLI,
             self.get_required_eden_cli_args()
             + [

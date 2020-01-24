@@ -354,7 +354,11 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
         if extra_args:
             args.extend(extra_args)
         return pexpect.spawn(
-            FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
+            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            FindExe.EDEN_CLI,
+            args,
+            encoding="utf-8",
+            logfile=sys.stderr,
         )
 
 

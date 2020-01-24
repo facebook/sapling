@@ -127,7 +127,6 @@ class SystemdEnvironmentFile:
             cls._validate_entry(name, value)
             output.extend(name)
             output.extend(b"=")
-            # pyre-fixme[16]: `Type` has no attribute `__escape_value`.
             output.extend(cls.__escape_value(value))
             output.extend(b"\n")
         return bytes(output)

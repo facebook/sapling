@@ -118,7 +118,8 @@ if not pycompat.iswindows:
             (u"cmsg_len", _cmsg_len_t),
             (u"cmsg_level", ctypes.c_int),
             (u"cmsg_type", ctypes.c_int),
-            # pyre-fixme[16]: `c_ubyte` has no attribute `__mul__`.
+            # pyre-fixme[6]: Expected `int` for 1st param but got
+            #  `Type[ctypes.c_ubyte]`.
             (u"cmsg_data", ctypes.c_ubyte * 0),
         ]
 

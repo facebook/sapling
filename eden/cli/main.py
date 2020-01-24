@@ -544,7 +544,6 @@ class CloneCmd(Subcmd):
                 )
                 return 1
 
-        # pyre-fixme[16]: `Namespace` has no attribute `path`.
         args.path = os.path.realpath(args.path)
 
         # Find the repository information
@@ -1090,7 +1089,6 @@ class PrefetchCmd(Subcmd):
 
         if args.pattern_file is not None:
             with open(args.pattern_file) as f:
-                # pyre-fixme[16]: `Namespace` has no attribute `PATTERN`.
                 args.PATTERN += [pat.strip() for pat in f.readlines()]
 
         if os.name == "nt":
@@ -1385,7 +1383,6 @@ class RestartCmd(Subcmd):
         self.args = args
         if args.restart_type is None:
             # Default to a full restart for now
-            # pyre-fixme[16]: `Namespace` has no attribute `restart_type`.
             args.restart_type = RESTART_MODE_FULL
 
         instance = get_eden_instance(self.args)
