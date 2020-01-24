@@ -76,14 +76,10 @@ class KeySpace {
       1,
       "blobmeta",
       Ephemeral{&EdenConfig::localStoreBlobMetaSizeLimit}};
-  // It is too costly to have trees be deleted by automatic
-  // background GC when there are programs that cause every
-  // tree in the repo to be fetched. Make ephemeral when GC
-  // is smarter and when Eden can more efficiently read from
-  // the hg cache.  This would also be better if programs
-  // weren't scanning the entire repo for filenames, causing
-  // every tree to be loaded.
-  static constexpr KeySpaceRecord TreeFamily{2, "tree", Persistent{}};
+  static constexpr KeySpaceRecord TreeFamily{
+      2,
+      "tree",
+      Ephemeral{&EdenConfig::localStoreTreeSizeLimit}};
   // Proxy hashes are required to fetch objects from hg from a hash.
   // Deleting them breaks re-importing after an inode is unloaded.
   static constexpr KeySpaceRecord HgProxyHashFamily{3,
