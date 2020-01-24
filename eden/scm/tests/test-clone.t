@@ -66,20 +66,9 @@ No update, with debug option:
   progress: linking: 7
   progress: linking: 8
   progress: linking: 9
+  progress: linking: 10
   progress: linking (end)
-  linked 9 files
-  progress: migrating commit data: 1/11 commits (9.09%)
-  progress: migrating commit data: 2/11 commits (18.18%)
-  progress: migrating commit data: 3/11 commits (27.27%)
-  progress: migrating commit data: 4/11 commits (36.36%)
-  progress: migrating commit data: 5/11 commits (45.45%)
-  progress: migrating commit data: 6/11 commits (54.55%)
-  progress: migrating commit data: 7/11 commits (63.64%)
-  progress: migrating commit data: 8/11 commits (72.73%)
-  progress: migrating commit data: 9/11 commits (81.82%)
-  progress: migrating commit data: 10/11 commits (90.91%)
-  progress: migrating commit data: 11/11 commits (100.00%)
-  progress: migrating commit data (end)
+  linked 10 files
   progress: migrating commit data: 1/11 commits (9.09%)
   progress: migrating commit data: 2/11 commits (18.18%)
   progress: migrating commit data: 3/11 commits (27.27%)

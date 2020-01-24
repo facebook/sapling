@@ -411,7 +411,7 @@ def _calcmode(vfs):
 
 _data = (
     "data meta 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-    " phaseroots obsstore"
+    " phaseroots obsstore visibleheads"
 )
 
 
@@ -513,7 +513,9 @@ class encodedstore(basicstore):
         return self.path + "/" + encodefilename(f)
 
     def copylist(self):
-        return ["requires", "00changelog.i"] + ["store/" + f for f in _data.split()]
+        return ["requires", "00changelog.i", "store/requires"] + [
+            "store/" + f for f in _data.split()
+        ]
 
 
 class fncache(object):
@@ -736,10 +738,12 @@ class fncachestore(basicstore):
 
     def copylist(self):
         d = (
-            "data meta dh fncache phaseroots obsstore"
+            "data meta dh fncache phaseroots obsstore visibleheads"
             " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
         )
-        return ["requires", "00changelog.i"] + ["store/" + f for f in d.split()]
+        return ["requires", "00changelog.i", "store/requires"] + [
+            "store/" + f for f in d.split()
+        ]
 
     def write(self, tr):
         self.fncache.write(tr)

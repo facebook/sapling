@@ -321,6 +321,10 @@ def unshare(ui, repo):
     repo.unfiltered().invalidatedirstate()
     repo.unfiltered().__init__(repo.baseui, repo.root)
 
+    # reinitialize zstore
+    if repo.ui.configbool("format", "use-zstore-commit-data"):
+        repo.unfiltered()._syncrevlogtozstore()
+
 
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.
