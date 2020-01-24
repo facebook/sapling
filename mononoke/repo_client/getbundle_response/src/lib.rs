@@ -6,6 +6,8 @@
  * directory of this source tree.
  */
 
+#![deny(warnings)]
+
 use crate::errors::ErrorKind;
 use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
@@ -14,7 +16,7 @@ use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt as OldFutureExt;
-use futures_util::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures_util::compat::Future01CompatExt;
 use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
