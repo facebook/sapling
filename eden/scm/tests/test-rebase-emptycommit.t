@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ configure mutation-norecord
   $ enable rebase
 
   $ hg init non-merge
@@ -129,10 +130,10 @@ Merge and its ancestors all become empty
   $ hg book -d A B C D E
 
   $ hg rebase -r '(0::)-(1::)-0' -d 7
-  rebasing dc0947a82db8 "C" (BOOK-C)
-  note: rebase of 2:dc0947a82db8 created no changes to commit
   rebasing b18e25de2cf5 "D" (BOOK-D)
   note: rebase of 3:b18e25de2cf5 created no changes to commit
+  rebasing dc0947a82db8 "C" (BOOK-C)
+  note: rebase of 2:dc0947a82db8 created no changes to commit
   rebasing 86a1f6686812 "E" (BOOK-E)
   note: rebase of 4:86a1f6686812 created no changes to commit
 
@@ -180,8 +181,8 @@ Part of ancestors of a merge become empty
   $ hg rebase -r '(0::)-(1::)-0' -d 9
   rebasing dc0947a82db8 "C" (BOOK-C)
   note: rebase of 2:dc0947a82db8 created no changes to commit
-  rebasing b18e25de2cf5 "D" (BOOK-D)
   rebasing 03ca77807e91 "E" (BOOK-E)
+  rebasing b18e25de2cf5 "D" (BOOK-D)
   rebasing ad6717a6a58e "F" (BOOK-F)
   note: rebase of 5:ad6717a6a58e created no changes to commit
   rebasing c58e8bdac1f4 "G" (BOOK-G)
@@ -189,9 +190,9 @@ Part of ancestors of a merge become empty
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o    12 G BOOK-G
   |\
-  | o  11 E BOOK-E
+  | o  11 D BOOK-D BOOK-F
   | |
-  o |  10 D BOOK-D BOOK-F
+  o |  10 E BOOK-E
   |/
   o  9 H BOOK-C
   |

@@ -2,6 +2,7 @@
 
 Test new conflict switching:
 
+  $ configure mutation-norecord
   $ newrepo
   $ enable amend morestatus rebase
   $ setconfig morestatus.show=True

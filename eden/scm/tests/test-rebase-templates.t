@@ -4,7 +4,7 @@ Testing templating for rebase command
 
 Setup
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable rebase
 
   $ hg init repo

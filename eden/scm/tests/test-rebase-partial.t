@@ -3,17 +3,14 @@
 Tests rebasing with part of the rebase set already in the
 destination (issue5422)
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable rebase
 
   $ rebasewithdag() {
   >   N=`$PYTHON -c "print($N+1)"`
   >   hg init repo$N && cd repo$N
   >   hg debugdrawdag
-  >   hg rebase "$@" > _rebasetmp
-  >   r=$?
-  >   grep -v 'saved backup bundle' _rebasetmp
-  >   [ $r -eq 0 ] && tglog
+  >   hg rebase "$@" && tglog
   >   cd ..
   >   return $r
   > }

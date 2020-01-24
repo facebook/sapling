@@ -4,12 +4,8 @@
 
 #testcases obsstore-off obsstore-on mutation
 
-  $ cat << EOF >> $HGRCPATH
-  > [extensions]
-  > amend=
-  > [diff]
-  > git=1
-  > EOF
+  $ enable amend
+  $ setconfig diff.git=1
 
 #if obsstore-on
   $ configure evolution

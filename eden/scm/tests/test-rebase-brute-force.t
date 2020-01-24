@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation
   $ setconfig extensions.bruterebase="$TESTDIR/bruterebase.py"
   $ init() {
   >   N=`expr ${N:-0} + 1`

@@ -1,6 +1,6 @@
 #chg-compatible
 
-
+  $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
 
   $ newserver master
@@ -38,7 +38,7 @@
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     A1
   | |
-  | o  changeset:   2:c84328973e26
+  | x  changeset:   2:c84328973e26
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     B

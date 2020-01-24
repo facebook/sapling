@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ configure mutation-norecord
   $ disable treemanifest
   $ enable rebase
   $ setconfig phases.publish=false

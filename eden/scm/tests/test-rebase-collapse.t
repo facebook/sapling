@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ configure mutation
   $ disable treemanifest
   $ enable rebase strip
   $ setconfig phases.publish=0
@@ -397,7 +398,7 @@ Test collapsing in place
 
   $ hg rebase --collapse -b . -d $X
   rebasing 71cf332de4cf "Y"
-  rebasing c2a9a5beba1a "Collapsed revision"
+  rebasing 2dddb285069e "Collapsed revision"
   $ hg st --change tip --copies
   M a
   M c
@@ -479,7 +480,7 @@ running into merge conflict and invoking rebase --continue.
   $ hg rebase --continue
   rebasing 1fb04abbc715 "a-dev"
   $ hg log
-  changeset:   3:3f6f2136305e
+  changeset:   3:925b342b51db
   parent:      1:3c8db56a44bc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
