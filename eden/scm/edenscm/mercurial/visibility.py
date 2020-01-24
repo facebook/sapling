@@ -246,8 +246,8 @@ class bundlevisibleheads(visibleheads):
         self.heads = util.removeduplicates(self.heads + bundleheads)
 
     def _updateheads(self, repo, newheads, tr):
-        # bundlerepo visibleheads are immutable.  This should never be called.
-        raise NotImplementedError
+        # Accept the new heads as-is.
+        self.heads = newheads
 
 
 def setvisibleheads(repo, newheads):
