@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use bindag::TestContext;
+use bindag::GeneralTestContext;
 use dag::{spanset::SpanSet, Id};
 
 #[allow(dead_code)]
-pub fn test_gca(context: &TestContext, namedag_revs: Vec<usize>) {
+pub fn test_gca<T: AsRef<[usize]>>(context: &GeneralTestContext<T>, namedag_revs: Vec<usize>) {
     let namedag_revs = SpanSet::from_spans(namedag_revs.iter().map(|&i| Id(i as u64)));
     let plain_revs = context.to_plain_revs(&namedag_revs);
     let mut plain_gca = bindag::gca(&context.parents, &plain_revs);
@@ -21,7 +21,11 @@ pub fn test_gca(context: &TestContext, namedag_revs: Vec<usize>) {
 }
 
 #[allow(dead_code)]
-pub fn test_range(context: &TestContext, roots: Vec<usize>, heads: Vec<usize>) {
+pub fn test_range<T: AsRef<[usize]>>(
+    context: &GeneralTestContext<T>,
+    roots: Vec<usize>,
+    heads: Vec<usize>,
+) {
     let plain_roots: Vec<_> = roots.iter().map(|&i| context.idmap[i]).collect();
     let plain_heads: Vec<_> = heads.iter().map(|&i| context.idmap[i]).collect();
 

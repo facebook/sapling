@@ -14,9 +14,9 @@ use tempfile::TempDir;
 
 /// Context for testing purpose.
 /// Contains the parsed bindag and NameDag from the dag crate.
-pub struct TestContext {
+pub struct GeneralTestContext<T> {
     /// Plain DAG parsed from bindag
-    pub parents: Vec<ParentRevs>,
+    pub parents: Vec<T>,
 
     /// Complex DAG, with ids re-assigned
     pub dag: NameDag,
@@ -28,6 +28,9 @@ pub struct TestContext {
     pub dir: TempDir,
 }
 
+pub type TestContext = GeneralTestContext<ParentRevs>;
+pub type OctopusTestContext = GeneralTestContext<Vec<usize>>;
+
 impl TestContext {
     pub fn from_bin(bin: &[u8]) -> Self {
         Self::from_bin_sliced(bin, 0..usize::max_value())
@@ -37,7 +40,12 @@ impl TestContext {
         // Prepare the plain DAG (parents)
         let parents = parse_bindag(bin);
         let parents = crate::slice_parents(parents, range);
+        Self::from_parents(parents)
+    }
+}
 
+impl<T: AsRef<[usize]>> GeneralTestContext<T> {
+    pub fn from_parents(parents: Vec<T>) -> Self {
         // Prepare NameDag
         let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
             let i = String::from_utf8(name.as_ref().to_vec())
@@ -45,13 +53,14 @@ impl TestContext {
                 .parse::<usize>()
                 .unwrap();
             Ok(parents[i]
+                .as_ref()
                 .iter()
                 .map(|p| format!("{}", p).as_bytes().to_vec().into())
                 .collect())
         };
         let mut heads: HashSet<usize> = (0..parents.len()).collect();
         for ps in &parents {
-            for p in ps.iter() {
+            for p in ps.as_ref().iter() {
                 heads.remove(&p);
             }
         }
@@ -82,7 +91,9 @@ impl TestContext {
             dir,
         }
     }
+}
 
+impl<T> GeneralTestContext<T> {
     /// Limit the size of `parents`.
     pub fn truncate(mut self, size: usize) -> Self {
         if size < self.parents.len() {

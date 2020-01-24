@@ -15,7 +15,7 @@ mod test_context;
 
 pub use gca::gca;
 pub use range::range;
-pub use test_context::TestContext;
+pub use test_context::{GeneralTestContext, OctopusTestContext, TestContext};
 
 pub static MOZILLA: &[u8] = include_bytes!("mozilla-central.bindag");
 pub static GIT: &[u8] = include_bytes!("git.bindag");
