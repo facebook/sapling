@@ -623,7 +623,7 @@ class metavfs(object):
                 # Also write to disk for compatibility (ex. shell completion
                 # script might read them).
                 legacypath = self.join(path)
-                util.writefile(legacypath, content)
+                util.replacefile(legacypath, content)
 
             return writablestream(write)
         else:

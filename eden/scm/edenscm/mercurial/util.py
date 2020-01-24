@@ -1921,6 +1921,13 @@ def appendfile(path, text):
         fp.write(text)
 
 
+def replacefile(path, text):
+    """Like writefile, but uses an atomic temp to ensure hardlinks are broken."""
+    with atomictempfile(path, "wb", checkambig=True) as fp:
+        fp.write(text)
+        fp.close()
+
+
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
     iterator over chunks of arbitrary size."""
