@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 CREATE TABLE `revisions` (
   `repo` varbinary(64) NOT NULL,
   `path` varbinary(512) NOT NULL,

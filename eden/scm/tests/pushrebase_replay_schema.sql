@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 CREATE TABLE `pushrebaserecording` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `repo_id` int(10) unsigned NOT NULL,
