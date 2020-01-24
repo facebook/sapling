@@ -608,7 +608,7 @@ class rebaseruntime(object):
         p1, p2, base = defineparents(
             repo, rev, self.destmap, self.state, self.skipped, self.obsoletenotrebased
         )
-        copypreds = [self.state[p] for p in self.predmap[rev]]
+        copypreds = [repo[p] for p in self.predmap[rev]]
         self.storestatus(tr=tr)
         storecollapsemsg(repo, self.collapsemsg)
         if len(repo[None].parents()) == 2:
@@ -723,6 +723,10 @@ class rebaseruntime(object):
                     if rebased not in self.skipped:
                         commitmsg += "\n* %s" % repo[rebased].description()
                 editopt = True
+            preds = []
+            for rebased in sorted(self.state):
+                if rebased not in self.skipped:
+                    preds.append(repo[rebased])
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             revtoreuse = max(self.state)
 
@@ -739,6 +743,7 @@ class rebaseruntime(object):
                     editor=editor,
                     date=self.date,
                     wctx=self.wctx,
+                    preds=preds,
                 )
             else:
                 if ui.configbool("rebase", "singletransaction"):
@@ -754,6 +759,7 @@ class rebaseruntime(object):
                         extrafn=_makeextrafn(self.extrafns),
                         editor=editor,
                         date=self.date,
+                        preds=preds,
                     )
             if newnode is not None:
                 newrev = repo[newnode].rev()
@@ -1336,6 +1342,7 @@ def concludememorynode(
     editor=None,
     extrafn=None,
     date=None,
+    preds=None,
     copypreds=None,
 ):
     """Commit the memory changes with parents p1 and p2. Reuse commit info from
@@ -1345,13 +1352,15 @@ def concludememorynode(
     if commitmsg is None:
         commitmsg = ctx.description()
     extra = {"rebase_source": ctx.hex()}
-    preds = [ctx.node()]
-    mutop = "rebase"
     mutinfo = None
-    if copypreds:
-        preds.extend(repo.changelog.node(r) for r in copypreds)
-        mutop = "rebase-copy"
     if not keepf:
+        mutop = "rebase"
+        if preds is None:
+            preds = [ctx]
+        if copypreds:
+            preds.extend(copypreds)
+            mutop = "rebase-copy"
+        preds = [p.node() for p in preds]
         mutinfo = mutation.record(repo, extra, preds, mutop)
     if extrafn:
         extrafn(ctx, extra)
@@ -1399,6 +1408,7 @@ def concludenode(
     editor=None,
     extrafn=None,
     date=None,
+    preds=None,
     copypreds=None,
 ):
     """Commit the wd changes with parents p1 and p2. Reuse commit info from rev
@@ -1413,13 +1423,15 @@ def concludenode(
         if commitmsg is None:
             commitmsg = ctx.description()
         extra = {"rebase_source": ctx.hex()}
-        preds = [ctx.node()]
-        mutop = "rebase"
         mutinfo = None
-        if copypreds:
-            preds.extend(repo.changelog.node(r) for r in copypreds)
-            mutop = "rebase-copy"
         if not keepf:
+            mutop = "rebase"
+            if preds is None:
+                preds = [ctx]
+            if copypreds:
+                preds.extend(copypreds)
+                mutop = "rebase-copy"
+            preds = [p.node() for p in preds]
             mutinfo = mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
