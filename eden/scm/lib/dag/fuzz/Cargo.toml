@@ -31,6 +31,10 @@ name = "gca_small"
 path = "fuzz_targets/gca_small.rs"
 
 [[bin]]
+name = "gca_octopus"
+path = "fuzz_targets/gca_octopus.rs"
+
+[[bin]]
 name = "range"
 path = "fuzz_targets/range.rs"
 
@@ -41,3 +45,7 @@ path = "fuzz_targets/range_medium.rs"
 [[bin]]
 name = "range_small"
 path = "fuzz_targets/range_small.rs"
+
+[[bin]]
+name = "range_octopus"
+path = "fuzz_targets/range_octopus.rs"
