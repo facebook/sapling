@@ -29,3 +29,15 @@ path = "fuzz_targets/gca.rs"
 [[bin]]
 name = "gca_small"
 path = "fuzz_targets/gca_small.rs"
+
+[[bin]]
+name = "range"
+path = "fuzz_targets/range.rs"
+
+[[bin]]
+name = "range_medium"
+path = "fuzz_targets/range_medium.rs"
+
+[[bin]]
+name = "range_small"
+path = "fuzz_targets/range_small.rs"

@@ -19,3 +19,28 @@ pub fn test_gca(context: &TestContext, namedag_revs: Vec<usize>) {
     namedag_gca.sort_unstable();
     assert_eq!(plain_gca, namedag_gca, "gca({:?})", &plain_revs);
 }
+
+#[allow(dead_code)]
+pub fn test_range(context: &TestContext, roots: Vec<usize>, heads: Vec<usize>) {
+    let plain_roots: Vec<_> = roots.iter().map(|&i| context.idmap[i]).collect();
+    let plain_heads: Vec<_> = heads.iter().map(|&i| context.idmap[i]).collect();
+
+    let mut plain_range = bindag::range(&context.parents, &plain_roots, &plain_heads);
+    plain_range.sort_unstable();
+
+    let namedag_roots = SpanSet::from_spans(roots.iter().map(|&i| Id(i as u64)));
+    let namedag_heads = SpanSet::from_spans(heads.iter().map(|&i| Id(i as u64)));
+    let mut namedag_range = context.to_plain_revs(
+        &context
+            .id_dag()
+            .range(namedag_roots, namedag_heads)
+            .expect("IdDag::range"),
+    );
+
+    namedag_range.sort_unstable();
+    assert_eq!(
+        plain_range, namedag_range,
+        "range({:?}::{:?})",
+        &roots, &heads
+    );
+}
