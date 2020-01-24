@@ -8919,7 +8919,7 @@ pub mod client {
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_paths: &Vec<crate::types::PathString>,
+            arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>>;
         fn getBindMounts(
             &self,
@@ -8965,12 +8965,12 @@ pub mod client {
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_paths: &Vec<crate::types::PathString>,
+            arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>>;
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_globs: &Vec<String>,
+            arg_globs: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>>;
         fn globFiles(
             &self,
@@ -9387,7 +9387,7 @@ pub mod client {
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_paths: &Vec<crate::types::PathString>,
+            arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
             use futures_preview::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
@@ -9931,7 +9931,7 @@ pub mod client {
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_paths: &Vec<crate::types::PathString>,
+            arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
             use futures_preview::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
@@ -9987,7 +9987,7 @@ pub mod client {
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_globs: &Vec<String>,
+            arg_globs: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
             use futures_preview::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
@@ -15488,11 +15488,11 @@ pub mod mock {
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_paths: &Vec<crate::types::PathString>,
+            arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
             let mut closure = self.getSHA1.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_paths.clone())
+            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetSHA1Error(error),
                 ))))
@@ -15604,11 +15604,11 @@ pub mod mock {
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_paths: &Vec<crate::types::PathString>,
+            arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
             let mut closure = self.getFileInformation.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_paths.clone())
+            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetFileInformationError(error),
                 ))))
@@ -15616,11 +15616,11 @@ pub mod mock {
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
-            arg_globs: &Vec<String>,
+            arg_globs: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
             let mut closure = self.glob.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_globs.clone())
+            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_globs.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGlobError(error),
                 ))))

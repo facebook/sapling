@@ -1758,7 +1758,7 @@ pub mod client {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
         fn translateFrames(
             &self,
-            arg_pointers: &Vec<i64>,
+            arg_pointers: &[i64],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>>;
         fn getPcapLoggingConfig(
             &self,
@@ -2373,7 +2373,7 @@ pub mod client {
         }
         fn translateFrames(
             &self,
-            arg_pointers: &Vec<i64>,
+            arg_pointers: &[i64],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
             use futures_preview::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
@@ -3864,11 +3864,11 @@ pub mod mock {
         }
         fn translateFrames(
             &self,
-            arg_pointers: &Vec<i64>,
+            arg_pointers: &[i64],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
             let mut closure = self.translateFrames.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<i64>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_pointers.clone())
+            Box::pin(futures_preview::future::ready(closure(arg_pointers.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceTranslateFramesError(error),
                 ))))

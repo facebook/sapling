@@ -1653,7 +1653,7 @@ pub mod client {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>>;
         fn getSelectedCounters(
             &self,
-            arg_keys: &Vec<String>,
+            arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>>;
         fn getCounter(
             &self,
@@ -1664,7 +1664,7 @@ pub mod client {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>>;
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &Vec<String>,
+            arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>>;
         fn getRegexExportedValues(
             &self,
@@ -1991,7 +1991,7 @@ pub mod client {
         }
         fn getSelectedCounters(
             &self,
-            arg_keys: &Vec<String>,
+            arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
             use futures_preview::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
@@ -2143,7 +2143,7 @@ pub mod client {
         }
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &Vec<String>,
+            arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
             use futures_preview::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
@@ -3840,11 +3840,11 @@ pub mod mock {
         }
         fn getSelectedCounters(
             &self,
-            arg_keys: &Vec<String>,
+            arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
             let mut closure = self.getSelectedCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_keys.clone())
+            Box::pin(futures_preview::future::ready(closure(arg_keys.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetSelectedCountersError(error),
                 ))))
@@ -3872,11 +3872,11 @@ pub mod mock {
         }
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &Vec<String>,
+            arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
             let mut closure = self.getSelectedExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_keys.clone())
+            Box::pin(futures_preview::future::ready(closure(arg_keys.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetSelectedExportedValuesError(error),
                 ))))
