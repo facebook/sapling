@@ -236,8 +236,8 @@ ImporterOptions HgImporter::waitForHelperStart() {
     // It should have normally printed an error message to stderr in this case,
     // which is normally redirected to our edenfs.log file.
     throw HgImporterError(
-        "error starting Mercurial import helper.  "
-        "Check edenfs.log for the error messages from the import helper.");
+        "error starting Mercurial import helper. Run `edenfsctl debug log` to "
+        "view the error messages from the import helper.");
   }
 
   if (header.command != CMD_STARTED) {
