@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import error, node, obsolete, revset
+from . import error, mutation, node, obsolete, revset
 from .i18n import _
 
 
@@ -48,6 +48,8 @@ def disallowednewunstable(repo, revs):
     To allow new unstable changesets, set the config:
         `experimental.evolution.allowunstable=True`
     """
+    if mutation.enabled(repo):
+        return revset.baseset()
     allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
     if allowunstable:
         return revset.baseset()
