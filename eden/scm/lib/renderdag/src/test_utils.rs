@@ -19,6 +19,14 @@ pub(crate) fn render_string(
     fixture: &TestFixture,
     renderer: &mut dyn Renderer<Id, Output = String>,
 ) -> String {
+    render_string_with_order(fixture, renderer, None)
+}
+
+pub(crate) fn render_string_with_order(
+    fixture: &TestFixture,
+    renderer: &mut dyn Renderer<Id, Output = String>,
+    order: Option<&[&str]>,
+) -> String {
     let TestFixture {
         dag,
         messages,
@@ -71,8 +79,16 @@ pub(crate) fn render_string(
     let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
     let messages: HashMap<_, _> = messages.iter().cloned().collect();
 
+    let iter = match order {
+        None => (0..=last_head).rev().collect::<Vec<_>>(),
+        Some(order) => order
+            .iter()
+            .map(|name| id_map.find_id_by_name(name.as_bytes()).unwrap().unwrap().0)
+            .collect(),
+    };
+
     let mut out = String::new();
-    for id in (0..=last_head).rev() {
+    for id in iter {
         let node = Id(id);
         if missing.contains(&node) {
             continue;

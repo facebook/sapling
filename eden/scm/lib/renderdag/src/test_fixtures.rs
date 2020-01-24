@@ -127,3 +127,50 @@ pub(crate) const LONG_MESSAGES: TestFixture = TestFixture {
     ancestors: &[],
     missing: &["Y", "Z"],
 };
+
+pub(crate) const ORDERS1: TestFixture = TestFixture {
+    dag: r#"
+                    K
+                   /|
+                  F J
+                 / /|
+                | E I
+                |/ /|
+                | D H
+                |/ /|
+                | C G
+                |/ /|
+                | B Z
+                |/
+                A
+    "#,
+    messages: &[],
+    heads: &["K"],
+    reserve: &[],
+    ancestors: &[],
+    missing: &[],
+};
+
+// Unlike ORDERS1, the first-parent branch (KFEDCBA) is the longest path.
+pub(crate) const ORDERS2: TestFixture = TestFixture {
+    dag: r#"
+                    K
+                   /|
+                  J F
+                 / /|
+                | I E
+                |/ /|
+                | H D
+                |/ /|
+                | G C
+                |/ /|
+                | B Z
+                |/
+                A
+    "#,
+    messages: &[],
+    heads: &["K"],
+    reserve: &[],
+    ancestors: &[],
+    missing: &[],
+};

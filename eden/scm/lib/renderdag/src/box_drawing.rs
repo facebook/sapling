@@ -291,7 +291,7 @@ where
 mod tests {
     use crate::render::GraphRowRenderer;
     use crate::test_fixtures::{self, TestFixture};
-    use crate::test_utils::render_string;
+    use crate::test_utils::{render_string, render_string_with_order};
 
     fn render(fixture: &TestFixture) -> String {
         let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
@@ -523,6 +523,139 @@ mod tests {
             │  long message 1
             ~  long message 2
                long message 3"#
+        );
+    }
+
+    #[test]
+    fn different_orders() {
+        let order = |order: &str| {
+            let order = order.matches(|_: char| true).collect::<Vec<_>>();
+            let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
+            render_string_with_order(&test_fixtures::ORDERS1, &mut renderer, Some(&order))
+        };
+
+        assert_eq!(
+            order("KJIHGFEDCBZA"),
+            r#"
+            o    K
+            ├─╮
+            │ o    J
+            │ ├─╮
+            │ │ o    I
+            │ │ ├─╮
+            │ │ │ o    H
+            │ │ │ ├─╮
+            │ │ │ │ o    G
+            │ │ │ │ ├─╮
+            o │ │ │ │ │  F
+            │ │ │ │ │ │
+            │ o │ │ │ │  E
+            ├─╯ │ │ │ │
+            │   o │ │ │  D
+            ├───╯ │ │ │
+            │     o │ │  C
+            ├─────╯ │ │
+            │       o │  B
+            ├───────╯ │
+            │         o  Z
+            │
+            o  A"#
+        );
+
+        assert_eq!(
+            order("KJIHGZBCDEFA"),
+            r#"
+            o    K
+            ├─╮
+            │ o    J
+            │ ├─╮
+            │ │ o    I
+            │ │ ├─╮
+            │ │ │ o    H
+            │ │ │ ├─╮
+            │ │ │ │ o    G
+            │ │ │ │ ├─╮
+            │ │ │ │ │ o  Z
+            │ │ │ │ │
+            │ │ │ │ o  B
+            │ │ │ │ │
+            │ │ │ o │  C
+            │ │ │ ├─╯
+            │ │ o │  D
+            │ │ ├─╯
+            │ o │  E
+            │ ├─╯
+            o │  F
+            ├─╯
+            o  A"#
+        );
+
+        // Keeping the p1 branch the longest path (KFEDCBA) is a reasonable
+        // optimization for a cleaner graph (less columns, more text space).
+        assert_eq!(
+            render(&test_fixtures::ORDERS2),
+            r#"
+            o    K
+            ├─╮
+            │ o  J
+            │ │
+            o │    F
+            ├───╮
+            │ │ o  I
+            │ ├─╯
+            o │    E
+            ├───╮
+            │ │ o  H
+            │ ├─╯
+            o │    D
+            ├───╮
+            │ │ o  G
+            │ ├─╯
+            o │    C
+            ├───╮
+            │ │ o  Z
+            │ │
+            o │  B
+            ├─╯
+            o  A"#
+        );
+
+        // Try to use the ORDERS2 order. However, the parent ordering in the
+        // graph is different, which makes the rendering different.
+        //
+        // Note: it's KJFIEHDGCZBA in the ORDERS2 graph. To map it to ORDERS1,
+        // follow:
+        //
+        // ORDERS1: KFJEIDHCGBZA
+        // ORDERS2: KJFIEHDGCBZA
+        //
+        // And we get KFJEIDHCGZBA.
+        assert_eq!(
+            order("KFJEIDHCGZBA"),
+            r#"
+            o    K
+            ├─╮
+            o │  F
+            │ │
+            │ o    J
+            │ ├─╮
+            │ o │  E
+            ├─╯ │
+            │   o  I
+            │ ╭─┤
+            │ │ o  D
+            ├───╯
+            │ o    H
+            │ ├─╮
+            │ o │  C
+            ├─╯ │
+            │   o  G
+            │ ╭─┤
+            │ o │  Z
+            │   │
+            │   o  B
+            ├───╯
+            o  A"#
         );
     }
 }
