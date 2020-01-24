@@ -9,6 +9,7 @@ use std::ops::{Deref, Range};
 use vlqencoding::VLQDecode;
 
 mod gca;
+pub mod octopus;
 mod range;
 mod test_context;
 
