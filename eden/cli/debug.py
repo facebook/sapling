@@ -667,7 +667,7 @@ class LogCmd(Subcmd):
         if pager_env:
             pager_cmd = shlex.split(pager_env)
         else:
-            pager_cmd = ["less"]
+            pager_cmd = ["less", "+G"]
         pager_cmd.append(str(eden_log_path))
 
         os.execvp(pager_cmd[0], pager_cmd)
