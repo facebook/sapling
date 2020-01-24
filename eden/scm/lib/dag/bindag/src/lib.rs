@@ -9,9 +9,11 @@ use std::ops::{Deref, Range};
 use vlqencoding::VLQDecode;
 
 mod gca;
+mod range;
 mod test_context;
 
 pub use gca::gca;
+pub use range::range;
 pub use test_context::TestContext;
 
 pub static MOZILLA: &[u8] = include_bytes!("mozilla-central.bindag");

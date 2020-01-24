@@ -12,7 +12,7 @@
 /// The algorithm was written by Bryan O'Sullivan on 2013-04-16.
 /// He provided both a Python [1] and a C version [2]. Since then, the only real
 /// logic change is removing an unnecessary "if" branch by Mads Kiilerich on
-/// 2014-02-24 [3].
+/// 2014-02-24 [4].
 ///
 /// The C implementation is quite competitive among linear algorithms on
 /// performance. It is cache-efficient, has fast paths to exit early, and
