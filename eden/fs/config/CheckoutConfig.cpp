@@ -32,14 +32,12 @@ namespace {
 const facebook::eden::RelativePathPiece kCheckoutConfig{"config.toml"};
 
 // Keys for the TOML config file.
-constexpr folly::StringPiece kBindMountsSection{"bind-mounts"};
 constexpr folly::StringPiece kRepoSection{"repository"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 
 // Files of interest in the client directory.
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
-const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
 
 // File holding mapping of client directories.
@@ -186,19 +184,6 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto repository = configRoot->get_table(kRepoSection.str());
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
-
-  // Extract the bind mounts
-  AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;
-  auto bindMounts = configRoot->get_table(kBindMountsSection.str());
-  if (bindMounts != nullptr) {
-    for (auto& item : *bindMounts) {
-      auto pathInClientDir = bindMountsPath + RelativePathPiece{item.first};
-      auto tomlValue = item.second->as<std::string>();
-      auto pathInMountDir =
-          mountPath + RelativePathPiece{tomlValue.get()->get()};
-      config->bindMounts_.emplace_back(pathInClientDir, pathInMountDir);
-    }
-  }
 
   return config;
 }

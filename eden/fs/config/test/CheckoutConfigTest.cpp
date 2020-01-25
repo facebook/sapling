@@ -15,7 +15,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using facebook::eden::AbsolutePath;
-using facebook::eden::BindMount;
 using facebook::eden::CheckoutConfig;
 using facebook::eden::Hash;
 using folly::StringPiece;
@@ -73,14 +72,6 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
       Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
   EXPECT_EQ(std::nullopt, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
-
-  std::vector<BindMount> expectedBindMounts;
-  auto pathInClientDir = clientDir_ / "bind-mounts" / "my-path";
-
-  expectedBindMounts.emplace_back(
-      BindMount{AbsolutePath{pathInClientDir.c_str()},
-                AbsolutePath{"/tmp/someplace/path/to-my-path"}});
-  EXPECT_EQ(expectedBindMounts, config->getBindMounts());
 }
 
 TEST_F(CheckoutConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
@@ -99,9 +90,6 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
       Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
   EXPECT_EQ(std::nullopt, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
-
-  std::vector<BindMount> expectedBindMounts;
-  EXPECT_EQ(expectedBindMounts, config->getBindMounts());
 }
 
 TEST_F(CheckoutConfigTest, testMultipleParents) {

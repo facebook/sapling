@@ -16,25 +16,6 @@
 namespace facebook {
 namespace eden {
 
-class BindMount {
- public:
-  BindMount(AbsolutePathPiece clientDirPath, AbsolutePathPiece mountDirPath)
-      : pathInClientDir(clientDirPath), pathInMountDir(mountDirPath) {}
-
-  bool operator==(const BindMount& other) const {
-    return pathInClientDir == other.pathInClientDir &&
-        pathInMountDir == other.pathInMountDir;
-  }
-
-  AbsolutePath pathInClientDir;
-  AbsolutePath pathInMountDir;
-};
-
-inline void operator<<(std::ostream& out, const BindMount& bindMount) {
-  out << "BindMount{pathInClientDir=" << bindMount.pathInClientDir
-      << "; pathInMountDir=" << bindMount.pathInMountDir << "}";
-}
-
 /**
  * CheckoutConfig contains the configuration state for a single Eden checkout.
  *
@@ -89,10 +70,6 @@ class CheckoutConfig {
   /** @return Path to the directory where overlay information is stored. */
   AbsolutePath getOverlayPath() const;
 
-  const std::vector<BindMount>& getBindMounts() const {
-    return bindMounts_;
-  }
-
   /**
    * Get the repository type.
    *
@@ -120,14 +97,8 @@ class CheckoutConfig {
   const AbsolutePath& getClientDirectory() const;
 
  private:
-  CheckoutConfig(
-      AbsolutePathPiece clientDirectory,
-      AbsolutePathPiece mountPath,
-      std::vector<BindMount>&& bindMounts);
-
   const AbsolutePath clientDirectory_;
   const AbsolutePath mountPath_;
-  std::vector<BindMount> bindMounts_;
   std::string repoType_;
   std::string repoSource_;
 };
