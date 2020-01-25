@@ -11,7 +11,7 @@ namespace facebook {
 namespace eden {
 
 // Older versions of MSVC++ ICE on the following code.
-#if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 191627035
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 191627036
 
 namespace {
 constexpr bool assertKeySpaceInvariants() {
