@@ -28,7 +28,7 @@ use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
 use getbundle_response::{create_getbundle_response, PhasesPart};
 use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
-use hooks::{HookExecution, HookManager};
+use hooks::HookExecution;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use manifest::{Diff, Entry, ManifestOps};
@@ -231,7 +231,6 @@ pub struct RepoClient {
     preserve_raw_bundle2: bool,
     // Whether to allow non-pushrebase pushes
     pure_push_allowed: bool,
-    hook_manager: Arc<HookManager>,
     // There is a race condition in bookmarks handling in Mercurial, which needs protocol-level
     // fixes. See `test-bookmark-race.t` for a reproducer; the issue is that between discovery
     // and bookmark handling (listkeys), we can get new commits and a bookmark change.
@@ -305,7 +304,6 @@ impl RepoClient {
         hash_validation_percentage: usize,
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
-        hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector: Option<PushRedirector>,
@@ -318,7 +316,6 @@ impl RepoClient {
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
-            hook_manager,
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             support_bundle2_listkeys,
             wireproto_logging,
@@ -1216,10 +1213,11 @@ impl HgCommands for RepoClient {
         let pure_push_allowed = self.pure_push_allowed;
         let reponame = self.repo.reponame().clone();
         cloned!(
-            self.hook_manager,
             self.cached_pull_default_bookmarks_maybe_stale,
             self.support_bundle2_listkeys
         );
+
+        let hook_manager = self.repo.hook_manager().clone();
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set

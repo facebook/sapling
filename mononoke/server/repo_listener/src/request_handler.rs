@@ -37,7 +37,6 @@ use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 use crate::repo_handlers::RepoHandler;
 
 use context::{is_quicksand, LoggingContainer, Metric, SessionContainer};
-use hooks::HookManager;
 
 lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
@@ -71,7 +70,6 @@ pub fn request_handler(
         maybe_push_redirector,
     }: RepoHandler,
     stdio: Stdio,
-    hook_manager: Arc<HookManager>,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
 ) -> impl Future<Item = (), Error = ()> {
@@ -165,7 +163,6 @@ pub fn request_handler(
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
-            hook_manager,
             support_bundle2_listkeys,
             wireproto_logging,
             maybe_push_redirector,

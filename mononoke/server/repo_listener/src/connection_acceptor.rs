@@ -229,7 +229,6 @@ fn accept(
                             fb,
                             handler.clone(),
                             stdio,
-                            handler.repo.hook_manager(),
                             load_limiting_config,
                             pushredirect_config,
                         )
