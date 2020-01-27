@@ -246,6 +246,11 @@ Test date formats with '>' or '<' accompanied by space characters
   Wed Feb 01 13:00:30 2006 -0500
   Wed Feb 01 13:00:30 2006 +0000
 
+Test that '<' and '>' are inclusive
+  $ THISCOMMIT=$(hg log -r . -T "{date|hgdate}")
+  $ hg log -r "date(\"<$THISCOMMIT\") & date(\">$THISCOMMIT\")" -T "{node}"
+  cefbcc8b3dc9345a744a11713abfe40a53d4fc9d (no-eol)
+
 Test issue 3764 (interpreting 'today' and 'yesterday')
   $ echo "hello" >> a
   >>> import datetime

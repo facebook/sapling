@@ -181,9 +181,9 @@ impl HgTime {
             date if date.starts_with("since ") => {
                 Self::parse(&date[6..]).map(|start| start..Self::max_value())
             }
-            date if date.starts_with("<") => {
-                Self::parse(&date[1..]).map(|end| Self::min_value()..end)
-            }
+            date if date.starts_with("<") => Self::parse(&date[1..])
+                .and_then(|end| end + 1)
+                .map(|end| Self::min_value()..end),
             date if date.starts_with("-") => {
                 // This does not really make much sense. But is supported by hg
                 // (see 'hg help dates').
