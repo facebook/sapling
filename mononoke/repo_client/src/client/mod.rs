@@ -85,6 +85,8 @@ define_stats! {
     quicksand_tree_size: timeseries(Rate, Sum),
     total_fetched_file_size: timeseries(Rate, Sum),
     quicksand_fetched_file_size: timeseries(Rate, Sum),
+    null_linknode_gettreepack: timeseries(Rate, Sum),
+    null_linknode_getpack: timeseries(Rate, Sum),
 
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); Rate, Sum),
     push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); Rate, Sum),
@@ -578,12 +580,18 @@ impl RepoClient {
                                 history_entry.parents(),
                                 history_entry.copyfrom().as_ref(),
                             );
+                            let linknode = history_entry.linknode().into_nodehash();
+                            if linknode == NULL_HASH {
+                                ctx.perf_counters()
+                                    .increment_counter(PerfCounterType::NullLinknode);
+                                STATS::null_linknode_getpack.add_value(1);
+                            }
 
                             wirepack::Part::History(wirepack::HistoryEntry {
                                 node: history_entry.filenode().into_nodehash(),
                                 p1: p1.into_nodehash(),
                                 p2: p2.into_nodehash(),
-                                linknode: history_entry.linknode().into_nodehash(),
+                                linknode,
                                 copy_from: copy_from.cloned().map(RepoPath::FilePath),
                             })
                         });
@@ -1806,25 +1814,31 @@ pub fn fetch_treepack_part_input(
         HgFileNodeId::new(hg_mf_id.into_nodehash()),
     )
     .join(envelope_fut)
-    .map(move |(maybe_filenode, envelope)| {
-        let content = envelope.contents().clone();
-        match maybe_filenode {
-            Some(filenode) => {
-                let p1 = filenode.p1.map(|p| p.into_nodehash());
-                let p2 = filenode.p2.map(|p| p.into_nodehash());
-                let parents = HgParents::new(p1, p2);
-                let linknode = filenode.linknode;
-                (parents, linknode, content)
-            }
-            // Filenodes might not be present. For example we don't have filenodes for
-            // infinitepush commits. In that case fetch parents from manifest, but we can't
-            // fetch the linknode, so set it to NULL_CSID. Client can handle null linknode,
-            // though it can cause slowness sometimes.
-            None => {
-                let (p1, p2) = envelope.parents();
-                let parents = HgParents::new(p1, p2);
+    .map({
+        cloned!(ctx);
+        move |(maybe_filenode, envelope)| {
+            let content = envelope.contents().clone();
+            match maybe_filenode {
+                Some(filenode) => {
+                    let p1 = filenode.p1.map(|p| p.into_nodehash());
+                    let p2 = filenode.p2.map(|p| p.into_nodehash());
+                    let parents = HgParents::new(p1, p2);
+                    let linknode = filenode.linknode;
+                    (parents, linknode, content)
+                }
+                // Filenodes might not be present. For example we don't have filenodes for
+                // infinitepush commits. In that case fetch parents from manifest, but we can't
+                // fetch the linknode, so set it to NULL_CSID. Client can handle null linknode,
+                // though it can cause slowness sometimes.
+                None => {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::NullLinknode);
+                    STATS::null_linknode_gettreepack.add_value(1);
+                    let (p1, p2) = envelope.parents();
+                    let parents = HgParents::new(p1, p2);
 
-                (parents, NULL_CSID, content)
+                    (parents, NULL_CSID, content)
+                }
             }
         }
     })
