@@ -9,7 +9,7 @@
 #![deny(warnings)]
 
 use sql::Connection;
-pub use sql_ext::SqlConstructors;
+use sql_ext::SqlConstructors;
 use std::collections::HashSet;
 
 use anyhow::Error;
@@ -18,6 +18,10 @@ use context::CoreContext;
 use futures::future::Future;
 use futures::{future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{FutureExt as _, TryFutureExt},
+};
 use mercurial_types::Globalrev;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;
@@ -99,6 +103,10 @@ pub trait BonsaiGlobalrevMapping: Send + Sync {
         repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> BoxFuture<Option<ChangesetId>, Error>;
+
+    /// Read the most recent Globalrev. This produces the freshest data possible, and is meant to
+    /// be used for Globalrev assignment.
+    fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error>;
 }
 
 impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
@@ -129,6 +137,10 @@ impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         (**self).get_bonsai_from_globalrev(repo_id, globalrev)
     }
+
+    fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error> {
+        (**self).get_max(repo_id)
+    }
 }
 
 queries! {
@@ -157,6 +169,16 @@ queries! {
         "SELECT bcs_id, globalrev
          FROM bonsai_globalrev_mapping
          WHERE repo_id = {repo_id} AND globalrev in {globalrev}"
+    }
+
+    read SelectMaxEntry(repo_id: RepositoryId) -> (Globalrev,) {
+        "
+        SELECT globalrev
+        FROM bonsai_globalrev_mapping
+        WHERE repo_id = {}
+        ORDER BY globalrev DESC
+        LIMIT 1
+        "
     }
 }
 
@@ -248,6 +270,23 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         self.get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
             .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
+            .boxify()
+    }
+
+    fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error> {
+        cloned!(self.read_master_connection);
+
+        async move {
+            let row = SelectMaxEntry::query(&read_master_connection, &repo_id)
+                .compat()
+                .await?
+                .into_iter()
+                .next();
+
+            Ok(row.map(|r| r.0))
+        }
+            .boxed()
+            .compat()
             .boxify()
     }
 }

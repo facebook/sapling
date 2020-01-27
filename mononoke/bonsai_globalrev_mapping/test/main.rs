@@ -8,48 +8,55 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use bonsai_globalrev_mapping::{
     BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs,
-    SqlBonsaiGlobalrevMapping, SqlConstructors,
+    SqlBonsaiGlobalrevMapping,
 };
-use futures::Future;
+use futures_preview::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use sql_ext::SqlConstructors;
 
-fn add_and_get<M: BonsaiGlobalrevMapping>(mapping: M) {
+#[fbinit::test]
+async fn test_add_and_get() -> Result<(), Error> {
+    let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
+
     let entry = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
         globalrev: GLOBALREV_ZERO,
     };
 
-    mapping
-        .bulk_import(&vec![entry.clone()])
-        .wait()
-        .expect("Adding new entry failed");
+    mapping.bulk_import(&vec![entry.clone()]).compat().await?;
 
     let result = mapping
         .get(
             REPO_ZERO,
             BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]),
         )
-        .wait()
-        .expect("Get failed");
+        .compat()
+        .await?;
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
         .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
-        .wait()
-        .expect("Failed to get globalrev by its bonsai counterpart");
+        .compat()
+        .await?;
     assert_eq!(result, Some(GLOBALREV_ZERO));
     let result = mapping
         .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_ZERO)
-        .wait()
-        .expect("Failed to get bonsai changeset by its globalrev counterpart");
+        .compat()
+        .await?;
     assert_eq!(result, Some(bonsai::ONES_CSID));
+
+    Ok(())
 }
 
-fn bulk_import<M: BonsaiGlobalrevMapping>(mapping: M) {
+#[fbinit::test]
+async fn test_bulk_import() -> Result<(), Error> {
+    let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
+
     let entry1 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
@@ -66,43 +73,58 @@ fn bulk_import<M: BonsaiGlobalrevMapping>(mapping: M) {
         globalrev: GLOBALREV_TWO,
     };
 
-    assert_eq!(
-        (),
-        mapping
-            .bulk_import(&vec![entry1.clone(), entry2.clone(), entry3.clone()])
-            .wait()
-            .expect("Adding new entries vector failed")
-    );
+    mapping
+        .bulk_import(&vec![entry1.clone(), entry2.clone(), entry3.clone()])
+        .compat()
+        .await?;
+
+    Ok(())
 }
 
-fn missing<M: BonsaiGlobalrevMapping>(mapping: M) {
+#[fbinit::test]
+async fn test_missing() -> Result<(), Error> {
+    let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
+
     let result = mapping
         .get(
             REPO_ZERO,
             BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]),
         )
-        .wait()
-        .expect("Failed to fetch missing changeset (should succeed with None instead)");
+        .compat()
+        .await?;
+
     assert_eq!(result, vec![]);
+
+    Ok(())
 }
 
 #[fbinit::test]
-fn test_add_and_get() {
-    async_unit::tokio_unit_test(move || {
-        add_and_get(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
-    });
-}
+async fn test_get_max() -> Result<(), Error> {
+    let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
-#[fbinit::test]
-fn test_add_many() {
-    async_unit::tokio_unit_test(move || {
-        bulk_import(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
-    });
-}
+    assert_eq!(None, mapping.get_max(REPO_ZERO).compat().await?);
 
-#[fbinit::test]
-fn test_missing() {
-    async_unit::tokio_unit_test(move || {
-        missing(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
-    });
+    let e0 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::ONES_CSID,
+        globalrev: GLOBALREV_ZERO,
+    };
+    mapping.bulk_import(&[e0.clone()]).compat().await?;
+    assert_eq!(
+        Some(GLOBALREV_ZERO),
+        mapping.get_max(REPO_ZERO).compat().await?
+    );
+
+    let e1 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::TWOS_CSID,
+        globalrev: GLOBALREV_ONE,
+    };
+    mapping.bulk_import(&[e1.clone()]).compat().await?;
+    assert_eq!(
+        Some(GLOBALREV_ONE),
+        mapping.get_max(REPO_ZERO).compat().await?
+    );
+
+    Ok(())
 }
