@@ -9,9 +9,10 @@
 #![deny(warnings)]
 
 use anyhow::Error;
+use assert_matches::assert_matches;
 use bonsai_globalrev_mapping::{
-    add_globalrevs, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs,
-    SqlBonsaiGlobalrevMapping,
+    add_globalrevs, AddGlobalrevsErrorKind, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry,
+    BonsaisOrGlobalrevs, SqlBonsaiGlobalrevMapping,
 };
 use futures_preview::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
@@ -180,10 +181,19 @@ async fn test_add_globalrevs() -> Result<(), Error> {
     let txn = conn.start_transaction().compat().await?;
     let res = async move {
         let txn = add_globalrevs(txn, &[e1.clone()]).await?;
-        txn.commit().compat().await
+        txn.commit().compat().await?;
+        Result::<_, AddGlobalrevsErrorKind>::Ok(())
     }
         .await;
-    assert!(res.is_err());
+    assert_matches!(res, Err(AddGlobalrevsErrorKind::Conflict));
+
+    assert_eq!(
+        Some(GLOBALREV_ONE),
+        mapping
+            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
+            .compat()
+            .await?
+    );
 
     Ok(())
 }

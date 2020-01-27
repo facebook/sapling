@@ -11,6 +11,7 @@
 use sql::{Connection, Transaction};
 use sql_ext::SqlConstructors;
 use std::collections::HashSet;
+use thiserror::Error;
 
 use anyhow::Error;
 use cloned::cloned;
@@ -144,7 +145,7 @@ impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
 }
 
 queries! {
-    write BulkImportGlobalrevs(values: (
+    write DangerouslyAddGlobalrevs(values: (
         repo_id: RepositoryId,
         bcs_id: ChangesetId,
         globalrev: Globalrev,
@@ -179,11 +180,6 @@ queries! {
         ORDER BY globalrev DESC
         LIMIT 1
         "
-    }
-
-    write AddGlobalrevs(values: (repo_id: RepositoryId, bcs_id: ChangesetId, globalrev: Globalrev)) {
-        none,
-        "INSERT INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES {values}"
     }
 }
 
@@ -227,7 +223,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             )
             .collect();
 
-        BulkImportGlobalrevs::query(&self.write_connection, &entries[..])
+        DangerouslyAddGlobalrevs::query(&self.write_connection, &entries[..])
             .from_err()
             .map(|_| ())
             .boxify()
@@ -395,10 +391,29 @@ pub fn bulk_import_globalrevs<'a>(
     globalrevs_store.bulk_import(&entries)
 }
 
+#[derive(Debug, Error)]
+pub enum AddGlobalrevsErrorKind {
+    #[error("Conflict detected while inserting Globalrevs")]
+    Conflict,
+
+    #[error("Internal error occurred while inserting Globalrevs")]
+    InternalError(#[source] Error),
+}
+
+impl From<Error> for AddGlobalrevsErrorKind {
+    fn from(e: Error) -> Self {
+        AddGlobalrevsErrorKind::InternalError(e)
+    }
+}
+
+// NOTE: For now, this is a top-level function since it doesn't use the connections in the
+// SqlBonsaiGlobalrevMapping, but if we were to add more implementations of the
+// BonsaiGlobalrevMapping trait, we should probably rethink the design of it, and not actually have
+// it contain any connections (instead, they should be passed on by callers).
 pub async fn add_globalrevs(
     transaction: Transaction,
     entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
-) -> Result<Transaction, Error> {
+) -> Result<Transaction, AddGlobalrevsErrorKind> {
     let rows: Vec<_> = entries
         .into_iter()
         .map(
@@ -410,9 +425,18 @@ pub async fn add_globalrevs(
         )
         .collect();
 
-    let (transaction, _) = AddGlobalrevs::query_with_transaction(transaction, &rows[..])
-        .compat()
-        .await?;
+    // It'd be really nice if we could rely on the error from an index conflict here, but our SQL
+    // crate doesn't allow us to reach into this yet, so for now we check the number of affected
+    // rows.
+
+    let (transaction, res) =
+        DangerouslyAddGlobalrevs::query_with_transaction(transaction, &rows[..])
+            .compat()
+            .await?;
+
+    if res.affected_rows() != rows.len() as u64 {
+        return Err(AddGlobalrevsErrorKind::Conflict);
+    }
 
     Ok(transaction)
 }
