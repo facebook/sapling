@@ -21,8 +21,8 @@ use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{
-    select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
-    FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
+    try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt as OldFutureExt,
+    StreamExt, StreamTimeoutError,
 };
 use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
@@ -1718,10 +1718,11 @@ pub fn gettreepack_entries(
         Some(try_boxstream!(MPath::new(rootdir)))
     };
 
-    select_all(
+    cloned!(repo);
+    stream::iter_ok::<_, Error>(
         mfnodes
-            .iter()
-            .filter(|node| !basemfnodes.contains(node))
+            .into_iter()
+            .filter(move |node| !basemfnodes.contains(&node))
             .map(move |mfnode| {
                 let cur_basemfnode = basemfnode.unwrap_or(HgManifestId::new(NULL_HASH));
                 // `basemfnode`s are used to reduce the data we send the client by having us prune
@@ -1730,19 +1731,20 @@ pub fn gettreepack_entries(
                 // against the manifest we now know it has (the one we're sending), to reduce
                 // the data we send.
                 if basemfnode.is_none() {
-                    basemfnode = Some(*mfnode);
+                    basemfnode = Some(mfnode);
                 }
 
                 get_changed_manifests_stream(
                     ctx.clone(),
-                    repo,
-                    *mfnode,
+                    &repo,
+                    mfnode,
                     cur_basemfnode,
                     rootpath.clone(),
                     fetchdepth,
                 )
             }),
     )
+    .flatten()
     .boxify()
 }
 
