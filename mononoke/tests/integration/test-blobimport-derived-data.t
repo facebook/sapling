@@ -32,7 +32,7 @@
   Not Derived: c5b2b396b5dd503d2b9ca8c19db1cb0e733c48f43c0ae79f2f174866e11ea38a
 
   $ blobimport --log repo-hg/.hg repo --derived-data-type fsnodes --derived-data-type blame |& grep Deriving
-  * Deriving data for: ["fsnodes", "blame"] (glob)
+  * Deriving data for: ["fsnodes", "blame", "filenodes"] (glob)
 
   $ mononoke_admin derived-data exists fsnodes master 2> /dev/null
   Derived: c5b2b396b5dd503d2b9ca8c19db1cb0e733c48f43c0ae79f2f174866e11ea38a

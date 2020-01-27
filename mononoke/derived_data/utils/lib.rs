@@ -15,6 +15,7 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
+use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{future, stream, Future, Stream};
@@ -34,6 +35,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootFsnodeId::NAME,
     BlameRoot::NAME,
     RootDeletedManifestId::NAME,
+    FilenodesOnlyPublic::NAME,
 ];
 
 pub trait DerivedUtils: Send + Sync + 'static {
@@ -261,6 +263,10 @@ pub fn derived_data_utils(
         }
         RootDeletedManifestId::NAME => {
             let mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        FilenodesOnlyPublic::NAME => {
+            let mapping = FilenodesOnlyPublicMapping::new(repo);
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),

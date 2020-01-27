@@ -20,6 +20,8 @@ use cmdlib::{
     helpers::{block_execute, upload_and_show_trace},
 };
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -95,7 +97,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .multiple(true)
                 .required(false)
                 .possible_values(POSSIBLE_DERIVED_TYPES)
-                .help("Derived data type to be backfilled")
+                .help("Derived data type to be backfilled. Note - 'filenodes' will always be derived")
         )
 }
 
@@ -265,10 +267,17 @@ fn main(fb: FacebookInit) -> Result<()> {
         HashMap::new()
     };
 
-    let derived_data_types = matches
+    let mut derived_data_types = matches
         .values_of(ARG_DERIVED_DATA_TYPE)
         .map(|v| v.map(|d| d.to_string()).collect())
         .unwrap_or(vec![]);
+
+    // Filenodes will be unconditionally derived, since blobimport imports public
+    // hg changesets which must have filenodes derived
+    let filenodes_derived_name = FilenodesOnlyPublic::NAME.to_string();
+    if !derived_data_types.contains(&filenodes_derived_name) {
+        derived_data_types.push(filenodes_derived_name);
+    }
 
     let has_globalrev = matches.is_present("has-globalrev");
 

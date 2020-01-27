@@ -43,6 +43,7 @@ blobimport, succeeding, creates directory if not existing
   $ blobimport --log repo-hg/.hg repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * inserted commits # 0 (glob)
+  * Deriving data for: ["filenodes"] (glob)
   * finished uploading changesets, globalrevs and deriving data (glob)
   * uploaded chunk of 1 bookmarks (glob)
   * latest imported revision 2 (glob)
@@ -55,6 +56,7 @@ blobimport --no-create after successful import, should be fine as storage shared
   $ blobimport --log repo-hg/.hg repo --no-create
   * using repo "repo" repoid RepositoryId(0) (glob)
   * inserted commits # 0 (glob)
+  * Deriving data for: ["filenodes"] (glob)
   * finished uploading changesets, globalrevs and deriving data (glob)
   * uploaded chunk of 0 bookmarks (glob)
   * latest imported revision 2 (glob)
