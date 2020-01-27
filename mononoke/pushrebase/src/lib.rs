@@ -411,7 +411,7 @@ async fn rebase_in_loop(
             &config,
             root,
             head,
-            &bookmark_val,
+            bookmark_val,
             &onto_bookmark,
             maybe_hg_replay_data,
             hooks,
@@ -439,7 +439,7 @@ async fn do_rebase(
     config: &PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
-    bookmark_val: &Option<ChangesetId>,
+    bookmark_val: Option<ChangesetId>,
     onto_bookmark: &OntoBookmarkParams,
     maybe_hg_replay_data: &Option<HgReplayData>,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
@@ -460,33 +460,17 @@ async fn do_rebase(
         .map(|h| h.into_transaction_hook(&rebased_changesets))
         .collect::<Result<Vec<_>, Error>>()?;
 
-    match bookmark_val {
-        Some(bookmark_val) => {
-            try_update_bookmark(
-                ctx.clone(),
-                &repo,
-                &onto_bookmark,
-                *bookmark_val,
-                new_head,
-                &maybe_hg_replay_data,
-                rebased_changesets,
-                hooks,
-            )
-            .await
-        }
-        None => {
-            try_create_bookmark(
-                &ctx,
-                &repo,
-                &onto_bookmark,
-                new_head,
-                &maybe_hg_replay_data,
-                rebased_changesets,
-                hooks,
-            )
-            .await
-        }
-    }
+    try_move_bookmark(
+        ctx.clone(),
+        &repo,
+        &onto_bookmark,
+        bookmark_val,
+        new_head,
+        &maybe_hg_replay_data,
+        rebased_changesets,
+        hooks,
+    )
+    .await
 }
 
 // There should only be one head in the pushed set
@@ -1189,69 +1173,32 @@ async fn find_rebased_set(
     Ok(nodes)
 }
 
-async fn try_update_bookmark(
+async fn try_move_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark: &OntoBookmarkParams,
-    old_value: ChangesetId,
+    old_value: Option<ChangesetId>,
     new_value: ChangesetId,
     maybe_hg_replay_data: &Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
     hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let bookmark_name = &bookmark.bookmark;
-    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = repo.update_bookmark_transaction(ctx);
 
     let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
 
-    txn.update(&bookmark_name, new_value, old_value, reason)?;
-
-    let hooks = Arc::new(hooks);
-
-    let sql_txn_hook = move |ctx, mut sql_txn| {
-        let hooks = hooks.clone();
-        async move {
-            for hook in hooks.iter() {
-                sql_txn = hook.populate_transaction(&ctx, sql_txn).await?
-            }
-            Ok(sql_txn)
+    match old_value {
+        Some(old_value) => {
+            txn.update(&bookmark_name, new_value, old_value, reason)?;
         }
-            .boxed()
-            .compat()
-            .boxify()
-    };
-
-    let success = txn
-        .commit_with_hook(Arc::new(sql_txn_hook))
-        .compat()
-        .await?;
-
-    let ret = if success {
-        Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
-    } else {
-        None
-    };
-
-    Ok(ret)
-}
-
-async fn try_create_bookmark(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    bookmark: &OntoBookmarkParams,
-    new_value: ChangesetId,
-    maybe_hg_replay_data: &Option<HgReplayData>,
-    rebased_changesets: RebasedChangesets,
-    hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
-) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
-    let bookmark_name = &bookmark.bookmark;
-    let mut txn = repo.update_bookmark_transaction(ctx.clone());
-
-    let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
-
-    txn.create(&bookmark_name, new_value, reason)?; // TODO Dedupe
+        None => {
+            txn.create(&bookmark_name, new_value, reason)?;
+        }
+    }
 
     let hooks = Arc::new(hooks);
+
     let sql_txn_hook = move |ctx, mut sql_txn| {
         let hooks = hooks.clone();
         async move {
