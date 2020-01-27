@@ -22,6 +22,7 @@ use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
 use futures_stats::Timed;
 use futures_util::future::{FutureExt, TryFutureExt};
+use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use phases::Phases;
@@ -380,6 +381,15 @@ fn normal_pushrebase(
         .boxify();
     }
 
+    let mut hooks = vec![];
+    if pushrebase_params.assign_globalrevs {
+        let hook = GlobalrevPushrebaseHook::new(
+            repo.bonsai_globalrev_mapping().clone(),
+            repo.get_repoid(),
+        );
+        hooks.push(hook);
+    }
+
     let mut flags = pushrebase_params.flags.clone();
     if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(bookmark) {
         // Bookmark config overrides repo flags.rewritedates config
@@ -398,7 +408,7 @@ fn normal_pushrebase(
                     &onto_bookmark,
                     &changesets,
                     &maybe_hg_replay_data,
-                    &vec![],
+                    &hooks[..],
                 )
                 .await
             }

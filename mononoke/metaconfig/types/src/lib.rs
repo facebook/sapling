@@ -433,6 +433,8 @@ pub struct PushrebaseParams {
     pub emit_obsmarkers: bool,
     /// Scribe category we log new commits to
     pub commit_scribe_category: Option<String>,
+    /// Whether Globalrevs should be assigned
+    pub assign_globalrevs: bool,
 }
 
 impl Default for PushrebaseParams {
@@ -442,6 +444,7 @@ impl Default for PushrebaseParams {
             block_merges: false,
             emit_obsmarkers: false,
             commit_scribe_category: None,
+            assign_globalrevs: false,
         }
     }
 }

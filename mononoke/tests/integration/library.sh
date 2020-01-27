@@ -437,6 +437,11 @@ function setup_mononoke_config {
     shift
   fi
 
+  if [[ -z "$REPOTYPE" ]]; then
+    echo "setup_mononoke_config: REPOTYPE is not set" 2>&1
+    exit 1
+  fi
+
   if [[ ! -e "$TESTTMP/mononoke_hgcli" ]]; then
     cat >> "$TESTTMP/mononoke_hgcli" <<EOF
 #! /bin/sh
@@ -656,6 +661,15 @@ if [[ -v EMIT_OBSMARKERS ]]; then
 emit_obsmarkers=true
 CONFIG
 fi
+
+if [[ -v ASSIGN_GLOBALREVS ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+assign_globalrevs=true
+CONFIG
+fi
+
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+CONFIG
 
 if [[ ! -v ENABLE_ACL_CHECKER ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
