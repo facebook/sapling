@@ -34,3 +34,19 @@ Push another commit, check that the globalrev is incrementing
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   global_rev=1000147971
+
+Check that a force pushrebase it not allowed
+  $ touch file3
+  $ hg ci -Aqm commit3
+  $ hgmn push -r . --to master_bookmark --force
+  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     While doing a force pushrebase
+  remote:   Root cause:
+  remote:     "force_pushrebase is not allowed when assigning Globalrevs"
+  remote:   Caused by:
+  remote:     force_pushrebase is not allowed when assigning Globalrevs
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]

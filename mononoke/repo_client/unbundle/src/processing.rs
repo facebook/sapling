@@ -246,6 +246,7 @@ fn run_pushrebase(
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => force_pushrebase(
             ctx.clone(),
             repo.clone(),
+            &pushrebase_params,
             lca_hint,
             plain_push,
             maybe_hg_replay_data,
@@ -441,12 +442,21 @@ fn normal_pushrebase(
 fn force_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
+    pushrebase_params: &PushrebaseParams,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
     maybe_hg_replay_data: Option<pushrebase::HgReplayData>,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
 ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error> {
+    if pushrebase_params.assign_globalrevs {
+        return Err(Error::msg(
+            "force_pushrebase is not allowed when assigning Globalrevs",
+        ))
+        .into_future()
+        .boxify();
+    }
+
     let maybe_target_bcs = bookmark_push.new.clone();
     let target_bcs = try_boxfuture!(
         maybe_target_bcs.ok_or(Error::msg("new changeset is required for force pushrebase"))
