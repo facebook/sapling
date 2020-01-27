@@ -45,8 +45,10 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
   $ cat "$log_proxy"
-  POST /lfs_repo/objects/batch 200 OK
-  GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
+  IN  > POST /lfs_repo/objects/batch -
+  OUT < POST /lfs_repo/objects/batch 200 OK
+  IN  > GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d -
+  OUT < GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
   $ truncate -s 0 "$log_proxy"
 
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
@@ -59,7 +61,8 @@
   [255]
 
   $ cat "$log_proxy"
-  POST /lfs_repo/objects/batch 502 Bad Gateway
+  IN  > POST /lfs_repo/objects/batch -
+  OUT < POST /lfs_repo/objects/batch 502 Bad Gateway
   $ truncate -s 0 "$log_proxy"
 
 # Kill nc, otherwise we don't exit properly :/

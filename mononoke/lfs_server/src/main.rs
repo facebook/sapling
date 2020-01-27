@@ -339,9 +339,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             logger.clone(),
             config_handle,
         ))
+        .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(ServerIdentityMiddleware::new())
-        .add(LoadMiddleware::new())
         .add(ScubaMiddleware::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())

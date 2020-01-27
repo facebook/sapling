@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Display};
 use std::sync::{
     atomic::{AtomicI64, Ordering},
     Arc,
@@ -18,8 +18,15 @@ use hyper::{Body, Response};
 
 use super::{Middleware, RequestContext};
 
-#[derive(StateData, Debug)]
+#[derive(StateData, Debug, Copy, Clone)]
 pub struct RequestLoad(pub i64);
+
+impl Display for RequestLoad {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "l")?;
+        fmt::Display::fmt(&self.0, fmt)
+    }
+}
 
 #[derive(Clone)]
 pub struct LoadMiddleware {
@@ -39,8 +46,8 @@ impl LoadMiddleware {
 
 impl Middleware for LoadMiddleware {
     fn inbound(&self, state: &mut State) {
-        let requests = self.requests.fetch_add(1, Ordering::Relaxed);
-        state.put(RequestLoad(requests));
+        let old_request_count = self.requests.fetch_add(1, Ordering::Relaxed);
+        state.put(RequestLoad(old_request_count + 1));
     }
 
     fn outbound(&self, state: &mut State, response: &mut Response<Body>) {

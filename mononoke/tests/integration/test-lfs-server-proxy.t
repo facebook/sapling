@@ -25,8 +25,10 @@
   $ cat "$log_proxy"
 
   $ cat "$log_upstream"
-  POST /lfs_upstream/objects/batch 200 OK
-  PUT /lfs_upstream/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > PUT /lfs_upstream/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 -
+  OUT < PUT /lfs_upstream/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 200 OK
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
@@ -35,11 +37,14 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
   $ cat "$log_proxy"
-  POST /lfs_proxy/objects/batch 200 OK
+  IN  > POST /lfs_proxy/objects/batch -
+  OUT < POST /lfs_proxy/objects/batch 200 OK
 
   $ cat "$log_upstream"
-  POST /lfs_upstream/objects/batch 200 OK
-  GET /lfs_upstream/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > GET /lfs_upstream/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d -
+  OUT < GET /lfs_upstream/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
@@ -48,12 +53,16 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
   $ cat "$log_proxy"
-  POST /lfs_proxy/objects/batch 200 OK
-  PUT /lfs_proxy/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 200 OK
+  IN  > POST /lfs_proxy/objects/batch -
+  OUT < POST /lfs_proxy/objects/batch 200 OK
+  IN  > PUT /lfs_proxy/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 -
+  OUT < PUT /lfs_proxy/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 200 OK
 
   $ cat "$log_upstream"
-  POST /lfs_upstream/objects/batch 200 OK
-  POST /lfs_upstream/objects/batch 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
@@ -63,13 +72,18 @@
 
 
   $ cat "$log_proxy"
-  POST /lfs_proxy/objects/batch 200 OK
-  PUT /lfs_proxy/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 200 OK
+  IN  > POST /lfs_proxy/objects/batch -
+  OUT < POST /lfs_proxy/objects/batch 200 OK
+  IN  > PUT /lfs_proxy/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 -
+  OUT < PUT /lfs_proxy/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 200 OK
 
   $ cat "$log_upstream"
-  POST /lfs_upstream/objects/batch 200 OK
-  POST /lfs_upstream/objects/batch 200 OK
-  PUT /lfs_upstream/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > PUT /lfs_upstream/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 -
+  OUT < PUT /lfs_upstream/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 200 OK
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
@@ -80,12 +94,17 @@
   a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84  -
 
   $ cat "$log_proxy"
-  POST /lfs_proxy/objects/batch 200 OK
-  GET /lfs_proxy/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c 200 OK
+  IN  > POST /lfs_proxy/objects/batch -
+  OUT < POST /lfs_proxy/objects/batch 200 OK
+  IN  > GET /lfs_proxy/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c -
+  OUT < GET /lfs_proxy/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c 200 OK
 
   $ cat "$log_upstream"
-  POST /lfs_upstream/objects/batch 200 OK
-  POST /lfs_upstream/objects/batch 200 OK
-  GET /lfs_upstream/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > POST /lfs_upstream/objects/batch -
+  OUT < POST /lfs_upstream/objects/batch 200 OK
+  IN  > GET /lfs_upstream/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c -
+  OUT < GET /lfs_upstream/download/2e8e6e2dda2bb7b6458146a1c1bf301e4856293e1cc258ab789c63df2254693c 200 OK
 
   $ truncate -s 0 "$log_proxy" "$log_upstream"
