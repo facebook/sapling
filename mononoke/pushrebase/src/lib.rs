@@ -43,6 +43,10 @@
 ///
 ///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
+///
+/// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
+/// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
+/// more information on those;
 use anyhow::{Context, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
@@ -50,10 +54,10 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
 use futures::{stream, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt, StreamExt as Futures01StreamExt};
+use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{try_join, try_join_all},
+    future::{try_join, try_join_all, FutureExt, TryFutureExt},
     stream::{StreamExt, TryStream, TryStreamExt},
 };
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
@@ -66,12 +70,15 @@ use mononoke_types::{
 };
 use revset::RangeNodeStream;
 use slog::info;
-use sql_ext::TransactionResult;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
+
+pub use hook::{PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook};
+
+mod hook;
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
@@ -180,7 +187,7 @@ impl From<ErrorKind> for PushrebaseError {
     }
 }
 
-type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
+pub type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
 #[derive(Clone)]
 pub struct PushrebaseChangesetPair {
@@ -206,31 +213,11 @@ pub struct PushrebaseSuccessResult {
 #[derive(Clone)]
 pub struct OntoBookmarkParams {
     pub bookmark: BookmarkName,
-
-    // Factory that creates a transaction that will be used to update the bookmark.
-    // It allows updating the bookmark atomically with some other update
-    pub sql_txn_factory:
-        Option<Arc<dyn Fn(RebasedChangesets) -> BoxFuture<TransactionResult, Error> + Sync + Send>>,
 }
 
 impl OntoBookmarkParams {
     pub fn new(bookmark: BookmarkName) -> Self {
-        Self {
-            bookmark,
-            sql_txn_factory: None,
-        }
-    }
-
-    pub fn new_with_factory(
-        bookmark: BookmarkName,
-        sql_txn_factory: Arc<
-            dyn Fn(RebasedChangesets) -> BoxFuture<TransactionResult, Error> + Sync + Send,
-        >,
-    ) -> Self {
-        Self {
-            bookmark,
-            sql_txn_factory: Some(sql_txn_factory),
-        }
+        Self { bookmark }
     }
 }
 
@@ -244,6 +231,7 @@ pub async fn do_pushrebase_bonsai(
     onto_bookmark: &OntoBookmarkParams,
     pushed: &HashSet<BonsaiChangeset>,
     maybe_hg_replay_data: &Option<HgReplayData>,
+    prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseSuccessResult, PushrebaseError> {
     let head = find_only_head_or_fail(&pushed)?;
     let roots = find_roots(&pushed);
@@ -282,6 +270,7 @@ pub async fn do_pushrebase_bonsai(
         client_cf,
         &client_bcs,
         maybe_hg_replay_data,
+        prepushrebase_hooks,
     )
     .await?;
 
@@ -375,11 +364,19 @@ async fn rebase_in_loop(
     client_cf: Vec<MPath>,
     client_bcs: &Vec<BonsaiChangeset>,
     maybe_hg_replay_data: &Option<HgReplayData>,
+    prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseSuccessResult, PushrebaseError> {
     let mut latest_rebase_attempt = root;
 
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
-        let bookmark_val = get_onto_bookmark_value(&ctx, &repo, &onto_bookmark).await?;
+        let hooks = try_join_all(
+            prepushrebase_hooks
+                .iter()
+                .map(|h| h.prepushrebase().map_err(PushrebaseError::from)),
+        );
+
+        let (hooks, bookmark_val) =
+            try_join(hooks, get_onto_bookmark_value(&ctx, &repo, &onto_bookmark)).await?;
 
         let server_bcs = fetch_bonsai_range(
             &ctx,
@@ -417,6 +414,7 @@ async fn rebase_in_loop(
             &bookmark_val,
             &onto_bookmark,
             maybe_hg_replay_data,
+            hooks,
         )
         .await?;
 
@@ -444,6 +442,7 @@ async fn do_rebase(
     bookmark_val: &Option<ChangesetId>,
     onto_bookmark: &OntoBookmarkParams,
     maybe_hg_replay_data: &Option<HgReplayData>,
+    mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let (new_head, rebased_changesets) = create_rebased_changesets(
         &ctx,
@@ -452,8 +451,14 @@ async fn do_rebase(
         root,
         head,
         bookmark_val.unwrap_or(root),
+        &mut hooks,
     )
     .await?;
+
+    let hooks = hooks
+        .into_iter()
+        .map(|h| h.into_transaction_hook(&rebased_changesets))
+        .collect::<Result<Vec<_>, Error>>()?;
 
     match bookmark_val {
         Some(bookmark_val) => {
@@ -465,6 +470,7 @@ async fn do_rebase(
                 new_head,
                 &maybe_hg_replay_data,
                 rebased_changesets,
+                hooks,
             )
             .await
         }
@@ -476,6 +482,7 @@ async fn do_rebase(
                 new_head,
                 &maybe_hg_replay_data,
                 rebased_changesets,
+                hooks,
             )
             .await
         }
@@ -897,6 +904,7 @@ async fn create_rebased_changesets(
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
+    hooks: &mut [Box<dyn PushrebaseCommitHook>],
 ) -> Result<(ChangesetId, RebasedChangesets), PushrebaseError> {
     let rebased_set = find_rebased_set(&ctx, &repo, root, head).await?;
 
@@ -930,6 +938,7 @@ async fn create_rebased_changesets(
             &onto,
             &repo,
             &rebased_set_ids,
+            hooks,
         )
         .await?;
         let timestamp = Timestamp::from(*bcs_new.author_date());
@@ -966,6 +975,7 @@ async fn rebase_changeset(
     onto: &ChangesetId,
     repo: &BlobRepo,
     rebased_set: &HashSet<ChangesetId>,
+    hooks: &mut [Box<dyn PushrebaseCommitHook>],
 ) -> Result<BonsaiChangeset> {
     let orig_cs_id = bcs.get_changeset_id();
     let new_file_changes =
@@ -1027,6 +1037,11 @@ async fn rebase_changeset(
 
     file_changes.extend(new_file_changes);
     bcs.file_changes = file_changes;
+
+    for hook in hooks.iter_mut() {
+        hook.post_rebase_changeset(orig_cs_id, &mut bcs)?;
+    }
+
     bcs.freeze()
 }
 
@@ -1182,25 +1197,34 @@ async fn try_update_bookmark(
     new_value: ChangesetId,
     maybe_hg_replay_data: &Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
+    hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let bookmark_name = &bookmark.bookmark;
-    let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
 
     txn.update(&bookmark_name, new_value, old_value, reason)?;
 
-    let success = match maybe_sql_txn_factory {
-        Some(sql_txn_factory) => {
-            let factory = Arc::new({
-                cloned!(rebased_changesets);
-                move || sql_txn_factory(rebased_changesets.clone())
-            });
-            txn.commit_into_txn(factory).compat().await?
+    let hooks = Arc::new(hooks);
+
+    let sql_txn_hook = move |ctx, mut sql_txn| {
+        let hooks = hooks.clone();
+        async move {
+            for hook in hooks.iter() {
+                sql_txn = hook.populate_transaction(&ctx, sql_txn).await?
+            }
+            Ok(sql_txn)
         }
-        None => txn.commit().compat().await?,
+            .boxed()
+            .compat()
+            .boxify()
     };
+
+    let success = txn
+        .commit_with_hook(Arc::new(sql_txn_hook))
+        .compat()
+        .await?;
 
     let ret = if success {
         Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
@@ -1218,25 +1242,33 @@ async fn try_create_bookmark(
     new_value: ChangesetId,
     maybe_hg_replay_data: &Option<HgReplayData>,
     rebased_changesets: RebasedChangesets,
+    hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let bookmark_name = &bookmark.bookmark;
-    let maybe_sql_txn_factory = bookmark.sql_txn_factory.clone();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
 
-    txn.create(&bookmark_name, new_value, reason)?;
+    txn.create(&bookmark_name, new_value, reason)?; // TODO Dedupe
 
-    let success = match maybe_sql_txn_factory {
-        Some(sql_txn_factory) => {
-            let factory = Arc::new({
-                cloned!(rebased_changesets);
-                move || sql_txn_factory(rebased_changesets.clone())
-            });
-            txn.commit_into_txn(factory).compat().await?
+    let hooks = Arc::new(hooks);
+    let sql_txn_hook = move |ctx, mut sql_txn| {
+        let hooks = hooks.clone();
+        async move {
+            for hook in hooks.iter() {
+                sql_txn = hook.populate_transaction(&ctx, sql_txn).await?
+            }
+            Ok(sql_txn)
         }
-        None => txn.commit().compat().await?,
+            .boxed()
+            .compat()
+            .boxify()
     };
+
+    let success = txn
+        .commit_with_hook(Arc::new(sql_txn_hook))
+        .compat()
+        .await?;
 
     let ret = if success {
         Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
@@ -1289,23 +1321,25 @@ async fn create_bookmark_update_reason(
 mod tests {
     use super::*;
     use anyhow::format_err;
+    use async_trait::async_trait;
     use blobrepo::DangerousOverride;
-    use bookmarks::Bookmarks;
+    use bookmarks::{BookmarkTransactionError, Bookmarks};
     use dbbookmarks::SqlBookmarks;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures_preview::{
         compat::Future01CompatExt,
-        future::{try_join_all, FutureExt as _, TryFutureExt},
+        future::{try_join_all, TryFutureExt},
         stream::{self, TryStreamExt},
     };
     use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types::FileType;
+    use mononoke_types::{BonsaiChangesetMut, RepositoryId};
     use mononoke_types_mocks::hash::AS;
     use mutable_counters::{MutableCounters, SqlMutableCounters};
-    use sql::{rusqlite::Connection as SqliteConnection, Connection};
-    use sql_ext::SqlConstructors;
+    use sql::{rusqlite::Connection as SqliteConnection, Connection, Transaction};
+    use sql_ext::{SqlConstructors, TransactionResult};
     use std::{collections::BTreeMap, str::FromStr};
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
@@ -1356,6 +1390,7 @@ mod tests {
             &onto_bookmark,
             &pushed,
             &maybe_hg_replay_data,
+            &vec![],
         )
         .await?;
 
@@ -1487,7 +1522,7 @@ mod tests {
     // Initializes bookmarks and mutable_counters on the "same db" i.e. on the same
     // sqlite connection
     async fn init_bookmarks_mutable_counters(
-    ) -> Result<(Arc<dyn Bookmarks>, Arc<SqlMutableCounters>, Connection), Error> {
+    ) -> Result<(Arc<dyn Bookmarks>, Arc<SqlMutableCounters>), Error> {
         let con = SqliteConnection::open_in_memory()?;
         con.execute_batch(SqlMutableCounters::get_up_query())?;
         con.execute_batch(SqlBookmarks::get_up_query())?;
@@ -1504,11 +1539,65 @@ mod tests {
             con.clone(),
         ));
 
-        Ok((bookmarks, mutable_counters, con))
+        Ok((bookmarks, mutable_counters))
     }
 
     #[fbinit::test]
-    fn pushrebase_one_commit_with_txn(fb: FacebookInit) -> Result<(), Error> {
+    fn pushrebase_one_commit_transaction_hook(fb: FacebookInit) -> Result<(), Error> {
+        #[derive(Copy, Clone)]
+        struct Hook(RepositoryId);
+
+        #[async_trait]
+        impl PushrebaseHook for Hook {
+            async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+                Ok(Box::new(*self) as Box<dyn PushrebaseCommitHook>)
+            }
+        }
+
+        impl PushrebaseCommitHook for Hook {
+            fn post_rebase_changeset(
+                &mut self,
+                _bcs_old: ChangesetId,
+                _bcs_new: &mut BonsaiChangesetMut,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn into_transaction_hook(
+                self: Box<Self>,
+                changesets: &RebasedChangesets,
+            ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
+                let (_, (cs_id, _)) = changesets
+                    .into_iter()
+                    .next()
+                    .ok_or(Error::msg("No rebased changeset"))?;
+                Ok(Box::new(TransactionHook(self.0, *cs_id)) as Box<dyn PushrebaseTransactionHook>)
+            }
+        }
+
+        struct TransactionHook(RepositoryId, ChangesetId);
+
+        #[async_trait]
+        impl PushrebaseTransactionHook for TransactionHook {
+            async fn populate_transaction(
+                &self,
+                ctx: &CoreContext,
+                txn: Transaction,
+            ) -> Result<Transaction, BookmarkTransactionError> {
+                let key = format!("{}", self.1);
+
+                let ret =
+                    SqlMutableCounters::set_counter_on_txn(ctx.clone(), self.0, &key, 1, None, txn)
+                        .compat()
+                        .await?;
+
+                match ret {
+                    TransactionResult::Succeeded(txn) => Ok(txn),
+                    TransactionResult::Failed => Err(Error::msg("Did not update").into()),
+                }
+            }
+        }
+
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
         runtime.block_on(
             async move {
@@ -1520,50 +1609,33 @@ mod tests {
                     .add_file("file", "content")
                     .commit()
                     .await?;
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+
+                let (bookmarks, mutable_counters) = init_bookmarks_mutable_counters().await?;
+                let repo = repo.dangerous_override(|_| bookmarks);
+
+                let bcs = repo
+                    .get_bonsai_changeset(ctx.clone(), bcs_id)
                     .compat()
                     .await?;
 
-                let (bookmarks, mutable_counters, con) = init_bookmarks_mutable_counters().await?;
-                let repo = repo.dangerous_override(|_| bookmarks);
-
                 let repoid = repo.get_repoid();
-                let mut book = OntoBookmarkParams::new_with_factory(
-                    BookmarkName::new("master")?,
-                    Arc::new({
-                        cloned!(ctx);
-                        move |rebased_changesets| {
-                            let (_, (rebased, _)) = rebased_changesets.into_iter().next().unwrap();
-                            con.start_transaction()
-                                .and_then({
-                                    cloned!(ctx);
-                                    move |txn| {
-                                        SqlMutableCounters::set_counter_on_txn(
-                                            ctx.clone(),
-                                            repoid,
-                                            &format!("{}", rebased),
-                                            1,
-                                            None,
-                                            txn,
-                                        )
-                                    }
-                                })
-                                .boxify()
-                        }
-                    }),
-                );
+                let mut book = master_bookmark();
+
                 bookmark(&ctx, &repo, book.bookmark.clone())
                     .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                     .await?;
 
-                do_pushrebase(
+                let hook: Box<dyn PushrebaseHook> = Box::new(Hook(repo.get_repoid()));
+                let hooks = vec![hook];
+
+                do_pushrebase_bonsai(
                     &ctx,
                     &repo,
                     &Default::default(),
                     &book,
-                    &hashset![hg_cs],
+                    &hashset![bcs.clone()],
                     &None,
+                    &hooks[..],
                 )
                 .map_err(|err| format_err!("{:?}", err))
                 .await?;
@@ -1581,13 +1653,14 @@ mod tests {
                 // Now do the same with another non-existent bookmark,
                 // make sure cs id is created.
                 book.bookmark = BookmarkName::new("newbook")?;
-                do_pushrebase(
+                do_pushrebase_bonsai(
                     &ctx,
                     &repo,
                     &Default::default(),
                     &book,
-                    &hashset![hg_cs],
+                    &hashset![bcs],
                     &None,
+                    &hooks[..],
                 )
                 .map_err(|err| format_err!("{:?}", err))
                 .await?;

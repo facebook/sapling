@@ -8,14 +8,13 @@
 
 use crate::{
     Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
-    BookmarkUpdateReason, Bookmarks, Freshness, Transaction,
+    BookmarkUpdateReason, Bookmarks, Freshness, Transaction, TransactionHook,
 };
 use anyhow::{Error, Result};
 use context::CoreContext;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
-use sql_ext::TransactionResult;
 use stats::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -450,10 +449,7 @@ impl Transaction for CachedBookmarksTransaction {
             .boxify()
     }
 
-    fn commit_into_txn(
-        self: Box<Self>,
-        txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
-    ) -> BoxFuture<bool, Error> {
+    fn commit_with_hook(self: Box<Self>, txn_hook: TransactionHook) -> BoxFuture<bool, Error> {
         let CachedBookmarksTransaction {
             transaction,
             caches,
@@ -463,7 +459,7 @@ impl Transaction for CachedBookmarksTransaction {
         } = *self;
 
         transaction
-            .commit_into_txn(txn_factory)
+            .commit_with_hook(txn_hook)
             .map(move |success| {
                 if success && dirty {
                     caches.purge_cache(ctx, repoid);
@@ -739,10 +735,7 @@ mod tests {
             future::ok(true).boxify()
         }
 
-        fn commit_into_txn(
-            self: Box<Self>,
-            _txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
-        ) -> BoxFuture<bool, Error> {
+        fn commit_with_hook(self: Box<Self>, _txn_hook: TransactionHook) -> BoxFuture<bool, Error> {
             unimplemented!()
         }
     }

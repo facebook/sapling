@@ -18,7 +18,7 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
-use sql_ext::TransactionResult;
+use sql::Transaction as SqlTransaction;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
@@ -48,6 +48,25 @@ pub struct BookmarkUpdateLogEntry {
     pub reason: BookmarkUpdateReason,
     /// When update happened
     pub timestamp: Timestamp,
+}
+
+#[derive(Debug)]
+pub enum BookmarkTransactionError {
+    // The transaction modifying bookmarks tables should be retried
+    RetryableError(Error),
+    // Transacton was rolled back, we consider this a logic error,
+    // which may prompt retry higher in the stack. This can happen
+    // for example if some other bookmark update won the race and
+    // the entire pushrebase needs to be retried
+    LogicError,
+    // Something unexpected went wrong
+    Other(Error),
+}
+
+impl From<Error> for BookmarkTransactionError {
+    fn from(e: Error) -> Self {
+        Self::Other(e)
+    }
 }
 
 pub trait Bookmarks: Send + Sync + 'static {
@@ -308,6 +327,12 @@ impl From<BookmarkUpdateReason> for Value {
     }
 }
 
+pub type TransactionHook = Arc<
+    dyn Fn(CoreContext, SqlTransaction) -> BoxFuture<SqlTransaction, BookmarkTransactionError>
+        + Sync
+        + Send,
+>;
+
 pub trait Transaction: Send + Sync + 'static {
     /// Adds set() operation to the transaction set.
     /// Updates a bookmark's value. Bookmark should already exist and point to `old_cs`, otherwise
@@ -371,13 +396,8 @@ pub trait Transaction: Send + Sync + 'static {
     /// returning a successful `false` value; infrastructure failure is reported via an Error.
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error>;
 
-    /// Commits the transaction using provided transaction. If bookmarks implementation
-    /// is not support committing into transactions, then it should return an error.
-    /// Future succeeds if transaction has been
-    /// successful, or errors if transaction has failed. Logical failure is indicated by
-    /// returning a successful `false` value; infrastructure failure is reported via an Error.
-    fn commit_into_txn(
-        self: Box<Self>,
-        txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
-    ) -> BoxFuture<bool, Error>;
+    /// Commits the bookmarks update along with any changes injected by the TransactionHook. The
+    /// future returns true if the bookmarks has moved, and false otherwise. Infrastructure errors
+    /// are reported via the Error.
+    fn commit_with_hook(self: Box<Self>, txn_hook: TransactionHook) -> BoxFuture<bool, Error>;
 }

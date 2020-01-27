@@ -399,6 +399,7 @@ fn normal_pushrebase(
                     &onto_bookmark,
                     &changesets,
                     &maybe_hg_replay_data,
+                    &vec![],
                 )
                 .await
             }

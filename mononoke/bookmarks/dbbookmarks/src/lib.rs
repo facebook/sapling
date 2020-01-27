@@ -10,8 +10,9 @@
 
 use anyhow::{bail, format_err, Error, Result};
 use bookmarks::{
-    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
-    BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness, Transaction,
+    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkTransactionError,
+    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
+    Transaction, TransactionHook,
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
@@ -630,19 +631,6 @@ impl SqlBookmarks {
     }
 }
 
-#[derive(Debug)]
-enum BookmarkTransactionError {
-    // The transaction modifying bookmarks tables should be retried
-    RetryableError(Error),
-    // Transacton was rolled back, we consider this a logic error,
-    // which may prompt retry higher in the stack. This can happen
-    // for example if some other bookmark update won the race and
-    // the entire pushrebase needs to be retried
-    LogicError,
-    // Something unexpected went wrong
-    Other(Error),
-}
-
 type RetryAttempt = usize;
 
 fn conditional_retry_without_delay<V, Fut, RetryableFunc, DecisionFunc>(
@@ -1137,34 +1125,17 @@ impl Transaction for SqlBookmarksTransaction {
     }
 
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
-        let Self {
-            ref write_connection,
-            ..
-        } = *self;
-        let sql_txn_factory = Arc::new({
-            cloned!(write_connection);
-            move || {
-                write_connection
-                    .start_transaction()
-                    .map(TransactionResult::Succeeded)
-                    .boxify()
-            }
-        });
-
-        self.commit_into_txn(sql_txn_factory).boxify()
+        self.commit_with_hook(Arc::new(|_ctx, txn| future::ok(txn).boxify()))
     }
 
-    // commit_into_txn() can be used to have the same transaction to update two different
-    // database tables. `sql_txn_factory()` provides this sql transaction, which is later
-    // used to commit all bookmark updates into it.
-    fn commit_into_txn(
-        self: Box<Self>,
-        sql_txn_factory: Arc<dyn Fn() -> BoxFuture<TransactionResult, Error> + Sync + Send>,
-    ) -> BoxFuture<bool, Error> {
+    /// commit_with_hook() can be used to have the same transaction to update two different database
+    /// tables. `txn_hook()` should apply changes to the transaction.
+    fn commit_with_hook(self: Box<Self>, txn_hook: TransactionHook) -> BoxFuture<bool, Error> {
         let Self {
             repo_id,
             ctx,
             payload,
+            write_connection,
             ..
         } = *self;
 
@@ -1173,11 +1144,12 @@ impl Transaction for SqlBookmarksTransaction {
 
         let commit_fut = conditional_retry_without_delay(
             move |_attempt| {
-                sql_txn_factory()
+                write_connection
+                    .start_transaction()
                     .map_err(BookmarkTransactionError::Other)
-                    .and_then(|txn_result| match txn_result {
-                        TransactionResult::Succeeded(txn) => Ok(txn),
-                        TransactionResult::Failed => Err(BookmarkTransactionError::LogicError),
+                    .and_then({
+                        cloned!(ctx, txn_hook);
+                        move |txn| txn_hook(ctx.clone(), txn)
                     })
                     .and_then({
                         cloned!(payload);

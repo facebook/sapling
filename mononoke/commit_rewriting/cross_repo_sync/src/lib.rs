@@ -21,9 +21,8 @@ use bookmark_renaming::{
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
+use futures::Future;
 use futures::Stream as StreamOld;
-use futures::{future as old_future, Future};
-use futures_ext::FutureExt as OldFutureExt;
 use futures_preview::future::try_join_all;
 use futures_preview::{
     compat::Future01CompatExt,
@@ -41,8 +40,7 @@ use movers::{get_large_to_small_mover, get_small_to_large_mover, Mover};
 use movers::{get_movers, Movers};
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
 use slog::info;
-use sql_ext::TransactionResult;
-use std::{collections::VecDeque, fmt, sync::Arc};
+use std::{collections::VecDeque, fmt};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
     WorkingCopyEquivalence,
@@ -50,6 +48,9 @@ use synced_commit_mapping::{
 use thiserror::Error;
 use topo_sort::sort_topological;
 
+use pushrebase_hook::CrossRepoSyncPushrebaseHook;
+
+mod pushrebase_hook;
 pub mod validation;
 
 #[derive(Debug, Error)]
@@ -815,46 +816,15 @@ where
                     params.recursion_limit = None;
                     params
                 };
-                let mapping = self.mapping.clone();
-                let this = self.clone();
 
-                // The code below does two actions: 1) moves a bookmark in pushrebase
-                // 2) inserts new synced commit mapping entry. We'd like these two actions to
-                // be atomic, and for that we use a sql transaction factory.
-                let bookmark = OntoBookmarkParams::new_with_factory(
-                    bookmark,
-                    Arc::new({
-                        cloned!(ctx);
-                        move |rebased_changesets| {
-                            if rebased_changesets.len() > 1 {
-                                return old_future::err(format_err!(
-                                    "expected exactly one commit to be rebased"
-                                ))
-                                .boxify();
-                            }
-                            match rebased_changesets.into_iter().next() {
-                                Some((_, (to, _))) => {
-                                    let entry = create_synced_commit_mapping_entry(hash, to, &this);
-                                    mapping
-                                        .add_no_commit(ctx.clone(), entry)
-                                        .map(TransactionResult::Succeeded)
-                                        .boxify()
-                                }
-                                None => old_future::err(format_err!(
-                                    "expected exactly one commit to be rebased"
-                                ))
-                                .boxify(),
-                            }
-                        }
-                    }),
-                );
                 let pushrebase_res = do_pushrebase_bonsai(
                     &ctx,
                     &target_repo,
                     &pushrebase_params,
-                    &bookmark,
+                    &OntoBookmarkParams::new(bookmark),
                     &rewritten_list,
                     &None,
+                    &[CrossRepoSyncPushrebaseHook::new(hash, self.repos.clone())],
                 )
                 .await;
                 let pushrebase_res =
@@ -1454,7 +1424,7 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
 ) -> Result<(), Error> {
     let entries: Vec<_> = mapped
         .into_iter()
-        .map(|(from, to)| create_synced_commit_mapping_entry(from, to, syncer))
+        .map(|(from, to)| create_synced_commit_mapping_entry(from, to, &syncer.repos))
         .collect();
     syncer
         .mapping
@@ -1464,12 +1434,11 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     Ok(())
 }
 
-fn create_synced_commit_mapping_entry<'a, M: SyncedCommitMapping + Clone + 'static>(
+pub fn create_synced_commit_mapping_entry(
     from: ChangesetId,
     to: ChangesetId,
-    syncer: &'a CommitSyncer<M>,
+    repos: &CommitSyncRepos,
 ) -> SyncedCommitMappingEntry {
-    let CommitSyncer { repos, .. } = syncer.clone();
     let (source_repo, target_repo, source_is_large) = match repos {
         CommitSyncRepos::LargeToSmall {
             large_repo,
