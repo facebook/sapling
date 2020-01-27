@@ -26,7 +26,7 @@ use std::{
 };
 
 use ascii::AsciiString;
-use bookmarks::BookmarkName;
+use bookmarks_types::BookmarkName;
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use repos::{

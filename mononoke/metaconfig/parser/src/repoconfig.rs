@@ -22,7 +22,7 @@ use std::{
 use crate::errors::ErrorKind;
 use anyhow::{anyhow, format_err, Error, Result};
 use ascii::AsciiString;
-use bookmarks::BookmarkName;
+use bookmarks_types::BookmarkName;
 use configerator::ConfigeratorAPI;
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
