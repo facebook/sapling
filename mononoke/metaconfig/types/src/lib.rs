@@ -398,35 +398,50 @@ impl Default for PushParams {
     }
 }
 
-/// Pushrebase configuration options
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct PushrebaseParams {
+/// Flags for the pushrebase inner loop
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct PushrebaseFlags {
     /// Update dates of rebased commits
     pub rewritedates: bool,
     /// How far will we go from bookmark to find rebase root
     pub recursion_limit: Option<usize>,
-    /// Scribe category we log new commits to
-    pub commit_scribe_category: Option<String>,
-    /// Block merge commits
-    pub block_merges: bool,
     /// Forbid rebases when root is not a p1 of the rebase set.
     pub forbid_p2_root_rebases: bool,
     /// Whether to do chasefolding check during pushrebase
     pub casefolding_check: bool,
+}
+
+impl Default for PushrebaseFlags {
+    fn default() -> Self {
+        PushrebaseFlags {
+            rewritedates: true,
+            recursion_limit: Some(16384), // this number is fairly arbirary
+            forbid_p2_root_rebases: true,
+            casefolding_check: true,
+        }
+    }
+}
+
+/// Pushrebase configuration options
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PushrebaseParams {
+    /// Pushrebase processing flags
+    pub flags: PushrebaseFlags,
+    /// Block merge commits
+    pub block_merges: bool,
     /// Whether to do emit obsmarkers after pushrebase
     pub emit_obsmarkers: bool,
+    /// Scribe category we log new commits to
+    pub commit_scribe_category: Option<String>,
 }
 
 impl Default for PushrebaseParams {
     fn default() -> Self {
         PushrebaseParams {
-            rewritedates: true,
-            recursion_limit: Some(16384), // this number is fairly arbirary
-            commit_scribe_category: None,
+            flags: PushrebaseFlags::default(),
             block_merges: false,
-            forbid_p2_root_rebases: true,
-            casefolding_check: true,
             emit_obsmarkers: false,
+            commit_scribe_category: None,
         }
     }
 }

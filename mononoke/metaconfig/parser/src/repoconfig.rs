@@ -32,7 +32,7 @@ use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, HookBypass,
     HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams,
-    LfsParams, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
+    LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
     SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig, WhitelistEntry,
     WireprotoLoggingConfig,
 };
@@ -629,18 +629,22 @@ impl RepoConfigs {
             .map(|raw| -> Result<_, Error> {
                 let default = PushrebaseParams::default();
                 Ok(PushrebaseParams {
-                    rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
-                    recursion_limit: raw
-                        .recursion_limit
-                        .map(|v| v.try_into())
-                        .transpose()?
-                        .or(default.recursion_limit),
+                    flags: PushrebaseFlags {
+                        rewritedates: raw.rewritedates.unwrap_or(default.flags.rewritedates),
+                        recursion_limit: raw
+                            .recursion_limit
+                            .map(|v| v.try_into())
+                            .transpose()?
+                            .or(default.flags.recursion_limit),
+                        forbid_p2_root_rebases: raw
+                            .forbid_p2_root_rebases
+                            .unwrap_or(default.flags.forbid_p2_root_rebases),
+                        casefolding_check: raw
+                            .casefolding_check
+                            .unwrap_or(default.flags.casefolding_check),
+                    },
                     commit_scribe_category: raw.commit_scribe_category,
                     block_merges: raw.block_merges.unwrap_or(default.block_merges),
-                    forbid_p2_root_rebases: raw
-                        .forbid_p2_root_rebases
-                        .unwrap_or(default.forbid_p2_root_rebases),
-                    casefolding_check: raw.casefolding_check.unwrap_or(default.casefolding_check),
                     emit_obsmarkers: raw.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
                 })
             })
@@ -1559,13 +1563,15 @@ mod test {
                     pure_push_allowed: false,
                 },
                 pushrebase: PushrebaseParams {
-                    rewritedates: false,
-                    recursion_limit: Some(1024),
-                    commit_scribe_category: None,
+                    flags: PushrebaseFlags {
+                        rewritedates: false,
+                        recursion_limit: Some(1024),
+                        forbid_p2_root_rebases: false,
+                        casefolding_check: false,
+                    },
                     block_merges: false,
-                    forbid_p2_root_rebases: false,
-                    casefolding_check: false,
                     emit_obsmarkers: false,
+                    commit_scribe_category: None,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

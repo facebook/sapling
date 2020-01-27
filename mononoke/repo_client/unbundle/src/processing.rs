@@ -233,7 +233,7 @@ fn run_pushrebase(
         PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => normal_pushrebase(
             ctx.clone(),
             repo.clone(),
-            pushrebase_params.clone(),
+            &pushrebase_params,
             uploaded_bonsais,
             any_merges,
             &onto_params,
@@ -346,7 +346,7 @@ fn run_bookmark_only_pushrebase(
 fn normal_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
-    mut pushrebase_params: PushrebaseParams,
+    pushrebase_params: &PushrebaseParams,
     changesets: HashSet<BonsaiChangeset>,
     any_merges: bool,
     onto_bookmark: &pushrebase::OntoBookmarkParams,
@@ -358,13 +358,6 @@ fn normal_pushrebase(
     Error = BundleResolverError,
 > {
     let bookmark = &onto_bookmark.bookmark;
-    let pushrebase = {
-        if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(bookmark) {
-            // Bookmark config overrides repo pushrebase.rewritedates config
-            pushrebase_params.rewritedates = rewritedates;
-        }
-        pushrebase_params
-    };
 
     if let Err(error) = check_plain_bookmark_move_preconditions(
         &ctx,
@@ -376,7 +369,7 @@ fn normal_pushrebase(
         return err(error).from_err().boxify();
     }
 
-    let block_merges = pushrebase.block_merges.clone();
+    let block_merges = pushrebase_params.block_merges.clone();
     if block_merges && any_merges {
         return err(format_err!(
             "Pushrebase blocked because it contains a merge commit.\n\
@@ -387,15 +380,21 @@ fn normal_pushrebase(
         .boxify();
     }
 
+    let mut flags = pushrebase_params.flags.clone();
+    if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(bookmark) {
+        // Bookmark config overrides repo flags.rewritedates config
+        flags.rewritedates = rewritedates;
+    }
+
     futures::lazy({
-        cloned!(repo, pushrebase, onto_bookmark, ctx);
+        cloned!(repo, onto_bookmark, ctx);
         move || {
             ctx.scuba().clone().log_with_msg("pushrebase started", None);
             async move {
                 pushrebase::do_pushrebase_bonsai(
                     &ctx,
                     &repo,
-                    &pushrebase,
+                    &flags,
                     &onto_bookmark,
                     &changesets,
                     &maybe_hg_replay_data,

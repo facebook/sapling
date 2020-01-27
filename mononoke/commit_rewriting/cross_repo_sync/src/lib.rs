@@ -32,7 +32,7 @@ use futures_preview::{
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
-use metaconfig_types::{CommitSyncConfig, CommitSyncDirection, PushrebaseParams, RepoConfig};
+use metaconfig_types::{CommitSyncConfig, CommitSyncDirection, PushrebaseFlags, RepoConfig};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -808,19 +808,19 @@ where
                 )
                 .await?;
 
-                let pushrebase_params = {
-                    let mut params = PushrebaseParams::default();
-                    params.rewritedates = false;
-                    params.forbid_p2_root_rebases = false;
-                    params.casefolding_check = false;
-                    params.recursion_limit = None;
-                    params
+                let pushrebase_flags = {
+                    let mut flags = PushrebaseFlags::default();
+                    flags.rewritedates = false;
+                    flags.forbid_p2_root_rebases = false;
+                    flags.casefolding_check = false;
+                    flags.recursion_limit = None;
+                    flags
                 };
 
                 let pushrebase_res = do_pushrebase_bonsai(
                     &ctx,
                     &target_repo,
-                    &pushrebase_params,
+                    &pushrebase_flags,
                     &OntoBookmarkParams::new(bookmark),
                     &rewritten_list,
                     &None,

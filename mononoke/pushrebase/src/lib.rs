@@ -63,7 +63,7 @@ use futures_preview::{
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
-use metaconfig_types::PushrebaseParams;
+use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{
     check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
     Timestamp,
@@ -228,7 +228,7 @@ impl OntoBookmarkParams {
 pub async fn do_pushrebase_bonsai(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &PushrebaseParams,
+    config: &PushrebaseFlags,
     onto_bookmark: &OntoBookmarkParams,
     pushed: &HashSet<BonsaiChangeset>,
     maybe_hg_replay_data: &Option<HgReplayData>,
@@ -358,7 +358,7 @@ async fn backfill_filenodes<'a>(
 async fn rebase_in_loop(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &PushrebaseParams,
+    config: &PushrebaseFlags,
     onto_bookmark: &OntoBookmarkParams,
     head: ChangesetId,
     root: ChangesetId,
@@ -437,7 +437,7 @@ async fn rebase_in_loop(
 async fn do_rebase(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &PushrebaseParams,
+    config: &PushrebaseFlags,
     root: ChangesetId,
     head: ChangesetId,
     bookmark_val: Option<ChangesetId>,
@@ -517,7 +517,7 @@ fn find_roots(commits: &HashSet<BonsaiChangeset>) -> HashMap<ChangesetId, ChildI
 async fn find_closest_root(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &PushrebaseParams,
+    config: &PushrebaseFlags,
     bookmark: &OntoBookmarkParams,
     roots: &HashMap<ChangesetId, ChildIndex>,
 ) -> Result<ChangesetId, PushrebaseError> {
@@ -555,7 +555,7 @@ async fn find_closest_root(
 async fn find_closest_ancestor_root(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &PushrebaseParams,
+    config: &PushrebaseFlags,
     bookmark: &BookmarkName,
     roots: &HashMap<ChangesetId, ChildIndex>,
     onto_bookmark_cs_id: ChangesetId,
@@ -885,7 +885,7 @@ async fn get_bookmark_value(
 async fn create_rebased_changesets(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &PushrebaseParams,
+    config: &PushrebaseFlags,
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
@@ -1324,7 +1324,7 @@ mod tests {
     async fn do_pushrebase(
         ctx: &CoreContext,
         repo: &BlobRepo,
-        config: &PushrebaseParams,
+        config: &PushrebaseFlags,
         onto_bookmark: &OntoBookmarkParams,
         pushed_set: &HashSet<HgChangesetId>,
         maybe_hg_replay_data: &Option<HgReplayData>,
@@ -1410,7 +1410,7 @@ mod tests {
         let res = do_pushrebase(
             &ctx,
             &repo,
-            &PushrebaseParams::default(),
+            &PushrebaseFlags::default(),
             &bookmark,
             &hgcss,
             &None,
@@ -1775,7 +1775,7 @@ mod tests {
             async move {
                 let ctx = CoreContext::test_mock(fb);
                 let repo = linear::getrepo(fb);
-                let config = PushrebaseParams::default();
+                let config = PushrebaseFlags::default();
 
                 let root0 = repo
                     .get_bonsai_from_hg(
@@ -2152,7 +2152,7 @@ mod tests {
                 ];
 
                 // try rebase with small recursion limit
-                let config = PushrebaseParams {
+                let config = PushrebaseFlags {
                     recursion_limit: Some(128),
                     ..Default::default()
                 };
@@ -2162,7 +2162,7 @@ mod tests {
                     _ => panic!("push-rebase should have failed because root too far behind"),
                 }
 
-                let config = PushrebaseParams {
+                let config = PushrebaseFlags {
                     recursion_limit: Some(256),
                     ..Default::default()
                 };
@@ -2208,7 +2208,7 @@ mod tests {
                     "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
                 )
                 .await?;
-                let config = PushrebaseParams {
+                let config = PushrebaseFlags {
                     rewritedates: false,
                     ..Default::default()
                 };
@@ -2222,7 +2222,7 @@ mod tests {
                     "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
                 )
                 .await?;
-                let config = PushrebaseParams {
+                let config = PushrebaseFlags {
                     rewritedates: true,
                     ..Default::default()
                 };
@@ -2298,7 +2298,7 @@ mod tests {
                 do_pushrebase(
                     &ctx,
                     &repo,
-                    &PushrebaseParams {
+                    &PushrebaseFlags {
                         casefolding_check: false,
                         ..Default::default()
                     },
@@ -2781,7 +2781,7 @@ mod tests {
                 )
                 .await?;
 
-                let config = PushrebaseParams {
+                let config = PushrebaseFlags {
                     rewritedates: true,
                     ..Default::default()
                 };
@@ -2859,7 +2859,7 @@ mod tests {
                 )
                 .await?;
 
-                let config_forbid_p2 = PushrebaseParams {
+                let config_forbid_p2 = PushrebaseFlags {
                     forbid_p2_root_rebases: true,
                     ..Default::default()
                 };
@@ -2870,7 +2870,7 @@ mod tests {
                         .is_err()
                 );
 
-                let config_allow_p2 = PushrebaseParams {
+                let config_allow_p2 = PushrebaseFlags {
                     forbid_p2_root_rebases: false,
                     ..Default::default()
                 };
@@ -3012,7 +3012,7 @@ mod tests {
                 let res = do_pushrebase(
                     &ctx,
                     &repo,
-                    &PushrebaseParams::default(),
+                    &PushrebaseFlags::default(),
                     &book,
                     &hgcss,
                     &None,
@@ -3029,7 +3029,7 @@ mod tests {
                 do_pushrebase(
                     &ctx,
                     &repo,
-                    &PushrebaseParams::default(),
+                    &PushrebaseFlags::default(),
                     &book,
                     &hgcss,
                     &None,
@@ -3111,7 +3111,7 @@ mod tests {
                 do_pushrebase(
                     &ctx,
                     &repo,
-                    &PushrebaseParams::default(),
+                    &PushrebaseFlags::default(),
                     &book,
                     &hgcss,
                     &None,
@@ -3208,7 +3208,7 @@ mod tests {
                 do_pushrebase(
                     &ctx,
                     &repo,
-                    &PushrebaseParams::default(),
+                    &PushrebaseFlags::default(),
                     &book,
                     &hgcss,
                     &None,
@@ -3319,7 +3319,7 @@ mod tests {
                 do_pushrebase(
                     &ctx,
                     &repo,
-                    &PushrebaseParams::default(),
+                    &PushrebaseFlags::default(),
                     &book,
                     &hgcss,
                     &None,
