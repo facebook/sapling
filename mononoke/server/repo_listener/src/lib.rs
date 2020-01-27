@@ -43,7 +43,7 @@ pub fn create_repo_listeners(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     mysql_options: MysqlOptions,
     caching: Caching,
-    disabled_hooks: &HashMap<String, HashSet<String>>,
+    disabled_hooks: HashMap<String, HashSet<String>>,
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,

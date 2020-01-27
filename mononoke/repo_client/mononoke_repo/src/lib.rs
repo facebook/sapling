@@ -28,6 +28,10 @@ use std::fmt::{self, Debug};
 use std::sync::Arc;
 use streaming_clone::SqlStreamingChunksFetcher;
 
+pub use builder::MononokeRepoBuilder;
+
+mod builder;
+
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {
     pub blobstore: RepoBlobstore,

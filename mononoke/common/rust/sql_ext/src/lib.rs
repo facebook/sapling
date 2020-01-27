@@ -11,9 +11,10 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     future::{loop_fn, ok, Loop},
-    Future,
+    Future, IntoFuture,
 };
 use futures_ext::{BoxFuture, FutureExt};
+use metaconfig_types::MetadataDBConfig;
 use slog::{info, Logger};
 use std::{path::Path, time::Duration};
 use tokio_timer::sleep;
@@ -338,6 +339,24 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
         let _ = con.execute_batch(Self::get_up_query());
 
         create_sqlite_connections(&path, readonly).map(|r| Self::from_sql_connections(r))
+    }
+
+    fn with_db_config(
+        fb: FacebookInit,
+        dbconfig: &MetadataDBConfig,
+        mysql_options: MysqlOptions,
+        readonly: bool,
+    ) -> BoxFuture<Self, Error> {
+        match dbconfig {
+            MetadataDBConfig::LocalDB { ref path } => {
+                Self::with_sqlite_path(path.join("sqlite_dbs"), readonly)
+                    .into_future()
+                    .boxify()
+            }
+            MetadataDBConfig::Mysql { ref db_address, .. } => {
+                Self::with_xdb(fb, db_address.clone(), mysql_options, readonly)
+            }
+        }
     }
 }
 

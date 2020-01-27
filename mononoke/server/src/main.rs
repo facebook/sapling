@@ -136,7 +136,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         config.repos.into_iter(),
         cmdlib::args::parse_mysql_options(&matches),
         cmdlib::args::init_cachelib(fb, &matches),
-        &cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
+        cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
         &root_log,
         matches
             .value_of("listening-host-port")

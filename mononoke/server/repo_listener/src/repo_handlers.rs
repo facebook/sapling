@@ -12,12 +12,16 @@ use std::sync::Arc;
 use anyhow::{format_err, Error};
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
-use futures::{future, Future, IntoFuture};
+use futures::{future, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{FutureExt as _, TryFutureExt},
+};
 use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
-use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore_factory::make_blobstore_no_sql;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
@@ -25,20 +29,12 @@ use cross_repo_sync::create_commit_syncers;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
-use metaconfig_types::{
-    CommitSyncConfig, MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLoggingConfig,
-};
+use metaconfig_types::{CommitSyncConfig, MetadataDBConfig, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use phases::{CachingPhases, Phases, SqlPhases};
-use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
-use repo_client::{
-    streaming_clone, MononokeRepo, PushRedirector, RepoReadWriteFetcher, WireprotoLogging,
-};
-use repo_read_write_status::SqlRepoReadWriteStatus;
+use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirector, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use skiplist::fetch_skiplist_index;
 use sql_ext::MysqlOptions;
 use sql_ext::SqlConstructors;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -113,24 +109,6 @@ pub struct RepoHandler {
     pub pure_push_allowed: bool,
     pub support_bundle2_listkeys: bool,
     pub maybe_push_redirector: Option<PushRedirector>,
-}
-
-fn open_db_from_config<S: SqlConstructors>(
-    fb: FacebookInit,
-    dbconfig: &MetadataDBConfig,
-    mysql_options: MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-) -> BoxFuture<S, Error> {
-    match dbconfig {
-        MetadataDBConfig::LocalDB { ref path } => {
-            S::with_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
-                .into_future()
-                .boxify()
-        }
-        MetadataDBConfig::Mysql { ref db_address, .. } => {
-            S::with_xdb(fb, db_address.clone(), mysql_options, readonly_storage.0)
-        }
-    }
 }
 
 /// Given a `CommitSyncConfig`, a small repo id, and an
@@ -217,7 +195,7 @@ pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     mysql_options: MysqlOptions,
     caching: Caching,
-    disabled_hooks: &HashMap<String, HashSet<String>>,
+    mut disabled_hooks: HashMap<String, HashSet<String>>,
     scuba_censored_table: Option<String>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
@@ -247,266 +225,154 @@ pub fn repo_handlers(
             let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            info!(logger, "Opening blobrepo");
 
             let ready_handle = ready.create_handle(reponame.clone());
 
-            let repoid = config.repoid;
-            let disabled_hooks = disabled_hooks
-                .get(&reponame)
-                .cloned()
-                .unwrap_or(HashSet::new());
+            let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or(HashSet::new());
 
-            open_blobrepo(
-                fb,
-                config.storage_config.clone(),
-                repoid,
-                mysql_options,
-                caching,
-                config.bookmarks_cache_ttl,
-                config.redaction,
-                scuba_censored_table.clone(),
-                config.filestore.clone(),
-                readonly_storage,
-                blobstore_options.clone(),
-                logger.clone(),
-            )
-            .and_then(move |blobrepo| {
-                let RepoConfig {
-                    storage_config: StorageConfig { dbconfig, .. },
-                    cache_warmup: cache_warmup_params,
-                    hook_manager_params,
-                    write_lock_db_address,
-                    readonly,
-                    pushrebase,
-                    bookmarks,
-                    lfs,
-                    infinitepush,
-                    list_keys_patterns_max,
-                    scuba_table,
-                    scuba_table_hooks,
-                    hash_validation_percentage,
-                    wireproto_logging,
-                    bundle2_replay_params,
-                    push,
-                    hook_max_file_size,
-                    commit_sync_config,
-                    ..
-                } = config.clone();
+            // Clone the few things we're going to need later in our bootstrap.
+            let cache_warmup_params = config.cache_warmup.clone();
+            let scuba_table = config.scuba_table.clone();
+            let hooks_scuba_table = config.scuba_table_hooks.clone();
+            let hook_max_file_size = config.hook_max_file_size.clone();
+            let db_config = config.storage_config.dbconfig.clone();
+            let hash_validation_percentage = config.hash_validation_percentage.clone();
+            let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
+            let pure_push_allowed = config.push.pure_push_allowed.clone();
+            let wireproto_logging = config.wireproto_logging.clone();
+            let commit_sync_config = config.commit_sync_config.clone();
+            let hook_manager_params = config.hook_manager_params.clone();
 
-                let hook_manager_params = hook_manager_params.unwrap_or(Default::default());
+            // TODO: Don't require full config in load_hooks so we can avoid cloning the entire
+            // config here.
+            let hook_config = config.clone();
 
-                let mut scuba = if let Some(table_name) = scuba_table_hooks {
-                    ScubaSampleBuilder::new(fb, table_name)
-                } else {
-                    ScubaSampleBuilder::with_discard()
-                };
-                scuba.add("repo", reponame.clone());
+            // And clone a few things of which we only have one but which we're going to need one
+            // per repo.
+            let blobstore_options = blobstore_options.clone();
+            let scuba_censored_table = scuba_censored_table.clone();
+
+            let fut = async move {
+                info!(logger, "Opening blobrepo");
+                let builder = MononokeRepoBuilder::prepare(
+                    ctx.clone(),
+                    reponame.clone(),
+                    config,
+                    mysql_options,
+                    caching,
+                    scuba_censored_table.clone(),
+                    readonly_storage,
+                    blobstore_options,
+                )
+                .await?;
+
+                let blobrepo = builder.blobrepo().clone();
+
+                info!(logger, "Warming up cache");
+                let initial_warmup = tokio_preview::task::spawn(
+                    cache_warmup(ctx.clone(), blobrepo.clone(), cache_warmup_params)
+                        .chain_err(format!("while warming up cache for repo: {}", reponame))
+                        .map_err(Error::from)
+                        .compat()
+                        .boxed(),
+                );
+
+                let mut scuba_logger = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
+                scuba_logger.add_common_server_data();
+
+                let mut hooks_scuba = ScubaSampleBuilder::with_opt_table(fb, hooks_scuba_table);
+                hooks_scuba.add("repo", reponame.clone());
 
                 info!(logger, "Creating HookManager");
                 let mut hook_manager = HookManager::new(
                     ctx.clone(),
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
-                    hook_manager_params,
-                    scuba,
+                    hook_manager_params.unwrap_or(Default::default()),
+                    hooks_scuba,
                 );
 
-                // TODO: Don't require full config in load_hooks so we can avoid a clone here.
                 info!(logger, "Loading hooks");
-                try_boxfuture!(load_hooks(
-                    fb,
-                    &mut hook_manager,
-                    config.clone(),
-                    &disabled_hooks
-                ));
+                load_hooks(fb, &mut hook_manager, hook_config, &disabled_hooks)?;
 
-                let streaming_clone = if let Some(db_address) = dbconfig.get_db_address() {
-                    streaming_clone(
+                let repo = builder.finalize(Arc::new(hook_manager));
+
+                let support_bundle2_listkeys = async {
+                    let counters = SqlMutableCounters::with_db_config(
                         fb,
-                        blobrepo.clone(),
-                        db_address,
+                        &db_config,
                         mysql_options,
-                        repoid,
                         readonly_storage.0,
                     )
-                    .map(Some)
-                    .left_future()
-                } else {
-                    Ok(None).into_future().right_future()
+                    .compat()
+                    .await?;
+
+                    let counter = counters
+                        .get_counter(
+                            ctx.clone(),
+                            blobrepo.get_repoid(),
+                            "support_bundle2_listkeys",
+                        )
+                        .compat()
+                        .await?
+                        .unwrap_or(1);
+                    Ok(counter != 0)
                 };
 
-                // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
-                let sql_read_write_status = if let Some(addr) = write_lock_db_address {
-                    SqlRepoReadWriteStatus::with_xdb(fb, addr, mysql_options, readonly_storage.0)
-                        .map(Some)
-                        .left_future()
-                } else {
-                    Ok(None).into_future().right_future()
-                };
-
-                let sql_mutable_counters = open_db_from_config::<SqlMutableCounters>(
+                let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_db_config(
                     fb,
-                    &dbconfig,
+                    &db_config,
                     mysql_options,
-                    readonly_storage,
-                );
+                    readonly_storage.0,
+                )
+                .compat();
 
-                let phases_hint = open_db_from_config::<SqlPhases>(
+                let wireproto_logging = create_wireproto_logging(
                     fb,
-                    &dbconfig,
-                    mysql_options,
+                    reponame.clone(),
                     readonly_storage,
-                );
+                    wireproto_logging,
+                )
+                .compat();
 
-                let sql_commit_sync_mapping = open_db_from_config::<SqlSyncedCommitMapping>(
-                    fb,
-                    &dbconfig,
-                    mysql_options,
-                    readonly_storage,
-                );
-
-                streaming_clone
-                    .join5(
-                        sql_read_write_status,
-                        sql_mutable_counters,
-                        phases_hint,
+                let (repo, support_bundle2_listkeys, sql_commit_sync_mapping, wireproto_logging) =
+                    futures_preview::future::try_join4(
+                        repo,
+                        support_bundle2_listkeys,
                         sql_commit_sync_mapping,
+                        wireproto_logging,
                     )
-                    .and_then(
-                        move |(
-                            streaming_clone,
-                            sql_read_write_status,
-                            sql_mutable_counters,
-                            phases_hint,
-                            sql_commit_sync_mapping,
-                        )| {
-                            let read_write_fetcher = RepoReadWriteFetcher::new(
-                                sql_read_write_status,
-                                readonly,
-                                reponame.clone(),
-                            );
+                    .await?;
 
-                            let listen_log = root_log.new(o!("repo" => reponame.clone()));
-                            let mut scuba_logger =
-                                ScubaSampleBuilder::with_opt_table(fb, scuba_table);
-                            scuba_logger.add_common_server_data();
-                            let hash_validation_percentage = hash_validation_percentage;
-                            let preserve_raw_bundle2 = bundle2_replay_params.preserve_raw_bundle2;
-                            let pure_push_allowed = push.pure_push_allowed;
+                let maybe_push_redirector_args =
+                    commit_sync_config.map(move |commit_sync_config| PushRedirectorArgs {
+                        commit_sync_config,
+                        synced_commit_mapping: sql_commit_sync_mapping,
+                        db_config,
+                        mysql_options,
+                    });
 
-                            let skip_index = fetch_skiplist_index(
-                                ctx.clone(),
-                                config.skiplist_index_blobstore_key,
-                                blobrepo.get_blobstore().boxed(),
-                            );
+                initial_warmup.await??;
 
-                            info!(logger, "Warming up cache");
-                            let initial_warmup =
-                                cache_warmup(ctx.clone(), blobrepo.clone(), cache_warmup_params)
-                                    .chain_err(format!(
-                                        "while warming up cache for repo: {}",
-                                        reponame
-                                    ))
-                                    .from_err();
+                info!(logger, "Repository is ready");
+                Ok((
+                    ctx,
+                    reponame,
+                    IncompleteRepoHandler {
+                        logger,
+                        scuba: scuba_logger,
+                        wireproto_logging: Arc::new(wireproto_logging),
+                        repo,
+                        hash_validation_percentage,
+                        preserve_raw_bundle2,
+                        pure_push_allowed,
+                        support_bundle2_listkeys,
+                    },
+                    maybe_push_redirector_args,
+                ))
+            };
 
-                            let mutable_counters = Arc::new(sql_mutable_counters);
-
-                            // TODO: T45466266 this should be replaced by gatekeepers
-                            let support_bundle2_listkeys = mutable_counters
-                                .clone()
-                                .get_counter(
-                                    ctx.clone(),
-                                    blobrepo.get_repoid(),
-                                    "support_bundle2_listkeys",
-                                )
-                                .map(|val| val.unwrap_or(1) != 0);
-
-                            let wireproto_logging_fut = create_wireproto_logging(
-                                fb,
-                                reponame.clone(),
-                                readonly_storage,
-                                wireproto_logging,
-                            )
-                            .map(Arc::new);
-
-                            ready_handle
-                                .wait_for(initial_warmup.and_then(|()| {
-                                    skip_index
-                                        .join3(support_bundle2_listkeys, wireproto_logging_fut)
-                                }))
-                                .map({
-                                    move |(
-                                        skip_index,
-                                        support_bundle2_listkeys,
-                                        wireproto_logging,
-                                    )| {
-                                        // initialize phases hint from the skip index
-                                        let phases_hint: Arc<dyn Phases> =
-                                            if let MetadataDBConfig::Mysql { .. } = dbconfig.clone()
-                                            {
-                                                Arc::new(CachingPhases::new(
-                                                    fb,
-                                                    Arc::new(phases_hint),
-                                                ))
-                                            } else {
-                                                Arc::new(phases_hint)
-                                            };
-
-                                        // initialize lca hint from the skip index
-                                        let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
-                                            skip_index;
-
-                                        let repo = MononokeRepo::new(
-                                            blobrepo,
-                                            &pushrebase,
-                                            bookmarks.clone(),
-                                            Arc::new(hook_manager),
-                                            streaming_clone,
-                                            lfs,
-                                            reponame.clone(),
-                                            read_write_fetcher,
-                                            infinitepush,
-                                            list_keys_patterns_max,
-                                            lca_hint,
-                                            phases_hint,
-                                            mutable_counters,
-                                        );
-
-                                        let maybe_push_redirector_args =
-                                            commit_sync_config.map(move |commit_sync_config| {
-                                                PushRedirectorArgs {
-                                                    commit_sync_config,
-                                                    synced_commit_mapping: sql_commit_sync_mapping,
-                                                    db_config: dbconfig,
-                                                    mysql_options,
-                                                }
-                                            });
-
-                                        info!(logger, "Repository is ready");
-                                        (
-                                            ctx,
-                                            reponame,
-                                            IncompleteRepoHandler {
-                                                logger: listen_log,
-                                                scuba: scuba_logger,
-                                                wireproto_logging,
-                                                repo,
-                                                hash_validation_percentage,
-                                                preserve_raw_bundle2,
-                                                pure_push_allowed,
-                                                support_bundle2_listkeys,
-                                            },
-                                            maybe_push_redirector_args,
-                                        )
-                                    }
-                                })
-                                .boxify()
-                        },
-                    )
-                    .boxify()
-            })
-            .boxify()
+            ready_handle.wait_for(fut.boxed().compat()).boxify()
         })
         .collect();
 
