@@ -1206,7 +1206,7 @@ fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
     let changeset_store = BlobRepoChangesetStore::new(repo.clone());
     let content_store = BlobRepoFileContentStore::new(repo);
     HookManager::new(
-        ctx,
+        ctx.fb,
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),
@@ -1274,7 +1274,7 @@ fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     );
 
     HookManager::new(
-        ctx,
+        ctx.fb,
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),

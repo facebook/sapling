@@ -30,6 +30,7 @@ use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
 use failure_ext::FutureFailureErrorExt;
+use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -67,13 +68,12 @@ pub struct HookManager {
 
 impl HookManager {
     pub fn new(
-        ctx: CoreContext,
+        fb: FacebookInit,
         changeset_store: Box<dyn ChangesetStore>,
         content_store: Arc<dyn FileContentStore>,
         hook_manager_params: HookManagerParams,
         mut scuba: ScubaSampleBuilder,
     ) -> HookManager {
-        let fb = ctx.fb;
         let changeset_hooks = HashMap::new();
         let file_hooks = HashMap::new();
 

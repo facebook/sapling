@@ -285,7 +285,7 @@ pub fn repo_handlers(
 
                 info!(logger, "Creating HookManager");
                 let mut hook_manager = HookManager::new(
-                    ctx.clone(),
+                    ctx.fb,
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
                     hook_manager_params.unwrap_or(Default::default()),

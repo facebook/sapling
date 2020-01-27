@@ -53,7 +53,7 @@ impl Tailer {
         let content_store = blobrepo_text_only_store(repo.clone(), config.hook_max_file_size);
 
         let mut hook_manager = HookManager::new(
-            ctx.clone(),
+            ctx.fb,
             Box::new(changeset_store),
             content_store,
             Default::default(),
