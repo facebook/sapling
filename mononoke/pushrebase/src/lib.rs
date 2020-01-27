@@ -189,7 +189,7 @@ impl From<ErrorKind> for PushrebaseError {
 
 pub type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PushrebaseChangesetPair {
     pub id_old: ChangesetId,
     pub id_new: ChangesetId,
@@ -204,6 +204,7 @@ fn rebased_changesets_into_pairs(
         .collect()
 }
 
+#[derive(Debug, Clone)]
 pub struct PushrebaseSuccessResult {
     pub head: ChangesetId,
     pub retry_num: usize,
