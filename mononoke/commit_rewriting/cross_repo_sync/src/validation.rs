@@ -28,6 +28,8 @@ use slog::{debug, error, info};
 use std::collections::{HashMap, HashSet};
 use synced_commit_mapping::SyncedCommitMapping;
 
+pub type PathToFileNodeIdMapping = HashMap<MPath, HgFileNodeId>;
+
 pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: CommitSyncer<M>,
@@ -39,35 +41,51 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     let target_hash = get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
     info!(ctx.logger(), "target repo cs id: {}", target_hash);
 
-    let moved_source_repo_entries = async {
-        let source_root_mf_id =
-            fetch_root_mf_id(ctx.clone(), source_repo.clone(), source_hash.clone()).await?;
-
-        let source_repo_entries =
-            list_all_filenode_ids(ctx.clone(), source_repo.clone(), source_root_mf_id)
-                .compat()
-                .await?;
-
-        if source_hash == target_hash {
-            // No need to move any paths, because this commit was preserved as is
-            Ok(source_repo_entries)
+    let moved_source_repo_entries = get_maybe_moved_filenode_ids(
+        ctx.clone(),
+        source_repo.clone(),
+        source_hash.clone(),
+        if source_hash != target_hash {
+            Some(commit_syncer.get_mover())
         } else {
-            move_all_paths(source_repo_entries, commit_syncer.get_mover())
-        }
-    };
-
-    let target_repo_entries = async {
-        let target_root_mf_id =
-            fetch_root_mf_id(ctx.clone(), target_repo.clone(), target_hash.clone()).await?;
-
-        list_all_filenode_ids(ctx.clone(), target_repo.clone(), target_root_mf_id)
-            .compat()
-            .await
-    };
+            // No need to move any paths, because this commit was preserved as is
+            None
+        },
+    );
+    let target_repo_entries =
+        get_maybe_moved_filenode_ids(ctx.clone(), target_repo.clone(), target_hash.clone(), None);
 
     let (moved_source_repo_entries, target_repo_entries) =
         try_join!(moved_source_repo_entries, target_repo_entries)?;
 
+    verify_filenode_mapping_equivalence(
+        ctx,
+        source_hash,
+        source_repo,
+        target_repo,
+        &moved_source_repo_entries,
+        &target_repo_entries,
+        commit_syncer.get_reverse_mover(),
+    )
+    .await
+}
+
+/// Given two `PathToFileNodeIdMapping`s, verify that they are
+/// equivalent, save for paths rewritten into nothingness
+/// by the `reverse_mover` (Note that the name `reverse_mover`
+/// means that it moves paths from `target_repo` to `source_repo`)
+pub async fn verify_filenode_mapping_equivalence<'a>(
+    ctx: CoreContext,
+    source_hash: ChangesetId,
+    source_repo: &'a BlobRepo,
+    target_repo: &'a BlobRepo,
+    moved_source_repo_entries: &'a PathToFileNodeIdMapping,
+    target_repo_entries: &'a PathToFileNodeIdMapping,
+    reverse_mover: &'a Mover,
+) -> Result<(), Error> {
+    // If you are wondering, why the lifetime is needed,
+    // in the function signature, see
+    // https://github.com/rust-lang/rust/issues/63033
     compare_contents(
         ctx.clone(),
         (source_repo.clone(), &moved_source_repo_entries),
@@ -78,7 +96,6 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 
     let mut extra_target_files_count = 0;
     for (path, _) in target_repo_entries {
-        let reverse_mover = commit_syncer.get_reverse_mover();
         // "path" is not present in the source, however that might be expected - we use
         // reverse_mover to check that.
         if moved_source_repo_entries.get(&path).is_none() && !reverse_mover(&path)?.is_none() {
@@ -100,6 +117,25 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 
     info!(ctx.logger(), "all is well!");
     Ok(())
+}
+
+/// Get all the file filenode ids for a given commit,
+/// potentially applying a `Mover` to all file paths
+pub async fn get_maybe_moved_filenode_ids(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hash: ChangesetId,
+    maybe_mover: Option<&Mover>,
+) -> Result<PathToFileNodeIdMapping, Error> {
+    let root_mf_id = fetch_root_mf_id(ctx.clone(), repo.clone(), hash.clone()).await?;
+    let repo_entries = list_all_filenode_ids(ctx.clone(), repo, root_mf_id)
+        .compat()
+        .await?;
+    if let Some(mover) = maybe_mover {
+        move_all_paths(&repo_entries, mover)
+    } else {
+        Ok(repo_entries)
+    }
 }
 
 /// This function returns what bookmarks are different between a source repo and a target repo.
@@ -186,10 +222,11 @@ fn list_all_filenode_ids(
     ctx: CoreContext,
     repo: BlobRepo,
     mf_id: HgManifestId,
-) -> BoxFuture<HashMap<MPath, HgFileNodeId>, Error> {
+) -> BoxFuture<PathToFileNodeIdMapping, Error> {
     info!(
         ctx.logger(),
-        "fetching filenode ids for {}",
+        "fetching filenode ids for {:?} in {}",
+        mf_id,
         repo.get_repoid()
     );
     mf_id
@@ -218,10 +255,10 @@ fn list_all_filenode_ids(
         .boxify()
 }
 
-async fn compare_contents(
+pub async fn compare_contents(
     ctx: CoreContext,
-    (large_repo, large_filenodes): (BlobRepo, &HashMap<MPath, HgFileNodeId>),
-    (small_repo, small_filenodes): (BlobRepo, &HashMap<MPath, HgFileNodeId>),
+    (large_repo, large_filenodes): (BlobRepo, &PathToFileNodeIdMapping),
+    (small_repo, small_filenodes): (BlobRepo, &PathToFileNodeIdMapping),
     large_hash: ChangesetId,
 ) -> Result<(), Error> {
     let mut different_filenodes = HashSet::new();
@@ -288,15 +325,15 @@ async fn compare_contents(
     Ok(())
 }
 
-fn move_all_paths(
-    filenodes: HashMap<MPath, HgFileNodeId>,
+pub fn move_all_paths(
+    filenodes: &PathToFileNodeIdMapping,
     mover: &Mover,
-) -> Result<HashMap<MPath, HgFileNodeId>, Error> {
+) -> Result<PathToFileNodeIdMapping, Error> {
     let mut moved_large_repo_entries = HashMap::new();
     for (path, filenode_id) in filenodes {
         let moved_path = mover(&path)?;
         if let Some(moved_path) = moved_path {
-            moved_large_repo_entries.insert(moved_path, filenode_id);
+            moved_large_repo_entries.insert(moved_path, filenode_id.clone());
         }
     }
 
