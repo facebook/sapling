@@ -10,14 +10,15 @@
 
 use anyhow::Error;
 use bonsai_globalrev_mapping::{
-    BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs,
+    add_globalrevs, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs,
     SqlBonsaiGlobalrevMapping,
 };
 use futures_preview::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use sql_ext::SqlConstructors;
+use sql::Connection;
+use sql_ext::{open_sqlite_in_memory, SqlConstructors};
 
 #[fbinit::test]
 async fn test_add_and_get() -> Result<(), Error> {
@@ -125,6 +126,64 @@ async fn test_get_max() -> Result<(), Error> {
         Some(GLOBALREV_ONE),
         mapping.get_max(REPO_ZERO).compat().await?
     );
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_add_globalrevs() -> Result<(), Error> {
+    let conn = open_sqlite_in_memory()?;
+    conn.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
+    let conn = Connection::with_sqlite(conn);
+
+    let mapping =
+        SqlBonsaiGlobalrevMapping::from_connections(conn.clone(), conn.clone(), conn.clone());
+
+    let e0 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::ONES_CSID,
+        globalrev: GLOBALREV_ZERO,
+    };
+
+    let e1 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::TWOS_CSID,
+        globalrev: GLOBALREV_ONE,
+    };
+
+    let txn = conn.start_transaction().compat().await?;
+    let txn = add_globalrevs(txn, &[e0.clone()]).await?;
+    txn.commit().compat().await?;
+
+    assert_eq!(
+        Some(GLOBALREV_ZERO),
+        mapping
+            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+            .compat()
+            .await?
+    );
+
+    let txn = conn.start_transaction().compat().await?;
+    let txn = add_globalrevs(txn, &[e1.clone()]).await?;
+    txn.commit().compat().await?;
+
+    assert_eq!(
+        Some(GLOBALREV_ONE),
+        mapping
+            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
+            .compat()
+            .await?
+    );
+
+    // Inserting duplicates fails
+
+    let txn = conn.start_transaction().compat().await?;
+    let res = async move {
+        let txn = add_globalrevs(txn, &[e1.clone()]).await?;
+        txn.commit().compat().await
+    }
+        .await;
+    assert!(res.is_err());
 
     Ok(())
 }

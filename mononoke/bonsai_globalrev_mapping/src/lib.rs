@@ -8,7 +8,7 @@
 
 #![deny(warnings)]
 
-use sql::Connection;
+use sql::{Connection, Transaction};
 use sql_ext::SqlConstructors;
 use std::collections::HashSet;
 
@@ -179,6 +179,11 @@ queries! {
         ORDER BY globalrev DESC
         LIMIT 1
         "
+    }
+
+    write AddGlobalrevs(values: (repo_id: RepositoryId, bcs_id: ChangesetId, globalrev: Globalrev)) {
+        none,
+        "INSERT INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES {values}"
     }
 }
 
@@ -388,4 +393,26 @@ pub fn bulk_import_globalrevs<'a>(
         }
     }
     globalrevs_store.bulk_import(&entries)
+}
+
+pub async fn add_globalrevs(
+    transaction: Transaction,
+    entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
+) -> Result<Transaction, Error> {
+    let rows: Vec<_> = entries
+        .into_iter()
+        .map(
+            |BonsaiGlobalrevMappingEntry {
+                 repo_id,
+                 bcs_id,
+                 globalrev,
+             }| (repo_id, bcs_id, globalrev),
+        )
+        .collect();
+
+    let (transaction, _) = AddGlobalrevs::query_with_transaction(transaction, &rows[..])
+        .compat()
+        .await?;
+
+    Ok(transaction)
 }
