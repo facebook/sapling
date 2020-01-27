@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+#[deny(warnings)]
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use fbinit::FacebookInit;
