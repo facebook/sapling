@@ -251,7 +251,10 @@ pub struct UpdateBookmarkContext {
 }
 
 impl UpdateBookmarkContext {
-    pub async fn set_to(self, cs_ident: impl Into<CommitIdentifier>) -> Result<(), Error> {
+    pub async fn set_to(
+        self,
+        cs_ident: impl Into<CommitIdentifier>,
+    ) -> Result<BookmarkName, Error> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
             Bookmark(bookmark) => bookmark,
@@ -268,7 +271,7 @@ impl UpdateBookmarkContext {
             },
         )?;
         book_txn.commit().compat().await?;
-        Ok(())
+        Ok(bookmark)
     }
 
     pub async fn delete(self) -> Result<(), Error> {

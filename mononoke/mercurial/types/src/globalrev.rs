@@ -10,11 +10,13 @@ use anyhow::{bail, Error, Result};
 use mononoke_types::BonsaiChangeset;
 use std::str;
 
+pub const GLOBALREV_EXTRA: &str = "global_rev";
+
 // Globalrev of first commit when globalrevs were introduced in Mercurial.
 // To get globalrev from commit we want to check whether there exists "global_rev" key in bcs extras
 // and is not less than START_COMMIT_GLOBALREV.
 // Otherwise we try to fetch "convert_revision" key, and parse svnrev from it.
-const START_COMMIT_GLOBALREV: u64 = 1000147970;
+pub const START_COMMIT_GLOBALREV: u64 = 1000147970;
 
 // Changeset globalrev.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -42,7 +44,7 @@ impl Globalrev {
 
     pub fn from_bcs(bcs: &BonsaiChangeset) -> Result<Self> {
         match (
-            bcs.extra().find(|(key, _)| key == &"global_rev"),
+            bcs.extra().find(|(key, _)| key == &GLOBALREV_EXTRA),
             bcs.extra().find(|(key, _)| key == &"convert_revision"),
         ) {
             (Some((_, globalrev)), Some((_, svnrev))) => {

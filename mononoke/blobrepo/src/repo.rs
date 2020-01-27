@@ -562,6 +562,10 @@ impl BlobRepo {
         self.bookmarks.get(ctx, name, self.repoid)
     }
 
+    pub fn bonsai_globalrev_mapping(&self) -> &Arc<dyn BonsaiGlobalrevMapping> {
+        &self.bonsai_globalrev_mapping
+    }
+
     pub fn get_bonsai_from_globalrev(
         &self,
         globalrev: Globalrev,
