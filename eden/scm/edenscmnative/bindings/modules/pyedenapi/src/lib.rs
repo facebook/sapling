@@ -14,12 +14,11 @@ use std::str;
 use bytes::Bytes;
 use cpython::*;
 
-use cpython_ext::ResultPyErrExt;
+use cpython_ext::{PyPath, ResultPyErrExt};
 use edenapi::{
     ApiError, ApiErrorKind, Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn,
     ProgressStats,
 };
-use encoding::local_bytes_to_path;
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
@@ -118,7 +117,7 @@ py_class!(class client |py| {
         _cls,
         url: &PyBytes,
         repo: &PyBytes,
-        creds: Option<(&PyBytes, &PyBytes)> = None,
+        creds: Option<(PyPath, PyPath)> = None,
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
         validate: bool = true,
@@ -141,8 +140,6 @@ py_class!(class client |py| {
             .stream_trees(streamtrees);
 
         if let Some((cert, key)) = creds {
-            let cert = local_bytes_to_path(cert.data(py)).map_pyerr(py)?;
-            let key = local_bytes_to_path(key.data(py)).map_pyerr(py)?;
             config = config.client_creds(cert, key).map_err(|e| into_exception(py, e))?;
         }
 
