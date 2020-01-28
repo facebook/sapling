@@ -72,7 +72,7 @@ def replace(text, substs):
     return utext.encode(pycompat.sysstr(encoding.encoding))
 
 
-_blockre = re.compile(br"\n(?:\s*\n)+")
+_blockre = re.compile(r"\n(?:\s*\n)+")
 
 
 def findblocks(text):
@@ -151,11 +151,11 @@ def findliteralblocks(blocks):
     return blocks
 
 
-_bulletre = re.compile(br"(\*|-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ")
-_optionre = re.compile(br"^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)" br"((.*)  +)(.*)$")
-_fieldre = re.compile(br":(?![: ])([^:]*)(?<! ):[ ]+(.*)")
-_definitionre = re.compile(br"[^ ]")
-_tablere = re.compile(br"(=+\s+)*=+")
+_bulletre = re.compile(r"(\*|-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ")
+_optionre = re.compile(r"^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)" r"((.*)  +)(.*)$")
+_fieldre = re.compile(r":(?![: ])([^:]*)(?<! ):[ ]+(.*)")
+_definitionre = re.compile(r"[^ ]")
+_tablere = re.compile(r"(=+\s+)*=+")
 
 
 def splitparagraphs(blocks):
@@ -313,7 +313,7 @@ def prunecontainers(blocks, keep):
     return blocks, pruned
 
 
-_sectionre = re.compile(br"""^([-=`:.'"~^_*+#])\1+$""")
+_sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
 
 
 def findtables(blocks):
@@ -468,7 +468,7 @@ def findadmonitions(blocks, admonitions=None):
     admonitions = admonitions or _admonitiontitles.keys()
 
     admonitionre = re.compile(
-        br"\.\. (%s)::" % "|".join(sorted(admonitions)), flags=re.IGNORECASE
+        r"\.\. (%s)::" % "|".join(sorted(admonitions)), flags=re.IGNORECASE
     )
 
     i = 0
@@ -590,7 +590,7 @@ def formatblock(block, width):
     elif block["type"] == "option":
         return formatoption(block, width)
 
-    text = " ".join(map(bytes.strip, block["lines"]))
+    text = " ".join(map(str.strip, block["lines"]))
     return util.wrap(text, width=width, initindent=indent, hangindent=subindent) + "\n"
 
 
