@@ -149,16 +149,24 @@ _encodedir(char* dest, size_t destsize, const char* src, Py_ssize_t len) {
 
 PyObject* encodedir(PyObject* self, PyObject* args) {
   Py_ssize_t len, newlen;
-  PyObject *pathobj, *newobj;
-  char* path;
+  PyObject *pathobj, *newobj = NULL;
+  const char* path;
 
   if (!PyArg_ParseTuple(args, "O:encodedir", &pathobj))
     return NULL;
 
-  if (PyBytes_AsStringAndSize(pathobj, &path, &len) == -1) {
+#ifdef IS_PY3K
+  path = PyUnicode_AsUTF8AndSize(pathobj, &len);
+  if (!path) {
+    PyErr_SetString(PyExc_TypeError, "expected a str");
+    return NULL;
+  }
+#else
+  if (PyBytes_AsStringAndSize(pathobj, (char**)&path, &len) == -1) {
     PyErr_SetString(PyExc_TypeError, "expected a string");
     return NULL;
   }
+#endif
 
   newlen = len ? _encodedir(NULL, 0, path, len + 1) : 1;
 
@@ -167,13 +175,22 @@ PyObject* encodedir(PyObject* self, PyObject* args) {
     return pathobj;
   }
 
+#ifdef IS_PY3K
+  char* newpath;
+  newpath = PyMem_Malloc(newlen);
+  if (newpath) {
+    _encodedir(newpath, newlen, path, len + 1);
+    newobj = PyUnicode_FromStringAndSize(newpath, newlen - 1);
+    PyMem_Free(newpath);
+  }
+#else
   newobj = PyBytes_FromStringAndSize(NULL, newlen);
-
   if (newobj) {
     assert(PyBytes_Check(newobj));
     Py_SIZE(newobj)--;
     _encodedir(PyBytes_AS_STRING(newobj), newlen, path, len + 1);
   }
+#endif
 
   return newobj;
 }
@@ -505,17 +522,27 @@ _lowerencode(char* dest, size_t destsize, const char* src, Py_ssize_t len) {
 }
 
 PyObject* lowerencode(PyObject* self, PyObject* args) {
-  char* path;
+  const char* path;
   Py_ssize_t len, newlen;
-  PyObject* ret;
+  PyObject* ret = NULL;
 
   if (!PyArg_ParseTuple(args, "s#:lowerencode", &path, &len))
     return NULL;
 
   newlen = _lowerencode(NULL, 0, path, len);
+#ifdef IS_PY3K
+  char* newpath;
+  newpath = PyMem_Malloc(newlen);
+  if (newpath) {
+    _lowerencode(newpath, newlen, path, len);
+    ret = PyUnicode_FromStringAndSize(newpath, newlen);
+    PyMem_Free(newpath);
+  }
+#else
   ret = PyBytes_FromStringAndSize(NULL, newlen);
   if (ret)
     _lowerencode(PyBytes_AS_STRING(ret), newlen, path, len);
+#endif
 
   return ret;
 }
@@ -641,7 +668,13 @@ hashmangle(const char* src, Py_ssize_t len, const char sha[20]) {
   assert(PyBytes_Check(ret));
   Py_SIZE(ret) = destlen;
 
+#ifdef IS_PY3K
+  PyObject* str = PyUnicode_FromStringAndSize(dest, destlen);
+  Py_XDECREF(ret);
+  return str;
+#else
   return ret;
+#endif
 }
 
 /*
@@ -723,16 +756,25 @@ static PyObject* hashencode(const char* src, Py_ssize_t len) {
 
 PyObject* pathencode(PyObject* self, PyObject* args) {
   Py_ssize_t len, newlen;
-  PyObject *pathobj, *newobj;
-  char* path;
+  PyObject *pathobj, *newobj = NULL;
+  const char* path;
 
   if (!PyArg_ParseTuple(args, "O:pathencode", &pathobj))
     return NULL;
 
-  if (PyBytes_AsStringAndSize(pathobj, &path, &len) == -1) {
+#ifdef IS_PY3K
+  char* newpath;
+  path = PyUnicode_AsUTF8AndSize(pathobj, &len);
+  if (!path) {
+    PyErr_SetString(PyExc_TypeError, "expected a str");
+    return NULL;
+  }
+#else
+  if (PyBytes_AsStringAndSize(pathobj, (char**)&path, &len) == -1) {
     PyErr_SetString(PyExc_TypeError, "expected a string");
     return NULL;
   }
+#endif
 
   if (len > maxstorepathlen)
     newlen = maxstorepathlen + 2;
@@ -745,13 +787,21 @@ PyObject* pathencode(PyObject* self, PyObject* args) {
       return pathobj;
     }
 
+#ifdef IS_PY3K
+    newpath = PyMem_Malloc(newlen);
+    if (newpath) {
+      basicencode(newpath, newlen, path, len + 1);
+      newobj = PyUnicode_FromStringAndSize(newpath, newlen - 1);
+      PyMem_Free(newpath);
+    }
+#else
     newobj = PyBytes_FromStringAndSize(NULL, newlen);
-
     if (newobj) {
       assert(PyBytes_Check(newobj));
       Py_SIZE(newobj)--;
       basicencode(PyBytes_AS_STRING(newobj), newlen, path, len + 1);
     }
+#endif
   } else
     newobj = hashencode(path, len + 1);
 
