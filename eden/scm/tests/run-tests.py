@@ -716,6 +716,12 @@ def parseargs(args, parser):
             sys.stderr.write("warning: --slowtimeout option ignored with --debug\n")
         options.timeout = 0
         options.slowtimeout = 0
+        # Enter ipdb shell on error.
+        options.extra_config_opt += [
+            "devel.debugger=1",
+            "ui.interactive=1",
+            "ui.paginate=0",
+        ]
     if options.py3k_warnings:
         if PYTHON3:
             parser.error("--py3k-warnings can only be used on Python 2.7")
