@@ -202,7 +202,8 @@ static PyObject* make_item(const WIN32_FIND_DATAA* fd, int wantstat) {
   return Py_BuildValue("siN", fd->cFileName, kind, py_st);
 }
 
-static PyObject* _listdir(char* path, int plen, int wantstat, char* skip) {
+static PyObject*
+_listdir(const char* path, int plen, int wantstat, const char* skip) {
   PyObject* rval = NULL; /* initialize - return value */
   PyObject* list;
   HANDLE fh;
@@ -311,7 +312,7 @@ static PyObject* makestat(const struct stat* st) {
 }
 
 static PyObject*
-_listdir_stat(char* path, int pathlen, int keepstat, char* skip) {
+_listdir_stat(const char* path, int pathlen, int keepstat, const char* skip) {
   PyObject *list, *elem, *stat = NULL, *ret = NULL;
   char fullpath[PATH_MAX + 10];
   int kind, err;
@@ -610,7 +611,8 @@ error_value:
 
 #endif /* __APPLE__ */
 
-static PyObject* _listdir(char* path, int pathlen, int keepstat, char* skip) {
+static PyObject*
+_listdir(const char* path, int pathlen, int keepstat, const char* skip) {
 #ifdef __APPLE__
   PyObject* ret;
   bool fallback = false;
@@ -643,7 +645,7 @@ static PyObject* statfiles(PyObject* self, PyObject* args) {
     PyObject *stat, *pypath;
     struct stat st;
     int ret, kind;
-    char* path;
+    const char* path;
 
     /* With a large file count or on a slow filesystem,
        don't block signals for long (issue4878). */
@@ -653,10 +655,14 @@ static PyObject* statfiles(PyObject* self, PyObject* args) {
     pypath = PySequence_GetItem(names, i);
     if (!pypath)
       goto bail;
+#ifdef IS_PY3K
+    path = PyUnicode_AsUTF8(pypath);
+#else
     path = PyBytes_AsString(pypath);
+#endif
     if (path == NULL) {
       Py_DECREF(pypath);
-      PyErr_SetString(PyExc_TypeError, "not a string");
+      PyErr_SetString(PyExc_TypeError, "not a str");
       goto bail;
     }
     ret = lstat(path, &st);
@@ -1175,7 +1181,7 @@ static PyObject* unblocksignal(PyObject* self, PyObject* args) {
 static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   PyObject* statobj = NULL; /* initialize - optional arg */
   PyObject* skipobj = NULL; /* initialize - optional arg */
-  char *path, *skip = NULL;
+  const char *path = NULL, *skip = NULL;
   int wantstat, plen;
 
   static char* kwlist[] = {"path", "stat", "skip", NULL};
@@ -1183,8 +1189,15 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   if (!PyArg_ParseTupleAndKeywords(
           args,
           kwargs,
+#ifdef IS_PY3K
+          "es#|OO:listdir",
+#else
           "s#|OO:listdir",
+#endif
           kwlist,
+#ifdef IS_PY3K
+          "utf-8",
+#endif
           &path,
           &plen,
           &statobj,
@@ -1194,7 +1207,11 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   wantstat = statobj && PyObject_IsTrue(statobj);
 
   if (skipobj && skipobj != Py_None) {
+#ifdef IS_PY3K
+    skip = PyUnicode_AsUTF8(skipobj);
+#else
     skip = PyBytes_AsString(skipobj);
+#endif
     if (!skip)
       return NULL;
   }
@@ -1203,6 +1220,7 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
 }
 
 #ifdef _WIN32
+// TODO(py3): Fix posixfile for Windows.
 static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
   static char* kwlist[] = {"name", "mode", "buffering", NULL};
   PyObject* file_obj = NULL;
