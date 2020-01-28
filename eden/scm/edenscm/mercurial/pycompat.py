@@ -221,11 +221,6 @@ if sys.version_info[0] >= 3:
 
         return w
 
-    # these wrappers are automagically imported by hgloader
-    delattr = _wrapattrfunc(builtins.delattr)
-    getattr = _wrapattrfunc(builtins.getattr)
-    hasattr = _wrapattrfunc(builtins.hasattr)
-    setattr = _wrapattrfunc(builtins.setattr)
     unicode = str
 
     def open(name, mode="r", buffering=-1):
