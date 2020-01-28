@@ -113,8 +113,7 @@ EOF
 
 function backsync_large_to_small() {
   "$BACKSYNCER" "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
-    --source-tier-config "$TESTTMP/mononoke-config" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
     --target-repo-id "$REPOIDSMALL" \
-    --target-tier-config "$TESTTMP/mononoke-config" \
     backsync-all
 }
