@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+mod getpack;
 mod gettreepack;
 mod request;
 
@@ -14,11 +15,14 @@ use hgproto::GettreepackArgs;
 use std::convert::TryInto;
 use std::str::FromStr;
 
+use getpack::RequestGetpackArgs;
 use gettreepack::RequestGettreepackArgs;
 use request::RequestLine;
 
 pub enum Request {
     Gettreepack(GettreepackArgs),
+    GetpackV1(RequestGetpackArgs),
+    GetpackV2(RequestGetpackArgs),
 }
 
 pub struct RepoRequest {
@@ -37,6 +41,8 @@ impl FromStr for RepoRequest {
                 let args: RequestGettreepackArgs = req.normal.args.parse()?;
                 Request::Gettreepack(args.try_into()?)
             }
+            "getpackv1" => Request::GetpackV1(req.normal.args.parse()?),
+            "getpackv2" => Request::GetpackV2(req.normal.args.parse()?),
             cmd @ _ => {
                 return Err(Error::msg(format!("Command not supported: {}", cmd)));
             }

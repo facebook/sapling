@@ -20,7 +20,7 @@ use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, FutureExt},
-    stream::TryStreamExt,
+    stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
 use hgproto::HgCommands;
@@ -70,6 +70,22 @@ fn dispatch(
 
     let stream = match req.request {
         Request::Gettreepack(args) => dispatcher.client().gettreepack(args).compat(),
+        Request::GetpackV1(args) => dispatcher
+            .client()
+            .getpackv1(Box::new(
+                stream::iter(args.entries.into_iter().map(Ok).collect::<Vec<_>>())
+                    .boxed()
+                    .compat(),
+            ))
+            .compat(),
+        Request::GetpackV2(args) => dispatcher
+            .client()
+            .getpackv2(Box::new(
+                stream::iter(args.entries.into_iter().map(Ok).collect::<Vec<_>>())
+                    .boxed()
+                    .compat(),
+            ))
+            .compat(),
     };
 
     count.fetch_add(1, Ordering::Relaxed);
