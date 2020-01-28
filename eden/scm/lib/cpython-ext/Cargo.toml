@@ -18,3 +18,4 @@ python27-sys = { version = "0.4", optional = true }
 python3-sys = { version = "0.4", optional = true }
 serde = "1"
 thiserror = "1.0.5"
+types = { path = "../types" }
