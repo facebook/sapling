@@ -39,7 +39,6 @@ use derived_data_utils::derived_data_utils;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{ChangesetId, RepositoryId};
-use phases::Phases;
 use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 
 use crate::changeset::UploadChangesets;
@@ -86,7 +85,6 @@ pub struct Blobimport {
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
     pub bookmark_import_policy: BookmarkImportPolicy,
-    pub phases_store: Arc<dyn Phases>,
     pub globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
     pub synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     pub lfs_helper: Option<String>,
@@ -110,7 +108,6 @@ impl Blobimport {
             skip,
             commits_limit,
             bookmark_import_policy,
-            phases_store,
             globalrevs_store,
             synced_commit_mapping,
             lfs_helper,
@@ -146,7 +143,6 @@ impl Blobimport {
             changeset,
             skip,
             commits_limit,
-            phases_store,
             lfs_helper,
             concurrent_changesets,
             concurrent_blobs,

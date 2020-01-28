@@ -20,18 +20,15 @@ use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
 use fbinit::FacebookInit;
-use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
-use phases::SqlPhases;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
-use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashSet, iter::FromIterator, str::FromStr, time::Duration};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BoxFuture<BlobRepo, Error>,
-    pub phases_store: BoxFuture<Arc<SqlPhases>, Error>,
     pub scuba_builder: ScubaSampleBuilder,
 }
 
@@ -690,10 +687,6 @@ pub fn setup_common(
         logger.clone(),
     );
 
-    let phases_store = args::open_sql::<SqlPhases>(fb, &matches)
-        .map(|phases| Arc::new(phases))
-        .boxify();
-
     let blobrepo = open_blobrepo_given_datasources(
         fb,
         datasources_fut,
@@ -724,7 +717,6 @@ pub fn setup_common(
     Ok((
         RepoWalkDatasources {
             blobrepo,
-            phases_store,
             scuba_builder,
         },
         RepoWalkParams {

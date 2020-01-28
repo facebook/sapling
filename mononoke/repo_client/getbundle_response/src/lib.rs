@@ -47,7 +47,6 @@ pub async fn create_getbundle_response(
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases_hint: Arc<dyn Phases>,
     return_phases: PhasesPart,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
@@ -61,7 +60,7 @@ pub async fn create_getbundle_response(
         // for heads that are not in "common"). Note that this is different from
         // "phases" part below, where we want to return phases for all heads.
         let filtered_heads = heads.iter().filter(|head| !common.contains(&head));
-        let phases = prepare_phases(&ctx, &blobrepo, filtered_heads, &phases_hint)
+        let phases = prepare_phases(&ctx, &blobrepo, filtered_heads, &blobrepo.get_phases())
             .compat()
             .await?;
         derive_filenodes_for_public_heads(&ctx, &blobrepo, &common, &phases).await
@@ -79,7 +78,7 @@ pub async fn create_getbundle_response(
 
     // Phases part has to be after the changegroup part.
     if return_phases {
-        let phases = prepare_phases(&ctx, &blobrepo, heads.iter(), &phases_hint)
+        let phases = prepare_phases(&ctx, &blobrepo, heads.iter(), &blobrepo.get_phases())
             .compat()
             .await?;
         parts.push(parts::phases_part(
@@ -263,10 +262,10 @@ fn prepare_phases<'a>(
         })
         .and_then({
             // calculate phases for the heads
-            cloned!(ctx, repo, phases);
+            cloned!(ctx, phases);
             move |bonsai_node_mapping| {
                 phases
-                    .get_public(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
+                    .get_public(ctx, bonsai_node_mapping.keys().cloned().collect())
                     .map(move |public| (public, bonsai_node_mapping))
             }
         })
@@ -342,10 +341,10 @@ fn calculate_public_roots(
                     (parents, visited)
                 })
                 .and_then({
-                    cloned!(ctx, repo, phases);
+                    cloned!(ctx, phases);
                     move |(parents, visited)| {
                         phases
-                            .get_public(ctx, repo, parents.iter().cloned().collect())
+                            .get_public(ctx, parents.iter().cloned().collect())
                             .map(move |public_phases| (public_phases, parents, visited))
                     }
                 })

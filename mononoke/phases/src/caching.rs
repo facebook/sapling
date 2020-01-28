@@ -6,12 +6,10 @@
  * directory of this source tree.
  */
 
-use crate::{Phase, Phases};
+use crate::{Phase, Phases, SqlPhases};
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
@@ -23,11 +21,6 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-
-// Memcache constants, should be changed when we want to invalidate memcache
-// entries
-const MC_CODEVER: u32 = 0;
-const MC_SITEVER: u32 = 0;
 
 define_stats! {
     prefix = "mononoke.phases";
@@ -43,19 +36,21 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)
 }
 
+pub struct Caches {
+    pub memcache: MemcacheClient, // Memcache Client for temporary caching
+    pub keygen: KeyGen,
+}
+
 pub struct CachingPhases {
-    phases_store: Arc<dyn Phases>, // phases_store is the underlying persistent storage (db)
-    memcache: MemcacheClient,      // Memcache Client for temporary caching
-    keygen: KeyGen,
+    phases_store: SqlPhases,
+    caches: Arc<Caches>,
 }
 
 impl CachingPhases {
-    pub fn new(fb: FacebookInit, phases_store: Arc<dyn Phases>) -> Self {
-        let key_prefix = "scm.mononoke.phases";
+    pub fn new(phases_store: SqlPhases, caches: Arc<Caches>) -> Self {
         Self {
             phases_store,
-            memcache: MemcacheClient::new(fb),
-            keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
+            caches,
         }
     }
 }
@@ -64,11 +59,12 @@ impl Phases for CachingPhases {
     fn get_public(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        cloned!(self.keygen, self.memcache, self.phases_store);
-        let repo_id = repo.get_repoid();
+        let keygen = self.caches.keygen.clone();
+        let memcache = self.caches.memcache.clone();
+        cloned!(self.phases_store);
+        let repo_id = self.phases_store.get_repoid();
         get_phases_from_memcache(&memcache, &keygen, repo_id, cs_ids.clone())
             .and_then(move |phases_memcache| {
                 let unknown: Vec<_> = cs_ids
@@ -91,7 +87,7 @@ impl Phases for CachingPhases {
                     return future::ok(public_memcache).left_future();
                 }
                 phases_store
-                    .get_public(ctx, repo, unknown)
+                    .get_public(ctx, unknown)
                     .and_then(move |public_store| {
                         set_phases_to_memcache(
                             &memcache,
@@ -112,23 +108,27 @@ impl Phases for CachingPhases {
     fn add_reachable_as_public(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        cloned!(self.keygen, self.memcache);
-        let repoid = repo.get_repoid();
+        let keygen = self.caches.keygen.clone();
+        let memcache = self.caches.memcache.clone();
+        let repo_id = self.phases_store.get_repoid();
         self.phases_store
-            .add_reachable_as_public(ctx, repo, heads)
+            .add_reachable_as_public(ctx, heads)
             .and_then(move |marked| {
                 set_phases_to_memcache(
                     &memcache,
                     &keygen,
-                    repoid,
+                    repo_id,
                     marked.iter().map(|csid| (*csid, Phase::Public)).collect(),
                 )
                 .map(move |_| marked)
             })
             .boxify()
+    }
+
+    fn get_sql_phases(&self) -> &SqlPhases {
+        &self.phases_store
     }
 }
 

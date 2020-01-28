@@ -28,6 +28,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memblob::EagerMemblob;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::{BlobstoreBytes, ChangesetId, RepoPath, RepositoryId};
+use phases::{SqlPhasesFactory, SqlPhasesStore};
 use rand::Rng;
 use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
@@ -126,6 +127,10 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
 
     // Disable redaction check when executing benchmark reports
     let repoid = RepositoryId::new(rand::random());
+
+    let phases_store = Arc::new(SqlPhasesStore::with_sqlite_in_memory()?);
+    let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repoid);
+
     let blobstore =
         RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
     Ok(BlobRepo::new(
@@ -137,6 +142,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         bonsai_hg_mapping,
         Arc::new(DummyLease {}),
         FilestoreConfig::default(),
+        phases_factory,
     ))
 }
 

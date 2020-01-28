@@ -18,7 +18,6 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
-use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
@@ -52,7 +51,6 @@ pub struct MononokeRepo {
     infinitepush: InfinitepushParams,
     list_keys_patterns_max: u64,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases_hint: Arc<dyn Phases>,
     mutable_counters: Arc<dyn MutableCounters>,
 }
 
@@ -70,7 +68,6 @@ impl MononokeRepo {
         infinitepush: InfinitepushParams,
         list_keys_patterns_max: u64,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        phases_hint: Arc<dyn Phases>,
         mutable_counters: Arc<dyn MutableCounters>,
     ) -> Self {
         MononokeRepo {
@@ -85,7 +82,6 @@ impl MononokeRepo {
             infinitepush,
             list_keys_patterns_max,
             lca_hint,
-            phases_hint,
             mutable_counters,
         }
     }
@@ -138,10 +134,6 @@ impl MononokeRepo {
 
     pub fn lca_hint(&self) -> Arc<dyn LeastCommonAncestorsHint> {
         self.lca_hint.clone()
-    }
-
-    pub fn phases_hint(&self) -> Arc<dyn Phases> {
-        self.phases_hint.clone()
     }
 }
 

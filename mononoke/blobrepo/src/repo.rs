@@ -33,6 +33,7 @@ use futures::stream::{self, futures_unordered, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
 use futures_stats::{FutureStats, Timed};
 use manifest::{ManifestOps, PathTree};
 use maplit::hashmap;
@@ -53,6 +54,7 @@ use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
     ContentMetadata, FileChange, Generation, MPath, MononokeId, RepositoryId, Timestamp,
 };
+use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{debug, trace, Logger};
@@ -123,6 +125,7 @@ pub struct BlobRepo {
         Arc<dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync>,
     derived_data_lease: Arc<dyn LeaseOps>,
     filestore_config: FilestoreConfig,
+    phases_factory: SqlPhasesFactory,
 }
 
 impl BlobRepo {
@@ -135,6 +138,7 @@ impl BlobRepo {
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
+        phases_factory: SqlPhasesFactory,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
@@ -159,6 +163,7 @@ impl BlobRepo {
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
             derived_data_lease,
             filestore_config,
+            phases_factory,
         }
     }
 
@@ -182,6 +187,7 @@ impl BlobRepo {
             repoid,
             derived_data_lease,
             filestore_config,
+            phases_factory,
             ..
         } = self;
 
@@ -199,6 +205,7 @@ impl BlobRepo {
             bonsai_hg_mapping,
             derived_data_lease,
             filestore_config,
+            phases_factory,
         )
     }
 
@@ -322,7 +329,7 @@ impl BlobRepo {
             .list_publishing_by_prefix(
                 ctx,
                 &BookmarkPrefix::empty(),
-                self.repoid,
+                self.get_repoid(),
                 Freshness::MaybeStale,
             )
             .map(|(_, cs_id)| cs_id)
@@ -954,6 +961,21 @@ impl BlobRepo {
 
     pub fn get_filenodes(&self) -> Arc<dyn Filenodes> {
         self.filenodes.clone()
+    }
+
+    pub fn get_phases(&self) -> Arc<dyn Phases> {
+        self.phases_factory
+            .get_phases((self.changeset_fetcher_factory)(), self.get_heads_fetcher())
+    }
+
+    pub fn get_heads_fetcher(&self) -> HeadsFetcher {
+        let this = self.clone();
+        Arc::new(move |ctx: &CoreContext| {
+            this.get_bonsai_heads_maybe_stale(ctx.clone())
+                .collect()
+                .compat()
+                .boxed()
+        })
     }
 
     pub fn get_bonsai_hg_mapping(&self) -> Arc<dyn BonsaiHgMapping> {
@@ -2244,6 +2266,7 @@ impl Clone for BlobRepo {
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
             derived_data_lease: self.derived_data_lease.clone(),
             filestore_config: self.filestore_config.clone(),
+            phases_factory: self.phases_factory.clone(),
         }
     }
 }

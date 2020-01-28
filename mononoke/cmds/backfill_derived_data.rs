@@ -278,12 +278,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             (
                 args::open_repo(fb, &logger, &matches),
                 args::open_sql::<SqlChangesets>(fb, &matches),
-                args::open_sql::<SqlPhases>(fb, &matches),
             )
                 .into_future()
-                .and_then(move |(repo, changesets, phases)| {
-                    fetch_all_public_changesets(ctx.clone(), repo.get_repoid(), changesets, phases)
-                        .collect()
+                .and_then(move |(repo, changesets)| {
+                    let phases = repo.get_phases();
+                    let sql_phases = phases.get_sql_phases();
+                    fetch_all_public_changesets(
+                        ctx.clone(),
+                        repo.get_repoid(),
+                        changesets,
+                        sql_phases.clone(),
+                    )
+                    .collect()
                 })
                 .and_then(move |css| {
                     let serialized = serialize_cs_entries(css);
@@ -350,7 +356,6 @@ fn fetch_all_public_changesets(
                             .and_then(move |mut entries| {
                                 phases
                                     .get_public_raw(
-                                        repo_id,
                                         &entries.iter().map(|entry| entry.cs_id).collect(),
                                     )
                                     .map(move |public| {

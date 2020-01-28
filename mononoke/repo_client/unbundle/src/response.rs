@@ -22,7 +22,6 @@ use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartI
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use obsolete;
-use phases::Phases;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -123,7 +122,6 @@ impl UnbundleResponse {
         repo: BlobRepo,
         pushrebase_params: PushrebaseParams,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        phases: Arc<dyn Phases>,
     ) -> BoxFuture<Bytes, Error> {
         let UnbundlePushRebaseResponse {
             commonheads,
@@ -166,16 +164,8 @@ impl UnbundleResponse {
                 }
                 heads.push(pushrebased_hg_rev);
                 async move {
-                    create_getbundle_response(
-                        ctx,
-                        repo,
-                        common,
-                        heads,
-                        lca_hint,
-                        phases,
-                        PhasesPart::Yes,
-                    )
-                    .await
+                    create_getbundle_response(ctx, repo, common, heads, lca_hint, PhasesPart::Yes)
+                        .await
                 }
                     .boxed()
                     .compat()
@@ -243,7 +233,6 @@ impl UnbundleResponse {
         repo: BlobRepo,
         pushrebase_params: PushrebaseParams,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        phases: Arc<dyn Phases>,
     ) -> BoxFuture<Bytes, Error> {
         match self {
             UnbundleResponse::Push(data) => Self::generate_push_response_bytes(ctx, data),
@@ -256,7 +245,6 @@ impl UnbundleResponse {
                 repo,
                 pushrebase_params,
                 lca_hint,
-                phases,
             ),
             UnbundleResponse::BookmarkOnlyPushRebase(data) => {
                 Self::generate_bookmark_only_pushrebase_response_bytes(ctx, data)

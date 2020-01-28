@@ -39,7 +39,6 @@ use mercurial_types::{
     NULL_HASH,
 };
 use mononoke_types::{BonsaiChangeset, ContentMetadata};
-use phases::Phases;
 use slog::info;
 
 use crate::concurrency::JobProcessor;
@@ -262,7 +261,6 @@ pub struct UploadChangesets {
     pub changeset: Option<HgNodeHash>,
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
-    pub phases_store: Arc<dyn Phases>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
     pub concurrent_blobs: usize,
@@ -281,7 +279,6 @@ impl UploadChangesets {
             changeset,
             skip,
             commits_limit,
-            phases_store,
             lfs_helper,
             concurrent_changesets,
             concurrent_blobs,
@@ -475,7 +472,8 @@ impl UploadChangesets {
                     create_changeset.create(ctx.clone(), &blobrepo, ScubaSampleBuilder::with_discard());
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
-                cloned!(ctx, blobrepo, phases_store);
+                cloned!(ctx);
+                let phases = blobrepo.get_phases();
 
                 // Uploading changeset and populate phases
                 // We know they are public.
@@ -483,7 +481,7 @@ impl UploadChangesets {
                     .get_completed_changeset()
                     .with_context(move || format!("While uploading changeset: {}", csid))
                     .from_err(), &executor)
-                    .and_then(move |shared| phases_store.add_reachable_as_public(ctx, blobrepo, vec![shared.0.get_changeset_id()]).map(move |_| (revidx, shared)))
+                    .and_then(move |shared| phases.add_reachable_as_public(ctx, vec![shared.0.get_changeset_id()]).map(move |_| (revidx, shared)))
                     .boxify()
             })
             // This is the number of changesets to upload in parallel. Keep it small to keep the database

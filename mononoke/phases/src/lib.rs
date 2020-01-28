@@ -10,10 +10,12 @@ mod caching;
 pub use caching::CachingPhases;
 mod errors;
 pub use errors::ErrorKind;
+mod factory;
+pub use factory::SqlPhasesFactory;
 
 use anyhow::{Error, Result};
 use ascii::AsciiString;
-use blobrepo::BlobRepo;
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -21,6 +23,7 @@ use futures::{
     stream, Future, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::{future::BoxFuture as NewBoxFuture, TryFutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
@@ -34,6 +37,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
     fmt,
+    sync::Arc,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -115,32 +119,28 @@ impl ConvIr<Phase> for Phase {
     }
 }
 
+/// This is the primary interface for clients to interact with Phases
 pub trait Phases: Send + Sync {
     /// mark all commits reachable from heads as public
     fn add_reachable_as_public(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error>;
 
     fn get_public(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
         csids: Vec<ChangesetId>,
     ) -> BoxFuture<HashSet<ChangesetId>, Error>;
 
-    fn is_public(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csid: ChangesetId,
-    ) -> BoxFuture<bool, Error> {
-        self.get_public(ctx, repo, vec![csid])
+    fn is_public(&self, ctx: CoreContext, csid: ChangesetId) -> BoxFuture<bool, Error> {
+        self.get_public(ctx, vec![csid])
             .map(move |public| public.contains(&csid))
             .boxify()
     }
+
+    fn get_sql_phases(&self) -> &SqlPhases;
 }
 
 define_stats! {
@@ -182,14 +182,19 @@ queries! {
     }
 }
 
+pub type HeadsFetcher = Arc<
+    dyn Fn(&CoreContext) -> NewBoxFuture<'static, Result<Vec<ChangesetId>, Error>> + Send + Sync,
+>;
+
+/// Object that reads/writes to phases db
 #[derive(Clone)]
-pub struct SqlPhases {
+pub struct SqlPhasesStore {
     write_connection: Connection,
     read_connection: Connection,
     read_master_connection: Connection,
 }
 
-impl SqlPhases {
+impl SqlPhasesStore {
     pub fn get_single_raw(
         &self,
         repo_id: RepositoryId,
@@ -219,19 +224,18 @@ impl SqlPhases {
             .right_future()
     }
 
-    pub fn add_public(
+    pub fn add_public_raw(
         &self,
         _ctx: CoreContext,
-        repo: BlobRepo,
+        repoid: RepositoryId,
         csids: Vec<ChangesetId>,
     ) -> impl Future<Item = (), Error = Error> {
         if csids.is_empty() {
             return future::ok(()).left_future();
         }
-        let repoid = &repo.get_repoid();
         let phases: Vec<_> = csids
             .iter()
-            .map(|csid| (repoid, csid, &Phase::Public))
+            .map(|csid| (&repoid, csid, &Phase::Public))
             .collect();
         STATS::add_many.add_value(1);
         InsertPhase::query(&self.write_connection, &phases)
@@ -247,57 +251,9 @@ impl SqlPhases {
         SelectAllPublic::query(&self.read_connection, &repo_id)
             .map(|ans| ans.into_iter().map(|x| x.0).collect())
     }
-
-    pub fn get_public_derive(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csids: Vec<ChangesetId>,
-        ephemeral_derive: bool,
-    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        if csids.is_empty() {
-            return future::ok(Default::default()).boxify();
-        }
-        let repoid = repo.get_repoid();
-        let this = self.clone();
-        self.get_public_raw(repoid, &csids)
-            .and_then(move |public_cold| {
-                let mut unknown: Vec<_> = csids
-                    .into_iter()
-                    .filter(|csid| !public_cold.contains(csid))
-                    .collect();
-                if unknown.is_empty() {
-                    return future::ok(public_cold).left_future();
-                }
-                repo.get_bonsai_heads_maybe_stale(ctx.clone())
-                    .collect()
-                    .and_then({
-                        cloned!(this);
-                        move |heads| {
-                            mark_reachable_as_public(ctx, repo, this, &heads, ephemeral_derive)
-                        }
-                    })
-                    .and_then(move |freshly_marked| {
-                        // Still do the get_public_raw incase someone else marked the changes as public
-                        // and thus mark_reachable_as_public did not return them as freshly_marked
-                        this.get_public_raw(repoid, &unknown)
-                            .map(move |public_hot| {
-                                let public_combined = public_cold.into_iter().chain(public_hot);
-                                if ephemeral_derive {
-                                    unknown.retain(|e| freshly_marked.contains(e));
-                                    public_combined.chain(unknown).collect()
-                                } else {
-                                    public_combined.collect()
-                                }
-                            })
-                    })
-                    .right_future()
-            })
-            .boxify()
-    }
 }
 
-impl SqlConstructors for SqlPhases {
+impl SqlConstructors for SqlPhasesStore {
     const LABEL: &'static str = "phases";
 
     fn from_connections(
@@ -317,30 +273,133 @@ impl SqlConstructors for SqlPhases {
     }
 }
 
+#[derive(Clone)]
+pub struct SqlPhases {
+    phases_store: Arc<SqlPhasesStore>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    heads_fetcher: HeadsFetcher,
+    repo_id: RepositoryId,
+}
+
+impl SqlPhases {
+    pub fn get_single_raw(
+        &self,
+        cs_id: ChangesetId,
+    ) -> impl Future<Item = Option<Phase>, Error = Error> {
+        self.phases_store.get_single_raw(self.repo_id, cs_id)
+    }
+
+    pub fn get_public_raw(
+        &self,
+        csids: &Vec<ChangesetId>,
+    ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
+        self.phases_store.get_public_raw(self.repo_id, csids)
+    }
+
+    pub fn add_public_raw(
+        &self,
+        ctx: CoreContext,
+        csids: Vec<ChangesetId>,
+    ) -> impl Future<Item = (), Error = Error> {
+        self.phases_store.add_public_raw(ctx, self.repo_id, csids)
+    }
+
+    pub fn list_all_public(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
+        self.phases_store.list_all_public(ctx, self.repo_id)
+    }
+
+    pub fn get_public_derive(
+        &self,
+        ctx: CoreContext,
+        csids: Vec<ChangesetId>,
+        ephemeral_derive: bool,
+    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
+        if csids.is_empty() {
+            return future::ok(Default::default()).boxify();
+        }
+        let this = self.clone();
+        self.get_public_raw(&csids)
+            .and_then(move |public_cold| {
+                let mut unknown: Vec<_> = csids
+                    .into_iter()
+                    .filter(|csid| !public_cold.contains(csid))
+                    .collect();
+                if unknown.is_empty() {
+                    return future::ok(public_cold).left_future();
+                }
+                (this.heads_fetcher)(&ctx)
+                    .compat()
+                    .and_then({
+                        cloned!(this);
+                        move |heads| mark_reachable_as_public(ctx, this, &heads, ephemeral_derive)
+                    })
+                    .and_then(move |freshly_marked| {
+                        // Still do the get_public_raw incase someone else marked the changes as public
+                        // and thus mark_reachable_as_public did not return them as freshly_marked
+                        this.get_public_raw(&unknown).map(move |public_hot| {
+                            let public_combined = public_cold.into_iter().chain(public_hot);
+                            if ephemeral_derive {
+                                unknown.retain(|e| freshly_marked.contains(e));
+                                public_combined.chain(unknown).collect()
+                            } else {
+                                public_combined.collect()
+                            }
+                        })
+                    })
+                    .right_future()
+            })
+            .boxify()
+    }
+
+    fn get_repoid(&self) -> RepositoryId {
+        self.repo_id
+    }
+}
+
+impl SqlPhases {
+    pub fn new(
+        phases_store: Arc<SqlPhasesStore>,
+        repo_id: RepositoryId,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        heads_fetcher: HeadsFetcher,
+    ) -> Self {
+        Self {
+            phases_store,
+            changeset_fetcher,
+            heads_fetcher,
+            repo_id,
+        }
+    }
+}
+
 impl Phases for SqlPhases {
     fn get_public(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
         csids: Vec<ChangesetId>,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        self.get_public_derive(ctx, repo, csids, false)
+        self.get_public_derive(ctx, csids, false)
     }
 
     fn add_reachable_as_public(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        mark_reachable_as_public(ctx, repo, self.clone(), &heads, false).boxify()
+        mark_reachable_as_public(ctx, self.clone(), &heads, false).boxify()
+    }
+
+    fn get_sql_phases(&self) -> &SqlPhases {
+        self
     }
 }
 
 /// Mark all commits reachable from `public_heads` as public
 pub fn mark_reachable_as_public<'a, Heads>(
     ctx: CoreContext,
-    repo: BlobRepo,
     phases: SqlPhases,
     public_heads: &'a Heads,
     ephemeral_derive: bool,
@@ -348,23 +407,23 @@ pub fn mark_reachable_as_public<'a, Heads>(
 where
     &'a Heads: IntoIterator<Item = &'a ChangesetId>,
 {
-    let changeset_fetcher = repo.get_changeset_fetcher();
+    let changeset_fetcher = phases.changeset_fetcher.clone();
     let all_heads: Vec<_> = public_heads.into_iter().cloned().collect();
     phases
-        .get_public_raw(repo.get_repoid(), &all_heads)
+        .get_public_raw(&all_heads)
         .and_then({
-            cloned!(ctx, repo, phases);
+            cloned!(ctx, phases);
             move |public| {
                 let input = all_heads
                     .into_iter()
                     .filter(|csid| !public.contains(csid))
                     .collect::<Vec<_>>();
                 future::loop_fn((HashMap::new(), input), {
-                    cloned!(ctx, repo, phases);
+                    cloned!(ctx, phases);
                     move |(mut output, mut input)| match input.pop() {
                         None => future::ok(Loop::Break(output)).left_future(),
                         Some(cs) => phases
-                            .get_single_raw(repo.get_repoid(), cs)
+                            .get_single_raw(cs)
                             .and_then({
                                 cloned!(changeset_fetcher, ctx);
                                 move |phase| match phase {
@@ -406,9 +465,7 @@ where
                     .chunks(100)
                     .and_then(move |chunk| {
                         if !ephemeral_derive {
-                            phases
-                                .add_public(ctx.clone(), repo.clone(), chunk)
-                                .left_future()
+                            phases.add_public_raw(ctx.clone(), chunk).left_future()
                         } else {
                             future::ok(()).right_future()
                         }

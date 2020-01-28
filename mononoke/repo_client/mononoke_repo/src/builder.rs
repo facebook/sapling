@@ -12,9 +12,8 @@ use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage
 use context::CoreContext;
 use futures_preview::{compat::Future01CompatExt, future};
 use hooks::HookManager;
-use metaconfig_types::{MetadataDBConfig, RepoConfig};
+use metaconfig_types::RepoConfig;
 use mutable_counters::SqlMutableCounters;
-use phases::{CachingPhases, Phases, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use skiplist::fetch_skiplist_index;
@@ -130,14 +129,6 @@ impl MononokeRepoBuilder {
             }
         };
 
-        let phases_hint = SqlPhases::with_db_config(
-            ctx.fb,
-            &storage_config.dbconfig,
-            mysql_options,
-            readonly_storage.0,
-        )
-        .compat();
-
         let mutable_counters = SqlMutableCounters::with_db_config(
             ctx.fb,
             &storage_config.dbconfig,
@@ -153,11 +144,10 @@ impl MononokeRepoBuilder {
         )
         .compat();
 
-        let (streaming_clone, sql_read_write_status, phases_hint, mutable_counters, skiplist) =
-            future::try_join5(
+        let (streaming_clone, sql_read_write_status, mutable_counters, skiplist) =
+            future::try_join4(
                 streaming_clone,
                 sql_read_write_status,
-                phases_hint,
                 mutable_counters,
                 skiplist,
             )
@@ -165,13 +155,6 @@ impl MononokeRepoBuilder {
 
         let read_write_fetcher =
             RepoReadWriteFetcher::new(sql_read_write_status, readonly, name.clone());
-
-        let phases_hint: Arc<dyn Phases> =
-            if let MetadataDBConfig::Mysql { .. } = storage_config.dbconfig {
-                Arc::new(CachingPhases::new(ctx.fb, Arc::new(phases_hint)))
-            } else {
-                Arc::new(phases_hint)
-            };
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
 
@@ -187,7 +170,6 @@ impl MononokeRepoBuilder {
             infinitepush,
             list_keys_patterns_max,
             lca_hint,
-            phases_hint,
             Arc::new(mutable_counters),
         );
 

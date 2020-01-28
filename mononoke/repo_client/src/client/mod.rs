@@ -397,7 +397,6 @@ impl RepoClient {
         }
         let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
         let lca_hint = self.repo.lca_hint().clone();
-        let phases_hint = self.repo.phases_hint().clone();
         async move {
             create_getbundle_response(
                 ctx.clone(),
@@ -405,7 +404,6 @@ impl RepoClient {
                 common,
                 heads,
                 lca_hint,
-                phases_hint,
                 if use_phases {
                     PhasesPart::Yes
                 } else {
@@ -980,8 +978,7 @@ impl HgCommands for RepoClient {
         let blobrepo = self.repo.blobrepo().clone();
 
         let nodes_len = nodes.len();
-
-        let phases_hint = self.repo.phases_hint().clone();
+        let phases_hint = blobrepo.get_phases().clone();
 
         blobrepo
             .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
@@ -999,7 +996,7 @@ impl HgCommands for RepoClient {
                 cloned!(ctx);
                 move |(bcs_ids, bcs_hg_mapping)| {
                     phases_hint
-                        .get_public(ctx, blobrepo, bcs_ids)
+                        .get_public(ctx, bcs_ids)
                         .map(move |public_csids| {
                             public_csids
                                 .into_iter()
@@ -1236,7 +1233,6 @@ impl HgCommands for RepoClient {
                 let blobrepo = client.repo.blobrepo().clone();
                 let bookmark_attrs = client.repo.bookmark_attrs();
                 let lca_hint = client.repo.lca_hint().clone();
-                let phases_hint = client.repo.phases_hint().clone();
                 let infinitepush_params = client.repo.infinitepush().clone();
                 let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                 let pushrebase_params = client.repo.pushrebase_params().clone();
@@ -1256,7 +1252,7 @@ impl HgCommands for RepoClient {
                             .map(move |_| action)
                     }
                 }).and_then({
-                    cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint, phases_hint);
+                    cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint);
                     move |action| {
                         match try_boxfuture!(client.maybe_get_push_redirector_for_action(&action)) {
                             Some(push_redirector) => {
@@ -1275,7 +1271,6 @@ impl HgCommands for RepoClient {
                                 blobrepo,
                                 bookmark_attrs,
                                 lca_hint,
-                                phases_hint,
                                 infinitepush_params,
                                 pushrebase_params,
                                 action,
@@ -1313,8 +1308,7 @@ impl HgCommands for RepoClient {
                         ctx,
                         blobrepo,
                         pushrebase_params,
-                        lca_hint,
-                        phases_hint)
+                        lca_hint)
                         .from_err()
                     }
                 });

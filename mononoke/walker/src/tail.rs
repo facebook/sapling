@@ -34,16 +34,15 @@ where
     VOut: 'static + Send,
 {
     let scuba_builder = datasources.scuba_builder;
-    let datasources = datasources.blobrepo.join(datasources.phases_store);
-    let traversal_fut = datasources.and_then(move |(repo, phases_store)| {
+    let datasources = datasources.blobrepo;
+    let traversal_fut = datasources.and_then(move |repo| {
         cloned!(walk_params.tail_secs);
         let stream = repeat(()).and_then({
             move |()| {
-                cloned!(ctx, repo, phases_store, walk_state,);
+                cloned!(ctx, repo, walk_state,);
                 let walk_output = walk_exact(
                     ctx,
                     repo,
-                    phases_store,
                     walk_params.enable_derive,
                     walk_params.walk_roots.clone(),
                     walk_state,

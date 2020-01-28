@@ -32,7 +32,6 @@ use manifold::{ObjectMeta, PayloadDesc, StoredObject};
 use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use phases::SqlPhases;
 use slog::{error, info, warn, Logger};
 use std::collections::HashMap;
 use std::fs::read;
@@ -250,7 +249,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let concurrent_blobs = args::get_usize(&matches, "concurrent-blobs", 100);
     let concurrent_lfs_imports = args::get_usize(&matches, "concurrent-lfs-imports", 10);
 
-    let phases_store = args::open_sql::<SqlPhases>(fb, &matches);
     let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
     let synced_commit_mapping = args::open_sql::<SqlSyncedCommitMapping>(fb, &matches);
 
@@ -284,70 +282,66 @@ fn main(fb: FacebookInit) -> Result<()> {
     let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
 
     let blobimport = blobrepo
-        .join4(phases_store, globalrevs_store, synced_commit_mapping)
-        .and_then(
-            move |(blobrepo, phases_store, globalrevs_store, synced_commit_mapping)| {
-                let phases_store = Arc::new(phases_store);
-                let globalrevs_store = Arc::new(globalrevs_store);
-                let synced_commit_mapping = Arc::new(synced_commit_mapping);
+        .join3(globalrevs_store, synced_commit_mapping)
+        .and_then(move |(blobrepo, globalrevs_store, synced_commit_mapping)| {
+            let globalrevs_store = Arc::new(globalrevs_store);
+            let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
-                blobimport_lib::Blobimport {
-                    ctx: ctx.clone(),
-                    logger: ctx.logger().clone(),
-                    blobrepo,
-                    revlogrepo_path,
-                    changeset,
-                    skip,
-                    commits_limit,
-                    bookmark_import_policy,
-                    phases_store,
-                    globalrevs_store,
-                    synced_commit_mapping,
-                    lfs_helper,
-                    concurrent_changesets,
-                    concurrent_blobs,
-                    concurrent_lfs_imports,
-                    fixed_parent_order,
-                    has_globalrev,
-                    small_repo_id,
-                    derived_data_types,
-                }
-                .import()
-                .and_then({
-                    cloned!(ctx);
-                    move |maybe_latest_imported_rev| match maybe_latest_imported_rev {
-                        Some(latest_imported_rev) => {
-                            info!(
-                                ctx.logger(),
-                                "latest imported revision {}",
-                                latest_imported_rev.as_u32()
-                            );
-                            if let Some((manifold_key, bucket)) = manifold_key_bucket {
-                                update_manifold_key(fb, latest_imported_rev, manifold_key, bucket)
-                                    .left_future()
-                            } else {
-                                future::ok(()).right_future()
-                            }
-                        }
-                        None => {
-                            info!(ctx.logger(), "didn't import any commits");
+            blobimport_lib::Blobimport {
+                ctx: ctx.clone(),
+                logger: ctx.logger().clone(),
+                blobrepo,
+                revlogrepo_path,
+                changeset,
+                skip,
+                commits_limit,
+                bookmark_import_policy,
+                globalrevs_store,
+                synced_commit_mapping,
+                lfs_helper,
+                concurrent_changesets,
+                concurrent_blobs,
+                concurrent_lfs_imports,
+                fixed_parent_order,
+                has_globalrev,
+                small_repo_id,
+                derived_data_types,
+            }
+            .import()
+            .and_then({
+                cloned!(ctx);
+                move |maybe_latest_imported_rev| match maybe_latest_imported_rev {
+                    Some(latest_imported_rev) => {
+                        info!(
+                            ctx.logger(),
+                            "latest imported revision {}",
+                            latest_imported_rev.as_u32()
+                        );
+                        if let Some((manifold_key, bucket)) = manifold_key_bucket {
+                            update_manifold_key(fb, latest_imported_rev, manifold_key, bucket)
+                                .left_future()
+                        } else {
                             future::ok(()).right_future()
                         }
                     }
-                })
-                .traced(ctx.trace(), "blobimport", trace_args!())
-                .map_err({
-                    cloned!(ctx);
-                    move |err| {
-                        // NOTE: We log the error immediatley, then provide another one for main's
-                        // Result (which will set our exit code).
-                        error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                        Error::msg("blobimport exited with a failure")
+                    None => {
+                        info!(ctx.logger(), "didn't import any commits");
+                        future::ok(()).right_future()
                     }
-                })
-                .then(move |result| upload_and_show_trace(ctx).then(move |_| result))
-            },
-        );
+                }
+            })
+            .traced(ctx.trace(), "blobimport", trace_args!())
+            .map_err({
+                cloned!(ctx);
+                move |err| {
+                    // NOTE: We log the error immediatley, then provide another one for main's
+                    // Result (which will set our exit code).
+                    error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+                    Error::msg("blobimport exited with a failure")
+                }
+            })
+            .then(move |result| upload_and_show_trace(ctx).then(move |_| result))
+        });
 
     block_execute(blobimport.compat(), fb, "blobimport", &logger, &matches)
 }

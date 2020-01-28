@@ -31,7 +31,7 @@ use mononoke_types::{ChangesetId, ContentId, MPath};
 use phases::{Phase, SqlPhases};
 use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
-use std::{collections::HashSet, iter::IntoIterator, sync::Arc};
+use std::{collections::HashSet, iter::IntoIterator};
 use thiserror::Error;
 
 // Holds type of edge and target Node that we want to load in next step(s)
@@ -102,12 +102,11 @@ fn bookmark_step(
 
 fn bonsai_phase_step(
     ctx: CoreContext,
-    repo: BlobRepo,
-    phases_store: &Arc<SqlPhases>,
+    phases_store: &SqlPhases,
     bcs_id: ChangesetId,
 ) -> BoxFuture<StepOutput, Error> {
     phases_store
-        .get_public_derive(ctx, repo, vec![bcs_id], true)
+        .get_public_derive(ctx, vec![bcs_id], true)
         .map(move |public| public.contains(&bcs_id))
         .map(|is_public| {
             let phase = if is_public { Some(Phase::Public) } else { None };
@@ -470,7 +469,6 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
 pub fn walk_exact<V, VOut>(
     ctx: CoreContext,
     repo: BlobRepo,
-    phases_store: Arc<SqlPhases>,
     enable_derive: bool,
     walk_roots: Vec<OutgoingEdge>,
     visitor: V,
@@ -507,7 +505,8 @@ where
                     bonsai_to_hg_mapping_step(ctx, &repo, bcs_id, enable_derive)
                 }
                 Node::BonsaiPhaseMapping(bcs_id) => {
-                    bonsai_phase_step(ctx, repo.clone(), &phases_store, bcs_id)
+                    let phases = repo.get_phases();
+                    bonsai_phase_step(ctx, &phases.get_sql_phases(), bcs_id)
                 }
                 // Hg
                 Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid),

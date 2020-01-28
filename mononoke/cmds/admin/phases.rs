@@ -33,7 +33,6 @@ use cmdlib::args;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
-use phases::{Phases, SqlPhases};
 use slog::{info, Logger};
 
 use crate::error::SubcommandError;
@@ -45,7 +44,6 @@ pub fn subcommand_phases(
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let repo = args::open_repo(fb, &logger, &matches);
-    let phases = args::open_sql::<SqlPhases>(fb, &matches);
     args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
@@ -61,7 +59,7 @@ pub fn subcommand_phases(
                 .map(|s| s.to_string())
                 .ok_or(Error::msg("changeset hash is not specified"));
 
-            subcommand_fetch_phase_impl(fb, repo, phases, hash, ty)
+            subcommand_fetch_phase_impl(fb, repo, hash, ty)
                 .boxed()
                 .compat()
                 .from_err()
@@ -74,10 +72,7 @@ pub fn subcommand_phases(
                 .and_then(|chunk_size| chunk_size.parse::<usize>().ok())
                 .unwrap_or(16384);
 
-            repo.join(phases)
-                .and_then(move |(repo, phases)| {
-                    add_public_phases(ctx, repo, Arc::new(phases), logger, path, chunk_size)
-                })
+            repo.and_then(move |repo| add_public_phases(ctx, repo, logger, path, chunk_size))
                 .from_err()
                 .boxify()
         }
@@ -88,7 +83,7 @@ pub fn subcommand_phases(
                 .unwrap_or("hg")
                 .to_string();
 
-            subcommand_list_public_impl(ctx, ty, repo, phases)
+            subcommand_list_public_impl(ctx, ty, repo)
                 .boxed()
                 .compat()
                 .from_err()
@@ -101,11 +96,11 @@ pub fn subcommand_phases(
 fn add_public_phases(
     ctx: CoreContext,
     repo: BlobRepo,
-    phases: Arc<SqlPhases>,
     logger: Logger,
     path: impl AsRef<str>,
     chunk_size: usize,
 ) -> impl Future<Item = (), Error = Error> {
+    let phases = repo.get_phases();
     let file = try_boxfuture!(File::open(path.as_ref()).map_err(Error::from));
     let hg_changesets = BufReader::new(file).lines().filter_map(|id_str| {
         id_str
@@ -121,13 +116,11 @@ fn add_public_phases(
             let count = chunk.len();
             repo.get_hg_bonsai_mapping(ctx.clone(), chunk)
                 .and_then({
-                    cloned!(ctx, repo, phases);
+                    cloned!(ctx, phases);
                     move |changesets| {
-                        phases.add_public(
-                            ctx,
-                            repo,
-                            changesets.into_iter().map(|(_, cs)| cs).collect(),
-                        )
+                        phases
+                            .get_sql_phases()
+                            .add_public_raw(ctx, changesets.into_iter().map(|(_, cs)| cs).collect())
                     }
                 })
                 .and_then({
@@ -150,15 +143,12 @@ async fn subcommand_list_public_impl(
     ctx: CoreContext,
     ty: String,
     repo: impl Future<Item = BlobRepo, Error = Error>,
-    phases: impl Future<Item = SqlPhases, Error = Error>,
 ) -> Result<(), Error> {
     let repo = repo.compat().await?;
-    let phases = phases.compat().await?;
+    let phases = repo.get_phases();
+    let sql_phases = phases.get_sql_phases();
 
-    let public = phases
-        .list_all_public(ctx.clone(), repo.get_repoid())
-        .compat()
-        .await?;
+    let public = sql_phases.list_all_public(ctx.clone()).compat().await?;
     if ty == "bonsai" {
         for p in public {
             println!("{}", p);
@@ -187,14 +177,13 @@ async fn subcommand_list_public_impl(
 pub async fn subcommand_fetch_phase_impl<'a>(
     fb: FacebookInit,
     repo: impl Future<Item = BlobRepo, Error = Error>,
-    phases: impl Future<Item = SqlPhases, Error = Error>,
     hash: Result<String, Error>,
     ty: String,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = repo.compat().await?;
-    let phases = phases.compat().await?;
     let hash = hash?;
+    let phases = repo.get_phases();
 
     let bcs_id = if ty == "bonsai" {
         ChangesetId::from_str(&hash)?
@@ -208,7 +197,7 @@ pub async fn subcommand_fetch_phase_impl<'a>(
         bail!("unknown hash type: {}", ty);
     };
 
-    let public_phases = phases.get_public(ctx, repo, vec![bcs_id]).compat().await?;
+    let public_phases = phases.get_public(ctx, vec![bcs_id]).compat().await?;
 
     if public_phases.contains(&bcs_id) {
         println!("public");

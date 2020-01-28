@@ -94,7 +94,6 @@ impl PushRedirector {
         let large_repo = self.repo.blobrepo().clone();
         let bookmark_attrs = self.repo.bookmark_attrs();
         let lca_hint = self.repo.lca_hint();
-        let phases = self.repo.phases_hint();
         let infinitepush_params = self.repo.infinitepush().clone();
         let puhsrebase_params = self.repo.pushrebase_params().clone();
 
@@ -107,7 +106,6 @@ impl PushRedirector {
             large_repo,
             bookmark_attrs,
             lca_hint,
-            phases,
             infinitepush_params,
             puhsrebase_params,
             large_repo_action,

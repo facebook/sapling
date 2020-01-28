@@ -25,7 +25,6 @@ use futures_util::future::{FutureExt, TryFutureExt};
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use phases::Phases;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
@@ -49,7 +48,6 @@ pub fn run_post_resolve_action(
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases: Arc<dyn Phases>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
     action: PostResolveAction,
@@ -76,7 +74,6 @@ pub fn run_post_resolve_action(
                 repo,
                 bookmark_attrs,
                 lca_hint,
-                phases,
                 infinitepush_params,
                 pushrebase_params,
                 action,
@@ -207,7 +204,6 @@ fn run_pushrebase(
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases: Arc<dyn Phases>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
     action: PostResolvePushRebase,
@@ -260,8 +256,8 @@ fn run_pushrebase(
     .and_then({
         cloned!(ctx, repo);
         move |(pushrebased_rev, pushrebased_changesets)| {
-            phases
-                .add_reachable_as_public(ctx, repo, vec![pushrebased_rev.clone()])
+            repo.get_phases()
+                .add_reachable_as_public(ctx, vec![pushrebased_rev.clone()])
                 .map(move |_| {
                     (
                         pushrebased_rev,

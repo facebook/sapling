@@ -18,8 +18,9 @@ use fbinit::FacebookInit;
 use fixtures::linear;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
+use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid::*;
-use phases::{mark_reachable_as_public, Phases, SqlPhases};
+use phases::{Phase, SqlPhasesStore};
 use std::str::FromStr;
 use tokio_compat::runtime::Runtime;
 
@@ -27,25 +28,25 @@ use tokio_compat::runtime::Runtime;
 fn add_get_phase_sql_test(fb: FacebookInit) -> Result<()> {
     let mut rt = Runtime::new()?;
     let ctx = CoreContext::test_mock(fb);
-    let repo = blobrepo_factory::new_memblob_empty(None)?;
-    let phases = SqlPhases::with_sqlite_in_memory()?;
+    let repo_id = RepositoryId::new(0);
+    let phases = SqlPhasesStore::with_sqlite_in_memory()?;
 
-    rt.block_on(phases.add_public(ctx.clone(), repo.clone(), vec![ONES_CSID]))?;
+    rt.block_on(phases.add_public_raw(ctx.clone(), repo_id, vec![ONES_CSID]))?;
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), ONES_CSID))?,
-        true,
+        rt.block_on(phases.get_single_raw(repo_id, ONES_CSID))?,
+        Some(Phase::Public),
         "sql: get phase for the existing changeset"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), TWOS_CSID))?,
-        false,
+        rt.block_on(phases.get_single_raw(repo_id, TWOS_CSID))?,
+        None,
         "sql: get phase for non existing changeset"
     );
 
     assert_eq!(
-        rt.block_on(phases.get_public(ctx.clone(), repo.clone(), vec![ONES_CSID, TWOS_CSID]))?,
+        rt.block_on(phases.get_public_raw(repo_id, &vec![ONES_CSID, TWOS_CSID]))?,
         hashset! {ONES_CSID},
         "sql: get phase for non existing changeset and existing changeset"
     );
@@ -180,38 +181,38 @@ fn get_phase_hint_test(fb: FacebookInit) {
         .unwrap()
         .unwrap();
 
-    let phases = SqlPhases::with_sqlite_in_memory().unwrap();
+    let phases = repo.get_phases();
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), public_bookmark_commit))
+        rt.block_on(phases.is_public(ctx.clone(), public_bookmark_commit))
             .unwrap(),
         true,
         "slow path: get phase for a Public commit which is also a public bookmark"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), public_commit))
+        rt.block_on(phases.is_public(ctx.clone(), public_commit))
             .unwrap(),
         true,
         "slow path: get phase for a Public commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), other_public_commit))
+        rt.block_on(phases.is_public(ctx.clone(), other_public_commit))
             .unwrap(),
         true,
         "slow path: get phase for other Public commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), draft_commit))
+        rt.block_on(phases.is_public(ctx.clone(), draft_commit))
             .unwrap(),
         false,
         "slow path: get phase for a Draft commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), other_draft_commit))
+        rt.block_on(phases.is_public(ctx.clone(), other_draft_commit))
             .unwrap(),
         false,
         "slow path: get phase for other Draft commit"
@@ -220,7 +221,6 @@ fn get_phase_hint_test(fb: FacebookInit) {
     assert_eq!(
         rt.block_on(phases.get_public(
             ctx.clone(),
-            repo.clone(),
             vec![
                 public_commit,
                 other_public_commit,
@@ -237,14 +237,14 @@ fn get_phase_hint_test(fb: FacebookInit) {
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), public_commit))
+        rt.block_on(phases.is_public(ctx.clone(), public_commit))
             .expect("Get phase failed"),
         true,
         "sql: make sure that phase was written to the db for public commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), repo.clone(), draft_commit))
+        rt.block_on(phases.is_public(ctx.clone(), draft_commit))
             .expect("Get phase failed"),
         false,
         "sql: make sure that phase was not written to the db for draft commit"
@@ -296,43 +296,29 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
         ))
         .unwrap();
 
-    let phases = SqlPhases::with_sqlite_in_memory()?;
+    let phases = repo.get_phases();
     // get phases mapping for all `bcss` in the same order
     let get_phases_map = || {
-        phases
-            .get_public(ctx.clone(), repo.clone(), bcss.clone())
-            .map({
-                cloned!(bcss);
-                move |public| {
-                    bcss.iter()
-                        .map(|bcs| public.contains(bcs))
-                        .collect::<Vec<_>>()
-                }
-            })
+        phases.get_public(ctx.clone(), bcss.clone()).map({
+            cloned!(bcss);
+            move |public| {
+                bcss.iter()
+                    .map(|bcs| public.contains(bcs))
+                    .collect::<Vec<_>>()
+            }
+        })
     };
 
     // all phases are draft
     assert_eq!(rt.block_on(get_phases_map())?, [false; 7]);
 
-    rt.block_on(mark_reachable_as_public(
-        ctx.clone(),
-        repo.clone(),
-        phases.clone(),
-        &[bcss[1]],
-        false,
-    ))?;
+    rt.block_on(phases.add_reachable_as_public(ctx.clone(), vec![bcss[1]]))?;
     assert_eq!(
         rt.block_on(get_phases_map())?,
         [true, true, false, false, false, false, false],
     );
 
-    rt.block_on(mark_reachable_as_public(
-        ctx.clone(),
-        repo.clone(),
-        phases.clone(),
-        &[bcss[2], bcss[5]],
-        false,
-    ))?;
+    rt.block_on(phases.add_reachable_as_public(ctx.clone(), vec![bcss[2], bcss[5]]))?;
     assert_eq!(
         rt.block_on(get_phases_map())?,
         [true, true, true, false, true, true, false],

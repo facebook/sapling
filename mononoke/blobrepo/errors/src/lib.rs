@@ -25,6 +25,7 @@ pub enum StateOpenError {
     Filenodes,
     BonsaiGlobalrevMapping,
     BonsaiHgMapping,
+    Phases,
 }
 
 impl fmt::Display for StateOpenError {
@@ -36,6 +37,7 @@ impl fmt::Display for StateOpenError {
             StateOpenError::Filenodes => write!(f, "filenodes"),
             StateOpenError::BonsaiGlobalrevMapping => write!(f, "bonsai_globalrev_mapping"),
             StateOpenError::BonsaiHgMapping => write!(f, "bonsai_hg_mapping"),
+            StateOpenError::Phases => write!(f, "phases"),
         }
     }
 }
