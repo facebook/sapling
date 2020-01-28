@@ -190,6 +190,9 @@ class remotefilelog(object):
     def __nonzero__(self):
         return True
 
+    __bool__ = __nonzero__
+
+
     def __len__(self):
         if self.filename == ".hgtags":
             # The length of .hgtags is used to fast path tag checking.

@@ -1325,6 +1325,8 @@ class manifestlog(object):
     def __nonzero__(self):
         return bool(self._revlog)
 
+    __bool__ = __nonzero__
+
     def _maplinknode(self, linknode):
         """Turns a linknode into a linkrev. Only needed for revlog backed
         manifestlogs."""

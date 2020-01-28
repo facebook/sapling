@@ -960,6 +960,8 @@ class basetreemanifestlog(object):
     def __nonzero__(self):
         return True
 
+    __bool__ = __nonzero__
+
     def __getitem__(self, node):
         return self.get("", node)
 
