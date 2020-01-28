@@ -154,7 +154,7 @@ def _buildencodefun(forfncache):
         cmap[xchr(x)] = e + xchr(x).lower()
 
     dmap = {}
-    for k, v in cmap.iteritems():
+    for k, v in cmap.items():
         dmap[v] = k
 
     if not forfncache:

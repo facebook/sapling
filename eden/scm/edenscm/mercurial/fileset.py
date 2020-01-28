@@ -671,7 +671,7 @@ def prettyformat(tree):
 def loadpredicate(ui, extname, registrarobj):
     """Load fileset predicates from specified registrarobj
     """
-    for name, func in registrarobj._table.iteritems():
+    for name, func in registrarobj._table.items():
         symbols[name] = func
         if func._callstatus:
             _statuscallers.add(name)
