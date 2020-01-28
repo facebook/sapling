@@ -853,7 +853,7 @@ pub fn add_shutdown_timeout_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 pub fn get_shutdown_grace_period<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-grace-period")
-        .ok_or(Error::msg("shutdown-grace-period must be specifier"))?
+        .ok_or(Error::msg("shutdown-grace-period must be specified"))?
         .parse()
         .map_err(Error::from)?;
     Ok(Duration::from_secs(seconds))
@@ -862,7 +862,7 @@ pub fn get_shutdown_grace_period<'a>(matches: &ArgMatches<'a>) -> Result<Duratio
 pub fn get_shutdown_timeout<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-timeout")
-        .ok_or(Error::msg("shutdown-timeout must be specifier"))?
+        .ok_or(Error::msg("shutdown-timeout must be specified"))?
         .parse()
         .map_err(Error::from)?;
     Ok(Duration::from_secs(seconds))
