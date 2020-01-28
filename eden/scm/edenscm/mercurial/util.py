@@ -212,8 +212,7 @@ def bitsfrom(container):
 # python 2.6 still have deprecation warning enabled by default. We do not want
 # to display anything to standard user so detect if we are running test and
 # only use python deprecation warning in this case.
-# pyre-fixme[16]: Optional type has no attribute `get`.
-_dowarn = bool(encoding.environ.get("HGEMITWARNINGS"))
+_dowarn = bool(os.environ.get("HGEMITWARNINGS"))
 if _dowarn:
     # explicitly unfilter our warning for python 2.7
     #
@@ -1106,9 +1105,8 @@ def mainfrozen():
 if mainfrozen() and getattr(sys, "frozen", None) != "macosx_app":
     # executable version (py2exe) doesn't support __file__
     datapath = os.path.dirname(pycompat.sysexecutable)
-# pyre-fixme[16]: Optional type has no attribute `__getitem__`.
-elif "HGDATAPATH" in encoding.environ:
-    datapath = encoding.environ["HGDATAPATH"]
+elif "HGDATAPATH" in os.environ:
+    datapath = os.environ["HGDATAPATH"]
 else:
     datapath = os.path.dirname(pycompat.fsencode(__file__))
 
@@ -1397,7 +1395,7 @@ def _reloadenv():
     if safehasattr(time, "perf_counter"):
         timer = time.perf_counter
 
-    if "TESTTMP" in encoding.environ or "testutil" in sys.modules:
+    if "TESTTMP" in os.environ or "testutil" in sys.modules:
         # Stabilize test output
         def timer():
             return 0

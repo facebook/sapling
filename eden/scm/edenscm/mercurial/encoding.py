@@ -77,13 +77,13 @@ def setfromenviron():
         items = os.environ.items()  # re-exports
         environ = dict((k.encode(u"utf-8"), v.encode(u"utf-8")) for k, v in items)
     try:
-        encoding = environ.get("HGENCODING")
+        encoding = os.environ.get("HGENCODING")
         if not encoding:
             encoding = locale.getpreferredencoding().encode("ascii") or "ascii"
             encoding = _encodingfixers.get(encoding, lambda: encoding)()
     except locale.Error:
         encoding = "ascii"
-    encodingmode = environ.get("HGENCODINGMODE", "strict")
+    encodingmode = os.environ.get("HGENCODINGMODE", "strict")
 
     if encoding == "ascii":
         encoding = "utf-8"
@@ -98,7 +98,7 @@ def setfromenviron():
 
     # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
     _wide = _sysstr(
-        environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide" and "WFA" or "WF"
+        os.environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide" and "WFA" or "WF"
     )
 
 
