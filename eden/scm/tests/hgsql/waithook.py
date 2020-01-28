@@ -1,3 +1,10 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+from __future__ import print_function
+
 import os
 import random
 import sys
@@ -14,7 +21,7 @@ def waithook(ui, repo, **kwargs):
     repo.localvfs.write("hookrunning", "")
     while not repo.localvfs.exists("flag"):
         if time.time() - start > 20:
-            print >>sys.stderr, "ERROR: Timeout waiting for .hg/flag"
+            print("ERROR: Timeout waiting for .hg/flag", file=sys.stderr)
             repo.localvfs.unlink("hookrunning")
             return True
         time.sleep(0.05)

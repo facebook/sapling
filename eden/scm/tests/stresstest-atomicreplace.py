@@ -1,12 +1,13 @@
 #!/usr/bin/env python2
-# stresstest-atomicreplace.py - test interrupting threading.Condition
-#
-# Copyright 2018 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
-#
+# GNU General Public License version 2.
+
 # This stress test checks if the replace logic in Mercurial is really atomic
+
+from __future__ import print_function
+
 import argparse
 import os
 import random
@@ -28,14 +29,13 @@ def run_stress_test(n, binary, kill_median, kill_half_width):
     py_filename = filename.replace("\\", "\\\\")
     min_sleep = (kill_median - kill_half_width) / 1000.0
     max_sleep = (kill_median + kill_half_width) / 1000.0
-    print "Will run (file content changes between iterations):"
-    print "  ", CMD % (binary, py_filename, content)
-    print "for %i times and kill each run after unform(%f..%f) s" % (
-        n,
-        min_sleep,
-        max_sleep,
+    print("Will run (file content changes between iterations):")
+    print("  ", CMD % (binary, py_filename, content))
+    print(
+        "for %i times and kill each run after unform(%f..%f) s"
+        % (n, min_sleep, max_sleep)
     )
-    print "Will check the existense of %s after each run\n" % filename
+    print("Will check the existense of %s after each run\n" % filename)
     try:
         # let's create a file upfront
         open(filename, "w").close()
@@ -46,9 +46,9 @@ def run_stress_test(n, binary, kill_median, kill_half_width):
             time.sleep(tosleep)
             proc.kill()
             if not os.path.exists(filename):
-                print u"ALARM! Iteration %i failed. File not found. Slept: %fs" % (
-                    p,
-                    tosleep,
+                print(
+                    u"ALARM! Iteration %i failed. File not found. Slept: %fs"
+                    % (p, tosleep)
                 )
     finally:
         shutil.rmtree(tempdir)
