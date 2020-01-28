@@ -7,4 +7,3 @@ edition = "2018"
 blackbox = { path = "../../../../lib/blackbox" }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
-encoding = { path = "../../../../lib/encoding" }

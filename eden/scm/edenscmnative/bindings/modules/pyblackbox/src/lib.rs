@@ -9,8 +9,7 @@
 
 use blackbox::{self, event::Event, init, log, serde_json, BlackboxOptions, SessionId, ToValue};
 use cpython::*;
-use cpython_ext::ResultPyErrExt;
-use encoding::local_bytes_to_path;
+use cpython_ext::{PyPath, ResultPyErrExt};
 use std::ops::Deref;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -21,7 +20,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "init",
         py_fn!(
             py,
-            init_blackbox(path: &PyBytes, count: u8 = 3, size: u64 = 100000000)
+            init_blackbox(path: PyPath, count: u8 = 3, size: u64 = 100000000)
         ),
     )?;
     m.add(py, "_logjson", py_fn!(py, log_json(json: String)))?;
@@ -56,8 +55,7 @@ def log(value, _dumps=_json.dumps, _logjson=_logjson):
 }
 
 /// Initialize the blackbox at the given path.
-fn init_blackbox(py: Python, path: &PyBytes, count: u8, size: u64) -> PyResult<PyObject> {
-    let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+fn init_blackbox(py: Python, path: PyPath, count: u8, size: u64) -> PyResult<PyObject> {
     let blackbox = BlackboxOptions::new()
         .max_bytes_per_log(size)
         .max_log_count(count)
