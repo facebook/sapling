@@ -62,7 +62,7 @@ if sys.version_info[0] >= 3:
             "urlunparse",
         ),
     )
-    urlreq._registeralias(urllib.parse, "unquote_to_bytes", "unquote")
+    urlreq._registeralias(urllib.parse, "unquote", "unquote")
     import urllib.request
 
     urlreq._registeraliases(
@@ -109,14 +109,14 @@ if sys.version_info[0] >= 3:
     # (if necessary), and returns str. This is wonky. We provide a custom
     # implementation that only accepts bytes and emits bytes.
     def quote(s, safe=r"/"):
-        s = urllib.parse.quote_from_bytes(s, safe=safe)
-        return s.encode("ascii", "strict")
+        s = urllib.parse.quote(s, safe=safe)
+        return s
 
     # urllib.parse.urlencode() returns str. We use this function to make
     # sure we return bytes.
     def urlencode(query, doseq=False):
         s = urllib.parse.urlencode(query, doseq=doseq)
-        return s.encode("ascii")
+        return s
 
     # pyre-fixme[16]: `_pycompatstub` has no attribute `quote`.
     urlreq.quote = quote
