@@ -51,20 +51,30 @@ pub struct SimplePyBuf<T>(cpy::Py_buffer, PhantomData<T>);
 unsafe impl<T> Send for SimplePyBuf<T> {}
 unsafe impl<T> Sync for SimplePyBuf<T> {}
 
-unsafe fn is_buffer(obj: &PyObject) -> bool {
-    if cpy::PyByteArray_Check(obj.as_ptr()) == 0 && cpy::PyBytes_Check(obj.as_ptr()) == 0 {
-        #[cfg(feature = "python2")]
-        return cpy::PyBuffer_Check(obj.as_ptr()) == 0;
-
-        #[cfg(feature = "python3")]
+unsafe fn is_safe_type(obj: &PyObject) -> bool {
+    if cpy::PyByteArray_Check(obj.as_ptr()) != 0 {
         return true;
     }
-
+    if cpy::PyBytes_Check(obj.as_ptr()) != 0 {
+        return true;
+    }
+    #[cfg(feature = "python2")]
+    {
+        if cpy::PyBuffer_Check(obj.as_ptr()) != 0 {
+            return true;
+        }
+    }
+    #[cfg(feature = "python3")]
+    {
+        if cpy::PyMemoryView_Check(obj.as_ptr()) != 0 {
+            return true;
+        }
+    }
     return false;
 }
 
 impl<T: Copy> SimplePyBuf<T> {
-    pub fn new(_py: Python<'_>, obj: &PyObject) -> Self {
+    pub fn new(py: Python<'_>, obj: &PyObject) -> Self {
         // Note about GC on obj:
         //
         // Practically, obj here is some low-level, non-container ones like
@@ -87,8 +97,9 @@ impl<T: Copy> SimplePyBuf<T> {
         // whitelist those two types. Beware that `PyBuffer_Check` won't guarnatee
         // its inner object is also immutable.
         unsafe {
-            if is_buffer(obj) {
-                panic!("potentially unsafe type");
+            if !is_safe_type(obj) {
+                let ty = obj.get_type(py);
+                panic!("potentially unsafe type for SimplePyBuf: {}", ty.name(py));
             }
 
             let mut buf = mem::zeroed::<SimplePyBuf<T>>();
