@@ -401,7 +401,7 @@ class uiconfig(object):
         """
         # default is not always a list
         v = self.configwith(parselist, section, name, default, "list", untrusted)
-        if isinstance(v, bytes):
+        if isinstance(v, str):
             return parselist(v)
         elif v is None:
             return []
@@ -481,7 +481,7 @@ class uiconfig(object):
 
 
 def parselist(value):
-    if isinstance(value, bytes):
+    if isinstance(value, str):
         return configparser.parselist(value)
     else:
         return value

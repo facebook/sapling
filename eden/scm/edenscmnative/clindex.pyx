@@ -59,15 +59,15 @@ RustError = bindings.error.RustError
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem(b'clindex', b'nodemap', default=True)
-configitem(b'clindex', b'verify', default=False)
+configitem('clindex', 'nodemap', default=True)
+configitem('clindex', 'verify', default=False)
 
 # Inserting 20k nodes takes about 2ms. See https://phab.mercurial-scm.org/D1291
 # for the table of node count and performance.
-configitem(b'clindex', b'lagthreshold', default=20000)
+configitem('clindex', 'lagthreshold', default=20000)
 
 # Path to write logs.
-configitem(b'clindex', b'logpath', default=None)
+configitem('clindex', 'logpath', default=None)
 
 origindextype = parsers.index
 
@@ -472,7 +472,7 @@ def reposetup(ui, repo):
 def uisetup(ui):
     # global logpath config
     global _logpath
-    _logpath = ui.config(b'clindex', b'logpath')
+    _logpath = ui.config('clindex', 'logpath')
 
     # filecache method has to be wrapped using wrapfilecache
     extensions.wrapfilecache(localrepo.localrepository, b'changelog',

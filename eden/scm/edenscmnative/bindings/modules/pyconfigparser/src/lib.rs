@@ -15,7 +15,7 @@ use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
-use cpython_ext::{Bytes, PyPath, Str};
+use cpython_ext::{PyPath, Str};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
@@ -70,7 +70,7 @@ py_class!(pub class config |py| {
         Ok(errors_to_str_vec(errors))
     }
 
-    def get(&self, section: String, name: String) -> PyResult<Option<Bytes>> {
+    def get(&self, section: String, name: String) -> PyResult<Option<Str>> {
         let cfg = self.cfg(py).borrow();
 
         Ok(cfg.get(section, name).map(|v| v.to_vec().into()))
@@ -78,7 +78,7 @@ py_class!(pub class config |py| {
 
     def sources(
         &self, section: String, name: String
-    ) -> PyResult<Vec<(Option<Bytes>, Option<(PyPath, usize, usize, usize)>, Bytes)>> {
+    ) -> PyResult<Vec<(Option<Str>, Option<(PyPath, usize, usize, usize)>, Str)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
@@ -114,12 +114,12 @@ py_class!(pub class config |py| {
         Ok(py.None())
     }
 
-    def sections(&self) -> PyResult<Vec<Bytes>> {
+    def sections(&self) -> PyResult<Vec<Str>> {
         let cfg = self.cfg(py).borrow();
         Ok(cfg.sections().iter().map(|s| s.to_vec().into()).collect())
     }
 
-    def names(&self, section: String) -> PyResult<Vec<Bytes>> {
+    def names(&self, section: String) -> PyResult<Vec<Str>> {
         let cfg = self.cfg(py).borrow();
         Ok(cfg.keys(section).iter().map(|s| s.to_vec().into()).collect())
     }
@@ -145,7 +145,7 @@ impl config {
     }
 }
 
-fn parselist(_py: Python, value: String) -> PyResult<Vec<Bytes>> {
+fn parselist(_py: Python, value: String) -> PyResult<Vec<Str>> {
     Ok(parse_list(value)
         .iter()
         .map(|v| v.to_vec().into())
