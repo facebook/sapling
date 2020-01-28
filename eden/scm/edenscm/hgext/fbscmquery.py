@@ -8,7 +8,7 @@
 
 import json
 import re
-from urllib import urlencode
+import sys
 
 from edenscm.mercurial import (
     extensions,
@@ -25,6 +25,12 @@ from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.util import httplib
 
 from .extlib.phabricator import arcconfig, graphql
+
+
+if sys.version_info[0] < 3:
+    from urllib import urlencode
+else:
+    from urllib.parse import urlencode
 
 
 namespacepredicate = registrar.namespacepredicate()
