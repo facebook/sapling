@@ -19,6 +19,7 @@ import xml.dom.minidom
 
 from edenscm.mercurial import error, node as nodemod, pycompat
 from edenscm.mercurial.i18n import _
+from past.builtins import basestring
 
 from . import common
 

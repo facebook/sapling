@@ -21,6 +21,8 @@ import socket
 import subprocess
 import weakref
 
+from past.builtins import basestring
+
 from . import (
     encoding,
     error,
@@ -170,7 +172,7 @@ def callcatch(ui, func):
             ui.warn(_("(%s)\n") % inst.hint)
     except error.ResponseError as inst:
         ui.warn(inst.args[0], error=_("abort"))
-        if not isinstance(inst.args[1], basestring):  # noqa
+        if not isinstance(inst.args[1], basestring):
             ui.warn(" %r\n" % (inst.args[1],))
         elif not inst.args[1]:
             ui.warn(_(" empty string\n"))
