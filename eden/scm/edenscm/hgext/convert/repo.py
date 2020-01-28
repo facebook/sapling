@@ -207,7 +207,7 @@ class gitutil(object):
         """Takes the text of a git commit in raw format and builds a commit object based
         on it.
         """
-        if not isinstance(commitstr, unicode):
+        if not isinstance(commitstr, pycompat.unicode):
             raise TypeError("parsegitcommitraw: commitstr must be a unicode string")
         if len(commitstr) == 0:
             raise ValueError("parsegitcommitraw: commitstr is empty")

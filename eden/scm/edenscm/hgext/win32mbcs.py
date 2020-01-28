@@ -91,7 +91,7 @@ def decode(arg):
 
 
 def encode(arg):
-    if isinstance(arg, unicode):  # noqa
+    if isinstance(arg, pycompat.unicode):
         return arg.encode(_encoding)
     elif isinstance(arg, tuple):
         return tuple(map(encode, arg))
@@ -132,7 +132,7 @@ def basewrapper(func, argtype, enc, dec, args, kwds):
 
 
 def wrapper(func, args, kwds):
-    return basewrapper(func, unicode, encode, decode, args, kwds)  # noqa
+    return basewrapper(func, pycompat.unicode, encode, decode, args, kwds)
 
 
 def reversewrapper(func, args, kwds):

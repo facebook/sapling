@@ -34,12 +34,12 @@ if sys.version_info < (2, 7, 6):
     # sys.version_info check above.
 
     def pack(orig, fmt, *args):
-        if isinstance(fmt, unicode):  # noqa: F821
+        if isinstance(fmt, pycompat.unicode):  # noqa: F821
             fmt = fmt.encode("utf-8")
         return orig(fmt, *args)
 
     def unpack(orig, fmt, data):
-        if isinstance(fmt, unicode):  # noqa: F821
+        if isinstance(fmt, pycompat.unicode):  # noqa: F821
             fmt = fmt.encode("utf-8")
         return orig(fmt, data)
 

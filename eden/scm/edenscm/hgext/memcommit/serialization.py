@@ -13,6 +13,10 @@ import struct
 import sys
 
 
+if sys.version_info[0] >= 3:
+    unicode = str
+
+
 def serialize(paramsdict):
     """serialized data is formatted as follows:
 

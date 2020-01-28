@@ -5,7 +5,7 @@
 
 # pyre-fixme[21]: Could not find `util`.
 import util
-from edenscm.mercurial import localrepo, util as hgutil
+from edenscm.mercurial import localrepo, pycompat, util as hgutil
 from edenscm.mercurial.node import bin
 
 # pyre-fixme[21]: Could not find `git_handler`.
@@ -13,13 +13,6 @@ from git_handler import GitHandler
 
 # pyre-fixme[21]: Could not find `gitrepo`.
 from gitrepo import gitrepo
-
-
-try:
-    # pyre-fixme[18]: Global name `unicode` is undefined.
-    unicode
-except NameError:
-    unicode = str
 
 
 def generate_repo_subclass(baseclass):
@@ -55,12 +48,12 @@ def generate_repo_subclass(baseclass):
             (tags, tagtypes) = super(hgrepo, self)._findtags()
 
             for tag, rev in self.githandler.tags.iteritems():
-                if isinstance(tag, unicode):
+                if isinstance(tag, pycompat.unicode):
                     tag = tag.encode("utf-8")
                 tags[tag] = bin(rev)
                 tagtypes[tag] = "git"
             for tag, rev in self.githandler.remote_refs.iteritems():
-                if isinstance(tag, unicode):
+                if isinstance(tag, pycompat.unicode):
                     tag = tag.encode("utf-8")
                 tags[tag] = rev
                 tagtypes[tag] = "git-remote"

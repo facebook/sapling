@@ -15,18 +15,10 @@ import os
 import shlex
 import shutil
 
-from edenscm.mercurial import encoding, error, hg, progress, scmutil, util
+from edenscm.mercurial import encoding, error, hg, progress, pycompat, scmutil, util
 from edenscm.mercurial.i18n import _
 
-from . import (
-    common,
-    filemap,
-    git,
-    hg as hgconvert,
-    p4,
-    repo,
-    subversion,
-)
+from . import common, filemap, git, hg as hgconvert, p4, repo, subversion
 
 
 mapfile = common.mapfile
@@ -46,7 +38,7 @@ orig_encoding = "ascii"
 
 
 def recode(s):
-    if isinstance(s, unicode):  # noqa
+    if isinstance(s, pycompat.unicode):
         return s.encode(orig_encoding, "replace")
     else:
         return s.decode("utf-8").encode(orig_encoding, "replace")
