@@ -238,7 +238,7 @@ async fn bootstrap_repositories<'a>(
                 scuba.clone(),
                 repo,
                 remote_args_blobstore,
-            );
+            )?;
 
             if let Some(warmup) = warmup {
                 info!(&logger, "Waiting for cache warmup to complete...");
@@ -314,7 +314,7 @@ async fn fast_replay_from_stdin<'a>(
                     continue;
                 }
                 Err(e) => {
-                    warn!(&logger, "Dispatch failed: {}", e);
+                    warn!(&logger, "Dispatch failed: {:#?}", e);
                     continue;
                 }
             },

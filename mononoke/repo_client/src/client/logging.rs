@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use chrono::Utc;
 use context::{CoreContext, SessionId};
@@ -38,6 +39,7 @@ pub struct WireprotoLogging {
     reponame: String,
     scribe_args: Option<(ScribeClientImplementation, String)>,
     blobstore_and_threshold: Option<(Arc<dyn Blobstore>, u64)>,
+    scuba_builder: ScubaSampleBuilder,
 }
 
 impl WireprotoLogging {
@@ -46,13 +48,24 @@ impl WireprotoLogging {
         reponame: String,
         scribe_category: Option<String>,
         blobstore_and_threshold: Option<(Arc<dyn Blobstore>, u64)>,
-    ) -> Self {
+        log_file: Option<&str>,
+    ) -> Result<Self, Error> {
         let scribe_args = scribe_category.map(|cat| (ScribeClientImplementation::new(fb), cat));
-        Self {
+
+        // We use a Scuba sample builder to produce samples to log. We also use that to allow
+        // logging to a file: we never log to an actual Scuba category here.
+        let mut scuba_builder = ScubaSampleBuilder::with_discard();
+        scuba_builder.add_common_server_data();
+        if let Some(log_file) = log_file {
+            scuba_builder = scuba_builder.with_log_file(log_file)?;
+        }
+
+        Ok(Self {
             reponame,
             scribe_args,
             blobstore_and_threshold,
-        }
+            scuba_builder,
+        })
     }
 }
 
@@ -201,9 +214,8 @@ fn do_wireproto_logging<'a>(
 
     // Use a ScubaSampleBuilder to build a sample to send in Scribe. Reach into the other Scuba
     // sample to grab a few datapoints from there as well.
-    let mut builder = ScubaSampleBuilder::with_discard();
+    let mut builder = wireproto.scuba_builder.clone();
     builder
-        .add_common_server_data()
         .add("command", command)
         .add("duration", stats.completion_time().as_micros_unchecked())
         .add("source_control_server_type", "mononoke")
@@ -247,7 +259,11 @@ fn do_wireproto_logging<'a>(
         };
 
         prepare_fut
-            .map(move |builder| {
+            .map(move |mut builder| {
+                // We use the Scuba sample and log it to Scribe, then we also log in the Scuba
+                // sample, but this is built using discard(), so at most it'll log to a file for
+                // debug / tests.
+
                 let sample = builder.get_sample();
                 // We can't really do anything with the errors, so let's just log them
                 if let Some((ref scribe_client, ref scribe_category)) = wireproto.scribe_args {
@@ -262,6 +278,8 @@ fn do_wireproto_logging<'a>(
                         STATS::wireproto_serialization_failure.add_value(1);
                     }
                 }
+
+                builder.log();
             })
             .or_else(|_| Ok(()))
     });

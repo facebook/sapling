@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use blobstore::Blobstore;
 use context::{LoggingContainer, SessionContainer};
 use fbinit::FacebookInit;
@@ -32,17 +32,18 @@ impl FastReplayDispatcher {
         scuba: ScubaSampleBuilder,
         repo: MononokeRepo,
         remote_args_blobstore: Option<Arc<dyn Blobstore>>,
-    ) -> Self {
-        let noop_wireproto = WireprotoLogging::new(fb, repo.reponame().clone(), None, None);
+    ) -> Result<Self, Error> {
+        let noop_wireproto = WireprotoLogging::new(fb, repo.reponame().clone(), None, None, None)
+            .context("While instantiating noop_wireproto")?;
 
-        Self {
+        Ok(Self {
             fb,
             logger,
             scuba,
             repo,
             wireproto_logging: Arc::new(noop_wireproto),
             remote_args_blobstore,
-        }
+        })
     }
 
     pub fn client(&self) -> RepoClient {

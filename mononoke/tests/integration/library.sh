@@ -605,8 +605,14 @@ list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
 CONFIG
 fi
 
+if [[ -v WIREPROTO_LOGGING_PATH ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [wireproto_logging]
+local_path="$WIREPROTO_LOGGING_PATH"
+CONFIG
+
+  if [[ -v WIREPROTO_LOGGING_BLOBSTORE ]]; then
+    cat >> "repos/$reponame/server.toml" <<CONFIG
 storage_config="traffic_replay_blobstore"
 remote_arg_size_threshold=0
 
@@ -614,10 +620,11 @@ remote_arg_size_threshold=0
 local_db_path="$TESTTMP/monsql"
 
 [storage.traffic_replay_blobstore.blobstore.blob_files]
-path = "$TESTTMP/traffic-replay-blobstore"
-
+path = "$WIREPROTO_LOGGING_BLOBSTORE"
 CONFIG
-
+  fi
+fi
+# path = "$TESTTMP/traffic-replay-blobstore"
 
 if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -1206,7 +1213,7 @@ function traffic_replay() {
     --testrun \
     --hgcli "$MONONOKE_HGCLI" \
     --mononoke-address "[::1]:$MONONOKE_SOCKET" \
-    --mononoke-server-common-name localhost < "$1"
+    --mononoke-server-common-name localhost
 }
 
 function enable_replay_verification_hook {
@@ -1431,4 +1438,24 @@ function regenerate_hg_filenodes() {
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --i-know-what-i-am-doing \
     "$@"
+}
+
+function fastreplay() {
+  "$MONONOKE_FASTREPLAY" \
+    "${COMMON_ARGS[@]}" \
+    --no-skiplist \
+    --no-cache-warmup \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
+function quiet() {
+  local log="$TESTTMP/quiet.last.log"
+  "$@" >"$log" 2>&1
+  ret="$?"
+  if [[ "$ret" == 0 ]]; then
+    return "$ret"
+  fi
+  cat "$log"
+  return "$ret"
 }

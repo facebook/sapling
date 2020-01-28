@@ -937,19 +937,8 @@ pub struct WireprotoLoggingConfig {
     /// `storage_config_and_threshold` is not specified then wireproto wireproto arguments will
     /// be inlined
     pub storage_config_and_threshold: Option<(StorageConfig, u64)>,
-}
-
-impl WireprotoLoggingConfig {
-    /// Create WireprotoLoggingConfig with correct default values
-    pub fn new(
-        scribe_category: Option<String>,
-        storage_config_and_threshold: Option<(StorageConfig, u64)>,
-    ) -> Self {
-        Self {
-            scribe_category,
-            storage_config_and_threshold,
-        }
-    }
+    /// Local path where to log replay data that would be sent to Scribe.
+    pub local_path: Option<String>,
 }
 
 impl Default for WireprotoLoggingConfig {
@@ -957,6 +946,7 @@ impl Default for WireprotoLoggingConfig {
         Self {
             scribe_category: None,
             storage_config_and_threshold: None,
+            local_path: None,
         }
     }
 }

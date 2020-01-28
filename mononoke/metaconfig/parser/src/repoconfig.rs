@@ -517,6 +517,7 @@ impl RepoConfigs {
                     scribe_category,
                     storage_config: wireproto_storage_config,
                     remote_arg_size_threshold,
+                    local_path,
                 } = wireproto_logging;
 
                 let storage_config_and_threshold = match (
@@ -543,7 +544,11 @@ impl RepoConfigs {
                     })
                     .transpose()?;
 
-                WireprotoLoggingConfig::new(scribe_category, storage_config_and_threshold)
+                WireprotoLoggingConfig {
+                    scribe_category,
+                    storage_config_and_threshold,
+                    local_path,
+                }
             }
             None => Default::default(),
         };
@@ -1584,6 +1589,7 @@ mod test {
                         main_storage_config,
                         DEFAULT_ARG_SIZE_THRESHOLD,
                     )),
+                    local_path: None,
                 },
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,

@@ -435,6 +435,7 @@ fn create_wireproto_logging(
     let WireprotoLoggingConfig {
         storage_config_and_threshold,
         scribe_category,
+        local_path,
     } = wireproto_logging_config;
     let blobstore_fut = match storage_config_and_threshold {
         Some((storage_config, threshold)) => {
@@ -452,8 +453,14 @@ fn create_wireproto_logging(
     };
 
     blobstore_fut
-        .map(move |blobstore_and_threshold| {
-            WireprotoLogging::new(fb, reponame, scribe_category, blobstore_and_threshold)
+        .and_then(move |blobstore_and_threshold| {
+            WireprotoLogging::new(
+                fb,
+                reponame,
+                scribe_category,
+                blobstore_and_threshold,
+                local_path.as_ref().map(|p| p.as_ref()),
+            )
         })
         .left_future()
 }
