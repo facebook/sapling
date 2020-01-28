@@ -7,17 +7,15 @@
 
 #![allow(non_camel_case_types)]
 
-use std::cell::RefCell;
+use std::{cell::RefCell, convert::TryInto};
 
-use cpython::exc::UnicodeDecodeError;
 use cpython::*;
 
 use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
-use cpython_ext::Bytes;
-use encoding::{local_bytes_to_path, path_to_local_bytes};
+use cpython_ext::{Bytes, PyPath};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
@@ -41,13 +39,12 @@ py_class!(pub class config |py| {
 
     def readpath(
         &self,
-        path: &PyBytes,
+        path: PyPath,
         source: String,
         sections: Option<Vec<String>>,
         remap: Option<Vec<(String, String)>>,
         readonly_items: Option<Vec<(String, String)>>
     ) -> PyResult<Vec<Bytes>> {
-        let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
         let mut cfg = self.cfg(py).borrow_mut();
 
         let mut opts = Options::new().source(source).process_hgplain();
@@ -81,7 +78,7 @@ py_class!(pub class config |py| {
 
     def sources(
         &self, section: String, name: String
-    ) -> PyResult<Vec<(Option<Bytes>, Option<(PyBytes, usize, usize, usize)>, Bytes)>> {
+    ) -> PyResult<Vec<(Option<Bytes>, Option<(PyPath, usize, usize, usize)>, Bytes)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
@@ -94,12 +91,11 @@ py_class!(pub class config |py| {
                 let file = source.file_content().unwrap();
                 let line = 1 + file.slice(0, range.start).iter().filter(|ch| **ch == b'\n').count();
 
-                let bytes = path_to_local_bytes(&path).unwrap();
-                let pypath = if bytes.is_empty() {
-                    PyBytes::new(py, b"<builtin>")
+                let pypath = if path.as_os_str().is_empty() {
+                    PyPath::from(String::from("<builtin>"))
                 } else {
-                    let path = util::path::normalize_for_display_bytes(&bytes);
-                    PyBytes::new(py, path)
+                    let path = util::path::strip_unc_prefix(&path);
+                    path.try_into().unwrap()
                 };
                 (pypath, range.start, range.end, line)
             });
@@ -154,15 +150,6 @@ fn parselist(_py: Python, value: String) -> PyResult<Vec<Bytes>> {
         .iter()
         .map(|v| v.to_vec().into())
         .collect())
-}
-
-fn encoding_error(py: Python, input: &PyBytes) -> PyErr {
-    use std::ffi::CStr;
-    let utf8 = CStr::from_bytes_with_nul(b"utf8\0").unwrap();
-    let reason = CStr::from_bytes_with_nul(b"invalid encoding\0").unwrap();
-    let input = input.data(py);
-    let err = UnicodeDecodeError::new(py, utf8, input, 0..input.len(), reason).unwrap();
-    PyErr::from_instance(py, err)
 }
 
 fn errors_to_bytes_vec(errors: Vec<configparser::error::Error>) -> Vec<Bytes> {

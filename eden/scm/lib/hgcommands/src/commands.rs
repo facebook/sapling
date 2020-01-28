@@ -139,7 +139,7 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
 
     io.write(format!(
         "{}\n",
-        util::path::normalize_for_display(&path.to_string_lossy())
+        util::path::strip_unc_prefix(&path).display()
     ))?;
     Ok(0)
 }

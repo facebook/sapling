@@ -18,24 +18,9 @@ use anyhow::Result;
 #[cfg(not(unix))]
 use tempfile::Builder;
 
-/// Normalize a canonicalized Path for display.
-///
-/// This removes the UNC prefix `\\?\` on Windows.
-pub fn normalize_for_display(path: &str) -> &str {
-    if cfg!(windows) && path.starts_with(r"\\?\") {
-        &path[4..]
-    } else {
-        path
-    }
-}
-
-/// Similar to [`normalize_for_display`]. But work on bytes.
-pub fn normalize_for_display_bytes(path: &[u8]) -> &[u8] {
-    if cfg!(windows) && path.starts_with(br"\\?\") {
-        &path[4..]
-    } else {
-        path
-    }
+/// Removes the UNC prefix `\\?\` on Windows. Does nothing on unices.
+pub fn strip_unc_prefix<'a>(path: &'a Path) -> &'a Path {
+    path.strip_prefix(r"\\?\").unwrap_or(path)
 }
 
 /// Return the absolute and normalized path without accessing the filesystem.
