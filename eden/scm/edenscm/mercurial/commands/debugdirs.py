@@ -12,7 +12,7 @@ from .cmdtable import command
 
 
 @command(
-    b"debugdirs",
+    "debugdirs",
     [
         ("r", "rev", "", _("search the repository as it is in REV"), _("REV")),
         ("0", "print0", None, _("end filenames with NUL, for use with xargs")),

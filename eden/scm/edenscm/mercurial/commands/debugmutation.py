@@ -13,7 +13,7 @@ from .cmdtable import command
 
 
 @command(
-    b"debugmutation",
+    "debugmutation",
     [("s", "successors", False, _("show successors instead of predecessors"))],
     _("[REV]"),
 )
@@ -110,7 +110,7 @@ def debugmutation(ui, repo, *revs, **opts):
     return 0
 
 
-@command(b"debugmutationfromobsmarkers", [])
+@command("debugmutationfromobsmarkers", [])
 def debugmutationfromobsmarkers(ui, repo, **opts):
     """convert obsolescence markers to mutation records"""
     entries, commits, written = mutation.convertfromobsmarkers(repo)
