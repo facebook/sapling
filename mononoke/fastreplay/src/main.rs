@@ -11,7 +11,7 @@
 mod dispatcher;
 mod protocol;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use blobstore_factory::make_blobstore_no_sql;
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
@@ -70,7 +70,9 @@ async fn dispatch(
         .get(&reponame)
         .ok_or_else(|| Error::msg(format!("Repository does not exist: {}", reponame)))?;
 
-    let req = protocol::parse_request(&req, &dispatcher).await?;
+    let req = protocol::parse_request(&req, &dispatcher)
+        .await
+        .context("While parsing request")?;
 
     let stream = match req {
         Request::Gettreepack(args) => dispatcher.client().gettreepack(args.0).compat(),

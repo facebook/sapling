@@ -40,15 +40,24 @@ Delete the ephemeral blobstore data. Check that replay now fails.
   * Creating 1 repositories (glob)
   * Repositories are ready! (glob)
   * Dispatch failed: Error { (glob)
-      context: "While loading remote_args",
-      source: "Key not found: wireproto_replay.*", (glob)
+      context: "While parsing request",
+      source: Error {
+          context: "While loading remote_args",
+          source: "Key not found: wireproto_replay.*", (glob)
+      },
   }
   * Dispatch failed: Error { (glob)
-      context: "While loading remote_args",
-      source: "Key not found: wireproto_replay.*", (glob)
+      context: "While parsing request",
+      source: Error {
+          context: "While loading remote_args",
+          source: "Key not found: wireproto_replay.*", (glob)
+      },
   }
   * Dispatch failed: Error { (glob)
-      context: "While loading remote_args",
-      source: "Key not found: wireproto_replay.*", (glob)
+      context: "While parsing request",
+      source: Error {
+          context: "While loading remote_args",
+          source: "Key not found: wireproto_replay.*", (glob)
+      },
   }
   * Processed all input... (glob)

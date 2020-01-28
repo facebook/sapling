@@ -29,10 +29,12 @@ pub enum Request {
 
 fn parse_command_and_args(command: &str, args: &str) -> Result<Request, Error> {
     let request = match command {
-        "gettreepack" => Request::Gettreepack(args.parse()?),
-        "getbundle" => Request::Getbundle(args.parse()?),
-        "getpackv1" => Request::GetpackV1(args.parse()?),
-        "getpackv2" => Request::GetpackV2(args.parse()?),
+        "gettreepack" => {
+            Request::Gettreepack(args.parse().context("While parsing gettreepack args")?)
+        }
+        "getbundle" => Request::Getbundle(args.parse().context("While parsing Getbundle args")?),
+        "getpackv1" => Request::GetpackV1(args.parse().context("While parsing Getpackv1 args")?),
+        "getpackv2" => Request::GetpackV2(args.parse().context("While parsing Getpackv2 args")?),
         cmd @ _ => {
             return Err(Error::msg(format!("Command not supported: {}", cmd)));
         }
