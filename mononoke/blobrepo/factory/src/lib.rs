@@ -433,6 +433,7 @@ fn new_production(
     let filenodes_pool = try_boxfuture!(get_volatile_pool("filenodes"));
     let changesets_cache_pool = try_boxfuture!(get_volatile_pool("changesets"));
     let bonsai_hg_mapping_cache_pool = try_boxfuture!(get_volatile_pool("bonsai_hg_mapping"));
+    let phases_cache_pool = try_boxfuture!(get_volatile_pool("phases"));
 
     let derive_data_lease = try_boxfuture!(MemcacheOps::new(fb, "derived-data-lease", ""));
 
@@ -496,7 +497,12 @@ fn new_production(
                     bonsai_hg_mapping_cache_pool,
                 );
 
-                let phases_factory = SqlPhasesFactory::new_with_caching(fb, phases, repoid.clone());
+                let phases_factory = SqlPhasesFactory::new_with_caching(
+                    fb,
+                    phases,
+                    repoid.clone(),
+                    phases_cache_pool,
+                );
                 let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
                 BlobRepo::new(

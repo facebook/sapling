@@ -76,6 +76,8 @@ const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 
+const PHASES_CACHE_SIZE: &str = "phases-cache-size";
+
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
     (
@@ -98,6 +100,7 @@ const CACHE_ARGS: &[(&str, &str)] = &[
         "content-sha1-cache-size",
         "override size of the content SHA1 cache",
     ),
+    (PHASES_CACHE_SIZE, "override size of the phases cache"),
 ];
 
 pub struct MononokeApp {
@@ -738,6 +741,9 @@ pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching 
         }
         if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
             settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
+        }
+        if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
+            settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
         }
 
         init_cachelib_from_settings(fb, settings).unwrap();

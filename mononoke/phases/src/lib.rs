@@ -13,6 +13,7 @@ pub use errors::ErrorKind;
 mod factory;
 pub use factory::SqlPhasesFactory;
 
+use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use ascii::AsciiString;
 use changeset_fetcher::ChangesetFetcher;
@@ -40,7 +41,7 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
     Draft,
     Public,

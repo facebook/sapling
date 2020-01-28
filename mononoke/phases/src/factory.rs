@@ -8,6 +8,7 @@
 
 use crate::caching::{Caches, CachingPhases};
 use crate::{HeadsFetcher, Phases, SqlPhases, SqlPhasesStore};
+use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ChangesetFetcher;
 use fbinit::FacebookInit;
 use memcache::{KeyGen, MemcacheClient};
@@ -41,11 +42,13 @@ impl SqlPhasesFactory {
         fb: FacebookInit,
         phases_store: Arc<SqlPhasesStore>,
         repo_id: RepositoryId,
+        cache_pool: VolatileLruCachePool,
     ) -> Self {
         let key_prefix = "scm.mononoke.phases";
         let caches = Caches {
             memcache: MemcacheClient::new(fb),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
+            cache_pool: cache_pool.into(),
         };
 
         Self {

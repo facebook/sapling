@@ -63,7 +63,7 @@ pub enum CacheDisposition {
 
 pub struct GetOrFillMultipleFromCacheLayers<Key, T> {
     pub repo_id: RepositoryId,
-    pub get_cache_key: Arc<dyn Fn(RepositoryId, &Key) -> String>,
+    pub get_cache_key: Arc<dyn Fn(RepositoryId, &Key) -> String + Send + Sync + 'static>,
     pub cachelib: CachelibHandler<T>,
     pub keygen: KeyGen,
     pub memcache: MemcacheHandler,
@@ -84,13 +84,21 @@ where
         let keys: Vec<(Key, CachelibKey)> = keys
             .into_iter()
             .map(|key| {
-                let cache_key = CachelibKey((self.get_cache_key)(self.repo_id, &key));
+                let cache_key = self.get_cachelib_key(&key);
                 (key, cache_key)
             })
             .collect();
 
         let (fetched_from_cachelib, left_to_fetch) =
             try_boxfuture!(self.cachelib.get_multiple_from_cachelib(keys));
+
+        let left_to_fetch: Vec<_> = left_to_fetch
+            .into_iter()
+            .map(move |(key, cache_key)| {
+                let memcache_key = self.get_memcache_key(&cache_key);
+                (key, cache_key, memcache_key)
+            })
+            .collect();
 
         cloned!(
             self.cachelib,
@@ -99,9 +107,9 @@ where
             self.serialize,
             self.determinator,
         );
+
         get_multiple_from_memcache(
             left_to_fetch,
-            &self.keygen,
             &self.memcache,
             self.deserialize.clone(),
             self.report_mc_result.clone(),
@@ -157,11 +165,40 @@ where
         })
         .boxify()
     }
+
+    pub fn fill_caches(&self, key_values: HashMap<Key, T>) {
+        let keys: HashMap<Key, (T, CachelibKey, MemcacheKey)> = key_values
+            .into_iter()
+            .map(|(key, value)| {
+                let cachelib_key = self.get_cachelib_key(&key);
+                let memcache_key = self.get_memcache_key(&cachelib_key);
+                (key, (value, cachelib_key, memcache_key))
+            })
+            .collect();
+
+        self.cachelib.fill_multiple_cachelib(
+            self.determinator,
+            fill_multiple_memcache(
+                &self.determinator,
+                keys,
+                self.memcache.clone(),
+                self.serialize.clone(),
+            ),
+        );
+    }
+
+    fn get_cachelib_key(&self, key: &Key) -> CachelibKey {
+        let cache_key = (self.get_cache_key)(self.repo_id, key);
+        CachelibKey(cache_key)
+    }
+
+    fn get_memcache_key(&self, key: &CachelibKey) -> MemcacheKey {
+        MemcacheKey(self.keygen.key(&key.0))
+    }
 }
 
 fn get_multiple_from_memcache<Key, T>(
-    keys: Vec<(Key, CachelibKey)>,
-    keygen: &KeyGen,
+    keys: Vec<(Key, CachelibKey, MemcacheKey)>,
     memcache: &MemcacheHandler,
     deserialize: Arc<dyn Fn(IOBuf) -> Result<T, ()> + Send + Sync + 'static>,
     report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
@@ -177,8 +214,7 @@ where
 {
     let mc_fetch_futs: Vec<_> = keys
         .into_iter()
-        .map(move |(key, cache_key)| {
-            let memcache_key = MemcacheKey(keygen.key(&cache_key.0));
+        .map(move |(key, cache_key, memcache_key)| {
             memcache
                 .get(memcache_key.0.clone())
                 .map_err(|()| McErrorKind::MemcacheInternal)

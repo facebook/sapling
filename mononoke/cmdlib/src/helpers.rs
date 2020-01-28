@@ -93,6 +93,7 @@ pub struct CachelibSettings {
     pub with_content_sha1_cache: bool,
     pub content_sha1_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
+    pub phases_cache_size: Option<usize>,
 }
 
 impl Default for CachelibSettings {
@@ -109,6 +110,7 @@ impl Default for CachelibSettings {
             with_content_sha1_cache: false,
             content_sha1_cache_size: None,
             blob_cache_size: None,
+            phases_cache_size: None,
         }
     }
 }
@@ -212,6 +214,11 @@ pub fn init_cachelib_from_settings(fb: FacebookInit, settings: CachelibSettings)
                 .unwrap_or(available_space / 20),
         )?;
     }
+
+    cachelib::get_or_create_volatile_pool(
+        "phases",
+        settings.phases_cache_size.unwrap_or(available_space / 20),
+    )?;
 
     cachelib::get_or_create_volatile_pool(
         "blobstore-blobs",
