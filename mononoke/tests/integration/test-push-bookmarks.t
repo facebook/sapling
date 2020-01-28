@@ -89,9 +89,9 @@ Try non fastforward moves (backwards and across branches)
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move"
+  remote:     "Non fastforward bookmark move from * to *" (glob)
   remote:   Caused by:
-  remote:     Non fastforward bookmark move
+  remote:     Non fastforward bookmark move from * to * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
@@ -102,9 +102,9 @@ Try non fastforward moves (backwards and across branches)
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move"
+  remote:     "Non fastforward bookmark move from * to *" (glob)
   remote:   Caused by:
-  remote:     Non fastforward bookmark move
+  remote:     Non fastforward bookmark move from * to * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
@@ -130,9 +130,9 @@ Try non fastfoward moves on regex bookmark
   remote:   Error:
   remote:     While doing a push
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move"
+  remote:     "Non fastforward bookmark move from * to *" (glob)
   remote:   Caused by:
-  remote:     Non fastforward bookmark move
+  remote:     Non fastforward bookmark move from * to * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

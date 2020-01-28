@@ -676,9 +676,13 @@ fn check_is_ancestor_opt(
             } else {
                 lca_hint
                     .is_ancestor(ctx, repo.get_changeset_fetcher(), old, new)
-                    .and_then(|is_ancestor| match is_ancestor {
+                    .and_then(move |is_ancestor| match is_ancestor {
                         true => Ok(()),
-                        false => Err(format_err!("Non fastforward bookmark move")),
+                        false => Err(format_err!(
+                            "Non fastforward bookmark move from {} to {}",
+                            old,
+                            new
+                        )),
                     })
                     .right_future()
             }

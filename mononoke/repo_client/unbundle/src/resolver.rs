@@ -798,6 +798,9 @@ impl Bundle2Resolver {
                     .upload_blob(ctx.clone(), blob)
                     .map(move |id| {
                         debug!(ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
+                        ctx.scuba()
+                            .clone()
+                            .log_with_msg("Saved a raw bundle2 content", Some(format!("{}", id)));
                         Some(id)
                     })
                     .boxify()

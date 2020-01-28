@@ -173,11 +173,11 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:   Error:
   remote:     While doing an infinitepush
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move (try --force?)"
+  remote:     "Non fastforward bookmark move from * to * (try --force?)" (glob)
   remote:   Caused by:
   remote:     While verifying Infinite Push bookmark push
   remote:   Caused by:
-  remote:     Non fastforward bookmark move (try --force?)
+  remote:     Non fastforward bookmark move from * to * (try --force?) (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123" --force
