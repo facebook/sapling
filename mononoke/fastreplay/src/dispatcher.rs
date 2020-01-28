@@ -6,8 +6,11 @@
  * directory of this source tree.
  */
 
+use anyhow::Error;
+use blobstore::Blobstore;
 use context::{LoggingContainer, SessionContainer};
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use repo_client::{MononokeRepo, RepoClient, WireprotoLogging};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
@@ -19,6 +22,7 @@ pub struct FastReplayDispatcher {
     logger: Logger,
     repo: MononokeRepo,
     wireproto_logging: Arc<WireprotoLogging>,
+    remote_args_blobstore: Option<Arc<dyn Blobstore>>,
 }
 
 impl FastReplayDispatcher {
@@ -27,6 +31,7 @@ impl FastReplayDispatcher {
         logger: Logger,
         scuba: ScubaSampleBuilder,
         repo: MononokeRepo,
+        remote_args_blobstore: Option<Arc<dyn Blobstore>>,
     ) -> Self {
         let noop_wireproto = WireprotoLogging::new(fb, repo.reponame().clone(), None, None);
 
@@ -36,6 +41,7 @@ impl FastReplayDispatcher {
             scuba,
             repo,
             wireproto_logging: Arc::new(noop_wireproto),
+            remote_args_blobstore,
         }
     }
 
@@ -55,5 +61,19 @@ impl FastReplayDispatcher {
             None, // Don't push redirect (we don't push)
             None, // Don't push redirect (we don't push)
         )
+    }
+
+    pub async fn load_remote_args(&self, key: String) -> Result<String, Error> {
+        let session = SessionContainer::new_with_defaults(self.fb);
+        let ctx = session.new_context(self.logger.clone(), self.scuba.clone());
+
+        let blobstore = self
+            .remote_args_blobstore
+            .as_ref()
+            .ok_or_else(|| Error::msg("Cannot load remote_args without a remote_args_blobstore"))?;
+
+        let e = Error::msg(format!("Key not found: {}", &key));
+        let bytes = blobstore.get(ctx, key).compat().await?.ok_or(e)?;
+        Ok(String::from_utf8(bytes.into_bytes().to_vec())?)
     }
 }

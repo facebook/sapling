@@ -12,6 +12,7 @@ mod dispatcher;
 mod protocol;
 
 use anyhow::Error;
+use blobstore_factory::make_blobstore_no_sql;
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::args;
@@ -43,32 +44,35 @@ use tokio::{
 };
 
 use dispatcher::FastReplayDispatcher;
-use protocol::{RepoRequest, Request};
+use protocol::{Request, RequestLine};
 
 const ARG_NO_SKIPLIST: &str = "no-skiplist";
 const ARG_NO_CACHE_WARMUP: &str = "no-cache-warmup";
 const ARG_ALIASES: &str = "alias";
 const ARG_MAX_CONCURRENCY: &str = "max-concurrency";
 
-fn dispatch(
+async fn dispatch(
     scuba: &ScubaSampleBuilder,
     dispatchers: &HashMap<String, FastReplayDispatcher>,
     aliases: &HashMap<String, String>,
     req: &str,
     count: &Arc<AtomicU64>,
 ) -> Result<JoinHandle<()>, Error> {
-    let req: RepoRequest = req.parse()?;
+    let req = serde_json::from_str::<RequestLine>(&req)?;
 
     let reponame = aliases
-        .get(&req.reponame)
-        .map(|r| r.to_string())
-        .unwrap_or(req.reponame);
+        .get(req.normal.reponame)
+        .map(|a| a.as_ref())
+        .unwrap_or(req.normal.reponame)
+        .to_string();
 
     let dispatcher = dispatchers
         .get(&reponame)
         .ok_or_else(|| Error::msg(format!("Repository does not exist: {}", reponame)))?;
 
-    let stream = match req.request {
+    let req = protocol::parse_request(&req, &dispatcher).await?;
+
+    let stream = match req {
         Request::Gettreepack(args) => dispatcher.client().gettreepack(args.0).compat(),
         Request::Getbundle(args) => dispatcher.client().getbundle(args.0).compat(),
         Request::GetpackV1(args) => dispatcher
@@ -184,6 +188,17 @@ async fn bootstrap_repositories<'a>(
         async move {
             let warmup_params = config.cache_warmup.clone();
 
+            // If we have remote args support for this repo, let's open it now. Note that
+            // this requires using prod configs for Fastreplay since those are the ones with
+            // wireproto logging config.
+            let remote_args_blobstore = config
+                .wireproto_logging
+                .storage_config_and_threshold
+                .as_ref()
+                .map(|(storage, _)| {
+                    make_blobstore_no_sql(fb, &storage.blobstore, readonly_storage).compat()
+                });
+
             let repo = MononokeRepoBuilder::prepare(
                 bootstrap_ctx.clone(),
                 name.clone(),
@@ -212,7 +227,18 @@ async fn bootstrap_repositories<'a>(
                 Some(handle)
             };
 
-            let dispatcher = FastReplayDispatcher::new(fb, logger.clone(), scuba.clone(), repo);
+            let remote_args_blobstore = match remote_args_blobstore {
+                Some(fut) => Some(fut.await?),
+                None => None,
+            };
+
+            let dispatcher = FastReplayDispatcher::new(
+                fb,
+                logger.clone(),
+                scuba.clone(),
+                repo,
+                remote_args_blobstore,
+            );
 
             if let Some(warmup) = warmup {
                 info!(&logger, "Waiting for cache warmup to complete...");
@@ -283,7 +309,7 @@ async fn fast_replay_from_stdin<'a>(
         }
 
         match reader.next_line().await? {
-            Some(req) => match dispatch(&scuba, &repos, &opts.aliases, &req, &count) {
+            Some(req) => match dispatch(&scuba, &repos, &opts.aliases, &req, &count).await {
                 Ok(..) => {
                     continue;
                 }

@@ -12,13 +12,13 @@ mod gettreepack;
 mod request;
 mod util;
 
-use anyhow::Error;
-use std::str::FromStr;
+use crate::dispatcher::FastReplayDispatcher;
+use anyhow::{Context, Error};
 
 use getbundle::RequestGetbundleArgs;
 use getpack::RequestGetpackArgs;
 use gettreepack::RequestGettreepackArgs;
-use request::RequestLine;
+pub use request::RequestLine;
 
 pub enum Request {
     Gettreepack(RequestGettreepackArgs),
@@ -27,30 +27,35 @@ pub enum Request {
     Getbundle(RequestGetbundleArgs),
 }
 
-pub struct RepoRequest {
-    pub reponame: String,
-    pub request: Request,
+fn parse_command_and_args(command: &str, args: &str) -> Result<Request, Error> {
+    let request = match command {
+        "gettreepack" => Request::Gettreepack(args.parse()?),
+        "getbundle" => Request::Getbundle(args.parse()?),
+        "getpackv1" => Request::GetpackV1(args.parse()?),
+        "getpackv2" => Request::GetpackV2(args.parse()?),
+        cmd @ _ => {
+            return Err(Error::msg(format!("Command not supported: {}", cmd)));
+        }
+    };
+
+    Ok(request)
 }
 
-impl FromStr for RepoRequest {
-    type Err = Error;
-
-    fn from_str(req: &str) -> Result<Self, Self::Err> {
-        let req: RequestLine = serde_json::from_str(&req)?;
-
-        let request = match req.normal.command.as_ref() {
-            "gettreepack" => Request::Gettreepack(req.normal.args.parse()?),
-            "getbundle" => Request::Getbundle(req.normal.args.parse()?),
-            "getpackv1" => Request::GetpackV1(req.normal.args.parse()?),
-            "getpackv2" => Request::GetpackV2(req.normal.args.parse()?),
-            cmd @ _ => {
-                return Err(Error::msg(format!("Command not supported: {}", cmd)));
-            }
-        };
-
-        Ok(RepoRequest {
-            reponame: req.normal.reponame,
-            request,
-        })
+pub async fn parse_request(
+    req: &RequestLine<'_>,
+    dispatcher: &FastReplayDispatcher,
+) -> Result<Request, Error> {
+    if let Some(inline_args) = &req.normal.args {
+        return parse_command_and_args(&req.normal.command, inline_args);
     }
+
+    if let Some(remote_args) = req.normal.remote_args {
+        let remote_args = dispatcher
+            .load_remote_args(remote_args.to_string())
+            .await
+            .context("While loading remote_args")?;
+        return parse_command_and_args(&req.normal.command, &remote_args);
+    }
+
+    Err(Error::msg("No args available"))
 }

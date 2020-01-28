@@ -16,19 +16,20 @@ pub struct RequestLineInts {
 }
 
 #[derive(Deserialize)]
-pub struct RequestLineNormals {
-    pub command: String,
-    pub args: String,
-    pub reponame: String,
-    pub user: Option<String>,
-    pub client_fullcommand: Option<String>,
-    pub client_hostname: Option<String>,
-    pub host: Option<String>,
+pub struct RequestLineNormals<'a> {
+    pub command: &'a str,
+    pub args: Option<String>,
+    pub remote_args: Option<&'a str>,
+    pub reponame: &'a str,
+    pub user: Option<&'a str>,
+    pub client_fullcommand: Option<&'a str>,
+    pub client_hostname: Option<&'a str>,
+    pub host: Option<&'a str>,
 }
 
-#[allow(unused)]
 #[derive(Deserialize)]
-pub struct RequestLine {
+pub struct RequestLine<'a> {
     pub int: RequestLineInts,
-    pub normal: RequestLineNormals,
+    #[serde(borrow)]
+    pub normal: RequestLineNormals<'a>,
 }
