@@ -92,7 +92,7 @@ impl HgPython {
                 None => fout.clone_ref(py),
                 Some(ref error) => write_to_py_object(py, error),
             };
-            let args: Vec<Bytes> = args.into_iter().map(Bytes::from).collect();
+            let args: Vec<Str> = args.into_iter().map(Str::from).collect();
             (args, fin, fout, ferr).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
