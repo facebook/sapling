@@ -32,7 +32,6 @@ use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
 use metaconfig_types::{CommitSyncConfig, MetadataDBConfig, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use ready_state::ReadyStateBuilder;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirector, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sql_ext::MysqlOptions;
@@ -200,7 +199,6 @@ pub fn repo_handlers(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     root_log: &Logger,
-    ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
     let repo_futs: Vec<
@@ -225,8 +223,6 @@ pub fn repo_handlers(
             let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-            let ready_handle = ready.create_handle(reponame.clone());
 
             let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or(HashSet::new());
 
@@ -372,7 +368,7 @@ pub fn repo_handlers(
                 ))
             };
 
-            ready_handle.wait_for(fut.boxed().compat()).boxify()
+            fut.boxed().compat().boxify()
         })
         .collect();
 

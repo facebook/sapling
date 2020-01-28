@@ -41,8 +41,8 @@ use tokio_openssl::SslAcceptorExt;
 use x509::identity;
 
 use limits::types::MononokeThrottleLimits;
+use monitoring::MononokeService;
 use pushredirect_enable::types::MononokePushRedirectEnable;
-
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 use crate::errors::ErrorKind;
@@ -67,6 +67,7 @@ pub fn connection_acceptor(
     fb: FacebookInit,
     common_config: CommonConfig,
     sockname: String,
+    service: MononokeService,
     root_log: Logger,
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
@@ -105,6 +106,9 @@ pub fn connection_acceptor(
         .map_err(|err| format_err!("error while creating security checker: {}", err)));
 
     let security_checker = Arc::new(security_checker);
+
+    // Now that we are listening and ready to accept connections, report that we are alive.
+    service.set_ready();
 
     TakeUntilNotSet::new(listener.boxify(), terminate_process)
         .for_each(move |sock| {

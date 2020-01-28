@@ -7,7 +7,14 @@
  */
 
 //! Scaffolding for service-level integration and monitoring.
+//!
 
+#![deny(warnings)]
+#![feature(never_type)]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Error, Result};
@@ -16,16 +23,26 @@ use fbinit::FacebookInit;
 use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
 
-use ready_state::ReadyState;
+#[derive(Clone)]
+pub struct MononokeService {
+    ready: Arc<AtomicBool>,
+}
 
-struct MononokeService {
-    ready: ReadyState,
+impl MononokeService {
+    pub fn new() -> Self {
+        Self {
+            ready: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    pub fn set_ready(&self) {
+        self.ready.store(true, Ordering::Relaxed);
+    }
 }
 
 impl Fb303Service for MononokeService {
     fn getStatus(&self) -> FbStatus {
-        // TODO: return Starting while precaching is active.
-        if self.ready.is_ready() {
+        if self.ready.load(Ordering::Relaxed) {
             FbStatus::Alive
         } else {
             FbStatus::Starting
@@ -33,11 +50,11 @@ impl Fb303Service for MononokeService {
     }
 }
 
-pub(crate) fn start_thrift_service<'a>(
+pub fn start_thrift_service<'a>(
     fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
-    ready: ReadyState,
+    service: MononokeService,
 ) -> Option<Result<JoinHandle<!>>> {
     matches.value_of("thrift_port").map(|port| {
         let port = port.parse().expect("Failed to parse thrift_port as number");
@@ -51,7 +68,7 @@ pub(crate) fn start_thrift_service<'a>(
                     "mononoke_server",
                     port,
                     0, // Disables separate status http server
-                    Box::new(MononokeService { ready }),
+                    Box::new(service),
                 )
                 .expect("failure while running thrift service framework")
             })

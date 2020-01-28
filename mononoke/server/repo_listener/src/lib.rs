@@ -33,6 +33,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{atomic::AtomicBool, Arc};
 
 use metaconfig_types::{CommonConfig, RepoConfig};
+use monitoring::MononokeService;
 
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
@@ -47,41 +48,38 @@ pub fn create_repo_listeners(
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
+    service: MononokeService,
     terminate_process: Arc<AtomicBool>,
     config_store: Option<ConfigStore>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
-) -> (BoxFuture<(), Error>, ready_state::ReadyState) {
+) -> BoxFuture<(), Error> {
     let sockname = String::from(sockname);
     let root_log = root_log.clone();
-    let mut ready = ready_state::ReadyStateBuilder::new();
 
-    (
-        repo_handlers(
-            fb,
-            repos,
-            mysql_options,
-            caching,
-            disabled_hooks,
-            common_config.scuba_censored_table.clone(),
-            readonly_storage,
-            blobstore_options.clone(),
-            &root_log,
-            &mut ready,
-        )
-        .and_then(move |handlers| {
-            connection_acceptor(
-                fb,
-                common_config,
-                sockname,
-                root_log,
-                handlers,
-                tls_acceptor,
-                terminate_process,
-                config_store,
-            )
-        })
-        .boxify(),
-        ready.freeze(),
+    repo_handlers(
+        fb,
+        repos,
+        mysql_options,
+        caching,
+        disabled_hooks,
+        common_config.scuba_censored_table.clone(),
+        readonly_storage,
+        blobstore_options.clone(),
+        &root_log,
     )
+    .and_then(move |handlers| {
+        connection_acceptor(
+            fb,
+            common_config,
+            sockname,
+            service,
+            root_log,
+            handlers,
+            tls_acceptor,
+            terminate_process,
+            config_store,
+        )
+    })
+    .boxify()
 }

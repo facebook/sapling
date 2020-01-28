@@ -9,8 +9,6 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-mod monitoring;
-
 use anyhow::Result;
 use clap::{App, ArgMatches};
 use cmdlib::args;
@@ -21,6 +19,7 @@ use futures_preview::{
     future::{FutureExt, TryFutureExt},
 };
 use metaconfig_parser::RepoConfigs;
+use monitoring::MononokeService;
 use slog::{error, info};
 use std::path::PathBuf;
 use std::sync::{
@@ -128,9 +127,10 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     info!(root_log, "Creating repo listeners");
 
+    let service = MononokeService::new();
     let terminate = Arc::new(AtomicBool::new(false));
 
-    let (repo_listeners, ready) = repo_listener::create_repo_listeners(
+    let repo_listeners = repo_listener::create_repo_listeners(
         fb,
         config.common,
         config.repos.into_iter(),
@@ -142,6 +142,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             .value_of("listening-host-port")
             .expect("listening path must be specified"),
         acceptor.build(),
+        service.clone(),
         terminate.clone(),
         config_source,
         cmdlib::args::parse_readonly_storage(&matches),
@@ -151,7 +152,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     tracing_fb303::register(fb);
 
     // Thread with a thrift service is now detached
-    monitoring::start_thrift_service(fb, &root_log, &matches, ready);
+    monitoring::start_thrift_service(fb, &root_log, &matches, service);
 
     cmdlib::helpers::serve_forever(
         runtime,
