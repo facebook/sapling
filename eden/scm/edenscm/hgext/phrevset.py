@@ -41,15 +41,13 @@ namespacepredicate = registrar.namespacepredicate()
 
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
-    "D(?P<id>[0-9]+)",  # Differential ID, just numeric part
-    flags=re.LOCALE,
+    "D(?P<id>[0-9]+)"  # Differential ID, just numeric part
 )
 
 DESCRIPTION_REGEX = re.compile(
     "Commit r"  # Prefix
     "(?P<callsign>[A-Z]{1,})"  # Callsign
-    "(?P<id>[a-f0-9]+)",  # rev
-    flags=re.LOCALE,
+    "(?P<id>[a-f0-9]+)"  # rev
 )
 
 

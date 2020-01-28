@@ -30,8 +30,7 @@ from . import commitcloud
 
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
-    "D(?P<id>[0-9]+)",  # Differential ID, just numeric part
-    flags=re.LOCALE,
+    "D(?P<id>[0-9]+)"  # Differential ID, just numeric part
 )
 cmdtable = {}
 command = registrar.command(cmdtable)
