@@ -9,11 +9,10 @@
 
 use std::cell::RefCell;
 
-use cpython::exc::UnicodeDecodeError;
 use cpython::*;
 
 use ::bookmarkstore::BookmarkStore;
-use encoding::local_bytes_to_path;
+use cpython_ext::PyPath;
 use types::hgid::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -26,11 +25,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class bookmarkstore |py| {
     data bm_store: RefCell<BookmarkStore>;
 
-    def __new__(_cls, path: &PyBytes) -> PyResult<bookmarkstore> {
+    def __new__(_cls, path: PyPath) -> PyResult<bookmarkstore> {
         let bm_store = {
-            let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
-
-            BookmarkStore::new(&path)
+            BookmarkStore::new(path.as_ref())
                 .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?
         };
         bookmarkstore::create_instance(py, RefCell::new(bm_store))
@@ -88,13 +85,3 @@ py_class!(class bookmarkstore |py| {
         Ok(py.None())
     }
 });
-
-// Taken from mercurial/rust/config crate
-fn encoding_error(py: Python, input: &PyBytes) -> PyErr {
-    use std::ffi::CStr;
-    let utf8 = CStr::from_bytes_with_nul(b"utf8\0").unwrap();
-    let reason = CStr::from_bytes_with_nul(b"invalid encoding\0").unwrap();
-    let input = input.data(py);
-    let err = UnicodeDecodeError::new(py, utf8, input, 0..input.len(), reason).unwrap();
-    PyErr::from_instance(py, err)
-}
