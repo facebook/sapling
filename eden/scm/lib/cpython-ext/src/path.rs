@@ -10,9 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[cfg(feature = "python2")]
-use anyhow::format_err;
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use cpython::*;
 
 #[cfg(feature = "python2")]
