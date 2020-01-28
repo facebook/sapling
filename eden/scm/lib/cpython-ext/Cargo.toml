@@ -12,6 +12,7 @@ python3 = []
 anyhow = "1.0.20"
 encoding = { path = "../encoding" }
 lazy_static = "1"
+types = { path = "../types" }
 parking_lot = "0.9"
 serde = "1"
 

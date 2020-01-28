@@ -7,11 +7,13 @@
 
 use std::{
     convert::{TryFrom, TryInto},
+    fmt,
     path::{Path, PathBuf},
 };
 
 use anyhow::{format_err, Result};
 use cpython::*;
+use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 
 #[cfg(feature = "python2")]
 use encoding::{local_bytes_to_path, path_to_local_bytes};
@@ -25,6 +27,14 @@ pub struct PyPath(String);
 impl PyPath {
     pub fn to_path_buf(&self) -> PathBuf {
         Path::new(&self.0).to_path_buf()
+    }
+
+    pub fn to_repo_path_buf(self) -> Result<RepoPathBuf> {
+        Ok(RepoPathBuf::from_string(self.0)?)
+    }
+
+    pub fn to_repo_path<'a>(&'a self) -> Result<&'a RepoPath> {
+        Ok(RepoPath::from_str(&self.0)?)
     }
 }
 
@@ -95,5 +105,29 @@ impl From<String> for PyPath {
 impl AsRef<Path> for PyPath {
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
+    }
+}
+
+impl<'a> From<&'a RepoPath> for PyPath {
+    fn from(repo_path: &'a RepoPath) -> PyPath {
+        PyPath(repo_path.as_str().to_owned())
+    }
+}
+
+impl From<RepoPathBuf> for PyPath {
+    fn from(repo_path_buf: RepoPathBuf) -> PyPath {
+        PyPath(repo_path_buf.into_string())
+    }
+}
+
+impl From<PathComponentBuf> for PyPath {
+    fn from(path_component_buf: PathComponentBuf) -> PyPath {
+        PyPath(path_component_buf.into_string())
+    }
+}
+
+impl fmt::Display for PyPath {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&*self.0, formatter)
     }
 }
