@@ -1559,11 +1559,11 @@ such str.lower().
 
   $ $PYTHON <<EOF
   > def escape(s):
-  >     return ''.join('\u%x' % ord(uc) for uc in s.decode('cp932'))
+  >     return ''.join('\\\u%x' % ord(uc) for uc in s.decode('cp932'))
   > # translation of "record" in ja_JP.cp932
-  > upper = "\x8bL\x98^"
+  > upper = b"\x8bL\x98^"
   > # str.lower()-ed section name should be treated as different one
-  > lower = "\x8bl\x98^"
+  > lower = b"\x8bl\x98^"
   > with open('ambiguous.py', 'w') as fp:
   >     fp.write("""# ambiguous section names in ja_JP.cp932
   > u'''summary of extension
