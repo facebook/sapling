@@ -1683,8 +1683,8 @@ def perflrucache(
             util.lrucachedict(size)
 
     values = []
-    for i in xrange(size):
-        values.append(random.randint(0, sys.maxint))
+    for i in range(size):
+        values.append(random.randint(0, sys.maxsize))
 
     # Get mode fills the cache and tests raw lookup performance with no
     # eviction.
@@ -1702,8 +1702,8 @@ def perflrucache(
 
     # Set mode tests insertion speed with cache eviction.
     setseq = []
-    for i in xrange(sets):
-        setseq.append(random.randint(0, sys.maxint))
+    for i in range(sets):
+        setseq.append(random.randint(0, sys.maxsize))
 
     def dosets():
         d = util.lrucachedict(size)

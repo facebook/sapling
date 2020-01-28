@@ -26,7 +26,7 @@ def main():
                 if buf:
                     try:
                         obj = ast.literal_eval(buf)
-                        buf = pprint.pformat(obj, width=sys.maxint)
+                        buf = pprint.pformat(obj, width=sys.maxsize)
                     except Exception:
                         pass
                     sys.stdout.write(buf)
