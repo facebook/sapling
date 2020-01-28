@@ -32,3 +32,15 @@ impl From<Bytes> for Str {
         Str(b)
     }
 }
+
+impl From<String> for Str {
+    fn from(s: String) -> Str {
+        Str(Bytes::from(s))
+    }
+}
+
+impl From<Vec<u8>> for Str {
+    fn from(s: Vec<u8>) -> Str {
+        Str(Bytes::from(s))
+    }
+}
