@@ -28,9 +28,7 @@ import re
 import shutil
 import sys
 import typing
-
-# pyre-fixme[21]: Could not find `UserDict`.
-import UserDict
+from collections import Mapping
 
 from edenscm.mercurial import (
     bookmarks,
@@ -614,8 +612,7 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 
 
-# pyre-fixme[11]: Annotation `DictMixin` is not defined as a type.
-class lazyremotenamedict(UserDict.DictMixin):
+class lazyremotenamedict(Mapping):
     """Read-only dict-like Class to lazily resolve remotename entries
 
     We are doing that because remotenames startup was slow.
@@ -686,6 +683,7 @@ class lazyremotenamedict(UserDict.DictMixin):
             return None
 
     def keys(self, resolvenodes=None):
+        # type: (typing.Optional[bool]) -> typing.AbstractSet[str]
         """Get a list of bookmark names
 
         `resolvenodes` allows callee to ask whether nodes to which these keys
@@ -716,6 +714,13 @@ class lazyremotenamedict(UserDict.DictMixin):
             if resolvenodes:
                 self._fetchandcache(k)
             yield (k, [bin(vtup[0])])
+
+    def __iter__(self):
+        for k, v in self.iteritems():
+            yield v
+
+    def __len__(self):
+        return len(list(self.keys(resolvenodes=False)))
 
 
 class remotenames(dict):
