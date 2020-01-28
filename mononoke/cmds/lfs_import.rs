@@ -12,9 +12,12 @@ use clap::Arg;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::TryFutureExt,
+    stream::{self, TryStreamExt},
+};
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 
@@ -78,23 +81,23 @@ fn main(fb: FacebookInit) -> Result<()> {
         .map_or(Ok(DEFAULT_CONCURRENCY), |j| j.parse())
         .map_err(Error::from)?;
 
-    let entries: Result<Vec<_>> = matches
+    let entries: Vec<_> = matches
         .values_of(ARG_POINTERS)
         .unwrap()
         .into_iter()
         .map(|e| File::new(Bytes::from(e), None, None).get_lfs_content())
         .collect();
 
-    let import = (blobrepo, entries)
-        .into_future()
-        .and_then(move |(blobrepo, entries)| {
-            stream::iter_ok(entries)
-                .map({
-                    move |lfs| lfs_upload(ctx.clone(), blobrepo.clone(), lfs_helper.clone(), lfs)
-                })
-                .buffered(concurrency)
-                .for_each(|_| Ok(()))
-        });
+    let import = async move {
+        let blobrepo = blobrepo.compat().await?;
+        stream::iter(entries)
+            .try_for_each_concurrent(concurrency, |lfs| {
+                lfs_upload(ctx.clone(), blobrepo.clone(), lfs_helper.clone(), lfs)
+                    .compat()
+                    .map_ok(|_| ())
+            })
+            .await
+    };
 
-    block_execute(import.compat(), fb, NAME, &logger, &matches)
+    block_execute(import, fb, NAME, &logger, &matches)
 }
