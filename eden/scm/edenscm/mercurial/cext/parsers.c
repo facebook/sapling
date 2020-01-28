@@ -14,6 +14,7 @@
  the GNU General Public License, incorporated herein by reference.
 */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <ctype.h>
 #include <stddef.h>
@@ -51,7 +52,7 @@ static PyObject* dict_new_presized(PyObject* self, PyObject* args) {
 static PyObject* parse_manifest(PyObject* self, PyObject* args) {
   PyObject *mfdict, *fdict;
   char *str, *start, *end;
-  int len;
+  Py_ssize_t len;
 
   if (!PyArg_ParseTuple(
           args,
@@ -242,8 +243,8 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
   PyObject *fname = NULL, *cname = NULL, *entry = NULL;
   char state, *cur, *str, *cpos;
   int mode, size, mtime;
-  unsigned int flen, len, pos = 40;
-  int readlen;
+  unsigned int flen, pos = 40;
+  Py_ssize_t readlen, len;
 
   if (!PyArg_ParseTuple(
           args,
@@ -264,7 +265,8 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
     goto quit;
   }
 
-  parents = Py_BuildValue("s#s#", str, 20, str + 20, 20);
+  parents =
+      Py_BuildValue("s#s#", str, (Py_ssize_t)20, str + 20, (Py_ssize_t)20);
   if (!parents)
     goto quit;
 
@@ -654,7 +656,7 @@ bail:
 
 static PyObject* fm1readmarkers(PyObject* self, PyObject* args) {
   const char *data, *dataend;
-  int datalen;
+  Py_ssize_t datalen;
   Py_ssize_t offset, stop;
   PyObject* markers = NULL;
 

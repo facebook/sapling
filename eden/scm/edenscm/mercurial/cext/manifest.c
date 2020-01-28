@@ -13,9 +13,7 @@
  * This software may be used and distributed according to the terms of
  * the GNU General Public License, incorporated herein by reference.
  */
-#ifdef IS_PY3K
 #define PY_SSIZE_T_CLEAN
-#endif
 #include <Python.h>
 
 #include <assert.h>

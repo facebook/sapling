@@ -1189,15 +1189,8 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   if (!PyArg_ParseTupleAndKeywords(
           args,
           kwargs,
-#ifdef IS_PY3K
-          "es#|OO:listdir",
-#else
           "s#|OO:listdir",
-#endif
           kwlist,
-#ifdef IS_PY3K
-          "utf-8",
-#endif
           &path,
           &plen,
           &statobj,

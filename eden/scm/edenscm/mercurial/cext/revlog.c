@@ -14,6 +14,7 @@
  the GNU General Public License, incorporated herein by reference.
 */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <assert.h>
 #include <ctype.h>
@@ -227,7 +228,7 @@ static PyObject* index_get(indexObject* self, Py_ssize_t pos) {
       parent_1,
       parent_2,
       c_node_id,
-      20);
+      (Py_ssize_t)20);
 
   if (entry) {
     PyObject_GC_UnTrack(entry);
@@ -1226,7 +1227,7 @@ nt_partialmatch(indexObject* self, const char* node, Py_ssize_t nodelen) {
 
 static PyObject* index_partialmatch(indexObject* self, PyObject* args) {
   const char* fullnode;
-  int nodelen;
+  Py_ssize_t nodelen;
   char* node;
   int rev, i;
 
@@ -2075,9 +2076,11 @@ void revlog_module_init(PyObject* mod) {
   PyModule_AddObject(mod, "index", (PyObject*)&indexType);
 
 #ifdef IS_PY3K
-  nullentry = Py_BuildValue("iiiiiiiy#", 0, 0, 0, -1, -1, -1, -1, nullid, 20);
+  nullentry = Py_BuildValue(
+      "iiiiiiiy#", 0, 0, 0, -1, -1, -1, -1, nullid, (Py_ssize_t)20);
 #else
-  nullentry = Py_BuildValue("iiiiiiis#", 0, 0, 0, -1, -1, -1, -1, nullid, 20);
+  nullentry = Py_BuildValue(
+      "iiiiiiis#", 0, 0, 0, -1, -1, -1, -1, nullid, (Py_ssize_t)20);
 #endif
   if (nullentry)
     PyObject_GC_UnTrack(nullentry);

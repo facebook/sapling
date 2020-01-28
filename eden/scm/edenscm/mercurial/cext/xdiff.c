@@ -9,6 +9,7 @@
  * xdiff.c: simple Python wrapper for xdiff library
  */
 
+#define PY_SSIZE_T_CLEAN
 #include "lib/third-party/xdiff/xdiff.h"
 #include "Python.h"
 
@@ -28,8 +29,8 @@ hunk_consumer(int64_t a1, int64_t a2, int64_t b1, int64_t b2, void* priv) {
 }
 
 static PyObject* blocks(PyObject* self, PyObject* args) {
-  char *sa, *sb;
-  int na, nb;
+  char *sa = NULL, *sb = NULL;
+  Py_ssize_t na = 0, nb = 0;
 
   if (!PyArg_ParseTuple(args, "s#s#", &sa, &na, &sb, &nb))
     return NULL;
