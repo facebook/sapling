@@ -40,8 +40,10 @@ if sys.version_info[0] >= 3:
 # sanity.
 _ignore = [
     unichr(int(x, 16)).encode("utf-8")
-    for x in "200c 200d 200e 200f 202a 202b 202c 202d 202e "
-    "206a 206b 206c 206d 206e 206f feff".split()
+    for x in (
+        "200c 200d 200e 200f 202a 202b 202c 202d 202e "
+        "206a 206b 206c 206d 206e 206f feff"
+    ).split()
 ]
 # verify the next function will work
 assert all(i.startswith((b"\xe2", b"\xef")) for i in _ignore)
@@ -64,22 +66,11 @@ def hfsignoreclean(s):
 def setfromenviron():
     """Reset encoding states from environment variables"""
     global encoding, encodingmode, environ, _wide
-    # encoding.environ is provided read-only, which may not be used to modify
-    # the process environment
-    _nativeenviron = sys.version_info[0] < 3 or os.supports_bytes_environ
-    if sys.version_info[0] < 3:
-        environ = os.environ  # re-exports
-    elif _nativeenviron:
-        environ = os.environb  # re-exports
-    else:
-        # preferred encoding isn't known yet; use utf-8 to avoid unicode error
-        # and recreate it once encoding is settled
-        items = os.environ.items()  # re-exports
-        environ = dict((k.encode(u"utf-8"), v.encode(u"utf-8")) for k, v in items)
+    environ = os.environ  # re-exports
     try:
         encoding = os.environ.get("HGENCODING")
         if not encoding:
-            encoding = locale.getpreferredencoding().encode("ascii") or "ascii"
+            encoding = locale.getpreferredencoding() or "ascii"
             encoding = _encodingfixers.get(encoding, lambda: encoding)()
     except locale.Error:
         encoding = "ascii"
@@ -87,14 +78,6 @@ def setfromenviron():
 
     if encoding == "ascii":
         encoding = "utf-8"
-
-    if not _nativeenviron:
-        # now encoding and helper functions are available, recreate the environ
-        # dict to be exported to other modules
-        items = os.environ.items()  # re-exports
-        environ = dict(
-            (tolocal(k.encode(u"utf-8")), tolocal(v.encode(u"utf-8"))) for k, v in items
-        )
 
     # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
     _wide = _sysstr(
@@ -134,7 +117,7 @@ def _setascii():
     encoding = "ascii"
 
 
-def tolocal(s):
+def _tolocal(s):
     """
     Convert a string from internal UTF-8 to local encoding
 
@@ -201,7 +184,7 @@ def tolocal(s):
         raise error.Abort(k, hint="please check your locale settings")
 
 
-def fromlocal(s):
+def _fromlocal(s):
     """
     Convert a string from the local character encoding to UTF-8
 
@@ -261,7 +244,7 @@ else:
     strmethod = pycompat.identity
 
 
-def colwidth(s):
+def _colwidth(s):
     "Find the column width of a string for display in the local encoding"
     return ucolwidth(s.decode(_sysstr(encoding), u"replace"))
 
@@ -349,7 +332,10 @@ def trim(s, width, ellipsis="", leftside=False):
     +
     """
     try:
-        u = s.decode(_sysstr(encoding))
+        if sys.version_info.major == 3:
+            u = s
+        else:
+            u = s.decode(_sysstr(encoding))
     except UnicodeDecodeError:
         if len(s) <= width:  # trimming is not needed
             return s
@@ -380,7 +366,7 @@ def trim(s, width, ellipsis="", leftside=False):
     return ellipsis  # no enough room for multi-column characters
 
 
-def lower(s):
+def _lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
         return asciilower(s)
@@ -402,7 +388,7 @@ def lower(s):
         raise error.Abort(k, hint="please check your locale settings")
 
 
-def upper(s):
+def _upper(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
         return asciiupper(s)
@@ -636,18 +622,28 @@ def fromutf8b(s):
 
 if sys.version_info[0] >= 3:
 
-    class strio(io.TextIOWrapper):
-        """Wrapper around TextIOWrapper that respects hg's encoding assumptions.
+    # Prefer native unicode on Python
+    colwidth = ucolwidth
+    fromlocal = pycompat.identity
+    strfromlocal = pycompat.identity
+    strio = pycompat.identity
+    strmethod = pycompat.identity
+    strtolocal = pycompat.identity
+    tolocal = pycompat.identity
+    unifromlocal = pycompat.identity
+    unitolocal = pycompat.identity
 
-        Also works around Python closing streams.
-        """
+    def lower(s):
+        return s.lower()
 
-        def __init__(self, buffer):
-            super(strio, self).__init__(buffer, encoding=_sysstr(encoding))
-
-        def __del__(self):
-            """Override __del__ so it doesn't close the underlying stream."""
+    def upper(s):
+        return s.upper()
 
 
 else:
+    colwidth = _colwidth
+    fromlocal = _fromlocal
+    lower = _lower
     strio = pycompat.identity
+    tolocal = _tolocal
+    upper = _upper
