@@ -12,18 +12,18 @@
   > for path in open(os.path.join(os.environ["TESTTMP"], "filelist")).read().splitlines():
   >     if path.startswith("fb/"):
   >         continue
-  >     content = open(path).read()
+  >     content = open(path, "rb").read()
   >     isexec = bool(stat.S_IEXEC & os.stat(path).st_mode)
   >     ispy = path.endswith(".py")
   >     issh = path.endswith(".sh")
   >     isrs = path.endswith(".rs")
-  >     if content.startswith("#!"):
-  >         interpreter = os.path.basename(content.split("\n")[0].split()[-1])
+  >     if content.startswith(b"#!"):
+  >         interpreter = os.path.basename(content.split(b"\n")[0].split()[-1])
   >     else:
   >         interpreter = None
-  >     if ispy and isexec and interpreter not in {"python", "python2", "python3"}:
+  >     if ispy and isexec and interpreter not in {b"python", b"python2", b"python3"}:
   >         print("%s is a Python script but does not have Python interpreter specified" % path)
-  >     elif issh and isexec and interpreter not in {"sh", "bash", "zsh", "fish"}:
+  >     elif issh and isexec and interpreter not in {b"sh", b"bash", b"zsh", b"fish"}:
   >         print("%s is a Shell script but does not have Shell interpreter specified" % path)
   >     elif isexec and not interpreter:
   >         print("%s is executable but does not have #!" % path)
