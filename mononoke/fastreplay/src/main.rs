@@ -69,7 +69,8 @@ fn dispatch(
         .ok_or_else(|| Error::msg(format!("Repository does not exist: {}", reponame)))?;
 
     let stream = match req.request {
-        Request::Gettreepack(args) => dispatcher.client().gettreepack(args).compat(),
+        Request::Gettreepack(args) => dispatcher.client().gettreepack(args.0).compat(),
+        Request::Getbundle(args) => dispatcher.client().getbundle(args.0).compat(),
         Request::GetpackV1(args) => dispatcher
             .client()
             .getpackv1(Box::new(

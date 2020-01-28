@@ -6,23 +6,25 @@
  * directory of this source tree.
  */
 
+mod getbundle;
 mod getpack;
 mod gettreepack;
 mod request;
+mod util;
 
 use anyhow::Error;
-use hgproto::GettreepackArgs;
-use std::convert::TryInto;
 use std::str::FromStr;
 
+use getbundle::RequestGetbundleArgs;
 use getpack::RequestGetpackArgs;
 use gettreepack::RequestGettreepackArgs;
 use request::RequestLine;
 
 pub enum Request {
-    Gettreepack(GettreepackArgs),
+    Gettreepack(RequestGettreepackArgs),
     GetpackV1(RequestGetpackArgs),
     GetpackV2(RequestGetpackArgs),
+    Getbundle(RequestGetbundleArgs),
 }
 
 pub struct RepoRequest {
@@ -37,10 +39,8 @@ impl FromStr for RepoRequest {
         let req: RequestLine = serde_json::from_str(&req)?;
 
         let request = match req.normal.command.as_ref() {
-            "gettreepack" => {
-                let args: RequestGettreepackArgs = req.normal.args.parse()?;
-                Request::Gettreepack(args.try_into()?)
-            }
+            "gettreepack" => Request::Gettreepack(req.normal.args.parse()?),
+            "getbundle" => Request::Getbundle(req.normal.args.parse()?),
             "getpackv1" => Request::GetpackV1(req.normal.args.parse()?),
             "getpackv2" => Request::GetpackV2(req.normal.args.parse()?),
             cmd @ _ => {
