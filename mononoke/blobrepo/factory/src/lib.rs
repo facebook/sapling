@@ -17,9 +17,7 @@ use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, MemcacheOps,
 };
-use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
-use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
@@ -476,26 +474,15 @@ fn new_production(
                     bonsai_hg_mapping_cache_pool,
                 );
 
-                let changeset_fetcher_factory = {
-                    cloned!(changesets, repoid);
-                    move || {
-                        let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
-                            SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
-                        );
-                        res
-                    }
-                };
-
                 let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
-                BlobRepo::new_with_changeset_fetcher_factory(
+                BlobRepo::new(
                     bookmarks,
                     RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
                     Arc::new(filenodes),
                     changesets,
                     bonsai_globalrev_mapping,
                     Arc::new(bonsai_hg_mapping),
-                    Arc::new(changeset_fetcher_factory),
                     Arc::new(derive_data_lease),
                     filestore_config,
                 )

@@ -162,34 +162,6 @@ impl BlobRepo {
         }
     }
 
-    pub fn new_with_changeset_fetcher_factory(
-        bookmarks: Arc<dyn Bookmarks>,
-        blobstore_args: RepoBlobstoreArgs,
-        filenodes: Arc<dyn Filenodes>,
-        changesets: Arc<dyn Changesets>,
-        bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-        changeset_fetcher_factory: Arc<
-            dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync,
-        >,
-        derived_data_lease: Arc<dyn LeaseOps>,
-        filestore_config: FilestoreConfig,
-    ) -> Self {
-        let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
-        BlobRepo {
-            bookmarks,
-            blobstore,
-            filenodes,
-            changesets,
-            bonsai_globalrev_mapping,
-            bonsai_hg_mapping,
-            repoid,
-            changeset_fetcher_factory,
-            derived_data_lease,
-            filestore_config,
-        }
-    }
-
     /// Convert this BlobRepo instance into one that only does writes in memory.
     ///
     /// ------------
