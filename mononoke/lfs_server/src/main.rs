@@ -35,12 +35,15 @@ use tokio_openssl::SslAcceptorExt;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo;
-use cmdlib::{args, helpers::serve_forever, monitoring::start_fb303_server};
+use cmdlib::{
+    args::{self, get_config_handle},
+    helpers::serve_forever,
+    monitoring::start_fb303_server,
+};
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 
 use crate::acl::LfsAclChecker;
-use crate::config::get_server_config;
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
@@ -302,7 +305,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .unwrap()
         .parse()?;
 
-    let config_handle = get_server_config(
+    let config_handle = get_config_handle(
         fb,
         logger.clone(),
         matches.value_of(ARG_LIVE_CONFIG),

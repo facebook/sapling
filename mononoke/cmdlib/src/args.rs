@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::io;
 use std::num::NonZeroU32;
 use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,6 +18,7 @@ use std::time::Duration;
 use anyhow::{bail, format_err, Error, Result};
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
+use configerator_cached::{ConfigHandle, ConfigStore};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -1189,4 +1191,56 @@ pub fn parse_disabled_hooks_no_repo_prefix(
 pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
     create_runtime(None, core_threads)
+}
+
+/// Extract a ConfigHandle<T> from a source_spec str that has one ofthe folowing formats:
+/// - configerator:PATH
+/// - file:PATH
+/// - default
+pub fn get_config_handle<T>(
+    fb: FacebookInit,
+    logger: Logger,
+    source_spec: Option<&str>,
+    poll_interval: u64,
+) -> Result<ConfigHandle<T>, Error>
+where
+    T: Default + Send + Sync + 'static + serde::de::DeserializeOwned,
+{
+    const CONFIGERATOR_FETCH_TIMEOUT: u64 = 10;
+
+    let timeout = Duration::from_secs(CONFIGERATOR_FETCH_TIMEOUT);
+    let poll_interval = Duration::from_secs(poll_interval);
+
+    match source_spec {
+        Some(source_spec) => {
+            // NOTE: This means we don't support file paths with ":" in them, but it also means we can
+            // add other options after the first ":" later if we want.
+            let mut iter = source_spec.split(":");
+
+            // NOTE: We match None as the last element to make sure the input doesn't contain
+            // disallowed trailing parts.
+            match (iter.next(), iter.next(), iter.next()) {
+                (Some("configerator"), Some(source), None) => Ok(Some((
+                    ConfigStore::configerator(fb, logger, poll_interval, timeout)?,
+                    source.to_string(),
+                ))),
+                (Some("file"), Some(file), None) => Ok(Some((
+                    ConfigStore::file(
+                        logger,
+                        PathBuf::new(),
+                        String::new(),
+                        Duration::from_secs(1),
+                    ),
+                    file.to_string(),
+                ))),
+                (Some("default"), None, None) => Ok(None),
+                _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
+            }
+        }
+        None => Ok(None),
+    }
+    .and_then(|config| match config {
+        None => Ok(ConfigHandle::default()),
+        Some((source, path)) => source.get_config_handle(path),
+    })
 }

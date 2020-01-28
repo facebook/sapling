@@ -8,6 +8,7 @@
 
 #![deny(warnings)]
 
+mod config;
 mod dispatcher;
 mod protocol;
 
@@ -16,6 +17,7 @@ use blobstore_factory::make_blobstore_no_sql;
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::args;
+use configerator_cached::ConfigHandle;
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::{
@@ -28,10 +30,11 @@ use hgproto::HgCommands;
 use hooks::HookManager;
 use hooks_content_stores::{InMemoryChangesetStore, InMemoryFileContentStore};
 use metaconfig_types::HookManagerParams;
+use rand::{thread_rng, Rng};
 use repo_client::MononokeRepoBuilder;
 use scuba_ext::ScubaSampleBuilder;
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{info, o, warn, Logger};
+use slog::{debug, info, o, warn, Logger};
 use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -43,6 +46,7 @@ use tokio::{
     task::JoinHandle,
 };
 
+use config::FastReplayConfig;
 use dispatcher::FastReplayDispatcher;
 use protocol::{Request, RequestLine};
 
@@ -51,17 +55,42 @@ const ARG_NO_CACHE_WARMUP: &str = "no-cache-warmup";
 const ARG_ALIASES: &str = "alias";
 const ARG_MAX_CONCURRENCY: &str = "max-concurrency";
 const ARG_HASH_VALIDATION_PERCENTAGE: &str = "hash-validation-percentage";
+const ARG_LIVE_CONFIG: &str = "live-config";
+
+const LIVE_CONFIG_POLL_INTERVAL: u64 = 5;
+
+fn should_admit(opts: &ReplayOpts) -> bool {
+    let admission_rate = opts.config.get().admission_rate();
+
+    if admission_rate >= 100 {
+        return true;
+    }
+
+    if admission_rate <= 0 {
+        return false;
+    }
+
+    let roll = thread_rng().gen_range(1, 100);
+    roll <= admission_rate
+}
 
 async fn dispatch(
+    logger: &Logger,
     scuba: &ScubaSampleBuilder,
     dispatchers: &HashMap<String, FastReplayDispatcher>,
-    aliases: &HashMap<String, String>,
+    opts: &ReplayOpts,
     req: &str,
     count: &Arc<AtomicU64>,
-) -> Result<JoinHandle<()>, Error> {
+) -> Result<Option<JoinHandle<()>>, Error> {
+    if !should_admit(opts) {
+        debug!(&logger, "Request was not admitted");
+        return Ok(None);
+    }
+
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
-    let reponame = aliases
+    let reponame = opts
+        .aliases
         .get(req.normal.reponame.as_ref())
         .map(|a| a.as_ref())
         .unwrap_or(req.normal.reponame.as_ref())
@@ -136,7 +165,7 @@ async fn dispatch(
         }
     };
 
-    Ok(tokio::task::spawn(task.boxed()))
+    Ok(Some(tokio::task::spawn(task.boxed())))
 }
 
 fn build_noop_hook_manager(fb: FacebookInit) -> HookManager {
@@ -282,10 +311,15 @@ async fn bootstrap_repositories<'a>(
 struct ReplayOpts {
     max_concurrency: u64,
     aliases: HashMap<String, String>,
+    config: ConfigHandle<FastReplayConfig>,
 }
 
 impl ReplayOpts {
-    fn parse<'a>(matches: &ArgMatches<'a>) -> Result<Self, Error> {
+    fn parse<'a>(
+        fb: FacebookInit,
+        logger: Logger,
+        matches: &ArgMatches<'a>,
+    ) -> Result<Self, Error> {
         let max_concurrency = matches
             .value_of(ARG_MAX_CONCURRENCY)
             .map(|n| -> Result<u64, Error> {
@@ -303,9 +337,18 @@ impl ReplayOpts {
             None => HashMap::new(),
         };
 
+        let config = cmdlib::args::get_config_handle(
+            fb,
+            logger,
+            matches.value_of(ARG_LIVE_CONFIG),
+            LIVE_CONFIG_POLL_INTERVAL,
+        )
+        .with_context(|| format!("While parsing --{}", ARG_LIVE_CONFIG))?;
+
         Ok(Self {
             max_concurrency,
             aliases,
+            config,
         })
     }
 }
@@ -331,7 +374,7 @@ async fn fast_replay_from_stdin<'a>(
         }
 
         match reader.next_line().await? {
-            Some(req) => match dispatch(&scuba, &repos, &opts.aliases, &req, &count).await {
+            Some(req) => match dispatch(&logger, &scuba, &repos, &opts, &req, &count).await {
                 Ok(..) => {
                     continue;
                 }
@@ -355,7 +398,7 @@ async fn do_main<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(), E
     scuba.add_common_server_data();
 
     // Do this earlier to show errors before we bootstrap repositories
-    let opts = ReplayOpts::parse(&matches)?;
+    let opts = ReplayOpts::parse(fb, logger.clone(), &matches)?;
 
     let repos = bootstrap_repositories(fb, &matches, &logger, &scuba).await?;
 
@@ -411,6 +454,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(
             Arg::with_name(ARG_HASH_VALIDATION_PERCENTAGE)
                 .long(ARG_HASH_VALIDATION_PERCENTAGE)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_LIVE_CONFIG)
+                .long(ARG_LIVE_CONFIG)
+                .help("Path to read hot-reloadable configuration from")
                 .takes_value(true)
                 .required(false),
         );

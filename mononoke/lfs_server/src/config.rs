@@ -6,16 +6,8 @@
  * directory of this source tree.
  */
 
-use anyhow::{format_err, Error};
-use configerator_cached::{ConfigHandle, ConfigStore};
-use fbinit::FacebookInit;
 use serde::{Deserialize, Serialize};
-use slog::Logger;
 use std::default::Default;
-use std::path::PathBuf;
-use std::time::Duration;
-
-const CONFIGERATOR_FETCH_TIMEOUT: u64 = 10;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Limit {
@@ -46,46 +38,4 @@ impl Default for ServerConfig {
             enforce_acl_check: false,
         }
     }
-}
-
-pub fn get_server_config(
-    fb: FacebookInit,
-    logger: Logger,
-    source_spec: Option<&str>,
-    poll_interval: u64,
-) -> Result<ConfigHandle<ServerConfig>, Error> {
-    let timeout = Duration::from_secs(CONFIGERATOR_FETCH_TIMEOUT);
-    let poll_interval = Duration::from_secs(poll_interval);
-    match source_spec {
-        Some(source_spec) => {
-            // NOTE: This means we don't support file paths with ":" in them, but it also means we can
-            // add other options after the first ":" later if we want.
-            let mut iter = source_spec.split(":");
-
-            // NOTE: We match None as the last element to make sure the input doesn't contain
-            // disallowed trailing parts.
-            match (iter.next(), iter.next(), iter.next()) {
-                (Some("configerator"), Some(source), None) => Ok(Some((
-                    ConfigStore::configerator(fb, logger, poll_interval, timeout)?,
-                    source.to_string(),
-                ))),
-                (Some("file"), Some(file), None) => Ok(Some((
-                    ConfigStore::file(
-                        logger,
-                        PathBuf::new(),
-                        String::new(),
-                        Duration::from_secs(1),
-                    ),
-                    file.to_string(),
-                ))),
-                (Some("default"), None, None) => Ok(None),
-                _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
-            }
-        }
-        None => Ok(None),
-    }
-    .and_then(|config| match config {
-        None => Ok(ConfigHandle::default()),
-        Some((source, path)) => source.get_config_handle(path),
-    })
 }
