@@ -6,7 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-Setup configuration
+Setup configuration. Unset a handful of variables that otherwise clutter Scuba logging.
+  $ unset SMC_TIERS TW_TASK_ID TW_CANARY_ID TW_JOB_CLUSTER TW_JOB_USER TW_JOB_NAME
   $ export WIREPROTO_LOGGING_PATH="$TESTTMP/wireproto.json"
   $ BLOB_TYPE="blob_files" quiet default_setup
 
@@ -40,3 +41,25 @@ Test a few more options
   Replay Succeeded
   Replay Succeeded
   Replay Succeeded
+
+Check logging structure
+  $ grep "Replay Succeeded" "$fastreplay_log" | head -n 1 | jq .
+  {
+    "int": {
+      "completion_time_us": *, (glob)
+      "poll_count": *, (glob)
+      "poll_time_us": *, (glob)
+      "recorded_duration_us": *, (glob)
+      "replay_response_size": *, (glob)
+      "time": * (glob)
+    },
+    "normal": {
+      "build_revision": *, (glob)
+      "build_rule": *, (glob)
+      "log_tag": "Replay Succeeded",
+      "recorded_mononoke_session_id": *, (glob)
+      "recorded_server": "mononoke",
+      "reponame": "repo",
+      "server_hostname": * (glob)
+    }
+  }

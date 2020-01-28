@@ -71,11 +71,11 @@ async fn dispatch(
         .get(&reponame)
         .ok_or_else(|| Error::msg(format!("Repository does not exist: {}", reponame)))?;
 
-    let req = protocol::parse_request(&req, &dispatcher)
+    let parsed_req = protocol::parse_request(&req, &dispatcher)
         .await
         .context("While parsing request")?;
 
-    let stream = match req {
+    let stream = match parsed_req {
         Request::Gettreepack(args) => dispatcher.client().gettreepack(args.0).compat(),
         Request::Getbundle(args) => dispatcher.client().getbundle(args.0).compat(),
         Request::GetpackV1(args) => dispatcher
@@ -102,6 +102,16 @@ async fn dispatch(
         cloned!(count, mut scuba);
 
         scuba.add("reponame", reponame);
+
+        scuba.add("recorded_server", req.server_type());
+        scuba.add("recorded_duration_us", req.duration_us());
+
+        if let Some(responselen) = req.int.responselen {
+            scuba.add("recorded_response_length", responselen);
+        }
+        if let Some(session_id) = req.normal.mononoke_session_uuid {
+            scuba.add("recorded_mononoke_session_id", session_id.as_ref());
+        }
 
         async move {
             let (stats, res) = stream
