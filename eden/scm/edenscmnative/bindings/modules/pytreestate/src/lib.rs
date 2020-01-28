@@ -34,8 +34,7 @@ use ::treestate::{
     treedirstate::TreeDirstate,
     treestate::TreeState,
 };
-use cpython_ext::ResultPyErrExt;
-use encoding::local_bytes_to_path;
+use cpython_ext::{PyPath, ResultPyErrExt};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -465,10 +464,9 @@ py_class!(class treestate |py| {
 
     def __new__(
         _cls,
-        path: &PyBytes,
+        path: PyPath,
         root_id: u64
     ) -> PyResult<treestate> {
-        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
         let root_id = if root_id == 0 {
             None
         } else {
@@ -485,9 +483,8 @@ py_class!(class treestate |py| {
         Ok(root_id.0)
     }
 
-    def saveas(&self, path: PyBytes) -> PyResult<u64> {
+    def saveas(&self, path: PyPath) -> PyResult<u64> {
         // Save as a new file. Return `BlockId` that can be used in constructor.
-        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
         let mut state = self.state(py).borrow_mut();
         let root_id = convert_result(py, state.write_as(path))?;
         Ok(root_id.0)
@@ -832,10 +829,6 @@ fn flags_to_hg_state(_py: Python, flags: u16) -> PyResult<&'static str> {
 /// Convert a Result to PyResult
 fn convert_result<T>(py: Python, result: Result<T>) -> PyResult<T> {
     result.map_pyerr(py)
-}
-
-fn encoding_error(py: Python) -> PyErr {
-    PyErr::new::<exc::RuntimeError, _>(py, "invalid encoding")
 }
 
 /// Convert "dir1/dir2/file1" to ["dir1/", "dir2/", "file1"]
