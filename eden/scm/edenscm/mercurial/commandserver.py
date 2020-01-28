@@ -24,7 +24,12 @@ import traceback
 
 from . import encoding, error, pycompat, util
 from .i18n import _
-from .thirdparty import selectors2
+
+
+if sys.version_info.major == 3:
+    import selectors as selectors2
+else:
+    from .thirdparty import selectors2
 
 
 logfile = None
