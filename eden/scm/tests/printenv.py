@@ -28,7 +28,11 @@ except ImportError:
     pass
 
 exitcode = 0
-out = sys.stdout
+
+if sys.version_info[0] >= 3:
+    out = sys.stdout.buffer
+else:
+    out = sys.stdout
 
 name = sys.argv[1]
 if len(sys.argv) > 2:
@@ -38,17 +42,17 @@ if len(sys.argv) > 2:
 
 # variables with empty values may not exist on all platforms, filter
 # them now for portability sake.
-env = [(k, v) for k, v in os.environ.iteritems() if k.startswith("HG_") and v]
+env = [(k, v) for k, v in os.environ.items() if k.startswith("HG_") and v]
 env.sort()
 
-out.write("%s hook: " % name)
+out.write(b"%s hook: " % name.encode("utf8"))
 if os.name == "nt":
     filter = lambda x: x.replace("\\", "/")
 else:
     filter = lambda x: x
 vars = ["%s=%s" % (k, filter(v)) for k, v in env]
-out.write(" ".join(vars))
-out.write("\n")
+out.write(" ".join(vars).encode("utf8"))
+out.write(b"\n")
 out.close()
 
 sys.exit(exitcode)
