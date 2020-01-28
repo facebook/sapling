@@ -13,21 +13,36 @@
 from __future__ import absolute_import
 
 import binascii
+import sys
 
 
 # This ugly style has a noticeable effect in manifest parsing
-hex = binascii.hexlify
-bin = binascii.unhexlify
+bhex = binascii.hexlify
+bbin = binascii.unhexlify
 
+if sys.version_info.major == 3:
+
+    def bin(s):
+        # type: (str) -> bytes
+        return bbin(s.encode("ascii"))
+
+    def hex(s):
+        # type: (bytes) -> str
+        return bhex(s).decode("ascii")
+
+
+else:
+    bin = bbin
+    hex = bhex
 nullrev = -1
 nullid = b"\0" * 20
 nullhex = hex(nullid)
 
 # Phony node value to stand-in for new files in some uses of
 # manifests.
-newnodeid = "!" * 20
-addednodeid = ("0" * 15) + "added"
-modifiednodeid = ("0" * 12) + "modified"
+newnodeid = b"!" * 20
+addednodeid = (b"0" * 15) + b"added"
+modifiednodeid = (b"0" * 12) + b"modified"
 
 wdirnodes = {newnodeid, addednodeid, modifiednodeid}
 
