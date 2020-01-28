@@ -877,14 +877,17 @@ This tests that translated help message is lower()-ed correctly.
   $ cat > $TESTTMP/escape.py <<EOF
   > from __future__ import absolute_import
   > import sys
-  > def escape(c):
-  >     o = ord(c)
+  > def escape(o):
   >     if o < 0x80:
-  >         return c
+  >         return chr(o)
   >     else:
-  >         return r'\x%02x' % o # escape char setting MSB
-  > for l in sys.stdin:
-  >     sys.stdout.write(''.join(escape(c) for c in l))
+  >         return r'\x%02x' % o  # escape char setting MSB
+  > if sys.version_info[0] >= 3:
+  >     inputs = sys.stdin.buffer.read()
+  > else:
+  >     inputs = bytearray(sys.stdin.read())
+  > for l in inputs:
+  >     sys.stdout.write(''.join(escape(l)))
   > EOF
 
   $ hg commit -i --encoding cp932 2>&1 <<EOF | $PYTHON $TESTTMP/escape.py | grep '^y - '
