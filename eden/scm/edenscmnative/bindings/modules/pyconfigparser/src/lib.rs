@@ -15,7 +15,7 @@ use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
-use cpython_ext::{Bytes, PyPath};
+use cpython_ext::{Bytes, PyPath, Str};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
@@ -44,7 +44,7 @@ py_class!(pub class config |py| {
         sections: Option<Vec<String>>,
         remap: Option<Vec<(String, String)>>,
         readonly_items: Option<Vec<(String, String)>>
-    ) -> PyResult<Vec<Bytes>> {
+    ) -> PyResult<Vec<Str>> {
         let mut cfg = self.cfg(py).borrow_mut();
 
         let mut opts = Options::new().source(source).process_hgplain();
@@ -60,14 +60,14 @@ py_class!(pub class config |py| {
         }
 
         let errors = cfg.load_path(path, &opts);
-        Ok(errors_to_bytes_vec(errors))
+        Ok(errors_to_str_vec(errors))
     }
 
-    def parse(&self, content: String, source: String) -> PyResult<Vec<Bytes>> {
+    def parse(&self, content: String, source: String) -> PyResult<Vec<Str>> {
         let mut cfg = self.cfg(py).borrow_mut();
         let opts = source.into();
         let errors = cfg.parse(content, &opts);
-        Ok(errors_to_bytes_vec(errors))
+        Ok(errors_to_str_vec(errors))
     }
 
     def get(&self, section: String, name: String) -> PyResult<Option<Bytes>> {
@@ -125,7 +125,7 @@ py_class!(pub class config |py| {
     }
 
     @staticmethod
-    def load() -> PyResult<(config, Vec<Bytes>)> {
+    def load() -> PyResult<(config, Vec<Str>)> {
         let mut cfg = ConfigSet::new();
         let mut errors = Vec::new();
         // Only load builtin configs if HGRCPATH is not set.
@@ -134,7 +134,7 @@ py_class!(pub class config |py| {
         }
         errors.append(&mut cfg.load_system());
         errors.append(&mut cfg.load_user());
-        let errors = errors_to_bytes_vec(errors);
+        let errors = errors_to_str_vec(errors);
         config::create_instance(py, RefCell::new(cfg)).map(|cfg| (cfg, errors))
     }
 });
@@ -152,10 +152,10 @@ fn parselist(_py: Python, value: String) -> PyResult<Vec<Bytes>> {
         .collect())
 }
 
-fn errors_to_bytes_vec(errors: Vec<configparser::error::Error>) -> Vec<Bytes> {
+fn errors_to_str_vec(errors: Vec<configparser::error::Error>) -> Vec<Str> {
     errors
         .into_iter()
-        .map(|err| format!("{}", err).into())
+        .map(|err| Str::from(format!("{}", err)))
         .collect()
 }
 
