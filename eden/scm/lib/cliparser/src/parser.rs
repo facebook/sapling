@@ -13,7 +13,7 @@ use cpython::{
     ToPyObject,
 };
 #[cfg(feature = "python")]
-use cpython_ext::Bytes;
+use cpython_ext::{Bytes, Str};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use thiserror::Error;
@@ -98,12 +98,14 @@ impl ToPyObject for Value {
         match self {
             Value::OptBool() => py.None().into_object(),
             Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => Bytes::from(s.to_string()).to_py_object(py).into_object(),
+            Value::Str(s) => Str::from(Bytes::from(s.to_string()))
+                .to_py_object(py)
+                .into_object(),
             Value::Int(i) => i.to_py_object(py).into_object(),
             Value::List(vec) => {
-                let collection: Vec<Bytes> = vec
+                let collection: Vec<Str> = vec
                     .into_iter()
-                    .map(|s: &String| Bytes::from(s.to_string()))
+                    .map(|s: &String| Str::from(Bytes::from(s.to_string())))
                     .collect();
                 collection.to_py_object(py).into_object()
             }

@@ -12,7 +12,7 @@ use crate::python::{
 };
 use clidispatch::io::IO;
 use cpython::*;
-use cpython_ext::{format_py_error, wrap_pyio, Bytes, WrappedIO};
+use cpython_ext::{format_py_error, wrap_pyio, Bytes, Str, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::{CString, OsString};
@@ -226,7 +226,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         let table = commands::table();
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
-            let doc = Bytes::from(def.doc().to_string());
+            let doc = Str::from(Bytes::from(def.doc().to_string()));
             py_table.set_item(py, def.name(), (doc, def.flags()))?;
         }
         Ok(py_table)
