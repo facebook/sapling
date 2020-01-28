@@ -12,9 +12,7 @@ use std::cell::RefCell;
 use cpython::*;
 
 use ::nodemap::{NodeMap, NodeSet, Repair};
-use cpython_ext::Bytes;
-use cpython_ext::ResultPyErrExt;
-use encoding::local_bytes_to_path;
+use cpython_ext::{Bytes, PyPath, ResultPyErrExt};
 use types::node::Node;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -28,9 +26,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class nodemap |py| {
     data log: RefCell<NodeMap>;
 
-    def __new__(_cls, path: &PyBytes) -> PyResult<nodemap> {
-        let path = local_bytes_to_path(path.data(py))
-            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
+    def __new__(_cls, path: PyPath) -> PyResult<nodemap> {
         let nodemap = NodeMap::open(path)
             .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
         nodemap::create_instance(py, RefCell::new(nodemap))
@@ -96,8 +92,7 @@ py_class!(class nodemap |py| {
 py_class!(class nodeset |py| {
     data set: RefCell<NodeSet>;
 
-    def __new__(_cls, path: &PyBytes) -> PyResult<Self> {
-        let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
+    def __new__(_cls, path: PyPath) -> PyResult<Self> {
         let nodeset = NodeSet::open(path).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(nodeset))
     }
