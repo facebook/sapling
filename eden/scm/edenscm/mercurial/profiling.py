@@ -14,6 +14,7 @@ from __future__ import absolute_import, print_function
 
 import contextlib
 import errno
+import sys
 import time
 
 from . import blackbox, error, extensions, pycompat, util
@@ -107,6 +108,11 @@ def flameprofile(ui, fp, section):
 
 @contextlib.contextmanager
 def statprofile(ui, fp, section):
+    # TODO(py3): Fix statprof compatibility.
+    if sys.version_info.major == 3:
+        yield
+        return
+
     from . import statprof
 
     freq = ui.configwith(float, section, "freq")
