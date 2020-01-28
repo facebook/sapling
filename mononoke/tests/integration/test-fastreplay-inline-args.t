@@ -32,3 +32,11 @@ Replay traffic
   Replay Succeeded
   Replay Succeeded
   Replay Succeeded
+  $ truncate -s 0 "$fastreplay_log"
+
+Test a few more options
+  $ quiet fastreplay --hash-validation-percentage 10  --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
+  $ jq -r .normal.log_tag  "$fastreplay_log" | grep Replay
+  Replay Succeeded
+  Replay Succeeded
+  Replay Succeeded

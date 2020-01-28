@@ -23,6 +23,7 @@ pub struct FastReplayDispatcher {
     repo: MononokeRepo,
     wireproto_logging: Arc<WireprotoLogging>,
     remote_args_blobstore: Option<Arc<dyn Blobstore>>,
+    hash_validation_percentage: usize,
 }
 
 impl FastReplayDispatcher {
@@ -32,6 +33,7 @@ impl FastReplayDispatcher {
         scuba: ScubaSampleBuilder,
         repo: MononokeRepo,
         remote_args_blobstore: Option<Arc<dyn Blobstore>>,
+        hash_validation_percentage: usize,
     ) -> Result<Self, Error> {
         let noop_wireproto = WireprotoLogging::new(fb, repo.reponame().clone(), None, None, None)
             .context("While instantiating noop_wireproto")?;
@@ -43,6 +45,7 @@ impl FastReplayDispatcher {
             repo,
             wireproto_logging: Arc::new(noop_wireproto),
             remote_args_blobstore,
+            hash_validation_percentage,
         })
     }
 
@@ -54,7 +57,7 @@ impl FastReplayDispatcher {
             self.repo.clone(),
             session,
             logging,
-            0,     // Don't validate hashes (TODO: Make this configurable)
+            self.hash_validation_percentage,
             false, // Don't preserve raw bundle 2 (we don't push)
             false, // Don't allow pushes (we don't push)
             true,  // Support bundle2_listkeys

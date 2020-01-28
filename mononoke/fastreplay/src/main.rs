@@ -50,6 +50,7 @@ const ARG_NO_SKIPLIST: &str = "no-skiplist";
 const ARG_NO_CACHE_WARMUP: &str = "no-cache-warmup";
 const ARG_ALIASES: &str = "alias";
 const ARG_MAX_CONCURRENCY: &str = "max-concurrency";
+const ARG_HASH_VALIDATION_PERCENTAGE: &str = "hash-validation-percentage";
 
 async fn dispatch(
     scuba: &ScubaSampleBuilder,
@@ -167,6 +168,14 @@ async fn bootstrap_repositories<'a>(
 
     let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);
     let no_cache_warmup = matches.is_present(ARG_NO_CACHE_WARMUP);
+    let hash_validation_percentage = matches
+        .value_of(ARG_HASH_VALIDATION_PERCENTAGE)
+        .map(|n| -> Result<usize, Error> {
+            let n = n.parse()?;
+            Ok(n)
+        })
+        .transpose()?
+        .unwrap_or(0);
 
     let noop_hook_manager = Arc::new(build_noop_hook_manager(fb));
 
@@ -240,6 +249,7 @@ async fn bootstrap_repositories<'a>(
                 scuba.clone(),
                 repo,
                 remote_args_blobstore,
+                hash_validation_percentage,
             )?;
 
             if let Some(warmup) = warmup {
@@ -385,6 +395,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("Map a repository name to replay to one found in config (FROM:TO)")
                 .multiple(true)
                 .number_of_values(1)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_HASH_VALIDATION_PERCENTAGE)
+                .long(ARG_HASH_VALIDATION_PERCENTAGE)
                 .takes_value(true)
                 .required(false),
         );
