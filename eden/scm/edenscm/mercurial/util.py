@@ -506,7 +506,7 @@ def Enum(clsname, names, module=None):
     """
     namespace = {n: i for i, n in enumerate(names.split(), 1)}
     namespace["__module__"] = module or __name__
-    return type(clsname.encode("ascii"), (object,), namespace)
+    return type(clsname, (object,), namespace)
 
 
 class cow(object):

@@ -145,7 +145,7 @@ def loadpath(path, module_name):
         if prefix == "python-base64":
             import base64
 
-            source = base64.decodestring(content)
+            source = base64.decodestring(content.encode("utf-8"))
             return loadsource(source, module_name)
     path = pycompat.fsdecode(path)
     if os.path.isdir(path):
@@ -270,12 +270,12 @@ def _validatecmdtable(ui, cmdtable):
         if not missing:
             for option in e[1]:
                 default = option[2]
-                if isinstance(default, type(u"")):
+                if (type(b"") != type("")) and isinstance(default, type(b"")):
                     raise error.ProgrammingError(
-                        "option '%s.%s' has a unicode default value" % (c, option[1]),
+                        "option '%s.%s' has a bytes default value" % (c, option[1]),
                         hint=(
-                            "change the %s.%s default value to a "
-                            "non-unicode string" % (c, option[1])
+                            "change the %s.%s default value to a string"
+                            % (c, option[1])
                         ),
                     )
             continue

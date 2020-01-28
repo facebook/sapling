@@ -62,4 +62,4 @@ IF UNAME_SYSNAME != "Windows":
             return orig(path)
 
     def uisetup(ui):
-        extensions.wrapfunction(os, b'rmdir', _rmdir)
+        extensions.wrapfunction(os, 'rmdir', _rmdir)

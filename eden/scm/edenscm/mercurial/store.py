@@ -142,14 +142,14 @@ def _buildencodefun(forfncache):
     >>> dec(enc(b'_' * 127)) == '_' * 127
     True
     """
-    e = "_"
+    e = b"_"
     xchr = pycompat.bytechr
     asciistr = list(map(xchr, range(127)))
     capitals = list(range(ord("A"), ord("Z") + 1))
 
     cmap = dict((x, x) for x in asciistr)
     for x in _reserved():
-        cmap[xchr(x)] = "~%02x" % x
+        cmap[xchr(x)] = b"~%02x" % x
     for x in capitals + [ord(e)]:
         cmap[xchr(x)] = e + xchr(x).lower()
 

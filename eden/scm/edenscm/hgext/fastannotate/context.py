@@ -142,8 +142,8 @@ def encodedir(path):
 
 def hashdiffopts(diffopts):
     diffoptstr = str(
-        sorted((k, getattr(diffopts, k)) for k in mdiff.diffopts.defaults.iterkeys())
-    )
+        sorted((k, getattr(diffopts, k)) for k in mdiff.diffopts.defaults.keys())
+    ).encode("utf-8")
     return hashlib.sha1(diffoptstr).hexdigest()[:6]
 
 

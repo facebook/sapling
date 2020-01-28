@@ -54,7 +54,7 @@ symbols = {}
 
 
 _quoteletters = {'"', "'"}
-_simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
+_simpleopletters = set(iter("()[]#:=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols
 _syminitletters = set(
@@ -64,7 +64,7 @@ _syminitletters = set(
 ) | set(map(pycompat.bytechr, range(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
-_symletters = _syminitletters | set(pycompat.iterbytestr("-/"))
+_symletters = _syminitletters | set(iter("-/"))
 
 
 def tokenize(program, lookup=None, syminitletters=None, symletters=None):
