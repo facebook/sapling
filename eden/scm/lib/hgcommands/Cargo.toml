@@ -4,19 +4,21 @@ version = "0.1.0"
 edition = "2018"
 
 [features]
-default = ["python2"]
-python2 = []
-python3 = []
+default = []
+python2 = ["bindings/python2", "pytracing/python2", "python27-sys", "cpython-ext/python2", "cpython/python27-sys"]
+python3 = ["bindings/python3", "pytracing/python3", "python3-sys", "cpython-ext/python3", "cpython/python3-sys"]
 
 [dependencies]
 anyhow = "1.0.20"
-bindings = { path = "../../edenscmnative/bindings" }
+bindings = { path = "../../edenscmnative/bindings", default-features = false }
 blackbox = { path = "../blackbox" }
 clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
-cpython-ext = { path = "../cpython-ext" }
+cpython-ext = { path = "../cpython-ext", default-features = false }
+cpython = { version = "0.4", default-features = false }
 edenapi = { path = "../edenapi" }
 edenfs-client = { path = "../edenfs-client"}
+encoding = { path = "../encoding" }
 flate2 = "1"
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }
@@ -24,21 +26,12 @@ libc = "0.2"
 mincode = { path = "../mincode"}
 parking_lot = "0.9"
 procinfo = { path = "../procinfo"}
-pytracing = { path = "../../edenscmnative/bindings/modules/pytracing" }
+python27-sys = { version = "0.4", optional = true }
+python3-sys = { version = "0.4", optional = true }
+pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 revisionstore = { path = "../revisionstore"}
 tracing = "0.1"
 tracing-collector = { path = "../tracing-collector" }
 types = { path = "../types" }
 util = { path = "../util" }
 zstd = "0.4"
-
-[dependencies.encoding]
-path = "../encoding"
-
-[dependencies.cpython]
-version = "0.4"
-default-features = false
-features = ["python27-sys"]
-
-[dependencies.python27-sys]
-version = "0.4"

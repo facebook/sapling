@@ -6,13 +6,18 @@ edition = "2018"
 [lib]
 name = "bindings"
 
+[features]
+default = []
+python2 = ["pytracing/python2", "pyindexes/python2"]
+python3 = ["pytracing/python3", "pyindexes/python3"]
+
 [profile.release]
 debug = true
 incremental = true
 lto = false
 
 [dependencies]
-cpython = { version = "0.4", features = ["python27-sys"], default-features = false }
+cpython = { version = "0.4", default-features = false }
 env_logger = "0.7"
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
@@ -22,7 +27,7 @@ pydag = { path = "modules/pydag" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
 pyhgtime = { path = "modules/pyhgtime" }
-pyindexes = { path = "modules/pyindexes" }
+pyindexes = { path = "modules/pyindexes", default-features = false }
 pylz4 = { path = "modules/pylz4" }
 pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }
@@ -34,7 +39,7 @@ pyrevisionstore = { path = "modules/pyrevisionstore" }
 pyrevlogindex = { path = "modules/pyrevlogindex" }
 pystackdesc = { path = "modules/pystackdesc" }
 pythreading = { path = "modules/pythreading" }
-pytracing = { path = "modules/pytracing" }
+pytracing = { path = "modules/pytracing", default-features = false }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }

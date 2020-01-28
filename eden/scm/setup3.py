@@ -156,7 +156,7 @@ def write_if_changed(path, content):
 pjoin = os.path.join
 relpath = os.path.relpath
 scriptdir = os.path.realpath(pjoin(__file__, ".."))
-builddir = pjoin(scriptdir, "build", "py3")
+builddir = pjoin(scriptdir, "build")
 
 
 def ensureexists(path):
@@ -1750,6 +1750,7 @@ hgmainfeatures = (
         filter(
             None,
             [
+                "python3",
                 "buildinfo" if needbuildinfo else None,
                 # TODO(py3): enable chg
                 # "with_chg" if not iswindows else None,

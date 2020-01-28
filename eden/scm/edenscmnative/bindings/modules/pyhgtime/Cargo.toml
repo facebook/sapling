@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-cpython = { version = "0.4", features = ["python27-sys"], default-features = false }
+cpython = { version = "0.4", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 hgtime = { path = "../../../../lib/hgtime" }

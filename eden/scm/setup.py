@@ -1906,6 +1906,7 @@ hgmainfeatures = (
         filter(
             None,
             [
+                "python2",
                 "buildinfo" if needbuildinfo else None,
                 "with_chg" if not iswindows else None,
             ],
