@@ -14,7 +14,10 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{Future as OldFuture, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_preview::{future, StreamExt, TryFutureExt};
+use futures_preview::{
+    future::{self, Either},
+    StreamExt, TryFutureExt,
+};
 use slog::{debug, error, info, Logger};
 use tokio_preview::{
     signal::unix::{signal, SignalKind},
@@ -362,10 +365,17 @@ where
         tokio_preview::task::spawn(stats_agg);
 
         // Spawn the server onto its own task
-        tokio_preview::task::spawn(server);
+        let server_handle = tokio_preview::task::spawn(server);
 
-        // Now wait for the termination signal
-        signalled.await;
+        // Now wait for the termination signal, or a server exit.
+        match future::select(server_handle, signalled).await {
+            Either::Left(..) => {
+                error!(&logger, "Server has exited! Starting shutdown...");
+            }
+            Either::Right(..) => {
+                info!(&logger, "Signalled! Starting shutdown...");
+            }
+        };
 
         // Shutting down: wait for the grace period.
         quiesce();
