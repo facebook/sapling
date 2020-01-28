@@ -11,9 +11,8 @@ use std::path::Path;
 
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
-use cpython_ext::Bytes;
+use cpython_ext::{Bytes, PyPath};
 
-use encoding::local_bytes_to_path;
 use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
 
@@ -32,30 +31,20 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-fn encoding_error(py: Python) -> PyErr {
-    PyErr::new::<cpython::exc::RuntimeError, _>(py, "invalid encoding")
-}
-
 py_class!(class gitignorematcher |py| {
     data matcher: GitignoreMatcher;
 
-    def __new__(_cls, root: &PyBytes, global_paths: Vec<PyBytes>) -> PyResult<gitignorematcher> {
-        let root = local_bytes_to_path(root.data(py)).map_err(|_|encoding_error(py))?;
-        let global_paths : Result<Vec<_>, _> = global_paths.iter()
-            .map(|path| local_bytes_to_path(path.data(py))).collect();
-        let global_paths = global_paths.map_err(|_|encoding_error(py))?;
+    def __new__(_cls, root: PyPath, global_paths: Vec<PyPath>) -> PyResult<gitignorematcher> {
         let global_paths: Vec<&Path> = global_paths.iter().map(AsRef::as_ref).collect();
         let matcher = GitignoreMatcher::new(&root, global_paths);
         gitignorematcher::create_instance(py, matcher)
     }
 
-    def match_relative(&self, path: &PyBytes, is_dir: bool) -> PyResult<bool> {
-        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
+    def match_relative(&self, path: PyPath, is_dir: bool) -> PyResult<bool> {
         Ok(self.matcher(py).match_relative(&path, is_dir))
     }
 
-    def explain(&self, path: &PyBytes, is_dir: bool) -> PyResult<Bytes> {
-        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
+    def explain(&self, path: PyPath, is_dir: bool) -> PyResult<Bytes> {
         Ok(self.matcher(py).explain(&path, is_dir).into())
     }
 });
@@ -68,17 +57,14 @@ py_class!(class treematcher |py| {
         Self::create_instance(py, matcher)
     }
 
-    def matches(&self, path: &PyBytes) -> PyResult<bool> {
-        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
+    def matches(&self, path: PyPath) -> PyResult<bool> {
         Ok(self.matcher(py).matches(path))
     }
 
-    def match_recursive(&self, path: &PyBytes) -> PyResult<Option<bool>> {
-        let path = path.data(py);
-        if path.is_empty() {
+    def match_recursive(&self, path: PyPath) -> PyResult<Option<bool>> {
+        if path.as_ref().as_os_str().is_empty() {
             Ok(None)
         } else {
-            let path = local_bytes_to_path(path).map_err(|_|encoding_error(py))?;
             Ok(self.matcher(py).match_recursive(path))
         }
     }

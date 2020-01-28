@@ -14,7 +14,9 @@ feature.require(["no-windows", "no-osx"])
 
 sh % "hg init"
 open("invalid\x80utf8", "w").write("test")
-sh % "hg addremove" == "adding invalid\\x80utf8 (esc)"
+sh % "hg addremove" == r"""
+    abort: "invalid\x80utf8" is not a valid UTF-8 path
+    [255]"""
 sh % "hg commit -m 'adding a filename that is invalid utf8'" == r"""
-    abort: invalid file name encoding: invalid\x80utf8! (esc)
+    abort: "invalid\x80utf8" is not a valid UTF-8 path
     [255]"""

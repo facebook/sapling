@@ -199,6 +199,8 @@ def callcatch(ui, func):
         ui.warn(_("(try '@prog@ doctor' to attempt to fix it)\n"))
     except error.RevisionstoreError as inst:
         ui.warn(_("%s\n") % inst, error=_("abort"))
+    except error.NonUTF8PathError as inst:
+        ui.warn(_("%s\n") % str(inst), error=_("abort"))
     except ImportError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
         m = str(inst).split()[-1]

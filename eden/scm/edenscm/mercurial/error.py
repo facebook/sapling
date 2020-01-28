@@ -29,6 +29,7 @@ IndexedLogError = bindings.error.IndexedLogError
 MetaLogError = bindings.error.MetaLogError
 RustError = bindings.error.RustError
 RevisionstoreError = bindings.error.RevisionstoreError
+NonUTF8PathError = bindings.error.NonUTF8Path
 
 
 def _tobytes(exc):

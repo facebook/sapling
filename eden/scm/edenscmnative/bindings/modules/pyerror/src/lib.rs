@@ -12,6 +12,7 @@ py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
 py_exception!(error, RustError);
 py_exception!(error, RevisionstoreError);
+py_exception!(error, NonUTF8Path);
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "error"].join(".");
@@ -25,6 +26,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "RevisionstoreError",
         py.get_type::<RevisionstoreError>(),
     )?;
+    m.add(py, "NonUTF8Path", py.get_type::<NonUTF8Path>())?;
 
     register_error_handlers();
 
@@ -39,6 +41,8 @@ fn register_error_handlers() {
             Some(PyErr::new::<MetaLogError, _>(py, e.to_string()))
         } else if let Some(e) = e.downcast_ref::<revisionstore::Error>() {
             Some(PyErr::new::<RevisionstoreError, _>(py, e.to_string()))
+        } else if let Some(e) = e.downcast_ref::<cpython_ext::Error>() {
+            Some(PyErr::new::<NonUTF8Path, _>(py, e.to_string()))
         } else {
             None
         }

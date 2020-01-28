@@ -11,18 +11,25 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use cpython::*;
-use types::{PathComponentBuf, RepoPath, RepoPathBuf};
+use thiserror::Error;
 
 #[cfg(feature = "python2")]
 use encoding::{local_bytes_to_path, path_to_local_bytes};
+use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 
 #[cfg(feature = "python2")]
 use crate::ResultPyErrExt;
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Default, Hash, Ord)]
 pub struct PyPath(String);
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("{0:?} is not a valid UTF-8 path")]
+    NonUTF8Path(PathBuf),
+}
 
 impl PyPath {
     pub fn to_path_buf(&self) -> PathBuf {
@@ -68,7 +75,7 @@ impl<'source> FromPyObject<'source> for PyPath {
             let path = local_bytes_to_path(s).map_pyerr(py)?;
             Ok(Self(
                 path.to_str()
-                    .ok_or_else(|| format_err!("{} is not a UTF-8 path", path.display()))
+                    .ok_or_else(|| Error::NonUTF8Path(path.to_path_buf()))
                     .map_pyerr(py)?
                     .into(),
             ))
@@ -90,7 +97,7 @@ impl<'a> TryFrom<&'a Path> for PyPath {
     fn try_from(path: &'a Path) -> Result<Self> {
         Ok(Self(
             path.to_str()
-                .ok_or_else(|| format_err!("{} is not a UTF-8 path", path.display()))?
+                .ok_or_else(|| Error::NonUTF8Path(path.to_path_buf()))?
                 .into(),
         ))
     }
