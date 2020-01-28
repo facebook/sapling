@@ -17,6 +17,7 @@
 export PREFIX=/usr/local
 
 PYTHON := python
+PYTHON3 := python36
 
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
@@ -29,6 +30,7 @@ TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
 HGNAME ?= hg
+HGNAME3 ?= hg3
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
@@ -73,6 +75,21 @@ else
 	cp build/scripts-2.7/$(HGNAME) $(HGNAME)
 endif
 
+hg3:
+	HGNAME=$(HGNAME3) $(PYTHON3) setup3.py $(PURE) \
+	  build_py -c -d . \
+	  build_clib $(COMPILERFLAG) \
+	  build_ext $(COMPILERFLAG) -i \
+	  build_rust_ext -i -l $(RFLAG)\
+	  build_pyzip -i \
+	  build_mo
+ifeq ($(OS),Windows_NT)
+	cp build/scripts-3*/$(HGNAME3).exe $(HGNAME3).exe
+else
+	$(RM) $(HGNAME3)
+	cp build/scripts-3*/$(HGNAME3) $(HGNAME3)
+endif
+
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
@@ -81,7 +98,7 @@ wheel:
 
 cleanbutpackages:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
-	find contrib doc i18n edenscm tests \
+	find contrib doc i18n edenscm edenscmnative tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in edenscm/hgext/__index__.py tests/*.err
 	rm -f edenscm/mercurial/__modulepolicy__.py
