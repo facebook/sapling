@@ -98,21 +98,26 @@ def gettext(message):
             # goofy unicode docstrings in test
             paragraphs = message.split(u"\n\n")
         else:
+            if sys.version_info[0] == 3:
+                raise TypeError("expect message to be str: %r" % message)
             paragraphs = [p.decode("ascii") for p in message.split("\n\n")]
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
         u = u"\n\n".join([p and _ugettext(p) or u"" for p in paragraphs])
-        try:
-            # encoding.tolocal cannot be used since it will first try to
-            # decode the Unicode string. Calling u.decode(enc) really
-            # means u.encode(sys.getdefaultencoding()).decode(enc). Since
-            # the Python encoding defaults to 'ascii', this fails if the
-            # translated string use non-ASCII characters.
-            encodingstr = pycompat.sysstr(encoding.encoding)
-            cache[message] = identity.replace(u.encode(encodingstr, "replace"))
-        except LookupError:
-            # An unknown encoding results in a LookupError.
-            cache[message] = identity.replace(message)
+        if sys.version_info[0] == 3:
+            cache[message] = identity.replace(u)
+        else:
+            try:
+                # encoding.tolocal cannot be used since it will first try to
+                # decode the Unicode string. Calling u.decode(enc) really
+                # means u.encode(sys.getdefaultencoding()).decode(enc). Since
+                # the Python encoding defaults to 'ascii', this fails if the
+                # translated string use non-ASCII characters.
+                encodingstr = pycompat.sysstr(encoding.encoding)
+                cache[message] = identity.replace(u.encode(encodingstr, "replace"))
+            except LookupError:
+                # An unknown encoding results in a LookupError.
+                cache[message] = identity.replace(message)
     return cache[message]
 
 
@@ -134,8 +139,11 @@ def ngettext(singular, plural, count):
     # Don't cache pluralized messages.  They are relatively rare, and the
     # content depends on the count.
     translated = _ungettext(singular, plural, count)
-    encodingstr = pycompat.sysstr(encoding.encoding)
-    return identity.replace(translated.encode(encodingstr, "replace"))
+    if sys.version_info[0] == 3:
+        return identity.replace(translated)
+    else:
+        encodingstr = pycompat.sysstr(encoding.encoding)
+        return identity.replace(translated.encode(encodingstr, "replace"))
 
 
 _plain = True
