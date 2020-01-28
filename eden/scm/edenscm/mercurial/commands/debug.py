@@ -2266,7 +2266,7 @@ def debugpickmergetool(ui, repo, *pats, **opts):
             ui.write(("%s = %s\n") % (path, tool))
 
 
-@command(b"debugprocesstree|debugproc", [], _("[PID] [PID] ..."), norepo=True)
+@command("debugprocesstree|debugproc", [], _("[PID] [PID] ..."), norepo=True)
 def debugprocesstree(ui, *pids, **opts):
     """show process tree related to hg
 
@@ -3153,7 +3153,7 @@ def debugwireargs(ui, repopath, *vals, **opts):
 
 
 @command(
-    b"debugdrawdag",
+    "debugdrawdag",
     [("p", "print", False, _("print the node to hash mapping of all created nodes"))],
 )
 def debugdrawdag(ui, repo, **opts):
@@ -3177,7 +3177,7 @@ def debugdrawdag(ui, repo, **opts):
 
 
 @command(
-    b"debugprogress",
+    "debugprogress",
     [
         ("s", "spinner", False, _("use a progress spinner")),
         ("n", "nototal", False, _("don't include the total")),
@@ -3260,7 +3260,7 @@ def _findtreemanifest(ctx):
 
 
 @command(
-    b"debugcheckcasecollisions",
+    "debugcheckcasecollisions",
     [("r", "rev", "", _("check the specified revision"), _("REV"))],
     _("[-r REV]... FILENAMES"),
 )
@@ -3343,7 +3343,7 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
 
 
 @command(
-    b"debugexistingcasecollisions",
+    "debugexistingcasecollisions",
     [("r", "rev", "", _("check the specified revision"), _("REV"))],
     _("[-r REV] [PATH...]"),
 )

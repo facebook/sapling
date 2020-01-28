@@ -106,9 +106,9 @@ from .i18n import _
 from .node import hex
 
 
-_pipechars = b"\\/+-|"
-_nonpipechars = b"".join(
-    pycompat.bytechr(i) for i in range(33, 127) if pycompat.bytechr(i) not in _pipechars
+_pipechars = "\\/+-|"
+_nonpipechars = "".join(
+    chr(i) for i in range(33, 127) if pycompat.bytechr(i) not in _pipechars
 )
 
 
@@ -123,7 +123,7 @@ def _parseasciigraph(text):
 
     >>> import pprint
     >>> pprint.pprint({pycompat.sysstr(k): [pycompat.sysstr(vv) for vv in v]
-    ...  for k, v in _parseasciigraph(br'''
+    ...  for k, v in _parseasciigraph(r'''
     ...        G
     ...        |
     ...  I D C F   # split: B -> E, F, G
@@ -142,7 +142,7 @@ def _parseasciigraph(text):
      'H': ['A'],
      'I': ['H']}
     >>> pprint.pprint({pycompat.sysstr(k): [pycompat.sysstr(vv) for vv in v]
-    ...  for k, v in _parseasciigraph(br'''
+    ...  for k, v in _parseasciigraph(r'''
     ...  o    foo
     ...  |\
     ...  +---o  bar
@@ -172,16 +172,16 @@ def _parseasciigraph(text):
         """(int, int) -> char. give a coordinate, return the char. return a
         space for anything out of range"""
         if x < 0 or y < 0:
-            return b" "
+            return " "
         try:
-            return lines[y][x : x + 1] or b" "
+            return lines[y][x : x + 1] or " "
         except IndexError:
-            return b" "
+            return " "
 
     def getname(y, x):
         """(int, int) -> str. like get(y, x) but concatenate left and right
         parts. if name is an 'o', try to replace it to the right"""
-        result = b""
+        result = ""
         for i in itertools.count(0):
             ch = get(y, x - i)
             if not _isname(ch):
@@ -192,17 +192,17 @@ def _parseasciigraph(text):
             if not _isname(ch):
                 break
             result += ch
-        if result == b"o":
+        if result == "o":
             # special handling, find the name to the right
-            result = b""
+            result = ""
             for i in itertools.count(2):
                 ch = get(y, x + i)
-                if ch == b" " or ch in _pipechars:
+                if ch == " " or ch in _pipechars:
                     if result or x + i >= len(lines[y]):
                         break
                 else:
                     result += ch
-            return result or b"o"
+            return result or "o"
         return result
 
     def parents(y, x):
@@ -218,19 +218,19 @@ def _parseasciigraph(text):
             if '-' (or '+') is not in excepted, and get(y, x) is '-' (or '+'),
             the next line (y + 1, x) will be checked instead."""
             ch = get(y, x)
-            if any(ch == c and c not in expected for c in (b"-", b"+")):
+            if any(ch == c and c not in expected for c in ("-", "+")):
                 y += 1
                 return follow(y + 1, x, expected)
-            if ch in expected or (b"o" in expected and _isname(ch)):
+            if ch in expected or ("o" in expected and _isname(ch)):
                 visit.append((y, x))
 
         #  -o-  # starting point:
         #  /|\ # follow '-' (horizontally), and '/|\' (to the bottom)
-        follow(y + 1, x, b"|")
-        follow(y + 1, x - 1, b"/")
-        follow(y + 1, x + 1, b"\\")
-        follow(y, x - 1, b"-")
-        follow(y, x + 1, b"-")
+        follow(y + 1, x, "|")
+        follow(y + 1, x - 1, "/")
+        follow(y + 1, x + 1, "\\")
+        follow(y, x - 1, "-")
+        follow(y, x + 1, "-")
 
         while visit:
             y, x = visit.pop()
@@ -241,28 +241,28 @@ def _parseasciigraph(text):
             if _isname(ch):
                 result.append(getname(y, x))
                 continue
-            elif ch == b"|":
-                follow(y + 1, x, b"/|o")
-                follow(y + 1, x - 1, b"/")
-                follow(y + 1, x + 1, b"\\")
-            elif ch == b"+":
-                follow(y, x - 1, b"-")
-                follow(y, x + 1, b"-")
-                follow(y + 1, x - 1, b"/")
-                follow(y + 1, x + 1, b"\\")
-                follow(y + 1, x, b"|")
-            elif ch == b"\\":
-                follow(y + 1, x + 1, b"\\|o")
-            elif ch == b"/":
-                follow(y + 1, x - 1, b"/|o")
-            elif ch == b"-":
-                follow(y, x - 1, b"-+o")
-                follow(y, x + 1, b"-+o")
+            elif ch == "|":
+                follow(y + 1, x, "/|o")
+                follow(y + 1, x - 1, "/")
+                follow(y + 1, x + 1, "\\")
+            elif ch == "+":
+                follow(y, x - 1, "-")
+                follow(y, x + 1, "-")
+                follow(y + 1, x - 1, "/")
+                follow(y + 1, x + 1, "\\")
+                follow(y + 1, x, "|")
+            elif ch == "\\":
+                follow(y + 1, x + 1, "\\|o")
+            elif ch == "/":
+                follow(y + 1, x - 1, "/|o")
+            elif ch == "-":
+                follow(y, x - 1, "-+o")
+                follow(y, x + 1, "-+o")
         return result
 
     for y, line in enumerate(lines):
         for x, ch in enumerate(pycompat.bytestr(line)):
-            if ch == b"#":  # comment
+            if ch == "#":  # comment
                 break
             if _isname(ch):
                 edges[getname(y, x)] += parents(y, x)
@@ -291,7 +291,7 @@ class simplefilectx(object):
         return None
 
     def flags(self):
-        return b""
+        return ""
 
 
 class simplecommitctx(context.committablectx):
@@ -310,7 +310,7 @@ class simplecommitctx(context.committablectx):
                 if path in removed:
                     raise error.Abort(_("%s: both added and removed") % path)
                 added.append(path)
-        extra = {b"branch": b"default"}
+        extra = {"branch": "default"}
         mutinfo = None
         if mutationspec is not None:
             predctxs, cmd, split = mutationspec
@@ -401,9 +401,9 @@ def _getcomments(text):
     ['split: B -> E, F, G', 'replace: C -> D -> H', 'prune: F, I']
     """
     for line in text.splitlines():
-        if b" # " not in line:
+        if " # " not in line:
             continue
-        yield line.split(b" # ", 1)[1].split(b" # ")[0].strip()
+        yield line.split(" # ", 1)[1].split(" # ")[0].strip()
 
 
 def drawdag(repo, text, **opts):
@@ -426,20 +426,20 @@ def drawdag(repo, text, **opts):
     edges = _parseasciigraph(text)
     for k, v in edges.items():
         if len(v) > 2:
-            raise error.Abort(_("%s: too many parents: %s") % (k, b" ".join(v)))
+            raise error.Abort(_("%s: too many parents: %s") % (k, " ".join(v)))
 
     # parse comments to get extra file content instructions
     files = collections.defaultdict(dict)  # {(name, path): content}
     comments = list(_getcomments(text))
-    filere = re.compile(br"^(\w+)/([\w/]+)\s*=\s*(.*)$", re.M)
-    for name, path, content in filere.findall(b"\n".join(comments)):
-        content = content.replace(br"\n", b"\n").replace(br"\1", b"\1")
+    filere = re.compile(r"^(\w+)/([\w/]+)\s*=\s*(.*)$", re.M)
+    for name, path, content in filere.findall("\n".join(comments)):
+        content = content.replace(r"\n", "\n").replace(r"\1", "\1")
         files[name][path] = content
 
     # parse commits like "X: date=1 0" to specify dates
     dates = {}
-    datere = re.compile(br"^(\w+) has date\s*[= ]([0-9 ]+)$", re.M)
-    for name, date in datere.findall(b"\n".join(comments)):
+    datere = re.compile(r"^(\w+) has date\s*[= ]([0-9 ]+)$", re.M)
+    for name, date in datere.findall("\n".join(comments)):
         dates[name] = date
 
     # do not create default files? (ex. commit A has file "A")
@@ -460,15 +460,15 @@ def drawdag(repo, text, **opts):
     mutations = {}
     for comment in comments:
         rels = []  # obsolete relationships
-        args = comment.split(b":", 1)
+        args = comment.split(":", 1)
         if len(args) <= 1:
             continue
 
         cmd = args[0].strip()
         arg = args[1].strip()
 
-        if cmd in (b"replace", b"rebase", b"amend"):
-            nodes = [n.strip() for n in arg.split(b"->")]
+        if cmd in ("replace", "rebase", "amend"):
+            nodes = [n.strip() for n in arg.split("->")]
             for i in range(len(nodes) - 1):
                 pred, succ = nodes[i], nodes[i + 1]
                 rels.append((pred, (succ,)))
@@ -478,10 +478,10 @@ def drawdag(repo, text, **opts):
                         % (succ, pred, mutations[succ][0])
                     )
                 mutations[succ] = ([pred], cmd, None)
-        elif cmd in (b"split",):
-            pred, succs = arg.split(b"->")
+        elif cmd in ("split",):
+            pred, succs = arg.split("->")
             pred = pred.strip()
-            succs = [s.strip() for s in succs.split(b",")]
+            succs = [s.strip() for s in succs.split(",")]
             rels.append((pred, succs))
             for succ in succs:
                 if succ in mutations:
@@ -498,9 +498,9 @@ def drawdag(repo, text, **opts):
                         % (pred, parent, child)
                     )
             mutations[succs[-1]] = ([pred], cmd, succs[:-1])
-        elif cmd in (b"fold",):
-            preds, succ = arg.split(b"->")
-            preds = [p.strip() for p in preds.split(b",")]
+        elif cmd in ("fold",):
+            preds, succ = arg.split("->")
+            preds = [p.strip() for p in preds.split(",")]
             succ = succ.strip()
             for pred in preds:
                 rels.append((pred, (succ,)))
@@ -518,11 +518,11 @@ def drawdag(repo, text, **opts):
                         % (succ, parent, child)
                     )
             mutations[succ] = (preds, cmd, None)
-        elif cmd in (b"prune",):
-            for n in arg.split(b","):
+        elif cmd in ("prune",):
+            for n in arg.split(","):
                 rels.append((n.strip(), ()))
-        elif cmd in (b"revive",):
-            for n in arg.split(b","):
+        elif cmd in ("revive",):
+            for n in arg.split(","):
                 rels.append((n.strip(), (n.strip(),)))
         if rels:
             obsmarkers.append((cmd, rels))
@@ -570,7 +570,7 @@ def drawdag(repo, text, **opts):
                 split = [repo[committed[s]] for s in split]
             commitmutations = ([repo[committed[p]] for p in preds], cmd, split)
 
-        date = dates.get(name, b"0 0")
+        date = dates.get(name, "0 0")
         ctx = simplecommitctx(repo, name, pctxs, added, commitmutations, date)
         n = ctx.commit()
         committed[name] = n
@@ -579,7 +579,7 @@ def drawdag(repo, text, **opts):
                 bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
 
     # handle special comments
-    with repo.wlock(), repo.lock(), repo.transaction(b"drawdag"):
+    with repo.wlock(), repo.lock(), repo.transaction("drawdag"):
         getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             for cmd, markers in obsmarkers:

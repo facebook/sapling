@@ -352,32 +352,26 @@ coreconfigitem("merge", "printcandidatecommmits", default=False)
 coreconfigitem("merge-tools", ".*", default=None, generic=True)
 coreconfigitem(
     "merge-tools",
-    br".*\.args$",
+    r".*\.args$",
     default="$local $base $other",
     generic=True,
     priority=-1,
 )
-coreconfigitem("merge-tools", br".*\.binary$", default=False, generic=True, priority=-1)
-coreconfigitem("merge-tools", br".*\.check$", default=list, generic=True, priority=-1)
+coreconfigitem("merge-tools", r".*\.binary$", default=False, generic=True, priority=-1)
+coreconfigitem("merge-tools", r".*\.check$", default=list, generic=True, priority=-1)
 coreconfigitem(
-    "merge-tools", br".*\.checkchanged$", default=False, generic=True, priority=-1
+    "merge-tools", r".*\.checkchanged$", default=False, generic=True, priority=-1
 )
 coreconfigitem(
-    "merge-tools",
-    br".*\.executable$",
-    default=dynamicdefault,
-    generic=True,
-    priority=-1,
+    "merge-tools", r".*\.executable$", default=dynamicdefault, generic=True, priority=-1
 )
-coreconfigitem("merge-tools", br".*\.fixeol$", default=False, generic=True, priority=-1)
-coreconfigitem("merge-tools", br".*\.gui$", default=False, generic=True, priority=-1)
-coreconfigitem("merge-tools", br".*\.priority$", default=0, generic=True, priority=-1)
+coreconfigitem("merge-tools", r".*\.fixeol$", default=False, generic=True, priority=-1)
+coreconfigitem("merge-tools", r".*\.gui$", default=False, generic=True, priority=-1)
+coreconfigitem("merge-tools", r".*\.priority$", default=0, generic=True, priority=-1)
 coreconfigitem(
-    "merge-tools", br".*\.premerge$", default=dynamicdefault, generic=True, priority=-1
+    "merge-tools", r".*\.premerge$", default=dynamicdefault, generic=True, priority=-1
 )
-coreconfigitem(
-    "merge-tools", br".*\.symlink$", default=False, generic=True, priority=-1
-)
+coreconfigitem("merge-tools", r".*\.symlink$", default=False, generic=True, priority=-1)
 coreconfigitem("mutation", "date", default=None)
 coreconfigitem("mutation", "enabled", default=False)
 coreconfigitem("mutation", "record", default=True)

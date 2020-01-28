@@ -422,8 +422,8 @@ def _render_effects(ui, text, effects):
     return _mergeeffects(text, start, stop)
 
 
-_ansieffectre = re.compile(br"\x1b\[[0-9;]*m")
-_truecolorre = re.compile(br"#([0-9A-Fa-f]{3}){1,2}(_background)?")
+_ansieffectre = re.compile(r"\x1b\[[0-9;]*m")
+_truecolorre = re.compile(r"#([0-9A-Fa-f]{3}){1,2}(_background)?")
 
 
 def stripeffects(text):
