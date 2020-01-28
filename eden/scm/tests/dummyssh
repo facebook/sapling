@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import shlex
 import subprocess
@@ -16,7 +16,7 @@ def parse(cmd):
     try:
         return shlex.split(cmd)
     except ValueError as e:
-        eprint('Illegal command "%s": %s\n' % (cmd, e))
+        print('Illegal command "%s": %s\n' % (cmd, e), file=sys.stderr)
         sys.exit(255)
 
 def parse_repo_path(path):
@@ -31,7 +31,7 @@ def parse_repo_path(path):
         repo = path[0]
         marker = path[1]
     else:
-        eprint("Illegal repo name: %s\n" % "?".join(path))
+        print("Illegal repo name: %s\n" % "?".join(path), file=sys.stderr)
         sys.exit(255)
 
     return repo, marker
@@ -47,10 +47,10 @@ if sys.argv[host_index] != "user@dummy":
 os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get('LOCALIP', '127.0.0.1')
 
 log = open("dummylog", "ab")
-log.write("Got arguments")
+log.write(b"Got arguments")
 for i, arg in enumerate(sys.argv[1:]):
-    log.write(" %d:%s" % (i + 1, arg))
-log.write("\n")
+    log.write(b" %d:%s" % (i + 1, arg.encode("utf-8")))
+log.write(b"\n")
 log.close()
 hgcmd = sys.argv[host_index + 1]
 if os.name == 'nt':
