@@ -247,7 +247,7 @@ class localpeer(repository.peer):
             return changegroup.getunbundler("01", cb, None)
 
     def heads(self, *args, **kwargs):
-        return self._repo.heads(*args, **kwargs)
+        return list(self._repo.heads(*args, **kwargs))
 
     def known(self, nodes):
         return self._repo.known(nodes)

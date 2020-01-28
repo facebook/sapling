@@ -846,7 +846,7 @@ def _parse(ui, args):
         raise error.Abort(e.args[0])
 
     # separate global options back out
-    for (k, v) in cmdoptions.items():
+    for (k, v) in list(cmdoptions.items()):
         if "-" in k:
             orig = k
             k = k.replace("-", "_")

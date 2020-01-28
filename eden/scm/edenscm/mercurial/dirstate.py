@@ -875,7 +875,7 @@ class dirstate(object):
         # We have seen some rare issues that a few "M" or "R" files show up
         # while the files are expected to be clean. Log the reason of first few
         # "M" files.
-        mtolog = self._ui.configint("experimental", "samplestatus")
+        mtolog = self._ui.configint("experimental", "samplestatus") or 0
 
         oldid = self.identity()
 

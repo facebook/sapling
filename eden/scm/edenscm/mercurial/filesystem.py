@@ -8,6 +8,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import errno
 import os
 import stat
@@ -39,7 +41,7 @@ class physicalfilesystem(object):
         # This is needed temporarily to enable an incremental migration of
         # functionality to this layer.
         self.dirstate = dirstate
-        self.mtolog = self.ui.configint("experimental", "samplestatus")
+        self.mtolog = self.ui.configint("experimental", "samplestatus") or 0
         self.ltolog = self.mtolog
         self.dtolog = self.mtolog
         self.ftolog = self.mtolog

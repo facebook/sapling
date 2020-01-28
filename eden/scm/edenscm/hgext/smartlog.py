@@ -304,7 +304,7 @@ def getdag(ui, repo, revs, master):
     # [(a,b), (c,d), (e,f)] => [b, d, f]
     def unzip(parents):
         if parents:
-            return list(zip(*parents)[1])
+            return list(list(zip(*parents))[1])
         else:
             return list()
 

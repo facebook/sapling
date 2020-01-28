@@ -6,6 +6,7 @@
 # shallowutil.py -- remotefilelog utilities
 from __future__ import absolute_import
 
+import builtins
 import errno
 import hashlib
 import os
@@ -209,11 +210,14 @@ def _buildpackmeta(metadict):
     return metabuf
 
 
-_metaitemtypes = {
-    # pyre-fixme[18]: Global name `long` is undefined.
-    constants.METAKEYFLAG: (int, long),  # noqa
-    constants.METAKEYSIZE: (int, long),  # noqa
-}
+long = getattr(builtins, "long", None)
+if long is not None:
+    inttype = (int, long)
+else:
+    inttype = int
+
+
+_metaitemtypes = {constants.METAKEYFLAG: inttype, constants.METAKEYSIZE: inttype}
 
 
 def buildpackmeta(metadict):
