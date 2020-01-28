@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum HgPhase {
     Public = 0,
