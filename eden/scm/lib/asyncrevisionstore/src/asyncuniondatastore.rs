@@ -44,6 +44,6 @@ impl AsyncUnionDataStore<DataPack> {
     pub fn new(
         packs: Vec<PathBuf>,
     ) -> impl Future<Item = AsyncUnionDataStore<DataPack>, Error = Error> + Send + 'static {
-        new_store(packs, DataPack::new)
+        new_store(packs, |path| DataPack::new(&path))
     }
 }

@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::TryInto;
+
 use anyhow::Result;
 use cpython::{
     PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
 };
 
-use cpython_ext::ResultPyErrExt;
+use cpython_ext::{PyPath, ResultPyErrExt};
 use revisionstore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
@@ -38,7 +40,7 @@ pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
         linknode: &PyBytes,
         copyfrom: Option<&PyBytes>,
     ) -> PyResult<PyObject>;
-    fn flush_py(&self, py: Python) -> PyResult<PyObject>;
+    fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>>;
 }
 
 pub trait RemoteHistoryStorePyExt: RemoteHistoryStore {
@@ -174,15 +176,10 @@ impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
         Ok(Python::None(py))
     }
 
-    fn flush_py(&self, py: Python) -> PyResult<PyObject> {
+    fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>> {
         let opt = self.flush().map_pyerr(py)?;
-        let opt = opt
-            .as_ref()
-            .map(|path| encoding::path_to_local_bytes(path))
-            .transpose()
-            .map_pyerr(py)?;
-        let opt = opt.map(|path| PyBytes::new(py, &path));
-        Ok(opt.into_py_object(py))
+        let opt = opt.map(|path| path.try_into()).transpose().map_pyerr(py)?;
+        Ok(opt)
     }
 }
 

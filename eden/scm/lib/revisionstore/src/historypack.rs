@@ -253,7 +253,11 @@ pub struct HistoryPack {
 }
 
 impl HistoryPack {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
+        HistoryPack::with_path(path.as_ref())
+    }
+
+    fn with_path(path: &Path) -> Result<Self> {
         let base_path = PathBuf::from(path);
         let pack_path = path.with_extension("histpack");
         let file = File::open(&pack_path)?;

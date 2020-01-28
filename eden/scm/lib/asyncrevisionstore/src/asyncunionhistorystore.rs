@@ -45,6 +45,6 @@ impl AsyncUnionHistoryStore<HistoryPack> {
         packs: Vec<PathBuf>,
     ) -> impl Future<Item = AsyncUnionHistoryStore<HistoryPack>, Error = Error> + Send + 'static
     {
-        new_store(packs, HistoryPack::new)
+        new_store(packs, |path| HistoryPack::new(&path))
     }
 }

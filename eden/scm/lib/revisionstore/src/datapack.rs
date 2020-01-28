@@ -265,7 +265,11 @@ impl<'a> fmt::Debug for DataEntry<'a> {
 }
 
 impl DataPack {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(p: impl AsRef<Path>) -> Result<Self> {
+        DataPack::with_path(p.as_ref())
+    }
+
+    fn with_path(path: &Path) -> Result<Self> {
         let base_path = PathBuf::from(path);
         let pack_path = path.with_extension("datapack");
         let file = File::open(&pack_path)?;
