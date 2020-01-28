@@ -127,7 +127,9 @@ class uiconfig(object):
             self.logmeasuredtimes = self.configbool("ui", "logmeasuredtimes")
 
     def setconfig(self, section, name, value, source=""):
-        if util.safehasattr(value, "__iter__"):
+        if isinstance(value, (str, int, float, bool)):
+            value = str(value)
+        elif util.safehasattr(value, "__iter__"):
 
             def escape(v):
                 if '"' in v:
@@ -135,8 +137,6 @@ class uiconfig(object):
                 return '"%s"' % v
 
             value = ",".join(escape(v) for v in value)
-        elif isinstance(value, (str, int, float, bool)):
-            value = str(value)
         elif value is None:
             pass
         else:
