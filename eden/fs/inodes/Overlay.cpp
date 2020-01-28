@@ -28,6 +28,11 @@
 namespace facebook {
 namespace eden {
 
+namespace {
+constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
+constexpr uint64_t ioClosedMask = 1ull << 63;
+} // namespace
+
 using folly::Unit;
 using std::optional;
 
@@ -73,6 +78,10 @@ void Overlay::close() {
   closeAndWaitForOutstandingIO();
   inodeMetadataTable_.reset();
   fsOverlay_.close(optNextInodeNumber);
+}
+
+bool Overlay::isClosed() {
+  return outstandingIORequests_.load(std::memory_order_acquire) & ioClosedMask;
 }
 
 struct statfs Overlay::statFs() {
@@ -312,9 +321,6 @@ InodeNumber Overlay::getMaxInodeNumber() {
   CHECK_GT(ino, 1);
   return InodeNumber{ino - 1};
 }
-
-static constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
-static constexpr uint64_t ioClosedMask = 1ull << 63;
 
 bool Overlay::tryIncOutstandingIORequests() {
   uint64_t currentOutstandingIO =

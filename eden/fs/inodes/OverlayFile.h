@@ -25,6 +25,9 @@ class OverlayFile {
   OverlayFile() = default;
   explicit OverlayFile(folly::File file, std::weak_ptr<Overlay> overlay);
 
+  OverlayFile(OverlayFile&&) = default;
+  OverlayFile& operator=(OverlayFile&&) = default;
+
   folly::Expected<struct stat, int> fstat() const;
   folly::Expected<ssize_t, int> preadNoInt(void* buf, size_t n, off_t offset)
       const;
@@ -37,6 +40,9 @@ class OverlayFile {
   folly::Expected<std::string, int> readFile() const;
 
  private:
+  OverlayFile(const OverlayFile&) = delete;
+  OverlayFile& operator=(const OverlayFile&) = delete;
+
   folly::File file_;
   std::weak_ptr<Overlay> overlay_;
 };

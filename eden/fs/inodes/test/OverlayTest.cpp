@@ -339,17 +339,22 @@ TEST_P(RawOverlayTest, closed_overlay_stress_test) {
           printf("createOverlayFile failed: %s\n", e.what());
           throw e;
         }
+        // The Overlay is already closed, so just return successfully.
+        gate.wait();
+        return;
       }
 
       // Block until after overlay has closed
       gate.wait();
+
+      ASSERT_TRUE(overlay->isClosed());
 
       try {
         char data[] = "new contents";
         struct iovec iov;
         iov.iov_base = data;
         iov.iov_len = sizeof(data);
-        result.pwritev(&iov, 1, FsOverlay::kHeaderLength);
+        result.pwritev(&iov, 1, FsOverlay::kHeaderLength).value();
         throw std::system_error(
             EIO,
             std::generic_category(),
@@ -372,7 +377,7 @@ TEST_P(RawOverlayTest, closed_overlay_stress_test) {
 
   auto finished = folly::collectAll(futures).get();
   for (auto& f : finished) {
-    EXPECT_FALSE(f.hasException());
+    EXPECT_FALSE(f.hasException()) << f.exception().what();
   }
 }
 

@@ -104,6 +104,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void close();
 
   /**
+   * Returns true if the Overlay has already been closed or is in the process of
+   * closing. This function is primarily for debugging.
+   */
+  bool isClosed();
+
+  /**
    * Get the maximum inode number that has ever been allocated to an inode.
    */
   InodeNumber getMaxInodeNumber();
