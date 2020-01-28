@@ -228,6 +228,12 @@ impl AsRef<RepoPath> for RepoPathBuf {
     }
 }
 
+impl AsRef<str> for RepoPathBuf {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl AsRef<[u8]> for RepoPathBuf {
     fn as_ref(&self) -> &[u8] {
         self.as_byte_slice()
@@ -356,6 +362,12 @@ impl PartialOrd for RepoPath {
 impl AsRef<RepoPath> for RepoPath {
     fn as_ref(&self) -> &RepoPath {
         self
+    }
+}
+
+impl AsRef<str> for RepoPath {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
