@@ -9,14 +9,13 @@
 
 use anyhow::Error;
 use cpython::*;
-use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
+use cpython_ext::{AnyhowResultExt, PyPath, ResultPyErrExt};
 use dag::{
     id::{Group, Id, VertexName},
     idmap::IdMap,
     spanset::{SpanSet, SpanSetIter},
     IdDag,
 };
-use encoding::local_bytes_to_path;
 use std::cell::RefCell;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -169,10 +168,9 @@ py_class!(class dagindex |py| {
     data dag: RefCell<IdDag>;
     data map: RefCell<IdMap>;
 
-    def __new__(_cls, path: &PyBytes, segment_size: usize = 16) -> PyResult<dagindex> {
-        let path = local_bytes_to_path(path.data(py)).map_pyerr(py)?;
-        let mut dag = IdDag::open(path.join("segment")).map_pyerr(py)?;
-        let map = IdMap::open(path.join("idmap")).map_pyerr(py)?;
+    def __new__(_cls, path: PyPath, segment_size: usize = 16) -> PyResult<dagindex> {
+        let mut dag = IdDag::open(path.as_ref().join("segment")).map_pyerr(py)?;
+        let map = IdMap::open(path.as_ref().join("idmap")).map_pyerr(py)?;
         dag.set_new_segment_size(segment_size);
         Self::create_instance(py, RefCell::new(dag), RefCell::new(map))
     }
