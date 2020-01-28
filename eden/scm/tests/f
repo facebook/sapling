@@ -64,7 +64,7 @@ def visit(opts, filenames, outfile):
         elif islink:
             if opts.type:
                 facts.append('link')
-            content = os.readlink(f)
+            content = os.readlink(f).encode("utf-8")
         elif isstdin:
             content = getattr(sys.stdin, 'buffer', sys.stdin).read()
             if opts.size:
@@ -96,9 +96,9 @@ def visit(opts, filenames, outfile):
             h = hashlib.sha1(content)
             facts.append('sha1=%s' % h.hexdigest()[:opts.bytes])
         if isstdin:
-            outfile.write(b', '.join(facts) + b'\n')
+            outfile.write(', '.join(facts).encode('utf-8') + b'\n')
         elif facts:
-            outfile.write(b'%s: %s\n' % (f.encode('utf-8'), b', '.join(facts)))
+            outfile.write(b'%s: %s\n' % (f.encode('utf-8'), ', '.join(facts).encode('utf-8')))
         elif not quiet:
             outfile.write(b'%s:\n' % f.encode('utf-8'))
         if content is not None:
@@ -120,7 +120,7 @@ def visit(opts, filenames, outfile):
                     outfile.write(b'%04x: %-47s |%s|\n' %
                                   (i, b' '.join(
                                       b'%02x' % ord(c) for c in iterbytes(s)),
-                                   re.sub(b'[^ -~]', b'.', s)))
+                                      re.sub(b'[^ -~]', b'.', s)))
             if opts.dump:
                 if not quiet:
                     outfile.write(b'>>>\n')
