@@ -13,6 +13,9 @@
  * This software may be used and distributed according to the terms of
  * the GNU General Public License, incorporated herein by reference.
  */
+#ifdef IS_PY3K
+#define PY_SSIZE_T_CLEAN
+#endif
 #include <Python.h>
 
 #include <assert.h>
@@ -25,7 +28,11 @@
 #define DEFAULT_LINES 100000
 
 typedef struct {
+#ifdef IS_PY3K
+  const char* start;
+#else
   char* start;
+#endif
   Py_ssize_t len; /* length of line including terminal newline */
   char hash_suffix;
   bool from_malloc;
@@ -52,7 +59,7 @@ static size_t pathlen(line* l) {
 
 /* get the node value of a single line */
 static PyObject* nodeof(line* l) {
-  char* s = l->start;
+  const char* s = l->start;
   ssize_t llen = pathlen(l);
   PyObject* hash = unhexlify(s + llen + 1, 40);
   if (!hash) {
@@ -70,7 +77,7 @@ static PyObject* nodeof(line* l) {
 
 /* get the node hash and flags of a line as a tuple */
 static PyObject* hashflags(line* l) {
-  char* s = l->start;
+  const char* s = l->start;
   size_t plen = pathlen(l);
   PyObject* hash = nodeof(l);
 
@@ -82,7 +89,11 @@ static PyObject* hashflags(line* l) {
 
   if (!hash)
     return NULL;
+#ifdef IS_PY3K
+  flags = PyUnicode_FromStringAndSize(s + hplen - 1, flen);
+#else
   flags = PyBytes_FromStringAndSize(s + hplen - 1, flen);
+#endif
   if (!flags) {
     Py_DECREF(hash);
     return NULL;
@@ -181,7 +192,7 @@ static void lazymanifest_dealloc(lazymanifest* self) {
   int i;
   for (i = 0; i < self->numlines; i++) {
     if (self->lines[i].from_malloc) {
-      free(self->lines[i].start);
+      free((void*)self->lines[i].start);
     }
   }
   if (self->lines) {
@@ -229,10 +240,19 @@ static PyObject* lmiter_iterentriesnext(PyObject* o) {
     goto done;
   }
   pl = pathlen(l);
+#ifdef IS_PY3K
+  path = PyUnicode_FromStringAndSize(l->start, pl);
+#else
   path = PyBytes_FromStringAndSize(l->start, pl);
+#endif
   hash = nodeof(l);
   consumed = pl + 41;
+#ifdef IS_PY3K
+  flags =
+      PyUnicode_FromStringAndSize(l->start + consumed, l->len - consumed - 1);
+#else
   flags = PyBytes_FromStringAndSize(l->start + consumed, l->len - consumed - 1);
+#endif
   if (!path || !hash || !flags) {
     goto done;
   }
@@ -288,7 +308,11 @@ static PyObject* lmiter_iterkeysnext(PyObject* o) {
     return NULL;
   }
   pl = pathlen(l);
+#ifdef IS_PY3K
+  return PyUnicode_FromStringAndSize(l->start, pl);
+#else
   return PyBytes_FromStringAndSize(l->start, pl);
+#endif
 }
 
 #ifdef IS_PY3K
@@ -379,11 +403,20 @@ static int linecmp(const void* left, const void* right) {
 static PyObject* lazymanifest_getitem(lazymanifest* self, PyObject* key) {
   line needle;
   line* hit;
+#ifdef IS_PY3K
+  if (!PyUnicode_Check(key)) {
+    PyErr_Format(
+        PyExc_TypeError, "getitem: manifest keys must be a unicode str.");
+    return NULL;
+  }
+  needle.start = PyUnicode_AsUTF8(key);
+#else
   if (!PyBytes_Check(key)) {
     PyErr_Format(PyExc_TypeError, "getitem: manifest keys must be a string.");
     return NULL;
   }
   needle.start = PyBytes_AsString(key);
+#endif
   hit = bsearch(&needle, self->lines, self->numlines, sizeof(line), &linecmp);
   if (!hit || hit->deleted) {
     PyErr_Format(PyExc_KeyError, "No such manifest entry.");
@@ -395,11 +428,19 @@ static PyObject* lazymanifest_getitem(lazymanifest* self, PyObject* key) {
 static int lazymanifest_delitem(lazymanifest* self, PyObject* key) {
   line needle;
   line* hit;
+#ifdef IS_PY3K
+  if (!PyUnicode_Check(key)) {
+    PyErr_Format(PyExc_TypeError, "delitem: manifest keys must be a str.");
+    return -1;
+  }
+  needle.start = PyUnicode_AsUTF8(key);
+#else
   if (!PyBytes_Check(key)) {
     PyErr_Format(PyExc_TypeError, "delitem: manifest keys must be a string.");
     return -1;
   }
   needle.start = PyBytes_AsString(key);
+#endif
   hit = bsearch(&needle, self->lines, self->numlines, sizeof(line), &linecmp);
   if (!hit || hit->deleted) {
     PyErr_Format(PyExc_KeyError, "Tried to delete nonexistent manifest entry.");
@@ -426,7 +467,7 @@ static int internalsetitem(lazymanifest* self, line* new) {
       if (self->lines[pos].deleted)
         self->livelines++;
       if (self->lines[pos].from_malloc)
-        free(self->lines[pos].start);
+        free((void*)self->lines[pos].start);
       start = pos;
       goto finish;
     }
@@ -450,22 +491,29 @@ finish:
 
 static int
 lazymanifest_setitem(lazymanifest* self, PyObject* key, PyObject* value) {
-  char* path;
+  const char* path;
   Py_ssize_t plen;
   PyObject* pyhash;
   Py_ssize_t hlen;
   char* hash;
   PyObject* pyflags;
-  char* flags;
+  const char* flags;
   Py_ssize_t flen;
   size_t dlen;
   char* dest;
   int i;
   line new;
-  if (!PyBytes_Check(key)) {
-    PyErr_Format(PyExc_TypeError, "setitem: manifest keys must be a string.");
+#ifdef IS_PY3K
+  if (!PyUnicode_Check(key)) {
+    PyErr_Format(PyExc_TypeError, "setitem: manifest keys must be a str.");
     return -1;
   }
+#else
+  if (!PyBytes_Check(key)) {
+    PyErr_Format(PyExc_TypeError, "setitem: manifest keys must be a str.");
+    return -1;
+  }
+#endif
   if (!value) {
     return lazymanifest_delitem(self, key);
   }
@@ -474,13 +522,16 @@ lazymanifest_setitem(lazymanifest* self, PyObject* key, PyObject* value) {
         PyExc_TypeError, "Manifest values must be a tuple of (node, flags).");
     return -1;
   }
-  if (PyBytes_AsStringAndSize(key, &path, &plen) == -1) {
+#ifdef IS_PY3K
+  path = PyUnicode_AsUTF8AndSize(key, &plen);
+#else
+  if (PyBytes_AsStringAndSize(key, (char**)&path, &plen) == -1) {
     return -1;
   }
-
+#endif
   pyhash = PyTuple_GetItem(value, 0);
   if (!PyBytes_Check(pyhash)) {
-    PyErr_Format(PyExc_TypeError, "node must be a 20-byte string");
+    PyErr_Format(PyExc_TypeError, "node must be a 20-byte bytes");
     return -1;
   }
   hlen = PyBytes_Size(pyhash);
@@ -491,19 +542,31 @@ lazymanifest_setitem(lazymanifest* self, PyObject* key, PyObject* value) {
    * the floor, which works fine.
    */
   if (hlen != 20 && hlen != 21 && hlen != 22) {
-    PyErr_Format(PyExc_TypeError, "node must be a 20-byte string");
+    PyErr_Format(PyExc_TypeError, "node must be a 20-byte bytes");
     return -1;
   }
   hash = PyBytes_AsString(pyhash);
 
   pyflags = PyTuple_GetItem(value, 1);
+#ifdef IS_PY3K
+  if (!PyUnicode_Check(pyflags)) {
+    PyErr_Format(PyExc_TypeError, "flags must be a str");
+    return -1;
+  }
+  flags = PyUnicode_AsUTF8AndSize(pyflags, &flen);
+  if (flen > 1) {
+    PyErr_Format(PyExc_TypeError, "len(flags) must be <= 1");
+    return -1;
+  }
+#else
   if (!PyBytes_Check(pyflags) || PyBytes_Size(pyflags) > 1) {
     PyErr_Format(PyExc_TypeError, "flags must a 0 or 1 byte string");
     return -1;
   }
-  if (PyBytes_AsStringAndSize(pyflags, &flags, &flen) == -1) {
+  if (PyBytes_AsStringAndSize(pyflags, (char**)&flags, &flen) == -1) {
     return -1;
   }
+#endif
   /* one null byte and one newline */
   dlen = plen + 41 + flen + 1;
   dest = malloc(dlen);
@@ -545,12 +608,22 @@ static PyMappingMethods lazymanifest_mapping_methods = {
 static int lazymanifest_contains(lazymanifest* self, PyObject* key) {
   line needle;
   line* hit;
-  if (!PyBytes_Check(key)) {
+  if (
+#ifdef IS_PY3K
+      !PyUnicode_Check(key)
+#else
+      !PyBytes_Check(key)
+#endif
+  ) {
     /* Our keys are always strings, so if the contains
      * check is for a non-string, just return false. */
     return 0;
   }
+#ifdef IS_PY3K
+  needle.start = PyUnicode_AsUTF8(key);
+#else
   needle.start = PyBytes_AsString(key);
+#endif
   hit = bsearch(&needle, self->lines, self->numlines, sizeof(line), &linecmp);
   if (!hit || hit->deleted) {
     return 0;
@@ -598,7 +671,7 @@ static int compact(lazymanifest* self) {
   src = self->lines;
   dst = self->lines;
   for (i = 0; i < self->numlines; i++, src++) {
-    char* tofree = NULL;
+    const char* tofree = NULL;
     if (src->from_malloc) {
       tofree = src->start;
     }
@@ -610,7 +683,7 @@ static int compact(lazymanifest* self) {
       data += dst->len;
       dst++;
     }
-    free(tofree);
+    free((void*)tofree);
   }
   Py_DECREF(self->pydata);
   self->pydata = pydata;
@@ -723,7 +796,11 @@ static PyObject* lazymanifest_diff(lazymanifest* self, PyObject* args) {
     return NULL;
   }
   listclean = (!pyclean) ? false : PyObject_IsTrue(pyclean);
+#ifdef IS_PY3K
+  es = PyUnicode_FromString("");
+#else
   es = PyBytes_FromString("");
+#endif
   if (!es) {
     goto nomem;
   }
@@ -762,8 +839,13 @@ static PyObject* lazymanifest_diff(lazymanifest* self, PyObject* args) {
     } else {
       result = linecmp(left, right);
     }
+#ifdef IS_PY3K
+    key = result <= 0 ? PyUnicode_FromString(left->start)
+                      : PyUnicode_FromString(right->start);
+#else
     key = result <= 0 ? PyBytes_FromString(left->start)
                       : PyBytes_FromString(right->start);
+#endif
     if (!key)
       goto nomem;
     if (result < 0) {
@@ -833,6 +915,10 @@ nomem:
 }
 
 static PyMethodDef lazymanifest_methods[] = {
+    {"keys",
+     (PyCFunction)lazymanifest_getkeysiter,
+     METH_NOARGS,
+     "Iterate over file names in this lazymanifest."},
     {"iterkeys",
      (PyCFunction)lazymanifest_getkeysiter,
      METH_NOARGS,
