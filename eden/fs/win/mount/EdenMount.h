@@ -38,7 +38,6 @@ class Future;
 namespace facebook {
 namespace eden {
 
-class BindMount;
 class CheckoutConfig;
 class CheckoutConflict;
 class Clock;
@@ -434,12 +433,6 @@ class EdenMount {
    */
 
   folly::Synchronized<ParentInfo> parentInfo_;
-
-  /*
-   * Note that this config will not be updated if the user modifies the
-   * underlying config files after the CheckoutConfig was created.
-   */
-  const std::vector<BindMount> bindMounts_;
 
   std::unique_ptr<Journal> journal_;
 
