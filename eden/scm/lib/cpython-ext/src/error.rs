@@ -154,7 +154,13 @@ impl fmt::Display for PyErr {
             .repr(py)
             .map(|s| s.to_string_lossy(py).to_string())
             .unwrap_or_else(|_| "<error in repr>".into());
-        write!(f, "{}", repr)
+        write!(f, "{}", repr)?;
+        if std::env::var("RUST_BACKTRACE").is_ok() {
+            if let Ok(s) = format_py_error(py, &self.inner) {
+                write!(f, "\n{}", s)?;
+            }
+        }
+        Ok(())
     }
 }
 
