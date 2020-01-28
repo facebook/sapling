@@ -12,8 +12,7 @@ use std::cell::RefCell;
 use anyhow::Error;
 use cpython::*;
 
-use cpython_ext::ResultPyErrExt;
-use encoding::{local_bytes_to_path, repo_path_to_local_bytes};
+use cpython_ext::PyPath;
 use pypathmatcher::UnsafePythonMatcher;
 use workingcopy::{WalkError, Walker};
 
@@ -27,23 +26,20 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class walker |py| {
     data walker: RefCell<Walker<UnsafePythonMatcher>>;
     data _errors: RefCell<Vec<Error>>;
-    def __new__(_cls, root: PyBytes, pymatcher: PyObject) -> PyResult<walker> {
-        let root = local_bytes_to_path(root.data(py))
-            .map_pyerr(py)?
-            .to_path_buf();
+    def __new__(_cls, root: PyPath, pymatcher: PyObject) -> PyResult<walker> {
         let matcher = UnsafePythonMatcher::new(pymatcher);
-        walker::create_instance(py, RefCell::new(Walker::new(root, matcher)), RefCell::new(Vec::new()))
+        walker::create_instance(py, RefCell::new(Walker::new(root.to_path_buf(), matcher)), RefCell::new(Vec::new()))
     }
 
     def __iter__(&self) -> PyResult<Self> {
         Ok(self.clone_ref(py))
     }
 
-    def __next__(&self) -> PyResult<Option<PyBytes>> {
+    def __next__(&self) -> PyResult<Option<PyPath>> {
         loop {
             match self.walker(py).borrow_mut().next() {
                 Some(Ok(path)) => {
-                    return Ok(Some(PyBytes::new(py, repo_path_to_local_bytes(path.as_ref()))));
+                    return Ok(Some(path.into()))
                 },
                 Some(Err(e)) => {
                     self._errors(py).borrow_mut().push(e)
