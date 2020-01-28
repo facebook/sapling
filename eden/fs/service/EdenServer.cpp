@@ -1181,21 +1181,15 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
     StringPiece type,
     StringPiece name) {
   BackingStoreKey key{type.str(), name.str()};
-  SYNCHRONIZED(lockedStores, backingStores_) {
-    const auto it = lockedStores.find(key);
-    if (it != lockedStores.end()) {
-      return it->second;
-    }
-
-    const auto store = createBackingStore(type, name);
-    lockedStores.emplace(key, store);
-    return store;
+  auto lockedStores = backingStores_.wlock();
+  const auto it = lockedStores->find(key);
+  if (it != lockedStores->end()) {
+    return it->second;
   }
 
-  // Ugh.  The SYNCHRONIZED() macro is super lame.
-  // We have to return something here, since the compiler can't figure out
-  // that we always return inside SYNCHRONIZED.
-  XLOG(FATAL) << "unreached";
+  const auto store = createBackingStore(type, name);
+  lockedStores->emplace(key, store);
+  return store;
 }
 
 shared_ptr<BackingStore> EdenServer::createBackingStore(
