@@ -52,9 +52,6 @@ from .node import hex
 
 urlreq = util.urlreq
 
-# for use with str.translate(None, _keepalnum), to keep just alphanumerics
-_keepalnum = "".join(c for c in map(pycompat.bytechr, range(256)) if not c.isalnum())
-
 samplehgrcs = {
     "user": b"""# example user config (see 'hg help config' for more info)
 [ui]
