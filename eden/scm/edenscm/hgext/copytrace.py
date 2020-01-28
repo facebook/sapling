@@ -35,11 +35,10 @@
 
 """
 
-# pyre-fixme[21]: Could not find `anydbm`.
-import anydbm
 import collections
 import json
 import os
+import sys
 import time
 
 from edenscm.mercurial import (
@@ -56,6 +55,12 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _
+
+
+if sys.version_info[0] < 3:
+    import anydbm as dbm
+else:
+    import dbm
 
 
 try:
@@ -169,10 +174,10 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
 def opendbm(repo, flag):
     """Open the dbm of choice.
 
-    On some platforms, anydbm is available, on others it's not,
+    On some platforms, dbm is available, on others it's not,
     but gdbm is unfortunately not available everywhere, like on Windows.
     """
-    dbms = [(anydbm.open, "amendcopytrace", anydbm.error)]
+    dbms = [(dbm.open, "amendcopytrace", dbm.error)]
     if hasgdbm:
         dbms.append((gdbm.open, "amendcopytrace.gdbm", gdbm.error))
 
