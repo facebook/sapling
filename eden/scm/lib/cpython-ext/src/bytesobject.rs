@@ -45,6 +45,10 @@ pub fn allocate_pybytes(py: RustPythonGILGuard<'_>, size: usize) -> (RustPyObjec
             (*typed).ob_sstate = 0; // SSTATE_NOT_INTERNED
             (*typed).ob_size = size as Py_ssize_t;
         }
+        #[cfg(feature = "python3")]
+        {
+            (*typed).ob_base.ob_size = size as Py_ssize_t;
+        }
         // Set the first byte to '\0'. If the caller forgot to populate the
         // slice, PyBytes_AsString would still return an empty C string.
         (*typed).ob_sval[0] = 0;

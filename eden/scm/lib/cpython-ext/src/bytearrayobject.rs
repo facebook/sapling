@@ -59,7 +59,8 @@ pub fn vec_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Vec<u8>) -> RustPyObj
         (*typed).ob_bytes = value.as_mut_ptr();
         #[cfg(feature = "python3")]
         {
-            (*typed).ob_start = value.as_mut_ptr();
+            (*typed).ob_base.ob_size = value.len() as Py_ssize_t;
+            (*typed).ob_start = (*typed).ob_bytes;
         }
         assert_eq!(
             PyByteArray_Size(ptr) as usize,
@@ -86,6 +87,7 @@ pub fn boxed_slice_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Box<[u8]>) ->
         (*typed).ob_bytes = value.as_mut_ptr();
         #[cfg(feature = "python3")]
         {
+            (*typed).ob_base.ob_size = value.len() as Py_ssize_t;
             (*typed).ob_start = value.as_mut_ptr();
         }
         assert_eq!(
