@@ -175,7 +175,7 @@ impl LocalStore for PythonDataStore {
         let py_missing = PyList::new(py, &[]);
         for key in keys.iter() {
             let py_key = from_key_to_tuple(py, &key);
-            py_missing.insert_item(py, py_missing.len(py), py_key.into_object());
+            py_missing.append(py, py_key.into_object());
         }
 
         let py_missing = self

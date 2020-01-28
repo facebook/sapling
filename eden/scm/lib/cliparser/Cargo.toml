@@ -12,7 +12,7 @@ cpython-ext = { path = "../cpython-ext", optional = true }
 thiserror = "1.0.5"
 
 [dependencies.cpython]
-version = "0.3"
+version = "0.4"
 default-features = false
 features = ["python27-sys"]
 optional = true

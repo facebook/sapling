@@ -36,9 +36,9 @@ zstd = "0.4"
 path = "../encoding"
 
 [dependencies.cpython]
-version = "0.3"
+version = "0.4"
 default-features = false
 features = ["python27-sys"]
 
 [dependencies.python27-sys]
-version = "0.3"
+version = "0.4"

@@ -17,9 +17,9 @@ parking_lot = "0.9"
 serde = "1"
 
 [dependencies.cpython]
-version = "0.3"
+version = "0.4"
 default-features = false
 features = ["python27-sys"]
 
 [dependencies.python27-sys]
-version = "0.3"
+version = "0.4"

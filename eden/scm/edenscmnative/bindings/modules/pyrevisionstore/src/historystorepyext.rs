@@ -59,7 +59,7 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
         let results = PyList::new(py, &[]);
         for key in missing {
             let key_tuple = from_key_to_tuple(py, &key);
-            results.insert_item(py, results.len(py), key_tuple.into_object());
+            results.append(py, key_tuple.into_object());
         }
 
         Ok(results)

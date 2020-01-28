@@ -5,6 +5,6 @@ edition = "2018"
 
 [dependencies]
 bookmarkstore = { path = "../../../../lib/bookmarkstore" }
-cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+cpython = { version = "0.4", features = ["python27-sys"], default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 types = { path = "../../../../lib/types" }
