@@ -49,7 +49,7 @@ pub async fn parse_request(
         return parse_command_and_args(&req.normal.command, inline_args);
     }
 
-    if let Some(remote_args) = req.normal.remote_args {
+    if let Some(remote_args) = req.normal.remote_args.as_ref() {
         let remote_args = dispatcher
             .load_remote_args(remote_args.to_string())
             .await

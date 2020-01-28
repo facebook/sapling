@@ -7,6 +7,7 @@
  */
 
 use serde::Deserialize;
+use std::borrow::Cow;
 
 #[derive(Deserialize)]
 pub struct RequestLineInts {
@@ -17,14 +18,22 @@ pub struct RequestLineInts {
 
 #[derive(Deserialize)]
 pub struct RequestLineNormals<'a> {
-    pub command: &'a str,
-    pub args: Option<String>,
-    pub remote_args: Option<&'a str>,
-    pub reponame: &'a str,
-    pub user: Option<&'a str>,
-    pub client_fullcommand: Option<&'a str>,
-    pub client_hostname: Option<&'a str>,
-    pub host: Option<&'a str>,
+    #[serde(borrow)]
+    pub command: Cow<'a, str>,
+    #[serde(borrow)]
+    pub args: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    pub remote_args: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    pub reponame: Cow<'a, str>,
+    #[serde(borrow)]
+    pub user: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    pub client_fullcommand: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    pub client_hostname: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    pub host: Option<Cow<'a, str>>,
 }
 
 #[derive(Deserialize)]

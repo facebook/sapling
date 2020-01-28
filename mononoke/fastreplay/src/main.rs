@@ -61,9 +61,9 @@ async fn dispatch(
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
     let reponame = aliases
-        .get(req.normal.reponame)
+        .get(req.normal.reponame.as_ref())
         .map(|a| a.as_ref())
-        .unwrap_or(req.normal.reponame)
+        .unwrap_or(req.normal.reponame.as_ref())
         .to_string();
 
     let dispatcher = dispatchers
