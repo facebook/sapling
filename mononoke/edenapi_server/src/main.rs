@@ -146,6 +146,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .takes_value(true),
         );
 
+    let app = args::add_shutdown_timeout_args(app);
     let app = args::add_fb303_args(app);
 
     let matches = app.get_matches();
