@@ -12,7 +12,8 @@ use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
-    CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult, MemcacheHandler,
+    cache_all_determinator, CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind,
+    McResult, MemcacheHandler,
 };
 use cloned::cloned;
 use context::CoreContext;
@@ -192,6 +193,7 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
             serialize: Arc::new(memcache_serialize),
             report_mc_result: Arc::new(report_mc_result),
             get_from_db: Arc::new(get_from_db),
+            determinator: cache_all_determinator::<BonsaiHgMappingEntry>,
         };
 
         params

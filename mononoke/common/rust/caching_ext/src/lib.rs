@@ -15,7 +15,7 @@ mod mock_store;
 
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Error;
 use bytes::Bytes;
@@ -49,6 +49,18 @@ pub type McResult<T> = Result<T, McErrorKind>;
 struct CachelibKey(String);
 struct MemcacheKey(String);
 
+pub type CachingDeterminator<T> = fn(&T) -> CacheDisposition;
+
+pub fn cache_all_determinator<T>(_value: &T) -> CacheDisposition {
+    CacheDisposition::Cache
+}
+
+pub enum CacheDisposition {
+    Cache,
+    CacheWithTtl(Duration),
+    Ignore,
+}
+
 pub struct GetOrFillMultipleFromCacheLayers<Key, T> {
     pub repo_id: RepositoryId,
     pub get_cache_key: Arc<dyn Fn(RepositoryId, &Key) -> String>,
@@ -60,6 +72,7 @@ pub struct GetOrFillMultipleFromCacheLayers<Key, T> {
     pub report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
     pub get_from_db:
         Arc<dyn Fn(HashSet<Key>) -> BoxFuture<HashMap<Key, T>, Error> + Send + Sync + 'static>,
+    pub determinator: CachingDeterminator<T>,
 }
 
 impl<Key, T> GetOrFillMultipleFromCacheLayers<Key, T>
@@ -83,7 +96,8 @@ where
             self.cachelib,
             self.get_from_db,
             self.memcache,
-            self.serialize
+            self.serialize,
+            self.determinator,
         );
         get_multiple_from_memcache(
             left_to_fetch,
@@ -97,7 +111,8 @@ where
                 Ok(result) => result,
                 Err(never) => never,
             };
-            let fetched_from_memcache = cachelib.fill_multiple_cachelib(fetched_from_memcache);
+            let fetched_from_memcache =
+                cachelib.fill_multiple_cachelib(determinator, fetched_from_memcache);
 
             let mut key_mapping = HashMap::new();
             let left_to_fetch: HashSet<Key> = left_to_fetch
@@ -128,11 +143,10 @@ where
                     })
                     .collect();
 
-                let fetched_from_db = cachelib.fill_multiple_cachelib(fill_multiple_memcache(
-                    fetched_from_db,
-                    memcache,
-                    serialize,
-                ));
+                let fetched_from_db = cachelib.fill_multiple_cachelib(
+                    determinator,
+                    fill_multiple_memcache(&determinator, fetched_from_db, memcache, serialize),
+                );
 
                 let mut fetched = HashMap::new();
                 fetched.extend(fetched_from_cachelib);
@@ -199,6 +213,7 @@ where
 }
 
 fn fill_multiple_memcache<Key, T>(
+    determinator: &CachingDeterminator<T>,
     keys: HashMap<Key, (T, CachelibKey, MemcacheKey)>,
     memcache: MemcacheHandler,
     serialize: Arc<dyn Fn(&T) -> Bytes + Send + Sync + 'static>,
@@ -211,7 +226,15 @@ where
             let serialized = serialize(&value);
 
             if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
-                ::tokio::spawn(memcache.set(memcache_key.0, serialized));
+                use CacheDisposition::*;
+                let f = match determinator(&value) {
+                    Cache => memcache.set(memcache_key.0, serialized).boxify(),
+                    CacheWithTtl(duration) => memcache
+                        .set_with_ttl(memcache_key.0, serialized, duration)
+                        .boxify(),
+                    Ignore => ok(()).boxify(),
+                };
+                ::tokio::spawn(f);
             }
 
             (key, (value, cache_key))
@@ -267,6 +290,7 @@ mod test {
             serialize: Arc::new(serialize),
             report_mc_result: Arc::new(test_report_mc_result),
             get_from_db: Arc::new(get_from_db),
+            determinator: cache_all_determinator::<u8>,
         }
     }
 

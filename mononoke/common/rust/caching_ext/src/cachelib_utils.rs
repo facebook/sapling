@@ -10,11 +10,11 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::Ordering;
 
-use crate::mock_store::MockStore;
+use crate::{mock_store::MockStore, CachingDeterminator};
 use anyhow::Result;
 use cachelib::{get_cached, set_cached, Abomonation, VolatileLruCachePool};
 
-use crate::CachelibKey;
+use crate::{CacheDisposition, CachelibKey};
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
@@ -53,12 +53,21 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
 
     pub(crate) fn fill_multiple_cachelib<Key: Eq + Hash>(
         &self,
+        determinator: CachingDeterminator<T>,
         keys: HashMap<Key, (T, CachelibKey)>,
     ) -> HashMap<Key, T> {
         keys.into_iter()
             .map(|(key, (value, cache_key))| {
                 // See comment in get_cached_or_fill why we ignore the result
-                let _ = self.set_cached(&cache_key.0, &value);
+                use CacheDisposition::*;
+                match determinator(&value) {
+                    Cache => {
+                        let _ = self.set_cached(&cache_key.0, &value);
+                    }
+                    // TODO - add TTL for cachelib
+                    CacheWithTtl(_) => {}
+                    Ignore => {}
+                };
                 (key, value)
             })
             .collect()
@@ -115,8 +124,7 @@ mod tests {
 
             let mock_cachelib = MockStore::new();
             let cachelib_handler = CachelibHandler::Mock(mock_cachelib.clone());
-
-            cachelib_handler.fill_multiple_cachelib(fill_query);
+            cachelib_handler.fill_multiple_cachelib(crate::cache_all_determinator::<String>, fill_query);
 
             if mock_cachelib.data() != initial_keys {
                 return TestResult::error("After fill_multiple_cachelib the content of cache is incorrect");

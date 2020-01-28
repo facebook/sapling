@@ -12,7 +12,7 @@ use futures::{future::ok, Future};
 use futures_ext::FutureExt;
 use iobuf::IOBuf;
 use memcache::MemcacheClient;
-use std::sync::atomic::Ordering;
+use std::{sync::atomic::Ordering, time::Duration};
 
 #[derive(Clone)]
 pub enum MemcacheHandler {
@@ -44,6 +44,18 @@ impl MemcacheHandler {
                 store.set(&key, &value);
                 ok(()).right_future()
             }
+        }
+    }
+
+    pub fn set_with_ttl(
+        &self,
+        key: String,
+        value: Bytes,
+        duration: Duration,
+    ) -> impl Future<Item = (), Error = ()> {
+        match self {
+            MemcacheHandler::Real(ref client) => client.set_with_ttl(key, value, duration),
+            MemcacheHandler::Mock(_) => unimplemented!(),
         }
     }
 

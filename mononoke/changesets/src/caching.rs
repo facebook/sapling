@@ -12,7 +12,8 @@ use bytes::Bytes;
 #[cfg(test)]
 use caching_ext::MockStoreStats;
 use caching_ext::{
-    CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult, MemcacheHandler,
+    cache_all_determinator, CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind,
+    McResult, MemcacheHandler,
 };
 use changeset_entry_thrift as thrift;
 use context::CoreContext;
@@ -137,6 +138,7 @@ impl CachingChangesets {
             serialize: Arc::new(serialize_changeset_entry),
             report_mc_result: Arc::new(report_mc_result),
             get_from_db: Arc::new(get_from_db),
+            determinator: cache_all_determinator::<ChangesetEntry>,
         }
     }
 }
