@@ -53,7 +53,7 @@ if PYTHON3:
             value = None
             tb = None
 
-
+    import collections.abc as abc
 else:
     exec(
         """
@@ -65,8 +65,12 @@ def reraise(tp, value, tb=None):
 """.strip()
     )
 
+    import collections as abc
+
 if PYTHON3:
     UNICODE = str
 else:
     # pyre-fixme[18]: Global name `unicode` is undefined.
     UNICODE = unicode  # noqa: F821 We handled versioning above
+
+collections_abc = abc
