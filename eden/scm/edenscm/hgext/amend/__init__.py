@@ -402,10 +402,9 @@ def amend(ui, repo, *pats, **opts):
         if opts.get("interactive"):
             # Strip the interactive flag to avoid infinite recursive loop
             opts.pop("interactive")
-            with repo.transaction("record"):
-                cmdutil.dorecord(
-                    ui, repo, amend, None, False, cmdutil.recordfilter, *pats, **opts
-                )
+            cmdutil.dorecord(
+                ui, repo, amend, None, False, cmdutil.recordfilter, *pats, **opts
+            )
             return
 
         else:
