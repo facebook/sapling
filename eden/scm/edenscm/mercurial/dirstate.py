@@ -37,6 +37,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid
+from .pycompat import encodeutf8
 
 
 parsers = policy.importmod(r"parsers")
@@ -180,12 +181,7 @@ class dirstate(object):
 
     @repocache("branch")
     def _branch(self):
-        try:
-            return self._opener.read("branch").strip() or "default"
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-            return "default"
+        return self._opener.tryreadutf8("branch").strip() or "default"
 
     @property
     def _pl(self):
@@ -378,10 +374,11 @@ class dirstate(object):
         return copies
 
     def setbranch(self, branch):
+        assert isinstance(branch, str)
         self._branch = encoding.fromlocal(branch)
         f = self._opener("branch", "w", atomictemp=True, checkambig=True)
         try:
-            f.write(self._branch + "\n")
+            f.write(encodeutf8(self._branch + "\n"))
             f.close()
 
             # make sure filecache has the correct stat info for _branch after
@@ -754,7 +751,7 @@ class dirstate(object):
     @util.propertycache
     def checkoutidentifier(self):
         try:
-            return self._opener.read("checkoutidentifier")
+            return self._opener.readutf8("checkoutidentifier")
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
@@ -779,7 +776,7 @@ class dirstate(object):
             # if the first parent has changed then consider this a new checkout
             if self._origpl[0] != self._pl[0]:
                 with self._opener("checkoutidentifier", "w", atomictemp=True) as f:
-                    f.write(util.makerandomidentifier())
+                    f.write(util.makerandomidentifier().encode("utf-8"))
                 util.clearcachedproperty(self, "checkoutidentifier")
             self._origpl = None
         # use the modification time of the newly created temporary file as the
@@ -883,6 +880,7 @@ class dirstate(object):
         pendingchanges = self._fs.pendingchanges(match, listignored=listignored)
 
         for fn, exists in pendingchanges:
+            assert isinstance(fn, str)
             try:
                 t = dget(fn)
                 # This "?" state is only tracked by treestate, emulate the old
@@ -942,6 +940,7 @@ class dirstate(object):
         # Step 2: Handle status results that are not simply pending filesystem
         # changes on top of the pristine tree.
         for fn in otherparentset:
+            assert isinstance(fn, str)
             if not match(fn) or fn in seenset:
                 continue
             t = dget(fn)
@@ -964,6 +963,7 @@ class dirstate(object):
                 seenset.add(fn)
 
         for fn in nonnormalset:
+            assert isinstance(fn, str)
             if not match(fn) or fn in seenset:
                 continue
             t = dget(fn)
@@ -1004,6 +1004,7 @@ class dirstate(object):
         # is just retroactively marking it as copied. In that case we need to
         # mark is as modified.
         for fn in copymap:
+            assert isinstance(fn, str)
             if not match(fn) or fn in seenset:
                 continue
             # It seems like a bug, but the tests show that copymap can contain
@@ -1026,6 +1027,7 @@ class dirstate(object):
 
         if listclean:
             for fn in pctx.manifest().matches(match):
+                assert isinstance(fn, str)
                 if fn not in seenset:
                     cadd(fn)
             seenset.update(clean)
