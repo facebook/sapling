@@ -22,7 +22,7 @@ import bindings
 
 from . import error, policy, pycompat, util, vfs as vfsmod
 from .i18n import _
-from .pycompat import range
+from .pycompat import decodeutf8, encodeutf8, range
 
 
 parsers = policy.importmod(r"parsers")
@@ -309,7 +309,7 @@ _maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
 
 
 def _hashencode(path, dotencode):
-    digest = hashlib.sha1(path).hexdigest()
+    digest = hashlib.sha1(encodeutf8(path)).hexdigest()
     le = lowerencode(path[5:]).split("/")  # skips prefix 'data/' or 'meta/'
     parts = _auxencode(le, dotencode)
     basename = parts[-1]
@@ -535,10 +535,11 @@ class fncache(object):
             # skip nonexistent file
             self.entries = set()
             return
-        self.entries = set(decodedir(fp.read()).splitlines())
+        self.entries = set(decodedir(decodeutf8(fp.read())).splitlines())
         if "" in self.entries:
             fp.seek(0)
             for n, line in enumerate(util.iterfile(fp)):
+                line = decodeutf8(line)
                 if not line.rstrip("\n"):
                     t = _("invalid entry in fncache, line %d") % (n + 1)
                     raise error.Abort(t)
@@ -549,7 +550,7 @@ class fncache(object):
             tr.addbackup("fncache")
             fp = self.vfs("fncache", mode="wb", atomictemp=True)
             if self.entries:
-                fp.write(encodedir("\n".join(self.entries) + "\n"))
+                fp.write(encodeutf8(encodedir("\n".join(self.entries) + "\n")))
             fp.close()
             self._dirty = False
 
@@ -603,7 +604,7 @@ class metavfs(object):
 
         # Migrating down is a no-op, since we double-write to svfs too.
 
-        metalog["tracked"] = "\n".join(sorted(desired))
+        metalog["tracked"] = "\n".join(sorted(desired)).encode("utf-8")
 
         try:
             # XXX: This is racy.
@@ -617,7 +618,7 @@ class metavfs(object):
         assert path in self.metapaths
         # Return a virtual file that is backed by self.metalog
         if mode in {"r", "rb"}:
-            return readablestream(self.metalog[path] or "")
+            return readablestream(self.metalog[path] or b"")
         elif mode in {"w", "wb"}:
 
             def write(content, path=path, self=self):
