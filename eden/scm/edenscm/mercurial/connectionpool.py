@@ -63,7 +63,7 @@ class connectionpool(object):
             def _cleanup(orig):
                 # close pipee first so peer._cleanup reading it won't deadlock,
                 # if there are other processes with pipeo open (i.e. us).
-                peer = orig.im_self
+                peer = orig.__self__
                 if util.safehasattr(peer, "_pipee"):
                     peer._pipee.close()
                 return orig()
