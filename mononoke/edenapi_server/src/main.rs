@@ -113,6 +113,7 @@ fn health_check(state: State) -> (State, &'static str) {
 fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp::new("EdenAPI Server")
         .with_advanced_args_hidden()
+        .with_fb303_args()
         .with_all_repos()
         .build()
         .arg(
@@ -151,7 +152,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         );
 
     let app = args::add_shutdown_timeout_args(app);
-    let app = args::add_fb303_args(app);
 
     let matches = app.get_matches();
     let logger = args::init_logging(fb, &matches);

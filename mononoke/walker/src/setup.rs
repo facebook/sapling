@@ -219,7 +219,7 @@ lazy_static! {
 }
 
 pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
-    let app_template = args::MononokeApp::new(app_name);
+    let app_template = args::MononokeApp::new(app_name).with_fb303_args();
 
     let scrub_objects =
         setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"))
@@ -273,7 +273,7 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .help(&INCLUDE_CHECK_TYPE_HELP),
     );
 
-    let app = app_template.build()
+    app_template.build()
         .version("0.0.0")
         .about("Walks the mononoke commit and/or derived data graphs, with option of performing validations and modifications")
         .arg(
@@ -285,9 +285,7 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
         )
         .subcommand(compression_benefit)
         .subcommand(scrub_objects)
-        .subcommand(validate);
-    let app = args::add_fb303_args(app);
-    app
+        .subcommand(validate)
 }
 
 // Add the args the "start from repo" walk types need

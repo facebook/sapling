@@ -94,6 +94,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_all_repos()
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
+        .with_fb303_args()
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
@@ -206,8 +207,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .help("A limit (in bytes) to enforce for uploads."),
         );
-
-    let app = args::add_fb303_args(app);
 
     let matches = app.get_matches();
 

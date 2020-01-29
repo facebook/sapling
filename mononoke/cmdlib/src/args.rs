@@ -129,6 +129,9 @@ pub struct MononokeApp {
 
     /// Adds --scuba-dataset and --scuba-log-file for scuba logging.
     scuba_logging: bool,
+
+    /// Adds --fb303-thrift-port
+    fb303: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -154,6 +157,7 @@ impl MononokeApp {
             source_repo: false,
             shutdown_timeout: false,
             scuba_logging: false,
+            fb303: false,
         }
     }
 
@@ -203,6 +207,11 @@ impl MononokeApp {
     /// This command has arguments for scuba logging.
     pub fn with_scuba_logging_args(mut self) -> Self {
         self.scuba_logging = true;
+        self
+    }
+
+    pub fn with_fb303_args(mut self) -> Self {
+        self.fb303 = true;
         self
     }
 
@@ -303,6 +312,10 @@ impl MononokeApp {
 
         if self.scuba_logging {
             app = add_scuba_logging_args(app);
+        }
+
+        if self.fb303 {
+            app = add_fb303_args(app);
         }
 
         app

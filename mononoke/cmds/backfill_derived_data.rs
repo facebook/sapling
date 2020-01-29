@@ -116,6 +116,7 @@ fn open_repo_maybe_unredacted<'a>(
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp::new("Utility to work with bonsai derived data")
         .with_advanced_args_hidden()
+        .with_fb303_args()
         .build()
         .version("0.0.0")
         .about("Utility to work with bonsai derived data")
@@ -188,7 +189,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .help("changeset by {hd|bonsai} hash or bookmark"),
                 ),
         );
-    let app = args::add_fb303_args(app);
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);
 
