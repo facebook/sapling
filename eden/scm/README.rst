@@ -1,7 +1,7 @@
-Mercurial
-=========
+Eden
+====
 
-Mercurial is a fast, easy to use, distributed revision control tool
+Eden SCM is a fast, easy to use, distributed revision control tool
 for software developers.
 
 Basic install::
