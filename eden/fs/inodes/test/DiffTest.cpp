@@ -1182,6 +1182,147 @@ TEST(DiffTest, directoryToFileWithGitIgnore) {
           std::make_pair(".gitignore", ScmFileStatus::ADDED)));
 }
 
+// Tests the case in which a file becomes a directory and the directory is
+// ignored but the parent directory is not ignored.
+TEST(DiffTest, addIgnoredDirectory) {
+  DiffTest test({
+      {"a/b.txt", "test\n"},
+      {"a/b/c.txt", "test\n"},
+      {"a/b/r", "test\n"},
+  });
+
+  // The following won't be tracked
+  test.getMount().deleteFile("a/b/r");
+  test.getMount().mkdir("a/b/r");
+  test.getMount().addFile("a/b/r/e.txt", "ignored");
+  test.getMount().mkdir("a/b/r/d");
+  // It is not possible to re-include a file if a parent directory of that file
+  // is excluded.
+  test.getMount().addFile("a/b/r/d/g.txt", "ignored too");
+
+  // The following should be tracked
+  test.getMount().mkdir("a/b/g");
+  test.getMount().addFile("a/b/g/e.txt", "added");
+
+  auto systemIgnore = "a/b/r/\n!a/b/r/d/g.txt\n";
+  auto result = test.diff(true, systemIgnore);
+
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("a/b/r", ScmFileStatus::REMOVED),
+          std::make_pair("a/b/r/e.txt", ScmFileStatus::IGNORED),
+          std::make_pair("a/b/r/d/g.txt", ScmFileStatus::IGNORED),
+          std::make_pair("a/b/g/e.txt", ScmFileStatus::ADDED)));
+}
+
+// Tests the case in which a directory is ignored but later down a file is
+// unignored, makes sure that the file is correctly marked as added.
+TEST(DiffTest, nestedGitIgnoreFiles) {
+  DiffTest test({
+      {"a/b.txt", "test\n"},
+      {"a/b/c.txt", "test\n"},
+      {"a/b/r", "file"},
+  });
+
+  auto gitIgnoreContents = "!e.txt\n";
+  test.getMount().deleteFile("a/b/r");
+  test.getMount().mkdir("a/b/r");
+  test.getMount().addFile("a/b/r/.gitignore", gitIgnoreContents);
+  test.getMount().addFile("a/b/r/e.txt", "shouldn't be ignored");
+  test.getMount().addFile("a/b/r/f.txt", "should be ignored");
+
+  auto systemIgnore = "a/b/r/*\n!a/b/r/.gitignore\n";
+  auto result = test.diff(true, systemIgnore);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("a/b/r", ScmFileStatus::REMOVED),
+          std::make_pair("a/b/r/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("a/b/r/e.txt", ScmFileStatus::ADDED),
+          std::make_pair("a/b/r/f.txt", ScmFileStatus::IGNORED)));
+}
+
+// Tests the case in which a tracked file in source control is modified locally.
+// In this case, the file should be recorded as MODIFIED, since it matches
+// an ignore rule but was already tracked
+TEST(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
+  DiffTest test({
+      {"src/foo/a.txt", "a"},
+      {"src/foo/b.txt", "b"},
+      {"src/foo/a", "regular file"},
+      {"src/bar/c.txt", "c"},
+      {"src/bar/d.txt", "d"},
+      {"src/bar/c", "regular file"},
+      {"src/foo/.gitignore", "a.txt\n"},
+
+  });
+
+  test.getMount().addFile("src/bar/e.txt", "e");
+  test.getMount().deleteFile("src/bar/d.txt");
+
+  // Even though this is modified, it will be ignored because it matches an
+  // ignore rule.
+  test.getMount().overwriteFile("src/foo/a.txt", "aa");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/bar/d.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/foo/a.txt", ScmFileStatus::MODIFIED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/bar/d.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/foo/a.txt", ScmFileStatus::MODIFIED)));
+}
+
+// Tests the case in which a tracked file in source control is modified locally.
+// In this case, the file should be recorded as MODIFIED, since it matches
+// an ignore rule but was already tracked
+TEST(DiffTest, tree_file_matches_new_ignore_rule_modified_locally) {
+  DiffTest test({
+      {"src/foo/a.txt", "a"},
+      {"src/foo/b.txt", "b"},
+      {"src/foo/a", "regular file"},
+      {"src/bar/c.txt", "c"},
+      {"src/bar/d.txt", "d"},
+      {"src/bar/c", "regular file"},
+
+  });
+
+  test.getMount().addFile("src/foo/.gitignore", "a.txt\n");
+  test.getMount().addFile("src/bar/e.txt", "e");
+  test.getMount().deleteFile("src/bar/d.txt");
+
+  // Even though this is modified, it will be ignored because it matches an
+  // ignore rule.
+  test.getMount().overwriteFile("src/foo/a.txt", "aa");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/foo/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/bar/d.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/foo/a.txt", ScmFileStatus::MODIFIED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/foo/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/bar/d.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/foo/a.txt", ScmFileStatus::MODIFIED)));
+}
+
 TEST(DiffTest, fileNotReady) {
   TestMount mount;
   auto backingStore = mount.getBackingStore();
