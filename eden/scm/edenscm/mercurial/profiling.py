@@ -19,6 +19,7 @@ import time
 
 from . import blackbox, error, extensions, pycompat, util
 from .i18n import _
+from .pycompat import decodeutf8
 
 
 def _loadprofiler(ui, profiler):
@@ -244,7 +245,7 @@ class profile(object):
             elapsed = time.time() - self._started
             if elapsed >= self._ui.configint(self._section, "minelapsed"):
                 output = self._ui.config(self._section, "output")
-                content = self._fp.getvalue()
+                content = decodeutf8(self._fp.getvalue())
                 if output == "blackbox":
                     blackbox.log({"profile": {"msg": content}})
                 elif output:
