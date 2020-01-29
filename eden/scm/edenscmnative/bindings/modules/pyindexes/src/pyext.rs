@@ -37,8 +37,8 @@ py_class!(class nodemap |py| {
         Ok(self.nodemap(py).node_to_rev(key.data(py)).map_pyerr(py)?.is_some())
     }
 
-    def partialmatch(&self, hex: PyBytes) -> PyResult<Option<PyBytes>> {
-        Ok(self.nodemap(py).hex_prefix_to_node(hex.data(py)).map_pyerr(py)?.map(|b| PyBytes::new(py, b)))
+    def partialmatch(&self, hex: &str) -> PyResult<Option<PyBytes>> {
+        Ok(self.nodemap(py).hex_prefix_to_node(hex).map_pyerr(py)?.map(|b| PyBytes::new(py, b)))
     }
 
     def build(&self) -> PyResult<PyBytes> {
