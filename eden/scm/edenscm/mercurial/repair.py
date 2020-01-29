@@ -31,7 +31,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, short
-from .pycompat import range
+from .pycompat import encodeutf8, range
 
 
 def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
@@ -45,7 +45,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     # Include a hash of all the nodes in the filename for uniqueness
     allcommits = repo.set("%ln::%ln", bases, heads)
     allhashes = sorted(c.hex() for c in allcommits)
-    totalhash = hashlib.sha1("".join(allhashes)).digest()
+    totalhash = hashlib.sha1(encodeutf8("".join(allhashes))).digest()
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), hex(totalhash[:4]), suffix)
 
     cgversion = changegroup.localversion(repo)
