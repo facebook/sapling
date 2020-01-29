@@ -344,7 +344,7 @@ def git_cleanup(ui, repo):
     wlock = repo.wlock()
     try:
         f = repo.sharedvfs(GitHandler.map_file, "wb")
-        map(f.write, new_map)
+        list(map(f.write, new_map))
     finally:
         wlock.release()
     ui.status(_("git commit map cleaned\n"))

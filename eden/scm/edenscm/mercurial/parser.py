@@ -222,7 +222,7 @@ def _prettyformat(tree, leafnodes, level, lines):
     if not isinstance(tree, tuple):
         lines.append((level, _brepr(tree)))
     elif tree[0] in leafnodes:
-        rs = map(_brepr, tree[1:])
+        rs = list(map(_brepr, tree[1:]))
         lines.append((level, "(%s %s)" % (tree[0], " ".join(rs))))
     else:
         lines.append((level, "(%s" % tree[0]))

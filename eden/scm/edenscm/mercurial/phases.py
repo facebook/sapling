@@ -290,7 +290,7 @@ class phasecache(object):
         repo = repo.unfiltered()
         nativeroots = []
         for phase in trackedphases:
-            nativeroots.append(map(repo.changelog.rev, self.phaseroots[phase]))
+            nativeroots.append(list(map(repo.changelog.rev, self.phaseroots[phase])))
         return repo.changelog.computephases(nativeroots)
 
     def _computephaserevspure(self, repo):

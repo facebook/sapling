@@ -427,7 +427,7 @@ class Client(object):
                 "from_scm_type": fromtype,
                 "to_repo": reponame,
                 "to_scm_type": totype,
-                "revs": map(fromenc, nodes),
+                "revs": list(map(fromenc, nodes)),
             }
         }
         ret = self._client.query(timeout, query, json.dumps(params))

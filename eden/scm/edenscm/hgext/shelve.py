@@ -1300,7 +1300,7 @@ def shelved(repo, subset, x):
     # filter if some of the revisions are not in repo
     nodes = filter(lambda x: x in repo, nodes)
     # convert to full hash
-    nodes = map(lambda x: nodemod.hex(repo[x].node()), nodes)
+    nodes = [nodemod.hex(repo[x].node()) for x in nodes]
     # returns intersection with shelved commits (including hidden)
     return subset & repo.revs("%ls", nodes)
 

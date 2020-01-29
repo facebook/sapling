@@ -756,7 +756,7 @@ def showpeerurls(repo, **args):
 def showpredecessors(repo, ctx, **args):
     """Returns the list if the closest visible successors. (EXPERIMENTAL)"""
     predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
-    predecessors = map(hex, predecessors)
+    predecessors = list(map(hex, predecessors))
 
     return _hybrid(
         None,

@@ -18,7 +18,7 @@ def insertreturns(x):
     if isinstance(x, str):
         return "".join(ch + "\n" for ch in x)
     else:
-        return map(insertreturns, x)
+        return list(map(insertreturns, x))
 
 
 def removereturns(x):
@@ -26,7 +26,7 @@ def removereturns(x):
     if isinstance(x, str):
         return x.replace("\n", "")
     else:
-        return map(removereturns, x)
+        return list(map(removereturns, x))
 
 
 def assertlistequal(lhs, rhs, decorator=lambda x: x):
@@ -50,7 +50,7 @@ def testfilefixup(oldcontents, workingcopy, expectedcontents, fixups=None):
     expectedcontents = insertreturns(expectedcontents)
     oldcontents = insertreturns(oldcontents)
     workingcopy = insertreturns(workingcopy)
-    state = absorb.filefixupstate(map(simplefctx, oldcontents), "path")
+    state = absorb.filefixupstate(list(map(simplefctx, oldcontents)), "path")
     state.diffwith(simplefctx(workingcopy))
     if fixups is not None:
         assertlistequal(state.fixups, fixups)

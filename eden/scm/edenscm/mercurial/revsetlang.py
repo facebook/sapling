@@ -706,7 +706,7 @@ def prettyformat(tree):
 
 def depth(tree):
     if isinstance(tree, tuple):
-        return max(map(depth, tree)) + 1
+        return max(list(map(depth, tree))) + 1
     else:
         return 0
 

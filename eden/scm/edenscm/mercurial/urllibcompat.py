@@ -25,7 +25,7 @@ class _pycompatstub(object):
 
     def _registeraliases(self, origin, items):
         """Add items that will be populated at the first access"""
-        items = map(_sysstr, items)
+        items = list(map(_sysstr, items))
         self._aliases.update(
             (item.replace(_sysstr("_"), _sysstr("")).lower(), (origin, item))
             for item in items

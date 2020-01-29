@@ -2300,14 +2300,16 @@ def showmarker(fm, marker, index=None):
         fm.write("index", "%i ", index)
     fm.write("prednode", "%s ", hex(marker.prednode()))
     succs = marker.succnodes()
-    fm.condwrite(succs, "succnodes", "%s ", fm.formatlist(map(hex, succs), name="node"))
+    fm.condwrite(
+        succs, "succnodes", "%s ", fm.formatlist(list(map(hex, succs)), name="node")
+    )
     fm.write("flag", "%X ", marker.flags())
     parents = marker.parentnodes()
     if parents is not None:
         fm.write(
             "parentnodes",
             "{%s} ",
-            fm.formatlist(map(hex, parents), name="node", sep=", "),
+            fm.formatlist(list(map(hex, parents)), name="node", sep=", "),
         )
     fm.write("date", "(%s) ", fm.formatdate(marker.date()))
     meta = marker.metadata().copy()
@@ -2950,7 +2952,7 @@ def _parselinerangelogopt(repo, opts):
         except ValueError:
             raise error.Abort(_("malformatted line-range pattern %s") % pat)
         try:
-            fromline, toline = map(int, linerange.split(":"))
+            fromline, toline = list(map(int, linerange.split(":")))
         except ValueError:
             raise error.Abort(_("invalid line range for %s") % pat)
         msg = _("line range pattern '%s' must match exactly one file") % pat

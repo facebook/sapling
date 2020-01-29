@@ -86,6 +86,6 @@ clt = clientpeer(srv)
 
 print(clt.greet("Foobar"))
 b = clt.iterbatch()
-map(b.greet, ("Fo, =;:<o", "Bar"))
+list(map(b.greet, ("Fo, =;:<o", "Bar")))
 b.submit()
 print([r for r in b.results()])

@@ -291,7 +291,7 @@ class FTPRangeHandler(urlreq.ftphandler):
             raise urlerr.urlerror(msg)
         path, attrs = splitattr(req.get_selector())
         dirs = path.split("/")
-        dirs = map(unquote, dirs)
+        dirs = list(map(unquote, dirs))
         dirs, file = dirs[:-1], dirs[-1]
         if dirs and not dirs[0]:
             dirs = dirs[1:]

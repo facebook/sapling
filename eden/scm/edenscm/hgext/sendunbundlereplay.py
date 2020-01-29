@@ -22,7 +22,7 @@ def getcommitdates(ui, fname=None):
             timestamps = tf.readlines()
     else:
         timestamps = ui.fin
-    return dict(map(lambda s: s.split("="), timestamps))
+    return dict([s.split("=") for s in timestamps])
 
 
 def getstream(fname):

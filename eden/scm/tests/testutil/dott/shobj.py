@@ -48,7 +48,7 @@ class LazyCommand(object):
                 args = shlex.split(self._command, expandfunc=expandarg)
             else:
                 assert isinstance(args, list)
-                args = map(os.path.expandvars, self._command)
+                args = list(map(os.path.expandvars, self._command))
             # Work with environment variables
             backupenv = {}
             while args and "=" in args[0]:

@@ -580,7 +580,7 @@ def testchunkselector(testfn, ui, headerlist, operation=None):
     chunkselector = curseschunkselector(headerlist, ui, operation)
     if testfn and os.path.exists(testfn):
         testf = open(testfn)
-        testcommands = map(lambda x: x.rstrip("\n"), testf.readlines())
+        testcommands = [x.rstrip("\n") for x in testf.readlines()]
         testf.close()
         while True:
             if chunkselector.handlekeypressed(testcommands.pop(0), test=True):

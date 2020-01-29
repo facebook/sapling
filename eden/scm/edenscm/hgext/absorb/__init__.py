@@ -302,7 +302,7 @@ class filefixupstate(object):
 
         # following fields are built from fctxs. they exist for perf reason
         self.contents = [f.data() for f in fctxs]
-        self.contentlines = map(mdiff.splitnewlines, self.contents)
+        self.contentlines = list(map(mdiff.splitnewlines, self.contents))
         self.linelog = self._buildlinelog()
         if self.ui.debugflag:
             assert self._checkoutlinelog() == self.contents

@@ -1512,7 +1512,7 @@ def sparse(ui, repo, *pats, **opts):
     if refresh:
         with repo.wlock():
             c = _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
-            fcounts = map(len, c)
+            fcounts = list(map(len, c))
             _verbose_output(ui, opts, 0, 0, 0, *fcounts)
 
     if cwdlist:
@@ -1545,7 +1545,7 @@ def show(ui, repo, **opts):
         return
 
     raw = repo.localvfs.read("sparse")
-    include, exclude, profiles = map(set, repo.readsparseconfig(raw))
+    include, exclude, profiles = list(map(set, repo.readsparseconfig(raw)))
 
     def getprofileinfo(profile, depth):
         """Returns a list of (depth, profilename, title) for this profile
@@ -2060,7 +2060,7 @@ def _refreshsubcmd(ui, repo, *pats, **opts):
         # always matcher so it checks everything.
         origmatcher = matchmod.always(repo.root, "")
         c = _refresh(ui, repo, repo.status(), origmatcher, force)
-        fcounts = map(len, c)
+        fcounts = list(map(len, c))
         _verbose_output(ui, opts, 0, 0, 0, *fcounts)
 
 
@@ -2101,7 +2101,9 @@ def _config(
 
         if repo.localvfs.exists("sparse"):
             raw = repo.localvfs.read("sparse")
-            oldinclude, oldexclude, oldprofiles = map(set, repo.readsparseconfig(raw))
+            oldinclude, oldexclude, oldprofiles = list(
+                map(set, repo.readsparseconfig(raw))
+            )
         else:
             oldinclude = set()
             oldexclude = set()
@@ -2162,7 +2164,9 @@ def _config(
                 newexclude.difference_update(pats)
 
             repo.writesparseconfig(newinclude, newexclude, newprofiles)
-            fcounts = map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+            fcounts = list(
+                map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+            )
 
             profilecount = len(newprofiles - oldprofiles) - len(
                 oldprofiles - newprofiles
@@ -2216,7 +2220,7 @@ def _import(ui, repo, files, opts, force=False):
         if repo.localvfs.exists("sparse"):
             raw = repo.localvfs.read("sparse")
         oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
-        includes, excludes, profiles = map(set, (oincludes, oexcludes, oprofiles))
+        includes, excludes, profiles = list(map(set, (oincludes, oexcludes, oprofiles)))
 
         # all active rules
         aincludes, aexcludes, aprofiles = set(), set(), set()
@@ -2254,7 +2258,9 @@ def _import(ui, repo, files, opts, force=False):
             repo.writesparseconfig(includes, excludes, profiles)
 
             try:
-                fcounts = map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+                fcounts = list(
+                    map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+                )
             except Exception:
                 repo.writesparseconfig(oincludes, oexcludes, oprofiles)
                 raise

@@ -1367,14 +1367,14 @@ def bundle(ui, repo, fname, dest=None, **opts):
                 _("--base is incompatible with specifying " "a destination")
             )
         common = [repo.lookup(rev) for rev in base]
-        heads = revs and map(repo.lookup, revs) or None
+        heads = revs and list(map(repo.lookup, revs)) or None
         outgoing = discovery.outgoing(repo, common, heads)
     else:
         dest = ui.expandpath(dest or "default-push", dest or "default")
         dest, branches = hg.parseurl(dest)
         other = hg.peer(repo, opts, dest)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
-        heads = revs and map(repo.lookup, revs) or revs
+        heads = revs and list(map(repo.lookup, revs)) or revs
         outgoing = discovery.findcommonoutgoing(
             repo, other, onlyheads=heads, force=opts.get("force"), portable=True
         )

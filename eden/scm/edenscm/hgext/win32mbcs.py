@@ -83,7 +83,7 @@ def decode(arg):
     elif isinstance(arg, tuple):
         return tuple(map(decode, arg))
     elif isinstance(arg, list):
-        return map(decode, arg)
+        return list(map(decode, arg))
     elif isinstance(arg, dict):
         for k, v in arg.items():
             arg[k] = decode(v)
@@ -96,7 +96,7 @@ def encode(arg):
     elif isinstance(arg, tuple):
         return tuple(map(encode, arg))
     elif isinstance(arg, list):
-        return map(encode, arg)
+        return list(map(encode, arg))
     elif isinstance(arg, dict):
         for k, v in arg.items():
             arg[k] = encode(v)

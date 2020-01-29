@@ -410,7 +410,7 @@ class changelog(revlog.revlog):
                 else:
                     visibleheads = self._visibleheads.heads
                 nodes += visibleheads + draftnodes
-            revs = map(torev, nodes)
+            revs = list(map(torev, nodes))
             r = self.index2.headsancestors(revs)
             return r
 

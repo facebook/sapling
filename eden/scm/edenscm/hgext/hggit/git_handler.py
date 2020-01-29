@@ -95,7 +95,7 @@ class GitProgress(object):
 
             m = RE_GIT_PROGRESS.search(data)
             if m:
-                pos, total = map(int, m.group(1, 2))
+                pos, total = list(map(int, m.group(1, 2)))
                 if topic != self.lasttopic:
                     self.prog.reset(topic, total=total)
                     self.lasttopic = topic
@@ -936,7 +936,7 @@ class GitHandler(object):
         else:
             renames = hg_renames
 
-        gparents = map(self.map_hg_get, commit.parents)
+        gparents = list(map(self.map_hg_get, commit.parents))
 
         for parent in gparents:
             if parent not in self.repo:

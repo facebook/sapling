@@ -230,7 +230,7 @@ def get(repo, status):
     """
     state = load_state(repo)
     if status in ("good", "bad", "skip", "current"):
-        return map(repo.changelog.rev, state[status])
+        return list(map(repo.changelog.rev, state[status]))
     else:
         # In the following sets, we do *not* call 'bisect()' with more
         # than one level of recursion, because that can be very, very

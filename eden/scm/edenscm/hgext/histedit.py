@@ -1335,7 +1335,7 @@ def _aborthistedit(ui, repo, state):
             with repo.transaction("histedit.abort") as tr:
                 hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
 
-        nodes = map(unfi.changelog.node, revs)
+        nodes = list(map(unfi.changelog.node, revs))
         scmutil.cleanupnodes(repo, nodes, "histedit")
     except Exception:
         if state.inprogress():

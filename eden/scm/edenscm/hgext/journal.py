@@ -532,10 +532,10 @@ def journal(ui, repo, *args, **opts):
         if count == limit:
             break
         newhashesstr = fm.formatlist(
-            map(fm.hexfunc, entry.newhashes), name="node", sep=","
+            list(map(fm.hexfunc, entry.newhashes)), name="node", sep=","
         )
         oldhashesstr = fm.formatlist(
-            map(fm.hexfunc, entry.oldhashes), name="node", sep=","
+            list(map(fm.hexfunc, entry.oldhashes)), name="node", sep=","
         )
 
         fm.startitem()

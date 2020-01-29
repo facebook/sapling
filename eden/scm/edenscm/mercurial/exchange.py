@@ -615,7 +615,7 @@ def _pushdiscoverybookmarks(pushop):
     ui.debug("checking for updated bookmarks\n")
     ancestors = ()
     if pushop.revs:
-        revnums = map(repo.changelog.rev, pushop.revs)
+        revnums = list(map(repo.changelog.rev, pushop.revs))
         ancestors = repo.changelog.ancestors(revnums, inclusive=True)
     remotebookmark = remote.listkeys("bookmarks")
 

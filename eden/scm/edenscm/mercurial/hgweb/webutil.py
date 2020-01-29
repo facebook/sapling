@@ -359,7 +359,7 @@ def linerange(req):
     if len(linerange) > 1:
         raise ErrorResponse(HTTP_BAD_REQUEST, "redundant linerange parameter")
     try:
-        fromline, toline = map(int, linerange[0].split(":", 1))
+        fromline, toline = list(map(int, linerange[0].split(":", 1)))
     except ValueError:
         raise ErrorResponse(HTTP_BAD_REQUEST, "invalid linerange parameter")
     try:

@@ -426,7 +426,7 @@ class fileserverclient(object):
                     allmisses.update(cache.receive(prog))
                     fileslog.metadatastore.markforrefresh()
 
-                misses = map(lambda key: key.split("\0"), allmisses)
+                misses = [key.split("\0") for key in allmisses]
                 perftrace.tracevalue("Memcache Misses", len(misses))
             except CacheConnectionError:
                 misses = fileids

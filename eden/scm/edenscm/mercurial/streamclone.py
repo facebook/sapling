@@ -146,7 +146,7 @@ def maybeperformlegacystreamclone(pullop):
 
     l = fp.readline()
     try:
-        filecount, bytecount = map(int, l.split(" ", 1))
+        filecount, bytecount = list(map(int, l.split(" ", 1)))
     except (ValueError, TypeError):
         raise error.ResponseError(_("unexpected response from remote server:"), l)
 

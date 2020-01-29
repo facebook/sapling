@@ -387,7 +387,7 @@ class remotefilelog(object):
         ancs = ancestor.ancestors(parentfunc, revmap[a], revmap[b])
         if ancs:
             # choose a consistent winner when there's a tie
-            return min(map(nodemap.__getitem__, ancs))
+            return min(list(map(nodemap.__getitem__, ancs)))
         return nullid
 
     def commonancestorsheads(self, a, b):
@@ -400,7 +400,7 @@ class remotefilelog(object):
         nodemap = dict(((v, k) for (k, v) in pycompat.iteritems(revmap)))
 
         ancs = ancestor.commonancestorsheads(parentfunc, revmap[a], revmap[b])
-        return map(nodemap.__getitem__, ancs)
+        return list(map(nodemap.__getitem__, ancs))
 
     def _buildrevgraph(self, a, b):
         """Builds a numeric revision graph for the given two nodes.

@@ -143,12 +143,12 @@ def crdump(ui, repo, *revs, **opts):
             ctx = repo[rev]
             rdata = {
                 "node": hex(ctx.node()),
-                "date": map(int, ctx.date()),
+                "date": list(map(int, ctx.date())),
                 "desc": encoding.fromlocal(ctx.description()),
                 "files": ctx.files(),
                 "p1": {"node": ctx.parents()[0].hex()},
                 "user": encoding.fromlocal(ctx.user()),
-                "bookmarks": map(encoding.fromlocal, ctx.bookmarks()),
+                "bookmarks": list(map(encoding.fromlocal, ctx.bookmarks())),
                 "commit_cloud": False if ctx.node() in notbackedup else True,
             }
             if ctx.parents()[0].phase() != phases.public:
@@ -320,9 +320,9 @@ def dumpmarkers(rawmarkers):
             "prednode": hex(rm.prednode()),
         }
         if rm.succnodes():
-            marker["succnodes"] = map(hex, rm.succnodes())
+            marker["succnodes"] = list(map(hex, rm.succnodes()))
         if rm.parentnodes():
-            marker["parents"] = map(hex, rm.parentnodes())
+            marker["parents"] = list(map(hex, rm.parentnodes()))
 
         markers.append(marker)
 

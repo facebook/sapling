@@ -180,9 +180,11 @@ def dodiff(ui, repo, cmdline, pats, opts):
         if node2 is None:
             raise error.Abort(_("--patch requires two revisions"))
     else:
-        mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher)[:3])
+        mod_a, add_a, rem_a = list(map(set, repo.status(node1a, node2, matcher)[:3]))
         if do3way:
-            mod_b, add_b, rem_b = map(set, repo.status(node1b, node2, matcher)[:3])
+            mod_b, add_b, rem_b = list(
+                map(set, repo.status(node1b, node2, matcher)[:3])
+            )
         else:
             mod_b, add_b, rem_b = set(), set(), set()
         modadd = mod_a | add_a | mod_b | add_b

@@ -2505,7 +2505,7 @@ class localrepository(object):
 
     def heads(self, start=None, includepublic=True, includedraft=True):
         headrevs = self.headrevs(start, includepublic, includedraft)
-        return map(self.changelog.node, headrevs)
+        return list(map(self.changelog.node, headrevs))
 
     def branchheads(self, branch=None, start=None, closed=False):
         """return a (possibly filtered) list of heads for the given branch

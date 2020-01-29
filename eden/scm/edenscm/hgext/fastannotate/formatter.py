@@ -74,7 +74,7 @@ class defaultformatter(object):
             pieces.append(l)
             if name in ["node", "date"]:  # node and date has fixed size
                 l = l[:1]
-            widths = map(encoding.colwidth, set(l))
+            widths = list(map(encoding.colwidth, set(l)))
             maxwidth = max(widths) if widths else 0
             maxwidths.append(maxwidth)
 
@@ -121,7 +121,9 @@ class jsonformatter(defaultformatter):
         if annotatedresult:
             self._writecomma()
 
-        pieces = [(name, map(f, annotatedresult)) for f, sep, name, enc in self.funcmap]
+        pieces = [
+            (name, list(map(f, annotatedresult))) for f, sep, name, enc in self.funcmap
+        ]
         if lines is not None:
             pieces.append(("line", lines))
         pieces.sort()

@@ -377,7 +377,7 @@ def main(repo, rules, stdscr):
 
         conflicts = rule.conflicts
         if len(conflicts) > 0:
-            conflictstr = ",".join(map(lambda r: str(r.ctx), conflicts))
+            conflictstr = ",".join([str(r.ctx) for r in conflicts])
             conflictstr = "changed files overlap with {0}".format(conflictstr)
         else:
             conflictstr = "no overlap"
