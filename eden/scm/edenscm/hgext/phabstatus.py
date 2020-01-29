@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import collections
 import os
 import ssl
 
@@ -244,7 +245,7 @@ def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
 
 
-class PeekaheadRevsetIter(object):
+class PeekaheadRevsetIter(collections.Iterator):
     """
     PeekaheadRevsetIter is a helper class that wraps a revision set iterator,
     and allows the phabstatus code to peek ahead in the list as the logging
@@ -271,6 +272,10 @@ class PeekaheadRevsetIter(object):
         self.chunksize = chunksize
 
     def next(self):
+        # Python2 compatibility
+        return self.__next__()
+
+    def __next__(self):
         if self.chunk_idx < len(self.chunk):
             # We still have data remaining in the peekahead chunk to return
             result = self.chunk[self.chunk_idx]
