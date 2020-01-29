@@ -22,6 +22,7 @@ import threading
 
 from . import encoding, error, pathutil, pycompat, util
 from .i18n import _
+from .pycompat import decodeutf8, encodeutf8
 
 
 def _avoidambig(path, oldstat):
@@ -57,7 +58,10 @@ class abstractvfs(object):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-        return ""
+        return b""
+
+    def tryreadutf8(self, path):
+        return decodeutf8(self.tryread(path))
 
     def tryreadlines(self, path, mode="rb"):
         """gracefully return an empty array for missing files"""
@@ -82,6 +86,9 @@ class abstractvfs(object):
         with self(path, "rb") as fp:
             return fp.read()
 
+    def readutf8(self, path):
+        return decodeutf8(self.read(path))
+
     def readlines(self, path, mode="rb"):
         with self(path, mode=mode) as fp:
             return fp.readlines()
@@ -89,6 +96,9 @@ class abstractvfs(object):
     def write(self, path, data, backgroundclose=False):
         with self(path, "wb", backgroundclose=backgroundclose) as fp:
             return fp.write(data)
+
+    def writeutf8(self, path, data):
+        return self.write(path, encodeutf8(data))
 
     def writelines(self, path, data, mode="wb", notindexed=False):
         with self(path, mode=mode, notindexed=notindexed) as fp:
@@ -385,6 +395,7 @@ class vfs(abstractvfs):
         combination of append mode and checkambig=True only in limited
         cases (see also issue5418 and issue5584 for detail).
         """
+        assert isinstance(path, str)
         if auditpath:
             if self._audit:
                 r = util.checkosfilename(path)

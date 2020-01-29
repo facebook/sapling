@@ -4,6 +4,7 @@ import unittest
 
 import silenttestrunner
 from edenscm.mercurial import error, scmutil
+from edenscm.mercurial.pycompat import encodeutf8
 
 
 class mockfile(object):
@@ -29,6 +30,9 @@ class mockvfs(object):
         self.contents = {}
 
     def read(self, path):
+        return encodeutf8(mockfile(path, self).read())
+
+    def readutf8(self, path):
         return mockfile(path, self).read()
 
     def readlines(self, path):
