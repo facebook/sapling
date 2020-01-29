@@ -7,7 +7,6 @@
  */
 
 #![deny(warnings)]
-#![type_length_limit = "21533355"]
 
 use anyhow::{format_err, Error};
 use clap::Arg;
@@ -17,6 +16,7 @@ use fbinit::FacebookInit;
 use futures::future::Future;
 use futures::stream;
 use futures::stream::Stream;
+use futures_ext::FutureExt;
 use futures_preview::compat::Future01CompatExt;
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use std::str::FromStr;
@@ -73,23 +73,27 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .collect();
 
-    let rechunk = blobrepo.and_then(move |blobrepo| {
-        stream::iter_result(filenode_ids)
-            .map({
-                cloned!(blobrepo);
-                move |fid| {
-                    blobrepo
-                        .get_file_envelope(ctx.clone(), fid)
-                        .map(|env| env.content_id())
-                        .and_then({
-                            cloned!(blobrepo, ctx);
-                            move |content_id| blobrepo.rechunk_file_by_content_id(ctx, content_id)
-                        })
-                }
-            })
-            .buffered(jobs)
-            .for_each(|_| Ok(()))
-    });
+    let rechunk = blobrepo
+        .and_then(move |blobrepo| {
+            stream::iter_result(filenode_ids)
+                .map({
+                    cloned!(blobrepo);
+                    move |fid| {
+                        blobrepo
+                            .get_file_envelope(ctx.clone(), fid)
+                            .map(|env| env.content_id())
+                            .and_then({
+                                cloned!(blobrepo, ctx);
+                                move |content_id| {
+                                    blobrepo.rechunk_file_by_content_id(ctx, content_id)
+                                }
+                            })
+                    }
+                })
+                .buffered(jobs)
+                .for_each(|_| Ok(()))
+        })
+        .boxify();
 
     block_execute(rechunk.compat(), fb, "rechunker", &logger, &matches)
 }
