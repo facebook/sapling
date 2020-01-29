@@ -115,8 +115,8 @@ import bindings
 
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
-from .node import bin, hex, nullid, nullrev, short
-from .pycompat import range
+from .node import bbin, bin, hex, nullid, nullrev, short
+from .pycompat import encodeutf8, range
 
 
 _fphasesentry = struct.Struct(">i20s")
@@ -147,7 +147,7 @@ def _readroots(repo, phasedefaults=None):
         try:
             for line in f:
                 phase, nh = line.split()
-                roots[int(phase)].add(bin(nh))
+                roots[int(phase)].add(bbin(nh))
         finally:
             f.close()
     except IOError as inst:
@@ -170,7 +170,7 @@ def binaryencode(phasemapping):
     for phase, nodes in enumerate(phasemapping):
         for head in nodes:
             binarydata.append(_fphasesentry.pack(phase, head))
-    return "".join(binarydata)
+    return b"".join(binarydata)
 
 
 def binarydecode(stream):
@@ -389,7 +389,7 @@ class phasecache(object):
         assert not self._headbased
         for phase, roots in enumerate(self.phaseroots):
             for h in roots:
-                fp.write("%i %s\n" % (phase, hex(h)))
+                fp.write(encodeutf8("%i %s\n" % (phase, hex(h))))
         self.dirty = False
 
     def _updateroots(self, phase, newroots, tr):
