@@ -18,6 +18,7 @@ from typing import Any
 
 from . import error, progress, pycompat, util, wireproto
 from .i18n import _
+from .pycompat import decodeutf8, encodeutf8
 
 
 # Record of the bytes sent and received to SSH peers.  This records the
@@ -56,6 +57,7 @@ class countingpipe(object):
         self._totalbytes = 0
 
     def write(self, data):
+        assert isinstance(data, bytes)
         self._totalbytes += len(data)
         self._ui.metrics.gauge("ssh_write_bytes", len(data))
         return self._pipe.write(data)
@@ -219,7 +221,7 @@ class sshpeer(wireproto.wirepeer):
         max_noise = 500
         while lines[-1] and max_noise:
             try:
-                l = r.readline()
+                l = decodeutf8(r.readline())
                 if lines[-1] == "1\n" and l == "\n":
                     break
                 if l:
@@ -288,7 +290,7 @@ class sshpeer(wireproto.wirepeer):
     def _callstream(self, cmd, **args):
         args = pycompat.byteskwargs(args)
         self.ui.debug("sending %s command\n" % cmd)
-        self._pipeo.write("%s\n" % cmd)
+        self._pipeo.write(encodeutf8("%s\n" % cmd))
         _func, names = wireproto.commands[cmd]
         keys = names.split()
         wireargs = {}
@@ -300,13 +302,13 @@ class sshpeer(wireproto.wirepeer):
                 wireargs[k] = args[k]
                 del args[k]
         for k, v in sorted(pycompat.iteritems(wireargs)):
-            self._pipeo.write("%s %d\n" % (k, len(v)))
+            self._pipeo.write(encodeutf8("%s %d\n" % (k, len(v))))
             if isinstance(v, dict):
                 for dk, dv in pycompat.iteritems(v):
-                    self._pipeo.write("%s %d\n" % (dk, len(dv)))
-                    self._pipeo.write(dv)
+                    self._pipeo.write(encodeutf8("%s %d\n" % (dk, len(dv))))
+                    self._pipeo.write(encodeutf8(dv))
             else:
-                self._pipeo.write(v)
+                self._pipeo.write(encodeutf8(v))
         self._pipeo.flush()
 
         return self._pipei
@@ -321,14 +323,14 @@ class sshpeer(wireproto.wirepeer):
     def _callpush(self, cmd, fp, **args):
         r = self._call(cmd, **args)
         if r:
-            return "", r
-        for d in iter(lambda: fp.read(4096), ""):
+            return b"", r
+        for d in iter(lambda: fp.read(4096), b""):
             self._send(d)
-        self._send("", flush=True)
+        self._send(b"", flush=True)
         r = self._recv()
         if r:
-            return "", r
-        return self._recv(), ""
+            return b"", r
+        return self._recv(), b""
 
     def _calltwowaystream(self, cmd, fp, **args):
         r = self._call(cmd, **args)
