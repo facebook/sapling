@@ -43,7 +43,7 @@ Test a few more options
   Replay Succeeded
 
 Check logging structure
-  $ grep "Replay Succeeded" "$fastreplay_log" | head -n 1 | jq .
+  $ grep "Replay Succeeded" "$fastreplay_log" | grep gettreepack | head -n 1 | jq .
   {
     "int": {
       "completion_time_us": *, (glob)
@@ -56,6 +56,8 @@ Check logging structure
     "normal": {
       "build_revision": *, (glob)
       "build_rule": *, (glob)
+      "command": "gettreepack",
+      "command_args": "[{\"basemfnodes\":\"\",\"directories\":\"\",\"mfnodes\":\"*\",\"rootdir\":\"\"}]", (glob)
       "log_tag": "Replay Succeeded",
       "recorded_mononoke_session_id": *, (glob)
       "recorded_server": "mononoke",

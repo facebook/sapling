@@ -132,6 +132,14 @@ async fn dispatch(
 
         scuba.add("reponame", reponame);
 
+        scuba.add("command", req.normal.command.as_ref());
+        if let Some(args) = req.normal.args.as_ref() {
+            scuba.add("command_args", args.as_ref());
+        }
+        if let Some(remote_args) = req.normal.remote_args.as_ref() {
+            scuba.add("command_remote_args", remote_args.as_ref());
+        }
+
         scuba.add("recorded_server", req.server_type());
         scuba.add("recorded_duration_us", req.duration_us());
 
