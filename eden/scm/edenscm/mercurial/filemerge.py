@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import os
 import re
+import subprocess
 import tempfile
 
 from . import (
@@ -304,6 +305,39 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
             #
             # Here, 'other [source]' is a local draft commit, 'local [dest]'
             # is the rebase destination, a public commit.
+
+            # Try to figure out "rename" path automatically by running
+            # a script the user specified.
+            # developer config: experimental.rename-cmd
+            cmd = ui.config("experimental", "rename-cmd")
+            if cmd:
+                ui.status(
+                    _("running %r to find rename destination of %s\n") % (cmd, fd)
+                )
+                try:
+                    proc = subprocess.Popen(
+                        cmd,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        shell=True,
+                    )
+                    destpath = pycompat.decodeutf8(
+                        proc.communicate(fd.encode("utf-8").strip())[0]
+                    ).strip()
+                except Exception as ex:
+                    ui.status(_(" failed: %s\n") % (ex))
+                else:
+                    destctx = fcd.changectx()
+                    if destpath in destctx:
+                        ui.status(_(" trying rename destination: %s\n") % (destpath,))
+                        fcd = destctx[destpath]
+                        raise error.RetryFileMerge(fcd=fcd)
+                    else:
+                        ui.status(
+                            _(" ignored invalid rename destination: %s\n") % (destpath,)
+                        )
+
             index = ui.promptchoice(_otherchangedlocaldeletedmsg % prompts, 2)
             choice = ["other", "local", "unresolved", "rename"][index]
         else:
