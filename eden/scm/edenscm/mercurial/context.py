@@ -50,7 +50,7 @@ from .node import (
     wdirnodes,
     wdirrev,
 )
-from .pycompat import range
+from .pycompat import encodeutf8, range
 from .thirdparty import attr
 
 
@@ -84,15 +84,16 @@ class basectx(object):
         return o
 
     def __bytes__(self):
-        return short(self.node())
+        return encodeutf8(str(self))
 
-    __str__ = encoding.strmethod(__bytes__)
+    def __str__(self):
+        return short(self.node())
 
     def __int__(self):
         return self.rev()
 
     def __repr__(self):
-        return r"<%s %s>" % (type(self).__name__, str(self))
+        return r"<%s %s>" % (type(self).__name__, self)
 
     def __eq__(self, other):
         try:
@@ -833,12 +834,13 @@ class basefilectx(object):
     __bool__ = __nonzero__
 
     def __bytes__(self):
+        return encodeutf8(str(self))
+
+    def __str__(self):
         try:
             return "%s@%s" % (self.path(), self._changectx)
         except error.LookupError:
             return "%s@???" % self.path()
-
-    __str__ = encoding.strmethod(__bytes__)
 
     def __repr__(self):
         return "<%s %s>" % (type(self).__name__, str(self))
@@ -1472,9 +1474,10 @@ class committablectx(basectx):
             self._extra["branch"] = "default"
 
     def __bytes__(self):
-        return bytes(self._parents[0]) + "+"
+        return encodeutf8(str(self))
 
-    __str__ = encoding.strmethod(__bytes__)
+    def __str__(self):
+        return str(self._parents[0]) + "+"
 
     def __nonzero__(self):
         return True
