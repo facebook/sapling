@@ -540,7 +540,7 @@ def patchtext(bin):
         pos += 12
         t.append(bin[pos : pos + l])
         pos += l
-    return "".join(t)
+    return b"".join(t)
 
 
 def patch(a, bin):
