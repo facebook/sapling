@@ -26,6 +26,7 @@ when adding support for new constructs.
 from __future__ import absolute_import
 
 import re
+import sys
 
 from . import encoding, identity, pycompat, url, util
 from .i18n import _
@@ -62,14 +63,20 @@ def replace(text, substs):
     '\\x81\\\\'
     """
 
-    # some character encodings (cp932 for Japanese, at least) use
-    # ASCII characters other than control/alphabet/digit as a part of
-    # multi-bytes characters, so direct replacing with such characters
-    # on strings in local encoding causes invalid byte sequences.
-    utext = text.decode(pycompat.sysstr(encoding.encoding))
-    for f, t in substs:
-        utext = utext.replace(f.decode("ascii"), t.decode("ascii"))
-    return utext.encode(pycompat.sysstr(encoding.encoding))
+    if sys.version_info[0] == 3:
+        assert isinstance(text, str)
+        for f, t in substs:
+            text = text.replace(f, t)
+        return text
+    else:
+        # some character encodings (cp932 for Japanese, at least) use
+        # ASCII characters other than control/alphabet/digit as a part of
+        # multi-bytes characters, so direct replacing with such characters
+        # on strings in local encoding causes invalid byte sequences.
+        utext = text.decode(pycompat.sysstr(encoding.encoding))
+        for f, t in substs:
+            utext = utext.replace(f.decode("ascii"), t.decode("ascii"))
+        return utext.encode(pycompat.sysstr(encoding.encoding))
 
 
 _blockre = re.compile(r"\n(?:\s*\n)+")
