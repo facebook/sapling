@@ -60,6 +60,7 @@ from edenscm.mercurial.i18n import _
 if sys.version_info[0] < 3:
     import anydbm as dbm
 else:
+    # pyre-fixme[21]: Could not find `dbm`.
     import dbm
 
 
