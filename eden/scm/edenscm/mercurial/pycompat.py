@@ -57,8 +57,8 @@ if sys.version_info[0] >= 3:
     import io
     import struct
 
-    fsencode = os.fsencode
-    fsdecode = os.fsdecode
+    fsencode = identity
+    fsdecode = identity
     oslinesep = os.linesep
     osname = os.name
     ospathsep = os.pathsep
