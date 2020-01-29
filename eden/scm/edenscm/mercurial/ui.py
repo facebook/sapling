@@ -48,6 +48,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex
+from .pycompat import decodeutf8, encodeutf8
 
 
 urlreq = util.urlreq
@@ -1161,7 +1162,7 @@ class ui(object):
         )
         try:
             f = util.fdopen(fd, r"wb")
-            f.write(util.tonativeeol(text))
+            f.write(encodeutf8(util.tonativeeol(text)))
             f.close()
 
             environ = {"HGUSER": user}
@@ -1199,7 +1200,7 @@ class ui(object):
                     )
 
             f = open(name, r"rb")
-            t = util.fromnativeeol(f.read())
+            t = decodeutf8(util.fromnativeeol(f.read()))
             f.close()
         finally:
             if rdir is None:
