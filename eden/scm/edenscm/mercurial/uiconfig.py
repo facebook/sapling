@@ -378,7 +378,7 @@ class uiconfig(object):
             if default is _unset:
                 default = 0
             value = default
-        if not isinstance(value, bytes):
+        if not isinstance(value, str):
             return value
         try:
             return util.sizetoint(value)
