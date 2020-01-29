@@ -1082,8 +1082,6 @@ def _dispatch(req):
         if options["verbose"] or options["debug"] or options["quiet"]:
             for opt in ("verbose", "debug", "quiet"):
                 val = str(bool(options[opt]))
-                if sys.version_info[0] >= 3:
-                    val = val.encode("ascii")
                 for ui_ in uis:
                     ui_.setconfig("ui", opt, val, "--" + opt)
 
