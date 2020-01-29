@@ -373,6 +373,29 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
   Hash wdHash_;
 };
 
+class AddedScmDiffEntry : public DeferredDiffEntry {
+ public:
+  AddedScmDiffEntry(
+      const DiffContext* context,
+      RelativePath path,
+      Hash wdHash,
+      const GitIgnoreStack* ignore,
+      bool isIgnored)
+      : DeferredDiffEntry{context, std::move(path)},
+        ignore_{ignore},
+        isIgnored_{isIgnored},
+        wdHash_{wdHash} {}
+
+  folly::Future<folly::Unit> run() override {
+    return diffAddedTree(context_, getPath(), wdHash_, ignore_, isIgnored_);
+  }
+
+ private:
+  const GitIgnoreStack* ignore_{nullptr};
+  bool isIgnored_{false};
+  Hash wdHash_;
+};
+
 } // unnamed namespace
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
@@ -450,5 +473,16 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
   return make_unique<ModifiedScmDiffEntry>(
       context, std::move(path), scmHash, wdHash, ignore, isIgnored);
 }
+
+unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
+    const DiffContext* context,
+    RelativePath path,
+    Hash wdHash,
+    const GitIgnoreStack* ignore,
+    bool isIgnored) {
+  return make_unique<AddedScmDiffEntry>(
+      context, std::move(path), wdHash, ignore, isIgnored);
+}
+
 } // namespace eden
 } // namespace facebook

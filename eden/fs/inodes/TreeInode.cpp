@@ -1984,7 +1984,7 @@ Future<Unit> TreeInode::computeDiff(
                     std::move(childPtr),
                     ignore.get(),
                     entryIgnored));
-          } else {
+          } else if (inodeEntry->isMaterialized()) {
             auto inodeFuture = self->loadChildLocked(
                 contents->entries, name, *inodeEntry, pendingLoads);
             deferredEntries.emplace_back(
@@ -1994,6 +1994,19 @@ Future<Unit> TreeInode::computeDiff(
                     std::move(inodeFuture),
                     ignore.get(),
                     entryIgnored));
+          } else {
+            // This entry is present locally but not in the source control tree.
+            // The current Inode is not materialized so do not load inodes and
+            // instead use the source control differ.
+
+            // Collect this future to complete with other
+            // deferred entries.
+            deferredEntries.emplace_back(DeferredDiffEntry::createAddedScmEntry(
+                context,
+                entryPath,
+                inodeEntry->getHash(),
+                ignore.get(),
+                entryIgnored));
           }
         }
       } else {
