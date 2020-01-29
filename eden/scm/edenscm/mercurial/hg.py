@@ -49,6 +49,7 @@ from . import (
 )
 from .i18n import _
 from .node import nullid
+from .pycompat import encodeutf8
 
 
 release = lock.release
@@ -114,7 +115,7 @@ def parseurl(path, branches=None):
     if u.fragment:
         branch = u.fragment
         u.fragment = None
-    return bytes(u), (branch, branches or [])
+    return str(u), (branch, branches or [])
 
 
 schemes = {
@@ -142,7 +143,7 @@ def _peerlookup(path):
 
 def islocal(repo):
     """return true if repo (or path pointing to repo) is local"""
-    if isinstance(repo, bytes):
+    if isinstance(repo, str):
         try:
             return _peerlookup(repo).islocal(repo)
         except AttributeError:
@@ -558,7 +559,7 @@ def clone(
     remote's path/URL. Defaults to "identity."
     """
 
-    if isinstance(source, bytes):
+    if isinstance(source, str):
         origsource = ui.expandpath(source)
         source, mayberevs = parseurl(origsource)
         if len(mayberevs) == 1:
@@ -617,7 +618,9 @@ def clone(
                     )
                 )
         elif sharenamemode == "remote":
-            sharepath = os.path.join(sharepool, hashlib.sha1(source).hexdigest())
+            sharepath = os.path.join(
+                sharepool, hashlib.sha1(encodeutf8(source)).hexdigest()
+            )
         else:
             raise error.Abort(_("unknown share naming mode: %s") % sharenamemode)
 
@@ -756,7 +759,7 @@ def clone(
                 fp = destrepo.localvfs("hgrc", "wb")
                 u = util.url(abspath)
                 u.passwd = None
-                defaulturl = bytes(u)
+                defaulturl = str(u)
                 fp.write(util.tonativeeol(template % defaulturl))
                 fp.close()
 
