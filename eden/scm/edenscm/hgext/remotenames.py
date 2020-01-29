@@ -718,7 +718,7 @@ class lazyremotenamedict(Mapping):
 
     def __iter__(self):
         for k, v in self.iteritems():
-            yield v
+            yield k
 
     def __len__(self):
         return len(list(self.keys(resolvenodes=False)))
@@ -1701,7 +1701,7 @@ def _normalizeremote(remote):
     u = util.url(remote)
     u.query = None
     u.fragment = None
-    return bytes(u)
+    return str(u)
 
 
 def activepath(ui, remote):
