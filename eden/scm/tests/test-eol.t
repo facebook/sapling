@@ -24,10 +24,11 @@ Set up helpers
   >     pass
   > (old, new) = sys.argv[1] == 'LF' and ('\n', '\r\n') or ('\r\n', '\n')
   > print("%% switching encoding from %r to %r" % (old, new))
+  > (old, new) = (old.encode('utf-8'), new.encode('utf-8'))
   > for path in sys.argv[2:]:
-  >     data = file(path, 'rb').read()
+  >     data = open(path, 'rb').read()
   >     data = data.replace(old, new)
-  >     file(path, 'wb').write(data)
+  >     open(path, 'wb').write(data)
   > EOF
 
   $ seteol () {

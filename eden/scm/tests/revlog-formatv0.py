@@ -22,6 +22,13 @@ import os
 import sys
 
 
+# PY3-compat
+if sys.version_info[0] >= 3:
+    fromhex = bytes.fromhex
+else:
+    fromhex = lambda x: x.decode("hex")
+
+
 files = [
     (
         "formatv0/.hg/00changelog.i",
@@ -68,7 +75,7 @@ makedirs(os.path.join(*"formatv0/.hg/data".split("/")))
 
 for name, data in files:
     f = open(name, "wb")
-    f.write(data.decode("hex"))
+    f.write(fromhex(data))
     f.close()
 
 sys.exit(0)

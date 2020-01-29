@@ -88,7 +88,7 @@ def main(target, maxchangesets, depth=None):
     for filename, data in content:
         if data is not None:
             f = open(filename, "wb")
-            f.write(data + "\n")
+            f.write((data + "\n").encode("utf-8"))
             f.close()
         elif os.path.exists(filename):
             os.remove(filename)

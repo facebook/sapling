@@ -1,23 +1,23 @@
 #chg-compatible
 
   $ cat > makepatch.py <<EOF
-  > f = file('eol.diff', 'wb')
+  > f = open('eol.diff', 'wb')
   > w = f.write
-  > w('test message\n')
-  > w('diff --git a/a b/a\n')
-  > w('--- a/a\n')
-  > w('+++ b/a\n')
-  > w('@@ -1,5 +1,5 @@\n')
-  > w(' a\n')
-  > w('-bbb\r\n')
-  > w('+yyyy\r\n')
-  > w(' cc\r\n')
-  > w(' \n')
-  > w(' d\n')
-  > w('-e\n')
-  > w('\ No newline at end of file\n')
-  > w('+z\r\n')
-  > w('\ No newline at end of file\r\n')
+  > w(b'test message\n')
+  > w(b'diff --git a/a b/a\n')
+  > w(b'--- a/a\n')
+  > w(b'+++ b/a\n')
+  > w(b'@@ -1,5 +1,5 @@\n')
+  > w(b' a\n')
+  > w(b'-bbb\r\n')
+  > w(b'+yyyy\r\n')
+  > w(b' cc\r\n')
+  > w(b' \n')
+  > w(b' d\n')
+  > w(b'-e\n')
+  > w(b'\ No newline at end of file\n')
+  > w(b'+z\r\n')
+  > w(b'\ No newline at end of file\r\n')
   > EOF
 
   $ hg init repo
@@ -27,7 +27,7 @@
 
 Test different --eol values
 
-  $ $PYTHON -c 'file("a", "wb").write("a\nbbb\ncc\n\nd\ne")'
+  $ $PYTHON -c 'open("a", "wb").write(b"a\nbbb\ncc\n\nd\ne")'
   $ hg ci -Am adda
   adding .gitignore
   adding a
@@ -91,7 +91,7 @@ auto EOL on LF file
 
 auto EOL on CRLF file
 
-  $ $PYTHON -c 'file("a", "wb").write("a\r\nbbb\r\ncc\r\n\r\nd\r\ne")'
+  $ $PYTHON -c 'open("a", "wb").write(b"a\r\nbbb\r\ncc\r\n\r\nd\r\ne")'
   $ hg commit -m 'switch EOLs in a'
   $ hg --traceback --config patch.eol='auto' import eol.diff
   applying eol.diff
@@ -107,11 +107,11 @@ auto EOL on CRLF file
 
 auto EOL on new file or source without any EOL
 
-  $ $PYTHON -c 'file("noeol", "wb").write("noeol")'
+  $ $PYTHON -c 'open("noeol", "wb").write(b"noeol")'
   $ hg add noeol
   $ hg commit -m 'add noeol'
-  $ $PYTHON -c 'file("noeol", "wb").write("noeol\r\nnoeol\n")'
-  $ $PYTHON -c 'file("neweol", "wb").write("neweol\nneweol\r\n")'
+  $ $PYTHON -c 'open("noeol", "wb").write(b"noeol\r\nnoeol\n")'
+  $ $PYTHON -c 'open("neweol", "wb").write(b"neweol\nneweol\r\n")'
   $ hg add neweol
   $ hg diff --git > noeol.diff
   $ hg revert --no-backup noeol neweol
@@ -129,10 +129,10 @@ auto EOL on new file or source without any EOL
 
 Test --eol and binary patches
 
-  $ $PYTHON -c 'file("b", "wb").write("a\x00\nb\r\nd")'
+  $ $PYTHON -c 'open("b", "wb").write(b"a\x00\nb\r\nd")'
   $ hg ci -Am addb
   adding b
-  $ $PYTHON -c 'file("b", "wb").write("a\x00\nc\r\nd")'
+  $ $PYTHON -c 'open("b", "wb").write(b"a\x00\nc\r\nd")'
   $ hg diff --git > bin.diff
   $ hg revert --no-backup b
 

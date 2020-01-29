@@ -9,10 +9,10 @@ Test applying context diffs
   > lasteol = sys.argv[2] == '1'
   > patterns = sys.argv[3:]
   > 
-  > fp = file(path, 'wb')
+  > fp = open(path, 'wb')
   > for i, pattern in enumerate(patterns):
   >     count = int(pattern[0:-1])
-  >     char = pattern[-1] + '\n'
+  >     char = (pattern[-1] + '\n').encode('utf-8')
   >     if not lasteol and i == len(patterns) - 1:
   >         fp.write((char*count)[:-1])
   >     else:
@@ -20,8 +20,8 @@ Test applying context diffs
   > fp.close()
   > EOF
   $ cat > cat.py <<EOF
-  > import sys
-  > sys.stdout.write(repr(file(sys.argv[1], 'rb').read()) + '\n')
+  > import sys, binascii
+  > sys.stdout.write(binascii.b2a_hex(open(sys.argv[1], 'rb').read()).decode('utf-8') + '\n')
   > EOF
 
 Initialize the test repository
@@ -117,12 +117,12 @@ Add file, missing a last end of line
 What's in a
 
   $ $PYTHON ../cat.py a
-  'A\nA\nA\nA\nA\nE\nC\nC\nC\nC\nC\nF\nF\n'
+  410a410a410a410a410a450a430a430a430a430a430a460a460a
   $ $PYTHON ../cat.py newnoeol
-  'a\nb'
+  610a62
   $ $PYTHON ../cat.py c
-  'A\nA\nA\nA\nA\nB\nB\n'
+  410a410a410a410a410a420a420a
   $ $PYTHON ../cat.py d
-  'A\nA\nA\nA\n'
+  410a410a410a410a
 
   $ cd ..

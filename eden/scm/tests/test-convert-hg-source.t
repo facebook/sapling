@@ -98,9 +98,9 @@ check shamap LF and CRLF handling
   $ cat > rewrite.py <<EOF
   > import sys
   > # Interlace LF and CRLF
-  > lines = [(l.rstrip() + ((i % 2) and '\n' or '\r\n'))
-  >          for i, l in enumerate(file(sys.argv[1]))]
-  > file(sys.argv[1], 'wb').write(''.join(lines))
+  > lines = [(l.rstrip() + ((i % 2) and b'\n' or b'\r\n'))
+  >          for i, l in enumerate(open(sys.argv[1], 'rb'))]
+  > open(sys.argv[1], 'wb').write(b''.join(lines))
   > EOF
   $ $PYTHON rewrite.py new/.hg/shamap
   $ cd orig

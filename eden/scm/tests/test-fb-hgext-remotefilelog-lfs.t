@@ -294,10 +294,15 @@
   $ cat > noise.py <<EOF
   > import os
   > import sys
+  > # PY3-compat
+  > if sys.version_info[0] >= 3:
+  >     stdout = sys.stdout.buffer
+  > else:
+  >     stdout = sys.stdout
   > # random content so compression is ineffective
   > length = int(sys.argv[1])
-  > sys.stdout.write(os.urandom(length))
-  > sys.stdout.flush()
+  > stdout.write(os.urandom(length))
+  > stdout.flush()
   > EOF
   $ hg bookmark -i base
   $ cp -R . ../shallow3

@@ -56,8 +56,8 @@ Restore
 Check that autobackup doesn't happen on restorebackup. Logs should be empty and backupstate should be correct
   $ test -f $TESTTMP/logs/test/*
   [1]
-  $ python -c "import sys; import json; bst = json.loads(sys.stdin.read()); print(bst['bookmarks'], bst['heads'])" < restored/.hg/infinitepushbackups/infinitepushbackupstate_f6bce706
-  ({u'abook': u'89ecc969c0ac7d7344728f1255250df7c54a56af'}, [u'89ecc969c0ac7d7344728f1255250df7c54a56af'])
+  $ python -c "import sys; import json; bst = json.loads(sys.stdin.read()); print('%s %s' % (bst['bookmarks']['abook'], bst['heads'][0]))" < restored/.hg/infinitepushbackups/infinitepushbackupstate_f6bce706
+  89ecc969c0ac7d7344728f1255250df7c54a56af 89ecc969c0ac7d7344728f1255250df7c54a56af
 
 
 Create second backup source

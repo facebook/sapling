@@ -7,10 +7,10 @@
   > path = sys.argv[1]
   > patterns = sys.argv[2:]
   > 
-  > fp = file(path, 'wb')
+  > fp = open(path, 'wb')
   > for pattern in patterns:
   >     count = int(pattern[0:-1])
-  >     char = pattern[-1] + '\n'
+  >     char = (pattern[-1] + '\n').encode('utf-8')
   >     fp.write(char*count)
   > fp.close()
   > EOF

@@ -278,12 +278,12 @@ Test that trimming description using multi-byte characters
 --------------------------------------------------------------------
 
   $ $PYTHON <<EOF
-  > fp = open('logfile', 'w')
-  > fp.write('12345678901234567890123456789012345678901234567890' +
-  >          '12345') # there are 5 more columns for 80 columns
+  > fp = open('logfile', 'wb')
+  > fp.write(b'12345678901234567890123456789012345678901234567890' +
+  >          b'12345') # there are 5 more columns for 80 columns
   > 
   > # 2 x 4 = 8 columns, but 3 x 4 = 12 bytes
-  > fp.write(u'\u3042\u3044\u3046\u3048'.encode('utf-8'))
+  > fp.write(b'\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88')
   > 
   > fp.close()
   > EOF

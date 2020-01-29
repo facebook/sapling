@@ -76,7 +76,7 @@ TODO: configure mutation
 
 7) Ensure the paths point to the right contents:
   $ getcontents() { # Usage: getcontents <path> <version>
-  >  local script="import sys, json; print json.load(sys.stdin)[0][\"conflicts\"][$1][\"$2\"][\"contents\"]"
+  >  local script="import sys, json; print(json.load(sys.stdin)[0][\"conflicts\"][$1][\"$2\"][\"contents\"])"
   >  local result=`hg resolve --tool internal:dumpjson --all | python -c "$script"`
   >  echo "$result"
   > }

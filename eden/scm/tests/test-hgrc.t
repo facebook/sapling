@@ -72,7 +72,7 @@ issue1829: wrong indentation
     = expected EOI or new_line
   [255]
 
-  $ $PYTHON -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
+  $ $PYTHON -c "print('[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n')" \
   > > $HGRC
   $ hg showconfig foo
   foo.bar=a\nb\nc\nde\nfg

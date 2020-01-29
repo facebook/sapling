@@ -121,7 +121,7 @@ Test files status in different revisions
 
 Test files properties
 
-  >>> file('bin', 'wb').write('\0a')
+  >>> open('bin', 'wb').write(b'\0a')
   $ fileset 'binary()'
   $ fileset 'binary() and unknown()'
   bin

@@ -5,9 +5,9 @@
   > import sys
   > 
   > for path in sys.argv[1:]:
-  >     data = file(path, 'rb').read()
-  >     data = data.replace('\n', '\r')
-  >     file(path, 'wb').write(data)
+  >     data = open(path, 'rb').read()
+  >     data = data.replace(b'\n', b'\r')
+  >     open(path, 'wb').write(data)
   > EOF
   $ cat > print.py <<EOF
   > import sys

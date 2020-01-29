@@ -488,14 +488,14 @@ no crash by empty group "()" while optimizing `or` operations
 test that chained `or` operations never eat up stack (issue4624)
 (uses `0:1` instead of `0` to avoid future optimization of trivial revisions)
 
-  $ hg log -T '{rev}\n' -r `$PYTHON -c "print '+'.join(['0:1'] * 500)"`
+  $ hg log -T '{rev}\n' -r `$PYTHON -c "print('+'.join(['0:1'] * 500))"`
   0
   1
 
 test that repeated `-r` options never eat up stack (issue4565)
 (uses `-r 0::1` to avoid possible optimization at old-style parser)
 
-  $ hg log -T '{rev}\n' `$PYTHON -c "for i in xrange(500): print '-r 0::1 ',"`
+  $ hg log -T '{rev}\n' `$PYTHON -c "for i in range(500): print('-r 0::1 '),"`
   0
   1
 
@@ -1534,17 +1534,17 @@ test author/desc/keyword in problematic encoding
   $ cd problematicencoding
 
   $ $PYTHON > setup.sh <<EOF
-  > print u'''
+  > print(u'''
   > echo a > text
   > hg add text
-  > hg --encoding utf-8 commit -u '\u30A2' -m none
+  > hg --encoding utf-8 commit -u '\\\u30A2' -m none
   > echo b > text
-  > hg --encoding utf-8 commit -u '\u30C2' -m none
+  > hg --encoding utf-8 commit -u '\\\u30C2' -m none
   > echo c > text
-  > hg --encoding utf-8 commit -u none -m '\u30A2'
+  > hg --encoding utf-8 commit -u none -m '\\\u30A2'
   > echo d > text
-  > hg --encoding utf-8 commit -u none -m '\u30C2'
-  > '''.encode('utf-8')
+  > hg --encoding utf-8 commit -u none -m '\\\u30C2'
+  > ''')
   > EOF
   $ sh < setup.sh
 
