@@ -103,22 +103,22 @@ def uisetup(ui):
         def compress(self, text):
             if util.safehasattr(self, "_lz4") and self._lz4:
                 if not text:
-                    return ("", text)
+                    return (b"", text)
                 c = lz4compresshc(text)
                 if len(text) <= len(c):
-                    if text[0] == "\0":
-                        return ("", text)
-                    return ("u", text)
-                return ("", "4" + c)
+                    if bytes(text[0:1]) == b"\0":
+                        return (b"", text)
+                    return (b"u", text)
+                return (b"", b"4" + c)
             return super(lz4revlog, self).compress(text)
 
         def decompress(self, bin):
             if not bin:
                 return bin
-            t = bin[0]
-            if t == "\0":
+            t = bytes(bin[0:1])
+            if t == b"\0":
                 return bin
-            if t == "4":
+            if t == b"4":
                 return lz4decompress(bin[1:])
             return super(lz4revlog, self).decompress(bin)
 
