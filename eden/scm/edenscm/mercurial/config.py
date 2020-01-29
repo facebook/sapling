@@ -88,10 +88,6 @@ class config(object):
         return list(self._data.get(section, {}).items())
 
     def set(self, section, item, value, source=""):
-        if sys.version_info[0] >= 3:
-            assert not isinstance(
-                value, str
-            ), "config values may not be unicode strings on Python 3"
         if section not in self:
             self._data[section] = util.cowsortdict()
         else:
@@ -203,7 +199,13 @@ class config(object):
             "config files must be opened in binary mode, got fp=%r mode=%r"
             % (fp, fp.mode)
         )
-        self.parse(path, fp.read(), sections=sections, remap=remap, include=self.read)
+        self.parse(
+            path,
+            pycompat.decodeutf8(fp.read()),
+            sections=sections,
+            remap=remap,
+            include=self.read,
+        )
 
 
 def parselist(value):
