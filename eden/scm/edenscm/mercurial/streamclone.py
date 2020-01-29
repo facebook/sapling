@@ -13,13 +13,15 @@
 from __future__ import absolute_import
 
 import struct
+from typing import Any, Iterable, Optional, Set, Tuple
 
 from . import error, phases, progress, store, util
 from .i18n import _
-from .pycompat import range
+from .pycompat import decodeutf8, encodeutf8, range
 
 
 def canperformstreamclone(pullop, bailifbundle2supported=False):
+    # type: (Any, bool) -> Tuple[bool, Optional[Set[str]]]
     """Whether it is possible to perform a streaming clone as part of pull.
 
     ``bailifbundle2supported`` will cause the function to return False if
@@ -111,6 +113,7 @@ def canperformstreamclone(pullop, bailifbundle2supported=False):
 
 
 def maybeperformlegacystreamclone(pullop):
+    # type: Any -> bool
     """Possibly perform a legacy stream clone operation.
 
     Legacy stream clones are performed as part of pull but before all other
@@ -146,7 +149,7 @@ def maybeperformlegacystreamclone(pullop):
 
     l = fp.readline()
     try:
-        filecount, bytecount = list(map(int, l.split(" ", 1)))
+        filecount, bytecount = list(map(int, l.split(b" ", 1)))
     except (ValueError, TypeError):
         raise error.ResponseError(_("unexpected response from remote server:"), l)
 
@@ -169,6 +172,7 @@ def maybeperformlegacystreamclone(pullop):
 
 
 def allowservergeneration(repo):
+    # type: Any -> bool
     """Whether streaming clones are allowed from the server."""
     if not repo.ui.configbool("server", "uncompressed", untrusted=True):
         return False
@@ -184,10 +188,12 @@ def allowservergeneration(repo):
 
 # This is it's own function so extensions can override it.
 def _walkstreamfiles(repo):
+    # type: Any -> Iterable[(str, str, int)]
     return repo.store.walk()
 
 
 def generatev1(repo):
+    # type: Any -> Tuple[int, int, Iterable[bytes]]
     """Emit content for version 1 of a streaming clone.
 
     This returns a 3-tuple of (file count, byte size, data iterator).
@@ -222,11 +228,12 @@ def generatev1(repo):
     debugflag = repo.ui.debugflag
 
     def emitrevlogdata():
+        # type: -> Iterable[bytes]
         for name, size in entries:
             if debugflag:
                 repo.ui.debug("sending %s (%d bytes)\n" % (name, size))
             # partially encode name over the wire for backwards compat
-            yield "%s\0%d\n" % (store.encodedir(name), size)
+            yield b"%s\0%d\n" % (encodeutf8(store.encodedir(name)), size)
             # auditing at this stage is both pointless (paths are already
             # trusted by the local repo) and expensive
             with svfs(name, "rb", auditpath=False) as fp:
@@ -240,18 +247,20 @@ def generatev1(repo):
 
 
 def generatev1wireproto(repo):
+    # type: Any -> Iterable[bytes]
     """Emit content for version 1 of streaming clone suitable for the wire.
 
     This is the data output from ``generatev1()`` with a header line
     indicating file count and byte size.
     """
     filecount, bytecount, it = generatev1(repo)
-    yield "%d %d\n" % (filecount, bytecount)
+    yield b"%d %d\n" % (filecount, bytecount)
     for chunk in it:
         yield chunk
 
 
-def generatebundlev1(repo, compression="UN"):
+def generatebundlev1(repo, compression=b"UN"):
+    # type: (Any, bytes) -> Tuple[str, Iterable[bytes]]
     """Emit content for version 1 of a stream clone bundle.
 
     The first 4 bytes of the output ("HGS1") denote this as stream clone
@@ -273,14 +282,15 @@ def generatebundlev1(repo, compression="UN"):
 
     Returns a tuple of (requirements, data generator).
     """
-    if compression != "UN":
+    if compression != b"UN":
         raise ValueError("we do not support the compression argument yet")
 
     requirements = repo.requirements & repo.supportedformats
-    requires = ",".join(sorted(requirements))
+    requires = encodeutf8(",".join(sorted(requirements)))
 
     def gen():
-        yield "HGS1"
+        # type: -> Iterable[bytes]
+        yield b"HGS1"
         yield compression
 
         filecount, bytecount, it = generatev1(repo)
@@ -291,7 +301,7 @@ def generatebundlev1(repo, compression="UN"):
         yield requires + "\0"
 
         # This is where we'll add compression in the future.
-        assert compression == "UN"
+        assert compression == b"UN"
 
         with progress.bar(
             repo.ui, _("bundle"), _("bytes"), bytecount, formatfunc=util.bytecount
@@ -304,6 +314,7 @@ def generatebundlev1(repo, compression="UN"):
 
 
 def consumev1(repo, fp, filecount, bytecount):
+    # type: (Any, Any, int, int) -> None
     """Apply the contents from version 1 of a streaming clone file handle.
 
     This takes the output from "stream_out" and applies it to the specified
@@ -342,7 +353,7 @@ def consumev1(repo, fp, filecount, bytecount):
                         # XXX doesn't support '\n' or '\r' in filenames
                         l = fp.readline()
                         try:
-                            name, size = l.split("\0", 1)
+                            name, size = l.split(b"\0", 1)
                             size = int(size)
                         except (ValueError, TypeError):
                             msg = _("unexpected response from remote server:")
@@ -352,7 +363,7 @@ def consumev1(repo, fp, filecount, bytecount):
                                 "adding %s (%s)\n" % (name, util.bytecount(size))
                             )
                         # for backwards compat, name was partially encoded
-                        path = store.decodedir(name)
+                        path = decodeutf8(store.decodedir(name))
                         with repo.svfs(path, "w", backgroundclose=True) as ofp:
                             for chunk in util.filechunkiter(fp, limit=size):
                                 prog.value += len(chunk)
@@ -372,8 +383,9 @@ def consumev1(repo, fp, filecount, bytecount):
 
 
 def readbundle1header(fp):
+    # type: Any -> Tuple[int, int, Set[str]]
     compression = fp.read(2)
-    if compression != "UN":
+    if compression != b"UN":
         raise error.Abort(
             _("only uncompressed stream clone bundles are " "supported; got %s")
             % compression
@@ -381,7 +393,7 @@ def readbundle1header(fp):
 
     filecount, bytecount = struct.unpack(">QQ", fp.read(16))
     requireslen = struct.unpack(">H", fp.read(2))[0]
-    requires = fp.read(requireslen)
+    requires = decodeutf8(fp.read(requireslen))
 
     if not requires.endswith("\0"):
         raise error.Abort(
@@ -394,6 +406,7 @@ def readbundle1header(fp):
 
 
 def applybundlev1(repo, fp):
+    # type: (Any, Any) -> None
     """Apply the content from a stream clone bundle version 1.
 
     We assume the 4 byte header has been read and validated and the file handle
@@ -421,7 +434,9 @@ class streamcloneapplier(object):
     """
 
     def __init__(self, fh):
+        # type: Any -> None
         self._fh = fh
 
     def apply(self, repo):
+        # type: Any -> None
         return applybundlev1(repo, self._fh)
