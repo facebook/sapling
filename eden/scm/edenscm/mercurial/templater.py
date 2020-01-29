@@ -1368,7 +1368,12 @@ def truncatelonglines(context, mapping, args):
     truncatedwidth = maxwidth
     if len(args) == 3:
         suffix = evalstring(context, mapping, args[2])
-        truncatedwidth -= len(suffix.decode("utf8"))
+        if isinstance(suffix, bytes):
+            # Python 2
+            truncatedwidth -= len(suffix.decode("utf8"))
+        else:
+            # Python 3
+            truncatedwidth -= len(suffix)
     else:
         suffix = None
 
@@ -1507,13 +1512,11 @@ stringify = templatefilters.stringify
 def _flatten(thing):
     """yield a single stream from a possibly nested set of iterators"""
     thing = templatekw.unwraphybrid(thing)
-    if isinstance(thing, bytes):
+    if isinstance(thing, str):
         yield thing
-    elif isinstance(thing, str):
-        # We can only hit this on Python 3, and it's here to guard
-        # against infinite recursion.
+    elif isinstance(thing, bytes):
         raise error.ProgrammingError(
-            "Mercurial IO including templates is done" " with bytes, not strings"
+            "Mercurial IO including templates is done with str, not bytes"
         )
     elif thing is None:
         pass
