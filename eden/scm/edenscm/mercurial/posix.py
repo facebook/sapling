@@ -32,6 +32,7 @@ from edenscmnative import osutil
 
 from . import encoding, error, fscap, pycompat
 from .i18n import _
+from .pycompat import decodeutf8, encodeutf8
 
 
 posixfile = open
@@ -194,6 +195,7 @@ def makelock(info, pathname):
     #     the flock. So it knows nobody else has the lock. Therefore it can do
     #     the unlink without extra locking.
     dirname = os.path.dirname(pathname)
+    info = encodeutf8(info)
     with _locked(dirname or "."):
         # Check and remove stale lock
         try:
@@ -733,7 +735,7 @@ if pycompat.isdarwin:
 
     def normcasefallback(path):
         try:
-            u = path.decode("utf-8")
+            u = decodeutf8(path)
         except UnicodeDecodeError:
             # OS X percent-encodes any bytes that aren't valid utf-8
             s = ""
@@ -748,7 +750,7 @@ if pycompat.isdarwin:
                     pos += 1
                 s += c
 
-            u = s.decode("utf-8")
+            u = decodeutf8(s)
 
         # Decompose then lowercase (HFS+ technote specifies lower)
         enc = unicodedata.normalize(r"NFD", u).lower().encode("utf-8")
