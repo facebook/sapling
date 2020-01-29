@@ -226,7 +226,7 @@ cdef class nodemap(object):
             rev = _logifraise(self._vfs,
                               lambda: self._rustnodemap[node],
                               lambda: {'nodemap.getitem': hex(node),
-                                       b'revorig': revorig})
+                                       'revorig': revorig})
             if rev != revorig:
                 _logandraise(self._vfs,
                              b'nodemap: inconsistent getitem(%s): %r vs %r'
@@ -282,7 +282,7 @@ cdef class nodemap(object):
             res = _logifraise(
                 self._vfs,
                 lambda: self._rustpartialmatch(hexprefix),
-                lambda: {'partialmatch': hexprefix, b'resorig': resorig})
+                lambda: {'partialmatch': hexprefix, 'resorig': resorig})
             if res != resorig:
                 _logandraise(
                     self._vfs,
@@ -360,9 +360,9 @@ cdef class localconfig:
     @classmethod
     def fromui(cls, ui):
         self = cls()
-        self.nodemap = ui.configbool(b'clindex', b'nodemap')
-        self.verify = ui.configbool(b'clindex', b'verify')
-        self.lagthreshold = ui.configint(b'clindex', b'lagthreshold')
+        self.nodemap = ui.configbool('clindex', 'nodemap')
+        self.verify = ui.configbool('clindex', 'verify')
+        self.lagthreshold = ui.configint('clindex', 'lagthreshold')
         return self
 
 def _parseindex(orig, self, data, inline):
@@ -418,7 +418,7 @@ def _wrapchangelog(orig, repo):
 
     try:
         with extensions.wrappedfunction(revlog.revlogio,
-                                        b'parseindex', _parseindex):
+                                        'parseindex', _parseindex):
             return orig(repo)
     finally:
         # do not leak them outside parseindex
@@ -461,10 +461,10 @@ def reposetup(ui, repo):
             # Force a reload of changelog. The current "self.changelog" object
             # has an outdated snapshot of changelog.i. We need to read the new
             # version before updatecaches().
-            if b'changelog' in self.__dict__:
-                del self.__dict__[b'changelog']
-            if b'changelog' in self._filecache:
-                del self._filecache[b'changelog']
+            if 'changelog' in self.__dict__:
+                del self.__dict__['changelog']
+            if 'changelog' in self._filecache:
+                del self._filecache['changelog']
             # This calls "updatecachess" and will pick up the new changelog.i.
             super(clindexrepo, self).destroyed()
 
@@ -476,5 +476,5 @@ def uisetup(ui):
     _logpath = ui.config('clindex', 'logpath')
 
     # filecache method has to be wrapped using wrapfilecache
-    extensions.wrapfilecache(localrepo.localrepository, b'changelog',
+    extensions.wrapfilecache(localrepo.localrepository, 'changelog',
                              _wrapchangelog)
