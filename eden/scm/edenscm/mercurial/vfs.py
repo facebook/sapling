@@ -396,6 +396,7 @@ class vfs(abstractvfs):
         cases (see also issue5418 and issue5584 for detail).
         """
         assert isinstance(path, str)
+        assert isinstance(mode, str)
         if auditpath:
             if self._audit:
                 r = util.checkosfilename(path)

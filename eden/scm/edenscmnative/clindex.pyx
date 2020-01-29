@@ -173,7 +173,7 @@ cdef class nodemap(object):
         self._overrides = {}
         self._vfs = vfs
         try:
-            index = util.buffer(util.mmapread(vfs(b'nodemap', b'rb')))
+            index = util.buffer(util.mmapread(vfs('nodemap', 'rb')))
             if len(index) < len(self.emptyindex):
                 index = self.emptyindex
         except IOError as ex:
@@ -205,7 +205,7 @@ cdef class nodemap(object):
         if lag == 0 or lag < self._config.lagthreshold:
             return
         _log(self._vfs, b'nodemap: updating (lag=%s)' % lag)
-        with self._vfs(b'nodemap', b'w', atomictemp=True) as f:
+        with self._vfs('nodemap', 'w', atomictemp=True) as f:
             f.write(self._rustnodemap.build())
         self._updated = True
 
@@ -397,7 +397,7 @@ def _log(vfs, message):
         if _logpath:
             f = open(_logpath, b'ab')
         else:
-            f = vfs(b'clindex.log', b'ab')
+            f = vfs('clindex.log', 'ab')
         with f:
             timestamp = datetime.datetime.now().strftime(b'%Y-%m-%d %H:%M:%S.%f')
             pid = os.getpid()
