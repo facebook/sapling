@@ -44,7 +44,7 @@ class batcher(object):
             resref = future()
             # Please don't invent non-ascii method names, or you will
             # give core hg a very sad time.
-            self.calls.append((name.encode("ascii"), args, opts, resref))
+            self.calls.append((name, args, opts, resref))
             return resref
 
         return call
