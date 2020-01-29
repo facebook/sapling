@@ -23,10 +23,10 @@ use crate::pythonutil::{
 };
 
 pub trait DataStorePyExt {
-    fn get_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes>;
-    fn get_delta_chain_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList>;
-    fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
-    fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
+    fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;
+    fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList>;
+    fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
+    fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
@@ -38,7 +38,7 @@ pub trait MutableDeltaStorePyExt: DataStorePyExt {
     fn add_py(
         &self,
         py: Python,
-        name: &PyBytes,
+        name: &PyPath,
         node: &PyBytes,
         deltabasenode: &PyBytes,
         delta: &PyBytes,
@@ -52,7 +52,7 @@ pub trait RemoteDataStorePyExt: RemoteDataStore {
 }
 
 impl<T: DataStore + ?Sized> DataStorePyExt for T {
-    fn get_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+    fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
         let result = self
             .get(&key)
@@ -62,7 +62,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         Ok(PyBytes::new(py, &result[..]))
     }
 
-    fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+    fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let delta = self
             .get_delta(&key)
@@ -73,7 +73,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
             from_key(py, &key)
         } else {
             (
-                PyBytes::new(py, key.path.as_byte_slice()),
+                PyPath::from(key.path.as_repo_path()),
                 PyBytes::new(py, Node::null_id().as_ref()),
             )
         };
@@ -82,7 +82,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         let meta = self.get_meta_py(py.clone(), &name, &node)?;
         Ok((
             bytes.into_object(),
-            base_name.into_object(),
+            base_name.to_py_object(py).into_object(),
             base_node.into_object(),
             meta.into_object(),
         )
@@ -90,7 +90,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
             .into_object())
     }
 
-    fn get_delta_chain_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
         let deltachain = self
             .get_delta_chain(&key)
@@ -104,7 +104,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         Ok(PyList::new(py, &pychain[..]))
     }
 
-    fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
         let metadata = self
             .get_meta(&key)
@@ -151,7 +151,7 @@ impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
             let (name, node) = from_key(py, &key);
             let (_, base_node) = from_base(py, &delta);
             let tuple = (
-                name.into_object(),
+                name.to_py_object(py).into_object(),
                 node.into_object(),
                 base_node.into_object(),
                 delta.data.len().into_py_object(py),
@@ -167,7 +167,7 @@ impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
     fn add_py(
         &self,
         py: Python,
-        name: &PyBytes,
+        name: &PyPath,
         node: &PyBytes,
         deltabasenode: &PyBytes,
         delta: &PyBytes,

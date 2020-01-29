@@ -161,24 +161,24 @@ py_class!(class datapack |py| {
         self.store(py).index_path().try_into().map_pyerr(py)
     }
 
-    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+    def get(&self, name: PyPath, node: &PyBytes) -> PyResult<PyBytes> {
         let store = self.store(py);
-        store.get_py(py, name, node)
+        store.get_py(py, &name, node)
     }
 
-    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.get_delta_py(py, name, node)
+        store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
-        store.get_delta_chain_py(py, name, node)
+        store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
-        store.get_meta_py(py, name, node)
+        store.get_meta_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -239,20 +239,20 @@ py_class!(class datapackstore |py| {
         datapackstore::create_instance(py, Box::new(DataPackStore::new(&path, corruption_policy)), path.to_path_buf())
     }
 
-    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
-        self.store(py).get_py(py, name, node)
+    def get(&self, name: PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+        self.store(py).get_py(py, &name, node)
     }
 
-    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        self.store(py).get_meta_py(py, name, node)
+    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
+        self.store(py).get_meta_py(py, &name, node)
     }
 
-    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
-        self.store(py).get_delta_py(py, name, node)
+    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
+        self.store(py).get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        self.store(py).get_delta_chain_py(py, name, node)
+    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
+        self.store(py).get_delta_chain_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -307,9 +307,9 @@ py_class!(class historypack |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
-        store.get_node_info_py(py, name, node)
+        store.get_node_info_py(py, &name, node)
     }
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
@@ -332,8 +332,8 @@ py_class!(class historypackstore |py| {
         historypackstore::create_instance(py, Box::new(HistoryPackStore::new(&path, corruption_policy)), path.to_path_buf())
     }
 
-    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
-        self.store(py).get_node_info_py(py, name, node)
+    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+        self.store(py).get_node_info_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -373,19 +373,19 @@ py_class!(class indexedlogdatastore |py| {
         py.allow_threads(|| IndexedLogDataStore::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
-    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.get_delta_py(py, name, node)
+        store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
-        store.get_delta_chain_py(py, name, node)
+        store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
-        store.get_meta_py(py, name, node)
+        store.get_meta_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -425,9 +425,9 @@ py_class!(class indexedloghistorystore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
-        store.get_node_info_py(py, name, node)
+        store.get_node_info_py(py, &name, node)
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {
@@ -464,9 +464,9 @@ py_class!(pub class mutabledeltastore |py| {
         mutabledeltastore::create_instance(py, store)
     }
 
-    def add(&self, name: &PyBytes, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+    def add(&self, name: PyPath, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.add_py(py, name, node, deltabasenode, delta, metadata)
+        store.add_py(py, &name, node, deltabasenode, delta, metadata)
     }
 
     def flush(&self) -> PyResult<Option<PyPath>> {
@@ -474,19 +474,19 @@ py_class!(pub class mutabledeltastore |py| {
         store.flush_py(py)
     }
 
-    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.get_delta_py(py, name, node)
+        store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
-        store.get_delta_chain_py(py, name, node)
+        store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
-        store.get_meta_py(py, name, node)
+        store.get_meta_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -573,9 +573,9 @@ py_class!(pub class mutablehistorystore |py| {
         mutablehistorystore::create_instance(py, store)
     }
 
-    def add(&self, name: &PyBytes, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<&PyBytes>) -> PyResult<PyObject> {
+    def add(&self, name: PyPath, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<PyPath>) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.add_py(py, name, node, p1, p2, linknode, copyfrom)
+        store.add_py(py, &name, node, p1, p2, linknode, copyfrom.as_ref())
     }
 
     def flush(&self) -> PyResult<Option<PyPath>> {
@@ -583,9 +583,9 @@ py_class!(pub class mutablehistorystore |py| {
         store.flush_py(py)
     }
 
-    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
-        store.get_node_info_py(py, name, node)
+        store.get_node_info_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -814,24 +814,24 @@ py_class!(class contentstore |py| {
         contentstore::create_instance(py, contentstore)
     }
 
-    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+    def get(&self, name: PyPath, node: &PyBytes) -> PyResult<PyBytes> {
         let store = self.store(py);
-        store.get_py(py, name, node)
+        store.get_py(py, &name, node)
     }
 
-    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.get_delta_py(py, name, node)
+        store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
-        store.get_delta_chain_py(py, name, node)
+        store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
-        store.get_meta_py(py, name, node)
+        store.get_meta_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -839,9 +839,9 @@ py_class!(class contentstore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def add(&self, name: &PyBytes, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+    def add(&self, name: PyPath, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.add_py(py, name, node, deltabasenode, delta, metadata)
+        store.add_py(py, &name, node, deltabasenode, delta, metadata)
     }
 
     def flush(&self) -> PyResult<Option<PyPath>> {
@@ -874,17 +874,17 @@ py_class!(class metadatastore |py| {
         metadatastore::create_instance(py, metadatastore)
     }
 
-    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
-        self.store(py).get_node_info_py(py, name, node)
+    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+        self.store(py).get_node_info_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         self.store(py).get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def add(&self, name: &PyBytes, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<&PyBytes>) -> PyResult<PyObject> {
+    def add(&self, name: PyPath, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<PyPath>) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.add_py(py, name, node, p1, p2, linknode, copyfrom)
+        store.add_py(py, &name, node, p1, p2, linknode, copyfrom.as_ref())
     }
 
     def flush(&self) -> PyResult<Option<PyPath>> {

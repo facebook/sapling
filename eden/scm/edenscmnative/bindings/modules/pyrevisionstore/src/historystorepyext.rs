@@ -22,7 +22,7 @@ use crate::pythonutil::{
 
 pub trait HistoryStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
-    fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple>;
+    fn get_node_info_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyTuple>;
 }
 
 pub trait IterableHistoryStorePyExt {
@@ -33,12 +33,12 @@ pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
     fn add_py(
         &self,
         py: Python,
-        name: &PyBytes,
+        name: &PyPath,
         node: &PyBytes,
         p1: &PyBytes,
         p2: &PyBytes,
         linknode: &PyBytes,
-        copyfrom: Option<&PyBytes>,
+        copyfrom: Option<&PyPath>,
     ) -> PyResult<PyObject>;
     fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>>;
 }
@@ -65,7 +65,7 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
         Ok(results)
     }
 
-    fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+    fn get_node_info_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyTuple> {
         let key = to_key(py, name, node)?;
         let info = self
             .get_node_info(&key)
@@ -96,16 +96,16 @@ fn from_node_info(py: Python, key: &Key, info: &NodeInfo) -> PyTuple {
 
 fn to_node_info(
     py: Python,
-    name: &PyBytes,
+    name: &PyPath,
     p1: &PyBytes,
     p2: &PyBytes,
     linknode: &PyBytes,
-    copyfrom: Option<&PyBytes>,
+    copyfrom: Option<&PyPath>,
 ) -> PyResult<NodeInfo> {
     // Not only can copyfrom be None, it can also be an empty string. In both cases that means that
     // `name` should be used.
     let copyfrom = copyfrom.unwrap_or(name);
-    let p1path = if copyfrom.data(py).is_empty() {
+    let p1path = if copyfrom.as_ref().as_os_str().is_empty() {
         name
     } else {
         copyfrom
@@ -137,20 +137,20 @@ impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
             let (name, node) = from_key(py, &key);
             let copyfrom = if key.path != node_info.parents[0].path {
                 if node_info.parents[0].path.is_empty() {
-                    PyBytes::new(py, b"")
+                    PyPath::from(String::from(""))
                 } else {
-                    PyBytes::new(py, node_info.parents[0].path.as_byte_slice())
+                    PyPath::from(node_info.parents[0].path.as_repo_path())
                 }
             } else {
-                PyBytes::new(py, b"")
+                PyPath::from(String::from(""))
             };
             let tuple = (
-                name.into_object(),
+                name.to_py_object(py).into_object(),
                 node.into_object(),
                 PyBytes::new(py, node_info.parents[0].hgid.as_ref()),
                 PyBytes::new(py, node_info.parents[1].hgid.as_ref()),
                 PyBytes::new(py, node_info.linknode.as_ref().as_ref()),
-                copyfrom.into_object(),
+                copyfrom.to_py_object(py).into_object(),
             )
                 .into_py_object(py);
             Ok(tuple)
@@ -163,12 +163,12 @@ impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
     fn add_py(
         &self,
         py: Python,
-        name: &PyBytes,
+        name: &PyPath,
         node: &PyBytes,
         p1: &PyBytes,
         p2: &PyBytes,
         linknode: &PyBytes,
-        copyfrom: Option<&PyBytes>,
+        copyfrom: Option<&PyPath>,
     ) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let nodeinfo = to_node_info(py, name, p1, p2, linknode, copyfrom)?;
