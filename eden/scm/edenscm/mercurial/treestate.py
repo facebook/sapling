@@ -15,6 +15,7 @@ from bindings import treestate
 
 from . import error, node, pycompat, txnutil, util
 from .i18n import _
+from .pycompat import decodeutf8, encodeutf8
 
 
 # header after the first 40 bytes of dirstate.
@@ -54,10 +55,11 @@ def _packmetadata(dictobj):
         if "=" in k or "\0" in entry:
             raise error.ProgrammingError("illegal metadata entry: %r" % entry)
         result.append(entry)
-    return "\0".join(result)
+    return encodeutf8("\0".join(result))
 
 
 def _unpackmetadata(data):
+    data = decodeutf8(data)
     return dict(entry.split("=", 1) for entry in data.split("\0") if "=" in entry)
 
 
@@ -337,7 +339,7 @@ class treestatemap(object):
 
     def _read(self):
         """Read every metadata automatically"""
-        content = ""
+        content = b""
         try:
             fp, _mode = txnutil.trypending(self._root, self._vfs, "dirstate")
             with fp:
