@@ -115,8 +115,8 @@ py_class!(class client |py| {
 
     def __new__(
         _cls,
-        url: &PyBytes,
-        repo: &PyBytes,
+        url: String,
+        repo: String,
         creds: Option<(PyPath, PyPath)> = None,
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
@@ -125,11 +125,8 @@ py_class!(class client |py| {
         streamhistory: bool = false,
         streamtrees: bool = false
     ) -> PyResult<client> {
-        let url = str::from_utf8(url.data(py)).map_pyerr(py)?;
-        let repo = str::from_utf8(repo.data(py)).map_pyerr(py)?;
-
         let mut config = Config::new()
-            .base_url_str(url)
+            .base_url_str(&url)
             .map_pyerr(py)?
             .repo(repo)
             .data_batch_size(databatchsize)
