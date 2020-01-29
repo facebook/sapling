@@ -531,7 +531,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    block_execute(healer.compat(), fb, app_name, &logger, &matches)
+    block_execute(
+        healer.compat(),
+        fb,
+        app_name,
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }
 
 #[cfg(test)]

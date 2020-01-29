@@ -95,5 +95,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .boxify();
 
-    block_execute(rechunk.compat(), fb, "rechunker", &logger, &matches)
+    block_execute(
+        rechunk.compat(),
+        fb,
+        "rechunker",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }

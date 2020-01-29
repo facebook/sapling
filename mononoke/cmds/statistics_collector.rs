@@ -629,7 +629,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     });
 
-    block_execute(run.compat(), fb, "statistics_collector", &logger, &matches)
+    block_execute(
+        run.compat(),
+        fb,
+        "statistics_collector",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }
 
 #[cfg(test)]

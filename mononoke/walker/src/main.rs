@@ -46,5 +46,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .boxify(),
     };
 
-    block_execute(future.compat(), fb, app_name, &logger, &matches)
+    block_execute(
+        future.compat(),
+        fb,
+        app_name,
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }

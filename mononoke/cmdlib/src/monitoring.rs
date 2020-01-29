@@ -14,21 +14,26 @@ use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
 use futures::Future;
-use services::{self, AliveService};
+use services::{self, Fb303Service};
 use slog::{info, Logger};
 use stats::schedule_stats_aggregation;
 
+// Re-eport AliveService for convenience so callers do not have to get the services dependency to
+// get AliveService.
+pub use services::AliveService;
+
 /// `service_name` should match tupperware to avoid confusion.
 /// e.g. for mononoke/blobstore_healer, pass blobstore_healer
-pub fn start_fb303_and_stats_agg(
+pub fn start_fb303_and_stats_agg<S: Fb303Service + Sync + Send + 'static>(
     fb: FacebookInit,
     runtime: &mut tokio_compat::runtime::Runtime,
     service_name: &str,
     logger: &Logger,
     matches: &ArgMatches,
+    service: S,
 ) -> Result<(), Error> {
     let service_name = service_name.to_string();
-    if let Some(()) = start_fb303_server(fb, &service_name, logger, matches)? {
+    if let Some(()) = start_fb303_server(fb, &service_name, logger, matches, service)? {
         let scheduler = schedule_stats_aggregation()
             .map_err(|e| format_err!("Failed to start stats aggregation {:?}", e))?;
 
@@ -41,11 +46,12 @@ pub fn start_fb303_and_stats_agg(
 
 /// This is a lower-level function that requires you to spawn the stats aggregation future
 /// yourself. This is useful if you'd like to be able to drop it in order to cancel it.
-pub fn start_fb303_server(
+pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
     fb: FacebookInit,
     service_name: &str,
     logger: &Logger,
     matches: &ArgMatches,
+    service: S,
 ) -> Result<Option<()>, Error> {
     let service_name = service_name.to_string();
     matches
@@ -62,7 +68,7 @@ pub fn start_fb303_server(
                         service_name,
                         port,
                         0, // Disables separate status http server
-                        Box::new(AliveService),
+                        Box::new(service),
                     )
                     .expect("failure while running thrift service framework")
                 })

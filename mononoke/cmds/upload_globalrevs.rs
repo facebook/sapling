@@ -92,5 +92,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
         });
 
-    block_execute(run.compat(), fb, "upload_globalrevs", &logger, &matches)
+    block_execute(
+        run.compat(),
+        fb,
+        "upload_globalrevs",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }

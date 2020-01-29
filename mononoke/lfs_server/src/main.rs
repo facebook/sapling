@@ -38,7 +38,7 @@ use blobrepo_factory::open_blobrepo;
 use cmdlib::{
     args::{self, get_config_handle},
     helpers::serve_forever,
-    monitoring::start_fb303_server,
+    monitoring::{start_fb303_server, AliveService},
 };
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
@@ -358,7 +358,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .next()
         .ok_or(Error::msg("Invalid Socket Address"))?;
 
-    start_fb303_server(fb, SERVICE_NAME, &logger, &matches)?;
+    start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
     let listener =
         TcpListener::bind(&addr).chain_err(Error::msg("Could not start TCP listener"))?;

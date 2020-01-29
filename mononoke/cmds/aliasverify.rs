@@ -371,5 +371,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     });
 
-    block_execute(aliasimport.compat(), fb, "aliasverify", &logger, &matches)
+    block_execute(
+        aliasimport.compat(),
+        fb,
+        "aliasverify",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }

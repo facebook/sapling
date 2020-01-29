@@ -26,7 +26,11 @@ use slog::{error, Logger};
 use tokio::{net::TcpListener, prelude::*};
 use tokio_openssl::SslAcceptorExt;
 
-use cmdlib::{args, helpers::serve_forever, monitoring::start_fb303_server};
+use cmdlib::{
+    args,
+    helpers::serve_forever,
+    monitoring::{start_fb303_server, AliveService},
+};
 use secure_utils::SslConfig;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -171,7 +175,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    start_fb303_server(fb, SERVICE_NAME, &logger, &matches)?;
+    start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
     let runtime = args::init_runtime(&matches)?;
 

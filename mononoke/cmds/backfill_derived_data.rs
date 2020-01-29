@@ -20,7 +20,10 @@ use changesets::{
 };
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers, monitoring::start_fb303_and_stats_agg};
+use cmdlib::{
+    args, helpers,
+    monitoring::{start_fb303_and_stats_agg, AliveService},
+};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
@@ -250,7 +253,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 );
                 move |data_type| DerivedDataStats::new(repo_name.clone(), data_type)
             };
-            start_fb303_and_stats_agg(fb, &mut runtime, &service_name, &logger, &matches)?;
+            start_fb303_and_stats_agg(
+                fb,
+                &mut runtime,
+                &service_name,
+                &logger,
+                &matches,
+                AliveService,
+            )?;
             (
                 args::open_repo(fb, &logger, &matches),
                 args::open_repo_unredacted(fb, &logger, &matches),

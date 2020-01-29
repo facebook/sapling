@@ -18,6 +18,7 @@ use futures_preview::{
     future::{self, Either},
     StreamExt, TryFutureExt,
 };
+use services::Fb303Service;
 use slog::{debug, error, info, Logger};
 use tokio_preview::{
     signal::unix::{signal, SignalKind},
@@ -402,17 +403,18 @@ where
 }
 
 /// Executes the future and waits for it to finish.
-pub fn block_execute<F, Out>(
+pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
     future: F,
     fb: FacebookInit,
     app_name: &str,
     logger: &Logger,
     matches: &ArgMatches,
+    service: S,
 ) -> Result<Out, Error>
 where
     F: Future<Output = Result<Out, Error>> + Send + 'static,
 {
-    monitoring::start_fb303_server(fb, app_name, logger, matches)?;
+    monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
     let mut runtime = args::init_runtime(&matches)?;
 
     let result = runtime.block_on_std(async {
@@ -445,6 +447,8 @@ mod test {
     use futures_preview::future::lazy;
     use slog_glog_fmt;
 
+    use crate::monitoring::AliveService;
+
     fn create_logger() -> Logger {
         slog_glog_fmt::facebook_logger().unwrap()
     }
@@ -460,7 +464,7 @@ mod test {
         let future = lazy({ |_| -> Result<(), Error> { Ok(()) } });
         let logger = create_logger();
         let matches = exec_matches();
-        let res = block_execute(future, fb, "test_app", &logger, &matches);
+        let res = block_execute(future, fb, "test_app", &logger, &matches, AliveService);
         assert!(res.is_ok());
     }
 
@@ -469,7 +473,7 @@ mod test {
         let future = lazy({ |_| -> Result<(), Error> { Err(Error::msg("Some error")) } });
         let logger = create_logger();
         let matches = exec_matches();
-        let res = block_execute(future, fb, "test_app", &logger, &matches);
+        let res = block_execute(future, fb, "test_app", &logger, &matches, AliveService);
         assert!(res.is_err());
     }
 }

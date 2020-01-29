@@ -99,5 +99,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             .await
     };
 
-    block_execute(import, fb, NAME, &logger, &matches)
+    block_execute(
+        import,
+        fb,
+        NAME,
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }

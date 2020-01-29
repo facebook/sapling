@@ -185,7 +185,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     });
 
-    block_execute(fut.compat(), fb, "hook_tailer", &logger, &matches)
+    block_execute(
+        fut.compat(),
+        fb,
+        "hook_tailer",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }
 
 fn process_hook_results(

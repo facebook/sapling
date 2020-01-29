@@ -343,5 +343,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             .then(move |result| upload_and_show_trace(ctx).then(move |_| result))
         });
 
-    block_execute(blobimport.compat(), fb, "blobimport", &logger, &matches)
+    block_execute(
+        blobimport.compat(),
+        fb,
+        "blobimport",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }
