@@ -58,9 +58,7 @@ _simpleopletters = set(iter("()[]#:=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols
 _syminitletters = set(
-    pycompat.iterbytestr(
-        string.ascii_letters.encode("ascii") + string.digits.encode("ascii") + b"._@"
-    )
+    pycompat.iterbytestr(string.ascii_letters + string.digits + "._@")
 ) | set(map(pycompat.bytechr, range(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
@@ -604,7 +602,7 @@ def _quote(s):
     >>> _quote(1)
     "'1'"
     """
-    return "'%s'" % util.escapestr(pycompat.bytestr(s))
+    return "'%s'" % util.escapestr(str(s))
 
 
 def formatspec(expr, *args):
