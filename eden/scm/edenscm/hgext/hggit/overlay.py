@@ -14,7 +14,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.node import bin, hex, nullid
-from past.builtins import basestring
+from edenscm.mercurial.pycompat import basestring
 
 
 def _maybehex(n):

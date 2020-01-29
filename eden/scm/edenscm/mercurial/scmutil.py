@@ -21,8 +21,6 @@ import socket
 import subprocess
 import weakref
 
-from past.builtins import basestring
-
 from . import (
     encoding,
     error,
@@ -41,7 +39,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
-from .pycompat import encodeutf8
+from .pycompat import basestring, encodeutf8
 
 
 if pycompat.iswindows:

@@ -46,6 +46,8 @@ else:
 empty = _queue.Empty
 queue = _queue
 
+basestring = tuple({type(""), type(b""), type(u"")})
+
 
 def identity(a):
     return a
