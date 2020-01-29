@@ -394,7 +394,7 @@ class wirepeer(repository.legacypeer):
 
         if heads != ["force"] and self.capable("unbundlehash"):
             heads = encodelist(
-                ["hashed", hashlib.sha1("".join(sorted(heads))).digest()]
+                ["hashed", hashlib.sha1(b"".join(sorted(heads))).digest()]
             )
         else:
             heads = encodelist(heads)
@@ -428,7 +428,7 @@ class wirepeer(repository.legacypeer):
         """
         if heads != ["force"] and self.capable("unbundlehash"):
             heads = encodelist(
-                ["hashed", hashlib.sha1("".join(sorted(heads))).digest()]
+                ["hashed", hashlib.sha1(b"".join(sorted(heads))).digest()]
             )
         else:
             heads = encodelist(heads)
