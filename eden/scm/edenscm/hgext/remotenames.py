@@ -1837,6 +1837,7 @@ def _readremotenamesfrom(vfs, filename):
             line = line.strip()
             if not line:
                 continue
+            line = pycompat.decodeutf8(line)
             nametype = None
             remote, rname = None, None
 
