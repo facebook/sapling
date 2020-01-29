@@ -75,7 +75,7 @@ else
 	cp build/scripts-2.7/$(HGNAME) $(HGNAME)
 endif
 
-hg3:
+local3:
 	HGNAME=$(HGNAME3) $(PYTHON3) setup3.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
@@ -98,6 +98,7 @@ wheel:
 
 cleanbutpackages:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
+	-$(PYTHON3) setup3.py clean --all # ignore errors from this command
 	find contrib doc i18n edenscm edenscmnative tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in edenscm/hgext/__index__.py tests/*.err
@@ -159,4 +160,4 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 # Packaging targets
 
-.PHONY: help all local build cleanbutpackages clean install install-home
+.PHONY: help all local local3 build cleanbutpackages clean install install-home
