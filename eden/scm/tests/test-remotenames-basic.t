@@ -229,13 +229,24 @@ Test clone --mirror
      baz                       2:4538525df7e2
      foo                       2:4538525df7e2
 
-Test loading with hggit
+Test custom paths dont override default
+  $ cd ..
+  $ hg init path_overrides
+  $ cd path_overrides
+  $ hg path -a default ../alpha
+  $ hg path -a custom ../alpha
+  $ hg pull
+  pulling from $TESTTMP/alpha
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 3 files
+  $ hg book --remote
+     default/bar               2:4538525df7e2
+     default/baz               2:4538525df7e2
+     default/foo               2:4538525df7e2
 
-  $ . "$TESTDIR/hggit/testutil"
-  $ setglobalconfig extensions.hggit= devel.all-warnings=no
-  $ hg help bookmarks  | egrep -- '--(un){0,1}track'
-   -t --track BOOKMARK     track this bookmark or remote name
-   -u --untrack            remove tracking for this bookmark
 
 Test json formatted bookmarks with tracking data
   $ cd ..

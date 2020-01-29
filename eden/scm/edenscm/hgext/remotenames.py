@@ -1748,20 +1748,17 @@ def activepath(ui, remote):
     if not candidates:
         return ""
 
-    # be stable under different orderings of paths in config files
-    # prefer any name other than 'default', 'default-push', 'infinitepush' or 'infinitepush-other' if available
-    # prefer shortest name of remaining names, and break ties by alphabetizing
-    cset = set(candidates)
-    cset.discard("default")
-    cset.discard("default-push")
-    cset.discard("infinitepush")
-    cset.discard("infinitepush-other")
-    if cset:
-        candidates = list(cset)
-
-    candidates.sort()  # alphabetical
-    candidates.sort(key=len)  # sort is stable so first will be the correct one
-    bestpath = candidates[0]
+    # Prefer default paths
+    for preferred in ["default", "default-push"]:
+        if preferred in candidates:
+            bestpath = preferred
+            break
+    else:
+        # Otherwise, pick the shortest (using a stable ordering).
+        # Use alphabetical to break ties in length.
+        candidates.sort()  # alphabetical
+        candidates.sort(key=len)  # sort is stable so first will be the correct one
+        bestpath = candidates[0]
 
     renames = _getrenames(ui)
     realpath = renames.get(bestpath, bestpath)
