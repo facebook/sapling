@@ -156,13 +156,15 @@ def hash(text, p1, p2):
 
 def textwithheader(text, p1, p2):
     """Similar to `hash`, but only return the content before calculating SHA1."""
+    assert isinstance(p1, bytes)
+    assert isinstance(p2, bytes)
     if p1 < p2:
         a = p1
         b = p2
     else:
         a = p2
         b = p1
-    return "%s%s%s" % (a, b, text)
+    return b"%s%s%s" % (a, b, text)
 
 
 def _trimchunk(revlog, revs, startidx, endidx=None):
@@ -352,7 +354,7 @@ class revlog(object):
         # Maps rev to chain base rev.
         self._chainbasecache = util.lrucachedict(100)
         # 2-tuple of (offset, data) of raw data from the revlog at an offset.
-        self._chunkcache = (0, "")
+        self._chunkcache = (0, b"")
         # How much data to read and cache into the raw revlog data cache.
         self._chunkcachesize = 65536
         self._maxchainlen = None
@@ -406,7 +408,7 @@ class revlog(object):
                 % self._chunkcachesize
             )
 
-        indexdata = ""
+        indexdata = b""
         self._initempty = True
         try:
             f = self.opener(self.indexfile)
@@ -504,7 +506,7 @@ class revlog(object):
     def clearcaches(self):
         self._cache = None
         self._chainbasecache.clear()
-        self._chunkcache = (0, "")
+        self._chunkcache = (0, b"")
         self._pcache = {}
 
         try:
@@ -1422,7 +1424,7 @@ class revlog(object):
 
     def _chunkclear(self):
         """Clear the raw chunk cache."""
-        self._chunkcache = (0, "")
+        self._chunkcache = (0, b"")
 
     def candelta(self, baserev, rev):
         """whether two revisions (prev, rev) can be delta-ed or not"""
@@ -1477,7 +1479,7 @@ class revlog(object):
         flags = None
         rawtext = None
         if node == nullid:
-            return ""
+            return b""
         if self._cache:
             if self._cache[0] == node:
                 # _cache only stores rawtext
@@ -1765,17 +1767,17 @@ class revlog(object):
     def compress(self, data):
         """Generate a possibly-compressed representation of data."""
         if not data:
-            return "", data
+            return b"", data
 
         compressed = self._compressor.compress(data)
 
         if compressed:
             # The revlog compressor added the header in the returned data.
-            return "", compressed
+            return b"", compressed
 
-        if data[0:1] == "\0":
-            return "", data
-        return "u", data
+        if data[0:1] == b"\0":
+            return b"", data
+        return b"u", data
 
     def decompress(self, data):
         """Decompress a revlog chunk.
@@ -1807,17 +1809,17 @@ class revlog(object):
         #
         # According to `hg perfrevlogchunks`, this is ~0.5% faster for zlib
         # compressed chunks. And this matters for changelog and manifest reads.
-        t = data[0:1]
+        t = bytes(data[0:1])
 
-        if t == "x":
+        if t == b"x":
             try:
                 return _zlibdecompress(data)
             except zlib.error as e:
                 raise RevlogError(_("revlog decompress error: %s") % str(e))
         # '\0' is more common than 'u' so it goes first.
-        elif t == "\0":
+        elif t == b"\0":
             return data
-        elif t == "u":
+        elif t == b"u":
             return util.buffer(data, 1)
 
         try:
