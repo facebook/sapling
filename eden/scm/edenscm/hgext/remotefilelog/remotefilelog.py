@@ -55,9 +55,9 @@ class remotefilelog(object):
     def read(self, node):
         """returns the file contents at this node"""
         t = self.revision(node)
-        if not t.startswith("\1\n"):
+        if not t.startswith(b"\1\n"):
             return t
-        s = t.index("\1\n", 2)
+        s = t.index(b"\1\n", 2)
         return t[s + 2 :]
 
     def add(self, text, meta, transaction, linknode, p1=None, p2=None):
