@@ -41,7 +41,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
-from .pycompat import range
+from .pycompat import encodeutf8
 
 
 if pycompat.iswindows:
@@ -61,6 +61,13 @@ class status(tuple):
     __slots__ = ()
 
     def __new__(cls, modified, added, removed, deleted, unknown, ignored, clean):
+        assert all(isinstance(f, str) for f in modified)
+        assert all(isinstance(f, str) for f in added)
+        assert all(isinstance(f, str) for f in removed)
+        assert all(isinstance(f, str) for f in deleted)
+        assert all(isinstance(f, str) for f in unknown)
+        assert all(isinstance(f, str) for f in ignored)
+        assert all(isinstance(f, str) for f in clean)
         return tuple.__new__(
             cls, (modified, added, removed, deleted, unknown, ignored, clean)
         )
@@ -400,7 +407,7 @@ def filteredhash(repo, maxrev):
     if revs:
         s = hashlib.sha1()
         for rev in revs:
-            s.update("%d;" % rev)
+            s.update(encodeutf8("%d;" % rev))
         key = s.digest()
     return key
 
@@ -1015,7 +1022,7 @@ def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
 def readrequires(opener, supported):
     """Reads and parses .hg/requires or .hg/store/requires and checks if all
     entries found are in the list of supported features."""
-    requirements = set(opener.read("requires").splitlines())
+    requirements = set(opener.readutf8("requires").splitlines())
     missings = []
     for r in requirements:
         if r not in supported:
@@ -1038,9 +1045,8 @@ def readrequires(opener, supported):
 
 
 def writerequires(opener, requirements):
-    with opener("requires", "w") as fp:
-        for r in sorted(requirements):
-            fp.write("%s\n" % r)
+    content = "".join("%s\n" % r for r in sorted(requirements))
+    opener.writeutf8("requires", content)
 
 
 class filecachesubentry(object):
@@ -1122,7 +1128,7 @@ class filecache(object):
 
     def __call__(self, func):
         self.func = func
-        self.name = func.__name__.encode("ascii")
+        self.name = func.__name__
         return self
 
     def __get__(self, obj, type=None):
@@ -1290,7 +1296,7 @@ class simplekeyvaluefile(object):
         'firstlinenonkeyval' indicates whether the first line of file should
         be treated as a key-value pair or reuturned fully under the
         __firstline key."""
-        lines = self.vfs.readlines(self.path)
+        lines = self.vfs.readutf8(self.path).splitlines(True)
         d = {}
         if firstlinenonkeyval:
             if not lines:
@@ -1339,7 +1345,7 @@ class simplekeyvaluefile(object):
                 raise error.ProgrammingError(e)
             lines.append("%s=%s\n" % (k, v))
         with self.vfs(self.path, mode="wb", atomictemp=True) as fp:
-            fp.write("".join(lines))
+            fp.write("".join(lines).encode("utf-8"))
 
 
 _reportobsoletedsource = ["debugobsolete", "pull", "push", "serve", "unbundle"]
