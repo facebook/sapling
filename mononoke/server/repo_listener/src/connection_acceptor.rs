@@ -40,8 +40,8 @@ use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_openssl::SslAcceptorExt;
 use x509::identity;
 
+use cmdlib::monitoring::ReadyFlagService;
 use limits::types::MononokeThrottleLimits;
-use monitoring::MononokeService;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
@@ -67,7 +67,7 @@ pub fn connection_acceptor(
     fb: FacebookInit,
     common_config: CommonConfig,
     sockname: String,
-    service: MononokeService,
+    service: ReadyFlagService,
     root_log: Logger,
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,

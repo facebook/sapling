@@ -32,8 +32,8 @@ use sql_ext::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::sync::{atomic::AtomicBool, Arc};
 
+use cmdlib::monitoring::ReadyFlagService;
 use metaconfig_types::{CommonConfig, RepoConfig};
-use monitoring::MononokeService;
 
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
@@ -48,7 +48,7 @@ pub fn create_repo_listeners(
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
-    service: MononokeService,
+    service: ReadyFlagService,
     terminate_process: Arc<AtomicBool>,
     config_store: Option<ConfigStore>,
     readonly_storage: ReadOnlyStorage,

@@ -11,50 +11,22 @@
 
 #![deny(warnings)]
 #![feature(never_type)]
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Error, Result};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
-use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
 
-#[derive(Clone)]
-pub struct MononokeService {
-    ready: Arc<AtomicBool>,
-}
+use cmdlib::monitoring::ReadyFlagService;
 
-impl MononokeService {
-    pub fn new() -> Self {
-        Self {
-            ready: Arc::new(AtomicBool::new(false)),
-        }
-    }
-
-    pub fn set_ready(&self) {
-        self.ready.store(true, Ordering::Relaxed);
-    }
-}
-
-impl Fb303Service for MononokeService {
-    fn getStatus(&self) -> FbStatus {
-        if self.ready.load(Ordering::Relaxed) {
-            FbStatus::Alive
-        } else {
-            FbStatus::Starting
-        }
-    }
-}
-
+// TODO: Stop using this one-off for Mononoke server, and instead use the one from cmdlib.
 pub fn start_thrift_service<'a>(
     fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
-    service: MononokeService,
+    service: ReadyFlagService,
 ) -> Option<Result<JoinHandle<!>>> {
     matches.value_of("thrift_port").map(|port| {
         let port = port.parse().expect("Failed to parse thrift_port as number");

@@ -11,7 +11,7 @@
 
 use anyhow::Result;
 use clap::{App, ArgMatches};
-use cmdlib::args;
+use cmdlib::{args, monitoring::ReadyFlagService};
 use configerator_cached::ConfigStore;
 use fbinit::FacebookInit;
 use futures_preview::{
@@ -19,7 +19,6 @@ use futures_preview::{
     future::{FutureExt, TryFutureExt},
 };
 use metaconfig_parser::RepoConfigs;
-use monitoring::MononokeService;
 use slog::{error, info};
 use std::path::PathBuf;
 use std::sync::{
@@ -127,7 +126,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     info!(root_log, "Creating repo listeners");
 
-    let service = MononokeService::new();
+    let service = ReadyFlagService::new();
     let terminate = Arc::new(AtomicBool::new(false));
 
     let repo_listeners = repo_listener::create_repo_listeners(

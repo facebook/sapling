@@ -14,13 +14,45 @@ use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
 use futures::Future;
-use services::{self, Fb303Service};
+use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
 use stats::schedule_stats_aggregation;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 // Re-eport AliveService for convenience so callers do not have to get the services dependency to
 // get AliveService.
 pub use services::AliveService;
+
+/// A FB303 service that reports healthy once set_ready has been called.
+#[derive(Clone)]
+pub struct ReadyFlagService {
+    ready: Arc<AtomicBool>,
+}
+
+impl ReadyFlagService {
+    pub fn new() -> Self {
+        Self {
+            ready: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    pub fn set_ready(&self) {
+        self.ready.store(true, Ordering::Relaxed);
+    }
+}
+
+impl Fb303Service for ReadyFlagService {
+    fn getStatus(&self) -> FbStatus {
+        if self.ready.load(Ordering::Relaxed) {
+            FbStatus::Alive
+        } else {
+            FbStatus::Starting
+        }
+    }
+}
 
 /// `service_name` should match tupperware to avoid confusion.
 /// e.g. for mononoke/blobstore_healer, pass blobstore_healer
