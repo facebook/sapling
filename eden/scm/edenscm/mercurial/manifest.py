@@ -20,6 +20,7 @@ import struct
 from . import error, mdiff, policy, pycompat, revlog, util
 from .i18n import _
 from .node import bin, hex
+from .pycompat import encodeutf8, unicode
 
 
 parsers = policy.importmod(r"parsers")
@@ -371,7 +372,7 @@ except AttributeError:
 
 
 class manifestdict(object):
-    def __init__(self, data=""):
+    def __init__(self, data=b""):
         self._lm = _lazymanifest(data)
 
     def __getitem__(self, key):
@@ -553,7 +554,7 @@ class manifestdict(object):
         delta = []
         dstart = None
         dend = None
-        dline = [""]
+        dline = [b""]
         start = 0
         # zero copy representation of base as a buffer
         addbuf = util.buffer(base)
@@ -567,12 +568,12 @@ class manifestdict(object):
                 start, end = _msearch(addbuf, f, start)
                 if not todelete:
                     h, fl = self._lm[f]
-                    l = "%s\0%s%s\n" % (f, revlog.hex(h), fl)
+                    l = encodeutf8("%s\0%s%s\n" % (f, revlog.hex(h), fl))
                 else:
                     if start == end:
                         # item we want to delete was not found, error out
                         raise AssertionError(_("failed to remove %s from manifest") % f)
-                    l = ""
+                    l = b""
                 if dstart is not None and dstart <= start and dend >= start:
                     if dend < end:
                         dend = end
@@ -580,13 +581,13 @@ class manifestdict(object):
                         dline.append(l)
                 else:
                     if dstart is not None:
-                        delta.append([dstart, dend, "".join(dline)])
+                        delta.append([dstart, dend, b"".join(dline)])
                     dstart = start
                     dend = end
                     dline = [l]
 
             if dstart is not None:
-                delta.append([dstart, dend, "".join(dline)])
+                delta.append([dstart, dend, b"".join(dline)])
             # apply the delta to the base, and get a delta for addrevision
             deltatext, arraytext = _addlistdelta(base, delta)
         else:
@@ -606,7 +607,10 @@ def _msearch(m, s, lo=0, hi=None):
     they indicate the proper sorted insertion point.
 
     m should be a buffer, a memoryview or a byte string.
-    s is a byte string"""
+    s is str"""
+    assert not isinstance(m, unicode)
+    assert isinstance(s, str)
+    s = encodeutf8(s)
 
     def advance(i, c):
         while i < lenm and m[i : i + 1] != c:
@@ -621,21 +625,21 @@ def _msearch(m, s, lo=0, hi=None):
     while lo < hi:
         mid = (lo + hi) // 2
         start = mid
-        while start > 0 and m[start - 1 : start] != "\n":
+        while start > 0 and m[start - 1 : start] != b"\n":
             start -= 1
-        end = advance(start, "\0")
+        end = advance(start, b"\0")
         if bytes(m[start:end]) < s:
             # we know that after the null there are 40 bytes of sha1
             # this translates to the bisect lo = mid + 1
-            lo = advance(end + 40, "\n") + 1
+            lo = advance(end + 40, b"\n") + 1
         else:
             # this translates to the bisect hi = mid
             hi = start
-    end = advance(lo, "\0")
+    end = advance(lo, b"\0")
     found = m[lo:end]
     if s == found:
         # we know that after the null there are 40 bytes of sha1
-        end = advance(end + 40, "\n")
+        end = advance(end + 40, b"\n")
         return (lo, end + 1)
     else:
         return (lo, lo)
@@ -667,7 +671,7 @@ def _addlistdelta(addlist, x):
 
     newaddlist += addlist[currentposition:]
 
-    deltatext = "".join(
+    deltatext = b"".join(
         struct.pack(">lll", start, end, len(content)) + content
         for start, end, content in x
     )
