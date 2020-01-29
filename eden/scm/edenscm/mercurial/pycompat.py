@@ -107,6 +107,10 @@ if sys.version_info[0] >= 3:
     byteskwargs = identity
     shlexsplit = shlex.split
 
+    def encodeutf8(s):
+        # type: (str) -> bytes
+        return s.encode("utf-8")
+
     def decodeutf8(s):
         # type: (bytes) -> str
         return s.decode("utf-8")
@@ -181,6 +185,11 @@ else:
     maplist = map
     ziplist = zip
     rawinput = raw_input  # noqa
+
+    def encodeutf8(s):
+        # type: (bytes) -> bytes
+        assert isinstance(s, bytes)
+        return s
 
     def decodeutf8(s):
         # type: (bytes) -> bytes
