@@ -986,7 +986,7 @@ class bundlepart(object):
     """
 
     def __init__(
-        self, parttype, mandatoryparams=(), advisoryparams=(), data="", mandatory=True
+        self, parttype, mandatoryparams=(), advisoryparams=(), data=b"", mandatory=True
     ):
         validateparttype(parttype)
         self.id = None
@@ -1136,10 +1136,10 @@ class bundlepart(object):
             header.append(value)
         ## finalize header
         try:
-            headerchunk = "".join(header)
+            headerchunk = b"".join(header)
         except TypeError:
             raise TypeError(
-                r"Found a non-bytes trying to " r"build bundle part header: %r" % header
+                r"Found a non-bytes trying to build bundle part header: %r" % header
             )
         outdebug(ui, "header chunk size: %i" % len(headerchunk))
         yield _pack(_fpartheadersize, len(headerchunk))
@@ -1188,9 +1188,11 @@ class bundlepart(object):
             buff = util.chunkbuffer(self.data)
             chunk = buff.read(preferedchunksize)
             while chunk:
+                assert isinstance(chunk, bytes)
                 yield chunk
                 chunk = buff.read(preferedchunksize)
         elif len(self.data):
+            assert isinstance(self.data, bytes)
             yield self.data
 
 
