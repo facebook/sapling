@@ -43,15 +43,17 @@ fn main() {
 
             return;
         }
-        Some(name) if name.ends_with("python") => {
-            // Translate to the "debugpython" command.
-            // ex. "python foo.py" => "hg debugpython -- foo.py"
-            let debugpython_args = vec!["hg", "debugpython", "--"]
-                .into_iter()
-                .map(ToString::to_string)
-                .chain(full_args.into_iter().skip(1))
-                .collect::<Vec<String>>();
-            full_args = debugpython_args;
+        Some(name) => {
+            if name.ends_with("python") || name.ends_with("python3") {
+                // Translate to the "debugpython" command.
+                // ex. "python foo.py" => "hg debugpython -- foo.py"
+                let debugpython_args = vec!["hg", "debugpython", "--"]
+                    .into_iter()
+                    .map(ToString::to_string)
+                    .chain(full_args.into_iter().skip(1))
+                    .collect::<Vec<String>>();
+                full_args = debugpython_args;
+            }
         }
         _ => (),
     }
