@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import struct
 from collections import defaultdict
+from typing import Iterable, Optional, Sequence, Tuple
 
 from edenscm.mercurial import perftrace, progress, pycompat
 from edenscm.mercurial.i18n import _
@@ -19,6 +20,7 @@ from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, re
 
 
 def sendpackpart(filename, history, data, version=1):
+    # type: (str, Sequence[Tuple[bytes, bytes, bytes, bytes, Optional[bytes]]], Sequence[Tuple[bytes, bytes, bytes, int]], int) -> Iterable[bytes]
     """A wirepack is formatted as follows:
 
     wirepack = <filename len: 2 byte unsigned int><filename>
@@ -38,20 +40,20 @@ def sendpackpart(filename, history, data, version=1):
                <delta>
     """
     rawfilenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
-    yield "%s%s" % (rawfilenamelen, filename)
+    yield b"%s%s" % (rawfilenamelen, filename)
 
     # Serialize and send history
     historylen = struct.pack("!I", len(history))
-    rawhistory = ""
+    rawhistory = b""
     for entry in history:
-        copyfrom = entry[4] or ""
+        copyfrom = entry[4] or b""
         copyfromlen = len(copyfrom)
         tup = entry[:-1] + (copyfromlen,)
         rawhistory += struct.pack("!20s20s20s20sH", *tup)
         if copyfrom:
             rawhistory += copyfrom
 
-    yield "%s%s" % (historylen, rawhistory)
+    yield b"%s%s" % (historylen, rawhistory)
 
     # Serialize and send data
     yield struct.pack("!I", len(data))
@@ -59,10 +61,10 @@ def sendpackpart(filename, history, data, version=1):
     for node, deltabase, delta, revlogflags in data:
         deltalen = struct.pack("!Q", len(delta))
         if version == 1:
-            yield "%s%s%s%s" % (node, deltabase, deltalen, delta)
+            yield b"%s%s%s%s" % (node, deltabase, deltalen, delta)
         elif version == 2:
             assert deltabase == nullid
-            rawdata = "%s%s%s%s" % (node, deltabase, deltalen, delta)
+            rawdata = b"%s%s%s%s" % (node, deltabase, deltalen, delta)
             metadata = {
                 constants.METAKEYFLAG: revlogflags,
                 constants.METAKEYSIZE: len(delta),
@@ -75,7 +77,8 @@ def sendpackpart(filename, history, data, version=1):
 
 
 def closepart():
-    return "\0" * 10
+    # type: () -> bytes
+    return b"\0" * 10
 
 
 def receivepack(ui, fh, dpack, hpack, version=1):

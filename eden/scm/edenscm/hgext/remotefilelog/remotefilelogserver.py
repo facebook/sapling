@@ -11,6 +11,7 @@ import json
 import os
 import stat
 import time
+from typing import Iterable
 
 from edenscm.mercurial import (
     changegroup,
@@ -463,6 +464,7 @@ def getpack(repo, proto, args, version=1):
         raise error.Abort(_("cannot fetch remote files over non-ssh protocol"))
 
     def streamer():
+        # type: () -> Iterable[bytes]
         """Request format:
 
         [<filerequest>,...]\0\0

@@ -14,6 +14,7 @@ import stat
 import struct
 import tempfile
 from collections import defaultdict
+from typing import Mapping
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
@@ -187,6 +188,7 @@ def _parsepackmeta(metabuf):
 
 
 def _buildpackmeta(metadict):
+    # type: (Mapping[str, bytes]) -> bytes
     """reverse of _parsepackmeta, dict -> bytes (<metadata-list>)
 
     The dict contains raw content - both keys and values are strings.
@@ -196,7 +198,7 @@ def _buildpackmeta(metadict):
     raise ProgrammingError when metadata key is illegal, or ValueError if
     length limit is exceeded
     """
-    metabuf = ""
+    metabuf = b""
     for k, v in sorted(pycompat.iteritems((metadict or {}))):
         if len(k) != 1:
             raise error.ProgrammingError("packmeta: illegal key: %s" % k)
@@ -221,6 +223,7 @@ _metaitemtypes = {constants.METAKEYFLAG: inttype, constants.METAKEYSIZE: inttype
 
 
 def buildpackmeta(metadict):
+    # type: (Mapping[str, int]) -> bytes
     """like _buildpackmeta, but typechecks metadict and normalize it.
 
     This means, METAKEYSIZE and METAKEYSIZE should have integers as values,
