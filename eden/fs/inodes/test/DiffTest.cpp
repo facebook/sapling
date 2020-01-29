@@ -1773,3 +1773,119 @@ TEST_F(
           std::make_pair("root/doc/c.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/doc/d.txt", ScmFileStatus::MODIFIED)));
 }
+
+TEST_F(DiffTestNonMateralized, diff_removed_tree_top_level_not_materialized) {
+  modifyAndInitialize();
+  auto backingStore = testMount_.getBackingStore();
+
+  // put some files in the commit that are not in the working copy.
+  auto builder2 = builder_.clone();
+  builder2.setFile("root/another/r.txt", "This is another/r.txt.\n");
+  builder2.setFile("root/another/s.txt", "This is another/s.txt.\n");
+  builder2.setFile("root/another/t.txt", "This is another/t.txt.\n");
+  builder2.setFile("root/another/u.txt", "This is another/u.txt.\n");
+
+  // Add tree2 to the backing store and create a commit pointing to it.
+  auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
+  auto commitHash2 = testMount_.nextCommitHash();
+  auto* commit2 =
+      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+  commit2->setReady();
+
+  // Run the diff. This will enter store/Diff.cpp via root/src using
+  // RemovedScmEntry via processRemoved
+  auto result = diff(commitHash2);
+
+  EXPECT_THAT(
+      result->entries,
+      UnorderedElementsAre(
+          std::make_pair("root/another/r.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another/s.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another/t.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another/u.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/doc/a.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/b.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/c.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/d.txt", ScmFileStatus::MODIFIED)));
+}
+
+TEST_F(
+    DiffTestNonMateralized,
+    diff_top_level_tree_replaced_with_file_not_materialized) {
+  addFile("root/another", "replaced with file\n");
+  modifyAndInitialize();
+  auto backingStore = testMount_.getBackingStore();
+
+  // put some files in the commit that are not in the working copy.
+  auto builder2 = builder_.clone();
+  builder2.removeFile("root/another");
+  builder2.setFile("root/another/r.txt", "This is another/r.txt.\n");
+  builder2.setFile("root/another/s.txt", "This is another/s.txt.\n");
+  builder2.setFile("root/another/t.txt", "This is another/t.txt.\n");
+  builder2.setFile("root/another/u.txt", "This is sranotherc/u.txt.\n");
+
+  // Add tree2 to the backing store and create a commit pointing to it.
+  auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
+  auto commitHash2 = testMount_.nextCommitHash();
+  auto* commit2 =
+      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+  commit2->setReady();
+
+  // Run the diff. This will enter store/Diff.cpp via root/src using
+  // RemovedScmEntry via processBothPresent
+  auto result = diff(commitHash2);
+
+  EXPECT_THAT(
+      result->entries,
+      UnorderedElementsAre(
+          std::make_pair("root/another/r.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another/s.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another/t.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another/u.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/another", ScmFileStatus::ADDED),
+          std::make_pair("root/doc/a.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/b.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/c.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/d.txt", ScmFileStatus::MODIFIED)));
+}
+
+TEST_F(DiffTestNonMateralized, diff_removed_tree_low_level_not_materialized) {
+  addFile("root/doc/another", "This is another\n");
+  modifyAndInitialize();
+  auto backingStore = testMount_.getBackingStore();
+
+  // remove some files from the commit that are in the working copy.
+  auto builder2 = builder_.clone();
+  builder2.removeFile("root/doc/another");
+  builder2.setFile("root/doc/another/r.txt", "This is another/r.txt.\n");
+  builder2.setFile("root/doc/another/s.txt", "This is another/s.txt.\n");
+  builder2.setFile("root/doc/another/t.txt", "This is another/t.txt.\n");
+  builder2.setFile("root/doc/another/u.txt", "This is another/u.txt.\n");
+
+  // materialize the inode not the files
+  testMount_.getInode("root/doc/another"_relpath);
+
+  // Add tree2 to the backing store and create a commit pointing to it.
+  auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/true);
+  auto commitHash2 = testMount_.nextCommitHash();
+  auto* commit2 =
+      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+  commit2->setReady();
+
+  // Run the diff. This will enter store/Diff.cpp via root/doc/src using
+  // diffRemovedTree from a ModifiedDiffEntry
+  auto result = diff(commitHash2);
+
+  EXPECT_THAT(
+      result->entries,
+      UnorderedElementsAre(
+          std::make_pair("root/doc/another/r.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/doc/another/s.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/doc/another/t.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/doc/another/u.txt", ScmFileStatus::REMOVED),
+          std::make_pair("root/doc/another", ScmFileStatus::ADDED),
+          std::make_pair("root/doc/a.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/b.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/c.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("root/doc/d.txt", ScmFileStatus::MODIFIED)));
+}

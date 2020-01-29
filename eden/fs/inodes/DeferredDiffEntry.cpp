@@ -95,97 +95,6 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
   folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
 };
 
-/*
- * Helper functions for diffing removed directories.
- *
- * This is used by both RemovedDiffEntry and ModifiedEntryInfo.
- * (ModifiedBlobDiffEntry needs it for handling cases where a directory was
- * replaced with a file.)
- */
-namespace {
-// Overload that takes an already loaded Tree
-folly::Future<folly::Unit> diffRemovedTree(
-    const DiffContext* context,
-    RelativePath currentPath,
-    const Tree* tree);
-// Overload that takes a TreeEntry, and has to load the Tree in question first
-folly::Future<folly::Unit> diffRemovedTree(
-    const DiffContext* context,
-    RelativePath currentPath,
-    const TreeEntry& entry);
-
-folly::Future<folly::Unit> diffRemovedTree(
-    const DiffContext* context,
-    RelativePath currentPath,
-    const TreeEntry& entry) {
-  DCHECK(entry.isTree());
-  return context->store->getTree(entry.getHash())
-      .thenValue([context, currentPath = RelativePath{std::move(currentPath)}](
-                     shared_ptr<const Tree>&& tree) {
-        return diffRemovedTree(context, std::move(currentPath), tree.get());
-      });
-}
-
-folly::Future<folly::Unit> diffRemovedTree(
-    const DiffContext* context,
-    RelativePath currentPath,
-    const Tree* tree) {
-  vector<Future<Unit>> subFutures;
-  for (const auto& entry : tree->getTreeEntries()) {
-    if (entry.isTree()) {
-      auto f = diffRemovedTree(context, currentPath + entry.getName(), entry);
-      subFutures.emplace_back(std::move(f));
-    } else {
-      XLOG(DBG5) << "diff: file in removed directory: "
-                 << currentPath + entry.getName();
-      context->callback->removedFile(currentPath + entry.getName());
-    }
-  }
-
-  return folly::collectAllSemiFuture(subFutures)
-      .toUnsafeFuture()
-      .thenValue([currentPath = RelativePath{std::move(currentPath)},
-                  tree = std::move(tree),
-                  context](vector<folly::Try<Unit>> results) {
-        // Call diffError() for each error that occurred
-        for (size_t n = 0; n < results.size(); ++n) {
-          auto& result = results[n];
-          if (result.hasException()) {
-            const auto& entry = tree->getEntryAt(n);
-            XLOG(WARN) << "exception processing diff for "
-                       << currentPath + entry.getName() << ": "
-                       << folly::exceptionStr(result.exception());
-            context->callback->diffError(
-                currentPath + entry.getName(), result.exception());
-          }
-        }
-        // Return successfully after recording the errors.  (If we failed then
-        // our caller would also record us as an error, which we don't want.)
-        return makeFuture();
-      });
-}
-} // unnamed namespace
-
-class RemovedDiffEntry : public DeferredDiffEntry {
- public:
-  RemovedDiffEntry(
-      const DiffContext* context,
-      RelativePath path,
-      const TreeEntry& scmEntry)
-      : DeferredDiffEntry{context, std::move(path)}, scmEntry_{scmEntry} {
-    // We only need to defer processing for removed directories;
-    // we never create RemovedDiffEntry objects for removed files.
-    DCHECK(scmEntry_.isTree());
-  }
-
-  folly::Future<folly::Unit> run() override {
-    return diffRemovedTree(context_, getPath(), scmEntry_);
-  }
-
- private:
-  TreeEntry scmEntry_;
-};
-
 class ModifiedDiffEntry : public DeferredDiffEntry {
  public:
   ModifiedDiffEntry(
@@ -251,7 +160,11 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         XLOG(DBG6) << "directory --> untracked file: " << getPath();
         context_->callback->addedFile(getPath());
       }
-      return diffRemovedTree(context_, getPath(), scmEntry_);
+      // Since this is a file or symlink in the current filesystem state, but a
+      // Tree in the source control state, we have to record the files from the
+      // Tree as removed. We can delegate this work to the source control tree
+      // differ.
+      return diffRemovedTree(context_, getPath(), scmEntry_.getHash());
     }
 
     {
@@ -396,6 +309,22 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
   Hash wdHash_;
 };
 
+class RemovedScmDiffEntry : public DeferredDiffEntry {
+ public:
+  RemovedScmDiffEntry(
+      const DiffContext* context,
+      RelativePath path,
+      Hash scmHash)
+      : DeferredDiffEntry{context, std::move(path)}, scmHash_{scmHash} {}
+
+  folly::Future<folly::Unit> run() override {
+    return diffRemovedTree(context_, getPath(), scmHash_);
+  }
+
+ private:
+  Hash scmHash_;
+};
+
 } // unnamed namespace
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
@@ -417,13 +346,6 @@ DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
     bool isIgnored) {
   return make_unique<UntrackedDiffEntry>(
       context, std::move(path), std::move(inodeFuture), ignore, isIgnored);
-}
-
-unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedEntry(
-    const DiffContext* context,
-    RelativePath path,
-    const TreeEntry& scmEntry) {
-  return make_unique<RemovedDiffEntry>(context, std::move(path), scmEntry);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
@@ -482,6 +404,13 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
     bool isIgnored) {
   return make_unique<AddedScmDiffEntry>(
       context, std::move(path), wdHash, ignore, isIgnored);
+}
+
+unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedScmEntry(
+    const DiffContext* context,
+    RelativePath path,
+    Hash scmHash) {
+  return make_unique<RemovedScmDiffEntry>(context, std::move(path), scmHash);
 }
 
 } // namespace eden

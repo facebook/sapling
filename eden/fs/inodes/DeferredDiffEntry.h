@@ -113,6 +113,11 @@ class DeferredDiffEntry {
       const GitIgnoreStack* ignore,
       bool isIgnored);
 
+  static std::unique_ptr<DeferredDiffEntry> createRemovedScmEntry(
+      const DiffContext* context,
+      RelativePath path,
+      Hash scmHash);
+
  protected:
   const DiffContext* const context_;
   RelativePath const path_;

@@ -2025,8 +2025,8 @@ Future<Unit> TreeInode::computeDiff(
 
     auto processRemoved = [&](const TreeEntry& scmEntry) {
       if (scmEntry.isTree()) {
-        deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
-            context, currentPath + scmEntry.getName(), scmEntry));
+        deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
+            context, currentPath + scmEntry.getName(), scmEntry.getHash()));
       } else {
         XLOG(DBG5) << "diff: removed file: "
                    << currentPath + scmEntry.getName();
@@ -2116,8 +2116,8 @@ Future<Unit> TreeInode::computeDiff(
           XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
           context->callback->addedFile(entryPath);
         }
-        deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
-            context, entryPath, scmEntry));
+        deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
+            context, entryPath, scmEntry.getHash()));
       } else {
         // This file corresponds to a different blob hash, or has a
         // different mode.
