@@ -1082,7 +1082,7 @@ class dirstate(object):
                         "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
                     )
 
-                with self._repo.wlock(freshinstance):
+                with self._repo.disableeventreporting(), self._repo.wlock(freshinstance):
                     identity = self._repo.dirstate.identity()
                     if identity == oldid:
                         if poststatusbefore:

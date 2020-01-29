@@ -19,6 +19,7 @@ import os
 import random
 import time
 import weakref
+from contextlib import contextmanager
 
 # pyre-fixme[21]: Could not find `bindings`.
 import bindings
@@ -592,6 +593,7 @@ class localrepository(object):
 
         self._narrowheadsmigration()
         self._zstorecommitdatamigration()
+        self._eventreporting = True
 
     def _narrowheadsmigration(self):
         """Migrate if 'narrow-heads' config has changed."""
@@ -651,6 +653,12 @@ class localrepository(object):
                         )
                     self.storerequirements.remove("narrowheads")
                     self._writestorerequirements()
+
+    @contextmanager
+    def disableeventreporting(self):
+        self._eventreporting = False
+        yield
+        self._eventreporting = True
 
     def _zstorecommitdatamigration(self):
         """Migrate if 'narrow-heads' config has changed."""

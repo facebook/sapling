@@ -417,7 +417,7 @@ class physicalfilesystem(object):
 
                 # Updating the dirstate is optional so we don't wait on the
                 # lock.
-                with repo.wlock(False):
+                with repo.disableeventreporting(), repo.wlock(False):
                     # The dirstate may have been reloaded after the wlock
                     # was taken, so load it again.
                     newdirstate = repo.dirstate

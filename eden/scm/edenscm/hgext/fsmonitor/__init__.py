@@ -899,7 +899,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                 repo.ui.debug(
                     "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
                 )
-            with repo.wlock(freshinstance):
+            with repo.disableeventreporting(), repo.wlock(freshinstance):
                 # The dirstate may have been reloaded after the wlock
                 # was taken, so load it again.
                 newdirstate = repo.dirstate

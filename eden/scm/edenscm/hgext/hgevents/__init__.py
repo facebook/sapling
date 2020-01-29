@@ -73,6 +73,8 @@ def reposetup(ui, repo):
 
         def wlock(self, *args, **kwargs):
             l = super(hgeventsrepo, self).wlock(*args, **kwargs)
+            if not self._eventreporting:
+                return l
             if not self.ui.configbool("experimental", "fsmonitor.transaction_notify"):
                 return l
             if l.held != 1:
