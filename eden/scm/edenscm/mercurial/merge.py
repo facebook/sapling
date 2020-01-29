@@ -36,6 +36,7 @@ from . import (
 )
 from .i18n import _
 from .node import addednodeid, bin, hex, modifiednodeid, nullhex, nullid, nullrev
+from .pycompat import decodeutf8, encodeutf8
 
 
 _pack = struct.pack
@@ -268,6 +269,7 @@ class mergestate(object):
         try:
             f = self._repo.localvfs(self.statepathv1)
             for i, l in enumerate(f):
+                l = decodeutf8(l)
                 if i == 0:
                     records.append(("L", l[:-1]))
                 else:
@@ -303,15 +305,15 @@ class mergestate(object):
             off = 0
             end = len(data)
             while off < end:
-                rtype = data[off]
+                rtype = data[off : off + 1]
                 off += 1
                 length = _unpack(">I", data[off : (off + 4)])[0]
                 off += 4
                 record = data[off : (off + length)]
                 off += length
-                if rtype == "t":
-                    rtype, record = record[0], record[1:]
-                records.append((rtype, record))
+                if rtype == b"t":
+                    rtype, record = record[0:1], record[1:]
+                records.append((decodeutf8(rtype), decodeutf8(record)))
             f.close()
         except IOError as err:
             if err.errno != errno.ENOENT:
@@ -433,10 +435,10 @@ class mergestate(object):
         irecords = iter(records)
         lrecords = next(irecords)
         assert lrecords[0] == "L"
-        f.write(hex(self._local) + "\n")
+        f.write(encodeutf8(hex(self._local) + "\n"))
         for rtype, data in irecords:
             if rtype == "F":
-                f.write("%s\n" % _droponode(data))
+                f.write(encodeutf8("%s\n" % _droponode(data)))
         f.close()
 
     def _writerecordsv2(self, records):
@@ -450,6 +452,8 @@ class mergestate(object):
             assert len(key) == 1
             if key not in whitelist:
                 key, data = "t", "%s%s" % (key, data)
+            key = encodeutf8(key)
+            data = encodeutf8(data)
             format = ">sI%is" % len(data)
             f.write(_pack(format, key, len(data), data))
         f.close()
@@ -466,7 +470,7 @@ class mergestate(object):
         if fcl.isabsent():
             hash = nullhex
         else:
-            hash = hex(hashlib.sha1(fcl.path()).digest())
+            hash = hex(hashlib.sha1(encodeutf8(fcl.path())).digest())
             self._repo.localvfs.write("merge/" + hash, fcl.data())
         self._state[fd] = [
             "u",
@@ -2334,7 +2338,7 @@ def update(
         if not partial and not wc.isinmemory():
             repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
-            repo.localvfs.write("updatestate", p2.hex())
+            repo.localvfs.writeutf8("updatestate", p2.hex())
 
         # Advertise fsmonitor when its presence could be useful.
         #
