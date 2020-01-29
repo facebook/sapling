@@ -79,7 +79,7 @@ import struct
 
 from . import error, node, obsutil, perftrace, phases, policy, pycompat, util
 from .i18n import _
-from .pycompat import range
+from .pycompat import encodeutf8, range
 
 
 parsers = policy.importmod(r"parsers")
@@ -460,6 +460,8 @@ def _fm1encodeonemarker(marker):
         data.extend(parents)
     totalsize = _calcsize(format)
     for key, value in metadata:
+        assert isinstance(key, str)
+        assert isinstance(value, str)
         lk = len(key)
         lv = len(value)
         if lk > 255:
@@ -480,9 +482,11 @@ def _fm1encodeonemarker(marker):
     data[0] = totalsize
     data = [_pack(format, *data)]
     for key, value in metadata:
+        key = encodeutf8(key)
+        value = encodeutf8(value)
         data.append(key)
         data.append(value)
-    return "".join(data)
+    return b"".join(data)
 
 
 def _fm1readmarkers(data, off, stop):
