@@ -14,8 +14,8 @@ from __future__ import absolute_import
 
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
-from .node import bin, hex, nullid
-from .pycompat import range
+from .node import bbin, bin, hex, nullid
+from .pycompat import decodeutf8, encodeutf8, range
 from .thirdparty import attr
 
 
@@ -52,13 +52,14 @@ def decodeextra(text):
     [('baz', '\\\\\\x002'), ('branch', 'default'), ('foo', 'bar')]
     """
     extra = _defaultextra.copy()
-    for l in text.split("\0"):
+    for l in text.split(b"\0"):
         if l:
-            if "\\0" in l:
+            if b"\\0" in l:
                 # fix up \0 without getting into trouble with \\0
-                l = l.replace("\\\\", "\\\\\n")
-                l = l.replace("\\0", "\0")
-                l = l.replace("\n", "")
+                l = l.replace(b"\\\\", b"\\\\\n")
+                l = l.replace(b"\\0", "\0")
+                l = l.replace(b"\n", b"")
+            l = decodeutf8(l)
             k, v = util.unescapestr(l).split(":", 1)
             extra[k] = v
     return extra
@@ -197,16 +198,16 @@ class changelogrevision(object):
         #
         # changelog v0 doesn't use extra
 
-        nl1 = text.index("\n")
-        nl2 = text.index("\n", nl1 + 1)
-        nl3 = text.index("\n", nl2 + 1)
+        nl1 = text.index(b"\n")
+        nl2 = text.index(b"\n", nl1 + 1)
+        nl3 = text.index(b"\n", nl2 + 1)
 
         # The list of files may be empty. Which means nl3 is the first of the
         # double newline that precedes the description.
-        if text[nl3 + 1 : nl3 + 2] == "\n":
+        if text[nl3 + 1 : nl3 + 2] == b"\n":
             doublenl = nl3
         else:
-            doublenl = text.index("\n\n", nl3 + 1)
+            doublenl = text.index(b"\n\n", nl3 + 1)
 
         self._offsets = (nl1, nl2, nl3, doublenl)
         self._text = text
@@ -216,24 +217,24 @@ class changelogrevision(object):
 
     @property
     def manifest(self):
-        return bin(self._text[0 : self._offsets[0]])
+        return bbin(self._text[0 : self._offsets[0]])
 
     @property
     def user(self):
         off = self._offsets
-        return encoding.tolocal(self._text[off[0] + 1 : off[1]])
+        return encoding.tolocalstr(self._text[off[0] + 1 : off[1]])
 
     @property
     def _rawdate(self):
         off = self._offsets
         dateextra = self._text[off[1] + 1 : off[2]]
-        return dateextra.split(" ", 2)[0:2]
+        return dateextra.split(b" ", 2)[0:2]
 
     @property
     def _rawextra(self):
         off = self._offsets
         dateextra = self._text[off[1] + 1 : off[2]]
-        fields = dateextra.split(" ", 2)
+        fields = dateextra.split(b" ", 2)
         if len(fields) != 3:
             return None
 
@@ -268,12 +269,12 @@ class changelogrevision(object):
         if off[2] == off[3]:
             self._files = tuple()
         else:
-            self._files = tuple(self._text[off[2] + 1 : off[3]].split("\n"))
+            self._files = tuple(decodeutf8(self._text[off[2] + 1 : off[3]]).split("\n"))
         return self._files
 
     @property
     def description(self):
-        return encoding.tolocal(self._text[self._offsets[3] + 2 :])
+        return encoding.tolocalstr(self._text[self._offsets[3] + 2 :])
 
 
 class changelog(revlog.revlog):
@@ -494,7 +495,7 @@ class changelog(revlog.revlog):
             self.opener.rename(tmpname, self.indexfile, checkambig=True)
         elif self._delaybuf:
             fp = self.opener(self.indexfile, "a", checkambig=True)
-            fp.write("".join(self._delaybuf))
+            fp.write(b"".join(self._delaybuf))
             fp.close()
             self._delaybuf = None
         self._divert = False
@@ -559,8 +560,8 @@ class changelog(revlog.revlog):
         text = self.revision(node)
         if not text:
             return []
-        last = text.index("\n\n")
-        l = text[:last].split("\n")
+        last = text.index(b"\n\n")
+        l = decodeutf8(text[:last]).split("\n")
         return l[3:]
 
     def add(
@@ -597,7 +598,8 @@ class changelog(revlog.revlog):
             parseddate = "%s %s" % (parseddate, extra)
         l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
         text = "\n".join(l)
-        result = self.addrevision(text, transaction, len(self), p1, p2)
+        btext = encodeutf8(text)
+        result = self.addrevision(btext, transaction, len(self), p1, p2)
         zstore = self.zstore
         if zstore is not None:
             zstore.flush()

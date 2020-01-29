@@ -630,6 +630,7 @@ if sys.version_info[0] >= 3:
     strmethod = pycompat.identity
     strtolocal = pycompat.identity
     tolocal = pycompat.identity
+    tolocalstr = pycompat.decodeutf8  # Binary utf-8 to Python 3 str
     unifromlocal = pycompat.identity
     unitolocal = pycompat.identity
 
@@ -646,4 +647,5 @@ else:
     lower = _lower
     strio = pycompat.identity
     tolocal = _tolocal
+    tolocalstr = _tolocal  # Binary utf-8 to local byte string
     upper = _upper
