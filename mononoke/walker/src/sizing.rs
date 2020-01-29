@@ -22,11 +22,10 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self},
-    Future, Stream,
+use futures_preview::{
+    future::{self, BoxFuture, FutureExt},
+    stream::{Stream, StreamExt, TryStreamExt},
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::FileBytes;
 use slog::{info, Logger};
 use std::{
@@ -82,37 +81,47 @@ fn size_sampling_stream<InStream, InStats>(
     sample_rate: u64,
     s: InStream,
     compressor_type: CompressorType,
-) -> impl Stream<Item = (Node, Option<NodeData>, Option<SizingStats>), Error = Error>
+) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SizingStats>), Error>>
 where
     InStream:
-        'static + Stream<Item = (Node, Option<NodeData>, Option<InStats>), Error = Error> + Send,
+        Stream<Item = Result<(Node, Option<NodeData>, Option<InStats>), Error>> + 'static + Send,
+    InStats: 'static + Send,
 {
-    s.map(move |(n, data_opt, _stats_opt)| match (&n, data_opt) {
-        // Sample on first byte of hash for reproducible values
-        (Node::FileContent(content_id), Some(NodeData::FileContent(fc)))
-            if content_id.blake2().as_ref()[0] as u64 % sample_rate == 0 =>
-        {
-            match fc {
-                FileContentData::Consumed(_num_loaded_bytes) => future::err(format_err!(
-                    "Stream was consumed before compression estimate"
-                ))
-                .left_future(),
-                FileContentData::ContentStream(file_bytes_stream) => file_bytes_stream
-                    .fold(SizingStats::default(), move |acc, file_bytes| {
-                        get_sizes(file_bytes, compressor_type).map(|sizes| acc + sizes)
-                    })
-                    .right_future(),
-            }
-            .map(move |sizes| {
-                (
-                    n,
-                    Some(NodeData::FileContent(FileContentData::Consumed(sizes.raw))),
-                    Some(sizes),
-                )
-            })
-            .left_future()
+    s.then(async move |r| {
+        match r {
+            Err(e) => future::err(e),
+            Ok((n, data_opt, _stats_opt)) => match (&n, data_opt) {
+                // Sample on first byte of hash for reproducible values
+                (Node::FileContent(content_id), Some(NodeData::FileContent(fc)))
+                    if content_id.blake2().as_ref()[0] as u64 % sample_rate == 0 =>
+                {
+                    match fc {
+                        FileContentData::Consumed(_num_loaded_bytes) => future::err(format_err!(
+                            "Stream was consumed before compression estimate"
+                        )),
+                        FileContentData::ContentStream(file_bytes_stream) => {
+                            let sizes = file_bytes_stream
+                                .try_fold(SizingStats::default(), async move |acc, bytes| {
+                                    get_sizes(bytes, compressor_type)
+                                        .and_then(|sizes| Ok(acc + sizes))
+                                })
+                                .await;
+                            match sizes {
+                                Err(e) => future::err(e),
+                                Ok(sizes) => future::ok((
+                                    n,
+                                    Some(NodeData::FileContent(FileContentData::Consumed(
+                                        sizes.raw,
+                                    ))),
+                                    Some(sizes),
+                                )),
+                            }
+                        }
+                    }
+                }
+                (_, data_opt) => future::ok((n, data_opt, None)),
+            },
         }
-        (_, data_opt) => future::ok((n, data_opt, None)).right_future(),
     })
     .buffered(100)
 }
@@ -191,44 +200,41 @@ pub fn compression_benefit(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
-    let (datasources, walk_params) = try_boxfuture!(setup_common(
-        COMPRESSION_BENEFIT,
-        fb,
-        &logger,
-        matches,
-        sub_m
-    ));
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+) -> BoxFuture<'static, Result<(), Error>> {
+    match setup_common(COMPRESSION_BENEFIT, fb, &logger, matches, sub_m) {
+        Err(e) => future::err::<_, Error>(e).boxed(),
+        Ok((datasources, walk_params)) => {
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let sizing_state = ProgressStateMutex::new(SizingState::new(logger.clone(), 1));
-    let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
-    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
-
-    let make_sink = {
-        cloned!(ctx, walk_params.progress_state, walk_params.quiet);
-        move |walk_output| {
-            cloned!(ctx, progress_state, sizing_state);
-            let walk_progress = progress_stream(quiet, progress_state.clone(), walk_output);
-            let compressor = size_sampling_stream(
-                sample_rate,
-                walk_progress,
-                CompressorType::Zstd {
-                    level: compression_level,
-                },
+            let sizing_state = ProgressStateMutex::new(SizingState::new(logger.clone(), 1));
+            let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
+            let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
+            let make_sink = {
+                cloned!(ctx, walk_params.progress_state, walk_params.quiet);
+                async move |walk_output| {
+                    cloned!(ctx, progress_state, sizing_state);
+                    let walk_progress =
+                        progress_stream(quiet, &progress_state.clone(), walk_output);
+                    let compressor = size_sampling_stream(
+                        sample_rate,
+                        walk_progress,
+                        CompressorType::Zstd {
+                            level: compression_level,
+                        },
+                    );
+                    let report_sizing = progress_stream(quiet, &sizing_state.clone(), compressor);
+                    report_state(ctx, sizing_state, report_sizing).await
+                }
+            };
+            cloned!(
+                walk_params.include_node_types,
+                walk_params.include_edge_types
             );
-            let report_sizing = progress_stream(quiet, sizing_state.clone(), compressor);
-            let one_fut = report_state(ctx, sizing_state, report_sizing);
-            one_fut
+            let walk_state = WalkState::new(WalkStateCHashMap::new(
+                include_node_types,
+                include_edge_types,
+            ));
+            walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxed()
         }
-    };
-    cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types
-    );
-    let walk_state = WalkState::new(WalkStateCHashMap::new(
-        include_node_types,
-        include_edge_types,
-    ));
-    walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxify()
+    }
 }

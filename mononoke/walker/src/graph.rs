@@ -10,7 +10,7 @@ use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
 use filenodes::FilenodeInfo;
 use filestore::Alias;
-use futures_ext::BoxStream;
+use futures_preview::stream::BoxStream;
 use mercurial_types::{
     blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifest,
     HgManifestId,
@@ -204,7 +204,7 @@ impl fmt::Display for EdgeType {
 
 /// File content gets a special two-state content so we can chose when to read the data
 pub enum FileContentData {
-    ContentStream(BoxStream<FileBytes, Error>),
+    ContentStream(BoxStream<'static, Result<FileBytes, Error>>),
     Consumed(usize),
 }
 

@@ -14,14 +14,12 @@ use crate::tail::walk_exact_tail;
 
 use anyhow::Error;
 use clap::ArgMatches;
-use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self},
-    Future, Stream,
+use futures_preview::{
+    future::{self, BoxFuture, FutureExt},
+    stream::{Stream, StreamExt, TryStreamExt},
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;
 
 // Force load of leaf data like file contents that graph traversal did not need
@@ -29,28 +27,30 @@ pub fn loading_stream<InStream, SS>(
     limit_data_fetch: bool,
     scheduled_max: usize,
     s: InStream,
-) -> impl Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>
+) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>>
 where
-    InStream: Stream<Item = (Node, Option<NodeData>, Option<SS>), Error = Error>,
+    InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
 {
-    s.map(move |(n, nd, ss)| match nd {
-        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
-            if !limit_data_fetch =>
-        {
-            file_bytes_stream
-                .fold(0, |acc, file_bytes| {
-                    future::ok::<_, Error>(acc + file_bytes.size())
-                })
-                .map(|num_bytes| {
-                    (
+    s.then(async move |r| match r {
+        Err(e) => future::err(e),
+        Ok((n, nd, ss)) => match nd {
+            Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
+                if !limit_data_fetch =>
+            {
+                let res = file_bytes_stream
+                    .try_fold(0, async move |acc, file_bytes| Ok(acc + file_bytes.size()))
+                    .await;
+                match res {
+                    Err(e) => future::err(e),
+                    Ok(bytes) => future::ok((
                         n,
-                        Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
+                        Some(NodeData::FileContent(FileContentData::Consumed(bytes))),
                         ss,
-                    )
-                })
-                .left_future()
-        }
-        _ => future::ok((n, nd, ss)).right_future(),
+                    )),
+                }
+            }
+            _ => future::ok((n, nd, ss)),
+        },
     })
     .buffer_unordered(scheduled_max)
 }
@@ -61,35 +61,30 @@ pub fn scrub_objects(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
-    let (datasources, walk_params) =
-        try_boxfuture!(setup_common(SCRUB, fb, &logger, matches, sub_m));
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+) -> BoxFuture<'static, Result<(), Error>> {
+    match setup_common(SCRUB, fb, &logger, matches, sub_m) {
+        Err(e) => future::err::<_, Error>(e).boxed(),
+        Ok((datasources, walk_params)) => {
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
 
-    let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
+            let make_sink = {
+                let scheduled_max = walk_params.scheduled_max;
+                let quiet = walk_params.quiet;
+                let progress_state = walk_params.progress_state.clone();
+                let ctx = ctx.clone();
+                async move |walk_output| {
+                    let loading = loading_stream(limit_data_fetch, scheduled_max, walk_output);
+                    let show_progress = progress_stream(quiet, &progress_state, loading);
+                    report_state(ctx, progress_state, show_progress).await
+                }
+            };
 
-    let make_sink = {
-        cloned!(
-            ctx,
-            walk_params.progress_state,
-            walk_params.quiet,
-            walk_params.scheduled_max
-        );
-        move |walk_output| {
-            cloned!(ctx, progress_state);
-            let loading = loading_stream(limit_data_fetch, scheduled_max, walk_output);
-            let show_progress = progress_stream(quiet, progress_state.clone(), loading);
-            let one_fut = report_state(ctx, progress_state.clone(), show_progress);
-            one_fut
+            let walk_state = WalkState::new(WalkStateCHashMap::new(
+                walk_params.include_node_types.clone(),
+                walk_params.include_edge_types.clone(),
+            ));
+            walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxed()
         }
-    };
-    cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types
-    );
-    let walk_state = WalkState::new(WalkStateCHashMap::new(
-        include_node_types,
-        include_edge_types,
-    ));
-    walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxify()
+    }
 }

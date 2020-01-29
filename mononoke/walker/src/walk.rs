@@ -17,13 +17,14 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
 use filestore::{self, Alias, FetchKey};
-use futures::{
-    future::{self},
-    Future,
-};
+use futures::future::{self, Future as OldFuture};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, BoxStream, FutureExt,
     StreamExt,
+};
+use futures_preview::{
+    compat::Stream01CompatExt,
+    stream::{BoxStream as NewBoxStream, StreamExt as NewStreamExt},
 };
 use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
@@ -31,6 +32,7 @@ use mononoke_types::{ChangesetId, ContentId, MPath};
 use phases::{Phase, SqlPhases};
 use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
+use std::iter::Iterator;
 use std::{collections::HashSet, iter::IntoIterator};
 use thiserror::Error;
 
@@ -167,10 +169,11 @@ fn file_content_step(
     repo: &BlobRepo,
     id: ContentId,
 ) -> BoxFuture<StepOutput, Error> {
-    let s = repo.get_file_content_by_content_id(ctx, id);
+    let s_old = repo.get_file_content_by_content_id(ctx, id);
+    let s = futures_preview::compat::Compat01As03::new(s_old);
     // We don't force file loading here, content may not be needed
     future::ok(StepOutput(
-        NodeData::FileContent(FileContentData::ContentStream(s)),
+        NodeData::FileContent(FileContentData::ContentStream(Box::pin(s))),
         vec![],
     ))
     .boxify()
@@ -466,7 +469,7 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
 }
 
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
-pub fn walk_exact<V, VOut>(
+fn walk_exact_compat<V, VOut>(
     ctx: CoreContext,
     repo: BlobRepo,
     enable_derive: bool,
@@ -608,4 +611,34 @@ where
         }
     })
     .boxify()
+}
+
+pub fn walk_exact<V, VOut>(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    enable_derive: bool,
+    walk_roots: Vec<OutgoingEdge>,
+    visitor: V,
+    scheduled_max: usize,
+    error_as_data_node_types: HashSet<NodeType>,
+    error_as_data_edge_types: HashSet<EdgeType>,
+    scuba: ScubaSampleBuilder,
+) -> NewBoxStream<'static, Result<VOut, Error>>
+where
+    V: 'static + Clone + WalkVisitor<VOut> + Send,
+    VOut: 'static + Send,
+{
+    walk_exact_compat(
+        ctx,
+        repo,
+        enable_derive,
+        walk_roots,
+        visitor,
+        scheduled_max,
+        error_as_data_node_types,
+        error_as_data_edge_types,
+        scuba,
+    )
+    .compat()
+    .boxed()
 }

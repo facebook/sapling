@@ -32,8 +32,10 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{Future, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::{
+    future::{self, BoxFuture, FutureExt},
+    stream::TryStreamExt,
+};
 use itertools::Itertools;
 use mononoke_types::MPath;
 use phases::Phase;
@@ -47,6 +49,7 @@ use std::{
     hash::Hash,
     iter::FromIterator,
     ops::AddAssign,
+    result::Result,
     str::FromStr,
     time::{Duration, Instant},
 };
@@ -464,67 +467,80 @@ pub fn validate(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
-    let (datasources, walk_params) =
-        try_boxfuture!(setup_common(VALIDATE, fb, &logger, matches, sub_m));
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+) -> BoxFuture<'static, Result<(), Error>> {
+    match setup_common(VALIDATE, fb, &logger, matches, sub_m).and_then(
+        |(datasources, walk_params)| {
+            args::get_repo_name(fb, &matches).and_then(|repo_stats_key| {
+                parse_check_types(sub_m).and_then(|mut include_check_types| {
+                    include_check_types
+                        .retain(|t| walk_params.include_node_types.contains(&t.node_type()));
+                    Ok((
+                        datasources,
+                        walk_params,
+                        repo_stats_key,
+                        include_check_types,
+                    ))
+                })
+            })
+        },
+    ) {
+        Err(e) => future::err::<_, Error>(e).boxed(),
+        Ok((datasources, walk_params, repo_stats_key, include_check_types)) => {
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            cloned!(
+                walk_params.include_node_types,
+                walk_params.include_edge_types,
+            );
+            info!(
+                logger,
+                "Performing check types {:?}",
+                sort_by_string(&include_check_types)
+            );
 
-    let repo_stats_key = try_boxfuture!(args::get_repo_name(fb, &matches));
+            let stateful_visitor = WalkState::new(ValidatingVisitor::new(
+                repo_stats_key.clone(),
+                include_node_types,
+                include_edge_types,
+                include_check_types.clone(),
+            ));
 
-    cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types,
-    );
+            let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
+                logger.clone(),
+                ctx.fb,
+                datasources.scuba_builder.clone(),
+                repo_stats_key,
+                include_check_types,
+                PROGRESS_SAMPLE_RATE,
+                Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
+            ));
 
-    let mut include_check_types = try_boxfuture!(parse_check_types(sub_m));
-    include_check_types.retain(|t| include_node_types.contains(&t.node_type()));
+            let make_sink = {
+                cloned!(ctx, walk_params.progress_state, walk_params.quiet);
+                async move |walk_output| {
+                    cloned!(ctx, progress_state, validate_progress_state);
+                    let walk_progress =
+                        progress_stream(quiet, &progress_state.clone(), walk_output).map_ok(
+                            |(n, d, s)| {
+                                // swap stats and data round
+                                (n, s, d)
+                            },
+                        );
 
-    info!(
-        logger,
-        "Performing check types {:?}",
-        sort_by_string(&include_check_types)
-    );
+                    let validate_progress =
+                        progress_stream(quiet, &validate_progress_state.clone(), walk_progress);
 
-    let stateful_visitor = WalkState::new(ValidatingVisitor::new(
-        repo_stats_key.clone(),
-        include_node_types,
-        include_edge_types,
-        include_check_types.clone(),
-    ));
-
-    let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
-        logger.clone(),
-        ctx.fb,
-        datasources.scuba_builder.clone(),
-        repo_stats_key,
-        include_check_types,
-        PROGRESS_SAMPLE_RATE,
-        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
-    ));
-
-    let make_sink = {
-        cloned!(ctx, walk_params.progress_state, walk_params.quiet);
-        move |walk_output| {
-            cloned!(ctx, progress_state, validate_progress_state);
-            let walk_progress =
-                progress_stream(quiet, progress_state.clone(), walk_output).map(|(n, d, s)| {
-                    // swap stats and data round
-                    (n, s, d)
-                });
-
-            let validate_progress =
-                progress_stream(quiet, validate_progress_state.clone(), walk_progress);
-
-            let one_fut = report_state(ctx.clone(), progress_state, validate_progress).map({
-                cloned!(validate_progress_state);
-                move |d| {
-                    validate_progress_state.report_progress();
-                    d
+                    let one_fut =
+                        report_state(ctx.clone(), progress_state, validate_progress).map({
+                            cloned!(validate_progress_state);
+                            move |d| {
+                                validate_progress_state.report_progress();
+                                d
+                            }
+                        });
+                    one_fut.await
                 }
-            });
-            one_fut
+            };
+            walk_exact_tail(ctx, datasources, walk_params, stateful_visitor, make_sink).boxed()
         }
-    };
-
-    walk_exact_tail(ctx, datasources, walk_params, stateful_visitor, make_sink).boxify()
+    }
 }

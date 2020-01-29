@@ -8,12 +8,10 @@
 
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
-
+#![feature(async_closure)]
 use anyhow::Error;
 use fbinit::FacebookInit;
-use futures::IntoFuture;
-use futures_ext::FutureExt;
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::future::{self, FutureExt};
 
 use cmdlib::{args, helpers::block_execute};
 
@@ -41,13 +39,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             sizing::compression_benefit(fb, logger.clone(), &matches, sub_m)
         }
         (setup::VALIDATE, Some(sub_m)) => validate::validate(fb, logger.clone(), &matches, sub_m),
-        _ => Err(Error::msg("Invalid Arguments, pass --help for usage."))
-            .into_future()
-            .boxify(),
+        _ => {
+            future::err::<_, Error>(Error::msg("Invalid Arguments, pass --help for usage.")).boxed()
+        }
     };
 
     block_execute(
-        future.compat(),
+        future,
         fb,
         app_name,
         &logger,

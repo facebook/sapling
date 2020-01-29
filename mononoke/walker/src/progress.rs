@@ -11,9 +11,9 @@ use crate::state::StepStats;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{self},
-    Future, Stream,
+use futures_preview::{
+    future::FutureExt,
+    stream::{Stream, StreamExt, TryStreamExt},
 };
 use slog::{info, Logger};
 use stats::prelude::*;
@@ -328,50 +328,58 @@ impl<Inner> Clone for ProgressStateMutex<Inner> {
 // Print some status update, passing on all data unchanged
 pub fn progress_stream<InStream, PS, ND, SS>(
     quiet: bool,
-    progress_state: PS,
+    progress_state: &PS,
     s: InStream,
-) -> impl Stream<Item = (Node, Option<ND>, Option<SS>), Error = Error>
+) -> impl Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>>
 where
-    InStream: 'static + Stream<Item = (Node, Option<ND>, Option<SS>), Error = Error> + Send,
+    InStream: Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>> + 'static + Send,
     PS: 'static + Send + Clone + ProgressRecorder<SS> + ProgressReporter,
 {
-    s.map(move |(n, data_opt, stats_opt)| {
-        progress_state.record_step(&n, stats_opt.as_ref());
-        if !quiet {
-            progress_state.report_throttled();
+    s.map({
+        let progress_state = progress_state.clone();
+        move |r| {
+            r.and_then(|(n, data_opt, stats_opt)| {
+                progress_state.record_step(&n, stats_opt.as_ref());
+                if !quiet {
+                    progress_state.report_throttled();
+                }
+                Ok((n, data_opt, stats_opt))
+            })
         }
-        (n, data_opt, stats_opt)
     })
 }
 
 // Final status summary, plus count of seen nodes
-pub fn report_state<InStream, PS, ND, SS>(
+pub async fn report_state<InStream, PS, ND, SS>(
     ctx: CoreContext,
     progress_state: PS,
     s: InStream,
-) -> impl Future<Item = (), Error = Error>
+) -> Result<(), Error>
 where
-    InStream: Stream<Item = (Node, Option<ND>, Option<SS>), Error = Error>,
+    InStream: Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>> + 'static + Send,
     PS: 'static + Send + Clone + ProgressReporter,
 {
     let init_stats: (usize, usize) = (0, 0);
-    s.fold(init_stats, {
-        move |(mut seen, mut loaded), (_n, nd, _ss)| {
+    s.try_fold(init_stats, {
+        async move |(mut seen, mut loaded), (_n, nd, _ss)| {
             let data_count = match nd {
                 None => 0,
                 _ => 1,
             };
             seen += 1;
             loaded += data_count;
-            future::ok::<_, Error>((seen, loaded))
+            Ok((seen, loaded))
         }
     })
     .map({
         cloned!(ctx);
         move |stats| {
-            info!(ctx.logger(), "Final count: {:?}", stats);
-            progress_state.report_progress();
-            ()
+            stats.and_then(|stats| {
+                info!(ctx.logger(), "Final count: {:?}", stats);
+                progress_state.report_progress();
+                Ok(())
+            })
         }
     })
+    .await
 }

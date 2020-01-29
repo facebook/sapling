@@ -20,7 +20,10 @@ use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
 use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -28,7 +31,7 @@ use slog::{info, warn, Logger};
 use std::{collections::HashSet, iter::FromIterator, str::FromStr, time::Duration};
 
 pub struct RepoWalkDatasources {
-    pub blobrepo: BoxFuture<BlobRepo, Error>,
+    pub blobrepo: BoxFuture<'static, Result<BlobRepo, Error>>,
     pub scuba_builder: ScubaSampleBuilder,
 }
 
@@ -696,7 +699,8 @@ pub fn setup_common(
         config.filestore,
         readonly_storage,
     )
-    .boxify();
+    .compat()
+    .boxed();
 
     let mut progress_node_types = include_node_types.clone();
     for e in &walk_roots {
