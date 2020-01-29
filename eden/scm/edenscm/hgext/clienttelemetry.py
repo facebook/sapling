@@ -26,6 +26,7 @@ from edenscm.mercurial import (
     wireproto,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import decodeutf8
 
 
 # Client telemetry functions generate client telemetry data at connection time.
@@ -107,7 +108,7 @@ def _peersetup(ui, peer):
     if peer.capable("clienttelemetry"):
         logargs = {name: f(ui) for name, f in _clienttelemetryfuncs.items()}
         logargs.update(_clienttelemetrydata)
-        peername = peer._call("clienttelemetry", **logargs)
+        peername = decodeutf8(peer._call("clienttelemetry", **logargs))
         ui.log("clienttelemetry", server_realhostname=peername)
         blackbox.log({"clienttelemetry": {"peername": peername}})
         ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
