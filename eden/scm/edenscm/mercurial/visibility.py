@@ -14,6 +14,8 @@ import bindings
 from edenscm.mercurial import error, node, util
 from edenscm.mercurial.i18n import _
 
+from .pycompat import encodeutf8
+
 
 def _convertfromobsolete(repo):
     """convert obsolete markers into a set of visible heads"""
@@ -66,7 +68,7 @@ class visibleheads(object):
         self.vfs = vfs
         self._invisiblerevs = None
         try:
-            lines = self.vfs("visibleheads").readlines()
+            lines = self.vfs.readutf8("visibleheads").splitlines()
             if lines and lines[0].strip() != FORMAT_VERSION:
                 raise error.Abort("invalid visibleheads file format %r" % lines[0])
             self.heads = [node.bin(head.strip()) for head in lines[1:]]
@@ -85,9 +87,9 @@ class visibleheads(object):
                 add(head)
 
     def _write(self, fp):
-        fp.write("%s\n" % FORMAT_VERSION)
+        fp.write(encodeutf8("%s\n" % FORMAT_VERSION))
         for h in self.heads:
-            fp.write("%s\n" % (node.hex(h),))
+            fp.write(encodeutf8("%s\n" % (node.hex(h),)))
         self.dirty = False
         self._logheads("wrote", visibility_newheadcount=len(self.heads))
 
