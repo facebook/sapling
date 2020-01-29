@@ -1326,7 +1326,9 @@ class GitHandler(object):
             # For empty repos dulwich gives us None, but since later
             # we want to iterate over this, we really want an empty
             # iterable
-            return ret if ret else {}
+            if ret is None or ret.refs is None:
+                ret = {}
+            return ret
         except (HangupException, GitProtocolError) as e:
             raise error.Abort(_("git remote error: ") + str(e))
 
