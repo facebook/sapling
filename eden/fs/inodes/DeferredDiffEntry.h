@@ -98,6 +98,14 @@ class DeferredDiffEntry {
       const TreeEntry& scmEntry,
       Hash currentBlobHash);
 
+  static std::unique_ptr<DeferredDiffEntry> createModifiedScmEntry(
+      const DiffContext* context,
+      RelativePath path,
+      Hash scmHash,
+      Hash wdHash,
+      const GitIgnoreStack* ignore,
+      bool isIgnored);
+
  protected:
   const DiffContext* const context_;
   RelativePath const path_;

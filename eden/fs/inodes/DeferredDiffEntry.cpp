@@ -14,6 +14,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/store/Diff.h"
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -255,11 +256,22 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
 
     {
       auto contents = treeInode->getContents().wlock();
-      if (!contents->isMaterialized() &&
-          contents->treeHash.value() == scmEntry_.getHash()) {
-        // It did not change since it was loaded,
-        // and it matches the scmEntry we're diffing against.
-        return makeFuture();
+      if (!contents->isMaterialized()) {
+        if (contents->treeHash.value() == scmEntry_.getHash()) {
+          // It did not change since it was loaded,
+          // and it matches the scmEntry we're diffing against.
+          return makeFuture();
+        } else {
+          auto contentsHash = contents->treeHash.value();
+          contents.unlock();
+          return diffTrees(
+              context_,
+              getPath(),
+              scmEntry_.getHash(),
+              contentsHash,
+              ignore_,
+              isIgnored_);
+        }
       }
     }
 
@@ -334,6 +346,33 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
   Hash currentBlobHash_;
 };
 
+class ModifiedScmDiffEntry : public DeferredDiffEntry {
+ public:
+  ModifiedScmDiffEntry(
+      const DiffContext* context,
+      RelativePath path,
+      Hash scmHash,
+      Hash wdHash,
+      const GitIgnoreStack* ignore,
+      bool isIgnored)
+      : DeferredDiffEntry{context, std::move(path)},
+        ignore_{ignore},
+        isIgnored_{isIgnored},
+        scmHash_{scmHash},
+        wdHash_{wdHash} {}
+
+  folly::Future<folly::Unit> run() override {
+    return diffTrees(
+        context_, getPath(), scmHash_, wdHash_, ignore_, isIgnored_);
+  }
+
+ private:
+  const GitIgnoreStack* ignore_{nullptr};
+  bool isIgnored_{false};
+  Hash scmHash_;
+  Hash wdHash_;
+};
+
 } // unnamed namespace
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
@@ -399,6 +438,17 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     Hash currentBlobHash) {
   return make_unique<ModifiedBlobDiffEntry>(
       context, std::move(path), scmEntry, currentBlobHash);
+}
+
+unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
+    const DiffContext* context,
+    RelativePath path,
+    Hash scmHash,
+    Hash wdHash,
+    const GitIgnoreStack* ignore,
+    bool isIgnored) {
+  return make_unique<ModifiedScmDiffEntry>(
+      context, std::move(path), scmHash, wdHash, ignore, isIgnored);
 }
 } // namespace eden
 } // namespace facebook

@@ -2078,18 +2078,17 @@ Future<Unit> TreeInode::computeDiff(
         // This file or directory is unchanged.  We can skip it.
         XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
       } else if (inodeEntry->isDirectory()) {
-        // This is a modified directory.  We have to load it then recurse
-        // into it to find files with differences.
-        auto inodeFuture = self->loadChildLocked(
-            contents->entries, scmEntry.getName(), *inodeEntry, pendingLoads);
-        deferredEntries.emplace_back(
-            DeferredDiffEntry::createModifiedEntryFromInodeFuture(
-                context,
-                entryPath,
-                scmEntry,
-                std::move(inodeFuture),
-                ignore.get(),
-                entryIgnored));
+        // This is a modified directory. Since it is not materialized we can
+        // directly compare the source control objects.
+
+        // Collect this future to complete with other deferred entries.
+        deferredEntries.emplace_back(DeferredDiffEntry::createModifiedScmEntry(
+            context,
+            entryPath,
+            scmEntry.getHash(),
+            inodeEntry->getHash(),
+            ignore.get(),
+            entryIgnored));
       } else if (scmEntry.isTree()) {
         // This used to be a directory in the source control state,
         // but is now a file or symlink.  Report the new file, then add a
