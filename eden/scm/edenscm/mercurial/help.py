@@ -57,7 +57,7 @@ def listexts(header, exts, indent=1, showdeprecated=False):
     """return a text listing of the given extensions"""
     rst = []
     if exts:
-        for name, desc in sorted(exts.iteritems()):
+        for name, desc in sorted(pycompat.iteritems(exts)):
             if not showdeprecated and any(w in desc for w in _exclkeywords):
                 continue
             rst.append("%s:%s: %s\n" % (" " * indent, name, desc))
@@ -154,7 +154,7 @@ def topicmatch(ui, commands, kw):
             or (callable(doc) and lowercontains(doc(ui)))
         ):
             results["topics"].append((names[0], header))
-    for cmd, entry in commands.table.iteritems():
+    for cmd, entry in pycompat.iteritems(commands.table):
         if len(entry) == 3:
             summary = entry[2]
         else:
@@ -170,7 +170,8 @@ def topicmatch(ui, commands, kw):
                 continue
             results["commands"].append((cmdname, summary))
     for name, docs in itertools.chain(
-        extensions.enabled(False).iteritems(), extensions.disabled().iteritems()
+        pycompat.iteritems(extensions.enabled(False)),
+        pycompat.iteritems(extensions.disabled()),
     ):
         if not docs:
             continue
@@ -183,7 +184,7 @@ def topicmatch(ui, commands, kw):
         except ImportError:
             # debug message would be printed in extensions.load()
             continue
-        for cmd, entry in getattr(mod, "cmdtable", {}).iteritems():
+        for cmd, entry in pycompat.iteritems(getattr(mod, "cmdtable", {})):
             if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
                 cmdname = cmd.partition("|")[0].lstrip("^")
                 cmddoc = pycompat.getdoc(entry[0])
@@ -403,7 +404,7 @@ class _helpdispatch(object):
         self.opts = opts
 
         self.commandindex = {}
-        for name, cmd in commands.table.iteritems():
+        for name, cmd in pycompat.iteritems(commands.table):
             for n in name.lstrip("^").split("|"):
                 self.commandindex[n] = cmd
 
@@ -611,7 +612,7 @@ class _helpdispatch(object):
     def helplist(self, name, select=None, **opts):
         h = {}
         cmds = {}
-        for c, e in self.commands.table.iteritems():
+        for c, e in pycompat.iteritems(self.commands.table):
             if select and not select(c):
                 continue
             f = c.lstrip("^").partition("|")[0]

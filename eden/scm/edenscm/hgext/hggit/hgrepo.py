@@ -47,12 +47,12 @@ def generate_repo_subclass(baseclass):
         def _findtags(self):
             (tags, tagtypes) = super(hgrepo, self)._findtags()
 
-            for tag, rev in self.githandler.tags.iteritems():
+            for tag, rev in pycompat.iteritems(self.githandler.tags):
                 if isinstance(tag, pycompat.unicode):
                     tag = tag.encode("utf-8")
                 tags[tag] = bin(rev)
                 tagtypes[tag] = "git"
-            for tag, rev in self.githandler.remote_refs.iteritems():
+            for tag, rev in pycompat.iteritems(self.githandler.remote_refs):
                 if isinstance(tag, pycompat.unicode):
                     tag = tag.encode("utf-8")
                 tags[tag] = rev

@@ -23,7 +23,7 @@ maintainers if the command is legitimate. To customize this footer, set:
 import getopt
 import re
 
-from edenscm.mercurial import error, extensions, fancyopts, registrar, util
+from edenscm.mercurial import error, extensions, fancyopts, pycompat, registrar, util
 from edenscm.mercurial.i18n import _
 
 
@@ -112,7 +112,10 @@ def parseoptions(ui, cmdoptions, args):
 
     args = list([convert(x) for x in args])
     opts = dict(
-        [(k, convert(v)) if isinstance(v, str) else (k, v) for k, v in opts.iteritems()]
+        [
+            (k, convert(v)) if isinstance(v, str) else (k, v)
+            for k, v in pycompat.iteritems(opts)
+        ]
     )
 
     return args, opts
@@ -127,7 +130,7 @@ class Command(object):
     def __str__(self):
         cmd = "hg " + self.name
         if self.opts:
-            for k, values in sorted(self.opts.iteritems()):
+            for k, values in sorted(pycompat.iteritems(self.opts)):
                 for v in values:
                     if v:
                         cmd += " %s %s" % (k, v)

@@ -46,7 +46,7 @@ def dumps(obj, paranoid=True):
     elif util.safehasattr(obj, "keys"):
         out = [
             '"%s": %s' % (encoding.jsonescape(k, paranoid=paranoid), dumps(v, paranoid))
-            for k, v in sorted(obj.iteritems())
+            for k, v in sorted(pycompat.iteritems(obj))
         ]
         return "{" + ", ".join(out) + "}"
     elif util.safehasattr(obj, "__iter__"):

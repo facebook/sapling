@@ -112,7 +112,7 @@ def recordbookmarks(orig, store, fp):
     repo = store._repo
     if util.safehasattr(repo, "journal"):
         oldmarks = bookmarks.bmstore(repo)
-        for mark, value in store.iteritems():
+        for mark, value in pycompat.iteritems(store):
             oldvalue = oldmarks.get(mark, node.nullid)
             if value != oldvalue:
                 repo.journal.record(bookmarktype, mark, oldvalue, value)
@@ -139,7 +139,7 @@ def _mergeentriesiter(*iterables, **kwargs):
             pass
 
     while iterable_map:
-        value, key, it = order(iterable_map.itervalues())
+        value, key, it = order(pycompat.itervalues(iterable_map))
         yield value
         try:
             iterable_map[key][0] = next(it)

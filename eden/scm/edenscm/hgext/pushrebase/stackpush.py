@@ -39,7 +39,7 @@ from __future__ import absolute_import
 
 import time
 
-from edenscm.mercurial import context, error, mutation
+from edenscm.mercurial import context, error, mutation, pycompat
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid, nullrev
 
@@ -150,7 +150,7 @@ class pushrequest(object):
         filechanges = {}
         examinepaths = set(files.keys())
 
-        for path, info in files.iteritems():
+        for path, info in pycompat.iteritems(files):
             if info.deleted:
                 filechanges[path] = None
             else:
@@ -215,7 +215,7 @@ class pushrequest(object):
         """
         mctx = ctx.manifestctx()
         conflicts = []
-        for path, expected in self.fileconditions.iteritems():
+        for path, expected in pycompat.iteritems(self.fileconditions):
             try:
                 actual = mctx.find(path)
             except KeyError:

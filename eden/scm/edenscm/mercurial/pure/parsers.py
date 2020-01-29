@@ -173,7 +173,7 @@ def pack_dirstate(dmap, copymap, pl, now):
     cs = stringio()
     write = cs.write
     write("".join(pl))
-    for f, e in dmap.iteritems():
+    for f, e in pycompat.iteritems(dmap):
         if e[0] == "n" and e[3] == now:
             # The file was last modified "simultaneously" with the current
             # write to dirstate (i.e. within the same second for file-

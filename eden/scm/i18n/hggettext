@@ -116,7 +116,7 @@ def docstrings(path):
     if not cmdtable:
         # Maybe we are processing mercurial.commands?
         cmdtable = getattr(mod, "table", {})
-    functions.extend((c[0], False) for c in cmdtable.itervalues())
+    functions.extend((c[0], False) for c in cmdtable.values())
 
     for func, rstrip in functions:
         if func.__doc__:

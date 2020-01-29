@@ -1006,7 +1006,7 @@ def _getbundlesendvars(pushop, bundler):
 
         part = bundler.newpart("pushvars")
 
-        for key, value in shellvars.iteritems():
+        for key, value in pycompat.iteritems(shellvars):
             part.addparam(key, value, mandatory=False)
 
 

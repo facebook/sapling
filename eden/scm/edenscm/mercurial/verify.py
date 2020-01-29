@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import os
 
-from . import error, progress, revlog, scmutil, util
+from . import error, progress, pycompat, revlog, scmutil, util
 from .i18n import _
 from .node import nullid, short
 
@@ -329,12 +329,12 @@ class verifier(object):
         return filenodes, subdirnodes
 
     def _verifymanifesttree(self, filenodes, subdirnodes, storefiles, progress):
-        for subdir, linkrevs in subdirnodes.iteritems():
+        for subdir, linkrevs in pycompat.iteritems(subdirnodes):
             progress.value += 1
             subdirfilenodes, subsubdirnodes = self._verifymanifestpart(
                 linkrevs, subdir, storefiles, progress
             )
-            for f, onefilenodes in subdirfilenodes.iteritems():
+            for f, onefilenodes in pycompat.iteritems(subdirfilenodes):
                 filenodes.setdefault(f, {}).update(onefilenodes)
             self._verifymanifesttree(filenodes, subsubdirnodes, storefiles, progress)
 
@@ -555,7 +555,7 @@ class verifier(object):
 
             # cross-check
             if f in filenodes:
-                fns = [(v, k) for k, v in filenodes[f].iteritems()]
+                fns = [(v, k) for k, v in pycompat.iteritems(filenodes[f])]
                 for lr, node in sorted(fns):
                     self.err(
                         lr, _("manifest refers to unknown revision %s") % short(node), f

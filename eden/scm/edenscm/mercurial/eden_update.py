@@ -9,7 +9,14 @@ This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.
 """
 
-from . import EdenThriftClient as thrift, error, localrepo, merge as mergemod, util
+from . import (
+    EdenThriftClient as thrift,
+    error,
+    localrepo,
+    merge as mergemod,
+    pycompat,
+    util,
+)
 from .i18n import _
 
 
@@ -235,7 +242,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
 def _check_actions_and_raise_if_there_are_conflicts(actions):
     # In stock Hg, update() performs this check once it gets the set of actions.
     conflict_paths = []
-    for action_type, list_of_tuples in actions.iteritems():
+    for action_type, list_of_tuples in pycompat.iteritems(actions):
         if len(list_of_tuples) == 0:
             continue  # Note `actions` defaults to [] for all keys.
         if action_type not in ("g", "k", "e", "r", "pr"):

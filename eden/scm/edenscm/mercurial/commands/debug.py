@@ -443,7 +443,7 @@ def debugcapabilities(ui, path, **opts):
     b2caps = bundle2.bundle2caps(peer)
     if b2caps:
         ui.write(("Bundle2 capabilities:\n"))
-        for key, values in sorted(b2caps.iteritems()):
+        for key, values in sorted(pycompat.iteritems(b2caps)):
             ui.write(("  %s\n") % key)
             for v in values:
                 ui.write(("    %s\n") % v)
@@ -870,7 +870,7 @@ def debugstate(ui, repo, **opts):
             ui.write("\n")
             return
 
-        for path, dirstate_tuple in sorted(repo.dirstate._map._map.iteritems()):
+        for path, dirstate_tuple in sorted(pycompat.iteritems(repo.dirstate._map._map)):
             status, mode, merge_state = dirstate_tuple
             if mode & 0o20000:
                 display_mode = "lnk"
@@ -891,7 +891,7 @@ def debugstate(ui, repo, **opts):
         keyfunc = None  # sort by filename
     ds = repo.dirstate
     dmap = ds._map
-    for path, ent in sorted(dmap.iteritems(), key=keyfunc):
+    for path, ent in sorted(pycompat.iteritems(dmap), key=keyfunc):
         if ent[3] == -1:
             timestr = "unset               "
         elif nodates:
@@ -1902,7 +1902,7 @@ def debugnamecomplete(ui, repo, *args):
     names = set()
     # since we previously only listed open branches, we will handle that
     # specially (after this for loop)
-    for name, ns in repo.names.iteritems():
+    for name, ns in pycompat.iteritems(repo.names):
         if name != "branches":
             names.update(ns.listnames(repo))
     names.update(
@@ -2139,7 +2139,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         def complete(spec, acceptable, matches, fullpaths):
             addmatch = matches.add
             speclen = len(spec)
-            for f, st in repo.dirstate.iteritems():
+            for f, st in pycompat.iteritems(repo.dirstate):
                 if f.startswith(spec) and st[0] in acceptable:
                     if fullpaths:
                         addmatch(f)
@@ -2373,7 +2373,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
         ui.status(str(r) + "\n")
         return not r
     else:
-        for k, v in sorted(target.listkeys(namespace).iteritems()):
+        for k, v in sorted(pycompat.iteritems(target.listkeys(namespace))):
             ui.write("%s\t%s\n" % (util.escapestr(k), util.escapestr(v)))
 
 
@@ -3140,7 +3140,7 @@ def debugwireargs(ui, repopath, *vals, **opts):
     for opt in cmdutil.remoteopts:
         del opts[opt[1]]
     args = {}
-    for k, v in opts.iteritems():
+    for k, v in pycompat.iteritems(opts):
         if v:
             args[k] = v
     args = pycompat.strkwargs(args)
@@ -3325,7 +3325,7 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
                     res = 1
     else:
         seen = set()
-        for mfnf in ctx.manifest().iterkeys():
+        for mfnf in pycompat.iterkeys(ctx.manifest()):
             for mfn in [mfnf] + list(util.finddirs(mfnf)):
                 if mfn in seen:
                     continue
@@ -3361,7 +3361,7 @@ def debugexistingcasecollisions(ui, repo, *basepaths, **opts):
             dirlistmap = {}
             for entry in dirlist:
                 dirlistmap.setdefault(entry.lower(), []).append(entry)
-            for _lowername, entries in sorted(dirlistmap.iteritems()):
+            for _lowername, entries in sorted(pycompat.iteritems(dirlistmap)):
                 if len(entries) > 1:
                     ui.write(
                         _("%s contains collisions: %s\n")
@@ -3444,7 +3444,7 @@ def debugreadauthforuri(ui, _repo, uri, user=None):
     auth = httpconnection.readauthforuri(ui, uri, user)
     if auth is not None:
         auth, items = auth
-        for k, v in sorted(items.iteritems()):
+        for k, v in sorted(pycompat.iteritems(items)):
             ui.write(("auth.%s.%s=%s\n") % (auth, k, v))
     else:
         ui.warn(_("no match found\n"))

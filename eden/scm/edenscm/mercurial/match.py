@@ -19,7 +19,7 @@ import re
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import pathmatcher
 
-from . import error, pathutil, util
+from . import error, pathutil, pycompat, util
 from .i18n import _
 
 
@@ -1620,7 +1620,7 @@ def readpatternfile(filepath, warn, sourceinfo=False):
             continue
 
         linesyntax = syntax
-        for s, rels in syntaxes.iteritems():
+        for s, rels in pycompat.iteritems(syntaxes):
             if line.startswith(rels):
                 linesyntax = rels
                 line = line[len(rels) :]

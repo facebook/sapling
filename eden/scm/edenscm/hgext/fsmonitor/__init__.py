@@ -626,7 +626,7 @@ def _walk(self, match, event):
     state.setignorelist(ignorelist)
 
     results.pop(".hg", None)
-    return results.iteritems()
+    return pycompat.iteritems(results)
 
 
 def overridestatus(

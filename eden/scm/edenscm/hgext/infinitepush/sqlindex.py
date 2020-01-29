@@ -10,7 +10,7 @@ import time
 import warnings
 
 import mysql.connector
-from edenscm.mercurial import error, util
+from edenscm.mercurial import error, pycompat, util
 from edenscm.mercurial.i18n import _
 
 
@@ -208,7 +208,8 @@ class sqlindex(object):
             self.sqlconnect()
 
         data = [
-            (bookmark, node, self.reponame) for bookmark, node in bookmarks.iteritems()
+            (bookmark, node, self.reponame)
+            for bookmark, node in pycompat.iteritems(bookmarks)
         ]
 
         self.sqlcursor.executemany(
@@ -420,7 +421,7 @@ class sqlindex(object):
 
         data = [
             (bookmark, node, hashlib.sha1(bookmark).hexdigest(), self.reponame)
-            for (bookmark, node) in bookmarks.iteritems()
+            for (bookmark, node) in pycompat.iteritems(bookmarks)
         ]
 
         self.sqlcursor.executemany(

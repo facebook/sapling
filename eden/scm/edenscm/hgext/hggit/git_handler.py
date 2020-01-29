@@ -256,7 +256,7 @@ class GitHandler(object):
 
     def save_tags(self):
         file = self.vfs(self.tags_file, "w+", atomictemp=True)
-        for name, sha in sorted(self.tags.iteritems()):
+        for name, sha in sorted(pycompat.iteritems(self.tags)):
             if not self.repo.tagtype(name) == "global":
                 file.write("%s %s\n" % (sha, name))
         # If this complains, atomictempfile no longer has close
@@ -417,7 +417,9 @@ class GitHandler(object):
             client.send_pack(path, changed, lambda have, want: [])
 
             changed_refs = [
-                ref for ref, sha in new_refs.iteritems() if sha != old_refs.get(ref)
+                ref
+                for ref, sha in pycompat.iteritems(new_refs)
+                if sha != old_refs.get(ref)
             ]
             new = [bin(self.map_hg_get(new_refs[ref])) for ref in changed_refs]
             old = {}
@@ -436,7 +438,7 @@ class GitHandler(object):
         remote_name = self.remote_name(remote)
 
         if remote_name and new_refs:
-            for ref, new_sha in sorted(new_refs.iteritems()):
+            for ref, new_sha in sorted(pycompat.iteritems(new_refs)):
                 old_sha = old_refs.get(ref)
                 if old_sha is None:
                     if self.ui.verbose:
@@ -997,7 +999,7 @@ class GitHandler(object):
             manifest2 = self.repo.changectx(p2).manifest()
             return [
                 path
-                for path, node1 in manifest1.iteritems()
+                for path, node1 in pycompat.iteritems(manifest1)
                 if path not in files and manifest2.get(path, node1) != node1
             ]
 
@@ -1237,7 +1239,7 @@ class GitHandler(object):
 
         # mapped nodes might be hidden
         unfiltered = self.repo.unfiltered()
-        for rev, rev_refs in exportable.iteritems():
+        for rev, rev_refs in pycompat.iteritems(exportable):
             ctx = self.repo[rev]
             if not rev_refs:
                 raise error.Abort(
@@ -1304,7 +1306,7 @@ class GitHandler(object):
             if refs is None:
                 return None
             filteredrefs = self.filter_refs(refs, heads)
-            return [x for x in filteredrefs.itervalues() if x not in self.git]
+            return [x for x in pycompat.itervalues(filteredrefs) if x not in self.git]
 
         try:
             with progress.bar(self.ui, "") as prog:
@@ -1357,7 +1359,7 @@ class GitHandler(object):
                     else:
                         raise error.Abort("ambiguous reference %s: %r" % (h, r))
         else:
-            for ref, sha in refs.iteritems():
+            for ref, sha in pycompat.iteritems(refs):
                 if not ref.endswith("^{}") and (
                     ref.startswith("refs/heads/") or ref.startswith("refs/tags/")
                 ):
@@ -1387,7 +1389,9 @@ class GitHandler(object):
                 return obj.commit_time >= min_timestamp
 
         return util.OrderedDict(
-            (ref, sha) for ref, sha in refs.iteritems() if check_min_time(self.git[sha])
+            (ref, sha)
+            for ref, sha in pycompat.iteritems(refs)
+            if check_min_time(self.git[sha])
         )
 
     def update_references(self):
@@ -1395,7 +1399,7 @@ class GitHandler(object):
 
         # Create a local Git branch name for each
         # Mercurial bookmark.
-        for hg_sha, refs in exportable.iteritems():
+        for hg_sha, refs in pycompat.iteritems(exportable):
             for git_ref in refs.heads:
                 git_sha = self.map_git_get(hg_sha)
                 if git_sha:
@@ -1433,7 +1437,7 @@ class GitHandler(object):
         bms = self.repo._bookmarks
         for filtered_bm, bm in self._filter_for_bookmarks(bms):
             res[hex(bms[bm])].heads.add("refs/heads/" + filtered_bm)
-        for tag, sha in self.tags.iteritems():
+        for tag, sha in pycompat.iteritems(self.tags):
             res[sha].tags.add("refs/tags/" + tag)
         return res
 
@@ -1447,7 +1451,7 @@ class GitHandler(object):
 
             suffix = self.branch_bookmark_suffix or ""
             changes = []
-            for head, sha in heads.iteritems():
+            for head, sha in pycompat.iteritems(heads):
                 # refs contains all the refs in the server, not just
                 # the ones we are pulling
                 hgsha = self.map_hg_get(sha)
@@ -1479,7 +1483,7 @@ class GitHandler(object):
         for t in list(remote_refs):
             if t.startswith(remote_name + "/"):
                 del remote_refs[t]
-        for ref_name, sha in refs.iteritems():
+        for ref_name, sha in pycompat.iteritems(refs):
             if ref_name.startswith("refs/heads"):
                 hgsha = self.map_hg_get(sha)
                 if hgsha is None or hgsha not in self.repo:

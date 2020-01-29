@@ -199,6 +199,7 @@ from edenscm.mercurial import (
     merge,
     patch,
     progress,
+    pycompat,
     registrar,
     repair,
     repoview,
@@ -538,7 +539,7 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             files = []
             sparsematch = repo.maybesparsematch(mctx.rev())
-            for f, (m, actionargs, msg) in actions.iteritems():
+            for f, (m, actionargs, msg) in pycompat.iteritems(actions):
                 if sparsematch and not sparsematch(f):
                     continue
                 if m in ("c", "dc", "cm"):

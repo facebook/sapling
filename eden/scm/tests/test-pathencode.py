@@ -16,7 +16,7 @@ import random
 import sys
 import time
 
-from edenscm.mercurial import store
+from edenscm.mercurial import pycompat, store
 
 
 try:
@@ -66,7 +66,7 @@ def buildprobtable(fp, cmd="hg manifest tip"):
             counts[c] += 1
     for c in "\r/\n":
         counts.pop(c, None)
-    t = sum(counts.itervalues()) / 100.0
+    t = sum(pycompat.itervalues(counts)) / 100.0
     fp.write("probtable = (")
     for i, (k, v) in enumerate(
         sorted(counts.iteritems(), key=lambda x: x[1], reverse=True)

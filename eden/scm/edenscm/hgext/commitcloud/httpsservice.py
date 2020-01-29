@@ -13,7 +13,7 @@ import socket
 import ssl
 import time
 
-from edenscm.mercurial import error, perftrace, util
+from edenscm.mercurial import error, perftrace, pycompat, util
 from edenscm.mercurial.i18n import _
 
 from . import baseservice, error as ccerror
@@ -35,7 +35,7 @@ def cleandict(d):
         return d
     return dict(
         (k, cleandict(v))
-        for k, v in d.iteritems()
+        for k, v in pycompat.iteritems(d)
         if (v is not None and not (util.safehasattr(v, "__len__") and len(v) == 0))
     )
 

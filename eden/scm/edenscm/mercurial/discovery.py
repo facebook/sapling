@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import functools
 
-from . import bookmarks, branchmap, phases, setdiscovery, treediscovery, util
+from . import bookmarks, branchmap, phases, pycompat, setdiscovery, treediscovery, util
 from .node import hex, nullid
 
 
@@ -221,7 +221,7 @@ def _headssummary(pushop):
 
     # A. register remote heads
     remotebranches = set()
-    for branch, heads in remote.branchmap().iteritems():
+    for branch, heads in pycompat.iteritems(remote.branchmap()):
         remotebranches.add(branch)
         known = []
         unsynced = []
@@ -249,13 +249,13 @@ def _headssummary(pushop):
     # This will possibly add new heads and remove existing ones.
     newmap = branchmap.branchcache(
         (branch, heads[1])
-        for branch, heads in headssum.iteritems()
+        for branch, heads in pycompat.iteritems(headssum)
         if heads[0] is not None
     )
     newmap.update(repo, (ctx.rev() for ctx in missingctx))
-    for branch, newheads in newmap.iteritems():
+    for branch, newheads in pycompat.iteritems(newmap):
         headssum[branch][1][:] = newheads
-    for branch, items in headssum.iteritems():
+    for branch, items in pycompat.iteritems(headssum):
         for l in items:
             if l is not None:
                 l.sort()
@@ -267,7 +267,7 @@ def _headssummary(pushop):
         futureheads = set(torev(h) for h in outgoing.missingheads)
         futureheads |= set(torev(h) for h in outgoing.commonheads)
         allfuturecommon = repo.changelog.ancestors(futureheads, inclusive=True)
-        for branch, heads in sorted(headssum.iteritems()):
+        for branch, heads in sorted(pycompat.iteritems(headssum)):
             remoteheads, newheads, unsyncedheads, placeholder = heads
             result = _postprocessobsolete(pushop, allfuturecommon, newheads)
             headssum[branch] = (

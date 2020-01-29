@@ -24,6 +24,7 @@ from edenscm.mercurial import (
     httppeer,
     perftrace,
     progress,
+    pycompat,
     revlog,
     sshpeer,
     util,
@@ -289,7 +290,7 @@ class getpackclient(object):
 
         # Issue request
         pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
-        for filename, nodes in grouped.iteritems():
+        for filename, nodes in pycompat.iteritems(grouped):
             filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
             countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
             rawnodes = "".join(n for n in nodes)

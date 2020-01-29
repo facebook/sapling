@@ -12,7 +12,7 @@ import os
 
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import revisionstore
-from edenscm.mercurial import ancestor, error, filelog, mdiff, revlog, util
+from edenscm.mercurial import ancestor, error, filelog, mdiff, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
@@ -191,7 +191,6 @@ class remotefilelog(object):
         return True
 
     __bool__ = __nonzero__
-
 
     def __len__(self):
         if self.filename == ".hgtags":
@@ -383,7 +382,7 @@ class remotefilelog(object):
             return nullid
 
         revmap, parentfunc = self._buildrevgraph(a, b)
-        nodemap = dict(((v, k) for (k, v) in revmap.iteritems()))
+        nodemap = dict(((v, k) for (k, v) in pycompat.iteritems(revmap)))
 
         ancs = ancestor.ancestors(parentfunc, revmap[a], revmap[b])
         if ancs:
@@ -398,7 +397,7 @@ class remotefilelog(object):
             return nullid
 
         revmap, parentfunc = self._buildrevgraph(a, b)
-        nodemap = dict(((v, k) for (k, v) in revmap.iteritems()))
+        nodemap = dict(((v, k) for (k, v) in pycompat.iteritems(revmap)))
 
         ancs = ancestor.commonancestorsheads(parentfunc, revmap[a], revmap[b])
         return map(nodemap.__getitem__, ancs)
@@ -414,7 +413,7 @@ class remotefilelog(object):
         parentsmap = collections.defaultdict(list)
         allparents = set()
         for mapping in (amap, bmap):
-            for node, pdata in mapping.iteritems():
+            for node, pdata in pycompat.iteritems(mapping):
                 parents = parentsmap[node]
                 p1, p2, linknode, copyfrom = pdata
                 # Don't follow renames (copyfrom).
@@ -430,7 +429,7 @@ class remotefilelog(object):
         parentrevs = collections.defaultdict(list)
         revmap = {}
         queue = collections.deque(
-            ((None, n) for n in parentsmap.iterkeys() if n not in allparents)
+            ((None, n) for n in pycompat.iterkeys(parentsmap) if n not in allparents)
         )
         while queue:
             prevrev, current = queue.pop()

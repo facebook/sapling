@@ -36,6 +36,7 @@ from edenscm.mercurial import (
     extensions,
     localrepo,
     policy,
+    pycompat,
     registrar,
     revlog,
     util,
@@ -313,7 +314,7 @@ cdef class nodemap(object):
         # index.  Ideally we can keep changelog always up-to-date with the
         # index. But that requires more changes (ex. removing index.insert API
         # and index takes care of data writes).
-        candidates.update(k for k in self._overrides.iterkeys()
+        candidates.update(k for k in pycompat.iterkeys(self._overrides)
                           if hex(k).startswith(hexprefix))
         if len(candidates) == 1:
             return list(candidates)[0]

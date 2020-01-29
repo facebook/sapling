@@ -305,7 +305,8 @@ def _logcommand(repo, tr, command):
 def _logbookmarks(repo, tr):
     revstring = "\n".join(
         sorted(
-            "%s %s" % (name, hex(node)) for name, node in repo._bookmarks.iteritems()
+            "%s %s" % (name, hex(node))
+            for name, node in pycompat.iteritems(repo._bookmarks)
         )
     )
     return writelog(repo, tr, "bookmarks.i", revstring)
@@ -1019,7 +1020,7 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
 
     # copy implementation for bookmarks
     itercopy = []
-    for mark in repo._bookmarks.iteritems():
+    for mark in pycompat.iteritems(repo._bookmarks):
         itercopy.append(mark)
     bmremove = []
     for mark in itercopy:
@@ -1051,13 +1052,13 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         predctxmanifest = predctx.manifest()
         dirstate = repo.dirstate
         diff = predctxmanifest.diff(wctxmanifest)
-        changedfiles.extend(diff.iterkeys())
+        changedfiles.extend(pycompat.iterkeys(diff))
 
         with dirstate.parentchange():
             dirstate.rebuild(prednode, predctxmanifest, changedfiles)
             # we want added and removed files to be shown
             # properly, not with ? and ! prefixes
-            for filename, data in diff.iteritems():
+            for filename, data in pycompat.iteritems(diff):
                 if data[0][0] is None:
                     dirstate.add(filename)
                 if data[1][0] is None:

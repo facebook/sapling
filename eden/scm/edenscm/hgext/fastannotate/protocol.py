@@ -8,7 +8,15 @@
 import contextlib
 import os
 
-from edenscm.mercurial import error, extensions, hg, localrepo, scmutil, wireproto
+from edenscm.mercurial import (
+    error,
+    extensions,
+    hg,
+    localrepo,
+    pycompat,
+    scmutil,
+    wireproto,
+)
 from edenscm.mercurial.i18n import _
 
 from . import context
@@ -199,7 +207,7 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
 
     ui.debug("fastannotate: server returned\n")
     for result in results:
-        for path, content in result.iteritems():
+        for path, content in pycompat.iteritems(result):
             # ignore malicious paths
             if not path.startswith("fastannotate/") or "/../" in (path + "/"):
                 ui.debug("fastannotate: ignored malicious path %s\n" % path)

@@ -194,7 +194,7 @@ class KeepAliveHandler(object):
 
     def close_all(self):
         """close all open connections"""
-        for host, conns in self._cm.get_all().iteritems():
+        for host, conns in pycompat.iteritems(self._cm.get_all()):
             for h in conns:
                 self._cm.remove(h)
                 h.close()

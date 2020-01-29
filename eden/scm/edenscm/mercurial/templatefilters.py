@@ -493,7 +493,7 @@ def websub(text, websubtable):
 def loadfilter(ui, extname, registrarobj):
     """Load template filter from specified registrarobj
     """
-    for name, func in registrarobj._table.iteritems():
+    for name, func in pycompat.iteritems(registrarobj._table):
         filters[name] = func
 
 

@@ -1260,7 +1260,7 @@ def _finishhistedit(ui, repo, state, fm):
 
     mapping, tmpnodes, created, ntm = processreplacement(state)
     if mapping:
-        for prec, succs in mapping.iteritems():
+        for prec, succs in pycompat.iteritems(mapping):
             if not succs:
                 ui.debug("histedit: %s is dropped\n" % node.short(prec))
             else:
@@ -1296,7 +1296,7 @@ def _finishhistedit(ui, repo, state, fm):
     nodechanges = fd(
         {
             hf(oldn): fl([hf(n) for n in newn], name="node")
-            for oldn, newn in mapping.iteritems()
+            for oldn, newn in pycompat.iteritems(mapping)
         },
         key="oldnode",
         value="newnodes",
@@ -1505,7 +1505,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
                     tsum = summary[len(fword) + 1 :].lstrip()
                     # safe but slow: reverse iterate over the actions so we
                     # don't clash on two commits having the same summary
-                    for na, l in reversed(list(newact.iteritems())):
+                    for na, l in reversed(list(pycompat.iteritems(newact))):
                         actx = repo[na.node]
                         asum = _getsummary(actx)
                         if asum == tsum:
@@ -1518,7 +1518,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
 
         # copy over and flatten the new list
         actions = []
-        for na, l in newact.iteritems():
+        for na, l in pycompat.iteritems(newact):
             actions.append(na)
             actions += l
 

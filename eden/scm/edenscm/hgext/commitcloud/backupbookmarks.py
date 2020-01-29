@@ -11,7 +11,15 @@ import os
 import re
 import socket
 
-from edenscm.mercurial import encoding, error, node as nodemod, perftrace, phases, util
+from edenscm.mercurial import (
+    encoding,
+    error,
+    node as nodemod,
+    perftrace,
+    phases,
+    pycompat,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 from . import dependencies
@@ -135,7 +143,7 @@ def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
     # to commits that are public.
     with perftrace.trace("Compute Bookmarks"):
         bookmarks = {}
-        for name, node in repo._bookmarks.iteritems():
+        for name, node in pycompat.iteritems(repo._bookmarks):
             ctx = repo[node]
             if ctx.rev() in ancestors or ctx.phase() == phases.public:
                 bookmarks[name] = ctx.hex()
@@ -250,7 +258,7 @@ def downloadbackupbookmarks(
         bookmarks = conn.peer.listkeyspatterns("bookmarks", patterns=[pattern])
 
     backupinfo = util.sortdict()
-    for name, hexnode in bookmarks.iteritems():
+    for name, hexnode in pycompat.iteritems(bookmarks):
 
         match = _backupbookmarkre.match(name)
         if match:

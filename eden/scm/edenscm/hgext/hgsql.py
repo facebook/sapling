@@ -890,7 +890,7 @@ def wraprepo(repo):
             refs = dict(self._bookmarks)
             refs["tip"] = self["tip"].rev()
             sha = ""
-            for k, v in sorted(refs.iteritems()):
+            for k, v in sorted(pycompat.iteritems(refs)):
                 if k != "tip":
                     v = hex(v)
                 sha = hashlib.sha1("%s%s%s" % (sha, k, v)).hexdigest()
@@ -1131,7 +1131,7 @@ def wraprepo(repo):
                 # the old cached ctx, since the old ctx contains a reference to
                 # the old revlog, which is now out of date.
                 mfl = self.manifestlog
-                for dirname, lrucache in oldmancache.iteritems():
+                for dirname, lrucache in pycompat.iteritems(oldmancache):
                     if dirname == "":
                         for oldmfnode in lrucache:
                             oldmfctx = lrucache[oldmfnode]
@@ -1236,7 +1236,7 @@ def wraprepo(repo):
                         break
 
                     fullrevisions = []
-                    for chunks in groupedrevdata.itervalues():
+                    for chunks in pycompat.itervalues(groupedrevdata):
                         chunkcount = chunks[0][2]
                         if chunkcount == 1:
                             fullrevisions.append(chunks[0])
@@ -1305,7 +1305,9 @@ def wraprepo(repo):
                 )
 
             # Compute new bookmarks, and delete old bookmarks
-            newbookmarks = dict((k, hex(v)) for k, v in self._bookmarks.iteritems())
+            newbookmarks = dict(
+                (k, hex(v)) for k, v in pycompat.iteritems(self._bookmarks)
+            )
             oldbookmarks = []
             cursor.execute(
                 "SELECT name, value FROM revision_references "
@@ -1338,7 +1340,7 @@ def wraprepo(repo):
                 values.append(reponame)
                 values.append(head)
 
-            for k, v in newbookmarks.iteritems():
+            for k, v in pycompat.iteritems(newbookmarks):
                 tmpl.append("(%s, 'bookmarks', %s, %s)")
                 values.append(repo.sqlreponame)
                 values.append(k)
@@ -1794,7 +1796,7 @@ def addentries(repo, queue, transaction, ignoreexisting=False):
         if revlog.dfh and not revlog.dfh.closed:
             revlog.dfh.flush()
 
-    for filelog in revlogs.itervalues():
+    for filelog in pycompat.itervalues(revlogs):
         flushrevlog(filelog)
 
     if manifest:

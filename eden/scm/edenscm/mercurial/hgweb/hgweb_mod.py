@@ -146,7 +146,7 @@ class requestcontext(object):
 
     def archivelist(self, nodeid):
         allowed = self.configlist("web", "allow_archive")
-        for typ, spec in self.archivespecs.iteritems():
+        for typ, spec in pycompat.iteritems(self.archivespecs):
             if typ in allowed or self.configbool("web", "allow%s" % typ):
                 yield {"type": typ, "extension": spec[2], "node": nodeid}
 
@@ -411,7 +411,7 @@ class hgweb(object):
 
             if cmd == "archive":
                 fn = req.form["node"][0]
-                for type_, spec in rctx.archivespecs.iteritems():
+                for type_, spec in pycompat.iteritems(rctx.archivespecs):
                     ext = spec[2]
                     if fn.endswith(ext):
                         req.form["node"] = [fn[: -len(ext)]]

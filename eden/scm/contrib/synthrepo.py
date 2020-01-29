@@ -52,7 +52,16 @@ import random
 import sys
 import time
 
-from edenscm.mercurial import context, error, hg, patch, registrar, scmutil, util
+from edenscm.mercurial import (
+    context,
+    error,
+    hg,
+    patch,
+    pycompat,
+    registrar,
+    scmutil,
+    util,
+)
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, nullrev, short
 
@@ -208,7 +217,7 @@ def analyze(ui, repo, *revs, **opts):
             for filename, mar, lineadd, lineremove, isbin in parsegitdiff(diff):
                 if isbin:
                     continue
-                added = sum(lineadd.itervalues(), 0)
+                added = sum(pycompat.itervalues(lineadd), 0)
                 if mar == "m":
                     if added and lineremove:
                         lineschanged[roundto(added, 5), roundto(lineremove, 5)] += 1
@@ -398,7 +407,7 @@ def synthesize(ui, repo, descpath, **opts):
             repo,
             [pctx.node(), nullid],
             message,
-            files.iterkeys(),
+            pycompat.iterkeys(files),
             filectxfn,
             ui.username(),
             "%d %d" % util.makedate(),

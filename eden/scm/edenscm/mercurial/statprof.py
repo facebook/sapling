@@ -449,7 +449,7 @@ class SiteStats(object):
                 if i == 0:
                     sitestat.addself()
 
-        return [s for s in stats.itervalues()]
+        return [s for s in pycompat.itervalues(stats)]
 
 
 class DisplayFormats:
@@ -535,7 +535,7 @@ def display_by_method(data, fp):
 
     # compute sums for each function
     functiondata = []
-    for fname, sitestats in grouped.iteritems():
+    for fname, sitestats in pycompat.iteritems(grouped):
         total_cum_sec = 0
         total_self_sec = 0
         total_percent = 0
@@ -609,7 +609,7 @@ def display_about_method(data, fp, function=None, **kwargs):
                 else:
                     children[site] = 1
 
-    parentlist = [(p, count) for p, count in parents.iteritems()]
+    parentlist = [(p, count) for p, count in pycompat.iteritems(parents)]
     parentlist.sort(reverse=True, key=lambda x: x[1])
     for parent, count in parentlist:
         print(
@@ -655,7 +655,7 @@ def display_about_method(data, fp, function=None, **kwargs):
         file=fp,
     )
 
-    children = [(child, count) for child, count in children.iteritems()]
+    children = [(child, count) for child, count in pycompat.iteritems(children)]
     children.sort(reverse=True, key=lambda x: x[1])
     for child, count in children:
         print(
@@ -780,7 +780,7 @@ def write_to_flame(data, fp, scriptpath=None, outputfile=None, **kwargs):
         else:
             lines[line] = 1
 
-    for line, count in lines.iteritems():
+    for line, count in pycompat.iteritems(lines):
         file.write("%s %s\n" % (line, count))
 
     file.close()

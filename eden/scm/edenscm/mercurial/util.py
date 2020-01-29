@@ -544,7 +544,7 @@ class sortdict(collections.OrderedDict):
         # __setitem__() isn't called as of PyPy 5.8.0
         def update(self, src):
             if isinstance(src, dict):
-                src = src.iteritems()
+                src = pycompat.iteritems(src)
             for k, v in src:
                 self[k] = v
 
@@ -973,7 +973,7 @@ filtertable = {"tempfile:": tempfilter, "pipe:": pipefilter}
 
 def filter(s, cmd):
     "filter a string through a command that transforms its input to its output"
-    for name, fn in filtertable.iteritems():
+    for name, fn in pycompat.iteritems(filtertable):
         if cmd.startswith(name):
             return fn(s, cmd[len(name) :].lstrip())
     return pipefilter(s, cmd)
@@ -1166,7 +1166,7 @@ def shellenviron(environ=None):
 
     env = dict(encoding.environ)
     if environ:
-        env.update((k, py2shell(v)) for k, v in environ.iteritems())
+        env.update((k, py2shell(v)) for k, v in pycompat.iteritems(environ))
     env["HG"] = hgexecutable()
     return env
 
@@ -3338,6 +3338,10 @@ class puredirs(object):
         addpath = self.addpath
         if safehasattr(map, "iteritems") and skip is not None:
             for f, s in map.iteritems():
+                if s[0] != skip:
+                    addpath(f)
+        elif safehasattr(map, "items") and skip is not None:
+            for f, s in map.items():
                 if s[0] != skip:
                     addpath(f)
         else:

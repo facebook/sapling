@@ -73,6 +73,9 @@ from git_handler import GitHandler
 # Disable DeprecationWarning from newer dulwich since hggit also supports older
 # dulwich.
 warnings.filterwarnings(r"ignore", r"", DeprecationWarning, r"edenscm.hgext.hggit")
+warnings.filterwarnings(
+    r"ignore", r"", DeprecationWarning, r"edenscm.mercurial.pycompat"
+)
 
 try:
     from edenscm.mercurial import exchange

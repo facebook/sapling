@@ -50,6 +50,7 @@ from edenscm.mercurial import (
     filemerge,
     node,
     phases,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -257,7 +258,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
         orig_encoded = json.loads(orig_data)
         orig_amend_copies = dict(
             (k.decode("base64"), v.decode("base64"))
-            for (k, v) in orig_encoded.iteritems()
+            for (k, v) in pycompat.iteritems(orig_encoded)
         )
 
         # Copytrace information is not valid if it refers to a file that
@@ -267,21 +268,21 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
         #
         # Find chained copies and renames (a -> b -> c) and collapse them to
         # (a -> c).  Delete the entry for b if this was a rename.
-        for dst, src in amend_copies.iteritems():
+        for dst, src in pycompat.iteritems(amend_copies):
             if src in orig_amend_copies:
                 amend_copies[dst] = orig_amend_copies[src]
                 if src not in amended_ctx:
                     del orig_amend_copies[src]
 
         # Copy any left over copies from the previous context.
-        for dst, src in orig_amend_copies.iteritems():
+        for dst, src in pycompat.iteritems(orig_amend_copies):
             if dst not in amend_copies:
                 amend_copies[dst] = src
 
         # Write out the entry for the new amend commit.
         encoded = dict(
             (k.encode("base64"), v.encode("base64"))
-            for (k, v) in amend_copies.iteritems()
+            for (k, v) in pycompat.iteritems(amend_copies)
         )
         db[node] = json.dumps(encoded)
         try:
@@ -315,7 +316,8 @@ def _getamendcopies(repo, dest, ancestor):
         # Load the amend copytrace data from this commit.
         encoded = json.loads(db[ctx.node()])
         return dict(
-            (k.decode("base64"), v.decode("base64")) for (k, v) in encoded.iteritems()
+            (k.decode("base64"), v.decode("base64"))
+            for (k, v) in pycompat.iteritems(encoded)
         )
     except Exception:
         repo.ui.log("copytrace", "Failed to load amend copytrace for %s" % dest.hex())
@@ -448,7 +450,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
             return orig(repo, cdst, csrc, base)
 
     cp = copiesmod._forwardcopies(base, csrc)
-    for dst, src in cp.iteritems():
+    for dst, src in pycompat.iteritems(cp):
         if src in mdst:
             copies[dst] = src
 
@@ -502,7 +504,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
         amend_copies = _getamendcopies(repo, cdst, base.p1())
         if amend_copies:
             repo.ui.debug("Loaded amend copytrace for %s" % cdst)
-            for dst, src in amend_copies.iteritems():
+            for dst, src in pycompat.iteritems(amend_copies):
                 if dst not in copies:
                     copies[dst] = src
 

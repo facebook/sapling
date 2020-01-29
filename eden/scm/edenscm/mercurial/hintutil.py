@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from . import rcutil, util
+from . import pycompat, rcutil, util
 from .i18n import _
 
 
@@ -38,7 +38,7 @@ triggered = set()
 
 
 def loadhint(ui, extname, registrarobj):
-    for name, func in registrarobj._table.iteritems():
+    for name, func in pycompat.iteritems(registrarobj._table):
         hinttable[name] = func
 
 

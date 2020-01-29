@@ -17,7 +17,7 @@ import itertools
 import os
 import struct
 
-from . import error, mdiff, policy, revlog, util
+from . import error, mdiff, policy, pycompat, revlog, util
 from .i18n import _
 from .node import bin, hex
 
@@ -405,10 +405,10 @@ class manifestdict(object):
         return self._lm.__iter__()
 
     def iterkeys(self):
-        return self._lm.iterkeys()
+        return pycompat.iterkeys(self._lm)
 
     def keys(self):
-        return list(self.iterkeys())
+        return list(self._lm.keys())
 
     def filesnotin(self, m2, matcher=None):
         """Set of files in this manifest that are not in the other"""
@@ -419,7 +419,7 @@ class manifestdict(object):
         diff = self.diff(m2)
         files = set(
             filepath
-            for filepath, hashflags in diff.iteritems()
+            for filepath, hashflags in pycompat.iteritems(diff)
             if hashflags[1][0] is None
         )
         return files
@@ -762,7 +762,7 @@ class treemanifest(object):
             if p in self._files:
                 yield self._subpath(p), n
             else:
-                for f, sn in n.iteritems():
+                for f, sn in pycompat.iteritems(n):
                     yield f, sn
 
     iteritems = items
@@ -773,14 +773,14 @@ class treemanifest(object):
             if p in self._files:
                 yield self._subpath(p)
             else:
-                for f in self._dirs[p].iterkeys():
+                for f in pycompat.iterkeys(self._dirs[p]):
                     yield f
 
     def keys(self):
         return list(self.iterkeys())
 
     def __iter__(self):
-        return self.iterkeys()
+        return pycompat.iterkeys(self)
 
     def __contains__(self, f):
         if f is None:
@@ -913,14 +913,14 @@ class treemanifest(object):
                 return
             t1._load()
             t2._load()
-            for d, m1 in t1._dirs.iteritems():
+            for d, m1 in pycompat.iteritems(t1._dirs):
                 if d in t2._dirs:
                     m2 = t2._dirs[d]
                     _filesnotin(m1, m2)
                 else:
-                    files.update(m1.iterkeys())
+                    files.update(pycompat.iterkeys(m1))
 
-            for fn in t1._files.iterkeys():
+            for fn in pycompat.iterkeys(t1._files):
                 if fn not in t2._files:
                     files.add(t1._subpath(fn))
 
@@ -1015,7 +1015,7 @@ class treemanifest(object):
             if fn in self._flags:
                 ret._flags[fn] = self._flags[fn]
 
-        for dir, subm in self._dirs.iteritems():
+        for dir, subm in pycompat.iteritems(self._dirs):
             m = subm._matches(match)
             if not m._isempty():
                 ret._dirs[dir] = m
@@ -1049,22 +1049,22 @@ class treemanifest(object):
                 return
             t1._load()
             t2._load()
-            for d, m1 in t1._dirs.iteritems():
+            for d, m1 in pycompat.iteritems(t1._dirs):
                 m2 = t2._dirs.get(d, emptytree)
                 _diff(m1, m2)
 
-            for d, m2 in t2._dirs.iteritems():
+            for d, m2 in pycompat.iteritems(t2._dirs):
                 if d not in t1._dirs:
                     _diff(emptytree, m2)
 
-            for fn, n1 in t1._files.iteritems():
+            for fn, n1 in pycompat.iteritems(t1._files):
                 fl1 = t1._flags.get(fn, "")
                 n2 = t2._files.get(fn, None)
                 fl2 = t2._flags.get(fn, "")
                 if n1 != n2 or fl1 != fl2:
                     result[t1._subpath(fn)] = ((n1, fl1), (n2, fl2))
 
-            for fn, n2 in t2._files.iteritems():
+            for fn, n2 in pycompat.iteritems(t2._files):
                 if fn not in t1._files:
                     fl2 = t2._flags.get(fn, "")
                     result[t2._subpath(fn)] = ((None, ""), (n2, fl2))
@@ -1122,7 +1122,7 @@ class treemanifest(object):
         m1._load()
         m2._load()
         emptytree = treemanifest()
-        for d, subm in self._dirs.iteritems():
+        for d, subm in pycompat.iteritems(self._dirs):
             subp1 = m1._dirs.get(d, emptytree)._node
             subp2 = m2._dirs.get(d, emptytree)._node
             if subp1 == revlog.nullid:
@@ -1141,7 +1141,7 @@ class treemanifest(object):
             yield self
 
         self._load()
-        for d, subm in self._dirs.iteritems():
+        for d, subm in pycompat.iteritems(self._dirs):
             for subtree in subm.walksubtrees(matcher=matcher):
                 yield subtree
 
@@ -1636,7 +1636,7 @@ class treemanifestctx(object):
             m0 = self._manifestlog.get(self._dir, revlog.node(r0)).read()
             m1 = self.read()
             md = treemanifest(dir=self._dir)
-            for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+            for f, ((n0, fl0), (n1, fl1)) in pycompat.iteritems(m0.diff(m1)):
                 if n1:
                     md[f] = n1
                     if fl1:

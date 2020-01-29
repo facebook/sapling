@@ -172,7 +172,7 @@ class bmstore(dict):
         self._aclean = True
 
     def _write(self, fp):
-        for name, node in self.iteritems():
+        for name, node in pycompat.iteritems(self):
             fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
         self._clean = True
         self._repo.invalidatevolatilesets()
@@ -346,7 +346,7 @@ def headsforactive(repo):
         raise ValueError("headsforactive() only makes sense with an active bookmark")
     name = repo._activebookmark.split("@", 1)[0]
     heads = []
-    for mark, n in repo._bookmarks.iteritems():
+    for mark, n in pycompat.iteritems(repo._bookmarks):
         if mark.split("@", 1)[0] == name:
             heads.append(n)
     return heads
@@ -403,7 +403,7 @@ def listbinbookmarks(repo):
     marks = getattr(repo, "_bookmarks", {})
 
     hasnode = repo.changelog.hasnode
-    for k, v in marks.iteritems():
+    for k, v in pycompat.iteritems(marks):
         # don't expose local divergent bookmarks
         if hasnode(v) and ("@" not in k or k.endswith("@")):
             yield k, v
@@ -907,7 +907,7 @@ def _printbookmarks(ui, repo, bmarks, **opts):
     hexfn = fm.hexfunc
     if len(bmarks) == 0 and fm.isplain():
         ui.status(_("no bookmarks set\n"))
-    for bmark, (n, prefix, label) in sorted(bmarks.iteritems()):
+    for bmark, (n, prefix, label) in sorted(pycompat.iteritems(bmarks)):
         fm.startitem()
         if not ui.quiet:
             fm.plain(" %s " % prefix, label=label)
@@ -933,7 +933,7 @@ def printbookmarks(ui, repo, **opts):
     """
     marks = repo._bookmarks
     bmarks = {}
-    for bmark, n in sorted(marks.iteritems()):
+    for bmark, n in sorted(pycompat.iteritems(marks)):
         active = repo._activebookmark
         if bmark == active:
             prefix, label = "*", activebookmarklabel
@@ -975,7 +975,7 @@ def reachablerevs(repo, bookmarks):
     # both bookmarks we are deleting and other bookmarks.
     othernodes = [
         node
-        for bookmark, node in repobookmarks.iteritems()
+        for bookmark, node in pycompat.iteritems(repobookmarks)
         if bookmark not in bookmarks
     ]
 

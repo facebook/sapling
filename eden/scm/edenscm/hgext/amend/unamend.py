@@ -14,6 +14,7 @@ from edenscm.mercurial import (
     node as nodemod,
     obsolete,
     obsutil,
+    pycompat,
     registrar,
     visibility,
 )
@@ -93,14 +94,14 @@ def unamend(ui, repo, **opts):
         cm = predctx.manifest()
         dirstate = repo.dirstate
         diff = cm.diff(wm)
-        changedfiles.extend(diff.iterkeys())
+        changedfiles.extend(pycompat.iterkeys(diff))
 
         tr = repo.transaction("unamend")
         with dirstate.parentchange():
             dirstate.rebuild(prednode, cm, changedfiles)
             # we want added and removed files to be shown
             # properly, not with ? and ! prefixes
-            for filename, data in diff.iteritems():
+            for filename, data in pycompat.iteritems(diff):
                 if data[0][0] is None:
                     dirstate.add(filename)
                 if data[1][0] is None:

@@ -1,7 +1,7 @@
 # git2hg.py - convert Git repositories and commits to Mercurial ones
 
 from dulwich.objects import Commit, Tag
-from edenscm.mercurial import util
+from edenscm.mercurial import pycompat, util
 from edenscm.mercurial.node import bin
 
 
@@ -24,7 +24,7 @@ def find_incoming(git_object_store, git_map, refs):
     def get_heads(refs):
         todo = []
         seenheads = set()
-        for ref, sha in refs.iteritems():
+        for ref, sha in pycompat.iteritems(refs):
             # refs could contain refs on the server that we haven't pulled down
             # the objects for; also make sure it's a sha and not a symref
             if ref != "HEAD" and sha in git_object_store:

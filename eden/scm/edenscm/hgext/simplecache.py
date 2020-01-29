@@ -181,7 +181,8 @@ class pathcopiesserializer(jsonserializer):
     @classmethod
     def serialize(cls, copydict):
         encoded = dict(
-            (k.encode("base64"), v.encode("base64")) for (k, v) in copydict.iteritems()
+            (k.encode("base64"), v.encode("base64"))
+            for (k, v) in pycompat.iteritems(copydict)
         )
         return super(pathcopiesserializer, cls).serialize(encoded)
 
@@ -189,7 +190,8 @@ class pathcopiesserializer(jsonserializer):
     def deserialize(cls, string):
         encoded = super(pathcopiesserializer, cls).deserialize(string)
         return dict(
-            (k.decode("base64"), v.decode("base64")) for k, v in encoded.iteritems()
+            (k.decode("base64"), v.decode("base64"))
+            for k, v in pycompat.iteritems(encoded)
         )
 
 

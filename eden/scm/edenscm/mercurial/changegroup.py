@@ -357,7 +357,7 @@ class cg1unpacker(object):
                     mfnode = cl.changelogrevision(cset).manifest
                     mfest = ml[mfnode].readnew()
                     # store file cgnodes we must see
-                    for f, n in mfest.iteritems():
+                    for f, n in pycompat.iteritems(mfest):
                         needfiles.setdefault(f, set()).add(n)
 
             # process the files
@@ -1080,7 +1080,7 @@ def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
                 if not needs:
                     del needfiles[f]
 
-    for f, needs in needfiles.iteritems():
+    for f, needs in pycompat.iteritems(needfiles):
         fl = repo.file(f)
         for n in needs:
             try:

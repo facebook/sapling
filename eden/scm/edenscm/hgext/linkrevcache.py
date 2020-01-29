@@ -207,7 +207,7 @@ class linkrevdbreadonly(object):
         # "close" in a "finally" block and it probably does not want close() to
         # raise an exception there.
         if util.safehasattr(self, "_dbs"):
-            for db in self._dbs.itervalues():
+            for db in pycompat.itervalues(self._dbs):
                 db.close()
             self._dbs.clear()
 
@@ -451,15 +451,15 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     db = repo._linkrevcache
     paths = dict(db._getdb(db._pathdbname))
     nodes = dict(db._getdb(db._nodedbname))
-    pathsrev = dict((v, k) for k, v in paths.iteritems())
-    nodesrev = dict((v, k) for k, v in nodes.iteritems())
+    pathsrev = dict((v, k) for k, v in pycompat.iteritems(paths))
+    nodesrev = dict((v, k) for k, v in pycompat.iteritems(nodes))
     lrevs = dict(db._getdb(db._linkrevdbname))
 
     readfilelog = ui.configbool("linkrevcache", "readfilelog", True)
 
     total = len(lrevs)
     with progress.bar(ui, _("verifying"), total=total) as prog:
-        for i, (k, v) in enumerate(lrevs.iteritems()):
+        for i, (k, v) in enumerate(pycompat.iteritems(lrevs)):
             prog.value = i
             pathid, nodeid = k.split("\0")
             path = pathsrev[pathid]

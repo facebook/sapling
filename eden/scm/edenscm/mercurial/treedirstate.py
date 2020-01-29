@@ -149,6 +149,8 @@ class treedirstatemap(object):
     def iteritems(self):
         return itertools.chain(self.itertrackeditems(), self.iterremoveditems())
 
+    items = iteritems
+
     def gettracked(self, filename, default=None):
         """Returns (state, mode, size, mtime) for the tracked file."""
         return self._rmap.gettracked(filename, default)
@@ -451,7 +453,7 @@ class treedirstatemap(object):
 
         with self._opener("dirstate", "w", atomictemp=True, checkambig=True) as st:
             newdmap = {}
-            for k, v in self.iteritems():
+            for k, v in pycompat.iteritems(self):
                 newdmap[k] = dirstate.dirstatetuple(*v)
 
             st.write(
@@ -548,7 +550,7 @@ class treedirstatemap(object):
         w.writeuint(self._rmap.rootid())
         w.writeuint(self._packedsize)
         w.writeuint(len(self.copymap))
-        for k, v in self.copymap.iteritems():
+        for k, v in pycompat.iteritems(self.copymap):
             w.writestr(k)
             w.writestr(v)
 

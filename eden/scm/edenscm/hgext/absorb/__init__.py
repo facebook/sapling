@@ -40,6 +40,7 @@ from edenscm.mercurial import (
     node,
     patch,
     phases,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -249,7 +250,7 @@ def overlaycontext(
     date = ctx.date()
     desc = ctx.description()
     user = ctx.user()
-    files = set(ctx.files()).union(memworkingcopy.iterkeys())
+    files = set(ctx.files()).union(pycompat.iterkeys(memworkingcopy))
     store = overlaystore(ctx, memworkingcopy)
     return context.memctx(
         repo=ctx.repo(),
@@ -697,7 +698,7 @@ class fixupstate(object):
 
     def apply(self):
         """apply fixups to individual filefixupstates"""
-        for path, state in self.fixupmap.iteritems():
+        for path, state in pycompat.iteritems(self.fixupmap):
             if self.ui.debugflag:
                 self.ui.write(_("applying fixups to %s\n") % path)
             state.apply()
@@ -706,7 +707,8 @@ class fixupstate(object):
     def chunkstats(self):
         """-> {path: chunkstats}. collect chunkstats from filefixupstates"""
         return dict(
-            (path, state.chunkstats) for path, state in self.fixupmap.iteritems()
+            (path, state.chunkstats)
+            for path, state in pycompat.iteritems(self.fixupmap)
         )
 
     def commit(self):
@@ -729,7 +731,7 @@ class fixupstate(object):
         chunkstats = self.chunkstats
         if ui.verbose:
             # chunkstats for each file
-            for path, stat in chunkstats.iteritems():
+            for path, stat in pycompat.iteritems(chunkstats):
                 if stat[0]:
                     ui.write(
                         _n(
@@ -831,9 +833,9 @@ class fixupstate(object):
                 return False
             pctx = parents[0]
         # ctx changes more files (not a subset of memworkingcopy)
-        if not set(ctx.files()).issubset(set(memworkingcopy.iterkeys())):
+        if not set(ctx.files()).issubset(set(pycompat.iterkeys(memworkingcopy))):
             return False
-        for path, content in memworkingcopy.iteritems():
+        for path, content in pycompat.iteritems(memworkingcopy):
             if path not in pctx or path not in ctx:
                 return False
             fctx = ctx[path]
@@ -900,7 +902,7 @@ def overlaydiffcontext(ctx, chunks):
         if not path or not info:
             continue
         patchmap[path].append(info)
-    for path, patches in patchmap.iteritems():
+    for path, patches in pycompat.iteritems(patchmap):
         if path not in ctx or not patches:
             continue
         patches.sort(reverse=True)
@@ -1074,7 +1076,7 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
     if not opts.get(flag):
         return orig(ui, repo, *pats, **opts)
     # use absorb
-    for k, v in opts.iteritems():  # check unsupported flags
+    for k, v in pycompat.iteritems(opts):  # check unsupported flags
         if v and k not in ["interactive", flag]:
             raise error.Abort(
                 _("--%s does not support --%s") % (flag, k.replace("_", "-"))
@@ -1087,7 +1089,7 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
     # what's going on and is less verbose.
     adoptedsum = 0
     messages = []
-    for path, (adopted, total) in state.chunkstats.iteritems():
+    for path, (adopted, total) in pycompat.iteritems(state.chunkstats):
         adoptedsum += adopted
         if adopted == total:
             continue

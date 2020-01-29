@@ -111,6 +111,15 @@ if sys.version_info[0] >= 3:
         # type: (bytes) -> str
         return s.decode("utf-8")
 
+    def iteritems(s):
+        return s.items()
+
+    def iterkeys(s):
+        return s.keys()
+
+    def itervalues(s):
+        return s.values()
+
 
 else:
     import cStringIO
@@ -177,6 +186,15 @@ else:
         # type: (bytes) -> bytes
         assert isinstance(s, bytes)
         return s
+
+    def iteritems(s):
+        return s.iteritems()
+
+    def iterkeys(s):
+        return s.iterkeys()
+
+    def itervalues(s):
+        return s.itervalues()
 
 
 isjython = sysplatform.startswith("java")

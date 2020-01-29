@@ -19,7 +19,7 @@ import logging
 import os
 import socket
 
-from . import httpclient, sslutil, urllibcompat, util
+from . import httpclient, pycompat, sslutil, urllibcompat, util
 from .i18n import _
 
 
@@ -82,7 +82,7 @@ def readauthforuri(ui, uri, user):
         gdict[setting] = val
 
     filtered = {}
-    for group, auth in sorted(groups.iteritems()):
+    for group, auth in sorted(pycompat.iteritems(groups)):
         ok = True
         for key in ("cert", "key"):
             val = auth.get(key)
@@ -101,7 +101,7 @@ def readauthforuri(ui, uri, user):
     bestlen = 0
     bestpriority = 0
     bestauth = None
-    for group, auth in filtered.iteritems():
+    for group, auth in pycompat.iteritems(filtered):
         if user and user != auth.get("username", user):
             # If a username was set in the URI, the entry username
             # must either match it or be unset

@@ -125,7 +125,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
 
     # Filter copies
     copied = copies.pathcopies(base, ctx)
-    copied = dict((dst, src) for dst, src in copied.iteritems() if dst in files)
+    copied = dict((dst, src) for dst, src in pycompat.iteritems(copied) if dst in files)
 
     def filectxfn(repo, memctx, path, contentctx=ctx, redirect=()):
         if path not in contentctx:
@@ -210,9 +210,11 @@ def fixdirstate(repo, oldctx, newctx, status):
         if src:
             oldcopies[f] = src[0]
     oldcopies.update(copies)
-    copies = dict((dst, oldcopies.get(src, src)) for dst, src in oldcopies.iteritems())
+    copies = dict(
+        (dst, oldcopies.get(src, src)) for dst, src in pycompat.iteritems(oldcopies)
+    )
     # Adjust the dirstate copies
-    for dst, src in copies.iteritems():
+    for dst, src in pycompat.iteritems(copies):
         if src not in newctx or dst in newctx or ds[dst] != "a":
             src = None
         ds.copy(src, dst)

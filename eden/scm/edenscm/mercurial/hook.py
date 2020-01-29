@@ -137,13 +137,17 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
     env["HG_HOOKTYPE"] = htype
     env["HG_HOOKNAME"] = name
 
-    for k, v in args.iteritems():
+    for k, v in pycompat.iteritems(args):
         if callable(v):
             v = v()
         if isinstance(v, dict):
             # make the dictionary element order stable across Python
             # implementations
-            v = "{" + ", ".join("%r: %r" % i for i in sorted(v.iteritems())) + "}"
+            v = (
+                "{"
+                + ", ".join("%r: %r" % i for i in sorted(pycompat.iteritems(v)))
+                + "}"
+            )
         env["HG_" + k.upper()] = v
 
     if repo:

@@ -330,7 +330,7 @@ class commandline(object):
 
     def _cmdline(self, cmd, *args, **kwargs):
         cmdline = [self.command, cmd] + list(args)
-        for k, v in kwargs.iteritems():
+        for k, v in pycompat.iteritems(kwargs):
             if len(k) == 1:
                 cmdline.append("-" + k)
             else:

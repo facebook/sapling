@@ -984,7 +984,7 @@ def _markchanges(repo, unknown, deleted, renames):
     with repo.wlock():
         wctx.forget(deleted)
         wctx.add(unknown)
-        for new, old in renames.iteritems():
+        for new, old in pycompat.iteritems(renames):
             wctx.copy(old, new)
 
 

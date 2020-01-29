@@ -170,7 +170,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 if filestosend is not NoFiles:
                     mflog = repo.manifestlog
                     with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
-                        for mfnode, clnode in mfs.iteritems():
+                        for mfnode, clnode in pycompat.iteritems(mfs):
                             prog.value += 1
                             if filestosend == LocalFiles and not containslocalfiles(
                                 mfnode
@@ -190,7 +190,7 @@ class shallowcg1packer(changegroup.cg1packer):
                                 p1node = tmfl[mfnode].parents[0]
                                 p1ctx = tmfl[p1node]
 
-                            diff = p1ctx.read().diff(mfctx.read()).iteritems()
+                            diff = pycompat.iteritems(p1ctx.read().diff(mfctx.read()))
                             for filename, ((anode, aflag), (bnode, bflag)) in diff:
                                 if bnode is not None:
                                     fclnodes = fnodes.setdefault(filename, {})
@@ -252,7 +252,7 @@ class shallowcg1packer(changegroup.cg1packer):
                     linkrevnodes = linknodes(filerevlog, fname)
                     # Normally we'd prune the linkrevnodes first,
                     # but that would perform the server fetches one by one.
-                    for fnode, cnode in list(linkrevnodes.iteritems()):
+                    for fnode, cnode in list(pycompat.iteritems(linkrevnodes)):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
                             if phasecache.phase(

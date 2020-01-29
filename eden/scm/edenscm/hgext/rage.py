@@ -361,7 +361,7 @@ def _makerage(ui, repo, **opts):
             "shared": lambda category: shallowutil.getcachepackpath(repo, category),
         }
 
-        for loc, getpath in packlocs.iteritems():
+        for loc, getpath in pycompat.iteritems(packlocs):
             for category in constants.ALL_CATEGORIES:
                 path = getpath(category)
                 detailed.append(

@@ -318,7 +318,7 @@ class dirstate(object):
         return iter(sorted(self._map))
 
     def items(self):
-        return self._map.iteritems()
+        return pycompat.iteritems(self._map)
 
     iteritems = items
 
@@ -774,7 +774,7 @@ class dirstate(object):
     def _writedirstate(self, st):
         # notify callbacks about parents change
         if self._origpl is not None and self._origpl != self._pl:
-            for c, callback in sorted(self._plchangecallbacks.iteritems()):
+            for c, callback in sorted(pycompat.iteritems(self._plchangecallbacks)):
                 callback(self, self._origpl, self._pl)
             # if the first parent has changed then consider this a new checkout
             if self._origpl[0] != self._pl[0]:
@@ -791,7 +791,7 @@ class dirstate(object):
         delaywrite = self._ui.configint("debug", "dirstate.delaywrite")
         if delaywrite > 0:
             # do we have any files to delay for?
-            for f, e in self._map.iteritems():
+            for f, e in pycompat.iteritems(self._map):
                 if e[0] == "n" and e[3] == now:
                     import time  # to avoid useless import
 
@@ -1290,7 +1290,7 @@ class dirstatemap(object):
         util.clearcachedproperty(self, "otherparentset")
 
     def iteritems(self):
-        return self._map.iteritems()
+        return pycompat.iteritems(self._map)
 
     def __len__(self):
         return len(self._map)
@@ -1387,7 +1387,7 @@ class dirstatemap(object):
         except AttributeError:
             nonnorm = set()
             otherparent = set()
-            for fname, e in self._map.iteritems():
+            for fname, e in pycompat.iteritems(self._map):
                 if e[0] != "n" or e[3] == -1:
                     nonnorm.add(fname)
                 if e[0] == "n" and e[2] == -2:
@@ -1408,7 +1408,7 @@ class dirstatemap(object):
 
         f = {}
         normcase = util.normcase
-        for name, s in self._map.iteritems():
+        for name, s in pycompat.iteritems(self._map):
             if s[0] != "r":
                 f[normcase(name)] = name
         f["."] = "."  # prevents useless util.fspath() invocation

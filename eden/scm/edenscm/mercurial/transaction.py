@@ -342,7 +342,7 @@ class transaction(util.transactional):
     def _generatefiles(self, suffix="", group=gengroupall):
         # write files registered for generation
         any = False
-        for id, entry in sorted(self._filegenerators.iteritems()):
+        for id, entry in sorted(pycompat.iteritems(self._filegenerators)):
             any = True
             order, filenames, genfunc, location = entry
 

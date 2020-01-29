@@ -146,7 +146,7 @@ def _ctxdesc(ctx):
     desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
     repo = ctx.repo()
     names = []
-    for nsname, ns in repo.names.iteritems():
+    for nsname, ns in pycompat.iteritems(repo.names):
         if nsname == "branches":
             continue
         names.extend(ns.names(repo, ctx.node()))
@@ -230,7 +230,7 @@ class rebaseruntime(object):
         f.write("0\n")  # used to be the "keepbranches" flag.
         f.write("%s\n" % (self.activebookmark or ""))
         destmap = self.destmap
-        for d, v in self.state.iteritems():
+        for d, v in pycompat.iteritems(self.state):
             oldrev = repo[d].hex()
             if v >= 0:
                 newrev = repo[v].hex()
@@ -486,7 +486,7 @@ class rebaseruntime(object):
         # if we fail before the transaction closes.
         self.storestatus()
 
-        cands = [k for k, v in self.state.iteritems() if v == revtodo]
+        cands = [k for k, v in pycompat.iteritems(self.state) if v == revtodo]
         total = len(cands)
         pos = 0
         with progress.bar(ui, _("rebasing"), _("changesets"), total) as prog:
@@ -763,7 +763,7 @@ class rebaseruntime(object):
                     )
             if newnode is not None:
                 newrev = repo[newnode].rev()
-                for oldrev in self.state.iterkeys():
+                for oldrev in pycompat.iterkeys(self.state):
                     self.state[oldrev] = newrev
 
         # restore original working directory
@@ -1180,7 +1180,7 @@ def _definedestmap(
             # emulate the old behavior, showing "nothing to rebase" (a better
             # behavior may be abort with "cannot find branching point" error)
             bpbase.clear()
-        for bp, bs in bpbase.iteritems():  # calculate roots
+        for bp, bs in pycompat.iteritems(bpbase):  # calculate roots
             roots += list(repo.revs("children(%d) & ancestors(%ld)", bp, bs))
 
         rebaseset = repo.revs("%ld::", roots)
@@ -1853,7 +1853,9 @@ def needupdate(repo, state):
         return False
 
     # We should be standing on the first as-of-yet unrebased commit.
-    firstunrebased = min([old for old, new in state.iteritems() if new == nullrev])
+    firstunrebased = min(
+        [old for old, new in pycompat.iteritems(state) if new == nullrev]
+    )
     if firstunrebased in parents:
         return True
 
@@ -2172,7 +2174,7 @@ def summaryhook(ui, repo):
         msg = _('rebase: (use "hg rebase --abort" to clear broken state)\n')
         ui.write(msg)
         return
-    numrebased = len([i for i in state.itervalues() if i >= 0])
+    numrebased = len([i for i in pycompat.itervalues(state) if i >= 0])
     # i18n: column positioning for "hg summary"
     ui.write(
         _("rebase: %s, %s (rebase --continue)\n")

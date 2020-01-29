@@ -996,7 +996,7 @@ class revlog(object):
                     # But, obviously its parents aren't.
                     for p in self.parents(n):
                         heads.pop(p, None)
-        heads = [head for head, flag in heads.iteritems() if flag]
+        heads = [head for head, flag in pycompat.iteritems(heads) if flag]
         roots = list(roots)
         assert orderedout
         assert roots

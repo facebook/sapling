@@ -287,7 +287,7 @@ def _setupupdates(ui):
             sparsematch = repo.sparsematch(mctx.rev())
 
         temporaryfiles = []
-        for file, action in actions.iteritems():
+        for file, action in pycompat.iteritems(actions):
             type, args, msg = action
             files.add(file)
             if sparsematch(file):
@@ -2358,7 +2358,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         )
 
     # Check for files that were only in the dirstate.
-    for file, state in dirstate.iteritems():
+    for file, state in pycompat.iteritems(dirstate):
         if not file in files:
             old = origsparsematch(file)
             new = sparsematch(file)
@@ -2371,7 +2371,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     typeactions = dict((m, []) for m in "a f g am cd dc r dm dg m e k p pr".split())
 
     with progress.bar(ui, _("applying"), total=len(actions)) as prog:
-        for f, (m, args, msg) in actions.iteritems():
+        for f, (m, args, msg) in pycompat.iteritems(actions):
             prog.value += 1
             if m not in typeactions:
                 typeactions[m] = []

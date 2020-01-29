@@ -77,7 +77,7 @@ from __future__ import absolute_import
 import errno
 import struct
 
-from . import error, node, obsutil, perftrace, phases, policy, util
+from . import error, node, obsutil, perftrace, phases, policy, pycompat, util
 from .i18n import _
 from .pycompat import range
 
@@ -265,7 +265,7 @@ def _fm0readmarkers(data, off, stop):
                 # if content cannot be translated to nodeid drop the data.
                 parents = None
 
-        metadata = tuple(sorted(metadata.iteritems()))
+        metadata = tuple(sorted(pycompat.iteritems(metadata)))
 
         yield (pre, sucs, flags, metadata, date, parents)
 
@@ -295,7 +295,7 @@ def _fm0encodemeta(meta):
     """Return encoded metadata string to string mapping.
 
     Assume no ':' in key and no '\0' in both key and value."""
-    for key, value in meta.iteritems():
+    for key, value in pycompat.iteritems(meta):
         if ":" in key or "\0" in key:
             raise ValueError("':' and '\0' are forbidden in metadata key'")
         if "\0" in value:
@@ -677,7 +677,7 @@ class obsstore(object):
             if len(succ) != 20:
                 raise ValueError(succ)
 
-        metadata = tuple(sorted(metadata.iteritems()))
+        metadata = tuple(sorted(pycompat.iteritems(metadata)))
 
         marker = (bytes(prec), tuple(succs), int(flag), metadata, date, parents)
         return bool(self.add(transaction, [marker]))

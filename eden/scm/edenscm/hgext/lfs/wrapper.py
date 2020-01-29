@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import hashlib
 
-from edenscm.mercurial import error, filelog, revlog, util
+from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid, short
 
@@ -81,7 +81,7 @@ def writetostore(self, text):
 
     # translate hg filelog metadata to lfs metadata with "x-hg-" prefix
     if hgmeta is not None:
-        for k, v in hgmeta.iteritems():
+        for k, v in pycompat.iteritems(hgmeta):
             metadata["x-hg-%s" % k] = v
 
     rawtext = metadata.serialize()

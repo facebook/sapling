@@ -88,8 +88,8 @@ hasconfigitems = False
 def registerconfigs(configitem):
     global hasconfigitems
     hasconfigitems = True
-    for section, items in CONFIG_DEFAULTS.iteritems():
-        for item, default in items.iteritems():
+    for section, items in CONFIG_DEFAULTS.items():
+        for item, default in items.items():
             configitem(section, item, default=default)
 
 

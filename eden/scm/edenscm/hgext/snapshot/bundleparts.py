@@ -5,7 +5,7 @@
 
 # bundleparts.py - utilies to pack/unpack the snapshot metadata into bundles
 
-from edenscm.mercurial import bundle2, error
+from edenscm.mercurial import bundle2, error, pycompat
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.utils import cborutil
 
@@ -112,7 +112,7 @@ def binarydecode(stream):
         raise error.Abort(_("invalid bundlepart stream"))
     try:
         for section in ("metadatafiles", "auxfiles"):
-            for oid, content in bundlepartdict[section].iteritems():
+            for oid, content in pycompat.iteritems(bundlepartdict[section]):
                 yield oid, content
     except (KeyError, ValueError):
         raise error.Abort(_("invalid bundlepart dict: %s") % (bundlepartdict,))

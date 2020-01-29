@@ -545,7 +545,7 @@ def expandaliases(tree, aliases, warn=None):
     tree = _aliasrules.expand(aliases, tree)
     # warn about problematic (but not referred) aliases
     if warn is not None:
-        for name, alias in sorted(aliases.iteritems()):
+        for name, alias in sorted(pycompat.iteritems(aliases)):
             if alias.error and not alias.warned:
                 warn(_("warning: %s\n") % (alias.error))
                 alias.warned = True

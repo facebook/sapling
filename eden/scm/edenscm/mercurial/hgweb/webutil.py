@@ -653,7 +653,7 @@ class sessionvars(object):
 
     def __iter__(self):
         separator = self.start
-        for key, value in sorted(self.vars.iteritems()):
+        for key, value in sorted(pycompat.iteritems(self.vars)):
             yield {
                 "name": key,
                 "value": pycompat.bytestr(value),

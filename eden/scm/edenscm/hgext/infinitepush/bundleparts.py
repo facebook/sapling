@@ -14,6 +14,7 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     mutation,
+    pycompat,
     revsetlang,
     util,
 )
@@ -117,7 +118,7 @@ def getscratchbranchparts(
     parts.append(
         bundle2.bundlepart(
             constants.scratchbranchparttype.upper(),
-            advisoryparams=params.iteritems(),
+            advisoryparams=pycompat.iteritems(params),
             data=cg,
         )
     )
@@ -244,7 +245,7 @@ def _bundlesetup():
         decodedbookmarks = bookmarks.decodebookmarks(part)
         toinsert = {}
         todelete = []
-        for bookmark, node in decodedbookmarks.iteritems():
+        for bookmark, node in pycompat.iteritems(decodedbookmarks):
             if node:
                 toinsert[bookmark] = node
             else:

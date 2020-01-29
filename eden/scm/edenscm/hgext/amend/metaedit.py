@@ -23,6 +23,7 @@ from edenscm.mercurial import (
     mutation,
     node as nodemod,
     phases,
+    pycompat,
     registrar,
     scmutil,
 )
@@ -248,7 +249,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
                     mapping = dict(
                         map(
                             lambda oldnew: (oldnew[0], [oldnew[1]]),
-                            replacemap.iteritems(),
+                            pycompat.iteritems(replacemap),
                         )
                     )
                     templ.setprop("nodereplacements", mapping)

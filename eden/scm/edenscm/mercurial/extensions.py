@@ -121,7 +121,7 @@ def find(name):
     try:
         mod = _extensions[name]
     except KeyError:
-        for k, v in _extensions.iteritems():
+        for k, v in pycompat.iteritems(_extensions):
             if k.endswith("." + name) or k.endswith("/" + name):
                 mod = v
                 break
@@ -258,7 +258,7 @@ _cmdfuncattrs = ("norepo", "optionalrepo", "inferrepo")
 
 def _validatecmdtable(ui, cmdtable):
     """Check if extension commands have required attributes"""
-    for c, e in cmdtable.iteritems():
+    for c, e in pycompat.iteritems(cmdtable):
         f = e[0]
         if getattr(f, "_deprecatedregistrar", False):
             ui.deprecwarn(
@@ -601,7 +601,7 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
     '''
     assert callable(wrapper)
     aliases, entry = cmdutil.findcmd(command, table)
-    for alias, e in table.iteritems():
+    for alias, e in pycompat.iteritems(table):
         if e is entry:
             key = alias
             break
@@ -772,7 +772,7 @@ def _disabledpaths(strip_init=False):
         if name in exts or name in _order or name == "__init__":
             continue
         exts[name] = path
-    for name, path in _disabledextensions.iteritems():
+    for name, path in pycompat.iteritems(_disabledextensions):
         # If no path was provided for a disabled extension (e.g. "color=!"),
         # don't replace the path we already found by the scan above.
         if path:
@@ -836,7 +836,7 @@ def disabled():
 
         return dict(
             (name, gettext(desc))
-            for name, desc in __index__.docs.iteritems()
+            for name, desc in pycompat.iteritems(__index__.docs)
             if name not in _order and name not in _blacklist
         )
     except (ImportError, AttributeError):
@@ -847,7 +847,7 @@ def disabled():
         return {}
 
     exts = {}
-    for name, path in paths.iteritems():
+    for name, path in pycompat.iteritems(paths):
         doc = _disabledhelp(path)
         if doc and name not in _blacklist:
             exts[name] = doc.splitlines()[0]
@@ -910,7 +910,7 @@ def disabledcmd(ui, cmd):
         ext = findcmd(cmd, cmd, path)
     if not ext:
         # otherwise, interrogate each extension until there's a match
-        for name, path in paths.iteritems():
+        for name, path in pycompat.iteritems(paths):
             ext = findcmd(cmd, name, path)
             if ext:
                 break
@@ -934,7 +934,7 @@ def enabled(shortname=True):
 
 def notloaded():
     """return short names of extensions that failed to load"""
-    return [name for name, mod in _extensions.iteritems() if mod is None]
+    return [name for name, mod in pycompat.iteritems(_extensions) if mod is None]
 
 
 def moduleversion(module):

@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import
 
-from . import error, registrar, templatekw, util
+from . import error, pycompat, registrar, templatekw, util
 from .i18n import _
 
 
@@ -92,7 +92,7 @@ class namespaces(object):
         return self._names.__iter__()
 
     def items(self):
-        return self._names.iteritems()
+        return pycompat.iteritems(self._names)
 
     iteritems = items
 
@@ -120,7 +120,7 @@ class namespaces(object):
 
         Raises a KeyError if there is no such node.
         """
-        for ns, v in self._names.iteritems():
+        for ns, v in pycompat.iteritems(self._names):
             # Fast path: do not consider branches unless it's "default".
             if ns == "branches" and name != "default":
                 continue
@@ -245,7 +245,7 @@ class namespace(object):
 
 
 def loadpredicate(ui, extname, registrarobj):
-    for name, ns in registrarobj._table.iteritems():
+    for name, ns in pycompat.iteritems(registrarobj._table):
         if name in namespacetable:
             raise error.ProgrammingError("namespace '%s' is already registered", name)
         namespacetable[name] = ns

@@ -3,7 +3,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import cmdutil, crecord as crecordmod, patch as patchmod, util
+from edenscm.mercurial import (
+    cmdutil,
+    crecord as crecordmod,
+    patch as patchmod,
+    pycompat,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 
@@ -113,6 +119,9 @@ def recordfilter(ui, headers, operation=None):
         applied[h.filename()] = [h] + h.hunks
 
     return (
-        sum([i for i in applied.itervalues() if i[0].special() or len(i) > 1], []),
+        sum(
+            [i for i in pycompat.itervalues(applied) if i[0].special() or len(i) > 1],
+            [],
+        ),
         {},
     )

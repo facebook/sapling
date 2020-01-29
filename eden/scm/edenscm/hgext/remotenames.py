@@ -45,6 +45,7 @@ from edenscm.mercurial import (
     mutation,
     namespaces,
     obsutil,
+    pycompat,
     registrar,
     repair,
     repoview,
@@ -255,7 +256,7 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
         _("`%s` not found: assuming it is a remote bookmark " "and trying to pull it\n")
         % mayberemotebookmark
     )
-    sourcerenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+    sourcerenames = dict((v, k) for k, v in pycompat.iteritems(_getrenames(ui)))
     remote, bookmarkname = splitremotename(mayberemotebookmark)
     paths = dict((path, url) for path, url in ui.configitems("paths"))
     if remote in sourcerenames:
@@ -314,12 +315,12 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
                     newbookmarks[rname] = node
 
             nodemap = repo.unfiltered().changelog.nodemap
-            for rname, node in bookmarks.iteritems():
+            for rname, node in pycompat.iteritems(bookmarks):
                 # if the node is known locally, update the old value or add new
                 if bin(node) in nodemap:
                     newbookmarks[rname] = node
 
-            for rname, node in newbookmarks.iteritems():
+            for rname, node in pycompat.iteritems(newbookmarks):
                 totalaccessednames += 1
                 _writesingleremotename(f, remotepath, "bookmarks", rname, node)
 
@@ -710,7 +711,7 @@ class lazyremotenamedict(Mapping):
             self._load()
         if resolvenodes is None:
             resolvenodes = self._repo.ui.configbool("remotenames", "resolvenodes")
-        for k, vtup in self.potentialentries.iteritems():
+        for k, vtup in pycompat.iteritems(self.potentialentries):
             if resolvenodes:
                 self._fetchandcache(k)
             yield (k, [bin(vtup[0])])
@@ -751,7 +752,7 @@ class remotenames(dict):
         # Only supported for bookmarks
         bmchanges = changes.get("bookmarks", {})
         remotepathbooks = {}
-        for remotename, node in bmchanges.iteritems():
+        for remotename, node in pycompat.iteritems(bmchanges):
             path, name = splitremotename(remotename)
             remotepathbooks.setdefault(path, {})[name] = node
 
@@ -764,7 +765,7 @@ class remotenames(dict):
         if not self._node2marks:
             mark2nodes = self.mark2nodes()
             self._node2marks = {}
-            for name, node in mark2nodes.iteritems():
+            for name, node in pycompat.iteritems(mark2nodes):
                 self._node2marks.setdefault(node[0], []).append(name)
         return self._node2marks
 
@@ -773,7 +774,7 @@ class remotenames(dict):
             mark2nodes = self.mark2nodes()
             self._hoist2nodes = {}
             hoist += "/"
-            for name, node in mark2nodes.iteritems():
+            for name, node in pycompat.iteritems(mark2nodes):
                 if name.startswith(hoist):
                     name = name[len(hoist) :]
                     self._hoist2nodes[name] = node
@@ -784,7 +785,7 @@ class remotenames(dict):
             mark2nodes = self.mark2nodes()
             self._node2hoists = {}
             hoist += "/"
-            for name, node in mark2nodes.iteritems():
+            for name, node in pycompat.iteritems(mark2nodes):
                 if name.startswith(hoist):
                     name = name[len(hoist) :]
                     self._node2hoists.setdefault(node[0], []).append(name)
@@ -797,7 +798,7 @@ class remotenames(dict):
         if not self._node2branch:
             branch2nodes = self.branch2nodes()
             self._node2branch = {}
-            for name, nodes in branch2nodes.iteritems():
+            for name, nodes in pycompat.iteritems(branch2nodes):
                 for node in nodes:
                     self._node2branch[node] = [name]
         return self._node2branch
@@ -1255,7 +1256,7 @@ def _pushrevs(repo, ui, rev):
 
 
 def expullcmd(orig, ui, repo, source="default", **opts):
-    revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+    revrenames = dict((v, k) for k, v in pycompat.iteritems(_getrenames(ui)))
     source = revrenames.get(source, source)
 
     if opts.get("update") and opts.get("rebase"):
@@ -1328,7 +1329,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     paths = dict((path, url) for path, url in ui.configitems("paths"))
     # XXX T58629567: The following line triggers an infinite loop in pyre, let's disable it for now.
     if not typing.TYPE_CHECKING:
-        revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+        revrenames = dict((v, k) for k, v in pycompat.iteritems(_getrenames(ui)))
 
     origdest = dest
     defaultpush = ui.paths.get("default-push") or ui.paths.get("default")
@@ -1477,7 +1478,7 @@ def _readtracking(repo):
 def _writetracking(repo, tracking):
     with repo.wlock():
         data = ""
-        for book, track in tracking.iteritems():
+        for book, track in pycompat.iteritems(tracking):
             data += "%s %s\n" % (book, track)
         vfs = repo.sharedvfs
         vfs.write("bookmarks.tracking", data)
@@ -1588,7 +1589,7 @@ def displaylocalbookmarks(ui, repo, opts, fm):
     distances = readdistancecache(repo)
     nq = not ui.quiet
 
-    for bmark, n in sorted(marks.iteritems()):
+    for bmark, n in sorted(pycompat.iteritems(marks)):
         current = repo._activebookmark
         if bmark == current:
             prefix, label = "*", "bookmarks.current bookmarks.active"
@@ -1679,7 +1680,7 @@ def _getremotepeer(ui, repo, opts):
 
 def _showfetchedbookmarks(ui, remote, bookmarks, opts, fm):
     remotepath = activepath(ui, remote)
-    for bmark, n in sorted(bookmarks.iteritems()):
+    for bmark, n in sorted(pycompat.iteritems(bookmarks)):
         fm.startitem()
         if not ui.quiet:
             fm.plain("   ")
@@ -1783,7 +1784,9 @@ def _getrenames(ui):
 
 def expandscheme(ui, uri):
     """For a given uri, expand the scheme for it"""
-    urischemes = [s for s in schemes.schemes.iterkeys() if uri.startswith("%s://" % s)]
+    urischemes = [
+        s for s in pycompat.iterkeys(schemes.schemes) if uri.startswith("%s://" % s)
+    ]
     for s in urischemes:
         # TODO: refactor schemes so we don't
         # duplicate this logic
@@ -1956,9 +1959,9 @@ def saveremotenames(repo, remotebookmarks, override=True):
 
         journal = []
         nm = repo.unfiltered().changelog.nodemap
-        for remote, rmbookmarks in remotebookmarks.iteritems():
+        for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
             rmbookmarks = {} if rmbookmarks is None else rmbookmarks
-            for name, node in rmbookmarks.iteritems():
+            for name, node in pycompat.iteritems(rmbookmarks):
                 oldnode = oldbooks.get((remote, name), hex(nullid))
                 newnode = node
                 if not bin(newnode) in nm:
@@ -2016,7 +2019,7 @@ def writedistancecache(repo, distance):
     try:
         cachevfs = shareawarecachevfs(repo)
         f = cachevfs("distance", "w", atomictemp=True)
-        for k, v in distance.iteritems():
+        for k, v in pycompat.iteritems(distance):
             f.write("%s %d %d\n" % (k, v[0], v[1]))
     except (IOError, OSError):
         pass
@@ -2093,7 +2096,7 @@ def precachedistance(repo):
         distances = {}
         if repo.ui.configbool("remotenames", "precachedistance"):
             distances = {}
-            for bmark, tracked in _readtracking(repo).iteritems():
+            for bmark, tracked in pycompat.iteritems(_readtracking(repo)):
                 distance = calculatenamedistance(repo, bmark, tracked)
                 if distance != (None, None):
                     distances[bmark] = distance

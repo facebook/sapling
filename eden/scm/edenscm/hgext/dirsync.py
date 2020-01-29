@@ -51,6 +51,7 @@ from edenscm.mercurial import (
     extensions,
     localrepo,
     match as matchmod,
+    pycompat,
     scmutil,
     util,
 )
@@ -114,7 +115,7 @@ def getmirrors(maps, filename):
             if filename.startswith(subdir):
                 return []
 
-    for key, mirrordirs in maps.iteritems():
+    for key, mirrordirs in pycompat.iteritems(maps):
         for subdir in mirrordirs:
             if filename.startswith(subdir):
                 return mirrordirs

@@ -5,7 +5,7 @@
 
 """Eden implementation for the dirstate filesystem class."""
 
-from . import filesystem, perftrace, util
+from . import filesystem, perftrace, pycompat, util
 from .EdenThriftClient import ScmFileStatus
 
 
@@ -25,7 +25,7 @@ class eden_filesystem(filesystem.physicalfilesystem):
         ADDED = ScmFileStatus.ADDED
         IGNORED = ScmFileStatus.IGNORED
 
-        for path, code in edenstatus.iteritems():
+        for path, code in pycompat.iteritems(edenstatus):
             if not match(path):
                 continue
 

@@ -16,7 +16,7 @@ import collections
 import heapq
 import os
 
-from . import match as matchmod, node, pathutil, scmutil, util
+from . import match as matchmod, node, pathutil, pycompat, scmutil, util
 from .i18n import _
 
 
@@ -109,7 +109,7 @@ def _findlimit(repo, a, b):
 def _chain(src, dst, a, b):
     """chain two sets of copies a->b"""
     t = a.copy()
-    for k, v in b.iteritems():
+    for k, v in pycompat.iteritems(b):
         if v in t:
             # found a chain
             if t[v] != k:
@@ -220,7 +220,7 @@ def _backwardrenames(a, b):
     # arbitrarily pick one of the renames.
     f = _forwardcopies(b, a)
     r = {}
-    for k, v in sorted(f.iteritems()):
+    for k, v in sorted(pycompat.iteritems(f)):
         # remove copies
         if v in a:
             continue
@@ -607,7 +607,7 @@ def _fullcopytracing(repo, c1, c2, base):
 
     # examine each file copy for a potential directory move, which is
     # when all the files in a directory are moved to a new directory
-    for dst, src in fullcopy.iteritems():
+    for dst, src in pycompat.iteritems(fullcopy):
         dsrc, ddst = pathutil.dirname(src), pathutil.dirname(dst)
         if dsrc in invalid:
             # already seen to be uninteresting
@@ -705,7 +705,7 @@ def _heuristicscopytracing(repo, c1, c2, base):
         ctx = ctx.p1()
 
     cp = _forwardcopies(base, c2)
-    for dst, src in cp.iteritems():
+    for dst, src in pycompat.iteritems(cp):
         if src in m1:
             copies[dst] = src
 
@@ -909,7 +909,7 @@ def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
         # of the function is much faster (and is required for carrying copy
         # metadata across the rebase anyway).
         exclude = pathcopies(repo[fromrev], repo[skiprev])
-    for dst, src in pathcopies(repo[fromrev], repo[rev]).iteritems():
+    for dst, src in pycompat.iteritems(pathcopies(repo[fromrev], repo[rev])):
         # copies.pathcopies returns backward renames, so dst might not
         # actually be in the dirstate
         if dst in exclude:

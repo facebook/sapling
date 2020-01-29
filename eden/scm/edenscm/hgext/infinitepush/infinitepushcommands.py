@@ -22,6 +22,7 @@ from edenscm.mercurial import (
     error,
     hg,
     patch,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -99,7 +100,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
         nodesmetadata[node] = output
 
     with index:
-        for node, metadata in nodesmetadata.iteritems():
+        for node, metadata in pycompat.iteritems(nodesmetadata):
             dumped = json.dumps(metadata, sort_keys=True)
             index.saveoptionaljsonmetadata(node, dumped)
 

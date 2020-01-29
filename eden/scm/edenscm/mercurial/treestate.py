@@ -13,7 +13,7 @@ import uuid
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import treestate
 
-from . import error, node, txnutil, util
+from . import error, node, pycompat, txnutil, util
 from .i18n import _
 
 
@@ -47,7 +47,7 @@ class _overlaydict(dict):
 
 def _packmetadata(dictobj):
     result = []
-    for k, v in dictobj.iteritems():
+    for k, v in pycompat.iteritems(dictobj):
         if not v:
             continue
         entry = "%s=%s" % (k, v)
@@ -115,7 +115,7 @@ class treestatemap(object):
             self._tree.importmap(importdirstate._map)
             # Import copymap
             copymap = importdirstate.copies()
-            for dest, src in copymap.iteritems():
+            for dest, src in pycompat.iteritems(copymap):
                 self.copy(src, dest)
         else:
             # The original dirstate lazily reads content for performance.
@@ -149,6 +149,8 @@ class treestatemap(object):
 
     def iteritems(self):
         return ((k, self[k]) for k in self.keys())
+
+    items = iteritems
 
     def __iter__(self):
         return iter(self.keys())

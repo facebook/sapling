@@ -10,6 +10,7 @@ from edenscm.mercurial import (
     context,
     manifest,
     match as matchmod,
+    pycompat,
     util,
 )
 from edenscm.mercurial.node import bin, hex, nullid
@@ -31,7 +32,9 @@ class overlaymanifest(object):
 
     def withflags(self):
         self.load()
-        return set([path for path, flag in self._flags.iteritems() if flag != ""])
+        return set(
+            [path for path, flag in pycompat.iteritems(self._flags) if flag != ""]
+        )
 
     def copy(self):
         return overlaymanifest(self.repo, self.tree.id)
@@ -59,7 +62,7 @@ class overlaymanifest(object):
                 return ""
 
         def addtree(tree, dirname):
-            for entry in tree.iteritems():
+            for entry in pycompat.iteritems(tree):
                 if entry.mode & 0o40000:
                     # expand directory
                     subtree = self.repo.handler.git.get_object(entry.sha)
@@ -84,7 +87,9 @@ class overlaymanifest(object):
 
     def iteritems(self):
         self.load()
-        return self._map.iteritems()
+        return pycompat.iteritems(self._map)
+
+    items = iteritems
 
     def __iter__(self):
         self.load()
@@ -122,7 +127,7 @@ class overlaymanifest(object):
 
         if matcher is None:
             matcher = matchmod.always("", "")
-        for fn, n1 in self.iteritems():
+        for fn, n1 in pycompat.iteritems(self):
             if not matcher(fn):
                 continue
             fl1 = self._flags.get(fn, "")
@@ -133,7 +138,7 @@ class overlaymanifest(object):
             if n1 != n2 or fl1 != fl2:
                 diff[fn] = ((n1, fl1), (n2, fl2))
 
-        for fn, n2 in m2.iteritems():
+        for fn, n2 in pycompat.iteritems(m2):
             if fn not in self:
                 if not matcher(fn):
                     continue

@@ -175,7 +175,7 @@ def streamencodemap(d):
     """
     yield encodelength(MAJOR_TYPE_MAP, len(d))
 
-    for key, value in sorted(d.iteritems(), key=lambda x: _mixedtypesortkey(x[0])):
+    for key, value in sorted(d.items(), key=lambda x: _mixedtypesortkey(x[0])):
         for chunk in streamencode(key):
             yield chunk
         for chunk in streamencode(value):

@@ -23,7 +23,7 @@ import sys
 import time
 import traceback
 
-from edenscm.mercurial import registrar, util
+from edenscm.mercurial import pycompat, registrar, util
 
 
 pathformat = "/tmp/trace-%(pid)s-%(time)s.log"
@@ -40,7 +40,7 @@ configitem("sigtrace", "memsignal", default="USR2")
 
 def printstacks(sig, currentframe):
     content = ""
-    for tid, frame in sys._current_frames().iteritems():
+    for tid, frame in pycompat.iteritems(sys._current_frames()):
         content += "Thread %s:\n%s\n" % (tid, util.smarttraceback(frame))
 
     path = pathformat % {"time": time.time(), "pid": os.getpid()}

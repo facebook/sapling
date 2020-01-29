@@ -1156,7 +1156,7 @@ class treemanifestctx(object):
             raise NotImplemented("native trees don't support shallow " "readdelta yet")
         else:
             md = _buildtree(self._manifestlog)
-            for f, ((n1, fl1), (n2, fl2)) in parentmf.diff(mf).iteritems():
+            for f, ((n1, fl1), (n2, fl2)) in pycompat.iteritems(parentmf.diff(mf)):
                 if n2:
                     md[f] = n2
                     if fl2:
@@ -1522,7 +1522,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
 def _difftoaddremove(diff):
     added = []
     removed = []
-    for filename, (old, new) in diff.iteritems():
+    for filename, (old, new) in pycompat.iteritems(diff):
         if new is not None and new[0] is not None:
             added.append((filename, new[0], new[1]))
         else:
@@ -1556,7 +1556,7 @@ def _getflatdiff(mfl, mfctx):
         diff = mfl[p1node].read().diff(mfctx.read())
         deletes = []
         adds = []
-        for filename, ((anode, aflag), (bnode, bflag)) in diff.iteritems():
+        for filename, ((anode, aflag), (bnode, bflag)) in pycompat.iteritems(diff):
             if bnode is None:
                 deletes.append(filename)
             else:

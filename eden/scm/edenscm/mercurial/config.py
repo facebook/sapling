@@ -85,7 +85,7 @@ class config(object):
         return sorted(self._data.keys())
 
     def items(self, section):
-        return list(self._data.get(section, {}).iteritems())
+        return list(self._data.get(section, {}).items())
 
     def set(self, section, item, value, source=""):
         if sys.version_info[0] >= 3:

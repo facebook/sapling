@@ -3,7 +3,7 @@ functions."""
 import re
 
 from dulwich import errors
-from edenscm.mercurial import error, lock as lockmod, util as hgutil
+from edenscm.mercurial import error, lock as lockmod, pycompat, util as hgutil
 from edenscm.mercurial.i18n import _
 
 
@@ -19,7 +19,7 @@ gitschemes = ("git", "git+ssh", "git+http", "git+https")
 
 def serialize_hgsub(data):
     """Produces a string from OrderedDict hgsub content"""
-    return "".join(["%s = %s\n" % (n, v) for n, v in data.iteritems()])
+    return "".join(["%s = %s\n" % (n, v) for n, v in pycompat.iteritems(data)])
 
 
 def transform_notgit(f):

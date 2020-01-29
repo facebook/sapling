@@ -765,7 +765,7 @@ class repo_source(common.converter_source):
 
         self.pathprojectindex = self.repo._buildprojectmap()
         self.projectpathindex = {
-            project: path for path, project in self.pathprojectindex.iteritems()
+            project: path for path, project in pycompat.iteritems(self.pathprojectindex)
         }
         self.commitprojectindex = self._buildcommitprojectmap()
         self.objecthashprojectindex = {}

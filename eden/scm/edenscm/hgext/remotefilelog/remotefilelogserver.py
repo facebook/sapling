@@ -496,7 +496,7 @@ def getpack(repo, proto, args, version=1):
         starttime = time.time()
 
         # Sort the files by name, so we provide deterministic results
-        for filename, nodes in sorted(files.iteritems()):
+        for filename, nodes in sorted(pycompat.iteritems(files)):
             args.append([filename, [hex(n) for n in nodes]])
             fl = repo.file(filename)
 

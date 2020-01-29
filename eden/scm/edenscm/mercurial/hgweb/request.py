@@ -47,7 +47,7 @@ def normalize(form):
                 form[name] = value
             del form[k]
     # And strip the values
-    for k, v in form.iteritems():
+    for k, v in pycompat.iteritems(form):
         form[k] = [i.strip() for i in v]
     return form
 

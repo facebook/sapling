@@ -160,7 +160,7 @@ class annotateopts(object):
     defaults = {"diffopts": None, "followrename": True, "followmerge": True}
 
     def __init__(self, **opts):
-        for k, v in self.defaults.iteritems():
+        for k, v in pycompat.iteritems(self.defaults):
             setattr(self, k, opts.get(k, v))
 
     @util.propertycache
@@ -554,7 +554,7 @@ class _annotatecontext(object):
             # find an unresolved line and its linelog rev to annotate
             hsh = None
             try:
-                for (rev, _linenum), idxs in key2idxs.iteritems():
+                for (rev, _linenum), idxs in pycompat.iteritems(key2idxs):
                     if revmap.rev2flag(rev) & revmapmod.sidebranchflag:
                         continue
                     hsh = annotateresult[idxs[0]][0]
@@ -565,7 +565,7 @@ class _annotatecontext(object):
                 # the remaining key2idxs are not in main branch, resolving them
                 # using the hard way...
                 revlines = {}
-                for (rev, linenum), idxs in key2idxs.iteritems():
+                for (rev, linenum), idxs in pycompat.iteritems(key2idxs):
                     if rev not in revlines:
                         hsh = annotateresult[idxs[0]][0]
                         if self.ui.debugflag:

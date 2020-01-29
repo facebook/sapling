@@ -14,6 +14,7 @@ from edenscm.mercurial import (
     mutation,
     node as nodemod,
     pushkey,
+    pycompat,
     util,
     wireproto,
 )
@@ -44,7 +45,7 @@ def extsetup(ui):
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
     patterns = wireproto.decodelist(patterns)
-    d = repo.listkeys(encoding.tolocal(namespace), patterns).iteritems()
+    d = pycompat.iteritems(repo.listkeys(encoding.tolocal(namespace), patterns))
     return pushkey.encodekeys(d)
 
 

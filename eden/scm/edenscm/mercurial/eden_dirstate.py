@@ -17,6 +17,7 @@ from . import (
     match as matchmod,
     perftrace,
     policy,
+    pycompat,
     scmutil,
     util,
 )
@@ -69,9 +70,9 @@ class eden_dirstate(dirstate.dirstate):
         # allowed. Or if it is, it should be through a separate, explicit
         # codepath.
         #
-        # We do provide edeniteritems() for users to iterate through only the
+        # We do provide pycompat.iteritems(ede) for users to iterate through only the
         # files explicitly tracked in the eden dirstate.
-        raise NotImplementedError("eden_dirstate.iteritems()")
+        raise NotImplementedError("pycompat.iteritems(eden_dirstate)")
 
     def dirs(self):  # override
         raise NotImplementedError("eden_dirstate.dirs()")
@@ -83,7 +84,7 @@ class eden_dirstate(dirstate.dirstate):
         This includes non-normal files (e.g., files marked for addition or
         removal), as well as normal files that have merge state information.
         """
-        return self._map._map.iteritems()
+        return pycompat.iteritems(self._map._map)
 
     def _p1_ctx(self):
         """Return the context object for the first parent commit."""

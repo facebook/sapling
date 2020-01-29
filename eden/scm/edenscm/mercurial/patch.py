@@ -1257,7 +1257,10 @@ the hunk is left unchanged.
             else:
                 fixoffset += chunk.removed - chunk.added
     return (
-        sum([h for h in applied.itervalues() if h[0].special() or len(h) > 1], []),
+        sum(
+            [h for h in pycompat.itervalues(applied) if h[0].special() or len(h) > 1],
+            [],
+        ),
         {},
     )
 
@@ -2600,7 +2603,7 @@ def diffhunks(
         copy = dict(
             (
                 (dst, src)
-                for (dst, src) in copy.iteritems()
+                for (dst, src) in pycompat.iteritems(copy)
                 if dst.startswith(relroot) and src.startswith(relroot)
             )
         )

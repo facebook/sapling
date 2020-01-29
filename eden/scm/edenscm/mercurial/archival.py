@@ -20,7 +20,15 @@ import time
 import zipfile
 import zlib
 
-from . import error, formatter, match as matchmod, progress, util, vfs as vfsmod
+from . import (
+    error,
+    formatter,
+    match as matchmod,
+    progress,
+    pycompat,
+    util,
+    vfs as vfsmod,
+)
 from .i18n import _
 
 
@@ -68,7 +76,7 @@ exts = {
 
 
 def guesskind(dest):
-    for kind, extensions in exts.iteritems():
+    for kind, extensions in pycompat.iteritems(exts):
         if any(dest.endswith(ext) for ext in extensions):
             return kind
     return None

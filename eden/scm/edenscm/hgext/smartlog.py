@@ -89,7 +89,7 @@ def _drawendinglines(orig, lines, extra, edgemap, seen):
         # undo the wrapfunction
         extensions.unwrapfunction(graphmod, "_drawendinglines", _drawendinglines)
         # restore the space to '|'
-        for k, v in edgemap.iteritems():
+        for k, v in pycompat.iteritems(edgemap):
             if v == " ":
                 edgemap[k] = "|"
     orig(lines, extra, edgemap, seen)
@@ -125,7 +125,7 @@ def uisetup(ui):
             # these are very hacky but it seems to work well and it seems there
             # is no other easy choice for now.
             edgemap = state["edges"]
-            for k in edgemap.iterkeys():
+            for k in pycompat.iterkeys(edgemap):
                 edgemap[k] = " "
             # also we need to hack _drawendinglines to draw the missing '|'s:
             #    (before)      (after)

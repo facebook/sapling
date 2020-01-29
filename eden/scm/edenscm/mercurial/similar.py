@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import mdiff, progress
+from . import mdiff, progress, pycompat
 from .i18n import _
 
 
@@ -97,7 +97,7 @@ def _findsimilarmatches(repo, added, removed, threshold):
                 if myscore > bestscore:
                     copies[a] = (r, myscore)
 
-    for dest, v in copies.iteritems():
+    for dest, v in pycompat.iteritems(copies):
         source, bscore = v
         yield source, dest, bscore
 

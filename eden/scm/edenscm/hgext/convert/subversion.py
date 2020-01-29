@@ -147,7 +147,7 @@ def get_log_child(
     def receiver(orig_paths, revnum, author, date, message, pool):
         paths = {}
         if orig_paths is not None:
-            for k, v in orig_paths.iteritems():
+            for k, v in pycompat.iteritems(orig_paths):
                 paths[k] = changedpath(v)
         pickle.dump((paths, revnum, author, date, message), fp, protocol)
 
@@ -239,7 +239,7 @@ class directlogstream(list):
         def receiver(orig_paths, revnum, author, date, message, pool):
             paths = {}
             if orig_paths is not None:
-                for k, v in orig_paths.iteritems():
+                for k, v in pycompat.iteritems(orig_paths):
                     paths[k] = changedpath(v)
             self.append((paths, revnum, author, date, message))
 
@@ -455,7 +455,7 @@ class svn_source(converter_source):
 
     def setrevmap(self, revmap):
         lastrevs = {}
-        for revid in revmap.iterkeys():
+        for revid in pycompat.iterkeys(revmap):
             uuid, module, revnum = revsplit(revid)
             lastrevnum = lastrevs.setdefault(module, revnum)
             if revnum > lastrevnum:
@@ -557,7 +557,9 @@ class svn_source(converter_source):
                 self.baseurl + quote(module), optrev(revnum), True, self.ctx
             )
             files = [
-                n for n, e in entries.iteritems() if e.kind == svn.core.svn_node_file
+                n
+                for n, e in pycompat.iteritems(entries)
+                if e.kind == svn.core.svn_node_file
             ]
             self.removed = set()
 
@@ -850,7 +852,7 @@ class svn_source(converter_source):
             parents = []
             # check whether this revision is the start of a branch or part
             # of a branch renaming
-            orig_paths = sorted(orig_paths.iteritems())
+            orig_paths = sorted(pycompat.iteritems(orig_paths))
             root_paths = [(p, e) for p, e in orig_paths if self.module.startswith(p)]
             if root_paths:
                 path, ent = root_paths[-1]
@@ -1012,7 +1014,7 @@ class svn_source(converter_source):
             path += "/"
         return (
             (path + p)
-            for p, e in entries.iteritems()
+            for p, e in pycompat.iteritems(entries)
             if e.kind == svn.core.svn_node_file
         )
 

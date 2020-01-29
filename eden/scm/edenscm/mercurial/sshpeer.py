@@ -299,10 +299,10 @@ class sshpeer(wireproto.wirepeer):
             else:
                 wireargs[k] = args[k]
                 del args[k]
-        for k, v in sorted(wireargs.iteritems()):
+        for k, v in sorted(pycompat.iteritems(wireargs)):
             self._pipeo.write("%s %d\n" % (k, len(v)))
             if isinstance(v, dict):
-                for dk, dv in v.iteritems():
+                for dk, dv in pycompat.iteritems(v):
                     self._pipeo.write("%s %d\n" % (dk, len(dv)))
                     self._pipeo.write(dv)
             else:

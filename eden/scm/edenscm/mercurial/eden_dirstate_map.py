@@ -42,7 +42,7 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # Remove all "clean" entries before writing. (It's possible we should
         # never allow these to be inserted into self._map in the first place.)
         to_remove = []
-        for path, v in self._map.iteritems():
+        for path, v in pycompat.iteritems(self._map):
             if v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE:
                 to_remove.append(path)
         for path in to_remove:
@@ -85,7 +85,9 @@ class eden_dirstate_map(dirstate.dirstatemap):
         self.copymap = copymap
 
     def iteritems(self):
-        raise RuntimeError("Should not invoke iteritems() on eden_dirstate_map!")
+        raise RuntimeError(
+            "Should not pycompat.iteritems(invoke) on eden_dirstate_map!"
+        )
 
     def __len__(self):
         raise RuntimeError("Should not invoke __len__ on eden_dirstate_map!")
@@ -140,7 +142,7 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # type() -> Tuple[Set[str], Set[str]]
         nonnorm = set()
         otherparent = set()
-        for path, entry in self._map.iteritems():
+        for path, entry in pycompat.iteritems(self._map):
             if entry[0] != "n":
                 nonnorm.add(path)
             elif entry[2] == MERGE_STATE_OTHER_PARENT:

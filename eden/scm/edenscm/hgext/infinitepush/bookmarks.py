@@ -6,7 +6,7 @@
 import json
 import struct
 
-from edenscm.mercurial import error, extensions, node as nodemod
+from edenscm.mercurial import error, extensions, node as nodemod, pycompat
 from edenscm.mercurial.i18n import _
 
 
@@ -53,7 +53,7 @@ def saveremotebookmarks(repo, newbookmarks, remote):
                 del newbookmarks[rname]
             bookmarks[rname] = hexnode
 
-    for bookmark, hexnode in newbookmarks.iteritems():
+    for bookmark, hexnode in pycompat.iteritems(newbookmarks):
         bookmarks[bookmark] = hexnode
     remotenamesext.saveremotenames(repo, {remotepath: bookmarks})
 
@@ -63,7 +63,7 @@ def savelocalbookmarks(repo, bookmarks):
         return
     with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
         changes = []
-        for scratchbook, node in bookmarks.iteritems():
+        for scratchbook, node in pycompat.iteritems(bookmarks):
             changectx = repo[node]
             changes.append((scratchbook, changectx.node()))
         repo._bookmarks.applychanges(repo, tr, changes)
@@ -109,7 +109,7 @@ def deleteremotebookmarks(ui, repo, path, names):
 
 def encodebookmarks(bookmarks):
     encoded = {}
-    for bookmark, node in bookmarks.iteritems():
+    for bookmark, node in pycompat.iteritems(bookmarks):
         encoded[bookmark] = node
     dumped = json.dumps(encoded)
     result = struct.pack(">i", len(dumped)) + dumped
@@ -123,7 +123,7 @@ def decodebookmarks(stream):
     # python json module always returns unicode strings. We need to convert
     # it back to bytes string
     result = {}
-    for bookmark, node in unicodedict.iteritems():
+    for bookmark, node in pycompat.iteritems(unicodedict):
         bookmark = bookmark.encode("ascii")
         node = node.encode("ascii")
         result[bookmark] = node

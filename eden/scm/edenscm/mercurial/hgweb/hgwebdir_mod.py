@@ -316,7 +316,7 @@ class hgwebdir(object):
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive", untrusted=True)
             archives = []
-            for typ, spec in hgweb_mod.archivespecs.iteritems():
+            for typ, spec in pycompat.iteritems(hgweb_mod.archivespecs):
                 if typ in allowed or ui.configbool(
                     "web", "allow" + typ, untrusted=True
                 ):

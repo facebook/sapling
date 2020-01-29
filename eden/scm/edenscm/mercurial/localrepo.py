@@ -1108,7 +1108,7 @@ class localrepository(object):
     def nodebookmarks(self, node):
         """return the list of bookmarks pointing to the specified node"""
         marks = []
-        for bookmark, n in self._bookmarks.iteritems():
+        for bookmark, n in pycompat.iteritems(self._bookmarks):
             if n == node:
                 marks.append(bookmark)
         return sorted(marks)
@@ -1226,7 +1226,7 @@ class localrepository(object):
                 mf = matchmod.match(self.root, "", [pat])
                 fn = None
                 params = cmd
-                for name, filterfn in self._datafilters.iteritems():
+                for name, filterfn in pycompat.iteritems(self._datafilters):
                     if cmd.startswith(name):
                         fn = filterfn
                         params = cmd[len(name) :].lstrip()

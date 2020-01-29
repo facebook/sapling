@@ -18,6 +18,7 @@ from edenscm.mercurial import (
     lock as lockmod,
     node as nodemod,
     progress,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -521,7 +522,7 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
             )
 
         changes = []
-        for name, hexnode in bookmarks.iteritems():
+        for name, hexnode in pycompat.iteritems(bookmarks):
             if hexnode in repo:
                 changes.append((name, nodemod.bin(hexnode)))
             else:

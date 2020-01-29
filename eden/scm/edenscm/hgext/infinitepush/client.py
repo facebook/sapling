@@ -23,6 +23,7 @@ from edenscm.mercurial import (
     peer,
     phases,
     pushkey,
+    pycompat,
     scmutil,
     ui as uimod,
     visibility,
@@ -316,7 +317,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
 def _showbookmarks(ui, remotebookmarks, **opts):
     # Copy-paste from commands.py
     fm = ui.formatter("bookmarks", opts)
-    for bmark, n in sorted(remotebookmarks.iteritems()):
+    for bmark, n in sorted(pycompat.iteritems(remotebookmarks)):
         fm.startitem()
         if not ui.quiet:
             fm.plain("   ")
@@ -520,7 +521,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                     "commitcloud.meta": ("date:", "summary:", "author:"),
                     "commitcloud.commitcloud": ("#commitcloud",),
                 }
-                for label, keywords in replacements.iteritems():
+                for label, keywords in pycompat.iteritems(replacements):
                     for kw in keywords:
                         remoteerror = remoteerror.replace(kw, ui.label(kw, label))
 

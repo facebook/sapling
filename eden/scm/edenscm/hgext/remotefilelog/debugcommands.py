@@ -13,7 +13,7 @@ import sys
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import revisionstore
 from edenscm.hgext import extutil
-from edenscm.mercurial import error, filelog, progress, revlog, util
+from edenscm.mercurial import error, filelog, progress, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 
@@ -213,7 +213,7 @@ def verifyremotefilelog(ui, path, **opts):
                 continue
             filepath = os.path.join(root, file)
             size, firstnode, mapping = parsefileblob(filepath, decompress)
-            for p1, p2, linknode, copyfrom in mapping.itervalues():
+            for p1, p2, linknode, copyfrom in pycompat.itervalues(mapping):
                 if linknode == nullid:
                     actualpath = os.path.relpath(root, path)
                     key = fileserverclient.getcachekey("reponame", actualpath, file)
