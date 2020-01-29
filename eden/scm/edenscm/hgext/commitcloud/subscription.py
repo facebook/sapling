@@ -11,12 +11,15 @@ import socket
 
 from edenscm.mercurial import vfs as vfsmod
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import encodeutf8
 
 from . import error as ccerror, util as ccutil, workspace
 
 
 def _uniquefilename(reporoot, reponame, workspacename):
-    hash = hashlib.sha256("\0".join([reporoot, reponame, workspacename])).hexdigest()
+    hash = hashlib.sha256(
+        encodeutf8("\0".join([reporoot, reponame, workspacename]))
+    ).hexdigest()
     return hash[:32]
 
 

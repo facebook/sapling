@@ -10,6 +10,7 @@ import json
 import time
 
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import encodeutf8
 
 from . import error as ccerror
 
@@ -28,7 +29,7 @@ class SyncState(object):
         return (
             cls.prefix
             + "".join(x for x in workspacename if x.isalnum())
-            + ".%s" % (hashlib.sha256(workspacename).hexdigest()[0:5])
+            + ".%s" % (hashlib.sha256(encodeutf8(workspacename)).hexdigest()[0:5])
         )
 
     @classmethod

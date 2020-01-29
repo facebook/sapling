@@ -9,6 +9,7 @@ import hashlib
 import os
 
 from edenscm.mercurial import error, node as nodemod, util
+from edenscm.mercurial.pycompat import encodeutf8
 
 from . import dependencies
 
@@ -26,7 +27,7 @@ class BackupState(object):
         self.remotepath = remotepath
         repo.sharedvfs.makedirs("commitcloud")
         self.filename = os.path.join(
-            self.prefix + hashlib.sha256(remotepath).hexdigest()[0:8]
+            self.prefix + hashlib.sha256(encodeutf8(remotepath)).hexdigest()[0:8]
         )
         self.heads = set()
         if repo.sharedvfs.exists(self.filename):
@@ -93,10 +94,10 @@ class BackupState(object):
         return set(unfi.nodes("not public() & ::%ln", heads))
 
     def _write(self, f):
-        f.write("%s\n" % FORMAT_VERSION)
-        f.write("%s\n" % self.remotepath)
+        f.write(encodeutf8("%s\n" % FORMAT_VERSION))
+        f.write(encodeutf8("%s\n" % self.remotepath))
         for h in self.heads:
-            f.write("%s\n" % nodemod.hex(h))
+            f.write(encodeutf8("%s\n" % nodemod.hex(h)))
 
     def update(self, newnodes, tr=None):
         unfi = self.repo.unfiltered()
