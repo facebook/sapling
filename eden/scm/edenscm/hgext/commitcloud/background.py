@@ -97,10 +97,16 @@ def autobackupdisableduntil(repo):
     'hg cloud disable', which stores its state in the autobackup state.
     """
     # developer config: infinitepushbackup.disableduntil
-    return max(
-        repo.ui.configint("infinitepushbackup", "disableduntil", None),
-        util.parseint(loadautobackupstate(repo).get("disableduntil")),
-    )
+    disableduntilconf = repo.ui.configint("infinitepushbackup", "disableduntil", None)
+    disableduntilstate = util.parseint(loadautobackupstate(repo).get("disableduntil"))
+
+    if disableduntilconf is None:
+        return disableduntilstate
+
+    if disableduntilstate is None:
+        return disableduntilconf
+
+    return max(disableduntilconf, disableduntilstate)
 
 
 def autobackupenabled(repo):
