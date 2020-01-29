@@ -220,6 +220,11 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
     const Tree& wdTree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
+  if (context->isCancelled()) {
+    XLOG(DBG7) << "diff() on directory " << currentPath
+               << " cancelled due to client request no longer being active";
+    return makeFuture();
+  }
   // If this directory is already ignored, we don't need to bother loading its
   // .gitignore file.  Everything inside this directory must also be ignored,
   // unless it is explicitly tracked in source control.
@@ -322,6 +327,11 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
     const Tree& wdTree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
+  if (context->isCancelled()) {
+    XLOG(DBG7) << "diff() on directory " << currentPath
+               << " cancelled due to client request no longer being active";
+    return makeFuture();
+  }
   ChildFutures childFutures;
 
   // If this directory is already ignored, we don't need to bother loading its
@@ -368,6 +378,11 @@ FOLLY_NODISCARD Future<Unit> diffRemovedTree(
     const DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& scmTree) {
+  if (context->isCancelled()) {
+    XLOG(DBG7) << "diff() on directory " << currentPath
+               << " cancelled due to client request no longer being active";
+    return makeFuture();
+  }
   ChildFutures childFutures;
   for (const auto& childEntry : scmTree.getTreeEntries()) {
     processRemovedSide(context, childFutures, currentPath, childEntry);
