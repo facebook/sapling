@@ -22,6 +22,7 @@ import errno
 
 from . import error, pycompat, util
 from .i18n import _
+from .pycompat import decodeutf8, encodeutf8
 
 
 version = 2
@@ -188,7 +189,7 @@ class transaction(util.transactional):
         self._backupmap = {}
         self._backupjournal = "%s.backupfiles" % self.journal
         self._backupsfile = opener.open(self._backupjournal, "w")
-        self._backupsfile.write("%d\n" % version)
+        self._backupsfile.write(b"%d\n" % version)
 
         if createmode is not None:
             opener.chmod(self.journal, createmode & 0o666)
@@ -256,7 +257,7 @@ class transaction(util.transactional):
         self.entries.append((file, offset, data))
         self.map[file] = len(self.entries) - 1
         # add enough data to the journal to do the truncate
-        self.file.write("%s\0%d\n" % (file, offset))
+        self.file.write(b"%s\0%d\n" % (encodeutf8(file), offset))
         self.file.flush()
 
     @active
@@ -293,7 +294,7 @@ class transaction(util.transactional):
         """register a new backup entry and write it to disk"""
         self._backupentries.append(entry)
         self._backupmap[entry[1]] = len(self._backupentries) - 1
-        self._backupsfile.write("%s\0%s\0%s\0%d\n" % entry)
+        self._backupsfile.write(encodeutf8("%s\0%s\0%s\0%d\n" % entry))
         self._backupsfile.flush()
 
     @active
@@ -555,7 +556,7 @@ class transaction(util.transactional):
         if self.undoname is None:
             return
         undobackupfile = self.opener.open("%s.backupfiles" % self.undoname, "w")
-        undobackupfile.write("%d\n" % version)
+        undobackupfile.write(encodeutf8("%d\n" % version))
         for l, f, b, c in self._backupentries:
             if not f:  # temporary file
                 continue
@@ -573,7 +574,7 @@ class transaction(util.transactional):
                 uname = name.replace(self.journal, self.undoname, 1)
                 u = vfs.reljoin(base, uname)
                 util.copyfile(vfs.join(b), vfs.join(u), hardlink=True)
-            undobackupfile.write("%s\0%s\0%s\0%d\n" % (l, f, u, c))
+            undobackupfile.write(encodeutf8("%s\0%s\0%s\0%d\n" % (l, f, u, c)))
         undobackupfile.close()
 
     def _writemetalog(self):
@@ -655,6 +656,7 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None):
     lines = fp.readlines()
     fp.close()
     for l in lines:
+        l = decodeutf8(l)
         try:
             f, o = l.split("\0")
             entries.append((f, int(o), None))
