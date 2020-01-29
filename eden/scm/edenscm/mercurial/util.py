@@ -57,7 +57,7 @@ import zlib
 import bindings
 
 from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
-from .pycompat import range
+from .pycompat import decodeutf8, encodeutf8, range
 
 
 base85 = policy.importmod(r"base85")
@@ -347,7 +347,7 @@ def mmapread(fp):
         # Empty files cannot be mmapped, but mmapread should still work.  Check
         # if the file is empty, and if so, return an empty buffer.
         if os.fstat(fd).st_size == 0:
-            return ""
+            return b""
         raise
 
 
@@ -981,7 +981,7 @@ def filter(s, cmd):
 
 def binary(s):
     """return true if a string is binary data"""
-    return bool(s and "\0" in s)
+    return bool(s and b"\0" in s)
 
 
 def increasingchunks(source, min=1024, max=65536):
@@ -1909,6 +1909,10 @@ def readfile(path):
         return fp.read()
 
 
+def readfileutf8(path):
+    return decodeutf8(readfile(path))
+
+
 def writefile(path, text):
     with open(path, "wb") as fp:
         fp.write(text)
@@ -1935,6 +1939,7 @@ class chunkbuffer(object):
 
         def splitbig(chunks):
             for chunk in chunks:
+                assert isinstance(chunk, bytes)
                 if len(chunk) > 2 ** 20:
                     pos = 0
                     while pos < len(chunk):
@@ -1954,7 +1959,7 @@ class chunkbuffer(object):
 
         If size parameter is omitted, read everything"""
         if l is None:
-            return "".join(self.iter)
+            return b"".join(self.iter)
 
         left = l
         buf = []
@@ -1964,6 +1969,7 @@ class chunkbuffer(object):
             if not queue:
                 target = 2 ** 18
                 for chunk in self.iter:
+                    assert isinstance(chunk, bytes)
                     queue.append(chunk)
                     target -= len(chunk)
                     if target <= 0:
@@ -2006,7 +2012,7 @@ class chunkbuffer(object):
                 self._chunkoffset += left
                 left -= chunkremaining
 
-        return "".join(buf)
+        return b"".join(buf)
 
 
 def filechunkiter(f, size=2097152, limit=None):
@@ -2409,11 +2415,11 @@ else:
 def escapestr(s):
     # call underlying function of s.encode('string_escape') directly for
     # Python 3 compatibility
-    return codecs.escape_encode(s)[0]
+    return decodeutf8(codecs.escape_encode(encodeutf8(s))[0])
 
 
 def unescapestr(s):
-    return codecs.escape_decode(s)[0]
+    return decodeutf8(codecs.escape_decode(s)[0])
 
 
 def forcebytestr(obj):
@@ -2541,19 +2547,23 @@ def wrap(line, width, initindent="", hangindent=""):
     if width <= maxindent:
         # adjust for weird terminal size
         width = max(78, maxindent + 1)
-    line = line.decode(
-        pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
-    )
-    initindent = initindent.decode(
-        pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
-    )
-    hangindent = hangindent.decode(
-        pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
-    )
+    if sys.version_info[0] < 3:
+        line = line.decode(
+            pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
+        )
+        initindent = initindent.decode(
+            pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
+        )
+        hangindent = hangindent.decode(
+            pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
+        )
     wrapper = MBTextWrapper(
         width=width, initial_indent=initindent, subsequent_indent=hangindent
     )
-    return wrapper.fill(line).encode(pycompat.sysstr(encoding.encoding))
+    if sys.version_info[0] < 3:
+        return wrapper.fill(line).encode(pycompat.sysstr(encoding.encoding))
+    else:
+        return wrapper.fill(line)
 
 
 if pyplatform.python_implementation() == "CPython" and sys.version_info < (3, 0):
@@ -2719,7 +2729,7 @@ def interpolate(prefix, mapping, s, fn=None, escape_prefix=False):
         else:
             prefix_char = prefix
         mapping[prefix_char] = prefix_char
-    r = remod.compile(br"%s(%s)" % (prefix, patterns))
+    r = remod.compile(r"%s(%s)" % (prefix, patterns))
     return r.sub(lambda x: fn(mapping[x.group()[1:]]), s)
 
 
@@ -3127,7 +3137,7 @@ def hidepassword(u):
     u = url(u)
     if u.passwd:
         u.passwd = "***"
-    return bytes(u)
+    return str(u)
 
 
 def removeauth(u):
@@ -4421,6 +4431,8 @@ def _render(
             result = "bin(%r)" % hex(value)
         else:
             result = repr(value)
+    elif isinstance(value, str):
+        result = repr(value)
     elif isinstance(value, (bool, int, basectx, abstractsmartset)):
         result = repr(value)
     elif isinstance(value, list):
