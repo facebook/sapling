@@ -7,6 +7,7 @@
 
 from . import filesystem, perftrace, pycompat, util
 from .EdenThriftClient import ScmFileStatus
+from .pycompat import decodeutf8
 
 
 class eden_filesystem(filesystem.physicalfilesystem):
@@ -26,6 +27,7 @@ class eden_filesystem(filesystem.physicalfilesystem):
         IGNORED = ScmFileStatus.IGNORED
 
         for path, code in pycompat.iteritems(edenstatus):
+            path = decodeutf8(path)
             if not match(path):
                 continue
 
