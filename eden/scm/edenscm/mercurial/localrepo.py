@@ -473,8 +473,8 @@ class localrepository(object):
                     # create an invalid changelog
                     self.localvfs.append(
                         "00changelog.i",
-                        "\0\0\0\1"
-                        " dummy changelog to prevent using the old repo layout",
+                        b"\0\0\0\1"
+                        b" dummy changelog to prevent using the old repo layout",
                     )
             else:
                 raise errormod.RepoError(_("repository %s not found") % path)
@@ -491,7 +491,7 @@ class localrepository(object):
         self.sharedpath = self.path
         self.sharedroot = self.root
         try:
-            sharedpath = self.localvfs.read("sharedpath").rstrip("\n")
+            sharedpath = self.localvfs.readutf8("sharedpath").rstrip("\n")
             if "relshared" in self.requirements:
                 sharedpath = self.localvfs.join(sharedpath)
             sharedvfs = vfsmod.vfs(sharedpath, realpath=True)
@@ -1314,7 +1314,7 @@ class localrepository(object):
                 hint=_("run 'hg recover' to clean up transaction"),
             )
 
-        idbase = "%.40f#%f" % (random.random(), time.time())
+        idbase = b"%.40f#%f" % (random.random(), time.time())
         ha = hex(hashlib.sha1(idbase).digest())
         txnid = "TXN:" + ha
         self.hook("pretxnopen", throw=True, txnname=desc, txnid=txnid)
@@ -1529,10 +1529,8 @@ class localrepository(object):
     @unfilteredmethod
     def _writejournal(self, desc):
         self.dirstate.savebackup(None, "journal.dirstate")
-        self.localvfs.write(
-            "journal.branch", encoding.fromlocal(self.dirstate.branch())
-        )
-        self.localvfs.write("journal.desc", "%d\n%s\n" % (len(self), desc))
+        self.localvfs.writeutf8("journal.branch", "default")
+        self.localvfs.writeutf8("journal.desc", "%d\n%s\n" % (len(self), desc))
         self.svfs.write("journal.bookmarks", self.svfs.tryread("bookmarks"))
         self.svfs.write("journal.phaseroots", self.svfs.tryread("phaseroots"))
         self.svfs.write("journal.visibleheads", self.svfs.tryread("visibleheads"))
@@ -1631,7 +1629,7 @@ class localrepository(object):
 
             self.dirstate.restorebackup(None, "undo.dirstate")
             try:
-                branch = self.localvfs.read("undo.branch")
+                branch = self.localvfs.readutf8("undo.branch")
                 self.dirstate.setbranch(encoding.tolocal(branch))
             except IOError:
                 ui.warn(
@@ -2272,7 +2270,8 @@ class localrepository(object):
                 # of storage format.
                 try:
                     for f in ctx.added():
-                        f.decode("utf-8")
+                        if isinstance(f, bytes):
+                            f.decode("utf-8")
                 except UnicodeDecodeError as inst:
                     raise errormod.Abort(
                         _("invalid file name encoding: %s!") % inst.object
@@ -2613,12 +2612,9 @@ class localrepository(object):
         return "%s %s %s %s %s" % (one, two, three, four, five)
 
     def savecommitmessage(self, text):
-        fp = self.localvfs("last-message.txt", "wb")
-        try:
-            fp.write(text)
-        finally:
-            fp.close()
-        return self.pathto(fp.name[len(self.root) + 1 :])
+        self.localvfs.writeutf8("last-message.txt", text)
+        path = self.localvfs.join("last-message.txt")
+        return self.pathto(path[len(self.root) + 1 :])
 
     def automigratestart(self):
         """perform potentially expensive in-place migrations
