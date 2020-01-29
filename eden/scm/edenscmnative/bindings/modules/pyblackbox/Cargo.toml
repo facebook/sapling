@@ -5,5 +5,5 @@ edition = "2018"
 
 [dependencies]
 blackbox = { path = "../../../../lib/blackbox" }
-cpython-ext = { path = "../../../../lib/cpython-ext" }
+cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
