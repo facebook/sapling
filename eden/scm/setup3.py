@@ -999,7 +999,7 @@ class buildpyzip(Command):
             return
 
         if appendzippath is None:
-            zippath = pjoin(builddir, "edenscmdeps.zip")
+            zippath = pjoin(builddir, "edenscmdeps3.zip")
         else:
             zippath = appendzippath
         # Perform a mtime check so we can skip building if possible
@@ -1135,7 +1135,7 @@ class hginstalllib(install_lib):
             file_util.copy_file = realcopyfile
 
     def _installpyzip(self):
-        for src, dst in [("edenscmdeps.zip", "edenscmdeps.zip")]:
+        for src, dst in [("edenscmdeps3.zip", "edenscmdeps3.zip")]:
             srcpath = pjoin(builddir, src)
             dstpath = pjoin(self.install_dir, dst)
             file_util.copy_file(srcpath, dstpath)

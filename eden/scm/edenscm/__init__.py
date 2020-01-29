@@ -27,8 +27,12 @@ def _fixsyspath():
     # Note: On Windows, the released version of hg uses python27.zip for all
     # pure Python modules including edenscm and everything in edenscmdeps.zip,
     # so not being able to locate edenscmdeps.zip is not fatal.
+    if sys.version_info[0] == 3:
+        name = "edenscmdeps3.zip"
+    else:
+        name = "edenscmdeps.zip"
     for candidate in [libdir, os.path.join(libdir, "build")]:
-        depspath = os.path.join(candidate, "edenscmdeps.zip")
+        depspath = os.path.join(candidate, name)
         if os.path.exists(depspath) and depspath not in sys.path:
             sys.path.insert(0, depspath)
 
