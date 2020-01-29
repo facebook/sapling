@@ -108,20 +108,20 @@ def gettestmethod(name, port):
             out, err = p.communicate("")
             message = err + out
             returncode = p.returncode
-            if "Lost connection to MySQL server" in message:
+            if b"Lost connection to MySQL server" in message:
                 raise unittest.SkipTest("MySQL is unavailable")
             if returncode == 80:
                 if not reportskips:
                     return
                 # Extract skipped reason from output
-                match = re.search("Skipped [^:]*: (.*)", err + out)
+                match = re.search(b"Skipped [^:]*: (.*)", err + out)
                 if match:
                     reason = match.group(1)
                 else:
                     reason = "skipped by run-tests.py"
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(message)
+                raise self.failureException(message.decode("utf-8"))
 
     return runsingletest
 
