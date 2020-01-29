@@ -98,8 +98,6 @@ class lockinfo(object):
         if cls._currentnamespace is not None:
             return cls._currentnamespace
         result = socket.gethostname()
-        if sys.version_info[0] >= 3:
-            result = result.encode(pycompat.sysstr(encoding.encoding), "replace")
         if pycompat.sysplatform.startswith("linux"):
             try:
                 result += "/%x" % os.stat("/proc/self/ns/pid").st_ino
