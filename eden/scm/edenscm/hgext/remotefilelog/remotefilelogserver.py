@@ -11,7 +11,7 @@ import json
 import os
 import stat
 import time
-from typing import Iterable
+from typing import IO, Dict, Iterable, List, Set
 
 from edenscm.mercurial import (
     changegroup,
@@ -545,6 +545,7 @@ def getpack(repo, proto, args, version=1):
 
 
 def _receivepackrequest(stream):
+    # type: (IO[bytes]) -> Dict[bytes, Set[List[bytes]]]
     files = {}
     while True:
         filenamelen = shallowutil.readunpack(stream, constants.FILENAMESTRUCT)[0]

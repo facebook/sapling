@@ -8,14 +8,26 @@ from __future__ import absolute_import
 
 import struct
 from collections import defaultdict
-from typing import Iterable, Optional, Sequence, Tuple
+from typing import (
+    IO,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from edenscm.mercurial import perftrace, progress, pycompat
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.types import UI
 
 from . import constants, shallowutil
+from .mutablestores import mutabledatastore, mutablehistorystore
 from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, readunpack
 
 
@@ -82,6 +94,7 @@ def closepart():
 
 
 def receivepack(ui, fh, dpack, hpack, version=1):
+    # type: (UI, IO[bytes], mutabledatastore, mutablehistorystore, int) -> Tuple[List[Tuple[bytes, bytes]], List[Tuple[bytes, bytes]]]
     receiveddata = []
     receivedhistory = []
 
@@ -114,6 +127,7 @@ def receivepack(ui, fh, dpack, hpack, version=1):
 
 
 def readhistory(fh):
+    # type: (IO[bytes]) -> Generator[Tuple[bytes, bytes, bytes, bytes, bytes], None, None]
     count = readunpack(fh, "!I")[0]
     for i in range(count):
         entry = readunpack(fh, "!20s20s20s20sH")
@@ -122,13 +136,15 @@ def readhistory(fh):
         else:
             copyfrom = ""
         entry = entry[:4] + (copyfrom,)
-        yield entry
+        yield cast("Tuple[bytes, bytes, bytes, bytes, bytes]", entry)
 
 
 def readdeltas(fh, version=1):
+    # type: (IO[bytes], int) -> Generator[Tuple[bytes, bytes, bytes, Optional[Dict[str,int]]], None, None]
     count = readunpack(fh, "!I")[0]
     for i in range(count):
         node, deltabase, deltalen = readunpack(fh, "!20s20sQ")
+        assert isinstance(node, bytes) and isinstance(deltabase, bytes)
         delta = readexactly(fh, deltalen)
         if version == 1:
             yield (node, deltabase, delta, None)

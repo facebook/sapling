@@ -13,13 +13,14 @@ import os
 import stat
 import struct
 import tempfile
+import typing
 from collections import defaultdict
-from typing import Mapping
+from typing import IO, Any, Dict, Mapping, Tuple
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.pycompat import encodeutf8, range
 
 from ..lfs import pointer
 from . import constants
@@ -161,6 +162,7 @@ def reportpackmetrics(ui, prefix, *stores):
 
 
 def _parsepackmeta(metabuf):
+    # type: (bytes) -> (Dict[str, bytes])
     """parse datapack meta, bytes (<metadata-list>) -> dict
 
     The dict contains raw content - both keys and values are strings.
@@ -204,7 +206,7 @@ def _buildpackmeta(metadict):
             raise error.ProgrammingError("packmeta: illegal key: %s" % k)
         if len(v) > 0xFFFE:
             raise ValueError("metadata value is too long: 0x%x > 0xfffe" % len(v))
-        metabuf += k
+        metabuf += encodeutf8(k)
         metabuf += struct.pack("!H", len(v))
         metabuf += v
     # len(metabuf) is guaranteed representable in 4 bytes, because there are
@@ -245,6 +247,7 @@ def buildpackmeta(metadict):
 
 
 def parsepackmeta(metabuf):
+    # type: (bytes) -> (Dict[str, int])
     """like _parsepackmeta, but convert fields to desired types automatically.
 
     This means, METAKEYFLAG and METAKEYSIZE fields will be converted to
@@ -254,7 +257,7 @@ def parsepackmeta(metabuf):
     for k, v in pycompat.iteritems(metadict):
         if k in _metaitemtypes and int in _metaitemtypes[k]:
             metadict[k] = bin2int(v)
-    return metadict
+    return typing.cast("Dict[str, int]", metadict)
 
 
 def int2bin(n):
@@ -335,6 +338,7 @@ def sortnodes(nodes, parentfunc):
 
 
 def readexactly(stream, n):
+    # type: (IO[bytes], int) -> bytes
     """read n bytes from stream.read and abort if less was available"""
     s = stream.read(n)
     if len(s) < n:
@@ -345,11 +349,13 @@ def readexactly(stream, n):
 
 
 def readunpack(stream, fmt):
+    # type: (IO[bytes], str) -> tuple
     data = readexactly(stream, struct.calcsize(fmt))
     return struct.unpack(fmt, data)
 
 
 def readpath(stream):
+    # type: (IO[bytes]) -> bytes
     rawlen = readexactly(stream, constants.FILENAMESIZE)
     pathlen = struct.unpack(constants.FILENAMESTRUCT, rawlen)[0]
     return readexactly(stream, pathlen)
