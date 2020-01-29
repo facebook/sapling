@@ -97,7 +97,7 @@ def isatty(fp):
 # destined stdout with a pipe destined stdout (e.g. pager), we want line
 # buffering
 if isatty(stdout):
-    stdout = os.fdopen(stdout.fileno(), pycompat.sysstr("wb"), 1)
+    stdout = os.fdopen(stdout.fileno(), "w", 1)
 
 if pycompat.iswindows:
     from . import windows as platform
