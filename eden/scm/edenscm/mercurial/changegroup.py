@@ -31,7 +31,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullrev, short
-from .pycompat import range
+from .pycompat import decodeutf8, encodeutf8, range
 
 
 CFG_CGDELTA_ALWAYS_NULL = "always-null"
@@ -60,7 +60,7 @@ def getchunk(stream):
     if l <= 4:
         if l:
             raise error.Abort(_("invalid chunk length %d") % l)
-        return ""
+        return b""
     return readexactly(stream, l - 4)
 
 
@@ -562,6 +562,7 @@ class cg1packer(object):
         return closechunk()
 
     def fileheader(self, fname):
+        fname = encodeutf8(fname)
         return chunkheader(len(fname)) + fname
 
     # Extracted both for clarity and for overriding in extensions.
@@ -628,10 +629,11 @@ class cg1packer(object):
             for chunk in self.group(
                 mfnodes, self._repo.manifestlog._revlog, lookuplinknode, prog
             ):
+                assert isinstance(chunk, bytes)
                 yield chunk
 
     def _manifestsdone(self):
-        return ""
+        return b""
 
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         """yield a sequence of changegroup chunks (strings)"""
@@ -662,6 +664,7 @@ class cg1packer(object):
 
         with progress.bar(repo.ui, _("bundling"), _("changesets")) as prog:
             for chunk in self.group(clnodes, cl, lookupcl, prog):
+                assert isinstance(chunk, bytes)
                 size += len(chunk)
                 yield chunk
         self._verbosenote(_("%8.i (changelog)\n") % size)
@@ -690,6 +693,7 @@ class cg1packer(object):
         for chunk in self.generatemanifests(
             commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
         ):
+            assert isinstance(chunk, bytes)
             yield chunk
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
@@ -709,6 +713,7 @@ class cg1packer(object):
                 return dict((fln(r), cln(lr)) for r, lr in revs if lr in clrevs)
 
         for chunk in self.generatefiles(changedfiles, linknodes, commonrevs, source):
+            assert isinstance(chunk, bytes)
             yield chunk
 
         yield self.close()
@@ -781,6 +786,7 @@ class cg1packer(object):
                 for x in self._packmanifests(
                     dir, prunednodes, makelookupmflinknode(dir, nodes)
                 ):
+                    assert isinstance(x, bytes)
                     size += len(x)
                     yield x
         self._verbosenote(_("%8.i (manifests)\n") % size)
@@ -824,7 +830,7 @@ class cg1packer(object):
         p1, p2 = revlog.parentrevs(rev)
         base = self.deltaparent(revlog, rev, p1, p2, prev)
 
-        prefix = ""
+        prefix = b""
         if revlog.iscensored(base) or revlog.iscensored(rev):
             try:
                 delta = revlog.revision(node, raw=True)
@@ -1037,7 +1043,7 @@ def makestream(
         # in bundles.
         fastpathlinkrev = False
     else:
-        heads = outgoing.missingheads
+        heads = list(outgoing.missingheads)
         # We go through the fast path if we get told to, or if all (unfiltered
         # heads have been requested (since we then know there all linkrevs will
         # be pulled by the client).
@@ -1057,7 +1063,7 @@ def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     with progress.bar(repo.ui, _("files"), _("files"), expectedfiles) as prog:
         for chunkdata in iter(source.filelogheader, {}):
             files += 1
-            f = chunkdata["filename"]
+            f = decodeutf8(chunkdata["filename"])
             repo.ui.debug("adding %s revisions\n" % f)
             prog.value = files
             fl = repo.file(f)
