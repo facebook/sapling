@@ -21,7 +21,7 @@ use edenapi::{
 };
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
-use types::{Key, Node, RepoPath, RepoPathBuf};
+use types::{Key, Node, RepoPathBuf};
 
 mod exceptions {
     use super::*;
@@ -154,7 +154,7 @@ py_class!(class client |py| {
 
     def get_files(
         &self,
-        keys: Vec<(PyBytes, PyBytes)>,
+        keys: Vec<(PyPath, String)>,
         store: PyObject,
         progress_fn: Option<PyObject> = None
     ) -> PyResult<downloadstats> {
@@ -177,7 +177,7 @@ py_class!(class client |py| {
 
     def get_history(
         &self,
-        keys: Vec<(PyBytes, PyBytes)>,
+        keys: Vec<(PyPath, String)>,
         store: PyObject,
         depth: Option<u32> = None,
         progress_fn: Option<PyObject> = None
@@ -203,7 +203,7 @@ py_class!(class client |py| {
 
     def get_trees(
         &self,
-        keys: Vec<(PyBytes, PyBytes)>,
+        keys: Vec<(PyPath, String)>,
         store: PyObject,
         progress_fn: Option<PyObject> = None
     ) -> PyResult<downloadstats> {
@@ -226,7 +226,7 @@ py_class!(class client |py| {
 
     def prefetch_trees(
         &self,
-        rootdir: PyBytes,
+        rootdir: PyPath,
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
         store: PyObject,
@@ -293,14 +293,13 @@ py_class!(class downloadstats |py| {
     }
 });
 
-fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
+fn make_key(py: Python, path: &PyPath, node: &String) -> PyResult<Key> {
     let path = make_path(py, path)?;
     let node = make_node_from_utf8(py, node)?;
     Ok(Key::new(path, node))
 }
 
-fn make_node_from_utf8(py: Python, node: &PyBytes) -> PyResult<Node> {
-    let node = str::from_utf8(node.data(py)).map_pyerr(py)?;
+fn make_node_from_utf8(py: Python, node: &String) -> PyResult<Node> {
     Ok(Node::from_str(node).map_pyerr(py)?)
 }
 
@@ -308,8 +307,10 @@ fn make_node_from_bytes(py: Python, node: &PyBytes) -> PyResult<Node> {
     Ok(Node::from_slice(node.data(py)).map_pyerr(py)?)
 }
 
-fn make_path(py: Python, path: &PyBytes) -> PyResult<RepoPathBuf> {
-    Ok(RepoPath::from_utf8(path.data(py)).map_pyerr(py)?.to_owned())
+fn make_path(py: Python, path: &PyPath) -> PyResult<RepoPathBuf> {
+    path.to_repo_path()
+        .map_pyerr(py)
+        .map(|path| path.to_owned())
 }
 
 fn wrap_callback(callback: PyObject) -> ProgressFn {
