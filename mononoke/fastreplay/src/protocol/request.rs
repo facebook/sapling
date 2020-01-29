@@ -11,7 +11,7 @@ use std::borrow::Cow;
 
 #[derive(Deserialize)]
 pub struct RequestLineInts {
-    pub time: u64,
+    pub time: i64,
     pub responselen: Option<u64>,
     pub duration: u64,
 }

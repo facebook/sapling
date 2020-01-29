@@ -120,6 +120,8 @@ impl Arbitrary for DateTime {
     }
 }
 
+const SEC_IN_NS: i64 = 1_000_000_000;
+
 /// Number of non-leap-nanoseconds since January 1, 1970 UTC
 #[derive(
     Debug,
@@ -140,6 +142,10 @@ impl Timestamp {
         DateTime::now().into()
     }
 
+    pub fn from_timestamp_secs(ts: i64) -> Self {
+        Timestamp(ts * SEC_IN_NS)
+    }
+
     pub fn from_timestamp_nanos(ts: i64) -> Self {
         Timestamp(ts)
     }
@@ -149,7 +155,7 @@ impl Timestamp {
     }
 
     pub fn timestamp_seconds(&self) -> i64 {
-        self.0 / 1_000_000_000
+        self.0 / SEC_IN_NS
     }
 
     pub fn since_nanos(&self) -> i64 {
@@ -158,7 +164,7 @@ impl Timestamp {
     }
 
     pub fn since_seconds(&self) -> i64 {
-        self.since_nanos() / 1_000_000_000
+        self.since_nanos() / SEC_IN_NS
     }
 }
 
@@ -171,7 +177,7 @@ impl From<DateTime> for Timestamp {
 impl From<Timestamp> for DateTime {
     fn from(ts: Timestamp) -> Self {
         let ts_secs = ts.timestamp_seconds();
-        let ts_nsecs = (ts.0 % 1_000_000_000) as u32;
+        let ts_nsecs = (ts.0 % SEC_IN_NS) as u32;
         DateTime::new(ChronoDateTime::<FixedOffset>::from_utc(
             NaiveDateTime::from_timestamp(ts_secs, ts_nsecs),
             FixedOffset::west(0),
@@ -254,5 +260,12 @@ mod test {
         let dt1: DateTime = ts1.into();
         assert_eq!(ts0, ts1);
         assert_eq!(dt0, dt1);
+    }
+
+    #[test]
+    fn seconds() {
+        let ts0 = Timestamp::from_timestamp_nanos(SEC_IN_NS);
+        let ts1 = Timestamp::from_timestamp_secs(1);
+        assert_eq!(ts0, ts1);
     }
 }

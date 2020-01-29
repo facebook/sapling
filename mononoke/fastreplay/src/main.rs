@@ -30,6 +30,7 @@ use hgproto::HgCommands;
 use hooks::HookManager;
 use hooks_content_stores::{InMemoryChangesetStore, InMemoryFileContentStore};
 use metaconfig_types::HookManagerParams;
+use mononoke_types::Timestamp;
 use rand::{thread_rng, Rng};
 use repo_client::MononokeRepoBuilder;
 use scuba_ext::ScubaSampleBuilder;
@@ -139,6 +140,9 @@ async fn dispatch(
         if let Some(remote_args) = req.normal.remote_args.as_ref() {
             scuba.add("command_remote_args", remote_args.as_ref());
         }
+
+        let replay_delay = Timestamp::from_timestamp_secs(req.int.time).since_seconds();
+        scuba.add("replay_delay_s", replay_delay);
 
         scuba.add("recorded_server", req.server_type());
         scuba.add("recorded_duration_us", req.duration_us());

@@ -50,6 +50,7 @@ Check logging structure
       "poll_count": *, (glob)
       "poll_time_us": *, (glob)
       "recorded_duration_us": *, (glob)
+      "replay_delay_s": * (glob)
       "replay_response_size": *, (glob)
       "time": * (glob)
     },
