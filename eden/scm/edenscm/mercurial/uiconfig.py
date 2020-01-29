@@ -259,19 +259,19 @@ class uiconfig(object):
     def configbool(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a boolean
 
-        >>> u = uiconfig(); s = b'foo'
-        >>> u.setconfig(s, b'true', b'yes')
-        >>> u.configbool(s, b'true')
+        >>> u = uiconfig(); s = 'foo'
+        >>> u.setconfig(s, 'true', 'yes')
+        >>> u.configbool(s, 'true')
         True
-        >>> u.setconfig(s, b'false', b'no')
-        >>> u.configbool(s, b'false')
+        >>> u.setconfig(s, 'false', 'no')
+        >>> u.configbool(s, 'false')
         False
-        >>> u.configbool(s, b'unknown')
+        >>> u.configbool(s, 'unknown')
         False
-        >>> u.configbool(s, b'unknown', True)
+        >>> u.configbool(s, 'unknown', True)
         True
-        >>> u.setconfig(s, b'invalid', b'somevalue')
-        >>> u.configbool(s, b'invalid')
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configbool(s, 'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a boolean ('somevalue')
@@ -298,21 +298,21 @@ class uiconfig(object):
     ):
         """parse a configuration element with a conversion function
 
-        >>> u = uiconfig(); s = b'foo'
-        >>> u.setconfig(s, b'float1', b'42')
-        >>> u.configwith(float, s, b'float1')
+        >>> u = uiconfig(); s = 'foo'
+        >>> u.setconfig(s, 'float1', '42')
+        >>> u.configwith(float, s, 'float1')
         42.0
-        >>> u.setconfig(s, b'float2', b'-4.25')
-        >>> u.configwith(float, s, b'float2')
+        >>> u.setconfig(s, 'float2', '-4.25')
+        >>> u.configwith(float, s, 'float2')
         -4.25
-        >>> u.configwith(float, s, b'unknown', 7)
+        >>> u.configwith(float, s, 'unknown', 7)
         7.0
-        >>> u.setconfig(s, b'invalid', b'somevalue')
-        >>> u.configwith(float, s, b'invalid')
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configwith(float, s, 'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a valid float ('somevalue')
-        >>> u.configwith(float, s, b'invalid', desc=b'womble')
+        >>> u.configwith(float, s, 'invalid', desc='womble')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a valid womble ('somevalue')
@@ -333,17 +333,17 @@ class uiconfig(object):
     def configint(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as an integer
 
-        >>> u = uiconfig(); s = b'foo'
-        >>> u.setconfig(s, b'int1', b'42')
-        >>> u.configint(s, b'int1')
+        >>> u = uiconfig(); s = 'foo'
+        >>> u.setconfig(s, 'int1', '42')
+        >>> u.configint(s, 'int1')
         42
-        >>> u.setconfig(s, b'int2', b'-42')
-        >>> u.configint(s, b'int2')
+        >>> u.setconfig(s, 'int2', '-42')
+        >>> u.configint(s, 'int2')
         -42
-        >>> u.configint(s, b'unknown', 7)
+        >>> u.configint(s, 'unknown', 7)
         7
-        >>> u.setconfig(s, b'invalid', b'somevalue')
-        >>> u.configint(s, b'invalid')
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configint(s, 'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a valid integer ('somevalue')
@@ -357,17 +357,17 @@ class uiconfig(object):
         Units can be specified as b (bytes), k or kb (kilobytes), m or
         mb (megabytes), g or gb (gigabytes).
 
-        >>> u = uiconfig(); s = b'foo'
-        >>> u.setconfig(s, b'val1', b'42')
-        >>> u.configbytes(s, b'val1')
+        >>> u = uiconfig(); s = 'foo'
+        >>> u.setconfig(s, 'val1', '42')
+        >>> u.configbytes(s, 'val1')
         42
-        >>> u.setconfig(s, b'val2', b'42.5 kb')
-        >>> u.configbytes(s, b'val2')
+        >>> u.setconfig(s, 'val2', '42.5 kb')
+        >>> u.configbytes(s, 'val2')
         43520
-        >>> u.configbytes(s, b'unknown', b'7 MB')
+        >>> u.configbytes(s, 'unknown', '7 MB')
         7340032
-        >>> u.setconfig(s, b'invalid', b'somevalue')
-        >>> u.configbytes(s, b'invalid')
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configbytes(s, 'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a byte quantity ('somevalue')
@@ -391,12 +391,12 @@ class uiconfig(object):
         """parse a configuration element as a list of comma/space separated
         strings
 
-        >>> u = uiconfig(); s = b'foo'
-        >>> u.setconfig(s, b'list1', b'this,is "a small" ,test')
-        >>> u.configlist(s, b'list1')
+        >>> u = uiconfig(); s = 'foo'
+        >>> u.setconfig(s, 'list1', 'this,is "a small" ,test')
+        >>> u.configlist(s, 'list1')
         ['this', 'is', 'a small', 'test']
-        >>> u.setconfig(s, b'list2', b'this, is "a small" , test ')
-        >>> u.configlist(s, b'list2')
+        >>> u.setconfig(s, 'list2', 'this, is "a small" , test ')
+        >>> u.configlist(s, 'list2')
         ['this', 'is', 'a small', 'test']
         """
         # default is not always a list
@@ -410,9 +410,9 @@ class uiconfig(object):
     def configdate(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a tuple of ints
 
-        >>> u = uiconfig(); s = b'foo'
-        >>> u.setconfig(s, b'date', b'0 0')
-        >>> u.configdate(s, b'date')
+        >>> u = uiconfig(); s = 'foo'
+        >>> u.setconfig(s, 'date', '0 0')
+        >>> u.configdate(s, 'date')
         (0, 0)
         """
         if self.config(section, name, default, untrusted):

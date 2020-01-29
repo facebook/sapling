@@ -791,9 +791,9 @@ this is a section and erroring out weirdly.
   >     pass
   > 
   > def uisetup(ui):
-  >     ui.setconfig(b'alias', b'shellalias', b'!echo hi', b'helpext')
-  >     ui.setconfig(b'alias', b'hgalias', b'summary', b'helpext')
   > 
+  >     ui.setconfig('alias', 'shellalias', '!echo hi', 'helpext')
+  >     ui.setconfig('alias', 'hgalias', 'summary', 'helpext')
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "helpext = `pwd`/helpext.py" >> $HGRCPATH

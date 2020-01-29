@@ -50,15 +50,15 @@ cdef extern from "Python.h":
 @contextlib.contextmanager
 def profile(ui, fp, section="profiling"):
     if ui is not None:
-        if ui.configbool(b'traceprof', b'disablegc'):
+        if ui.configbool('traceprof', 'disablegc'):
             gc.disable() # slightly more predictable
-        microseconds = ui.configint(b'traceprof', b'timethreshold')
+        microseconds = ui.configint('traceprof', 'timethreshold')
         if microseconds is not None:
             settimethreshold((<double>microseconds) / 1000.0)
-        count = ui.configint(b'traceprof', b'countthreshold')
+        count = ui.configint('traceprof', 'countthreshold')
         if count is not None:
             setcountthreshold(count)
-        dedup = ui.configbool(b'traceprof', b'framededup', True)
+        dedup = ui.configbool('traceprof', 'framededup', True)
         setdedup(<int>dedup)
     enable()
     try:

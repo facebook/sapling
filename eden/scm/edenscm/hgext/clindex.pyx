@@ -55,15 +55,15 @@ indexes.nodemap.emptyindexbuffer() # force demandimport to load indexes
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem(b'clindex', b'nodemap', default=True)
-configitem(b'clindex', b'verify', default=False)
+configitem('clindex', 'nodemap', default=True)
+configitem('clindex', 'verify', default=False)
 
 # Inserting 20k nodes takes about 2ms. See https://phab.mercurial-scm.org/D1291
 # for the table of node count and performance.
-configitem(b'clindex', b'lagthreshold', default=20000)
+configitem('clindex', 'lagthreshold', default=20000)
 
 # Path to write logs.
-configitem(b'clindex', b'logpath', default=None)
+configitem('clindex', 'logpath', default=None)
 
 origindextype = parsers.index
 
@@ -355,9 +355,9 @@ cdef class localconfig:
     @classmethod
     def fromui(cls, ui):
         self = cls()
-        self.nodemap = ui.configbool(b'clindex', b'nodemap')
-        self.verify = ui.configbool(b'clindex', b'verify')
-        self.lagthreshold = ui.configint(b'clindex', b'lagthreshold')
+        self.nodemap = ui.configbool('clindex', 'nodemap')
+        self.verify = ui.configbool('clindex', 'verify')
+        self.lagthreshold = ui.configint('clindex', 'lagthreshold')
         return self
 
 def _parseindex(orig, self, data, inline):
@@ -468,7 +468,7 @@ def reposetup(ui, repo):
 def uisetup(ui):
     # global logpath config
     global _logpath
-    _logpath = ui.config(b'clindex', b'logpath')
+    _logpath = ui.config('clindex', 'blogpath')
 
     # filecache method has to be wrapped using wrapfilecache
     extensions.wrapfilecache(localrepo.localrepository, b'changelog',
