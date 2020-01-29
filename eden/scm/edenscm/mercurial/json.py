@@ -36,13 +36,7 @@ def dumps(obj, paranoid=True):
     elif isinstance(obj, bytes):
         return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
     elif isinstance(obj, str):
-        # This branch is unreachable on Python 2, because bytes == str
-        # and we'll return in the next-earlier block in the elif
-        # ladder. On Python 3, this helps us catch bugs before they
-        # hurt someone.
-        raise error.ProgrammingError(
-            "Mercurial only does output with bytes on Python 3: %r" % obj
-        )
+        return _sysjson.dumps(obj)
     elif util.safehasattr(obj, "keys"):
         out = [
             '"%s": %s' % (encoding.jsonescape(k, paranoid=paranoid), dumps(v, paranoid))
@@ -75,4 +69,6 @@ def loads(string):
     """
     # XXX: This should round-trip with "dumps". But it might be non-trivial to
     # do so.
-    return _rapply(lambda s: bytes(s.encode("utf-8")), _sysjson.loads(string))
+    return _rapply(
+        lambda s: pycompat.decodeutf8(s.encode("utf-8")), _sysjson.loads(string)
+    )
