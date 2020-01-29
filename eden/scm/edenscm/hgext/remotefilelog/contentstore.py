@@ -50,6 +50,8 @@ class unioncontentstore(object):
         Under the hood, this uses getdeltachain() across all the stores to build
         up a full chain to produce the full text.
         """
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         chain = self.getdeltachain(name, node)
 
         if chain[-1][ChainIndicies.BASENODE] != nullid:
@@ -70,6 +72,8 @@ class unioncontentstore(object):
     def getdelta(self, name, node):
         """Return the single delta entry for the given name/node pair.
         """
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         for store in self.stores:
             try:
                 return store.getdelta(name, node)
@@ -88,6 +92,8 @@ class unioncontentstore(object):
         where the chain is terminated by a full text entry with a nullid
         deltabasenode.
         """
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         chain = self._getpartialchain(name, node)
         while chain[-1][ChainIndicies.BASENODE] != nullid:
             x, x, deltabasename, deltabasenode, x = chain[-1]
@@ -104,6 +110,8 @@ class unioncontentstore(object):
 
     def getmeta(self, name, node):
         """Returns the metadata dict for given node."""
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         for store in self.stores:
             try:
                 return store.getmeta(name, node)
