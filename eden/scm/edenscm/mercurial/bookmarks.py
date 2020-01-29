@@ -28,6 +28,7 @@ from . import (
 )
 from .i18n import _
 from .node import bin, hex, short, wdirid
+from .pycompat import decodeutf8, encodeutf8
 
 
 # label constants
@@ -74,6 +75,7 @@ class bmstore(dict):
         try:
             with _getbkfile(repo) as bkfile:
                 for line in bkfile:
+                    line = decodeutf8(line)
                     line = line.strip()
                     if not line:
                         continue
@@ -164,7 +166,7 @@ class bmstore(dict):
                     "bookmarks.current", "w", atomictemp=True, checkambig=True
                 )
                 try:
-                    f.write(encoding.fromlocal(self._active))
+                    f.write(encodeutf8(encoding.fromlocal(self._active)))
                 finally:
                     f.close()
             else:
@@ -173,7 +175,8 @@ class bmstore(dict):
 
     def _write(self, fp):
         for name, node in pycompat.iteritems(self):
-            fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
+            name = encoding.fromlocal(name)
+            fp.write(encodeutf8("%s %s\n" % (hex(node), name)))
         self._clean = True
         self._repo.invalidatevolatilesets()
 
@@ -254,29 +257,9 @@ def _readactive(repo, marks):
     itself as we commit. This function returns the name of that bookmark.
     It is stored in .hg/bookmarks.current
     """
-    mark = None
-    try:
-        file = repo.localvfs("bookmarks.current")
-    except IOError as inst:
-        if inst.errno != errno.ENOENT:
-            raise
-        return None
-    try:
-        # No readline() in osutil.posixfile, reading everything is
-        # cheap.
-        # Note that it's possible for readlines() here to raise
-        # IOError, since we might be reading the active mark over
-        # static-http which only tries to load the file when we try
-        # to read from it.
-        mark = encoding.tolocal((file.readlines() or [""])[0])
-        if mark == "" or mark not in marks:
-            mark = None
-    except IOError as inst:
-        if inst.errno != errno.ENOENT:
-            raise
-        return None
-    finally:
-        file.close()
+    mark = repo.localvfs.tryreadutf8("bookmarks.current") or None
+    if mark and mark not in marks:
+        mark = None
     return mark
 
 
