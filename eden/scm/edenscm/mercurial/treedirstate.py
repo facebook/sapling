@@ -151,16 +151,16 @@ class treedirstatemap(object):
 
     items = iteritems
 
-    def gettracked(self, filename, default=None):
+    def gettracked(self, filename):
         """Returns (state, mode, size, mtime) for the tracked file."""
-        return self._rmap.gettracked(filename, default)
+        return self._rmap.gettracked(filename)
 
     def getremoved(self, filename, default=None):
         """Returns (state, mode, size, mtime) for the removed file."""
         return self._rmap.getremoved(filename, default)
 
     def get(self, filename, default=None):
-        return self._rmap.gettracked(filename, None) or self._rmap.getremoved(
+        return self._rmap.gettracked(filename) or self._rmap.getremoved(
             filename, default
         )
 
@@ -172,9 +172,7 @@ class treedirstatemap(object):
         return [f] if f else []
 
     def __getitem__(self, filename):
-        item = self._rmap.gettracked(filename, None) or self._rmap.getremoved(
-            filename, None
-        )
+        item = self._rmap.gettracked(filename) or self._rmap.getremoved(filename, None)
         if item is None:
             raise KeyError(filename)
         return item

@@ -305,7 +305,7 @@ class dirstate(object):
           a  marked for addition
           ?  not tracked
         """
-        return self._map.get(key, ("?",))[0]
+        return self._map.get(key, ("?", 0, 0, 0))[0]
 
     def __contains__(self, key):
         return key in self._map
@@ -1082,7 +1082,9 @@ class dirstate(object):
                         "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
                     )
 
-                with self._repo.disableeventreporting(), self._repo.wlock(freshinstance):
+                with self._repo.disableeventreporting(), self._repo.wlock(
+                    freshinstance
+                ):
                     identity = self._repo.dirstate.identity()
                     if identity == oldid:
                         if poststatusbefore:

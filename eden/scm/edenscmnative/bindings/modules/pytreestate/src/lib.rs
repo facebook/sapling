@@ -102,7 +102,7 @@ py_class!(class treedirstatemap |py| {
             old_map.call_method(py, "iteritems", NoArgs, None)?)?;
         for item in iter {
             let item_tuple = item?.extract::<PyTuple>(py)?;
-            let filename = item_tuple.get_item(py, 0).extract::<PyBytes>(py)?;
+            let filename = item_tuple.get_item(py, 0).extract::<PyPathBuf>(py)?;
             let data = item_tuple.get_item(py, 1).extract::<PySequence>(py)?;
             let state = *data.get_item(py, 0)?.extract::<PyBytes>(py)?.data(py).first().unwrap();
             let mode = data.get_item(py, 1)?.extract::<u32>(py)?;
@@ -110,12 +110,12 @@ py_class!(class treedirstatemap |py| {
             let mtime = data.get_item(py, 3)?.extract::<i32>(py)?;
             if state == b'r' {
                 dirstate
-                    .remove_file(filename.data(py), &FileState::new(b'r', 0, size, 0))
+                    .remove_file(filename.as_utf8_bytes(), &FileState::new(b'r', 0, size, 0))
                     .map_pyerr(py)?;
             } else if state != b'?' {
                 // Drop "?" entries - treedirstate does not store untracked files.
                 dirstate
-                    .add_file(filename.data(py),
+                    .add_file(filename.as_utf8_bytes(),
                               &FileState::new(state, mode, size, mtime))
                     .map_pyerr(py)?;
             }
@@ -131,7 +131,7 @@ py_class!(class treedirstatemap |py| {
         let mut filter = |filepath: &Vec<KeyRef>, state: &mut FileState| {
             if state.state == b'n' && state.mtime == fsnow {
                 state.mtime = -1;
-                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
                 nonnorm.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
                 Ok(VisitorResult::Changed)
             } else {
@@ -154,7 +154,7 @@ py_class!(class treedirstatemap |py| {
         let mut filter = |filepath: &Vec<KeyRef>, state: &mut FileState| {
             if state.state == b'n' && state.mtime == fsnow {
                 state.mtime = -1;
-                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
                 nonnorm.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
                 Ok(VisitorResult::Changed)
             } else {
@@ -181,83 +181,57 @@ py_class!(class treedirstatemap |py| {
         Ok((dirstate.tracked_count() + dirstate.removed_count()) as usize)
     }
 
-    def hastrackedfile(&self, filename: PyBytes) -> PyResult<bool> {
+    def hastrackedfile(&self, filename: PyPathBuf) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let value = dirstate
-                .get_tracked(filename.data(py))
+                .get_tracked(filename.as_utf8_bytes())
                 .map_pyerr(py)?;
 
         Ok(value.is_some())
     }
 
-    def hasremovedfile(&self, filename: PyBytes) -> PyResult<bool> {
+    def hasremovedfile(&self, filename: PyPathBuf) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let value = dirstate
-                .get_removed(filename.data(py))
+                .get_removed(filename.as_utf8_bytes())
                 .map_pyerr(py)?;
         Ok(value.is_some())
     }
 
-    def gettracked(&self, filename: PyObject, default: PyObject) -> PyResult<PyObject> {
+    def gettracked(&self, filename: PyPathBuf) -> PyResult<Option<(PyBytes, u32, i32, i32)>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
-        let res = if let Ok(filename) = filename.extract::<PyBytes>(py) {
-            let value = dirstate
-                    .get_tracked(filename.data(py))
-                    .map_pyerr(py)?;
-            match value {
-                Some(ref file) =>
-                    PyTuple::new(py, &[
-                           PyBytes::new(py, &[file.state; 1]).to_py_object(py).into_object(),
-                           file.mode.to_py_object(py).into_object(),
-                           file.size.to_py_object(py).into_object(),
-                           file.mtime.to_py_object(py).into_object()]).into_object(),
-                None => default,
-            }
-        } else {
-            default
-        };
-        Ok(res)
+        let value = dirstate
+                .get_tracked(filename.as_utf8_bytes())
+                .map_pyerr(py)?;
+        Ok(value.map(|file| (PyBytes::new(py, &[file.state; 1]), file.mode, file.size, file.mtime)))
     }
 
-    def getremoved(&self, filename: PyObject, default: PyObject) -> PyResult<PyObject> {
+    def getremoved(&self, filename: PyPathBuf, default: Option<(PyBytes, u32, i32, i32)>) -> PyResult<Option<(PyBytes, u32, i32, i32)>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
-        let res = if let Ok(filename) = filename.extract::<PyBytes>(py) {
-            let value = dirstate
-                    .get_removed(filename.data(py))
-                    .map_pyerr(py)?;
-            match value {
-                Some(ref file) =>
-                    PyTuple::new(py, &[
-                           PyBytes::new(py, &[file.state; 1]).to_py_object(py).into_object(),
-                           file.mode.to_py_object(py).into_object(),
-                           file.size.to_py_object(py).into_object(),
-                           file.mtime.to_py_object(py).into_object()]).into_object(),
-                None => default,
-            }
-        } else {
-            default
-        };
-        Ok(res)
+        let value = dirstate
+                .get_removed(filename.as_utf8_bytes())
+                .map_pyerr(py)?;
+        Ok(value.map_or(default, |file| Some((PyBytes::new(py, &[file.state; 1]), file.mode, file.size, file.mtime))))
     }
 
-    def hastrackeddir(&self, dirname: PyBytes) -> PyResult<bool> {
+    def hastrackeddir(&self, dirname: PyPathBuf) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
-            .has_tracked_dir(dirname.data(py))
+            .has_tracked_dir(dirname.as_utf8_bytes())
             .map_pyerr(py)
     }
 
-    def hasremoveddir(&self, dirname: PyBytes) -> PyResult<bool> {
+    def hasremoveddir(&self, dirname: PyPathBuf) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
-            .has_removed_dir(dirname.data(py))
+            .has_removed_dir(dirname.as_utf8_bytes())
             .map_pyerr(py)
     }
 
     def visittrackedfiles(&self, target: PyObject) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
-            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
             target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             Ok(VisitorResult::NotChanged)
         };
@@ -270,7 +244,7 @@ py_class!(class treedirstatemap |py| {
     def visitremovedfiles(&self, target: PyObject) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
-            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
             target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             Ok(VisitorResult::NotChanged)
         };
@@ -283,13 +257,13 @@ py_class!(class treedirstatemap |py| {
     // Get the next dirstate object after the provided filename.  If the filename is None,
     // returns the first file in the tree.  If the provided filename is the last file, returns
     // None.
-    def getnext(&self, filename: Option<PyBytes>, removed: bool) -> PyResult<PyObject> {
+    def getnext(&self, filename: Option<PyPathBuf>, removed: bool) -> PyResult<Option<(PyBytes, (PyBytes, u32, i32, i32))>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let next = if removed {
             match filename {
                 Some(filename) => {
                     dirstate
-                        .get_next_removed(filename.data(py))
+                        .get_next_removed(filename.as_utf8_bytes())
                         .map_pyerr(py)?
                 }
                 None => {
@@ -302,7 +276,7 @@ py_class!(class treedirstatemap |py| {
             match filename {
                 Some(filename) => {
                     dirstate
-                        .get_next_tracked(filename.data(py))
+                        .get_next_tracked(filename.as_utf8_bytes())
                         .map_pyerr(py)?
                 }
                 None => {
@@ -311,24 +285,12 @@ py_class!(class treedirstatemap |py| {
                 }
             }
         };
-        let res = match next {
-            Some((ref f, ref s)) =>
-                PyTuple::new(py, &[
-                    PyBytes::new(py, &f).into_object(),
-                    PyTuple::new(py, &[
-                        PyBytes::new(py, &[s.state; 1]).to_py_object(py).into_object(),
-                        s.mode.to_py_object(py).into_object(),
-                        s.size.to_py_object(py).into_object(),
-                        s.mtime.to_py_object(py).into_object()]).into_object()
-                    ]).into_object(),
-            None => py.None(),
-        };
-        Ok(res)
+        Ok(next.map(|(f, s)| (PyBytes::new(py, &f), (PyBytes::new(py, &[s.state; 1]), s.mode, s.size, s.mtime))))
     }
 
     def addfile(
         &self,
-        filename: PyBytes,
+        filename: PyPathBuf,
         _old_state: PyBytes,
         state: PyBytes,
         mode: u32,
@@ -338,30 +300,30 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let state = *state.data(py).first().unwrap_or(&b'?');
         dirstate
-            .add_file(filename.data(py), &FileState::new(state, mode, size, mtime))
+            .add_file(filename.as_utf8_bytes(), &FileState::new(state, mode, size, mtime))
             .map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def removefile(&self, filename: PyBytes, _old_state: PyBytes, size: i32) -> PyResult<PyNone> {
+    def removefile(&self, filename: PyPathBuf, _old_state: PyBytes, size: i32) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
-            .remove_file(filename.data(py), &FileState::new(b'r', 0, size, 0))
+            .remove_file(filename.as_utf8_bytes(), &FileState::new(b'r', 0, size, 0))
             .map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def deletefile(&self, filename: PyBytes) -> PyResult<bool> {
+    def deletefile(&self, filename: PyPathBuf) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
-            .drop_file(filename.data(py))
+            .drop_file(filename.as_utf8_bytes())
             .map_pyerr(py)
     }
 
-    def untrackfile(&self, filename: PyBytes) -> PyResult<bool> {
+    def untrackfile(&self, filename: PyPathBuf) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
-            .drop_file(filename.data(py))
+            .drop_file(filename.as_utf8_bytes())
             .map_pyerr(py)
     }
 
@@ -374,11 +336,11 @@ py_class!(class treedirstatemap |py| {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut tracked_visitor = |filepath: &Vec<KeyRef>, state: &mut FileState| {
             if state.state != b'n' || state.mtime == -1 {
-                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
                 nonnormal.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             }
             if state.state == b'n' && state.mtime == -2 {
-                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
                 otherparent.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             }
             Ok(VisitorResult::NotChanged)
@@ -388,7 +350,7 @@ py_class!(class treedirstatemap |py| {
             .map_pyerr(py)?;
 
         let mut removed_visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
-            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
             nonnormal.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             Ok(VisitorResult::NotChanged)
         };
@@ -401,29 +363,29 @@ py_class!(class treedirstatemap |py| {
 
     def getcasefoldedtracked(
         &self,
-        filename: PyBytes,
+        filename: PyPathBuf,
         casefolder: PyObject,
         casefolderid: u64
-    ) -> PyResult<Option<PyObject>> {
+    ) -> PyResult<Option<PyPathBuf>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut filter = |filename: KeyRef| {
-            let unfolded = PyBytes::new(py, filename);
+            let unfolded = PyPathBuf::from_utf8_bytes(filename.to_vec())?;
             let folded = casefolder.call(py, (unfolded,), None)
                                    .map_err(|e| callback_error(py, e))?
-                                   .extract::<PyBytes>(py)
+                                   .extract::<PyPathBuf>(py)
                                    .map_err(|e| callback_error(py, e))?;
-            Ok(folded.data(py).to_vec().into_boxed_slice())
+            Ok(folded.as_utf8_bytes().to_vec().into_boxed_slice())
         };
 
         dirstate
-            .get_tracked_filtered_key(filename.data(py), &mut filter, casefolderid)
-            .map(|o| o.map(|k| PyBytes::new(py, &k).into_object()))
+            .get_tracked_filtered_key(filename.as_utf8_bytes(), &mut filter, casefolderid)
+            .map(|o| o.map(|k| PyPathBuf::from_utf8_bytes(k.to_vec()).unwrap()))
             .map_pyerr(py)
     }
 
     def pathcomplete(
         &self,
-        spec: PyBytes,
+        spec: PyPathBuf,
         acceptablestates: PyBytes,
         matchcallback: PyObject,
         fullpaths: bool
@@ -432,7 +394,7 @@ py_class!(class treedirstatemap |py| {
         let acceptablestates = acceptablestates.data(py);
 
         let mut visitor = |filepath: &Vec<KeyRef>| {
-            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
             matchcallback.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             Ok(())
         };
@@ -444,14 +406,14 @@ py_class!(class treedirstatemap |py| {
         // Files in state a, n or m are in the tracked tree.
         if b"anm".iter().any(|x| acceptablestates.contains(x)) {
             dirstate
-                .path_complete_tracked(spec.data(py), fullpaths, &acceptable, &mut visitor)
+                .path_complete_tracked(spec.as_utf8_bytes(), fullpaths, &acceptable, &mut visitor)
                 .map_pyerr(py)?;
         }
 
         // Files in state r are in the removed tree.
         if acceptablestates.contains(&b'r') {
             dirstate
-                .path_complete_removed(spec.data(py), fullpaths, &acceptable, &mut visitor)
+                .path_complete_removed(spec.as_utf8_bytes(), fullpaths, &acceptable, &mut visitor)
                 .map_pyerr(py)?;
         }
 
@@ -507,43 +469,23 @@ py_class!(class treestate |py| {
         })
     }
 
-    def get(&self, path: PyPathBuf, default: PyObject) -> PyResult<PyObject> {
+    def get(&self, path: PyPathBuf, default: Option<(u16, u32, i32, i32, Option<PyPathBuf>)>) -> PyResult<Option<(u16, u32, i32, i32, Option<PyPathBuf>)>> {
         let mut state = self.state(py).borrow_mut();
         let path = path.as_utf8_bytes();
 
-        Ok(if path.ends_with(b"/") {
-            let dir = convert_result(py, state.get_dir(path))?;
-            match dir {
-                // (union state, intersection state)
-                Some(ref state) =>
-                    PyTuple::new(py, &[
-                                 state.union.to_bits().to_py_object(py).into_object(),
-                                 state.intersection.to_bits().to_py_object(py).into_object(),
-                    ]).into_object(),
-                None => default,
-            }
-        } else {
-            let file = convert_result(py, state.get(path))?;
-            match file {
-                // (flags, mode, size, mtime, copied)
-                Some(ref file) =>
-                    PyTuple::new(py, &[
-                                 file.state.to_bits().to_py_object(py).into_object(),
-                                 file.mode.to_py_object(py).into_object(),
-                                 file.size.to_py_object(py).into_object(),
-                                 file.mtime.to_py_object(py).into_object(),
-                                 match file.copied {
-                                     Some(ref path) => PyBytes::new(py, &path).into_object(),
-                                     None => py.None(),
-                                 }
-                    ]).into_object(),
-                None => default,
-            }
-        })
+        assert!(!path.ends_with(b"/"));
+
+        let file = convert_result(py, state.get(path))?;
+        Ok(file.map_or(default, |file|
+                    Some((file.state.to_bits(),
+                     file.mode,
+                     file.size,
+                     file.mtime,
+                     file.copied.as_ref().map(|path| PyPathBuf::from_utf8_bytes(path.to_vec()).unwrap())))))
     }
 
     def insert(
-        &self, path: PyPathBuf, bits: u16, mode: u32, size: i32, mtime: i32, copied: PyObject
+        &self, path: PyPathBuf, bits: u16, mode: u32, size: i32, mtime: i32, copied: Option<PyPathBuf>
     ) -> PyResult<PyObject> {
         let mut flags = StateFlags::from_bits_truncate(bits);
         // For special mtime or size, mark them as "NEED_CHECK" automatically.
@@ -552,16 +494,13 @@ py_class!(class treestate |py| {
         }
 
         // Also fix-up COPIED bit so they stay consistent.
-        let copied = if copied.is_true(py)? {
-            let path = copied.extract::<PyBytes>(py)?;
+        if copied.as_ref().is_some() {
             flags |= StateFlags::COPIED;
-            Some(path.data(py).to_vec().into_boxed_slice())
         } else {
             flags -= StateFlags::COPIED;
-            None
         };
 
-        let file = FileStateV2 { mode, size, mtime, copied, state: flags };
+        let file = FileStateV2 { mode, size, mtime, copied: copied.map(|copied| copied.as_utf8_bytes().to_vec().into_boxed_slice()), state: flags };
         let path = path.as_utf8_bytes();
         let mut state = self.state(py).borrow_mut();
         convert_result(py, state.insert(path, &file))?;
@@ -571,6 +510,14 @@ py_class!(class treestate |py| {
     def remove(&self, path: PyPathBuf) -> PyResult<bool> {
         let mut state = self.state(py).borrow_mut();
         convert_result(py, state.remove(path.as_utf8_bytes()))
+    }
+
+    def getdir(&self, path: PyPathBuf) -> PyResult<Option<(u16, u16)>> {
+        let mut state = self.state(py).borrow_mut();
+        let path = path.as_utf8_bytes();
+
+        let dir = convert_result(py, state.get_dir(path))?;
+        Ok(dir.map(|state| (state.union.to_bits(), state.intersection.to_bits())))
     }
 
     def hasdir(&self, path: PyPathBuf) -> PyResult<bool> {

@@ -297,7 +297,7 @@ class treestatemap(object):
     def hastrackeddir(self, d):
         if not d.endswith("/"):
             d += "/"
-        state = self._tree.get(d, None)  # [union, intersection]
+        state = self._tree.getdir(d)  # [union, intersection]
         return bool(state and (state[0] & treestate.EXIST_NEXT))
 
     def hasdir(self, d):
