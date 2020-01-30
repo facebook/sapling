@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# cython: language_level=3str
+
 """alternative changelog index
 
 This extension replaces certain parts of changelog index algorithms to make it
