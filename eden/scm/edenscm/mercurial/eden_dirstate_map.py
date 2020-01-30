@@ -48,7 +48,8 @@ class eden_dirstate_map(dirstate.dirstatemap):
         for path in to_remove:
             self._map.pop(path)
 
-        eden_dirstate_serializer.write(file, parents, self._map, self.copymap)
+        m = {pycompat.encodeutf8(k): v for k, v in self._map.items()}
+        eden_dirstate_serializer.write(file, parents, m, self.copymap)
         file.close()
 
         # Inform the edenfs daemon about the parent change.
