@@ -117,14 +117,20 @@ def get_mount_pts_set(
         eden_locations.append(eden_repo_path)
 
         try:
-            hg_cache_dir = subprocess.check_output(
+            proc = subprocess.run(
                 ["hg", "config", "remotefilelog.cachepath"],
                 cwd=mount_path,
                 env=dict(os.environ, HGPLAIN="1"),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
         except subprocess.CalledProcessError:
+            # hg config may fail if the repo is corrupted.
+            # We don't log any output about this here.
+            # The check_hg() logic will detect and perform error handling for this case.
             continue
 
+        hg_cache_dir = proc.stdout
         eden_locations.append(hg_cache_dir.decode("utf-8").rstrip("\n"))
 
     # Set is used to skip duplicate mount folders
