@@ -11,7 +11,7 @@ use std::path::Path;
 
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
-use cpython_ext::{Bytes, PyPath};
+use cpython_ext::{PyPath, Str};
 
 use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
@@ -44,7 +44,7 @@ py_class!(class gitignorematcher |py| {
         Ok(self.matcher(py).match_relative(&path, is_dir))
     }
 
-    def explain(&self, path: PyPath, is_dir: bool) -> PyResult<Bytes> {
+    def explain(&self, path: PyPath, is_dir: bool) -> PyResult<Str> {
         Ok(self.matcher(py).explain(&path, is_dir).into())
     }
 });
@@ -70,18 +70,18 @@ py_class!(class treematcher |py| {
     }
 });
 
-fn normalize_glob(_py: Python, path: &str) -> PyResult<Bytes> {
+fn normalize_glob(_py: Python, path: &str) -> PyResult<Str> {
     Ok(pathmatcher::normalize_glob(path).into())
 }
 
-fn plain_to_glob(_py: Python, path: &str) -> PyResult<Bytes> {
+fn plain_to_glob(_py: Python, path: &str) -> PyResult<Str> {
     Ok(pathmatcher::plain_to_glob(path).into())
 }
 
-fn expand_curly_brackets(_py: Python, pattern: &str) -> PyResult<Vec<Bytes>> {
+fn expand_curly_brackets(_py: Python, pattern: &str) -> PyResult<Vec<Str>> {
     Ok(pathmatcher::expand_curly_brackets(pattern)
         .into_iter()
-        .map(Bytes::from)
+        .map(|s| s.into())
         .collect())
 }
 
