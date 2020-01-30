@@ -635,7 +635,7 @@ def parseargs(args, parser):
     if options.with_hg:
         options.with_hg = canonpath(_bytespath(options.with_hg))
         # HGEXECUTABLEPATH is used by util.hgcmd()
-        os.environ["HGEXECUTABLEPATH"] = options.with_hg
+        os.environ["HGEXECUTABLEPATH"] = options.with_hg.decode("utf8")
         if not (
             os.path.isfile(options.with_hg) and os.access(options.with_hg, os.X_OK)
         ):
@@ -854,9 +854,7 @@ def highlightdiff(line, color):
     if not color:
         return line
     assert pygmentspresent
-    return pygments.highlight(
-        line.decode("latin1"), difflexer, terminal256formatter
-    ).encode("latin1")
+    return pygments.highlight(line, difflexer, terminal256formatter).encode("latin1")
 
 
 def highlightmsg(msg, color):
@@ -1257,7 +1255,7 @@ class Test(unittest.TestCase):
         env = self._getenv()
         self._genrestoreenv(env)
         self._daemonpids.append(env["DAEMON_PIDS"])
-        self._createhgrc(env["HGRCPATH"].rsplit(os.pathsep, 1)[-1])
+        self._createhgrc(env["HGRCPATH"].rsplit(os.pathsep.encode("utf8"), 1)[-1])
 
         vlog("# Test", self.name)
         vlog("# chg in use: %s" % self._usechg)
@@ -1463,7 +1461,9 @@ class Test(unittest.TestCase):
         if os.name != "nt":
             # Now that we *only* load stdlib from python.zip on Windows,
             # there's no userbase
-            env["PYTHONUSERBASE"] = sysconfig.get_config_var("userbase")
+            userbase = sysconfig.get_config_var("userbase")
+            if userbase:
+                env["PYTHONUSERBASE"] = sysconfig.get_config_var("userbase")
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["HOME"] = self._testtmp
@@ -1476,10 +1476,12 @@ class Test(unittest.TestCase):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
         rcpath = os.path.join(self._threadtmp, b".hgrc")
-        rcpaths = self._extrarcpaths + [rcpath]
-        env["HGRCPATH"] = os.pathsep.join(rcpaths)
+        rcpaths = [p.encode("utf-8") for p in self._extrarcpaths] + [rcpath]
+        env["HGRCPATH"] = os.pathsep.encode("utf8").join(rcpaths)
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b"daemon.pids")
-        env["HGEDITOR"] = '"' + PYTHON + '"' + ' -c "import sys; sys.exit(0)"'
+        env["HGEDITOR"] = (
+            '"' + PYTHON.decode("utf8") + '"' + ' -c "import sys; sys.exit(0)"'
+        )
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"] = "test"
         env["HGENCODING"] = "ascii"
@@ -1602,7 +1604,7 @@ class Test(unittest.TestCase):
             killdaemons(env["DAEMON_PIDS"])
             return ret
 
-        output = ""
+        output = b""
         proc.tochild.close()
 
         try:
@@ -1664,7 +1666,7 @@ class PythonTest(Test):
 
     def _processoutput(self, output):
         if os.path.exists(self.refpath):
-            expected = open(self.refpath, "r").readlines()
+            expected = open(self.refpath, "rb").readlines()
         else:
             return output
 
@@ -1675,11 +1677,11 @@ class PythonTest(Test):
 
             # by default, processed output is the same as received output
             processed[i] = output[i]
-            if line.endswith(" (re)"):
+            if line.endswith(b" (re)"):
                 # pattern, should try to match
                 pattern = line[:-5]
-                if not pattern.endswith("$"):
-                    pattern += "$"
+                if not pattern.endswith(b"$"):
+                    pattern += b"$"
                 if re.match(pattern, output[i].strip()):
                     processed[i] = expected[i]
             i = i + 1
@@ -1948,7 +1950,7 @@ class TTest(Test):
                         script.append(
                             b"%s %s <<EOF\n"
                             % (
-                                "hg debugpython --",
+                                b"hg debugpython --",
                                 self._stringescape(
                                     os.path.join(self._testdir, "heredoctest.py")
                                 ),
@@ -1956,7 +1958,7 @@ class TTest(Test):
                         )
                     else:
                         script.append(
-                            b"%s -m heredoctest <<EOF\n" % "hg debugpython --"
+                            b"%s -m heredoctest <<EOF\n" % b"hg debugpython --"
                         )
                 addsalt(n, True)
                 script.append(l[2:])
@@ -2460,7 +2462,7 @@ class TestResult(unittest._TextTestResult):
                     if len(lines) > self._options.maxdifflines:
                         omitted = len(lines) - self._options.maxdifflines
                         lines = lines[: self._options.maxdifflines] + [
-                            "... (%d lines omitted. set --maxdifflines to see more) ..."
+                            b"... (%d lines omitted. set --maxdifflines to see more) ..."
                             % omitted
                         ]
                     for line in lines:
@@ -2719,7 +2721,7 @@ class TestSuite(unittest.TestSuite):
                 timepassed = now - suitestart
                 lines = []
                 runningfrac = 0.0
-                for name, (test, teststart) in runningtests.iteritems():
+                for name, (test, teststart) in runningtests.items():
                     try:
                         saltseen, saltcount = getattr(test, "progress")
                         runningfrac += saltseen * 1.0 / saltcount
@@ -2976,7 +2978,7 @@ class TextTestRunner(unittest.TextTestRunner):
             withhg = self._runner.options.with_hg
             if withhg:
                 opts += " --with-hg=%s " % shellquote(_strpath(withhg))
-            rtc = "%s %s %s %s" % (PYTHON, sys.argv[0], opts, test)
+            rtc = "%s %s %s %s" % (PYTHON.decode("utf-8"), sys.argv[0], opts, test)
             data = pread(bisectcmd + ["--command", rtc])
             m = re.search(
                 (
@@ -2988,12 +2990,19 @@ class TextTestRunner(unittest.TextTestRunner):
                 (re.MULTILINE | re.DOTALL),
             )
             if m is None:
+                # self.stream.writeln("Failed to identify failure point for %s:\n%s" % (test, data.decode("utf-8")))
                 self.stream.writeln("Failed to identify failure point for %s" % test)
                 continue
             dat = m.groupdict()
-            verb = "broken" if dat["goodbad"] == "bad" else "fixed"
+            verb = "broken" if dat["goodbad"] == b"bad" else b"fixed"
             self.stream.writeln(
-                "%s %s by %s (%s)" % (test, verb, dat["node"], dat["summary"])
+                "%s %s by %s (%s)"
+                % (
+                    test,
+                    verb,
+                    dat["node"].decode("utf-8"),
+                    dat["summary"].decode("utf-8"),
+                )
             )
 
     def printtimes(self, times):
@@ -3435,7 +3444,7 @@ class TestRunner(object):
             # O(1).
             # `chgsockpath` is inside HGTMP, and will be cleaned up by
             # self._cleanup().
-            self.options.chg_sock_path = os.path.join(self._hgtmp, "chgserver")
+            self.options.chg_sock_path = os.path.join(self._hgtmp, b"chgserver")
 
         try:
             return self._runtests(testdescs) or 0
@@ -3696,7 +3705,7 @@ class TestRunner(object):
             # No correction is needed
             return
         if getattr(os, "symlink", None):
-            tmphgpath = os.path.join(self._tmpbindir, "hg")
+            tmphgpath = os.path.join(self._tmpbindir, b"hg")
             vlog("# Symlink %s to %s" % (self._hgcommand, tmphgpath))
 
             try:
