@@ -8,8 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use cpython_ext::Bytes;
-use cpython_ext::ResultPyErrExt;
+use cpython_ext::{Bytes, PyNone, ResultPyErrExt};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 #[cfg(feature = "python2")]
@@ -86,33 +85,33 @@ py_class!(class tracingdata |py| {
     }
 
     /// Edit fields of a previously added span.
-    def edit(&self, id: u64,  metadata: Vec<(String, String)>) -> PyResult<PyObject> {
+    def edit(&self, id: u64,  metadata: Vec<(String, String)>) -> PyResult<PyNone> {
         let mut data = self.data(py).lock();
         data.edit_espan(EspanId(id), metadata);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Enter a span.
-    def enter(&self, id: u64) -> PyResult<PyObject> {
+    def enter(&self, id: u64) -> PyResult<PyNone> {
         let mut data = self.data(py).lock();
         data.add_action(EspanId(id), Action::EnterSpan);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Exit a span.
-    def exit(&self, id: u64) -> PyResult<PyObject> {
+    def exit(&self, id: u64) -> PyResult<PyNone> {
         let mut data = self.data(py).lock();
         data.add_action(EspanId(id), Action::ExitSpan);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Add an event.
-    def event(&self, metadata: Vec<(String, String)>) -> PyResult<PyObject> {
+    def event(&self, metadata: Vec<(String, String)>) -> PyResult<PyNone> {
         let metadata: Vec<(&str, &str)> = metadata.iter().map(|(k, v)| (k.as_ref(), v.as_ref())).collect();
         let mut data = self.data(py).lock();
         let id = data.add_espan(&metadata, None);
         data.add_action(id, Action::Event);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Export as Trace Event.
@@ -152,9 +151,9 @@ py_class!(class tracingdata |py| {
     }
 
     /// Swap with the global singleton.
-    def __enter__(&self) -> PyResult<PyObject> {
+    def __enter__(&self) -> PyResult<PyNone> {
         self.swap_with_singleton(py);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Swap (back) with the global singleton.

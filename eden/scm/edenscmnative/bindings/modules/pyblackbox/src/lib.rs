@@ -9,7 +9,7 @@
 
 use blackbox::{self, event::Event, init, log, serde_json, BlackboxOptions, SessionId, ToValue};
 use cpython::*;
-use cpython_ext::{PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use std::ops::Deref;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -55,28 +55,28 @@ def log(value, _dumps=_json.dumps, _logjson=_logjson):
 }
 
 /// Initialize the blackbox at the given path.
-fn init_blackbox(py: Python, path: PyPathBuf, count: u8, size: u64) -> PyResult<PyObject> {
+fn init_blackbox(py: Python, path: PyPathBuf, count: u8, size: u64) -> PyResult<PyNone> {
     let blackbox = BlackboxOptions::new()
         .max_bytes_per_log(size)
         .max_log_count(count)
         .open(path)
         .map_pyerr(py)?;
     init(blackbox);
-    Ok(py.None())
+    Ok(PyNone)
 }
 
 /// Log a JSON-serialized event. The JSON string must be deserializable
 /// to the Rust Event type, defined in blackbox/src/event.rs.
-fn log_json(py: Python, json: String) -> PyResult<PyObject> {
+fn log_json(py: Python, json: String) -> PyResult<PyNone> {
     let event = Event::from_json(&json).map_pyerr(py)?;
     log(&event);
-    Ok(py.None())
+    Ok(PyNone)
 }
 
 /// Write buffered changes to disk.
-fn sync(py: Python) -> PyResult<PyObject> {
+fn sync(_py: Python) -> PyResult<PyNone> {
     blackbox::sync();
-    Ok(py.None())
+    Ok(PyNone)
 }
 
 /// Read events in the given time span. Return `[(session_id, timestamp, message, json)]`.

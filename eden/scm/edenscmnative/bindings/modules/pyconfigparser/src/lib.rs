@@ -15,7 +15,7 @@ use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
-use cpython_ext::{PyPathBuf, Str};
+use cpython_ext::{PyNone, PyPathBuf, Str};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
@@ -107,11 +107,11 @@ py_class!(pub class config |py| {
 
     def set(
         &self, section: String, name: String, value: Option<String>, source: String
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<PyNone> {
         let mut cfg = self.cfg(py).borrow_mut();
         let opts = source.into();
         cfg.set(section, name, value, &opts);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def sections(&self) -> PyResult<Vec<Str>> {

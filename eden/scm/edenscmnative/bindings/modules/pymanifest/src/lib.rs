@@ -14,7 +14,7 @@ use bytes::Bytes;
 use cpython::*;
 
 use cpython_ext::{pyset_add, pyset_new};
-use cpython_ext::{PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
@@ -226,7 +226,7 @@ py_class!(class treemanifest |py| {
         Ok(PyBytes::new(py, lines.concat().as_bytes()))
     }
 
-    def set(&self, path: PyPathBuf, binnode: &PyBytes, flag: &PyString) -> PyResult<PyObject> {
+    def set(&self, path: PyPathBuf, binnode: &PyBytes, flag: &PyString) -> PyResult<PyNone> {
         // TODO: can the node and flag that are passed in be None?
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
@@ -235,7 +235,7 @@ py_class!(class treemanifest |py| {
         let file_metadata = FileMetadata::new(node, file_type);
         insert(&mut tree, &mut self.pending_delete(py).borrow_mut(), repo_path_buf, file_metadata)
             .map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def setflag(&self, path: PyPathBuf, flag: &PyString) -> PyResult<PyObject> {
@@ -503,13 +503,13 @@ pub fn prefetch(
     node: &PyBytes,
     path: PyPathBuf,
     depth: Option<usize>,
-) -> PyResult<PyObject> {
+) -> PyResult<PyNone> {
     let store = Arc::new(ManifestStore::new(PythonDataStore::new(store)));
     let node = pybytes_to_node(py, node)?;
     let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
     let key = Key::new(repo_path_buf, node);
     manifest_tree::prefetch(store, key, depth).map_pyerr(py)?;
-    Ok(py.None())
+    Ok(PyNone)
 }
 
 fn insert(

@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use cpython::*;
 
 use ::bookmarkstore::BookmarkStore;
-use cpython_ext::PyPathBuf;
+use cpython_ext::{PyNone, PyPathBuf};
 use types::hgid::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -33,7 +33,7 @@ py_class!(class bookmarkstore |py| {
         bookmarkstore::create_instance(py, RefCell::new(bm_store))
     }
 
-    def update(&self, bookmark: &str, node: PyBytes) -> PyResult<PyObject> {
+    def update(&self, bookmark: &str, node: PyBytes) -> PyResult<PyNone> {
         let mut bm_store = self.bm_store(py).borrow_mut();
         let hgid = HgId::from_slice(node.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
@@ -41,15 +41,15 @@ py_class!(class bookmarkstore |py| {
         bm_store.update(bookmark, hgid)
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
-        Ok(py.None())
+        Ok(PyNone)
     }
 
-    def remove(&self, bookmark: &str) -> PyResult<PyObject> {
+    def remove(&self, bookmark: &str) -> PyResult<PyNone> {
         let mut bm_store = self.bm_store(py).borrow_mut();
 
         bm_store.remove(bookmark)
             .map_err(|e| PyErr::new::<exc::KeyError, _>(py, format!("{}", e)))?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def lookup_bookmark(&self, bookmark: &str) -> PyResult<Option<PyBytes>> {
@@ -77,11 +77,11 @@ py_class!(class bookmarkstore |py| {
         }
     }
 
-    def flush(&self) -> PyResult<PyObject> {
+    def flush(&self) -> PyResult<PyNone> {
         let mut bm_store = self.bm_store(py).borrow_mut();
         bm_store
             .flush()
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 });

@@ -9,7 +9,7 @@
 
 use anyhow::Error;
 use cpython::*;
-use cpython_ext::{AnyhowResultExt, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{AnyhowResultExt, PyNone, PyPathBuf, ResultPyErrExt};
 use dag::{
     id::{Group, Id, VertexName},
     idmap::IdMap,
@@ -176,12 +176,12 @@ py_class!(class dagindex |py| {
     }
 
     /// Build segments. Store them on disk.
-    def build(&self, masternodes: Vec<PyBytes>, othernodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyObject> {
+    def build(&self, masternodes: Vec<PyBytes>, othernodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
         let map = self.map(py).borrow();
         // All nodes known and nothing needs to be built?
         if masternodes.iter().all(|n| is_ok_some(map.find_id_by_name_with_max_group(n.data(py), Group::MASTER)))
             && othernodes.iter().all(|n| is_ok_some(map.find_id_by_name(n.data(py)))) {
-            return Ok(py.None());
+            return Ok(PyNone);
         }
         drop(map);
         let get_parents = translate_get_parents(py, parentfunc);
@@ -207,14 +207,14 @@ py_class!(class dagindex |py| {
         }
         syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr(py)?;
 
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Reload segments. Get changes on disk.
-    def reload(&self) -> PyResult<PyObject> {
+    def reload(&self) -> PyResult<PyNone> {
         self.map(py).borrow_mut().reload().map_pyerr(py)?;
         self.dag(py).borrow_mut().reload().map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def id2node(&self, id: u64) -> PyResult<Option<PyBytes>> {

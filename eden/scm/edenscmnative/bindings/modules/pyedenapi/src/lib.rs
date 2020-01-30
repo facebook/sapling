@@ -14,7 +14,7 @@ use std::str;
 use bytes::Bytes;
 use cpython::*;
 
-use cpython_ext::{PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use edenapi::{
     ApiError, ApiErrorKind, Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn,
     ProgressStats,
@@ -144,8 +144,8 @@ py_class!(class client |py| {
         client::create_instance(py, inner)
     }
 
-    def health_check(&self) -> PyResult<PyObject> {
-        Ok(self.inner(py).health_check().map(|()| py.None()).map_err(|e| into_exception(py, e))?)
+    def health_check(&self) -> PyResult<PyNone> {
+        Ok(self.inner(py).health_check().map(|()| PyNone).map_err(|e| into_exception(py, e))?)
     }
 
     def hostname(&self) -> PyResult<String> {

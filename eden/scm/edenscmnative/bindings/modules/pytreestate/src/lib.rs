@@ -25,6 +25,7 @@ use std::path::PathBuf;
 
 use anyhow::Error;
 use cpython::*;
+use cpython_ext::PyNone;
 
 use ::treestate::{
     errors::ErrorKind,
@@ -78,10 +79,10 @@ py_class!(class treedirstatemap |py| {
             RefCell::new(dirstate))
     }
 
-    def clear(&self) -> PyResult<PyObject> {
+    def clear(&self) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate.clear();
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     // Read a dirstate file.
@@ -253,7 +254,7 @@ py_class!(class treedirstatemap |py| {
             .map_pyerr(py)
     }
 
-    def visittrackedfiles(&self, target: PyObject) -> PyResult<PyObject> {
+    def visittrackedfiles(&self, target: PyObject) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
@@ -263,10 +264,10 @@ py_class!(class treedirstatemap |py| {
         dirstate
             .visit_tracked(&mut visitor)
             .map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
-    def visitremovedfiles(&self, target: PyObject) -> PyResult<PyObject> {
+    def visitremovedfiles(&self, target: PyObject) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
@@ -276,7 +277,7 @@ py_class!(class treedirstatemap |py| {
         dirstate
             .visit_removed(&mut visitor)
             .map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     // Get the next dirstate object after the provided filename.  If the filename is None,
@@ -333,21 +334,21 @@ py_class!(class treedirstatemap |py| {
         mode: u32,
         size: i32,
         mtime: i32
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let state = *state.data(py).first().unwrap_or(&b'?');
         dirstate
             .add_file(filename.data(py), &FileState::new(state, mode, size, mtime))
             .map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
-    def removefile(&self, filename: PyBytes, _old_state: PyBytes, size: i32) -> PyResult<PyObject> {
+    def removefile(&self, filename: PyBytes, _old_state: PyBytes, size: i32) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .remove_file(filename.data(py), &FileState::new(b'r', 0, size, 0))
             .map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def deletefile(&self, filename: PyBytes) -> PyResult<bool> {
@@ -369,7 +370,7 @@ py_class!(class treedirstatemap |py| {
         Ok(self.dirstate(py).borrow().root_id().map(|id| id.0))
     }
 
-    def computenonnormals(&self, nonnormal: PyObject, otherparent: PyObject) -> PyResult<PyObject> {
+    def computenonnormals(&self, nonnormal: PyObject, otherparent: PyObject) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let mut tracked_visitor = |filepath: &Vec<KeyRef>, state: &mut FileState| {
             if state.state != b'n' || state.mtime == -1 {
@@ -395,7 +396,7 @@ py_class!(class treedirstatemap |py| {
             .visit_removed(&mut removed_visitor)
             .map_pyerr(py)?;
 
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def getcasefoldedtracked(
@@ -426,7 +427,7 @@ py_class!(class treedirstatemap |py| {
         acceptablestates: PyBytes,
         matchcallback: PyObject,
         fullpaths: bool
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let acceptablestates = acceptablestates.data(py);
 
@@ -454,7 +455,7 @@ py_class!(class treedirstatemap |py| {
                 .map_pyerr(py)?;
         }
 
-        Ok(py.None())
+        Ok(PyNone)
     }
 
 });

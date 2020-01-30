@@ -12,7 +12,7 @@ use std::{cell::RefCell, io::Cursor};
 use anyhow::Error;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
-use cpython_ext::{PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use thiserror::Error;
 
 use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore, Repair};
@@ -188,16 +188,16 @@ py_class!(class mutationstore |py| {
         mutationstore::create_instance(py, RefCell::new(ms))
     }
 
-    def add(&self, entry: &mutationentry) -> PyResult<PyObject> {
+    def add(&self, entry: &mutationentry) -> PyResult<PyNone> {
         let mut ms = self.mut_store(py).borrow_mut();
         ms.add(entry.entry(py)).map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
-    def flush(&self) -> PyResult<PyObject> {
+    def flush(&self) -> PyResult<PyNone> {
         let mut ms = self.mut_store(py).borrow_mut();
         ms.flush().map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def has(&self, succ: &PyBytes) -> PyResult<bool> {

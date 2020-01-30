@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use cpython::*;
 
 use ::nodemap::{NodeMap, NodeSet, Repair};
-use cpython_ext::{Bytes, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{Bytes, PyNone, PyPathBuf, ResultPyErrExt};
 use types::node::Node;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -32,7 +32,7 @@ py_class!(class nodemap |py| {
         nodemap::create_instance(py, RefCell::new(nodemap))
     }
 
-    def add(&self, first: &PyBytes, second: &PyBytes) -> PyResult<PyObject> {
+    def add(&self, first: &PyBytes, second: &PyBytes) -> PyResult<PyNone> {
         let first = Node::from_slice(first.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
         let second = Node::from_slice(second.data(py))
@@ -43,13 +43,13 @@ py_class!(class nodemap |py| {
         log.add(&first, &second)
             .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
 
-        Ok(py.None())
+        Ok(PyNone)
     }
 
-    def flush(&self) -> PyResult<PyObject> {
+    def flush(&self) -> PyResult<PyNone> {
         self.log(py).borrow_mut().flush()
             .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def lookupbyfirst(&self, first: &PyBytes) -> PyResult<PyObject> {
@@ -97,17 +97,17 @@ py_class!(class nodeset |py| {
         Self::create_instance(py, RefCell::new(nodeset))
     }
 
-    def add(&self, node: &PyBytes) -> PyResult<PyObject> {
+    def add(&self, node: &PyBytes) -> PyResult<PyNone> {
         let node = Node::from_slice(node.data(py)).map_pyerr(py)?;
         let set = self.set(py);
         let mut set = set.borrow_mut();
         set.add(&node).map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
-    def flush(&self) -> PyResult<PyObject> {
+    def flush(&self) -> PyResult<PyNone> {
         self.set(py).borrow_mut().flush().map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def __contains__(&self, node: &PyBytes) -> PyResult<bool> {

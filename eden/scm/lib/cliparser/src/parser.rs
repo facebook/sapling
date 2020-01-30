@@ -13,7 +13,7 @@ use cpython::{
     ToPyObject,
 };
 #[cfg(feature = "python")]
-use cpython_ext::{Bytes, Str};
+use cpython_ext::{Bytes, PyNone, Str};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use thiserror::Error;
@@ -96,7 +96,7 @@ impl ToPyObject for Value {
 
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         match self {
-            Value::OptBool() => py.None().into_object(),
+            Value::OptBool() => PyNone.to_py_object(py).into_object(),
             Value::Bool(b) => b.to_py_object(py).into_object(),
             Value::Str(s) => Str::from(Bytes::from(s.to_string()))
                 .to_py_object(py)

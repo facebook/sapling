@@ -8,7 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use cpython_ext::SimplePyBuf;
+use cpython_ext::{PyNone, SimplePyBuf};
 use dag::{id::Id, spanset::SpanSet};
 use pydag::Spans;
 use std::cell::RefCell;
@@ -138,10 +138,10 @@ py_class!(class revlogindex |py| {
 
     /// Insert a new revision that hasn't been written to disk.
     /// Used by revlog._addrevision.
-    def insert(&self, parents: Vec<u32>) -> PyResult<PyObject> {
+    def insert(&self, parents: Vec<u32>) -> PyResult<PyNone> {
         let revlog = self.changelogi(py);
         revlog.insert(parents);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def __len__(&self) -> PyResult<usize> {

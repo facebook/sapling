@@ -7,10 +7,11 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::{PyModule, PyObject, PyResult, Python};
+use cpython::{PyModule, PyResult, Python};
+use cpython_ext::PyNone;
 
 /// Populate an existing empty module so it contains utilities.
-pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> {
+pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyNone> {
     env_logger::init();
 
     let m = module;
@@ -54,5 +55,5 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     m.add(py, "workingcopy", pyworkingcopy::init_module(py, &name)?)?;
     m.add(py, "zstd", pyzstd::init_module(py, &name)?)?;
     m.add(py, "zstore", pyzstore::init_module(py, &name)?)?;
-    Ok(py.None())
+    Ok(PyNone)
 }

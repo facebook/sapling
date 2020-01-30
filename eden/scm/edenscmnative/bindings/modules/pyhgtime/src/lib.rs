@@ -6,6 +6,7 @@
  */
 
 use cpython::*;
+use cpython_ext::PyNone;
 use hgtime::HgTime;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -42,11 +43,11 @@ fn parserange(_py: Python, content: &str) -> PyResult<Option<((i64, i32), (i64, 
     }))
 }
 
-fn setnowfortesting(py: Python, content: &str) -> PyResult<PyObject> {
+fn setnowfortesting(_py: Python, content: &str) -> PyResult<PyNone> {
     if let Some(time) = HgTime::parse(content) {
         time.set_as_now_for_testing();
     }
-    Ok(py.None())
+    Ok(PyNone)
 }
 
 fn pytzset(_: Python) -> PyResult<Option<i32>> {

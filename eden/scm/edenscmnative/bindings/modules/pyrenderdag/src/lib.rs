@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use cpython::*;
+use cpython_ext::PyNone;
 use parking_lot::Mutex;
 use renderdag::{Ancestor, GraphRowRenderer, Renderer};
 
@@ -52,10 +53,10 @@ py_class!(pub class renderer |py| {
         Ok(renderer.width(node.as_ref(), parents.as_ref()))
     }
 
-    def reserve(&self, node: i64) -> PyResult<PyObject> {
+    def reserve(&self, node: i64) -> PyResult<PyNone> {
         let mut renderer = self.inner(py).lock();
         renderer.reserve(node);
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     def nextrow(&self, node: i64, parents: Vec<(String, i64)>, glyph: String, message: String) -> PyResult<String> {

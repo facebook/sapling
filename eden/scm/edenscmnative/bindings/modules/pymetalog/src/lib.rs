@@ -9,8 +9,7 @@
 
 use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
 use cpython::*;
-use cpython_ext::Bytes;
-use cpython_ext::ResultPyErrExt;
+use cpython_ext::{Bytes, PyNone, ResultPyErrExt};
 use std::cell::RefCell;
 use std::time::SystemTime;
 
@@ -51,10 +50,10 @@ py_class!(class metalog |py| {
     }
 
     /// Remove an item. Does not raise if the key does not exist.
-    def remove(&self, key: &str) -> PyResult<PyObject> {
+    def remove(&self, key: &str) -> PyResult<PyNone> {
         let mut log = self.log(py).borrow_mut();
         log.remove(key).map_pyerr(py)?;
-        Ok(py.None())
+        Ok(PyNone)
     }
 
     /// Get all keys.
