@@ -64,7 +64,7 @@ pub struct MutationEntry {
     pub preds: Vec<Node>,
     pub split: Vec<Node>,
     pub op: String,
-    pub user: Box<[u8]>,
+    pub user: String,
     pub time: f64,
     pub tz: i32,
     pub extra: Vec<(Box<[u8]>, Box<[u8]>)>,
@@ -125,7 +125,7 @@ impl MutationEntry {
         w.write_vlq(self.op.len())?;
         w.write_all(self.op.as_bytes())?;
         w.write_vlq(self.user.len())?;
-        w.write_all(&self.user)?;
+        w.write_all(&self.user.as_bytes())?;
         w.write_f64::<BigEndian>(self.time)?;
         w.write_vlq(self.tz)?;
         w.write_vlq(self.extra.len())?;
@@ -158,7 +158,7 @@ impl MutationEntry {
         let user_len = r.read_vlq()?;
         let mut user = vec![0; user_len];
         r.read_exact(&mut user)?;
-        let user = user.into_boxed_slice();
+        let user = String::from_utf8(user)?;
         let time = r.read_f64::<BigEndian>()?;
         let tz = r.read_vlq()?;
         let extra_count = r.read_vlq()?;

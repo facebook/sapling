@@ -94,7 +94,7 @@ py_class!(class mutationentry |py| {
         preds: Option<Vec<PyBytes>>,
         split: Option<Vec<PyBytes>>,
         op: &PyString,
-        user: &PyBytes,
+        user: &PyString,
         time: f64,
         tz: i32,
         extra: Option<Vec<(PyBytes, PyBytes)>>
@@ -126,7 +126,7 @@ py_class!(class mutationentry |py| {
             nodes
         };
         let op = op.to_string(py)?.into();
-        let user = Box::from(user.data(py));
+        let user = user.to_string(py)?.into();
         let extra = {
             let mut items = Vec::new();
             if let Some(extra) = extra {
