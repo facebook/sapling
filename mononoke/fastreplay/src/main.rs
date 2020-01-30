@@ -33,7 +33,6 @@ use metaconfig_types::HookManagerParams;
 use mononoke_types::Timestamp;
 use rand::{thread_rng, Rng};
 use repo_client::MononokeRepoBuilder;
-use scopeguard::defer;
 use scuba_ext::ScubaSampleBuilder;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o, warn, Logger};
@@ -44,7 +43,10 @@ use std::sync::{
     Arc,
 };
 use std::time::Duration;
-use tokio::io::{self, AsyncBufReadExt, BufReader};
+use tokio::{
+    io::{self, AsyncBufReadExt, BufReader},
+    task::JoinHandle,
+};
 
 use config::FastReplayConfig;
 use dispatcher::FastReplayDispatcher;
@@ -54,7 +56,7 @@ define_stats! {
     prefix = "mononoke.fastreplay";
     received: timeseries(Rate, Sum),
     admitted: timeseries(Rate, Sum),
-    processed: timeseries(Rate, Sum),
+    dispatched: timeseries(Rate, Sum),
 }
 
 const ARG_NO_SKIPLIST: &str = "no-skiplist";
@@ -81,11 +83,21 @@ fn should_admit(config: &FastReplayConfig) -> bool {
 }
 
 async fn dispatch(
+    logger: &Logger,
+    scuba: &ScubaSampleBuilder,
     dispatchers: &HashMap<String, FastReplayDispatcher>,
     aliases: &HashMap<String, String>,
+    config: &FastReplayConfig,
     req: &str,
-    mut scuba: ScubaSampleBuilder,
-) -> Result<(), Error> {
+    count: &Arc<AtomicU64>,
+) -> Result<Option<JoinHandle<()>>, Error> {
+    STATS::received.add_value(1);
+    if !should_admit(config) {
+        debug!(&logger, "Request was not admitted");
+        return Ok(None);
+    }
+
+    STATS::admitted.add_value(1);
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
     let reponame = aliases
@@ -123,47 +135,59 @@ async fn dispatch(
             .compat(),
     };
 
-    scuba.add("reponame", reponame);
+    count.fetch_add(1, Ordering::Relaxed);
 
-    scuba.add("command", req.normal.command.as_ref());
-    if let Some(args) = req.normal.args.as_ref() {
-        scuba.add("command_args", args.as_ref());
-    }
-    if let Some(remote_args) = req.normal.remote_args.as_ref() {
-        scuba.add("command_remote_args", remote_args.as_ref());
-    }
+    let task = {
+        cloned!(count, mut scuba);
 
-    let replay_delay = Timestamp::from_timestamp_secs(req.int.time).since_seconds();
-    scuba.add("replay_delay_s", replay_delay);
+        scuba.add("reponame", reponame);
 
-    scuba.add("recorded_server", req.server_type());
-    scuba.add("recorded_duration_us", req.duration_us());
-
-    if let Some(responselen) = req.int.responselen {
-        scuba.add("recorded_response_length", responselen);
-    }
-    if let Some(session_id) = req.normal.mononoke_session_uuid {
-        scuba.add("recorded_mononoke_session_id", session_id.as_ref());
-    }
-
-    let (stats, res) = stream
-        .try_fold(0, |size, e| future::ready(Ok(size + e.len())))
-        .timed()
-        .await;
-
-    scuba.add_future_stats(&stats);
-
-    match res {
-        Ok(size) => {
-            scuba.add("replay_response_size", size);
-            scuba.log_with_msg("Replay Succeeded", None);
+        scuba.add("command", req.normal.command.as_ref());
+        if let Some(args) = req.normal.args.as_ref() {
+            scuba.add("command_args", args.as_ref());
         }
-        Err(e) => {
-            scuba.log_with_msg("Replay Failed", format!("{:#?}", e));
+        if let Some(remote_args) = req.normal.remote_args.as_ref() {
+            scuba.add("command_remote_args", remote_args.as_ref());
         }
-    }
 
-    Ok(())
+        let replay_delay = Timestamp::from_timestamp_secs(req.int.time).since_seconds();
+        scuba.add("replay_delay_s", replay_delay);
+
+        scuba.add("recorded_server", req.server_type());
+        scuba.add("recorded_duration_us", req.duration_us());
+
+        if let Some(responselen) = req.int.responselen {
+            scuba.add("recorded_response_length", responselen);
+        }
+        if let Some(session_id) = req.normal.mononoke_session_uuid {
+            scuba.add("recorded_mononoke_session_id", session_id.as_ref());
+        }
+
+        async move {
+            let (stats, res) = stream
+                .try_fold(0, |size, e| future::ready(Ok(size + e.len())))
+                .timed()
+                .await;
+            scuba.add_future_stats(&stats);
+
+            match res {
+                Ok(size) => {
+                    scuba.add("replay_response_size", size);
+                    scuba.log_with_msg("Replay Succeeded", None);
+                }
+                Err(e) => {
+                    scuba.log_with_msg("Replay Failed", format!("{:#?}", e));
+                }
+            }
+
+            count.fetch_sub(1, Ordering::Relaxed);
+
+            ()
+        }
+    };
+
+    STATS::dispatched.add_value(1);
+    Ok(Some(tokio::task::spawn(task.boxed())))
 }
 
 fn build_noop_hook_manager(fb: FacebookInit) -> HookManager {
@@ -307,7 +331,7 @@ async fn bootstrap_repositories<'a>(
 }
 
 struct ReplayOpts {
-    aliases: Arc<HashMap<String, String>>,
+    aliases: HashMap<String, String>,
     config: ConfigHandle<FastReplayConfig>,
 }
 
@@ -324,7 +348,6 @@ impl ReplayOpts {
                 .collect::<Result<HashMap<_, _>, _>>()?,
             None => HashMap::new(),
         };
-        let aliases = Arc::new(aliases);
 
         let config = cmdlib::args::get_config_handle(
             fb,
@@ -342,7 +365,7 @@ async fn fast_replay_from_stdin<'a>(
     opts: &ReplayOpts,
     logger: &Logger,
     scuba: &ScubaSampleBuilder,
-    repos: &Arc<HashMap<String, FastReplayDispatcher>>,
+    repos: &HashMap<String, FastReplayDispatcher>,
     count: &Arc<AtomicU64>,
 ) -> Result<(), Error> {
     let mut reader = BufReader::new(io::stdin()).lines();
@@ -361,44 +384,31 @@ async fn fast_replay_from_stdin<'a>(
             continue;
         }
 
-        let line = reader.next_line().await?;
-        STATS::received.add_value(1);
-
-        match line {
-            Some(req) => {
-                if !should_admit(&config) {
-                    debug!(&logger, "Request was not admitted");
+        match reader.next_line().await? {
+            Some(req) => match dispatch(
+                &logger,
+                &scuba,
+                &repos,
+                &opts.aliases,
+                &config,
+                &req,
+                &count,
+            )
+            .await
+            {
+                Ok(..) => {
                     continue;
                 }
-                STATS::admitted.add_value(1);
-
-                count.fetch_add(1, Ordering::Relaxed);
-
-                // NOTE: We clone values here because we need a 'static future to spawn.
-                cloned!(logger, scuba, repos, opts.aliases, count);
-
-                let task = async move {
-                    defer!({
-                        count.fetch_sub(1, Ordering::Relaxed);
-                    });
-
-                    match dispatch(&repos, &aliases, &req, scuba).await {
-                        Ok(()) => {
-                            STATS::processed.add_value(1);
-                        }
-                        Err(err) => {
-                            warn!(&logger, "Dispatch failed: {:#?}", err);
-                        }
-                    };
-                };
-
-                tokio::task::spawn(task.boxed());
-            }
+                Err(e) => {
+                    warn!(&logger, "Dispatch failed: {:#?}", e);
+                    continue;
+                }
+            },
             None => {
                 info!(&logger, "Processed all input...");
                 return Ok(());
             }
-        };
+        }
     }
 }
 
@@ -415,7 +425,6 @@ async fn do_main<'a>(
     let opts = ReplayOpts::parse(fb, logger.clone(), &matches)?;
 
     let repos = bootstrap_repositories(fb, &matches, &logger, &scuba).await?;
-    let repos = Arc::new(repos);
 
     // Report that we're good to go.
     service.set_ready();
