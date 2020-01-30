@@ -113,9 +113,9 @@ if sys.version_info[0] >= 3:
         # type: (str) -> bytes
         return s.encode("utf-8")
 
-    def decodeutf8(s):
-        # type: (bytes) -> str
-        return s.decode("utf-8")
+    def decodeutf8(s, errors="strict"):
+        # type: (bytes, str) -> str
+        return s.decode("utf-8", errors=errors)
 
     def iteritems(s):
         return s.items()
@@ -199,8 +199,8 @@ else:
         assert isinstance(s, bytes)
         return s
 
-    def decodeutf8(s):
-        # type: (bytes) -> bytes
+    def decodeutf8(s, errors="strict"):
+        # type: (bytes, str) -> bytes
         assert isinstance(s, bytes)
         return s
 

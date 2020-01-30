@@ -41,10 +41,10 @@ def _writessherror(ui, s):
     if s and not ui.quiet:
         for l in s.splitlines():
             if l.startswith(b"ssh:"):
-                prefix = b""
+                prefix = ""
             else:
-                prefix = _(b"remote: ")
-            ui.write_err(prefix, l, b"\n")
+                prefix = _("remote: ")
+            ui.write_err(prefix, decodeutf8(l, errors="replace"), "\n")
 
 
 class countingpipe(object):
@@ -81,13 +81,19 @@ class countingpipe(object):
         return self._pipe.flush()
 
 
-class threadedstderr(threading.Thread):
+class threadedstderr(object):
     def __init__(self, ui, stderr):
         self._ui = ui
         self._stderr = stderr
         self._stop = False
-        threading.Thread.__init__(self)
-        self.daemon = True
+        self._thread = None
+
+    def start(self):
+        # type: () -> None
+        thread = threading.Thread(target=self.run)
+        thread.daemon = True
+        thread.start()
+        self._thread = thread
 
     def run(self):
         # type: () -> None
@@ -101,6 +107,10 @@ class threadedstderr(threading.Thread):
     def close(self):
         # type: () -> None
         self._stop = True
+
+    def join(self, timeout):
+        if self._thread:
+            self._thread.join(timeout)
 
 
 class sshpeer(wireproto.wirepeer):
@@ -194,12 +204,12 @@ class sshpeer(wireproto.wirepeer):
         # while self._subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
         sub = util.popen4(cmd, bufsize=0, env=sshenv)
-        self._pipeo, self._pipei, self._pipee, self._subprocess = sub
+        pipeo, pipei, pipee, self._subprocess = sub
 
-        self._pipee = threadedstderr(self.ui, self._pipee)
+        self._pipee = threadedstderr(self.ui, pipee)
         self._pipee.start()
-        self._pipei = countingpipe(self.ui, self._pipei)
-        self._pipeo = countingpipe(self.ui, self._pipeo)
+        self._pipei = countingpipe(self.ui, pipei)
+        self._pipeo = countingpipe(self.ui, pipeo)
 
         self.ui.metrics.gauge("ssh_connections")
 
