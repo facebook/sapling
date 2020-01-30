@@ -7,6 +7,7 @@
  */
 
 use serde::Deserialize;
+use std::convert::TryInto;
 
 use fastreplay_structs::FastReplayConfig as RawFastReplayConfig;
 
@@ -24,6 +25,7 @@ impl Default for FastReplayConfig {
         FastReplayConfig {
             inner: RawFastReplayConfig {
                 admission_rate: 100,
+                max_concurrency: 50,
             },
         }
     }
@@ -32,5 +34,11 @@ impl Default for FastReplayConfig {
 impl FastReplayConfig {
     pub fn admission_rate(&self) -> i64 {
         self.inner.admission_rate
+    }
+
+    pub fn max_concurrency(&self) -> u64 {
+        // NOTE: The config comes as an i64. it should be > 0 since we validate that, but let's be
+        // safe if not.
+        self.inner.max_concurrency.try_into().unwrap_or(50)
     }
 }

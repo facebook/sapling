@@ -54,14 +54,13 @@ use protocol::{Request, RequestLine};
 const ARG_NO_SKIPLIST: &str = "no-skiplist";
 const ARG_NO_CACHE_WARMUP: &str = "no-cache-warmup";
 const ARG_ALIASES: &str = "alias";
-const ARG_MAX_CONCURRENCY: &str = "max-concurrency";
 const ARG_HASH_VALIDATION_PERCENTAGE: &str = "hash-validation-percentage";
 const ARG_LIVE_CONFIG: &str = "live-config";
 
 const LIVE_CONFIG_POLL_INTERVAL: u64 = 5;
 
-fn should_admit(opts: &ReplayOpts) -> bool {
-    let admission_rate = opts.config.get().admission_rate();
+fn should_admit(config: &FastReplayConfig) -> bool {
+    let admission_rate = config.admission_rate();
 
     if admission_rate >= 100 {
         return true;
@@ -79,19 +78,19 @@ async fn dispatch(
     logger: &Logger,
     scuba: &ScubaSampleBuilder,
     dispatchers: &HashMap<String, FastReplayDispatcher>,
-    opts: &ReplayOpts,
+    aliases: &HashMap<String, String>,
+    config: &FastReplayConfig,
     req: &str,
     count: &Arc<AtomicU64>,
 ) -> Result<Option<JoinHandle<()>>, Error> {
-    if !should_admit(opts) {
+    if !should_admit(config) {
         debug!(&logger, "Request was not admitted");
         return Ok(None);
     }
 
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
-    let reponame = opts
-        .aliases
+    let reponame = aliases
         .get(req.normal.reponame.as_ref())
         .map(|a| a.as_ref())
         .unwrap_or(req.normal.reponame.as_ref())
@@ -321,7 +320,6 @@ async fn bootstrap_repositories<'a>(
 }
 
 struct ReplayOpts {
-    max_concurrency: u64,
     aliases: HashMap<String, String>,
     config: ConfigHandle<FastReplayConfig>,
 }
@@ -332,15 +330,6 @@ impl ReplayOpts {
         logger: Logger,
         matches: &ArgMatches<'a>,
     ) -> Result<Self, Error> {
-        let max_concurrency = matches
-            .value_of(ARG_MAX_CONCURRENCY)
-            .map(|n| -> Result<u64, Error> {
-                let n = n.parse()?;
-                Ok(n)
-            })
-            .transpose()?
-            .unwrap_or(50);
-
         let aliases = match matches.values_of(ARG_ALIASES) {
             Some(values) => values
                 .into_iter()
@@ -357,11 +346,7 @@ impl ReplayOpts {
         )
         .with_context(|| format!("While parsing --{}", ARG_LIVE_CONFIG))?;
 
-        Ok(Self {
-            max_concurrency,
-            aliases,
-            config,
-        })
+        Ok(Self { aliases, config })
     }
 }
 
@@ -376,7 +361,10 @@ async fn fast_replay_from_stdin<'a>(
 
     loop {
         let load = count.load(Ordering::Relaxed);
-        if load > opts.max_concurrency {
+
+        let config = opts.config.get();
+
+        if load > config.max_concurrency() {
             warn!(
                 &logger,
                 "Waiting for some requests to complete (load: {})...", load
@@ -386,7 +374,17 @@ async fn fast_replay_from_stdin<'a>(
         }
 
         match reader.next_line().await? {
-            Some(req) => match dispatch(&logger, &scuba, &repos, &opts, &req, &count).await {
+            Some(req) => match dispatch(
+                &logger,
+                &scuba,
+                &repos,
+                &opts.aliases,
+                &config,
+                &req,
+                &count,
+            )
+            .await
+            {
                 Ok(..) => {
                     continue;
                 }
@@ -444,12 +442,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_all_repos()
         .with_scuba_logging_args()
         .build()
-        .arg(
-            Arg::with_name(ARG_MAX_CONCURRENCY)
-                .long(ARG_MAX_CONCURRENCY)
-                .takes_value(true)
-                .required(false),
-        )
         .arg(
             Arg::with_name(ARG_NO_SKIPLIST)
                 .long(ARG_NO_SKIPLIST)

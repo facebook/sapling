@@ -72,10 +72,23 @@ Check logging structure
   $ live_config="$TESTTMP/live.json"
   $ cat > "$live_config" << EOF
   > {
-  >   "admission_rate": 0
+  >   "admission_rate": 0,
+  >   "max_concurrency": 10
   > }
   > EOF
   $ fastreplay  --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep "not admitted"
   * Request was not admitted (glob)
   * Request was not admitted (glob)
   * Request was not admitted (glob)
+
+# Check that replaying with max_concurrency = 1 replays in oder
+  $ truncate -s 0 "$fastreplay_log"
+  $ live_config="$TESTTMP/live.json"
+  $ cat > "$live_config" << EOF
+  > {
+  >   "admission_rate": 0,
+  >   "max_concurrency": 1
+  > }
+  > EOF
+  $ quiet fastreplay  --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH"
+  $ grep "Replay Succeeded" "$fastreplay_log" | jq .normal.command
