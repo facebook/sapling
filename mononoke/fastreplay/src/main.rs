@@ -36,6 +36,7 @@ use repo_client::MononokeRepoBuilder;
 use scuba_ext::ScubaSampleBuilder;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o, warn, Logger};
+use stats::prelude::*;
 use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -50,6 +51,13 @@ use tokio::{
 use config::FastReplayConfig;
 use dispatcher::FastReplayDispatcher;
 use protocol::{Request, RequestLine};
+
+define_stats! {
+    prefix = "mononoke.fastreplay";
+    received: timeseries(Rate, Sum),
+    admitted: timeseries(Rate, Sum),
+    dispatched: timeseries(Rate, Sum),
+}
 
 const ARG_NO_SKIPLIST: &str = "no-skiplist";
 const ARG_NO_CACHE_WARMUP: &str = "no-cache-warmup";
@@ -83,11 +91,13 @@ async fn dispatch(
     req: &str,
     count: &Arc<AtomicU64>,
 ) -> Result<Option<JoinHandle<()>>, Error> {
+    STATS::received.add_value(1);
     if !should_admit(config) {
         debug!(&logger, "Request was not admitted");
         return Ok(None);
     }
 
+    STATS::admitted.add_value(1);
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
     let reponame = aliases
@@ -176,6 +186,7 @@ async fn dispatch(
         }
     };
 
+    STATS::dispatched.add_value(1);
     Ok(Some(tokio::task::spawn(task.boxed())))
 }
 
