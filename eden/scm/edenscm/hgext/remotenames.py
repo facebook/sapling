@@ -1879,7 +1879,7 @@ def readremotenames(repo=None, svfs=None):
 
 def _writesingleremotename(fd, remote, nametype, name, node):
     remotename = joinremotename(remote, name)
-    fd.write("%s %s %s\n" % (node, nametype, remotename))
+    fd.write(pycompat.encodeutf8("%s %s %s\n" % (node, nametype, remotename)))
 
 
 def transition(repo, ui):
