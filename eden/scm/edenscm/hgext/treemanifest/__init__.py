@@ -150,7 +150,6 @@ from __future__ import absolute_import
 import abc
 import contextlib
 import hashlib
-import itertools
 import os
 import random
 import shutil
@@ -209,6 +208,12 @@ from ..remotefilelog.datapack import makedatapackstore, memdatapack
 from ..remotefilelog.historypack import makehistorypackstore, memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
 from ..remotefilelog.repack import domaintenancerepack, repacklockvfs
+
+
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 
 
 cmdtable = {}
@@ -2254,7 +2259,7 @@ def _findrecenttree(repo, startrev, targetmfnodes):
 
         # Zip's the iterators together, using the fillvalue when the shorter
         # iterator runs out of values.
-        candidates = itertools.izip_longest(ancestors, descendants, fillvalue=None)
+        candidates = zip_longest(ancestors, descendants, fillvalue=None)
         for revs in candidates:
             for rev in revs:
                 if rev is None:
