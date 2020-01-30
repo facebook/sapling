@@ -587,9 +587,11 @@ class localrepository(object):
         # changelog might access 'remotenames' and other extensions might
         # use changelog before 'remotenames.reposetup'.
         for name in ["remotenames", "bookmarks"]:
-            if self.sharedvfs.exists(name) and not self.svfs.exists(name):
+            if self.sharedvfs.exists(name) and not os.path.exists(self.svfs.join(name)):
                 with self.wlock(), self.lock():
-                    self.svfs.write(name, self.sharedvfs.read(name))
+                    data = self.sharedvfs.read(name)
+                    # avoid svfs.write so it does not write into metalog.
+                    util.writefile(self.svfs.join(name), data)
 
         self._narrowheadsmigration()
         self._zstorecommitdatamigration()
