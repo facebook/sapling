@@ -728,6 +728,7 @@ def _wraprepo(ui, repo):
             set to False.
 
             """
+            raw = pycompat.decodeutf8(raw)
             filename = filename or "<sparse profile>"
             metadata = {}
             last_key = None
