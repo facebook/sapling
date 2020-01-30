@@ -21,16 +21,8 @@ bhex = binascii.hexlify
 bbin = binascii.unhexlify
 
 if sys.version_info.major == 3:
-
-    def bin(s):
-        # type: (str) -> bytes
-        return bbin(s.encode("ascii"))
-
-    def hex(s):
-        # type: (bytes) -> str
-        return bhex(s).decode("ascii")
-
-
+    bin = bbin
+    hex = bytes.hex
 else:
     bin = bbin
     hex = bhex
