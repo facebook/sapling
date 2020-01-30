@@ -495,10 +495,9 @@ py_class!(class treestate |py| {
         Ok(state.len())
     }
 
-    def __contains__(&self, path: PyBytes) -> PyResult<bool> {
+    def __contains__(&self, path: PyPath) -> PyResult<bool> {
         let mut state = self.state(py).borrow_mut();
-        let path = path.data(py);
-        let file = convert_result(py, state.get(path))?;
+        let file = convert_result(py, state.get(path.as_utf8_bytes()))?;
         // A lot of places require "__contains__(path)" to be "False" if "path" is "?" state
         let visible_flags = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
         Ok(match file {
@@ -507,9 +506,9 @@ py_class!(class treestate |py| {
         })
     }
 
-    def get(&self, path: PyBytes, default: PyObject) -> PyResult<PyObject> {
+    def get(&self, path: PyPath, default: PyObject) -> PyResult<PyObject> {
         let mut state = self.state(py).borrow_mut();
-        let path = path.data(py);
+        let path = path.as_utf8_bytes();
 
         Ok(if path.ends_with(b"/") {
             let dir = convert_result(py, state.get_dir(path))?;
@@ -543,7 +542,7 @@ py_class!(class treestate |py| {
     }
 
     def insert(
-        &self, path: PyBytes, bits: u16, mode: u32, size: i32, mtime: i32, copied: PyObject
+        &self, path: PyPath, bits: u16, mode: u32, size: i32, mtime: i32, copied: PyObject
     ) -> PyResult<PyObject> {
         let mut flags = StateFlags::from_bits_truncate(bits);
         // For special mtime or size, mark them as "NEED_CHECK" automatically.
@@ -562,20 +561,20 @@ py_class!(class treestate |py| {
         };
 
         let file = FileStateV2 { mode, size, mtime, copied, state: flags };
-        let path = path.data(py);
+        let path = path.as_utf8_bytes();
         let mut state = self.state(py).borrow_mut();
         convert_result(py, state.insert(path, &file))?;
         Ok(py.None())
     }
 
-    def remove(&self, path: PyBytes) -> PyResult<bool> {
+    def remove(&self, path: PyPath) -> PyResult<bool> {
         let mut state = self.state(py).borrow_mut();
-        convert_result(py, state.remove(path.data(py)))
+        convert_result(py, state.remove(path.as_utf8_bytes()))
     }
 
-    def hasdir(&self, path: PyBytes) -> PyResult<bool> {
+    def hasdir(&self, path: PyPath) -> PyResult<bool> {
         let mut state = self.state(py).borrow_mut();
-        let path = path.data(py);
+        let path = path.as_utf8_bytes();
         Ok(convert_result(py, state.has_dir(path))?)
     }
 
@@ -584,7 +583,7 @@ py_class!(class treestate |py| {
         setbits: u16,
         unsetbits: u16,
         dirfilter: Option<PyObject> = None
-    ) -> PyResult<Vec<PyBytes>> {
+    ) -> PyResult<Vec<PyPath>> {
         // Get all file paths with `setbits` all set, `unsetbits` all unset.
         // If dirfilter is provided. It is a callable that takes a directory path, and returns True
         // if the path should be skipped.
@@ -596,7 +595,7 @@ py_class!(class treestate |py| {
         let mut result = Vec::new();
         convert_result(py, state.visit(
             &mut |components, _state| {
-                let path = PyBytes::new(py, &components.concat());
+                let path = PyPath::from_utf8_bytes(components.concat()).expect("path should be utf-8");
                 result.push(path);
                 Ok(VisitorResult::NotChanged)
             },
@@ -607,7 +606,7 @@ py_class!(class treestate |py| {
                     }
                 }
                 if let Some(ref dirfilter) = dirfilter {
-                    let path = PyBytes::new(py, &components.concat());
+                    let path = PyPath::from_utf8_bytes(components.concat()).expect("path should be utf-8");
                     if let Ok(result) = dirfilter.call(py, (path,), None) {
                         if let Ok(result) = result.is_true(py) {
                             if result {  // should skip
@@ -623,7 +622,7 @@ py_class!(class treestate |py| {
         Ok(result)
     }
 
-    def tracked(&self, prefix: PyBytes) -> PyResult<Vec<PyBytes>> {
+    def tracked(&self, prefix: PyPath) -> PyResult<Vec<PyPath>> {
         // prefix limits the result to given prefix (ex. ["dir1/", "dir2/"]). To get all tracked
         // files, set prefix to an empty list.
         // Not ideal as a special case. But the returned list is large and it needs to be fast.
@@ -631,10 +630,10 @@ py_class!(class treestate |py| {
         let mut state = self.state(py).borrow_mut();
         let mut result = Vec::new();
         let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
-        let prefix = split_path(prefix.data(py));
+        let prefix = split_path(prefix.as_utf8_bytes());
         convert_result(py, state.visit(
             &mut |components, _state| {
-                let path = PyBytes::new(py, &components.concat());
+                let path = PyPath::from_utf8_bytes(components.concat()).expect("path should be utf-8");
                 result.push(path);
                 Ok(VisitorResult::NotChanged)
             },
@@ -665,43 +664,43 @@ py_class!(class treestate |py| {
     }
 
     def getfiltered(
-        &self, path: PyBytes, filter: PyObject, filterid: u64
-    ) -> PyResult<Vec<PyBytes>> {
+        &self, path: PyPath, filter: PyObject, filterid: u64
+    ) -> PyResult<Vec<PyPath>> {
         let mut state = self.state(py).borrow_mut();
-        let path = path.data(py);
 
         let result = convert_result(py, state.get_filtered_key(
-            path,
+            path.as_utf8_bytes(),
             &mut |path| {
-                let path = PyBytes::new(py, path);
+                let path = PyPath::from_utf8_bytes(path.to_vec()).expect("path should be utf-8");
                 let filtered = filter
-                    .call(py, (path,), None)
+                    .call(py, (&path,), None)
                     .map_err(|e| callback_error(py, e))?
-                    .extract::<PyBytes>(py)
+                    .extract::<PyPath>(py)
                     .map_err(|e| callback_error(py, e))?;
-                Ok(filtered.data(py).to_vec().into_boxed_slice())
+                Ok(filtered.into_utf8_bytes().into_boxed_slice())
             },
             filterid,
         ))?;
 
-        Ok(result.iter().map(|o| PyBytes::new(py, &o[..])).collect())
+        Ok(result.into_iter().map(|o| PyPath::from_utf8_bytes(o.into_vec()).expect("path should be utf-8")).collect())
     }
 
     def pathcomplete(
-        &self, prefix: PyBytes, setbits: u16, unsetbits: u16, matchcallback: PyObject,
+        &self, prefix: PyPath, setbits: u16, unsetbits: u16, matchcallback: PyObject,
         fullpaths: bool
     ) -> PyResult<PyObject> {
         let setbits = StateFlags::from_bits_truncate(setbits);
         let unsetbits = StateFlags::from_bits_truncate(unsetbits);
         let mask = setbits | unsetbits;
         let mut state = self.state(py).borrow_mut();
+        let prefix = prefix.as_utf8_bytes();
 
         convert_result(py, state.path_complete(
-            prefix.data(py),
+            prefix,
             fullpaths,
             &|file| file.state & mask == setbits,
             &mut |components| {
-                let path = PyBytes::new(py, &components.concat()).into_object();
+                let path = PyPath::from_utf8_bytes(components.concat()).expect("path should be utf-8");
                 matchcallback.call(py, (path,), None).map_err(|e| callback_error(py, e))?;
                 Ok(())
             },
@@ -718,7 +717,7 @@ py_class!(class treestate |py| {
             old_map.call_method(py, "iteritems", NoArgs, None)?)?;
         for item in iter {
             let item_tuple = item?.extract::<PyTuple>(py)?;
-            let path = item_tuple.get_item(py, 0).extract::<PyBytes>(py)?;
+            let path = item_tuple.get_item(py, 0).extract::<PyPath>(py)?;
             let data = item_tuple.get_item(py, 1).extract::<PySequence>(py)?;
             let state = *data.get_item(py, 0)?.extract::<PyBytes>(py)?.data(py).first().unwrap();
             let mode = data.get_item(py, 1)?.extract::<u32>(py)?;
@@ -738,9 +737,8 @@ py_class!(class treestate |py| {
                 _ => StateFlags::empty(),
             };
             if !flags.is_empty() {
-                let path = path.data(py);
                 let file = FileStateV2 { mode, size, mtime, copied: None, state: flags };
-                convert_result(py, tree.insert(path, &file))?;
+                convert_result(py, tree.insert(path.as_utf8_bytes(), &file))?;
             }
         }
         Ok(None)
