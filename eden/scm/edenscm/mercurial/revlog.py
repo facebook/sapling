@@ -2045,7 +2045,7 @@ class revlog(object):
         if alwayscache and rawtext is None:
             rawtext = buildtext()
 
-        if type(rawtext) == str:  # only accept immutable objects
+        if type(rawtext) == bytes:  # only accept immutable objects
             self._cache = (node, curr, rawtext)
         self._chainbasecache[curr] = chainbase
         return node
