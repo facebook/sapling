@@ -349,7 +349,7 @@ class simplecommitctx(context.committablectx):
             renamed = m.group(2)
         else:
             renamed = None
-        return simplefilectx(key, data, renamed)
+        return simplefilectx(key, pycompat.encodeutf8(data), renamed)
 
     def commit(self):
         return self._repo.commitctx(self)
