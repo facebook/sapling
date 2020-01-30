@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 from . import bookmarks, encoding, obsolete, phases, util
+from .pycompat import decodeutf8
 
 
 def _nslist(repo):
@@ -70,5 +71,5 @@ def decodekeys(data):
     result = util.sortdict()
     for l in data.splitlines():
         k, v = l.split(b"\t")
-        result[decode(k)] = decode(v)
+        result[decodeutf8(decode(k))] = decodeutf8(decode(v))
     return result
