@@ -12,6 +12,7 @@ import json
 
 from edenscm.mercurial import dagop, node as nodemod
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
+from edenscm.mercurial.pycompat import ensurestr
 
 
 def _joinremotename(remote, name):
@@ -443,13 +444,13 @@ class BaseService(object):
     def _makenodes(self, data):
         nodes = {}
         for nodeinfo in data["nodes"]:
-            node = nodeinfo["node"].encode("ascii")
-            parents = [p.encode("ascii") for p in nodeinfo["parents"]]
-            bookmarks = [b.encode("utf-8") for b in nodeinfo["bookmarks"]]
-            author = nodeinfo["author"].encode("utf-8")
+            node = ensurestr(nodeinfo["node"])
+            parents = [ensurestr(p) for p in nodeinfo["parents"]]
+            bookmarks = [ensurestr(b) for b in nodeinfo["bookmarks"]]
+            author = ensurestr(nodeinfo["author"])
             date = int(nodeinfo["date"])
-            message = nodeinfo["message"].encode("utf-8")
-            phase = nodeinfo["phase"].encode("utf-8")
+            message = ensurestr(nodeinfo["message"])
+            phase = ensurestr(nodeinfo["phase"])
             nodes[node] = NodeInfo(
                 node, bookmarks, parents, author, date, message, phase
             )

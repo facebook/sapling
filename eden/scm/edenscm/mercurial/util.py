@@ -2297,6 +2297,7 @@ def stringmatcher(pattern, casesensitive=True):
 
 
 def shortuser(user):
+    # type: (str) -> str
     """Return a short representation of a user name or email address."""
     f = user.find("@")
     if f >= 0:
@@ -2314,6 +2315,7 @@ def shortuser(user):
 
 
 def emailuser(user):
+    # type: (str) -> str
     """Return the user portion of an email address."""
     f = user.find("@")
     if f >= 0:
@@ -2325,6 +2327,7 @@ def emailuser(user):
 
 
 def email(author):
+    # type: (str) -> str
     """get email of author."""
     r = author.find(">")
     if r == -1:
@@ -2333,6 +2336,7 @@ def email(author):
 
 
 def emaildomainuser(user, domain):
+    # type: (str, str) -> str
     """get email of author, abbreviating users in the given domain."""
     useremail = email(user)
     if domain and useremail.endswith("@" + domain):
@@ -2341,6 +2345,7 @@ def emaildomainuser(user, domain):
 
 
 def ellipsis(text, maxlength=400):
+    # type: (str, int) -> str
     """Trim string to at most maxlength (default: 400) columns in display."""
     return encoding.trim(text, maxlength, ellipsis="...")
 

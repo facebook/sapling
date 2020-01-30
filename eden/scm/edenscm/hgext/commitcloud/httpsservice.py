@@ -137,11 +137,11 @@ class HttpsCommitCloudService(baseservice.BaseService):
         if self._getheader("Content-Encoding") == "gzip":
             buffer = util.stringio()
             with gzip.GzipFile(fileobj=buffer, mode="w") as compressed:
-                compressed.write(json.dumps(data))
+                compressed.write(pycompat.encodeutf8(json.dumps(data)))
                 compressed.flush()
             rdata = buffer.getvalue()
         else:
-            rdata = json.dumps(data)
+            rdata = pycompat.encodeutf8(json.dumps(data))
 
         # exponential backoff here on failure, 1s, 2s, 4s, 8s, 16s etc
         sl = 1

@@ -126,6 +126,12 @@ if sys.version_info[0] >= 3:
     def itervalues(s):
         return s.values()
 
+    def ensurestr(s):
+        # type: Union[str, bytes] -> str
+        if isinstance(s, bytes):
+            s = s.decode("utf-8")
+        return s
+
 
 else:
     import cStringIO
@@ -206,6 +212,12 @@ else:
 
     def itervalues(s):
         return s.itervalues()
+
+    def ensurestr(s):
+        # type: Union[str, unicode] -> str
+        if isinstance(s, unicode):
+            s = s.encode("utf-8")
+        return s
 
 
 isjython = sysplatform.startswith("java")
