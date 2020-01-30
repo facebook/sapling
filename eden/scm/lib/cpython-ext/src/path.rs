@@ -43,6 +43,18 @@ impl PyPath {
     pub fn to_repo_path<'a>(&'a self) -> Result<&'a RepoPath> {
         Ok(RepoPath::from_str(&self.0)?)
     }
+
+    pub fn into_utf8_bytes(self) -> Vec<u8> {
+        self.0.into()
+    }
+
+    pub fn as_utf8_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
+    pub fn from_utf8_bytes(utf8_bytes: Vec<u8>) -> Result<Self> {
+        Ok(Self(String::from_utf8(utf8_bytes)?))
+    }
 }
 
 impl ToPyObject for PyPath {
@@ -136,5 +148,11 @@ impl From<PathComponentBuf> for PyPath {
 impl fmt::Display for PyPath {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&*self.0, formatter)
+    }
+}
+
+impl From<PyPath> for String {
+    fn from(path: PyPath) -> String {
+        path.0
     }
 }
