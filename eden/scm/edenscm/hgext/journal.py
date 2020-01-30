@@ -205,7 +205,15 @@ class journalentry(
 
     @classmethod
     def fromstorage(cls, line):
-        (time, user, command, namespace, name, oldhashes, newhashes) = line.split("\n")
+        (
+            time,
+            user,
+            command,
+            namespace,
+            name,
+            oldhashes,
+            newhashes,
+        ) = pycompat.decodeutf8(line).split("\n")
         timestamp, tz = time.split()
         timestamp, tz = float(timestamp), int(tz)
         oldhashes = tuple(node.bin(hash) for hash in oldhashes.split(","))
@@ -214,20 +222,23 @@ class journalentry(
             (timestamp, tz), user, command, namespace, name, oldhashes, newhashes
         )
 
-    def __str__(self):
+    def serialize(self):
         """String representation for storage"""
+        # type: () -> bytes
         time = " ".join(map(str, self.timestamp))
         oldhashes = ",".join([node.hex(hash) for hash in self.oldhashes])
         newhashes = ",".join([node.hex(hash) for hash in self.newhashes])
-        return "\n".join(
-            (
-                time,
-                self.user,
-                self.command,
-                self.namespace,
-                self.name,
-                oldhashes,
-                newhashes,
+        return pycompat.encodeutf8(
+            "\n".join(
+                (
+                    time,
+                    self.user,
+                    self.command,
+                    self.namespace,
+                    self.name,
+                    oldhashes,
+                    newhashes,
+                )
             )
         )
 
@@ -378,7 +389,7 @@ class journalstorage(object):
                 f.seek(0, os.SEEK_SET)
                 # Read just enough bytes to get a version number (up to 2
                 # digits plus separator)
-                version = f.read(3).partition(b"\0")[0]
+                version = pycompat.decodeutf8(f.read(3).partition(b"\0")[0])
                 if version and version != str(storageversion):
                     # different version of the storage. Exit early (and not
                     # write anything) if this is not a version we can handle or
@@ -388,10 +399,10 @@ class journalstorage(object):
                     return
                 if not version:
                     # empty file, write version first
-                    f.write(str(storageversion) + "\0")
+                    f.write(pycompat.encodeutf8(str(storageversion) + "\0"))
                 f.seek(0, os.SEEK_END)
                 for entry in entries:
-                    f.write(str(entry) + "\0")
+                    f.write(entry.serialize() + b"\0")
 
     def filtered(self, namespace=None, name=None):
         """Yield all journal entries with the given namespace or name
@@ -441,8 +452,8 @@ class journalstorage(object):
         with vfs(filename) as f:
             raw = f.read()
 
-        lines = raw.split("\0")
-        version = lines and lines[0]
+        lines = raw.split(b"\0")
+        version = lines and pycompat.decodeutf8(lines[0])
         if version != str(storageversion):
             version = version or _("not available")
             raise error.Abort(_("unknown journal file version '%s'") % version)
