@@ -378,7 +378,7 @@ class journalstorage(object):
                 f.seek(0, os.SEEK_SET)
                 # Read just enough bytes to get a version number (up to 2
                 # digits plus separator)
-                version = f.read(3).partition("\0")[0]
+                version = f.read(3).partition(b"\0")[0]
                 if version and version != str(storageversion):
                     # different version of the storage. Exit early (and not
                     # write anything) if this is not a version we can handle or
