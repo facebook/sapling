@@ -271,6 +271,7 @@ def _validatecmdtable(ui, cmdtable):
             for option in e[1]:
                 default = option[2]
                 if (type(b"") != type("")) and isinstance(default, type(b"")):
+                    # TODO: write a test after Python 3 migration
                     raise error.ProgrammingError(
                         "option '%s.%s' has a bytes default value" % (c, option[1]),
                         hint=(
