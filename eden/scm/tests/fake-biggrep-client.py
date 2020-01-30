@@ -72,7 +72,7 @@ def result_line(filename, line, col, context):
 p = subprocess.Popen(["hg", "log", "-r", ".", "-T{node}"], stdout=subprocess.PIPE)
 out, err = p.communicate()
 rev = out.rstrip()
-print("#%s:0" % rev)
+print("#%s:0" % rev.decode("utf-8"))
 
 # This list is coupled with the "Set up the repository with some simple files"
 # section of eden/scm/tests/test-fb-hgext-tweakdefaults-grep.t
