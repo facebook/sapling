@@ -38,6 +38,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
 
 
 if not pycompat.iswindows:
@@ -268,7 +269,7 @@ def writelog(repo, tr, name, revstring):
     if tr is None:
         raise error.ProgrammingError
     rlog = _getrevlog(repo, name)
-    node = rlog.addrevision(revstring, tr, 1, nullid, nullid)
+    node = rlog.addrevision(encodeutf8(revstring), tr, 1, nullid, nullid)
     return hex(node)
 
 
@@ -325,7 +326,8 @@ def _logindex(repo, tr, nodes):
 def _logundoredoindex(repo, reverseindex, branch=""):
     rlog = _getrevlog(repo, "index.i")
     hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
-    return repo.localvfs.write("undolog/redonode", str(hexnode) + "\0" + branch)
+    body = str(hexnode) + "\0" + branch
+    return repo.localvfs.writeutf8("undolog/redonode", body)
 
 
 def _delundoredo(repo):
@@ -337,9 +339,9 @@ def _recordnewgap(repo, absoluteindex=None):
     path = "undolog" + "/" + "gap"
     if absoluteindex is None:
         rlog = _getrevlog(repo, "index.i")
-        repo.localvfs.write(path, str(len(rlog) - 1))
+        repo.localvfs.writeutf8(path, str(len(rlog) - 1))
     else:
-        repo.localvfs.write(path, str(absoluteindex))
+        repo.localvfs.writeutf8(path, str(absoluteindex))
 
 
 # Read
@@ -353,7 +355,7 @@ def _readindex(repo, reverseindex, prefetchedrevlog=None):
     index = _invertindex(rlog, reverseindex)
     if index < 0 or index > len(rlog) - 1:
         raise IndexError
-    chunk = rlog.revision(index)
+    chunk = decodeutf8(rlog.revision(index))
     indexdict = {}
     for row in chunk.split("\n"):
         kvpair = row.split(" ", 1)
@@ -364,7 +366,7 @@ def _readindex(repo, reverseindex, prefetchedrevlog=None):
 
 def _readnode(repo, filename, hexnode):
     rlog = _getrevlog(repo, filename)
-    return rlog.revision(bin(hexnode))
+    return decodeutf8(rlog.revision(bin(hexnode)))
 
 
 def _logtoscuba(ui, message):
