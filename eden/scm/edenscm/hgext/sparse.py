@@ -428,7 +428,7 @@ def _tracksparseprofiles(runcommand, lui, repo, *args):
         # them. Only read the sparse file on the filesystem.
         if util.safehasattr(repo, "getactiveprofiles"):
             profile = repo.localvfs.tryread("sparse")
-            lui.log("sparse_profiles", "", active_profiles=profile)
+            lui.log("sparse_profiles", "", active_profiles=pycompat.decodeutf8(profile))
     return res
 
 
