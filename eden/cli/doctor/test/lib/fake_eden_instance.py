@@ -55,7 +55,7 @@ class FakeEdenInstance:
 
         # A map from mount path --> FakeCheckout
         self._checkouts_by_path: Dict[str, FakeCheckout] = {}
-        self._hg_repo_by_path: Dict[str, FakeHgRepo] = {}
+        self._hg_repo_by_path: Dict[Path, FakeHgRepo] = {}
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
 
@@ -192,7 +192,9 @@ class FakeEdenInstance:
         (hg_dir / "bookmarks").touch()
         (hg_dir / "branch").write_text("default\n")
 
-        self._hg_repo_by_path[full_path] = FakeHgRepo()
+        fake_repo = FakeHgRepo()
+        self._hg_repo_by_path[Path(full_path)] = fake_repo
+        self._hg_repo_by_path[fake_checkout.config.backing_repo] = fake_repo
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._checkouts_by_path.keys()
@@ -242,7 +244,13 @@ class FakeEdenInstance:
     def get_config_value(self, key: str, default: str) -> str:
         return self._config.get(key, default)
 
-    def get_hg_repo(self, path: str) -> Optional[FakeHgRepo]:
+    def get_hg_repo(self, path: Path) -> FakeHgRepo:
         if path in self._hg_repo_by_path:
             return self._hg_repo_by_path[path]
-        return None
+
+        def bad_commit_checker(commit: str) -> bool:
+            return False
+
+        fake_repo = FakeHgRepo()
+        fake_repo.commit_checker = bad_commit_checker
+        return fake_repo

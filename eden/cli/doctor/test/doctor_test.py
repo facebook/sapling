@@ -782,7 +782,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                 dirstate_parent=(dirstate_hash_hex, dirstate_parent2_hash_hex),
             )
 
-        hg_repo = checkout.instance.get_hg_repo(str(checkout.path))
+        hg_repo = checkout.instance.get_hg_repo(checkout.path)
         if commit_checker and hg_repo is not None:
             fake_hg_repo = typing.cast(FakeHgRepo, hg_repo)
             fake_hg_repo.commit_checker = commit_checker

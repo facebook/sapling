@@ -201,19 +201,16 @@ class DirstateChecker(HgFileChecker):
         return binascii.hexlify(commit).decode("utf-8")
 
     def _is_commit_hash_valid(self, commit_hash: bytes) -> bool:
+        # Explicitly check against the backing repository rather than the checkout
+        # itself.  The backing repository is the source of truth for commit information,
+        # and querying it will work even if the checkout's .hg directory is corrupt and
+        # needs to be repaired.
+        backing_repo = self.checkout.get_backing_repo()
         try:
-            repo = self.checkout.instance.get_hg_repo(str(self.checkout.path))
-            if repo is not None:
-                repo.get_commit_hash(
-                    self._commit_hex(commit_hash), stderr_output=subprocess.STDOUT
-                )
-                return True
-            else:
-                # This case can happen if the repo is corrupted. In this case return
-                # true and assume that the commit was valid before the repo corrupted
-                # This will also be hit in the cli unit tests since the FakeEdenInstance
-                # does not set up a complete .hg directory.
-                return True
+            backing_repo.get_commit_hash(
+                self._commit_hex(commit_hash), stderr_output=subprocess.STDOUT
+            )
+            return True
         except subprocess.CalledProcessError as ex:
             if b"unknown revision" in ex.output:
                 return False

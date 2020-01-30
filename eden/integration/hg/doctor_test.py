@@ -116,3 +116,19 @@ class DoctorTest(EdenHgTestCase):
         # Since Eden's snapshot file pointed to a bad commit, it should pick
         # mercurial's parent as the new parent
         self.assertEqual(hg_parent, hg_parent_fixed)
+
+    def test_eden_doctor_fixes_bad_dirstate_file(self) -> None:
+        repo_path = Path(self.repo.path)
+        # replace .hg/dirstate with an empty file
+        (repo_path / ".hg" / "dirstate").write_bytes(b"")
+
+        cmd_result = self.eden.run_unchecked("doctor", "-n", stdout=subprocess.PIPE)
+        doctor_out = cmd_result.stdout.decode("utf-8")
+        self.assertIn(f"Found inconsistent/missing data in {repo_path}/.hg", doctor_out)
+        self.assertIn(f"error parsing .hg/dirstate", doctor_out)
+
+        fixed_result = self.eden.run_unchecked("doctor", stdout=subprocess.PIPE)
+        self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
+
+        fixed_parent = self.hg("log", "-r.", "-T{node}")
+        self.assertEqual(fixed_parent, self.commit2)

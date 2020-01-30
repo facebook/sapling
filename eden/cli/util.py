@@ -281,8 +281,10 @@ class Repo(abc.ABC):
 class HgRepo(Repo):
     HEAD = "."
 
-    def __init__(self, source: str, working_dir: str) -> None:
-        super(HgRepo, self).__init__("hg", source, working_dir)
+    def __init__(self, source: str, working_dir: Optional[str] = None) -> None:
+        super(HgRepo, self).__init__(
+            "hg", source, source if working_dir is None else working_dir
+        )
         self._env = os.environ.copy()
         self._env["HGPLAIN"] = "1"
 

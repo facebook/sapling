@@ -758,8 +758,8 @@ Do you want to run `eden mount %s` instead?"""
 
         return checkouts
 
-    def get_hg_repo(self, path: str) -> Optional[util.HgRepo]:
-        return util.get_hg_repo(path)
+    def get_hg_repo(self, path: Path) -> util.HgRepo:
+        return util.HgRepo(str(path))
 
     def _get_directory_map(self) -> Dict[Path, str]:
         """
@@ -1160,6 +1160,10 @@ class EdenCheckout:
         assert len(commid_id) == 40
         commit_bin = binascii.unhexlify(commid_id)
         write_file_atomically(snapshot_path, SNAPSHOT_MAGIC + commit_bin)
+
+    def get_backing_repo(self) -> util.HgRepo:
+        repo_path = self.get_config().backing_repo
+        return self.instance.get_hg_repo(repo_path)
 
 
 def find_eden(
