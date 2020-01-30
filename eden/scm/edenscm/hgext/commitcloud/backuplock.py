@@ -34,7 +34,7 @@ progressfilename = "commitcloudsyncprogress"
 def progress(repo, step, **kwargs):
     with repo.sharedvfs.open(progressfilename, "w", atomictemp=True) as f:
         data = {"step": str(step), "data": kwargs}
-        json.dump(data, f)
+        f.write(pycompat.encodeutf8(json.dumps(data)))
 
 
 def progressbackingup(repo, nodes):

@@ -24,6 +24,7 @@ from edenscm.mercurial import (
     visibility,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import encodeutf8
 
 from . import (
     backup,
@@ -225,9 +226,9 @@ def _sync(
     with repo.wlock():
         fp = repo.localvfs("lastsync.log", "w+")
         if synced and not failed:
-            fp.write("Success")
+            fp.write(encodeutf8("Success"))
         else:
-            fp.write("Failed")
+            fp.write(encodeutf8("Failed"))
         fp.close()
     return _maybeupdateworkingcopy(repo, startnode)
 

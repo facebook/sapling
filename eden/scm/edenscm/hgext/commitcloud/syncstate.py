@@ -10,7 +10,7 @@ import json
 import time
 
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import encodeutf8
+from edenscm.mercurial.pycompat import encodeutf8, ensurestr
 
 from . import error as ccerror
 
@@ -53,19 +53,19 @@ class SyncState(object):
                     )
 
                 self.version = data["version"]
-                self.heads = [h.encode() for h in data["heads"]]
+                self.heads = [ensurestr(h) for h in data["heads"]]
                 self.bookmarks = {
-                    n.encode("utf-8"): v.encode() for n, v in data["bookmarks"].items()
+                    ensurestr(n): ensurestr(v) for n, v in data["bookmarks"].items()
                 }
                 self.remotebookmarks = {
-                    n.encode("utf-8"): v.encode()
+                    ensurestr(n): ensurestr(v)
                     for n, v in data.get("remotebookmarks", {}).items()
                 }
-                self.omittedheads = [h.encode() for h in data.get("omittedheads", ())]
+                self.omittedheads = [ensurestr(h) for h in data.get("omittedheads", ())]
                 self.omittedbookmarks = [
-                    n.encode("utf-8") for n in data.get("omittedbookmarks", ())
+                    ensurestr(n) for n in data.get("omittedbookmarks", ())
                 ]
-                self.snapshots = [s.encode() for s in data.get("snapshots", [])]
+                self.snapshots = [ensurestr(s) for s in data.get("snapshots", [])]
                 self.maxage = data.get("maxage", None)
                 self.lastupdatetime = data.get("lastupdatetime", None)
         else:
@@ -102,7 +102,7 @@ class SyncState(object):
             "remotebookmarks": newremotebookmarks,
         }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
-            json.dump(data, f)
+            f.write(encodeutf8(json.dumps(data)))
         self.prevstate = (self.version, self.heads, self.bookmarks, self.snapshots)
         self.version = newversion
         self.heads = newheads

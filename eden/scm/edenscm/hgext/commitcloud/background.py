@@ -43,7 +43,6 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 from ..extutil import runbgcommand
-
 from . import util as ccutil, workspace
 
 
@@ -78,7 +77,7 @@ def loadautobackupstate(repo):
 def saveautobackupstate(repo, state):
     repo.sharedvfs.makedirs("commitcloud")
     with repo.sharedvfs.open(_autobackupstatefile, "w", atomictemp=True) as f:
-        json.dump(state, f)
+        f.write(pycompat.encodeutf8(json.dumps(state)))
 
 
 def disableautobackup(repo, until):

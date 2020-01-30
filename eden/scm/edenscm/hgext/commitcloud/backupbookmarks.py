@@ -79,7 +79,7 @@ _backupstateprefix = "infinitepushbackups/infinitepushbackupstate"
 
 
 def _localbackupstatepath(remotepath):
-    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
+    hash = hashlib.sha256(pycompat.encodeutf8(remotepath)).hexdigest()[0:8]
     return os.path.join(_backupstateprefix + "_" + hash)
 
 
@@ -113,7 +113,7 @@ def _readlocalbackupstate(repo, remotepath, doingbackup=False):
 def _writelocalbackupstate(repo, remotepath, heads, bookmarks):
     state = {"heads": list(heads), "bookmarks": bookmarks, "remotepath": remotepath}
     with repo.sharedvfs(_localbackupstatepath(remotepath), "w", atomictemp=True) as f:
-        json.dump(state, f)
+        f.write(pycompat.encodeutf8(json.dumps(state)))
 
 
 @perftrace.tracefunc("Push Commit Cloud Backup Bookmarks")
