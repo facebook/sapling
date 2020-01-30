@@ -132,7 +132,7 @@ impl<'a> Matcher for UnsafePythonMatcher {
 }
 
 fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> DirectoryMatch {
-    let py_path = PyBytes::new(py, path.as_byte_slice());
+    let py_path = PyPath::from(path);
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
     let py_value = py_matcher
@@ -154,7 +154,7 @@ fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) ->
 }
 
 fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> bool {
-    let py_path = PyBytes::new(py, path.as_byte_slice());
+    let py_path = PyPath::from(path);
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
     py_matcher
