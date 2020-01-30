@@ -190,7 +190,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.pycompat import decodeutf8, range
 
 from ..extutil import flock
 from ..remotefilelog import (
@@ -2003,7 +2003,7 @@ def _registerbundle2parts():
                 _("unknown treegroup bundle2 part version: %s") % versionstr
             )
 
-        category = part.params.get("category", "")
+        category = decodeutf8(part.params.get("category", ""))
         if category != PACK_CATEGORY:
             raise error.Abort(_("invalid treegroup pack category: %s") % category)
 

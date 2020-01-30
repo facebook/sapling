@@ -20,7 +20,7 @@ from typing import IO, Any, Dict, Mapping, Tuple
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.pycompat import encodeutf8, range
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
 
 from ..lfs import pointer
 from . import constants
@@ -355,10 +355,10 @@ def readunpack(stream, fmt):
 
 
 def readpath(stream):
-    # type: (IO[bytes]) -> bytes
+    # type: (IO[bytes]) -> str
     rawlen = readexactly(stream, constants.FILENAMESIZE)
     pathlen = struct.unpack(constants.FILENAMESTRUCT, rawlen)[0]
-    return readexactly(stream, pathlen)
+    return decodeutf8(readexactly(stream, pathlen))
 
 
 def getgid(groupname):
