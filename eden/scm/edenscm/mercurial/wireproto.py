@@ -37,7 +37,7 @@ from . import (
 )
 from .i18n import _
 from .node import bin, hex, bbin, bhex, nullid
-from .pycompat import encodeutf8, decodeutf8, iteritems, range
+from .pycompat import decodeutf8, encodeutf8, iteritems, range
 
 
 urlerr = util.urlerr
@@ -286,7 +286,7 @@ class wirepeer(repository.legacypeer):
         yield {"nodes": encodelist(nodes)}, f
         d = f.value
         try:
-            yield [bool(int(b)) for b in d]
+            yield [bool(int(b)) for b in decodeutf8(d)]
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
