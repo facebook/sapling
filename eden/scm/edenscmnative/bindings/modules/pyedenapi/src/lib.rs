@@ -14,7 +14,7 @@ use std::str;
 use bytes::Bytes;
 use cpython::*;
 
-use cpython_ext::{PyPath, ResultPyErrExt};
+use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{
     ApiError, ApiErrorKind, Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn,
     ProgressStats,
@@ -117,7 +117,7 @@ py_class!(class client |py| {
         _cls,
         url: String,
         repo: String,
-        creds: Option<(PyPath, PyPath)> = None,
+        creds: Option<(PyPathBuf, PyPathBuf)> = None,
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
         validate: bool = true,
@@ -154,7 +154,7 @@ py_class!(class client |py| {
 
     def get_files(
         &self,
-        keys: Vec<(PyPath, String)>,
+        keys: Vec<(PyPathBuf, String)>,
         store: PyObject,
         progress_fn: Option<PyObject> = None
     ) -> PyResult<downloadstats> {
@@ -177,7 +177,7 @@ py_class!(class client |py| {
 
     def get_history(
         &self,
-        keys: Vec<(PyPath, String)>,
+        keys: Vec<(PyPathBuf, String)>,
         store: PyObject,
         depth: Option<u32> = None,
         progress_fn: Option<PyObject> = None
@@ -203,7 +203,7 @@ py_class!(class client |py| {
 
     def get_trees(
         &self,
-        keys: Vec<(PyPath, String)>,
+        keys: Vec<(PyPathBuf, String)>,
         store: PyObject,
         progress_fn: Option<PyObject> = None
     ) -> PyResult<downloadstats> {
@@ -226,7 +226,7 @@ py_class!(class client |py| {
 
     def prefetch_trees(
         &self,
-        rootdir: PyPath,
+        rootdir: PyPathBuf,
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
         store: PyObject,
@@ -293,7 +293,7 @@ py_class!(class downloadstats |py| {
     }
 });
 
-fn make_key(py: Python, path: &PyPath, node: &String) -> PyResult<Key> {
+fn make_key(py: Python, path: &PyPathBuf, node: &String) -> PyResult<Key> {
     let path = make_path(py, path)?;
     let node = make_node_from_utf8(py, node)?;
     Ok(Key::new(path, node))
@@ -307,7 +307,7 @@ fn make_node_from_bytes(py: Python, node: &PyBytes) -> PyResult<Node> {
     Ok(Node::from_slice(node.data(py)).map_pyerr(py)?)
 }
 
-fn make_path(py: Python, path: &PyPath) -> PyResult<RepoPathBuf> {
+fn make_path(py: Python, path: &PyPathBuf) -> PyResult<RepoPathBuf> {
     path.to_repo_path()
         .map_pyerr(py)
         .map(|path| path.to_owned())

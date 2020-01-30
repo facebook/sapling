@@ -12,7 +12,7 @@ use cpython::{
     PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
 };
 
-use cpython_ext::{PyPath, ResultPyErrExt};
+use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use revisionstore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
@@ -22,7 +22,7 @@ use crate::pythonutil::{
 
 pub trait HistoryStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
-    fn get_node_info_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyTuple>;
+    fn get_node_info_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyTuple>;
 }
 
 pub trait IterableHistoryStorePyExt {
@@ -33,14 +33,14 @@ pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
     fn add_py(
         &self,
         py: Python,
-        name: &PyPath,
+        name: &PyPathBuf,
         node: &PyBytes,
         p1: &PyBytes,
         p2: &PyBytes,
         linknode: &PyBytes,
-        copyfrom: Option<&PyPath>,
+        copyfrom: Option<&PyPathBuf>,
     ) -> PyResult<PyObject>;
-    fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>>;
+    fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>>;
 }
 
 pub trait RemoteHistoryStorePyExt: RemoteHistoryStore {
@@ -65,7 +65,7 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
         Ok(results)
     }
 
-    fn get_node_info_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+    fn get_node_info_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         let key = to_key(py, name, node)?;
         let info = self
             .get_node_info(&key)
@@ -96,11 +96,11 @@ fn from_node_info(py: Python, key: &Key, info: &NodeInfo) -> PyTuple {
 
 fn to_node_info(
     py: Python,
-    name: &PyPath,
+    name: &PyPathBuf,
     p1: &PyBytes,
     p2: &PyBytes,
     linknode: &PyBytes,
-    copyfrom: Option<&PyPath>,
+    copyfrom: Option<&PyPathBuf>,
 ) -> PyResult<NodeInfo> {
     // Not only can copyfrom be None, it can also be an empty string. In both cases that means that
     // `name` should be used.
@@ -137,12 +137,12 @@ impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
             let (name, node) = from_key(py, &key);
             let copyfrom = if key.path != node_info.parents[0].path {
                 if node_info.parents[0].path.is_empty() {
-                    PyPath::from(String::from(""))
+                    PyPathBuf::from(String::from(""))
                 } else {
-                    PyPath::from(node_info.parents[0].path.as_repo_path())
+                    PyPathBuf::from(node_info.parents[0].path.as_repo_path())
                 }
             } else {
-                PyPath::from(String::from(""))
+                PyPathBuf::from(String::from(""))
             };
             let tuple = (
                 name.to_py_object(py).into_object(),
@@ -163,12 +163,12 @@ impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
     fn add_py(
         &self,
         py: Python,
-        name: &PyPath,
+        name: &PyPathBuf,
         node: &PyBytes,
         p1: &PyBytes,
         p2: &PyBytes,
         linknode: &PyBytes,
-        copyfrom: Option<&PyPath>,
+        copyfrom: Option<&PyPathBuf>,
     ) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let nodeinfo = to_node_info(py, name, p1, p2, linknode, copyfrom)?;
@@ -176,7 +176,7 @@ impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
         Ok(Python::None(py))
     }
 
-    fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>> {
+    fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>> {
         let opt = self.flush().map_pyerr(py)?;
         let opt = opt.map(|path| path.try_into()).transpose().map_pyerr(py)?;
         Ok(opt)

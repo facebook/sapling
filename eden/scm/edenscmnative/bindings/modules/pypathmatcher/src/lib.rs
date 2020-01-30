@@ -11,7 +11,7 @@ use std::path::Path;
 
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
-use cpython_ext::{PyPath, Str};
+use cpython_ext::{PyPathBuf, Str};
 
 use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
@@ -34,17 +34,17 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class gitignorematcher |py| {
     data matcher: GitignoreMatcher;
 
-    def __new__(_cls, root: PyPath, global_paths: Vec<PyPath>) -> PyResult<gitignorematcher> {
+    def __new__(_cls, root: PyPathBuf, global_paths: Vec<PyPathBuf>) -> PyResult<gitignorematcher> {
         let global_paths: Vec<&Path> = global_paths.iter().map(AsRef::as_ref).collect();
         let matcher = GitignoreMatcher::new(&root, global_paths);
         gitignorematcher::create_instance(py, matcher)
     }
 
-    def match_relative(&self, path: PyPath, is_dir: bool) -> PyResult<bool> {
+    def match_relative(&self, path: PyPathBuf, is_dir: bool) -> PyResult<bool> {
         Ok(self.matcher(py).match_relative(&path, is_dir))
     }
 
-    def explain(&self, path: PyPath, is_dir: bool) -> PyResult<Str> {
+    def explain(&self, path: PyPathBuf, is_dir: bool) -> PyResult<Str> {
         Ok(self.matcher(py).explain(&path, is_dir).into())
     }
 });
@@ -57,11 +57,11 @@ py_class!(class treematcher |py| {
         Self::create_instance(py, matcher)
     }
 
-    def matches(&self, path: PyPath) -> PyResult<bool> {
+    def matches(&self, path: PyPathBuf) -> PyResult<bool> {
         Ok(self.matcher(py).matches(path))
     }
 
-    def match_recursive(&self, path: PyPath) -> PyResult<Option<bool>> {
+    def match_recursive(&self, path: PyPathBuf) -> PyResult<Option<bool>> {
         if path.as_ref().as_os_str().is_empty() {
             Ok(None)
         } else {
@@ -132,7 +132,7 @@ impl<'a> Matcher for UnsafePythonMatcher {
 }
 
 fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> DirectoryMatch {
-    let py_path = PyPath::from(path);
+    let py_path = PyPathBuf::from(path);
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
     let py_value = py_matcher
@@ -154,7 +154,7 @@ fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) ->
 }
 
 fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> bool {
-    let py_path = PyPath::from(path);
+    let py_path = PyPathBuf::from(path);
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
     py_matcher

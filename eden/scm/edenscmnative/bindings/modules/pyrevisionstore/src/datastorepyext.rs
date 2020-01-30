@@ -13,7 +13,7 @@ use cpython::{
     ToPyObject,
 };
 
-use cpython_ext::{PyPath, ResultPyErrExt};
+use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use revisionstore::{DataStore, MutableDeltaStore, RemoteDataStore, ToKeys};
 use types::{Key, Node};
 
@@ -23,10 +23,10 @@ use crate::pythonutil::{
 };
 
 pub trait DataStorePyExt {
-    fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;
-    fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList>;
-    fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
-    fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
+    fn get_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyBytes>;
+    fn get_delta_chain_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyList>;
+    fn get_delta_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyObject>;
+    fn get_meta_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
@@ -38,13 +38,13 @@ pub trait MutableDeltaStorePyExt: DataStorePyExt {
     fn add_py(
         &self,
         py: Python,
-        name: &PyPath,
+        name: &PyPathBuf,
         node: &PyBytes,
         deltabasenode: &PyBytes,
         delta: &PyBytes,
         metadata: Option<PyDict>,
     ) -> PyResult<PyObject>;
-    fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>>;
+    fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>>;
 }
 
 pub trait RemoteDataStorePyExt: RemoteDataStore {
@@ -52,7 +52,7 @@ pub trait RemoteDataStorePyExt: RemoteDataStore {
 }
 
 impl<T: DataStore + ?Sized> DataStorePyExt for T {
-    fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+    fn get_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
         let result = self
             .get(&key)
@@ -62,7 +62,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         Ok(PyBytes::new(py, &result[..]))
     }
 
-    fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
+    fn get_delta_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let delta = self
             .get_delta(&key)
@@ -73,7 +73,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
             from_key(py, &key)
         } else {
             (
-                PyPath::from(key.path.as_repo_path()),
+                PyPathBuf::from(key.path.as_repo_path()),
                 PyBytes::new(py, Node::null_id().as_ref()),
             )
         };
@@ -90,7 +90,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
             .into_object())
     }
 
-    fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList> {
+    fn get_delta_chain_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
         let deltachain = self
             .get_delta_chain(&key)
@@ -104,7 +104,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         Ok(PyList::new(py, &pychain[..]))
     }
 
-    fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
+    fn get_meta_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
         let metadata = self
             .get_meta(&key)
@@ -167,7 +167,7 @@ impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
     fn add_py(
         &self,
         py: Python,
-        name: &PyPath,
+        name: &PyPathBuf,
         node: &PyBytes,
         deltabasenode: &PyBytes,
         delta: &PyBytes,
@@ -184,7 +184,7 @@ impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
         Ok(Python::None(py))
     }
 
-    fn flush_py(&self, py: Python) -> PyResult<Option<PyPath>> {
+    fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>> {
         let opt = self.flush().map_pyerr(py)?;
         let opt = opt.map(|path| path.try_into()).transpose().map_pyerr(py)?;
         Ok(opt)

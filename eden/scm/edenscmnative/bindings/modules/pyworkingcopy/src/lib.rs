@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use anyhow::Error;
 use cpython::*;
 
-use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
 use pypathmatcher::UnsafePythonMatcher;
 use workingcopy::{WalkError, Walker};
 
@@ -26,7 +26,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class walker |py| {
     data walker: RefCell<Walker<UnsafePythonMatcher>>;
     data _errors: RefCell<Vec<Error>>;
-    def __new__(_cls, root: PyPath, pymatcher: PyObject) -> PyResult<walker> {
+    def __new__(_cls, root: PyPathBuf, pymatcher: PyObject) -> PyResult<walker> {
         let matcher = UnsafePythonMatcher::new(pymatcher);
         walker::create_instance(py, RefCell::new(Walker::new(root.to_path_buf(), matcher)), RefCell::new(Vec::new()))
     }
@@ -35,7 +35,7 @@ py_class!(class walker |py| {
         Ok(self.clone_ref(py))
     }
 
-    def __next__(&self) -> PyResult<Option<PyPath>> {
+    def __next__(&self) -> PyResult<Option<PyPathBuf>> {
         loop {
             match self.walker(py).borrow_mut().next() {
                 Some(Ok(path)) => {

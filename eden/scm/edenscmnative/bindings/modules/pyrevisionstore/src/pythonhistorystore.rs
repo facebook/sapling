@@ -11,7 +11,7 @@ use cpython::{
     PythonObject, PythonObjectWithTypeObject,
 };
 
-use cpython_ext::{PyErr, PyPath};
+use cpython_ext::{PyErr, PyPathBuf};
 use revisionstore::{HistoryStore, LocalStore};
 use types::{Key, NodeInfo};
 
@@ -31,7 +31,7 @@ impl HistoryStore for PythonHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyPath::from(key.path.as_repo_path());
+        let py_name = PyPathBuf::from(key.path.as_repo_path());
         let py_node = PyBytes::new(py, key.node.as_ref());
 
         let py_data = match self.py_store.call_method(

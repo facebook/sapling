@@ -20,7 +20,7 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{PyErr, PyPath, ResultPyErrExt};
+use cpython_ext::{PyErr, PyPathBuf, ResultPyErrExt};
 use pyconfigparser::config;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
@@ -69,22 +69,28 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "repackdatapacks",
-        py_fn!(py, repackdata(packpath: PyPath, outdir: PyPath)),
+        py_fn!(py, repackdata(packpath: PyPathBuf, outdir: PyPathBuf)),
     )?;
     m.add(
         py,
         "repackincrementaldatapacks",
-        py_fn!(py, incremental_repackdata(packpath: PyPath, outdir: PyPath)),
+        py_fn!(
+            py,
+            incremental_repackdata(packpath: PyPathBuf, outdir: PyPathBuf)
+        ),
     )?;
     m.add(
         py,
         "repackhistpacks",
-        py_fn!(py, repackhist(packpath: PyPath, outdir: PyPath)),
+        py_fn!(py, repackhist(packpath: PyPathBuf, outdir: PyPathBuf)),
     )?;
     m.add(
         py,
         "repackincrementalhistpacks",
-        py_fn!(py, incremental_repackhist(packpath: PyPath, outdir: PyPath)),
+        py_fn!(
+            py,
+            incremental_repackhist(packpath: PyPathBuf, outdir: PyPathBuf)
+        ),
     )?;
     Ok(m)
 }
@@ -92,17 +98,17 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 /// Helper function to de-serialize and re-serialize from and to Python objects.
 fn repack_pywrapper(
     py: Python,
-    path: PyPath,
-    outdir: PyPath,
+    path: PyPathBuf,
+    outdir: PyPathBuf,
     repacker: impl FnOnce(PathBuf, PathBuf) -> Result<PathBuf>,
-) -> PyResult<PyPath> {
+) -> PyResult<PyPathBuf> {
     repacker(path.to_path_buf(), outdir.to_path_buf())
         .and_then(|p| p.try_into())
         .map_pyerr(py)
 }
 
 /// Merge all the datapacks into one big datapack. Returns the fullpath of the resulting datapack.
-fn repackdata(py: Python, packpath: PyPath, outdir_py: PyPath) -> PyResult<PyPath> {
+fn repackdata(py: Python, packpath: PyPathBuf, outdir_py: PyPathBuf) -> PyResult<PyPathBuf> {
     repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
         repack_datapacks(list_packs(&dir, "datapack")?.iter(), &outdir)
     })
@@ -110,14 +116,18 @@ fn repackdata(py: Python, packpath: PyPath, outdir_py: PyPath) -> PyResult<PyPat
 
 /// Merge all the history packs into one big historypack. Returns the fullpath of the resulting
 /// histpack.
-fn repackhist(py: Python, packpath: PyPath, outdir_py: PyPath) -> PyResult<PyPath> {
+fn repackhist(py: Python, packpath: PyPathBuf, outdir_py: PyPathBuf) -> PyResult<PyPathBuf> {
     repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
         repack_historypacks(list_packs(&dir, "histpack")?.iter(), &outdir)
     })
 }
 
 /// Perform an incremental repack of data packs.
-fn incremental_repackdata(py: Python, packpath: PyPath, outdir_py: PyPath) -> PyResult<PyPath> {
+fn incremental_repackdata(
+    py: Python,
+    packpath: PyPathBuf,
+    outdir_py: PyPathBuf,
+) -> PyResult<PyPathBuf> {
     repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
         repack_datapacks(
             filter_incrementalpacks(list_packs(&dir, "datapack")?, "datapack")?.iter(),
@@ -127,7 +137,11 @@ fn incremental_repackdata(py: Python, packpath: PyPath, outdir_py: PyPath) -> Py
 }
 
 /// Perform an incremental repack of history packs.
-fn incremental_repackhist(py: Python, packpath: PyPath, outdir_py: PyPath) -> PyResult<PyPath> {
+fn incremental_repackhist(
+    py: Python,
+    packpath: PyPathBuf,
+    outdir_py: PyPathBuf,
+) -> PyResult<PyPathBuf> {
     repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
         repack_historypacks(
             filter_incrementalpacks(list_packs(&dir, "histpack")?, "histpack")?.iter(),
@@ -141,7 +155,7 @@ py_class!(class datapack |py| {
 
     def __new__(
         _cls,
-        path: PyPath
+        path: PyPathBuf
     ) -> PyResult<datapack> {
         datapack::create_instance(
             py,
@@ -149,34 +163,34 @@ py_class!(class datapack |py| {
         )
     }
 
-    def path(&self) -> PyResult<PyPath> {
+    def path(&self) -> PyResult<PyPathBuf> {
         self.store(py).base_path().try_into().map_pyerr(py)
     }
 
-    def packpath(&self) -> PyResult<PyPath> {
+    def packpath(&self) -> PyResult<PyPathBuf> {
         self.store(py).pack_path().try_into().map_pyerr(py)
     }
 
-    def indexpath(&self) -> PyResult<PyPath> {
+    def indexpath(&self) -> PyResult<PyPathBuf> {
         self.store(py).index_path().try_into().map_pyerr(py)
     }
 
-    def get(&self, name: PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
         let store = self.store(py);
         store.get_py(py, &name, node)
     }
 
-    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
         store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
         store.get_meta_py(py, &name, node)
     }
@@ -229,7 +243,7 @@ py_class!(class datapackstore |py| {
     data store: Box<DataPackStore>;
     data path: PathBuf;
 
-    def __new__(_cls, path: PyPath, deletecorruptpacks: bool = false) -> PyResult<datapackstore> {
+    def __new__(_cls, path: PyPathBuf, deletecorruptpacks: bool = false) -> PyResult<datapackstore> {
         let corruption_policy = if deletecorruptpacks {
             CorruptionPolicy::REMOVE
         } else {
@@ -239,19 +253,19 @@ py_class!(class datapackstore |py| {
         datapackstore::create_instance(py, Box::new(DataPackStore::new(&path, corruption_policy)), path.to_path_buf())
     }
 
-    def get(&self, name: PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
         self.store(py).get_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
         self.store(py).get_meta_py(py, &name, node)
     }
 
-    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
         self.store(py).get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         self.store(py).get_delta_chain_py(py, &name, node)
     }
 
@@ -282,7 +296,7 @@ py_class!(class historypack |py| {
 
     def __new__(
         _cls,
-        path: PyPath
+        path: PyPathBuf
     ) -> PyResult<historypack> {
         historypack::create_instance(
             py,
@@ -290,15 +304,15 @@ py_class!(class historypack |py| {
         )
     }
 
-    def path(&self) -> PyResult<PyPath> {
+    def path(&self) -> PyResult<PyPathBuf> {
         self.store(py).base_path().try_into().map_pyerr(py)
     }
 
-    def packpath(&self) -> PyResult<PyPath> {
+    def packpath(&self) -> PyResult<PyPathBuf> {
         self.store(py).pack_path().try_into().map_pyerr(py)
     }
 
-    def indexpath(&self) -> PyResult<PyPath> {
+    def indexpath(&self) -> PyResult<PyPathBuf> {
         self.store(py).index_path().try_into().map_pyerr(py)
     }
 
@@ -307,7 +321,7 @@ py_class!(class historypack |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
         store.get_node_info_py(py, &name, node)
     }
@@ -322,7 +336,7 @@ py_class!(class historypackstore |py| {
     data store: Box<HistoryPackStore>;
     data path: PathBuf;
 
-    def __new__(_cls, path: PyPath, deletecorruptpacks: bool = false) -> PyResult<historypackstore> {
+    def __new__(_cls, path: PyPathBuf, deletecorruptpacks: bool = false) -> PyResult<historypackstore> {
         let corruption_policy = if deletecorruptpacks {
             CorruptionPolicy::REMOVE
         } else {
@@ -332,7 +346,7 @@ py_class!(class historypackstore |py| {
         historypackstore::create_instance(py, Box::new(HistoryPackStore::new(&path, corruption_policy)), path.to_path_buf())
     }
 
-    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         self.store(py).get_node_info_py(py, &name, node)
     }
 
@@ -361,7 +375,7 @@ py_class!(class historypackstore |py| {
 py_class!(class indexedlogdatastore |py| {
     data store: Box<IndexedLogDataStore>;
 
-    def __new__(_cls, path: PyPath) -> PyResult<indexedlogdatastore> {
+    def __new__(_cls, path: PyPathBuf) -> PyResult<indexedlogdatastore> {
         indexedlogdatastore::create_instance(
             py,
             Box::new(IndexedLogDataStore::new(&path).map_pyerr(py)?),
@@ -369,21 +383,21 @@ py_class!(class indexedlogdatastore |py| {
     }
 
     @staticmethod
-    def repair(path: PyPath) -> PyResult<PyUnicode> {
+    def repair(path: PyPathBuf) -> PyResult<PyUnicode> {
         py.allow_threads(|| IndexedLogDataStore::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
-    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
         store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
         store.get_meta_py(py, &name, node)
     }
@@ -408,7 +422,7 @@ py_class!(class indexedlogdatastore |py| {
 py_class!(class indexedloghistorystore |py| {
     data store: Box<IndexedLogHistoryStore>;
 
-    def __new__(_cls, path: PyPath) -> PyResult<indexedloghistorystore> {
+    def __new__(_cls, path: PyPathBuf) -> PyResult<indexedloghistorystore> {
         indexedloghistorystore::create_instance(
             py,
             Box::new(IndexedLogHistoryStore::new(&path).map_pyerr(py)?),
@@ -416,7 +430,7 @@ py_class!(class indexedloghistorystore |py| {
     }
 
     @staticmethod
-    def repair(path: PyPath) -> PyResult<PyUnicode> {
+    def repair(path: PyPathBuf) -> PyResult<PyUnicode> {
         IndexedLogHistoryStore::repair(path).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
@@ -425,7 +439,7 @@ py_class!(class indexedloghistorystore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
         store.get_node_info_py(py, &name, node)
     }
@@ -443,8 +457,8 @@ py_class!(class indexedloghistorystore |py| {
 });
 
 fn make_mutabledeltastore(
-    packfilepath: Option<PyPath>,
-    indexedlogpath: Option<PyPath>,
+    packfilepath: Option<PyPathBuf>,
+    indexedlogpath: Option<PyPathBuf>,
 ) -> Result<Box<dyn MutableDeltaStore + Send>> {
     let store: Box<dyn MutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
         Box::new(MutableDataPack::new(packfilepath, DataPackVersion::One)?)
@@ -459,32 +473,32 @@ fn make_mutabledeltastore(
 py_class!(pub class mutabledeltastore |py| {
     data store: Box<dyn MutableDeltaStore>;
 
-    def __new__(_cls, packfilepath: Option<PyPath> = None, indexedlogpath: Option<PyPath> = None) -> PyResult<mutabledeltastore> {
+    def __new__(_cls, packfilepath: Option<PyPathBuf> = None, indexedlogpath: Option<PyPathBuf> = None) -> PyResult<mutabledeltastore> {
         let store = make_mutabledeltastore(packfilepath, indexedlogpath).map_pyerr(py)?;
         mutabledeltastore::create_instance(py, store)
     }
 
-    def add(&self, name: PyPath, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+    def add(&self, name: PyPathBuf, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
         let store = self.store(py);
         store.add_py(py, &name, node, deltabasenode, delta, metadata)
     }
 
-    def flush(&self) -> PyResult<Option<PyPath>> {
+    def flush(&self) -> PyResult<Option<PyPathBuf>> {
         let store = self.store(py);
         store.flush_py(py)
     }
 
-    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
         store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
         store.get_meta_py(py, &name, node)
     }
@@ -551,7 +565,7 @@ impl MutableDeltaStore for mutabledeltastore {
 }
 
 fn make_mutablehistorystore(
-    packfilepath: Option<PyPath>,
+    packfilepath: Option<PyPathBuf>,
 ) -> Result<Box<dyn MutableHistoryStore + Send>> {
     let store: Box<dyn MutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
         Box::new(MutableHistoryPack::new(
@@ -568,22 +582,22 @@ fn make_mutablehistorystore(
 py_class!(pub class mutablehistorystore |py| {
     data store: Box<dyn MutableHistoryStore>;
 
-    def __new__(_cls, packfilepath: Option<PyPath>) -> PyResult<mutablehistorystore> {
+    def __new__(_cls, packfilepath: Option<PyPathBuf>) -> PyResult<mutablehistorystore> {
         let store = make_mutablehistorystore(packfilepath).map_pyerr(py)?;
         mutablehistorystore::create_instance(py, store)
     }
 
-    def add(&self, name: PyPath, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<PyPath>) -> PyResult<PyObject> {
+    def add(&self, name: PyPathBuf, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<PyPathBuf>) -> PyResult<PyObject> {
         let store = self.store(py);
         store.add_py(py, &name, node, p1, p2, linknode, copyfrom.as_ref())
     }
 
-    def flush(&self) -> PyResult<Option<PyPath>> {
+    def flush(&self) -> PyResult<Option<PyPathBuf>> {
         let store = self.store(py);
         store.flush_py(py)
     }
 
-    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
         store.get_node_info_py(py, &name, node)
     }
@@ -798,7 +812,7 @@ impl pyremotestore {
 py_class!(class contentstore |py| {
     data store: ContentStore;
 
-    def __new__(_cls, path: Option<PyPath>, config: config, remote: pyremotestore) -> PyResult<contentstore> {
+    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore) -> PyResult<contentstore> {
         let remotestore = remote.into_inner(py);
         let config = config.get_cfg(py);
 
@@ -814,22 +828,22 @@ py_class!(class contentstore |py| {
         contentstore::create_instance(py, contentstore)
     }
 
-    def get(&self, name: PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
         let store = self.store(py);
         store.get_py(py, &name, node)
     }
 
-    def getdelta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyObject> {
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
         store.get_delta_py(py, &name, node)
     }
 
-    def getdeltachain(&self, name: PyPath, node: &PyBytes) -> PyResult<PyList> {
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPath, node: &PyBytes) -> PyResult<PyDict> {
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
         store.get_meta_py(py, &name, node)
     }
@@ -839,12 +853,12 @@ py_class!(class contentstore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def add(&self, name: PyPath, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+    def add(&self, name: PyPathBuf, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
         let store = self.store(py);
         store.add_py(py, &name, node, deltabasenode, delta, metadata)
     }
 
-    def flush(&self) -> PyResult<Option<PyPath>> {
+    def flush(&self) -> PyResult<Option<PyPathBuf>> {
         let store = self.store(py);
         store.flush_py(py)
     }
@@ -858,7 +872,7 @@ py_class!(class contentstore |py| {
 py_class!(class metadatastore |py| {
     data store: MetadataStore;
 
-    def __new__(_cls, path: Option<PyPath>, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
+    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
         let remotestore = remote.into_inner(py);
         let config = config.get_cfg(py);
 
@@ -874,7 +888,7 @@ py_class!(class metadatastore |py| {
         metadatastore::create_instance(py, metadatastore)
     }
 
-    def getnodeinfo(&self, name: PyPath, node: &PyBytes) -> PyResult<PyTuple> {
+    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         self.store(py).get_node_info_py(py, &name, node)
     }
 
@@ -882,12 +896,12 @@ py_class!(class metadatastore |py| {
         self.store(py).get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def add(&self, name: PyPath, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<PyPath>) -> PyResult<PyObject> {
+    def add(&self, name: PyPathBuf, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<PyPathBuf>) -> PyResult<PyObject> {
         let store = self.store(py);
         store.add_py(py, &name, node, p1, p2, linknode, copyfrom.as_ref())
     }
 
-    def flush(&self) -> PyResult<Option<PyPath>> {
+    def flush(&self) -> PyResult<Option<PyPathBuf>> {
         let store = self.store(py);
         store.flush_py(py)
     }

@@ -15,7 +15,7 @@ use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
-use cpython_ext::{PyPath, Str};
+use cpython_ext::{PyPathBuf, Str};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
@@ -39,7 +39,7 @@ py_class!(pub class config |py| {
 
     def readpath(
         &self,
-        path: PyPath,
+        path: PyPathBuf,
         source: String,
         sections: Option<Vec<String>>,
         remap: Option<Vec<(String, String)>>,
@@ -78,7 +78,7 @@ py_class!(pub class config |py| {
 
     def sources(
         &self, section: String, name: String
-    ) -> PyResult<Vec<(Option<Str>, Option<(PyPath, usize, usize, usize)>, Str)>> {
+    ) -> PyResult<Vec<(Option<Str>, Option<(PyPathBuf, usize, usize, usize)>, Str)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
@@ -92,7 +92,7 @@ py_class!(pub class config |py| {
                 let line = 1 + file.slice(0, range.start).iter().filter(|ch| **ch == b'\n').count();
 
                 let pypath = if path.as_os_str().is_empty() {
-                    PyPath::from(String::from("<builtin>"))
+                    PyPathBuf::from(String::from("<builtin>"))
                 } else {
                     let path = util::path::strip_unc_prefix(&path);
                     path.try_into().unwrap()

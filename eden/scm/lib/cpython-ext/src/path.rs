@@ -23,7 +23,7 @@ use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 use crate::ResultPyErrExt;
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Default, Hash, Ord)]
-pub struct PyPath(String);
+pub struct PyPathBuf(String);
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -31,7 +31,7 @@ pub enum Error {
     NonUTF8Path(PathBuf),
 }
 
-impl PyPath {
+impl PyPathBuf {
     pub fn to_path_buf(&self) -> PathBuf {
         Path::new(&self.0).to_path_buf()
     }
@@ -57,7 +57,7 @@ impl PyPath {
     }
 }
 
-impl ToPyObject for PyPath {
+impl ToPyObject for PyPathBuf {
     #[cfg(feature = "python3")]
     type ObjectType = PyUnicode;
     #[cfg(feature = "python2")]
@@ -73,7 +73,7 @@ impl ToPyObject for PyPath {
     }
 }
 
-impl<'source> FromPyObject<'source> for PyPath {
+impl<'source> FromPyObject<'source> for PyPathBuf {
     fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
         #[cfg(feature = "python3")]
         {
@@ -95,7 +95,7 @@ impl<'source> FromPyObject<'source> for PyPath {
     }
 }
 
-impl TryFrom<PathBuf> for PyPath {
+impl TryFrom<PathBuf> for PyPathBuf {
     type Error = anyhow::Error;
 
     fn try_from(path: PathBuf) -> Result<Self> {
@@ -103,7 +103,7 @@ impl TryFrom<PathBuf> for PyPath {
     }
 }
 
-impl<'a> TryFrom<&'a Path> for PyPath {
+impl<'a> TryFrom<&'a Path> for PyPathBuf {
     type Error = anyhow::Error;
 
     fn try_from(path: &'a Path) -> Result<Self> {
@@ -115,44 +115,44 @@ impl<'a> TryFrom<&'a Path> for PyPath {
     }
 }
 
-impl From<String> for PyPath {
-    fn from(s: String) -> PyPath {
+impl From<String> for PyPathBuf {
+    fn from(s: String) -> PyPathBuf {
         Self(s)
     }
 }
 
-impl AsRef<Path> for PyPath {
+impl AsRef<Path> for PyPathBuf {
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
     }
 }
 
-impl<'a> From<&'a RepoPath> for PyPath {
-    fn from(repo_path: &'a RepoPath) -> PyPath {
-        PyPath(repo_path.as_str().to_owned())
+impl<'a> From<&'a RepoPath> for PyPathBuf {
+    fn from(repo_path: &'a RepoPath) -> PyPathBuf {
+        PyPathBuf(repo_path.as_str().to_owned())
     }
 }
 
-impl From<RepoPathBuf> for PyPath {
-    fn from(repo_path_buf: RepoPathBuf) -> PyPath {
-        PyPath(repo_path_buf.into_string())
+impl From<RepoPathBuf> for PyPathBuf {
+    fn from(repo_path_buf: RepoPathBuf) -> PyPathBuf {
+        PyPathBuf(repo_path_buf.into_string())
     }
 }
 
-impl From<PathComponentBuf> for PyPath {
-    fn from(path_component_buf: PathComponentBuf) -> PyPath {
-        PyPath(path_component_buf.into_string())
+impl From<PathComponentBuf> for PyPathBuf {
+    fn from(path_component_buf: PathComponentBuf) -> PyPathBuf {
+        PyPathBuf(path_component_buf.into_string())
     }
 }
 
-impl fmt::Display for PyPath {
+impl fmt::Display for PyPathBuf {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&*self.0, formatter)
     }
 }
 
-impl From<PyPath> for String {
-    fn from(path: PyPath) -> String {
+impl From<PyPathBuf> for String {
+    fn from(path: PyPathBuf) -> String {
         path.0
     }
 }

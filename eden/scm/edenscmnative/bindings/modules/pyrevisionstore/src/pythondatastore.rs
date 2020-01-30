@@ -11,7 +11,7 @@ use cpython::{
     PythonObject, PythonObjectWithTypeObject,
 };
 
-use cpython_ext::{PyErr, PyPath};
+use cpython_ext::{PyErr, PyPathBuf};
 use revisionstore::{DataStore, Delta, LocalStore, Metadata, RemoteDataStore};
 use types::Key;
 
@@ -34,7 +34,7 @@ impl DataStore for PythonDataStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyPath::from(key.path.as_repo_path());
+        let py_name = PyPathBuf::from(key.path.as_repo_path());
         let py_node = PyBytes::new(py, key.hgid.as_ref());
 
         let py_data = match self
@@ -59,7 +59,7 @@ impl DataStore for PythonDataStore {
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyPath::from(key.path.as_repo_path());
+        let py_name = PyPathBuf::from(key.path.as_repo_path());
         let py_node = PyBytes::new(py, key.hgid.as_ref());
         let py_delta = match self
             .py_store
@@ -97,7 +97,7 @@ impl DataStore for PythonDataStore {
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyPath::from(key.path.as_repo_path());
+        let py_name = PyPathBuf::from(key.path.as_repo_path());
         let py_node = PyBytes::new(py, key.hgid.as_ref());
         let py_chain =
             match self
@@ -124,7 +124,7 @@ impl DataStore for PythonDataStore {
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyPath::from(key.path.as_repo_path());
+        let py_name = PyPathBuf::from(key.path.as_repo_path());
         let py_node = PyBytes::new(py, key.hgid.as_ref());
         let py_meta = match self
             .py_store
@@ -153,7 +153,7 @@ impl RemoteDataStore for PythonDataStore {
         let keys = keys
             .into_iter()
             .map(|key| {
-                let py_name = PyPath::from(key.path.as_repo_path());
+                let py_name = PyPathBuf::from(key.path.as_repo_path());
                 let py_node = PyBytes::new(py, key.hgid.as_ref());
                 (py_name, py_node)
             })

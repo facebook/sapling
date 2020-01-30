@@ -11,7 +11,7 @@ use cpython::{
     ToPyObject,
 };
 
-use cpython_ext::{PyErr as ExtPyErr, PyPath, ResultPyErrExt};
+use cpython_ext::{PyErr as ExtPyErr, PyPathBuf, ResultPyErrExt};
 use revisionstore::datastore::{Delta, Metadata};
 use types::{Key, Node, RepoPathBuf};
 
@@ -21,28 +21,28 @@ pub fn to_node(py: Python, node: &PyBytes) -> Node {
     (&bytes).into()
 }
 
-pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
+pub fn to_path(py: Python, name: &PyPathBuf) -> PyResult<RepoPathBuf> {
     name.to_repo_path()
         .map_pyerr(py)
         .map(|path| path.to_owned())
 }
 
-pub fn to_key(py: Python, name: &PyPath, node: &PyBytes) -> PyResult<Key> {
+pub fn to_key(py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<Key> {
     let node = to_node(py, node);
     let path = to_path(py, name)?;
     Ok(Key::new(path, node))
 }
 
-pub fn from_key(py: Python, key: &Key) -> (PyPath, PyBytes) {
+pub fn from_key(py: Python, key: &Key) -> (PyPathBuf, PyBytes) {
     (
-        PyPath::from(key.path.as_repo_path()),
+        PyPathBuf::from(key.path.as_repo_path()),
         PyBytes::new(py, key.hgid.as_ref()),
     )
 }
 
 pub fn to_delta(
     py: Python,
-    name: &PyPath,
+    name: &PyPathBuf,
     node: &PyBytes,
     deltabasenode: &PyBytes,
     data: &PyBytes,
@@ -63,9 +63,9 @@ pub fn to_delta(
 pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delta> {
     // A python delta is a tuple: (name, node, base name, base node, delta bytes)
     let py_delta = PyTuple::extract(py, &py_delta)?;
-    let py_name = PyPath::extract(py, &py_delta.get_item(py, 0))?;
+    let py_name = PyPathBuf::extract(py, &py_delta.get_item(py, 0))?;
     let py_node = PyBytes::extract(py, &py_delta.get_item(py, 1))?;
-    let py_delta_name = PyPath::extract(py, &py_delta.get_item(py, 2))?;
+    let py_delta_name = PyPathBuf::extract(py, &py_delta.get_item(py, 2))?;
     let py_delta_node = PyBytes::extract(py, &py_delta.get_item(py, 3))?;
     let py_bytes = PyBytes::extract(py, &py_delta.get_item(py, 4))?;
 
@@ -82,7 +82,7 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
     })
 }
 
-pub fn from_base(py: Python, delta: &Delta) -> (PyPath, PyBytes) {
+pub fn from_base(py: Python, delta: &Delta) -> (PyPathBuf, PyBytes) {
     match delta.base.as_ref() {
         Some(base) => from_key(py, &base),
         None => from_key(
@@ -121,7 +121,7 @@ pub fn from_key_to_tuple<'a>(py: Python, key: &'a Key) -> PyTuple {
 
 pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
     let py_tuple = <&PyTuple>::extract(py, &py_tuple)?.as_slice(py);
-    let name = <PyPath>::extract(py, &py_tuple[0])?;
+    let name = <PyPathBuf>::extract(py, &py_tuple[0])?;
     let node = <&PyBytes>::extract(py, &py_tuple[1])?;
     to_key(py, &name, &node)
 }
@@ -130,8 +130,8 @@ pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyB
     PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
 }
 
-pub fn path_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyPath> {
-    PyPath::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
+pub fn path_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyPathBuf> {
+    PyPathBuf::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
 }
 
 pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
