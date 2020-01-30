@@ -219,7 +219,7 @@ def union(matches, root, cwd):
     If the list only contains one non-None value, return that matcher.
     Otherwise return a union matcher.
     """
-    matches = filter(None, matches)
+    matches = list(filter(None, matches))
     if len(matches) == 0:
         return nevermatcher(root, cwd)
     elif len(matches) == 1:
