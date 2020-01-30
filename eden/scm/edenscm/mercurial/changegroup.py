@@ -38,9 +38,9 @@ CFG_CGDELTA_ALWAYS_NULL = "always-null"
 CFG_CGDELTA_NO_EXTERNAL = "no-external"
 CFG_CGDELTA_DEFAULT = "default"
 
-_CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
-_CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
-_CHANGEGROUPV3_DELTA_HEADER = ">20s20s20s20s20sH"
+_CHANGEGROUPV1_DELTA_HEADER = b"20s20s20s20s"
+_CHANGEGROUPV2_DELTA_HEADER = b"20s20s20s20s20s"
+_CHANGEGROUPV3_DELTA_HEADER = b">20s20s20s20s20sH"
 
 
 def readexactly(stream, n):
@@ -56,7 +56,7 @@ def readexactly(stream, n):
 def getchunk(stream):
     """return the next chunk from stream as a string"""
     d = readexactly(stream, 4)
-    l = struct.unpack(">l", d)[0]
+    l = struct.unpack(b">l", d)[0]
     if l <= 4:
         if l:
             raise error.Abort(_("invalid chunk length %d") % l)
@@ -66,12 +66,12 @@ def getchunk(stream):
 
 def chunkheader(length):
     """return a changegroup chunk header (string)"""
-    return struct.pack(">l", length + 4)
+    return struct.pack(b">l", length + 4)
 
 
 def closechunk():
     """return a changegroup chunk header (string) for a zero-length chunk"""
-    return struct.pack(">l", 0)
+    return struct.pack(b">l", 0)
 
 
 def writechunks(ui, chunks, filename, vfs=None):
@@ -172,7 +172,7 @@ class cg1unpacker(object):
 
     def _chunklength(self):
         d = readexactly(self._stream, 4)
-        l = struct.unpack(">l", d)[0]
+        l = struct.unpack(b">l", d)[0]
         if l <= 4:
             if l:
                 raise error.Abort(_("invalid chunk length %d") % l)

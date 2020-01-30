@@ -36,8 +36,8 @@ from . import (
     util,
 )
 from .i18n import _
-from .node import bin, hex, nullid
-from .pycompat import range
+from .node import bin, hex, bbin, bhex, nullid
+from .pycompat import encodeutf8, decodeutf8, iteritems, range
 
 
 urlerr = util.urlerr
@@ -193,10 +193,10 @@ def escapearg(plain):
 
 def unescapearg(escaped):
     return (
-        escaped.replace(":e", "=")
-        .replace(":s", ";")
-        .replace(":o", ",")
-        .replace(":c", ":")
+        escaped.replace(b":e", b"=")
+        .replace(b":s", b";")
+        .replace(b":o", b",")
+        .replace(b":c", b":")
     )
 
 
@@ -264,9 +264,9 @@ class wirepeer(repository.legacypeer):
         f = future()
         yield {"key": encoding.fromlocal(key)}, f
         d = f.value
-        success, data = d[:-1].split(" ", 1)
+        success, data = d[:-1].split(b" ", 1)
         if int(success):
-            yield bin(data)
+            yield bbin(data)
         else:
             self._abort(error.RepoError(data))
 
@@ -276,7 +276,7 @@ class wirepeer(repository.legacypeer):
         yield {}, f
         d = f.value
         try:
-            yield decodelist(d[:-1])
+            yield decodelist(decodeutf8(d[:-1]))
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 

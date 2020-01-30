@@ -690,9 +690,9 @@ def analyzeremotephases(repo, subset, roots):
     draftroots = []
     nodemap = repo.changelog.nodemap  # to filter unknown nodes
     for nhex, phase in pycompat.iteritems(roots):
-        if nhex == "publishing":  # ignore data related to publish option
+        if nhex == b"publishing":  # ignore data related to publish option
             continue
-        node = bin(nhex)
+        node = bbin(nhex)
         phase = int(phase)
         if phase == public:
             if node != nullid:

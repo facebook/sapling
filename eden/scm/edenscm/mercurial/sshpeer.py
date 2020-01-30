@@ -278,8 +278,8 @@ class sshpeer(wireproto.wirepeer):
         available -= toread
         chunk = work
         while chunk:
-            while ";" in work:
-                one, work = work.split(";", 1)
+            while b";" in work:
+                one, work = work.split(b";", 1)
                 yield wireproto.unescapearg(one)
             toread = min(available, 1024)
             chunk = rsp.read(toread)

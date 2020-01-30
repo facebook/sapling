@@ -181,12 +181,12 @@ urlreq = util.urlreq
 _pack = struct.pack
 _unpack = struct.unpack
 
-_fstreamparamsize = ">i"
-_fpartheadersize = ">i"
-_fparttypesize = ">B"
-_fpartid = ">I"
-_fpayloadsize = ">i"
-_fpartparamcount = ">BB"
+_fstreamparamsize = b">i"
+_fpartheadersize = b">i"
+_fparttypesize = b">B"
+_fpartid = b">I"
+_fpayloadsize = b">i"
+_fpartparamcount = b">BB"
 
 preferedchunksize = 4096
 
@@ -787,7 +787,7 @@ def getunbundler(ui, fp, magicstring=None):
     if magicstring is None:
         magicstring = changegroup.readexactly(fp, 4)
     magic, version = magicstring[0:2], magicstring[2:4]
-    if magic != "HG":
+    if magic != b"HG":
         ui.debug(
             "error: invalid magic: %r (version %r), should be 'HG'\n" % (magic, version)
         )
@@ -943,7 +943,7 @@ class unbundle20(unpackermixin):
             return self._fp.close()
 
 
-formatmap = {"20": unbundle20}
+formatmap = {b"20": unbundle20}
 
 b2streamparamsmap = {}
 
@@ -1369,7 +1369,7 @@ class unbundlepart(unpackermixin):
     def _readheader(self):
         """read the header and setup the object"""
         typesize = self._unpackheader(_fparttypesize)[0]
-        self.type = self._fromheader(typesize)
+        self.type = pycompat.decodeutf8(self._fromheader(typesize))
         indebug(self.ui, 'part type: "%s"' % self.type)
         self.id = self._unpackheader(_fpartid)[0]
         indebug(self.ui, 'part id: "%s"' % pycompat.bytestr(self.id))
@@ -1391,10 +1391,10 @@ class unbundlepart(unpackermixin):
         # retrieve param value
         manparams = []
         for key, value in mansizes:
-            manparams.append((self._fromheader(key), self._fromheader(value)))
+            manparams.append((pycompat.decodeutf8(self._fromheader(key)), self._fromheader(value)))
         advparams = []
         for key, value in advsizes:
-            advparams.append((self._fromheader(key), self._fromheader(value)))
+            advparams.append((pycompat.decodeutf8(self._fromheader(key)), self._fromheader(value)))
         self._initparams(manparams, advparams)
         ## part payload
         self._payloadstream = util.chunkbuffer(self._payloadchunks())
@@ -1755,7 +1755,7 @@ def handlechangegroup(op, inpart):
     inflicted to any end-user.
     """
     tr = op.gettransaction()
-    unpackerversion = inpart.params.get("version", "01")
+    unpackerversion = pycompat.decodeutf8(inpart.params.get("version", b"01"))
     # We should raise an appropriate exception here
     cg = changegroup.getunbundler(unpackerversion, inpart, None)
     # the source and url passed here are overwritten by the one contained in

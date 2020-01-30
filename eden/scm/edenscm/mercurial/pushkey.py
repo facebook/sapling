@@ -69,6 +69,6 @@ def decodekeys(data):
     # revision codes. See T24417531
     result = util.sortdict()
     for l in data.splitlines():
-        k, v = l.split("\t")
+        k, v = l.split(b"\t")
         result[decode(k)] = decode(v)
     return result
