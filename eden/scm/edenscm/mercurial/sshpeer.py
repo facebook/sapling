@@ -63,7 +63,21 @@ class countingpipe(object):
         return self._pipe.write(data)
 
     def read(self, size):
+        # type: (int) -> bytes
         r = self._pipe.read(size)
+        bufs = [r]
+        # In Python 3 _pipe is a FileIO and is not guaranteed to return size
+        # bytes. So let's loop until we get the bytes, or we get 0 bytes,
+        # indicating the end of the pipe.
+        if len(r) < size:
+            totalread = len(r)
+            while totalread < size and len(r) != 0:
+                r = self._pipe.read(size - totalread)
+                totalread += len(r)
+                bufs.append(r)
+
+        r = b"".join(bufs)
+
         self._totalbytes += len(r)
         self._ui.metrics.gauge("ssh_read_bytes", len(r))
         return r
