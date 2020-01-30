@@ -52,6 +52,7 @@ import re
 import socket
 import struct
 import time
+from typing import BinaryIO, Callable, Dict, List, Optional
 
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import commands, hgtime
@@ -102,19 +103,23 @@ class channeledsystem(object):
     """Propagate ui.system() and ui._runpager() requests to the chg client"""
 
     def __init__(self, in_, out):
+        # type: (BinaryIO, BinaryIO) -> None
         self.in_ = in_
         self.out = out
 
     def _send_request(self, channel, args):
-        data = "\0".join(args) + "\0"
+        # type: (str, List[str]) -> None
+        data = pycompat.encodeutf8("\0".join(args) + "\0")
         self.out.write(struct.pack(">cI", channel, len(data)))
         self.out.write(data)
         self.out.flush()
 
     def _environ_to_args(self, environ):
+        # type: (Dict[str,str]) -> List[str]
         return ["%s=%s" % (k, v) for k, v in environ.items()]
 
     def runsystem(self, cmd, environ, cwd=None):
+        # type: (str, Dict[str,str], Optional[str]) -> int
         """Send a request to run a system command.
 
         This request type is sent with the 's' channel code.
@@ -140,6 +145,7 @@ class channeledsystem(object):
         return rc
 
     def runpager(self, cmd, environ, redirectstderr, cmdtable):
+        # type: (bytes, Dict[str,str], BinaryIO, Dict[bytes, Callable]) -> None
         """Requests to run a pager command are sent using the 'p' channel code.
         The request contents are a series of null-terminated strings:
         - the first string is the pager command string, to be run with "sh -c"
@@ -192,6 +198,7 @@ class chgcmdserver(commandserver.server):
         self._restoreio()
 
     def attachio(self):
+        # type: () -> None
         """Attach to client's stdio passed via unix domain socket; all
         channels except cresult will no longer be used
         """
@@ -236,6 +243,7 @@ class chgcmdserver(commandserver.server):
         self.cresult.write(struct.pack(">i", len(clientfds)))
 
     def _saveio(self):
+        # type: () -> bool
         if self._oldios:
             return False
         ui = self.ui
@@ -247,6 +255,7 @@ class chgcmdserver(commandserver.server):
         return True
 
     def _restoreio(self):
+        # type: () -> None
         ui = self.ui
         for (ch, fp, fd), (cn, fn, _mode) in zip(self._oldios, _iochannels):
             newfp = getattr(ui, fn)
@@ -262,6 +271,7 @@ class chgcmdserver(commandserver.server):
         del self._oldios[:]
 
     def chdir(self):
+        # type: () -> None
         """Change current directory
 
         Note that the behavior of --cwd option is bit different from this.
@@ -274,12 +284,14 @@ class chgcmdserver(commandserver.server):
         os.chdir(path)
 
     def setumask(self):
+        # type: () -> None
         """Change umask"""
         mask = struct.unpack(">I", self._read(4))[0]
         _log("setumask %r\n" % mask)
         os.umask(mask)
 
     def runcommand(self):
+        # type () -> None
         # Environment variables might change, reload env.
         util._reloadenv()
         args = self._readlist()
@@ -297,18 +309,23 @@ class chgcmdserver(commandserver.server):
             uimod.ui = origui
 
     def setenv(self):
+        # type: () -> None
         """Clear and update os.environ
 
         Note that not all variables can make an effect on the running process.
         """
         l = self._readlist()
         try:
-            newenv = dict(s.split("=", 1) for s in l if "=" in s)
+            newenv = dict(  # ignore below bc pyre doesn't like list to kv conversion
+                pycompat.decodeutf8(s).split("=", 1)  # type: ignore
+                for s in l
+                if b"=" in s
+            )
         except ValueError:
             raise ValueError("unexpected value in setenv request")
         _log("setenv: %r\n" % sorted(newenv.keys()))
-        encoding.environ.clear()
-        encoding.environ.update(newenv)
+        encoding.environ.clear()  # type: ignore
+        encoding.environ.update(newenv)  # type: ignore
         # Apply $TZ changes.
         hgtime.tzset()
 
@@ -336,10 +353,12 @@ class chgcmdserver(commandserver.server):
 
 
 def _tempaddress(address):
+    # type: (str) -> str
     return "%s.%d.tmp" % (address, os.getpid())
 
 
 def _realaddress(address):
+    # type: (str) -> str
     # if the basename of address contains '.', use only the left part. this
     # makes it possible for the client to pass 'server.tmp$PID' and follow by
     # an atomic rename to avoid locking when spawning new servers.
