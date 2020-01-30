@@ -1273,7 +1273,7 @@ class localrepository(object):
 
     def wread(self, filename):
         if self.wvfs.islink(filename):
-            data = self.wvfs.readlink(filename)
+            data = pycompat.encodeutf8(self.wvfs.readlink(filename))
         else:
             data = self.wvfs.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
