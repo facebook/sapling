@@ -34,7 +34,7 @@ use ::treestate::{
     treedirstate::TreeDirstate,
     treestate::TreeState,
 };
-use cpython_ext::{PyPath, ResultPyErrExt};
+use cpython_ext::{AnyhowResultExt, PyPath, ResultPyErrExt};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -673,10 +673,8 @@ py_class!(class treestate |py| {
             &mut |path| {
                 let path = PyPath::from_utf8_bytes(path.to_vec()).expect("path should be utf-8");
                 let filtered = filter
-                    .call(py, (&path,), None)
-                    .map_err(|e| callback_error(py, e))?
-                    .extract::<PyPath>(py)
-                    .map_err(|e| callback_error(py, e))?;
+                    .call(py, (&path,), None).into_anyhow_result()?
+                    .extract::<PyPath>(py).into_anyhow_result()?;
                 Ok(filtered.into_utf8_bytes().into_boxed_slice())
             },
             filterid,
@@ -701,7 +699,7 @@ py_class!(class treestate |py| {
             &|file| file.state & mask == setbits,
             &mut |components| {
                 let path = PyPath::from_utf8_bytes(components.concat()).expect("path should be utf-8");
-                matchcallback.call(py, (path,), None).map_err(|e| callback_error(py, e))?;
+                matchcallback.call(py, (path,), None).into_anyhow_result()?;
                 Ok(())
             },
         ))?;
