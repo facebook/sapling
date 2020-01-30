@@ -3068,7 +3068,7 @@ class url(object):
         user, passwd = self.user, self.passwd
         try:
             self.user, self.passwd = None, None
-            s = bytes(self)
+            s = str(self)
         finally:
             self.user, self.passwd = user, passwd
         if not self.user:
