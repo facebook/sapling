@@ -307,7 +307,7 @@ cdef class nodemap(object):
             # Convert b'ambiguous prefix' to RevlogError. This is because the
             # rust code cannot access RevlogError cleanly. So we do the
             # conversion here.
-            if b'ambiguous prefix' in str(ex):
+            if 'ambiguous prefix' in str(ex):
                 raise error.RevlogError
             raise
 
