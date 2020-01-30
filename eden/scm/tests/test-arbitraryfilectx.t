@@ -7,7 +7,7 @@ Setup:
   > from edenscm.mercurial import commands, context, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'eval', [], 'hg eval CMD')
+  > @command('eval', [], 'hg eval CMD')
   > def eval_(ui, repo, *cmds, **opts):
   >     cmd = " ".join(cmds)
   >     res = str(eval(cmd, globals(), locals()))

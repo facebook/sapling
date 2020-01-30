@@ -107,7 +107,7 @@ don't allow marking or unmarking driver-resolved files
   > from edenscm.mercurial import merge, registrar, scmutil
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'markdriver',
+  > @command('markdriver',
   >   [('u', 'unmark', None, '')],
   >   'FILE...')
   > def markdriver(ui, repo, *pats, **opts):

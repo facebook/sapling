@@ -20,7 +20,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-@command(b"debugbruterebase")
+@command("debugbruterebase")
 def debugbruterebase(ui, repo, source, dest):
     """for every non-empty subset of source, run rebase -r subset -d dest
 

@@ -29,7 +29,7 @@ duplicating obsmarkers.
   > from edenscm.mercurial import obsolete, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'debugdupobsmarkers')
+  > @command('debugdupobsmarkers')
   > def debugdupobsmarkers(ui, repo, **opts):
   >     newmarkers = []
   >     for marker in repo.obsstore._all:

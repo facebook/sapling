@@ -5,7 +5,7 @@
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'debugadddrop',
+  > @command('debugadddrop',
   >   [('', 'drop', False, 'drop file from dirstate', 'FILE'),
   >    ('', 'normal-lookup', False, 'add file to dirstate', 'FILE')],
   >     'hg debugadddrop')

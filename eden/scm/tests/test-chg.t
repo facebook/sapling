@@ -108,7 +108,7 @@ chg waits for pager if runcommand raises
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'crash')
+  > @command('crash')
   > def pagercrash(ui, repo, *pats, **opts):
   >     ui.write('going to crash\n')
   >     raise Exception('.')

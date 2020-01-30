@@ -778,15 +778,15 @@ this is a section and erroring out weirdly.
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
-  > @command(b'nohelp',
+  > @command('nohelp',
   >     [(b'', b'longdesc', 3, b'x'*90),
   >     (b'n', b'', None, b'normal desc'),
   >     (b'', b'newline', b'', b'line1\nline2')],
   >     b'hg nohelp',
   >     norepo=True)
-  > @command(b'debugoptADV', [(b'', b'aopt', None, b'option is (ADVANCED)')])
-  > @command(b'debugoptDEP', [(b'', b'dopt', None, b'option is (DEPRECATED)')])
-  > @command(b'debugoptEXP', [(b'', b'eopt', None, b'option is (EXPERIMENTAL)')])
+  > @command('debugoptADV', [(b'', b'aopt', None, b'option is (ADVANCED)')])
+  > @command('debugoptDEP', [(b'', b'dopt', None, b'option is (DEPRECATED)')])
+  > @command('debugoptEXP', [(b'', b'eopt', None, b'option is (EXPERIMENTAL)')])
   > def nohelp(ui, *args, **kwargs):
   >     pass
   > 

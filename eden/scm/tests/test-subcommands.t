@@ -4,30 +4,30 @@
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'test', [], 'hg test SUBCOMMAND', subonly=True)
+  > @command('test', [], 'hg test SUBCOMMAND', subonly=True)
   > def test(ui, repo):
   >     """test command"""
   >     ui.status("test command called (should not happen)\n")
   > subcmd = test.subcommand(categories=[("First Category", ["one"])])
-  > @subcmd(b'one', [])
+  > @subcmd('one', [])
   > def testone(ui, repo):
   >     """first test subcommand"""
   >     ui.status("test subcommand one called\n")
-  > @subcmd(b'two', [])
+  > @subcmd('two', [])
   > def testone(ui, repo):
   >     """second test subcommand"""
   >     ui.status("test subcommand two called\n")
-  > @command(b'othertest', [], 'hg othertest [SUBCOMMAND]')
+  > @command('othertest', [], 'hg othertest [SUBCOMMAND]')
   > def othertest(ui, repo, parameter):
   >     """other test command"""
   >     ui.status("other test command called with '%s'\n" % parameter)
   > othersubcmd = othertest.subcommand()
-  > @othersubcmd(b'alpha|alfa', [])
+  > @othersubcmd('alpha|alfa', [])
   > def othertestalpha(ui, repo, parameter):
   >     """other test subcommand alpha"""
   >     ui.status("other test command alpha called with '%s'\n" % parameter)
   > nestedsubcmd = othertestalpha.subcommand()
-  > @nestedsubcmd(b'beta', [])
+  > @nestedsubcmd('beta', [])
   > def othertestalphabeta(ui, repo):
   >     """other test subcommand alpha subcommand beta"""
   >     ui.status("other test command alpha/beta called\n")

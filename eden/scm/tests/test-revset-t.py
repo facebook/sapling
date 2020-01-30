@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 import os
+
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
@@ -95,7 +96,7 @@ from edenscm.mercurial import (
 )
 cmdtable = {}
 command = registrar.command(cmdtable)
-@command(b'debugrevlistspec',
+@command('debugrevlistspec',
     [('', 'optimize', None, 'print parsed tree after optimizing'),
      ('', 'bin', None, 'unhexlify arguments')])
 def debugrevlistspec(ui, repo, fmt, *args, **opts):

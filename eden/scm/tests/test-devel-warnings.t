@@ -8,20 +8,20 @@
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
-  > @command(b'buggylocking', [], '')
+  > @command('buggylocking', [], '')
   > def buggylocking(ui, repo):
   >     lo = repo.lock()
   >     wl = repo.wlock()
   >     wl.release()
   >     lo.release()
   > 
-  > @command(b'buggytransaction', [], '')
+  > @command('buggytransaction', [], '')
   > def buggylocking(ui, repo):
   >     tr = repo.transaction('buggy')
   >     # make sure we rollback the transaction as we don't want to rely on the__del__
   >     tr.release()
   > 
-  > @command(b'properlocking', [], '')
+  > @command('properlocking', [], '')
   > def properlocking(ui, repo):
   >     """check that reentrance is fine"""
   >     wl = repo.wlock()
@@ -37,24 +37,24 @@
   >     lo.release()
   >     wl.release()
   > 
-  > @command(b'nowaitlocking', [], '')
+  > @command('nowaitlocking', [], '')
   > def nowaitlocking(ui, repo):
   >     lo = repo.lock()
   >     wl = repo.wlock(wait=False)
   >     wl.release()
   >     lo.release()
   > 
-  > @command(b'no-wlock-write', [], '')
+  > @command('no-wlock-write', [], '')
   > def nowlockwrite(ui, repo):
   >     with repo.vfs(b'branch', 'a'):
   >         pass
   > 
-  > @command(b'no-lock-write', [], '')
+  > @command('no-lock-write', [], '')
   > def nolockwrite(ui, repo):
   >     with repo.svfs(b'fncache', 'a'):
   >         pass
   > 
-  > @command(b'stripintr', [], '')
+  > @command('stripintr', [], '')
   > def stripintr(ui, repo):
   >     lo = repo.lock()
   >     tr = repo.transaction('foobar')
@@ -62,16 +62,16 @@
   >         repair.strip(repo.ui, repo, [repo['.'].node()])
   >     finally:
   >         lo.release()
-  > @command(b'oldanddeprecated', [], '')
+  > @command('oldanddeprecated', [], '')
   > def oldanddeprecated(ui, repo):
   >     """test deprecation warning API"""
   >     def foobar(ui):
   >         ui.deprecwarn('foorbar is deprecated, go shopping', '42.1337')
   >     foobar(ui)
-  > @command(b'nouiwarning', [], '')
+  > @command('nouiwarning', [], '')
   > def nouiwarning(ui, repo):
   >     util.nouideprecwarn('this is a test', '13.37')
-  > @command(b'programmingerror', [], '')
+  > @command('programmingerror', [], '')
   > def programmingerror(ui, repo):
   >     raise error.ProgrammingError('something went wrong', hint='try again')
   > EOF
@@ -181,7 +181,7 @@ Test warning on config option access and registration
   > configitem('ui', 'quiet', default=False)
   > configitem('ui', 'interactive', default=None)
   > 
-  > @command(b'buggyconfig')
+  > @command('buggyconfig')
   > def cmdbuggyconfig(ui, repo):
   >     repo.ui.config('ui', 'quiet', True)
   >     repo.ui.config('ui', 'interactive', False)

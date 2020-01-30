@@ -64,7 +64,7 @@ these predicates use '\0' as a separator:
   > )
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command(b'debugrevlistspec',
+  > @command('debugrevlistspec',
   >     [('', 'optimize', None, 'print parsed tree after optimizing'),
   >      ('', 'bin', None, 'unhexlify arguments')])
   > def debugrevlistspec(ui, repo, fmt, *args, **opts):
