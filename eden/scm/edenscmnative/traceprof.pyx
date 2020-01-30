@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 # distutils: language = c++
+# cython: language_level=3str
 
 # traceprof.pyx - C++ to Python bridge for the traceprof Mercurial extension
 

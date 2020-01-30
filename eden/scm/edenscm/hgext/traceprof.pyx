@@ -7,6 +7,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+# cython: language_level=3str
+
 """accurate callgraph profiling
 
 lsprof's high precision, plus statprof's intuitive output format.

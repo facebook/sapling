@@ -5,6 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+# cython: language_level=3str
+
 """patch rmdir
 
 Check if a directory is empty before trying to call rmdir on it. This works
