@@ -98,8 +98,10 @@ Verify backups
 
   $ cat > sha256.py << EOF
   > import hashlib, sys
+  > # PY3-compat
+  > stdin = sys.stdin.buffer if sys.version_info[0] >= 3 else sys.stdin
   > s = hashlib.sha256()
-  > s.update(sys.stdin.read())
+  > s.update(stdin.read())
   > sys.stdout.write('%s' % s.hexdigest()[:8])
   > EOF
 

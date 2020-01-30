@@ -65,7 +65,7 @@ sh % "hg --cwd b tip" == r"""
 sh % "cat" << r"""
 from __future__ import print_function
 print('patching file a')
-file('a', 'wb').write('line2\n')
+open('a', 'wb').write(b'line2\n')
 """ > "dummypatch.py"
 sh % "hg clone -qr0 a b0"
 sh % "'HGEDITOR=cat' hg --config \"ui.patch=$PYTHON ../dummypatch.py\" --cwd b0 import --edit ../exported-tip.patch" == r"""
