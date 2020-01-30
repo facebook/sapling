@@ -21,6 +21,7 @@ import socket
 import struct
 import sys
 import traceback
+from typing import Any, BinaryIO, List, Tuple
 
 from . import encoding, error, pycompat, util
 from .i18n import _
@@ -54,14 +55,17 @@ class channeledoutput(object):
     """
 
     def __init__(self, out, channel):
+        # type: (BinaryIO, str) -> None
         self.out = out
         self.channel = channel
 
     @property
     def name(self):
+        # type: () -> str
         return "<%c-channel>" % self.channel
 
     def write(self, data):
+        # type: (bytes) -> None
         if not data:
             return
         # single write() to guarantee the same atomicity as the underlying file
@@ -90,15 +94,18 @@ class channeledinput(object):
     maxchunksize = 4 * 1024
 
     def __init__(self, in_, out, channel):
+        # type: (BinaryIO, BinaryIO, str) -> None
         self.in_ = in_
         self.out = out
         self.channel = channel
 
     @property
     def name(self):
+        # type: () -> str
         return "<%c-channel>" % self.channel
 
     def read(self, size=-1):
+        # type: (int) -> bytes
         if size < 0:
             # if we need to consume all the clients input, ask for 4k chunks
             # so the pipe doesn't fill up risking a deadlock
@@ -114,8 +121,9 @@ class channeledinput(object):
             return self._read(size, self.channel)
 
     def _read(self, size, channel):
+        # type: (int, str) -> bytes
         if not size:
-            return ""
+            return b""
         assert size > 0
 
         # tell the client we need at most size bytes
@@ -125,18 +133,19 @@ class channeledinput(object):
         length = self.in_.read(4)
         length = struct.unpack(">I", length)[0]
         if not length:
-            return ""
+            return b""
         else:
             return self.in_.read(length)
 
     def readline(self, size=-1):
+        # type: (int) -> bytes
         if size < 0:
             size = self.maxchunksize
             s = self._read(size, "L")
             buf = s
             # keep asking for more until there's either no more or
             # we got a full line
-            while s and s[-1] != "\n":
+            while s and s[-1] != b"\n":
                 s = self._read(size, "L")
                 buf += s
 
@@ -145,9 +154,11 @@ class channeledinput(object):
             return self._read(size, "L")
 
     def __iter__(self):
+        # type: () -> channeledinput
         return self
 
     def next(self):
+        # type: () -> bytes
         l = self.readline()
         if not l:
             raise StopIteration
@@ -166,6 +177,7 @@ class server(object):
     """
 
     def __init__(self, ui, repo, fin, fout):
+        # type: (Any, Any, BinaryIO, BinaryIO) -> None
         self.cwd = pycompat.getcwd()
 
         # developer config: cmdserver.log
@@ -199,8 +211,9 @@ class server(object):
         """release and restore resources taken during server session"""
 
     def _read(self, size):
+        # type: (int) -> bytes
         if not size:
-            return ""
+            return b""
 
         data = self.client.read(size)
 
@@ -211,6 +224,7 @@ class server(object):
         return data
 
     def _readstr(self):
+        # type: () -> bytes
         """read a string from the channel
 
         format:
@@ -218,14 +232,15 @@ class server(object):
         """
         length = struct.unpack(">I", self._read(4))[0]
         if not length:
-            return ""
+            return b""
         return self._read(length)
 
     def _readlist(self):
+        # type: () -> List[bytes]
         """read a list of NULL separated strings from the channel"""
         s = self._readstr()
         if s:
-            return s.split("\0")
+            return s.split(b"\0")
         else:
             return []
 
@@ -242,13 +257,13 @@ class server(object):
         copiedui = self.ui.copy()
         uis = [copiedui]
         if self.repo:
-            self.repo.baseui = copiedui
+            self.repo.baseui = copiedui  # type: ignore
             # clone ui without using ui.copy because this is protected
-            repoui = self.repoui.__class__(self.repoui)
-            repoui.copy = copiedui.copy  # redo copy protection
+            repoui = self.repoui.__class__(self.repoui)  # type: ignore
+            repoui.copy = copiedui.copy  # type: ignore , redo copy protection
             uis.append(repoui)
-            self.repo.ui = self.repo.dirstate._ui = repoui
-            self.repo.invalidateall()
+            self.repo.ui = self.repo.dirstate._ui = repoui  # type: ignore
+            self.repo.invalidateall()  # type: ignore
 
         for ui in uis:
             ui.resetstate()
@@ -271,10 +286,12 @@ class server(object):
         self.cresult.write(struct.pack(">i", int(ret)))
 
     def getencoding(self):
+        # type: () -> None
         """ writes the current encoding to the result channel """
-        self.cresult.write(encoding.encoding)
+        self.cresult.write(pycompat.encodeutf8(encoding.encoding))  # type: ignore
 
     def serveone(self):
+        # type: () -> bool
         cmd = self.client.readline()[:-1]
         if cmd:
             handler = self.capabilities.get(cmd)
@@ -285,26 +302,26 @@ class server(object):
                 # looking at the servers capabilities
                 raise error.Abort(_("unknown command %s") % cmd)
 
-        return cmd != ""
+        return cmd != b""
 
     capabilities = {"runcommand": runcommand, "getencoding": getencoding}
 
     def serve(self):
+        # type: () -> int
         hellomsg = "capabilities: " + " ".join(sorted(self.capabilities))
         hellomsg += "\n"
-        hellomsg += "encoding: " + encoding.encoding
+        hellomsg += "encoding: " + encoding.encoding  # type: ignore
         hellomsg += "\n"
         hellomsg += "pid: %d" % util.getpid()
         versionmod = sys.modules.get("edenscm.mercurial.__version__")
         if versionmod:
             hellomsg += "\n"
-            hellomsg += "versionhash: %s" % versionmod.versionhash
+            hellomsg += "versionhash: %s" % versionmod.versionhash  # type: ignore
         if util.safehasattr(os, "getpgid"):
             hellomsg += "\n"
             hellomsg += "pgid: %d" % os.getpgid(0)
-
         # write the hello msg in -one- chunk
-        self.cout.write(hellomsg)
+        self.cout.write(pycompat.encodeutf8(hellomsg))
 
         try:
             while self.serveone():
@@ -318,6 +335,7 @@ class server(object):
 
 
 def _protectio(ui):
+    # type: (Any) -> Tuple[BinaryIO, ...]
     """ duplicates streams and redirect original to null if ui uses stdio """
     ui.flush()
     newfiles = []
@@ -336,6 +354,7 @@ def _protectio(ui):
 
 
 def _restoreio(ui, fin, fout):
+    # type: (Any,BinaryIO,BinaryIO) -> None
     """ restores streams from duplicated ones """
     ui.flush()
     for f, uif in [(fin, ui.fin), (fout, ui.fout)]:
@@ -353,6 +372,7 @@ class pipeservice(object):
         pass
 
     def run(self):
+        # type: () -> int
         ui = self.ui
         # redirect stdio to null device so that broken extensions or in-process
         # hooks will never cause corruption of channel protocol.
@@ -361,11 +381,12 @@ class pipeservice(object):
             sv = server(ui, self.repo, fin, fout)
             return sv.serve()
         finally:
-            sv.cleanup()
+            sv.cleanup()  # type: ignore
             _restoreio(ui, fin, fout)
 
 
 def _initworkerprocess():
+    # type: () -> None
     # use a different process group from the master process, in order to:
     # 1. make the current process group no longer "orphaned" (because the
     #    parent of this process is in a different process group while
