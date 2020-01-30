@@ -131,6 +131,7 @@ Rebase changes made on copied (forked) source code:
   @@ -0,0 +1,1 @@
   +E
   \ No newline at end of file
+  
 
 A similar setup. C/C is marked as copied from A.
   $ newrepo
