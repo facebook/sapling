@@ -50,7 +50,6 @@ use sql_ext::SqlConstructors;
 use sqlfilenodes::SqlFilenodes;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    iter::FromIterator,
     sync::Arc,
 };
 use tests_utils::{create_commit, store_files, CreateCommitContext};
@@ -797,84 +796,6 @@ fn make_file_change(
         .into_blob()
         .store(ctx, repo.blobstore())
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
-}
-
-#[fbinit::test]
-fn test_find_files_in_manifest(fb: FacebookInit) -> Result<(), Error> {
-    let make_paths =
-        |paths: &[&str]| -> Result<HashSet<_>, _> { paths.into_iter().map(MPath::new).collect() };
-
-    let mut rt = Runtime::new()?;
-    let ctx = CoreContext::test_mock(fb);
-    let repo = many_files_dirs::getrepo(fb);
-
-    let mf = rt
-        .block_on(repo.get_changeset_by_changesetid(
-            ctx.clone(),
-            HgChangesetId::new(string_to_nodehash(
-                "d261bc7900818dea7c86935b3fb17a33b2e3a6b4",
-            )),
-        ))?
-        .manifestid();
-    let paths = make_paths(&[
-        "1",
-        "1/bla/bla",
-        "3",
-        "dir3/bla/bla",
-        "dir1/subdir1/subsubdir1/file_1",
-        "dir1/subdir1/subsubdir2/file_1",
-        "dir1/subdir1/subsubdir2/file_2",
-        "dir1/subdir1",
-    ])?;
-    let files = rt.block_on(repo.find_files_in_manifest(ctx, mf, paths))?;
-    assert_eq!(
-        HashSet::from_iter(files.keys().cloned()),
-        make_paths(&[
-            "1",
-            "dir1/subdir1/subsubdir1/file_1",
-            "dir1/subdir1/subsubdir2/file_1",
-            "dir1/subdir1/subsubdir2/file_2",
-        ])?
-    );
-    Ok(())
-}
-
-#[fbinit::test]
-fn test_find_all_path_component_entries(fb: FacebookInit) -> Result<(), Error> {
-    let make_paths =
-        |paths: &[&str]| -> Result<HashSet<_>, _> { paths.into_iter().map(MPath::new).collect() };
-
-    let mut rt = Runtime::new()?;
-    let ctx = CoreContext::test_mock(fb);
-    let repo = many_files_dirs::getrepo(fb);
-
-    let mf = rt
-        .block_on(repo.get_changeset_by_changesetid(
-            ctx.clone(),
-            HgChangesetId::new(string_to_nodehash(
-                "d261bc7900818dea7c86935b3fb17a33b2e3a6b4",
-            )),
-        ))?
-        .manifestid();
-    let paths = make_paths(&[
-        "dir1/subdir1/subsubdir1/file_1",
-        "dir1/subdir1/subsubdir2/file_1",
-        "dir1/subdir1/subsubdir2/file_2",
-    ])?;
-    let files = rt.block_on(repo.find_all_path_component_entries(ctx, mf, paths))?;
-    assert_eq!(
-        HashSet::from_iter(files.keys().cloned()),
-        make_paths(&[
-            "dir1",
-            "dir1/subdir1",
-            "dir1/subdir1/subsubdir1",
-            "dir1/subdir1/subsubdir2",
-            "dir1/subdir1/subsubdir1/file_1",
-            "dir1/subdir1/subsubdir2/file_1",
-            "dir1/subdir1/subsubdir2/file_2",
-        ])?
-    );
-    Ok(())
 }
 
 #[fbinit::test]

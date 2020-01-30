@@ -12,12 +12,17 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
-use futures::future::{self, Future};
-use futures_ext::FutureExt;
+use futures::{
+    future::{self, Future},
+    Stream,
+};
+use futures_ext::{FutureExt, StreamExt};
+use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};
+use std::collections::HashMap;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
 
@@ -78,7 +83,10 @@ pub fn get_file_nodes(
         .and_then({
             cloned!(ctx, repo);
             move |root_mf_id| {
-                repo.find_files_in_manifest(ctx, root_mf_id, paths.clone())
+                root_mf_id
+                    .find_entries(ctx, repo.get_blobstore(), paths.clone())
+                    .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
+                    .collect_to::<HashMap<_, _>>()
                     .map(move |manifest_entries| {
                         let mut existing_hg_nodes = Vec::new();
                         let mut non_existing_paths = Vec::new();

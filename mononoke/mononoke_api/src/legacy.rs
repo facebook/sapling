@@ -7,13 +7,13 @@
  */
 
 use anyhow::Error;
-use futures::{future, Future};
-use futures_ext::FutureExt;
+use futures::Future;
 use thiserror::Error;
 
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
+use manifest::ManifestOps;
 use mercurial_types::manifest::Content;
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
@@ -36,18 +36,17 @@ pub fn get_content_by_path(
     repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
         .and_then({
             cloned!(repo, ctx);
-            move |changeset| match path {
-                None => future::ok(changeset.manifestid().into()).left_future(),
-                Some(path) => repo
-                    .find_entries_in_manifest(ctx, changeset.manifestid(), vec![path.clone()])
-                    .and_then(move |entries| {
-                        entries
-                            .get(&path)
-                            .copied()
-                            .ok_or_else(|| ErrorKind::NotFound(path.to_string()).into())
+            move |changeset| {
+                changeset
+                    .manifestid()
+                    .find_entry(ctx, repo.get_blobstore(), path.clone())
+                    .and_then(move |entry| {
+                        entry.ok_or_else(|| {
+                            ErrorKind::NotFound(MPath::display_opt(path.as_ref()).to_string())
+                                .into()
+                        })
                     })
-                    .right_future(),
             }
         })
-        .and_then(move |entry_id| repo.get_content_by_entryid(ctx, entry_id))
+        .and_then(move |entry| repo.get_content_by_entryid(ctx, entry.into()))
 }

@@ -2358,12 +2358,13 @@ mod tests {
                     .get_changeset_by_changesetid(ctx.clone(), root_hg)
                     .compat()
                     .await?;
-                let root_1_id = repo
-                    .find_files_in_manifest(ctx.clone(), root_cs.manifestid(), vec![path_1.clone()])
+
+                let root_1_id = root_cs
+                    .manifestid()
+                    .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
                     .compat()
                     .await?
-                    .get(&path_1)
-                    .copied()
+                    .and_then(|entry| Some(entry.into_leaf()?.1))
                     .ok_or(Error::msg("path_1 missing in manifest"))?;
 
                 // crate filechange with with same content as "1" but set executable bit
@@ -2433,17 +2434,13 @@ mod tests {
                     .get_changeset_by_changesetid(ctx.clone(), result_hg)
                     .compat()
                     .await?;
-                let result_1_id = repo
-                    .find_files_in_manifest(
-                        ctx.clone(),
-                        result_cs.manifestid(),
-                        vec![path_1.clone()],
-                    )
+                let result_1_id = result_cs
+                    .manifestid()
+                    .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
                     .compat()
                     .await?
-                    .get(&path_1)
-                    .copied()
-                    .ok_or(Error::msg("path_1 mising in manifest"))?;
+                    .and_then(|entry| Some(entry.into_leaf()?.1))
+                    .ok_or(Error::msg("path_1 missing in manifest"))?;
 
                 // `result_1_id` should be equal to `root_1_id`, because executable flag
                 // is not a part of file envelope

@@ -41,8 +41,10 @@ impl FileContentStore for BlobRepoFileContentStore {
             .and_then({
                 cloned!(self.repo, ctx);
                 move |changeset| {
-                    repo.find_files_in_manifest(ctx, changeset.manifestid(), vec![path.clone()])
-                        .map(move |fs| fs.get(&path).copied())
+                    changeset
+                        .manifestid()
+                        .find_entry(ctx, repo.get_blobstore(), Some(path))
+                        .map(|entry| Some(entry?.into_leaf()?.1))
                 }
             })
             .boxify()

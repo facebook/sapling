@@ -35,7 +35,7 @@ use futures::IntoFuture;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
 use futures_stats::{FutureStats, Timed};
-use manifest::{ManifestOps, PathTree};
+use manifest::ManifestOps;
 use maplit::hashmap;
 use mercurial_types::{
     blobs::{
@@ -1205,65 +1205,6 @@ impl BlobRepo {
                     },
                 )
             })
-    }
-
-    /// Find files in manifest
-    ///
-    /// This function correctly handles conflicting paths too.
-    pub fn find_files_in_manifest(
-        &self,
-        ctx: CoreContext,
-        manifest_id: HgManifestId,
-        paths: impl IntoIterator<Item = MPath>,
-    ) -> impl Future<Item = HashMap<MPath, HgFileNodeId>, Error = Error> {
-        manifest_id
-            .find_entries(ctx, self.blobstore.clone(), paths)
-            .filter_map(|(path, entry_id)| {
-                let (_file_type, filenode_id) = entry_id.into_leaf()?;
-                Some((path?, filenode_id))
-            })
-            .collect_to()
-    }
-
-    /// Look up manifest entries for multiple paths.
-    ///
-    /// Given a list of paths and a root manifest ID, walk the tree and
-    /// return the manifest entries corresponding to the specified paths.
-    pub fn find_entries_in_manifest(
-        &self,
-        ctx: CoreContext,
-        manifest_id: HgManifestId,
-        paths: impl IntoIterator<Item = MPath>,
-    ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
-        manifest_id
-            .find_entries(ctx, self.blobstore.clone(), paths)
-            .filter_map(|(path, entry)| Some((path?, HgEntryId::from(entry))))
-            .collect_to()
-    }
-
-    /// Look up manifest entries for every component of multiple paths.
-    ///
-    /// Similar to `find_entries_in_manifest`, walks the manifest tree starting from
-    /// the given root manifest ID, looking for the specified paths. Unlike
-    /// `find_entries_in_manifest`, this method returns the manifest entry of every
-    /// path component traversed. This is useful for situations where the client would
-    /// like to cache these entries to avoid future roundtrips to the server.
-    pub fn find_all_path_component_entries(
-        &self,
-        ctx: CoreContext,
-        manifest_id: HgManifestId,
-        paths: impl IntoIterator<Item = MPath>,
-    ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
-        let all_paths = paths
-            .into_iter()
-            .map(|path| (path, ()))
-            .collect::<PathTree<()>>()
-            .into_iter()
-            .map(|p| p.0);
-        manifest_id
-            .find_entries(ctx, self.blobstore.clone(), all_paths)
-            .filter_map(|(path, entry)| Some((path?, HgEntryId::from(entry))))
-            .collect_to()
     }
 
     pub fn get_manifest_from_bonsai(

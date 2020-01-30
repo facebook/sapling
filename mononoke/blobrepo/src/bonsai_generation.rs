@@ -17,7 +17,7 @@ use futures_ext::{try_boxfuture, FutureExt};
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use manifest::{bonsai_diff, BonsaiDiffFileChange};
+use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEnvelope},
     HgFileEnvelope, HgFileNodeId, HgManifestId, MPath, RepoPath,
@@ -185,21 +185,19 @@ fn get_copy_info(
                     join_all(parents_bonsai_and_mfs.map({
                         cloned!(ctx, repopath);
                         move |(bonsai_parent, parent_mf)| {
-                            repo.find_files_in_manifest(
-                                ctx.clone(),
-                                parent_mf,
-                                vec![repopath.clone()],
-                            )
-                            .map({
-                                cloned!(repopath);
-                                move |res| {
-                                    if res.get(&repopath).copied() == Some(copyfromnode) {
+                            parent_mf
+                                .find_entry(
+                                    ctx.clone(),
+                                    repo.get_blobstore(),
+                                    Some(repopath.clone()),
+                                )
+                                .map(move |entry| {
+                                    if entry?.into_leaf()?.1 == copyfromnode {
                                         Some(bonsai_parent)
                                     } else {
                                         None
                                     }
-                                }
-                            })
+                                })
                         }
                     }))
                     .map(move |res| (res, repopath))
