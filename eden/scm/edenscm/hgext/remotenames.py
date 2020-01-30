@@ -448,7 +448,7 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
 
     # early exit if we know all the specified remote heads already
     clrev = cl.rev
-    clcontains = cl.__contains__
+    clcontains = cl.nodemap.__contains__
     srvheads = list(clrev(n) for n in srvheadhashes if clcontains(n))
     if len(srvheads) == len(srvheadhashes):
         ui.debug("all remote heads known locally\n")
