@@ -16,7 +16,7 @@ use anyhow::{Context, Error};
 use blobstore_factory::make_blobstore_no_sql;
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, monitoring::ReadyFlagService};
 use configerator_cached::ConfigHandle;
 use context::SessionContainer;
 use fbinit::FacebookInit;
@@ -403,9 +403,12 @@ async fn fast_replay_from_stdin<'a>(
     }
 }
 
-async fn do_main<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let logger = args::init_logging(fb, &matches);
-
+async fn do_main<'a>(
+    fb: FacebookInit,
+    matches: &ArgMatches<'a>,
+    logger: &Logger,
+    service: &ReadyFlagService,
+) -> Result<(), Error> {
     let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
     scuba.add_common_server_data();
 
@@ -414,6 +417,10 @@ async fn do_main<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(), E
 
     let repos = bootstrap_repositories(fb, &matches, &logger, &scuba).await?;
 
+    // Report that we're good to go.
+    service.set_ready();
+
+    // Start replaying
     let count = Arc::new(AtomicU64::new(0));
     fast_replay_from_stdin(&opts, &logger, &scuba, &repos, &count).await?;
 
@@ -433,6 +440,7 @@ async fn do_main<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(), E
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp::new("Mononoke Local Replay")
         .with_advanced_args_hidden()
+        .with_fb303_args()
         .with_all_repos()
         .with_scuba_logging_args()
         .build()
@@ -479,8 +487,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches();
 
-    let mut runtime = args::init_runtime(&matches)?;
-    runtime.block_on_std(do_main(fb, &matches))?;
+    let logger = args::init_logging(fb, &matches);
+    let service = ReadyFlagService::new();
+
+    let main = do_main(fb, &matches, &logger, &service);
+
+    cmdlib::helpers::block_execute(main, fb, "fastreplay", &logger, &matches, service.clone())?;
 
     Ok(())
 }

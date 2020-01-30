@@ -412,7 +412,7 @@ pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
     service: S,
 ) -> Result<Out, Error>
 where
-    F: Future<Output = Result<Out, Error>> + Send + 'static,
+    F: Future<Output = Result<Out, Error>>,
 {
     monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
     let mut runtime = args::init_runtime(&matches)?;
