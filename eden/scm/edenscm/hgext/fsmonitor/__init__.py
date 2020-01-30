@@ -606,7 +606,11 @@ def _walk(self, match, event):
             # tracked, mark as deleted
             results[f] = None
 
-    nf = iter(auditpass).next
+    auditpassiter = iter(auditpass)
+
+    def nf():
+        return next(auditpassiter)
+
     for st in util.statfiles([join(f) for f in auditpass]):
         f = nf()
         if (st and not ignore(f)) or f in dmap:
