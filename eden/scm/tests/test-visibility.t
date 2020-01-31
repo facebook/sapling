@@ -16,7 +16,7 @@ Useful functions
   > }
 
   $ printvisibleheads() {
-  >   hg dbsh -c 'ui.write(repo.svfs.read("visibleheads"))' | sort
+  >   hg dbsh -c 'ui.write(m.pycompat.decodeutf8(repo.svfs.read("visibleheads")))' | sort
   > }
 
 Setup
