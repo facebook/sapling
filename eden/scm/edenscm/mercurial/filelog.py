@@ -38,8 +38,8 @@ def parsemeta(text):
 
 def packmeta(meta, text):
     keys = sorted(meta)
-    metatext = "".join("%s: %s\n" % (k, meta[k]) for k in keys)
-    return encodeutf8("\1\n%s\1\n%s" % (metatext, text))
+    metatext = encodeutf8("".join("%s: %s\n" % (k, meta[k]) for k in keys))
+    return b"\1\n%s\1\n%b" % (metatext, text)
 
 
 def _censoredtext(text):
