@@ -3,10 +3,6 @@ from __future__ import absolute_import, print_function
 import os
 
 from edenscm.mercurial import dispatch
-from hghave import require
-
-
-require(["py2"])
 
 
 def testdispatch(cmd):
@@ -25,14 +21,14 @@ os.chdir("test1")
 
 # create file 'foo', add and commit
 f = open("foo", "wb")
-f.write("foo\n")
+f.write(b"foo\n")
 f.close()
 testdispatch("add foo")
 testdispatch("commit -m commit1 -d 2000-01-01 foo")
 
 # append to file 'foo' and commit
 f = open("foo", "ab")
-f.write("bar\n")
+f.write(b"bar\n")
 f.close()
 testdispatch("commit -m commit2 -d 2000-01-02 foo")
 
