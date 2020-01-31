@@ -90,7 +90,10 @@ def require(features):
     if result["missing"]:
         sys.exit(2)
 
-    if result["skipped"] or result["error"]:
+    if result["skipped"]:
+        sys.exit(80)
+
+    if result["error"]:
         sys.exit(1)
 
 
