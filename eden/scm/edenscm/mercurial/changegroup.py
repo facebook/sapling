@@ -1135,7 +1135,7 @@ def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     with progress.bar(repo.ui, _("files"), _("files"), expectedfiles) as prog:
         for chunkdata in iter(source.filelogheader, {}):
             files += 1
-            f = decodeutf8(chunkdata["filename"])
+            f = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % f)
             prog.value = files
             fl = repo.file(f)

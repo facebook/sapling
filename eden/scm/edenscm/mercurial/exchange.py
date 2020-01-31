@@ -190,7 +190,7 @@ def readbundle(ui, fh, fname, vfs=None):
     elif vfs:
         fname = vfs.join(fname)
 
-    magic, version = header[0:2], header[2:4]
+    magic, version = pycompat.decodeutf8(header[0:2]), pycompat.decodeutf8(header[2:4])
 
     if magic != "HG":
         raise error.Abort(_("%s: not a Mercurial bundle") % fname)

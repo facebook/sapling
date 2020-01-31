@@ -797,9 +797,9 @@ class unpackermixin(object):
 def getunbundler(ui, fp, magicstring=None):
     """return a valid unbundler object for a given magicstring"""
     if magicstring is None:
-        magicstring = changegroup.readexactly(fp, 4)
+        magicstring = pycompat.decodeutf8(changegroup.readexactly(fp, 4))
     magic, version = magicstring[0:2], magicstring[2:4]
-    if magic != b"HG":
+    if magic != "HG":
         ui.debug(
             "error: invalid magic: %r (version %r), should be 'HG'\n" % (magic, version)
         )
@@ -977,7 +977,7 @@ class unbundle20(unpackermixin):
             return self._fp.close()
 
 
-formatmap = {b"20": unbundle20}
+formatmap = {"20": unbundle20}
 
 
 @b2streamparamhandler("compression")
