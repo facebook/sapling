@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test adding, removing, changing files in both merge parents, without telling
@@ -46,11 +45,11 @@ and add B_add and C_add. Note: there are no conflicts.
   >     os.unlink("B_del")
   >     os.unlink("C_del")
   > 
-  >     open("B_add", "w").write("B")
-  >     open("C_add", "w").write("C")
+  >     _ = open("B_add", "w").write("B")
+  >     _ = open("C_add", "w").write("C")
   > 
-  >     open("B_change", "a").write("B")
-  >     open("C_change", "a").write("C")
+  >     _ = open("B_change", "a").write("B")
+  >     _ = open("C_change", "a").write("C")
   > 
   >     # mark files using mergedriver APIs
   >     mergestate.queueremove("A")

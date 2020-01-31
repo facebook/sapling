@@ -101,7 +101,7 @@ check shamap LF and CRLF handling
   > # Interlace LF and CRLF
   > lines = [(l.rstrip() + ((i % 2) and b'\n' or b'\r\n'))
   >          for i, l in enumerate(open(sys.argv[1], 'rb'))]
-  > open(sys.argv[1], 'wb').write(b''.join(lines))
+  > _ = open(sys.argv[1], 'wb').write(b''.join(lines))
   > EOF
   $ $PYTHON rewrite.py new/.hg/shamap
   $ cd orig

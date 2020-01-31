@@ -29,7 +29,7 @@ Set up helpers
   > for path in sys.argv[2:]:
   >     data = open(path, 'rb').read()
   >     data = data.replace(old, new)
-  >     open(path, 'wb').write(data)
+  >     _ = open(path, 'wb').write(data)
   > EOF
 
   $ seteol () {

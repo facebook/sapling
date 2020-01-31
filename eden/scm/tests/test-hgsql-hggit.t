@@ -1,4 +1,3 @@
-#require py2
   $ . "$RUNTESTDIR/hgsql/library.sh"
   $ . "$RUNTESTDIR/hggit/testutil"
   $ shorttraceback
@@ -10,7 +9,7 @@
 
 Make "a" compressable
 
-  >>> open("a", "w").write("0\n" * 5000)
+  >>> _ = open("a", "w").write("0\n" * 5000)
   $ git add a
   $ git commit -m a
   [master (root-commit) *] a (glob)

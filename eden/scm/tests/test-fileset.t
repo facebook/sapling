@@ -122,7 +122,7 @@ Test files status in different revisions
 
 Test files properties
 
-  >>> open('bin', 'wb').write(b'\0a')
+  >>> _ = open('bin', 'wb').write(b'\0a')
   $ fileset 'binary()'
   $ fileset 'binary() and unknown()'
   bin
@@ -161,8 +161,8 @@ Test files properties
   $ hg --config ui.portablefilenames=ignore add con.xml
 #endif
 
-  >>> open('1k', 'wb').write(b' '*1024)
-  >>> open('2k', 'wb').write(b' '*2048)
+  >>> _ = open('1k', 'wb').write(b' '*1024)
+  >>> _ = open('2k', 'wb').write(b' '*2048)
   $ hg add 1k 2k
   $ fileset 'size("bar")'
   hg: parse error: couldn't parse size: bar
@@ -272,9 +272,9 @@ Test with a revision
   b2
   c1
 
-  >>> open('dos', 'wb').write("dos\r\n")
-  >>> open('mixed', 'wb').write("dos\r\nunix\n")
-  >>> open('mac', 'wb').write("mac\r")
+  >>> _ = open('dos', 'wb').write("dos\r\n")
+  >>> _ = open('mixed', 'wb').write("dos\r\nunix\n")
+  >>> _ = open('mac', 'wb').write("mac\r")
   $ hg add dos mixed mac
 
 (remove a1, to examine safety of 'eol' on removed files)

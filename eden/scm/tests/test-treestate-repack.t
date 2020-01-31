@@ -18,7 +18,7 @@ Prepare: fake uuid.uuid4 so it becomes predictable
   >         value = int(open(path).read())
   >     except Exception:
   >         pass
-  >     open(path, 'w').write('%s' % (value + 1))
+  >     _ = open(path, 'w').write('%s' % (value + 1))
   >     return '00000000-0000-0000-0000-%012d' % value
   > uuid.uuid4 = uuid4
   > EOF

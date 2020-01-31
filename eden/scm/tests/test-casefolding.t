@@ -1,4 +1,3 @@
-#require py2
 #require icasefs
 
   $ hg debugfsinfo | grep 'case-sensitive:'
@@ -155,7 +154,7 @@ X will be using HFS+. If that's not true, this test will fail.
   $ echo a >> Z
   $ hg commit -Aqm 'add z'
   $ rm Z
-  >>> open(u'z\u200c'.encode('utf-8'), 'w').write('unicode is fun')
+  >>> _ = open(u'z\u200c'.encode('utf-8'), 'w').write('unicode is fun')
   $ hg status
   M Z
 

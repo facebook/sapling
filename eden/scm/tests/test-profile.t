@@ -105,7 +105,7 @@ Test other config sections
 Test statprof will not take at least frequency time.
 
   >>> import time
-  >>> open('start', 'w').write('%s' % time.time())
+  >>> _ = open('start', 'w').write('%s' % time.time())
 
   $ hg --profile --config profiling.output=z --config profiling.type=stat --config profiling.freq=0.02 debugshell -c 'a=1'
 

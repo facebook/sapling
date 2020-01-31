@@ -14,11 +14,11 @@ Test alignment of multibyte characters
   > m = b"MIDDLE_"
   > # (byte, width) = (18, 12)
   > l = b"\xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d"
-  > f = open('s', 'wb'); f.write(s); f.close()
-  > f = open('m', 'wb'); f.write(m); f.close()
-  > f = open('l', 'wb'); f.write(l); f.close()
+  > f = open('s', 'wb'); _ = f.write(s); f.close()
+  > f = open('m', 'wb'); _ = f.write(m); f.close()
+  > f = open('l', 'wb'); _ = f.write(l); f.close()
   > # instant extension to show list of options
-  > f = open('showoptlist.py', 'wb'); f.write(b"""# encoding: utf-8
+  > f = open('showoptlist.py', 'wb'); _ = f.write(b"""# encoding: utf-8
   > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)

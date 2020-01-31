@@ -54,13 +54,13 @@ Empty placeholder:
 
 Write binary data to the placeholder:
 
-  >>> open('b', 'w').write('this is a binary\0')
+  >>> _ = open('b', 'w').write('this is a binary\0')
   $ hg --config extensions.n=$TESTTMP/nolink.py st --debug
   ignoring suspect symlink placeholder "b"
 
 Write a long string to the placeholder:
 
-  >>> open('b', 'w').write('this' * 1000)
+  >>> _ = open('b', 'w').write('this' * 1000)
   $ hg --config extensions.n=$TESTTMP/nolink.py st --debug
   ignoring suspect symlink placeholder "b"
 

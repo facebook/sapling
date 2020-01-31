@@ -232,8 +232,8 @@ Prepare custom diff/edit tool:
   > #!$PYTHON
   > import time
   > time.sleep(1) # avoid unchanged-timestamp problems
-  > open('a/a', 'ab').write(b'edited\n')
-  > open('a/b', 'ab').write(b'edited\n')
+  > _ = open('a/a', 'ab').write(b'edited\n')
+  > _ = open('a/b', 'ab').write(b'edited\n')
   > EOT
 
 #if execbit
@@ -404,7 +404,7 @@ Test symlinks handling (issue1909)
 
 Test handling of non-ASCII paths in generated docstrings (issue5301)
 
-  >>> open("u", "w").write("\xa5\xa5")
+  >>> _ = open("u", "w").write("\xa5\xa5")
   $ U=`cat u`
 
   $ HGPLAIN=1 hg --config hgext.extdiff= --config extdiff.cmd.td=hi help -k xyzzy

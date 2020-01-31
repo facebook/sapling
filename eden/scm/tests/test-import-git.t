@@ -569,7 +569,7 @@ Simulate a copy/paste turning LF into CRLF (issue2870)
   >>> fp = open('binary.diff', 'rb')
   >>> data = fp.read()
   >>> fp.close()
-  >>> open('binary.diff', 'wb').write(data.replace(b'\n', b'\r\n'))
+  >>> _ = open('binary.diff', 'wb').write(data.replace(b'\n', b'\r\n'))
   $ rm binary2
   $ hg import --no-commit binary.diff
   applying binary.diff

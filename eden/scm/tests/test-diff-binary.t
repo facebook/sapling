@@ -1,13 +1,12 @@
-#require py2
 #chg-compatible
 
   $ newrepo
   $ setconfig diff.git=1 diff.nobinary=1
 
-  >>> open('a.bin', 'wb').write(b'\0\1')
+  >>> _ = open('a.bin', 'wb').write(b'\0\1')
   $ hg commit -m A -A a.bin
 
-  >>> open('a.bin', 'wb').write(b'\0\2')
+  >>> _ = open('a.bin', 'wb').write(b'\0\2')
 
   $ hg diff
   diff --git a/a.bin b/a.bin

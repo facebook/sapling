@@ -8,7 +8,7 @@
   > for path in sys.argv[1:]:
   >     data = open(path, 'rb').read()
   >     data = data.replace(b'\n', b'\r')
-  >     open(path, 'wb').write(data)
+  >     _ = open(path, 'wb').write(data)
   > EOF
   $ cat > print.py <<EOF
   > import sys

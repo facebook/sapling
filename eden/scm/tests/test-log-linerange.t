@@ -790,7 +790,7 @@ Renames are followed.
 Binary files work but without diff hunks filtering.
 (Checking w/ and w/o diff.git option.)
 
-  >>> open('binary', 'wb').write('this\nis\na\nbinary\0')
+  >>> _ = open('binary', 'wb').write('this\nis\na\nbinary\0')
   $ hg add binary
   $ hg ci -m 'add a binary file' --quiet
 #if common-zlib
