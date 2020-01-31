@@ -4142,7 +4142,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                                 else:
                                     util.rename(target, bakname)
                     if ui.verbose or not exact:
-                        if not isinstance(msg, bytes):
+                        if not isinstance(msg, str):
                             msg = msg(abs)
                         ui.status(msg % rel)
                 elif exact:
