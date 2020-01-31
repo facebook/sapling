@@ -9,6 +9,7 @@ import collections
 import copy
 import datetime
 import os
+import shlex
 import socket
 import time
 from typing import Any, Dict, List, Optional
@@ -328,7 +329,7 @@ def format_time(elapsed, modulos, suffixes):
 
 
 def format_cmd(cmd):
-    args = os.fsdecode(cmd).split("\x00", 1)
+    args = os.fsdecode(cmd).split("\x00")
 
     # Focus on just the basename as the paths can be quite long
     cmd = args[0]
@@ -336,11 +337,7 @@ def format_cmd(cmd):
         cmd = os.path.basename(cmd)
 
     # Show cmdline args too, if they exist
-    if len(args) > 1:
-        arg_str = args[1].replace("\x00", " ")
-        cmd += f" {arg_str}"
-
-    return cmd
+    return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
 
 
 COLUMN_FORMATTING = Row(

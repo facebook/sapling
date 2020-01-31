@@ -14,11 +14,12 @@ class TopTest(unittest.TestCase):
         self.process = Process(42, "ls", "fbsource")
 
     def test_format_cmd(self):
-        self.assertEqual(format_cmd(b"/bin/ls"), "ls")
-        self.assertEqual(format_cmd(b"chg[worker/0]"), "chg[worker/0]")
+        self.assertEqual("ls", format_cmd(b"/bin/ls"))
+        self.assertEqual("'chg[worker/0]'", format_cmd(b"chg[worker/0]"))
 
     def test_format_cmd_with_arg(self):
-        self.assertEqual(format_cmd(b"/bin/ls\x00-l"), "ls -l")
+        self.assertEqual("ls -l", format_cmd(b"/bin/ls\x00-l"), "ls -l")
+        self.assertEqual("ls -l 'one two'", format_cmd(b"ls\0-l\0one two"))
 
     def test_format_mount(self):
         self.assertEqual(format_mount("/data/users/zuck/fbsource"), "fbsource")
