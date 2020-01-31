@@ -25,10 +25,11 @@ use apiserver_thrift::types::{
     MononokeTreeHash,
 };
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use mercurial_types::{blobs::HgBlobChangeset, HgEntry, HgEntryId, Type};
+use mercurial_types::{blobs::HgBlobChangeset, HgEntry, HgEntryId, HgManifest, Type};
 use mononoke_types::RepositoryId;
 
 use crate::cache::CacheManager;
@@ -153,8 +154,9 @@ impl EntryWithSizeAndContentHash {
         let cache_key = Self::get_cache_key(repo.get_repoid(), hash.as_str());
 
         let future = match entry {
-            HgEntryId::Manifest(manifestid) => repo
-                .get_manifest_by_nodeid(ctx, manifestid)
+            HgEntryId::Manifest(manifestid) => manifestid
+                .load(ctx, repo.blobstore())
+                .from_err()
                 .map({
                     cloned!(name, hash);
                     move |manifest| EntryWithSizeAndContentHash {

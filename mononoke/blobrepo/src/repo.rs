@@ -35,20 +35,19 @@ use futures::IntoFuture;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
 use futures_stats::Timed;
-use manifest::ManifestOps;
+use manifest::{Entry, Manifest, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{
     blobs::{
         fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
         fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
         fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
-        fetch_file_size_from_blobstore, BlobManifest, ChangesetMetadata, ContentBlobMeta,
-        HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents,
-        UploadHgFileEntry, UploadHgNodeHash,
+        fetch_file_size_from_blobstore, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset,
+        HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
+        UploadHgNodeHash,
     },
-    manifest::Content,
-    FileBytes, Globalrev, HgChangesetId, HgEntry, HgEntryId, HgFileEnvelope, HgFileNodeId,
-    HgManifest, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
+    FileBytes, Globalrev, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifestId,
+    HgNodeHash, HgParents, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
@@ -90,8 +89,6 @@ define_stats! {
     generate_hg_from_bonsai_total_latency_ms: histogram(100, 0, 10_000, Average; P 50; P 75; P 90; P 95; P 99),
     generate_hg_from_bonsai_single_latency_ms: histogram(100, 0, 10_000, Average; P 50; P 75; P 90; P 95; P 99),
     generate_hg_from_bonsai_generated_commit_num: histogram(1, 0, 20, Average; P 50; P 75; P 90; P 95; P 99),
-    get_manifest_by_nodeid: timeseries(Rate, Sum),
-    get_root_entry: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
     get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
     get_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
@@ -473,41 +470,6 @@ impl BlobRepo {
         HgBlobChangeset::load(ctx, &self.blobstore.boxed(), changesetid)
             .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(changesetid).into()))
             .boxify()
-    }
-
-    pub fn get_manifest_by_nodeid(
-        &self,
-        ctx: CoreContext,
-        manifestid: HgManifestId,
-    ) -> BoxFuture<Box<dyn HgManifest + Sync>, Error> {
-        STATS::get_manifest_by_nodeid.add_value(1);
-        BlobManifest::load(ctx, self.blobstore.boxed(), manifestid)
-            .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into()))
-            .map(|m| m.boxed())
-            .boxify()
-    }
-
-    pub fn get_content_by_entryid(
-        &self,
-        ctx: CoreContext,
-        entry_id: HgEntryId,
-    ) -> impl Future<Item = Content, Error = Error> {
-        match entry_id {
-            HgEntryId::File(file_type, filenode_id) => {
-                let stream = self.get_file_content(ctx, filenode_id).boxify();
-                let content = Content::new_file(file_type, stream);
-                Ok(content).into_future().left_future()
-            }
-            HgEntryId::Manifest(manifest_id) => self
-                .get_manifest_by_nodeid(ctx, manifest_id)
-                .map(Content::Tree)
-                .right_future(),
-        }
-    }
-
-    pub fn get_root_entry(&self, manifestid: HgManifestId) -> HgBlobEntry {
-        STATS::get_root_entry.add_value(1);
-        HgBlobEntry::new_root(self.blobstore.boxed(), manifestid)
     }
 
     pub fn get_bookmark(
@@ -1088,7 +1050,9 @@ impl BlobRepo {
     ) -> impl Future<Item = bool, Error = Error> {
         let repo = self.clone();
         let child_mf_id = child_mf_id.clone();
-        self.get_manifest_by_nodeid(ctx.clone(), parent_mf_id)
+        parent_mf_id
+            .load(ctx.clone(), &self.blobstore)
+            .from_err()
             .and_then(move |mf| {
                 loop_fn(
                     (None, mf, path.into_iter()),
@@ -1101,10 +1065,11 @@ impl BlobRepo {
                         match mf.lookup(&element) {
                             Some(entry) => {
                                 let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
-                                match entry.get_hash() {
-                                    HgEntryId::File(..) => future::ok(Loop::Break(false)).boxify(),
-                                    HgEntryId::Manifest(manifest_id) => repo
-                                        .get_manifest_by_nodeid(ctx.clone(), manifest_id)
+                                match entry {
+                                    Entry::Leaf(..) => future::ok(Loop::Break(false)).boxify(),
+                                    Entry::Tree(manifest_id) => manifest_id
+                                        .load(ctx.clone(), repo.blobstore())
+                                        .from_err()
                                         .map(move |mf| {
                                             Loop::Continue((Some(cur_path), mf, elements))
                                         })
@@ -1118,12 +1083,9 @@ impl BlobRepo {
                                 // Entry can potentially be a conflict if its lowercased version
                                 // is the same as lowercased version of the current element
 
-                                for entry in mf.list() {
-                                    let basename = entry
-                                        .get_name()
-                                        .expect("Non-root entry has empty basename");
+                                for (basename, _) in mf.list() {
                                     let path =
-                                        MPath::join_element_opt(cur_path.as_ref(), Some(basename));
+                                        MPath::join_element_opt(cur_path.as_ref(), Some(&basename));
                                     match (&element_utf8, std::str::from_utf8(basename.as_ref())) {
                                         (Ok(ref element), Ok(ref basename)) => {
                                             if basename.to_lowercase() == element.to_lowercase() {

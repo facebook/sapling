@@ -226,7 +226,7 @@ test get tree
   ]
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/$BLOBHASH | extract_json_error > output
-  $ echo -e "$BLOBHASH is not found\n404" > baseline
+  $ echo -e "hgmanifest.sha1.$BLOBHASH is not found\n404" > baseline
   $ diff output baseline
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000 | extract_json_error
@@ -234,7 +234,7 @@ test get tree
   400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000000000000000000000000000000000000001 | extract_json_error
-  0000000000000000000000000000000000000001 is not found
+  hgmanifest.sha1.0000000000000000000000000000000000000001 is not found
   404
 test get bookmark
   $ sslcurl $APISERVER/repo/resolve_bookmark/$COMMITB1_BOOKMARK | tee output | jq ".comment,.author"

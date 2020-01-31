@@ -6,14 +6,14 @@
  * directory of this source tree.
  */
 
-use blobrepo::BlobRepo;
-use clap::ArgMatches;
-use cmdlib::{args, helpers};
-
 use crate::cmdargs::{REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
 use crate::common::get_file_nodes;
 use anyhow::{format_err, Error};
+use blobrepo::BlobRepo;
+use blobstore::Loadable;
+use clap::ArgMatches;
 use cloned::cloned;
+use cmdlib::{args, helpers};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
@@ -23,7 +23,7 @@ use futures_ext::{
     bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
 };
 use itertools::{Either, Itertools};
-use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, MPath};
+use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, HgManifest, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
 use slog::{info, Logger};
@@ -44,13 +44,14 @@ fn find_files_with_given_content_id_blobstore_keys(
     bounded_traversal_stream(4096, Some((repo.clone(), manifest_id, None)), {
         cloned!(ctx);
         move |(repo, manifest_id, path)| {
-            repo.clone()
-                .get_manifest_by_nodeid(ctx.clone(), manifest_id)
+            manifest_id
+                .load(ctx.clone(), repo.blobstore())
+                .from_err()
                 .map({
                     cloned!(repo);
                     move |manifest| {
-                        let (manifests, filenodes): (Vec<_>, Vec<_>) =
-                            manifest.list().partition_map(|child| {
+                        let (manifests, filenodes): (Vec<_>, Vec<_>) = HgManifest::list(&manifest)
+                            .partition_map(|child| {
                                 let full_path =
                                     MPath::join_element_opt(path.as_ref(), child.get_name());
                                 match child.get_hash() {

@@ -42,8 +42,10 @@ use time_ext::DurationExt;
 use unodes::{derive_unodes, RootUnodeManifestId, RootUnodeManifestMapping};
 
 use mercurial_types::{
-    blobs::HgBlobChangeset, fetch_manifest_envelope, manifest::Content, HgChangesetId, HgEntry,
-    HgFileNodeId, HgManifestId, HgParents,
+    blobs::{HgBlobChangeset, HgBlobEntry},
+    fetch_manifest_envelope,
+    manifest::Content,
+    HgChangesetId, HgEntry, HgFileNodeId, HgManifest, HgManifestId, HgParents,
 };
 use metaconfig_types::{CommonConfig, RepoConfig, SourceControlServiceMonitoring};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -869,8 +871,9 @@ impl MononokeRepo {
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
         let treemanifestid = HgManifestId::new(treehash);
 
-        self.repo
-            .get_manifest_by_nodeid(ctx.clone(), treemanifestid)
+        treemanifestid
+            .load(ctx.clone(), self.repo.blobstore())
+            .map_err(Error::from)
             .map({
                 cloned!(self.cache, self.repo);
                 move |tree| {
@@ -1020,7 +1023,7 @@ impl MononokeRepo {
         let mut fetches = Vec::new();
         for key in keys {
             let manifest_id = HgManifestId::new(key.hgid.clone().into());
-            let entry = self.repo.get_root_entry(manifest_id);
+            let entry = HgBlobEntry::new_root(self.repo.blobstore().boxed(), manifest_id);
             let get_parents = entry.get_parents(ctx.clone());
             let get_content = entry.get_raw_content(ctx.clone());
 

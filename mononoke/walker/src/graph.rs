@@ -12,8 +12,8 @@ use filenodes::FilenodeInfo;
 use filestore::Alias;
 use futures_preview::stream::BoxStream;
 use mercurial_types::{
-    blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifest,
-    HgManifestId,
+    blobs::{BlobManifest, HgBlobChangeset},
+    FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
 use phases::Phase;
@@ -221,7 +221,7 @@ pub enum NodeData {
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),
     HgChangeset(HgBlobChangeset),
-    HgManifest(Box<dyn HgManifest + Sync>),
+    HgManifest(BlobManifest),
     HgFileEnvelope(HgFileEnvelope),
     HgFileNode(Option<FilenodeInfo>),
     // Content

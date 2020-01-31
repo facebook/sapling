@@ -7,16 +7,17 @@
  */
 
 use anyhow::Error;
-use futures::Future;
-use thiserror::Error;
-
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use manifest::ManifestOps;
+use futures::{future, Future};
+use futures_ext::{FutureExt, StreamExt};
+use manifest::{Entry, ManifestOps};
 use mercurial_types::manifest::Content;
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -48,5 +49,16 @@ pub fn get_content_by_path(
                     })
             }
         })
-        .and_then(move |entry| repo.get_content_by_entryid(ctx, entry.into()))
+        .and_then(move |entry| match entry {
+            Entry::Tree(manifest_id) => manifest_id
+                .load(ctx.clone(), repo.blobstore())
+                .from_err()
+                .map(|manifest| Content::Tree(Box::new(manifest)))
+                .left_future(),
+            Entry::Leaf((file_type, filenode_id)) => {
+                let stream = repo.get_file_content(ctx, filenode_id).boxify();
+                let content = Content::new_file(file_type, stream);
+                future::ok(content).right_future()
+            }
+        })
 }

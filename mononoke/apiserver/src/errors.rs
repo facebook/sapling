@@ -19,6 +19,7 @@ use thiserror::Error;
 
 use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
 use blobrepo::ErrorKind as BlobRepoError;
+use blobstore::LoadableError;
 use mercurial_types::blobs::ErrorKind as MercurialBlobError;
 use mononoke_api::legacy::ErrorKind as ApiError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
@@ -107,6 +108,7 @@ impl From<Error> for ErrorKind {
             e: ApiError => ErrorKind::from(e),
             e: ReachabilityIndexError => ErrorKind::from(e),
             e: MercurialBlobError => ErrorKind::from(e),
+            e: LoadableError => ErrorKind::from(e),
         };
         ret.unwrap_or_else(|e| ErrorKind::InternalError(e))
     }
@@ -130,6 +132,15 @@ impl From<ApiError> for ErrorKind {
 
         match e {
             NotFound(t) => ErrorKind::NotFound(t, None),
+        }
+    }
+}
+
+impl From<LoadableError> for ErrorKind {
+    fn from(e: LoadableError) -> ErrorKind {
+        match e {
+            LoadableError::Missing(key) => ErrorKind::NotFound(key, None),
+            LoadableError::Error(error) => ErrorKind::InternalError(error),
         }
     }
 }

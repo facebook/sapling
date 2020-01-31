@@ -386,9 +386,7 @@ async fn fetch_mfs(
 
     // Make sure that Manifest ids are present in the repo
     for (hash, _) in &fetched_mfs {
-        repo.get_manifest_by_nodeid(ctx.clone(), *hash)
-            .compat()
-            .await?;
+        hash.load(ctx.clone(), repo.blobstore()).compat().await?;
     }
     Ok(fetched_mfs)
 }

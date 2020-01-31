@@ -113,7 +113,10 @@ impl NewBlobs {
                 (entries, content_blobs, root_manifest)
             }
             None => {
-                let entry = (repo.get_root_entry(manifest_root_id), RepoPath::RootPath);
+                let entry = (
+                    HgBlobEntry::new_root(repo.blobstore().boxed(), manifest_root_id),
+                    RepoPath::RootPath,
+                );
                 (vec![], vec![], future::ok(Some(entry)).boxify())
             }
         };

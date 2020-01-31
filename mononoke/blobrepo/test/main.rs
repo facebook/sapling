@@ -34,8 +34,8 @@ use mercurial_types::{
         fetch_file_envelope, BlobManifest, ContentBlobMeta, File, HgBlobChangeset,
         UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     },
-    manifest, FileType, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifestId,
-    HgParents, MPath, MPathElement, RepoPath,
+    manifest, FileType, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifest,
+    HgManifestId, HgParents, MPath, MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
@@ -817,9 +817,10 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let get_entries = {
             cloned!(ctx, repo);
             move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn HgEntry + Sync>>, Error> {
-                repo.get_manifest_by_nodeid(ctx.clone(), ms_hash)
+                ms_hash.load(ctx.clone(), repo.blobstore())
+                    .from_err()
                     .map(|ms| {
-                        ms.list()
+                        HgManifest::list(&ms)
                             .map(|e| {
                                 let name = e.get_name().unwrap().as_ref().to_owned();
                                 (String::from_utf8(name).unwrap(), e)
@@ -1697,7 +1698,7 @@ mod octopus_merges {
                     .await?;
 
                 // Do we get the same files?
-                let files = hg_manifest.list();
+                let files = Manifest::list(&hg_manifest);
                 assert_eq!(files.collect::<Vec<_>>().len(), 3);
 
                 Ok(())

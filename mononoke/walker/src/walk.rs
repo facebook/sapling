@@ -376,7 +376,9 @@ fn hg_manifest_step(
     path: Option<MPath>,
     hg_manifest_id: HgManifestId,
 ) -> BoxFuture<StepOutput, Error> {
-    repo.get_manifest_by_nodeid(ctx, hg_manifest_id)
+    hg_manifest_id
+        .load(ctx, repo.blobstore())
+        .from_err()
         .map({
             move |hgmanifest| {
                 let (manifests, filenodes): (Vec<_>, Vec<_>) =

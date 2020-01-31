@@ -8,6 +8,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::{args, helpers};
@@ -119,7 +120,12 @@ fn fetch_content(
         .map(|cs| cs.manifestid().clone())
         .and_then({
             cloned!(ctx, repo);
-            move |root_mf_id| repo.get_manifest_by_nodeid(ctx, root_mf_id)
+            move |root_mf_id| {
+                root_mf_id
+                    .load(ctx, repo.blobstore())
+                    .from_err()
+                    .map(|mf| Box::new(mf) as Box<dyn HgManifest + Sync>)
+            }
         });
 
     let all_but_last = iter_ok::<_, Error>(path.clone().into_iter().rev().skip(1).rev());
