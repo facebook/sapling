@@ -24,10 +24,12 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
+DECLARE_bool(foreground);
+DECLARE_string(configPath);
+DECLARE_string(etcEdenDir);
+
 namespace facebook {
 namespace eden {
-
-DECLARE_bool(foreground);
 
 class EdenConfig;
 class UserInfo;

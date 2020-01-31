@@ -22,7 +22,11 @@ DEFINE_string(
     etcEdenDir,
     EDEN_ETC_EDEN_DIR,
     "The directory holding all system configuration files");
-
+DEFINE_bool(
+    foreground,
+    false,
+    "Run edenfs in the foreground, rather than daemonizing "
+    "as a background process");
 DEFINE_string(
     logPath,
     "",
@@ -63,12 +67,6 @@ void findEdenDir(EdenConfig& config) {
 
 namespace facebook {
 namespace eden {
-
-DEFINE_bool(
-    foreground,
-    false,
-    "Run edenfs in the foreground, rather than daemonizing "
-    "as a background process");
 
 PathComponentPiece getDefaultLogFileName() {
   return "edenfs.log"_pc;
