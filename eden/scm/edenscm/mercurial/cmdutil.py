@@ -223,17 +223,17 @@ def parsealiases(cmd):
 
 def setupwrapcolorwrite(ui):
     # wrap ui.write so diff output can be labeled/colorized
-    def wrapwrite(orig, *args, **kw):
+    def wrapwritebytes(orig, *args, **kw):
         label = kw.pop(r"label", "")
         for chunk, l in patch.difflabel(lambda: args):
             orig(chunk, label=label + l)
 
-    oldwrite = ui.write
+    oldwrite = ui.writebytes
 
     def wrap(*args, **kwargs):
-        return wrapwrite(oldwrite, *args, **kwargs)
+        return wrapwritebytes(oldwrite, *args, **kwargs)
 
-    setattr(ui, "write", wrap)
+    setattr(ui, "writebytes", wrap)
     return oldwrite
 
 
@@ -265,7 +265,7 @@ def recordfilter(ui, originalhunks, operation=None):
             ui, originalhunks, usecurses, testfile, operation
         )
     finally:
-        ui.write = oldwrite
+        ui.writebytes = oldwrite
     return newchunks, newopts
 
 

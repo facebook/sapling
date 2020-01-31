@@ -1893,7 +1893,10 @@ class revlog(object):
         if node == wdirid:
             raise RevlogError(_("%s: attempt to add wdir revision") % (self.indexfile))
 
-        btext = [rawtext]
+        if isinstance(rawtext, memoryview):
+            btext = [bytes(rawtext)]
+        else:
+            btext = [rawtext]
 
         def buildtext():
             if btext[0] is not None:

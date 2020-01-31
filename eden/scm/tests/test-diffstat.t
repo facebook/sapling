@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ hg init repo
@@ -57,7 +56,7 @@ Binary git diffstat:
 
   $ hg ci -m createb
 
-  >>> _ = open("file with spaces", "wb").write("\0")
+  >>> _ = open("file with spaces", "wb").write(b"\0")
   $ hg add "file with spaces"
 
 Filename with spaces diffstat:

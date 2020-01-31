@@ -449,12 +449,12 @@ def colorlabel(ui, msg, label, usebytes=False):
         if label and msg:
             if msg[-1] == "\n":
                 if usebytes:
-                    msg = b"[%s|%s]\n" % (label, msg[:-1])
+                    msg = b"[%s|%s]\n" % (encodeutf8(label), msg[:-1])
                 else:
                     msg = "[%s|%s]\n" % (label, msg[:-1])
             else:
                 if usebytes:
-                    msg = b"[%s|%s]" % (label, msg)
+                    msg = b"[%s|%s]" % (encodeutf8(label), msg)
                 else:
                     msg = "[%s|%s]" % (label, msg)
     elif ui._colormode is not None:

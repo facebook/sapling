@@ -321,7 +321,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
             message = b"Binary file %s has changed\n" % encodeutf8(fn1)
         hunks = iter([(None, [message])])
     elif not a:
-        without_newline = b[-1:] != "\n"
+        without_newline = b[-1:] != b"\n"
         bl = splitnewlines(b)
         if a is None:
             l1 = b"--- /dev/null%s" % datetag(epoch)
