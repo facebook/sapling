@@ -625,7 +625,7 @@ def encodecaps(caps):
         ca = urlreq.quote(ca)
         vals = [urlreq.quote(v) for v in vals]
         if vals:
-            ca = "%s=%s" % (ca, ",".join(vals))
+            ca = b"%s=%s" % (ca, b",".join(vals))
         chunks.append(ca)
     return b"\n".join(chunks)
 

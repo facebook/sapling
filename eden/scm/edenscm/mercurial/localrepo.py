@@ -825,7 +825,7 @@ class localrepository(object):
         if self.ui.configbool("experimental", "bundle2-advertise"):
             caps = set(caps)
             capsblob = bundle2.encodecaps(bundle2.getrepocaps(self))
-            caps.add("bundle2=" + urlreq.quote(capsblob))
+            caps.add("bundle2=" + pycompat.decodeutf8(urlreq.quote(capsblob)))
         return caps
 
     def _applyopenerreqs(self):
