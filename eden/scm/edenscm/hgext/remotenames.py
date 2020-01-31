@@ -28,7 +28,6 @@ import re
 import shutil
 import sys
 import typing
-from collections import Mapping
 
 from edenscm.mercurial import (
     bookmarks,
@@ -64,6 +63,12 @@ from edenscm.mercurial.node import bin, hex, nullid, short
 
 from . import schemes
 from .convert import hg as converthg
+
+
+if sys.version_info[0] < 3:
+    from collections import Mapping
+else:
+    from collections.abc import Mapping
 
 
 cmdtable = {}
