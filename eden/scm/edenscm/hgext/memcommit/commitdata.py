@@ -134,11 +134,13 @@ class fileinfo(object):
 
     def islink(self):
         # type: () -> bool
-        return self.flags is not None and "l" in self.flags  # type: ignore
+        flags = self.flags
+        return flags is not None and "l" in flags
 
     def isexec(self):
         # type: () -> bool
-        return self.flags is not None and "x" in self.flags  # type: ignore
+        flags = self.flags
+        return flags is not None and "x" in flags
 
     def todict(self):
         # type: () -> Dict[str, Union[bool, str]]
