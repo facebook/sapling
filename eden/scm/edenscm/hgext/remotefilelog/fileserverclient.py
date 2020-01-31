@@ -198,7 +198,7 @@ class cacheconnection(object):
     def _request(self, request, flush=True):
         if self.connected:
             try:
-                self.pipei.write(request)
+                self.pipei.write(pycompat.encodeutf8(request))
                 if flush:
                     self.pipei.flush()
             except IOError:
@@ -258,7 +258,7 @@ class cacheconnection(object):
         except IOError:
             self.close()
 
-        return result
+        return pycompat.decodeutf8(result)
 
 
 class lazyfield(object):
