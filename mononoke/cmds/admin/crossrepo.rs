@@ -210,22 +210,26 @@ async fn subcommand_verify_bookmarks(
                 match d {
                     InconsistentValue {
                         target_bookmark,
-                        expected_target_cs_id,
-                        actual_target_cs_id,
+                        target_cs_id,
+                        source_cs_id,
                     } => {
                         warn!(
                             ctx.logger(),
-                            "inconsistent value of {}: target repo has {}, but source repo cs remaps to {:?}",
+                            "inconsistent value of {}: target repo has {}, but source repo bookmark points to {:?}",
                             target_bookmark,
-                            expected_target_cs_id,
-                            actual_target_cs_id,
+                            target_cs_id,
+                            source_cs_id,
                         );
                     }
-                    ShouldBeDeleted { target_bookmark } => {
+                    MissingInTarget {
+                        target_bookmark,
+                        source_cs_id,
+                    } => {
                         warn!(
                             ctx.logger(),
-                            "target repo doesn't have bookmark {} but source repo has it",
+                            "target repo doesn't have bookmark {} but source repo has it and it points to {}",
                             target_bookmark,
+                            source_cs_id,
                         );
                     }
                     NoSyncOutcome { target_bookmark } => {
@@ -277,14 +281,14 @@ async fn update_large_repo_bookmarks(
         match d {
             InconsistentValue {
                 target_bookmark,
-                expected_target_cs_id,
+                target_cs_id,
                 ..
             } => {
                 let maybe_large_cs_id = mapping
                     .get(
                         ctx.clone(),
                         small_repo.get_repoid(),
-                        *expected_target_cs_id,
+                        *target_cs_id,
                         large_repo.get_repoid(),
                     )
                     .compat()
@@ -302,11 +306,13 @@ async fn update_large_repo_bookmarks(
                 } else {
                     warn!(
                         ctx.logger(),
-                        "{} from small repo doesn't remap to large repo", expected_target_cs_id,
+                        "{} from small repo doesn't remap to large repo", target_cs_id,
                     );
                 }
             }
-            ShouldBeDeleted { target_bookmark } => {
+            MissingInTarget {
+                target_bookmark, ..
+            } => {
                 warn!(
                     ctx.logger(),
                     "large repo bookmark (renames to {}) not found in small repo", target_bookmark,
@@ -480,8 +486,8 @@ mod test {
         let mut expected_diff = hashset! {
             BookmarkDiff::InconsistentValue {
                 target_bookmark: master.clone(),
-                expected_target_cs_id: another_bcs_id,
-                actual_target_cs_id: Some(master_val),
+                target_cs_id: another_bcs_id,
+                source_cs_id: Some(master_val),
             }
         };
         assert!(!actual_diff.is_empty());
@@ -498,8 +504,8 @@ mod test {
 
         expected_diff.insert(BookmarkDiff::InconsistentValue {
             target_bookmark: another_book,
-            expected_target_cs_id: another_bcs_id,
-            actual_target_cs_id: None,
+            target_cs_id: another_bcs_id,
+            source_cs_id: None,
         });
         assert_eq!(
             actual_diff.clone().into_iter().collect::<HashSet<_>>(),
@@ -537,8 +543,8 @@ mod test {
             let expected_diff = hashset! {
                 BookmarkDiff::InconsistentValue {
                     target_bookmark: master.clone(),
-                    expected_target_cs_id: another_bcs_id,
-                    actual_target_cs_id: Some(master_val),
+                    target_cs_id: another_bcs_id,
+                    source_cs_id: Some(master_val),
                 }
             };
             assert_eq!(

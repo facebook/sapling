@@ -186,9 +186,10 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
             });
             continue;
         }
-        let actual_target_cs_id = renamed_source_bookmarks.get(target_book);
+        let corresponding_changesets = renamed_source_bookmarks.get(target_book);
+        let remapped_source_cs_id = corresponding_changesets.map(|cs| cs.target_cs_id);
         let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer();
-        if actual_target_cs_id.is_none() && reverse_bookmark_renamer(target_book).is_none() {
+        if remapped_source_cs_id.is_none() && reverse_bookmark_renamer(target_book).is_none() {
             // Note that the reverse_bookmark_renamer check below is necessary because there
             // might be bookmark in the source repo that shouldn't be present in the target repo
             // at all. Without reverse_bookmark_renamer it's not possible to distinguish "bookmark
@@ -197,20 +198,21 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
             continue;
         }
 
-        if actual_target_cs_id != Some(target_cs_id) {
+        if remapped_source_cs_id != Some(*target_cs_id) {
             diff.push(BookmarkDiff::InconsistentValue {
                 target_bookmark: target_book.clone(),
-                expected_target_cs_id: target_cs_id.clone(),
-                actual_target_cs_id: actual_target_cs_id.cloned(),
+                target_cs_id: target_cs_id.clone(),
+                source_cs_id: corresponding_changesets.map(|cs| cs.source_cs_id),
             });
         }
     }
 
     // find all bookmarks that exist in source repo, but don't exist in target repo
-    for renamed_source_bookmark in renamed_source_bookmarks.keys() {
-        if !target_bookmarks.contains_key(renamed_source_bookmark) {
-            diff.push(BookmarkDiff::ShouldBeDeleted {
+    for (renamed_source_bookmark, corresponding_changesets) in renamed_source_bookmarks {
+        if !target_bookmarks.contains_key(&renamed_source_bookmark) {
+            diff.push(BookmarkDiff::MissingInTarget {
                 target_bookmark: renamed_source_bookmark.clone(),
+                source_cs_id: corresponding_changesets.source_cs_id,
             });
         }
     }
@@ -384,11 +386,12 @@ async fn fetch_root_mf_id(
 pub enum BookmarkDiff {
     InconsistentValue {
         target_bookmark: BookmarkName,
-        expected_target_cs_id: ChangesetId,
-        actual_target_cs_id: Option<ChangesetId>,
+        target_cs_id: ChangesetId,
+        source_cs_id: Option<ChangesetId>,
     },
-    ShouldBeDeleted {
+    MissingInTarget {
         target_bookmark: BookmarkName,
+        source_cs_id: ChangesetId,
     },
     NoSyncOutcome {
         target_bookmark: BookmarkName,
@@ -402,17 +405,30 @@ impl BookmarkDiff {
             InconsistentValue {
                 target_bookmark, ..
             } => target_bookmark,
-            ShouldBeDeleted { target_bookmark } => target_bookmark,
+            MissingInTarget {
+                target_bookmark, ..
+            } => target_bookmark,
             NoSyncOutcome { target_bookmark } => target_bookmark,
         }
     }
+}
+
+struct CorrespondingChangesets {
+    source_cs_id: ChangesetId,
+    target_cs_id: ChangesetId,
 }
 
 async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     bookmarks: impl IntoIterator<Item = (BookmarkName, ChangesetId)>,
-) -> Result<(HashMap<BookmarkName, ChangesetId>, HashSet<BookmarkName>), Error> {
+) -> Result<
+    (
+        HashMap<BookmarkName, CorrespondingChangesets>,
+        HashSet<BookmarkName>,
+    ),
+    Error,
+> {
     let bookmark_renamer = commit_syncer.get_bookmark_renamer();
 
     let mut renamed_and_remapped_bookmarks = vec![];
@@ -433,7 +449,12 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
                         }
                         None => None,
                     };
-                    Ok((renamed_bookmark, maybe_remapped_cs_id))
+                    let maybe_corresponding_changesets =
+                        maybe_remapped_cs_id.map(|target_cs_id| CorrespondingChangesets {
+                            source_cs_id: cs_id,
+                            target_cs_id,
+                        });
+                    Ok((renamed_bookmark, maybe_corresponding_changesets))
                 })
                 .boxed();
             renamed_and_remapped_bookmarks.push(maybe_sync_outcome);
@@ -445,10 +466,10 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     let mut no_sync_outcome = HashSet::new();
 
     while let Some(item) = s.next().await {
-        let (renamed_bookmark, maybe_remapped_cs_id) = item?;
-        match maybe_remapped_cs_id {
-            Some(remapped_cs_id) => {
-                remapped_bookmarks.insert(renamed_bookmark, remapped_cs_id);
+        let (renamed_bookmark, maybe_corresponding_changesets) = item?;
+        match maybe_corresponding_changesets {
+            Some(corresponding_changesets) => {
+                remapped_bookmarks.insert(renamed_bookmark, corresponding_changesets);
             }
             None => {
                 no_sync_outcome.insert(renamed_bookmark);
