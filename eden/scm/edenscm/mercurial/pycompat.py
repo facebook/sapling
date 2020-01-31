@@ -69,7 +69,14 @@ if sys.version_info[0] >= 3:
     getcwd = os.getcwd
     sysplatform = sys.platform
     sysexecutable = sys.executable
+
+    # Upstream added stringio which conforms to their end goal of using bytes
+    # everywhere. We want to use String in Python 3 and Bytes/str in Python 2,
+    # so we need a different io abstraction here, which I call stringutf8io. We
+    # should probably remove stringio.
     stringio = io.BytesIO
+    stringutf8io = io.StringIO
+
     maplist = lambda *args: list(map(*args))
     ziplist = lambda *args: list(zip(*args))
     rawinput = input
@@ -190,6 +197,7 @@ else:
     sysexecutable = sys.executable
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
+    stringutf8io = cStringIO.StringIO
     maplist = map
     ziplist = zip
     rawinput = raw_input  # noqa

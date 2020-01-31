@@ -307,8 +307,8 @@ def _hg(*args, **kwargs):
     stdin = kwargs.get("stdin") or ""
     encoding.setfromenviron()
     cwdbefore = os.getcwd()
-    fout = util.stringio()
-    fin = util.stringio(stdin)
+    fout = pycompat.stringutf8io()
+    fin = pycompat.stringutf8io(stdin)
     sysargs = ["hg"] + list(args)
     pycompat.sysargv = sysargs
     status = bindings.commands.run(sysargs, fin, fout, fout)
