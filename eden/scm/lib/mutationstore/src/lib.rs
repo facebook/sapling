@@ -322,7 +322,7 @@ mod tests {
                 preds: vec![nodes[0], nodes[2], nodes[3]],
                 split: vec![],
                 op: "fold".into(),
-                user: Box::from(&b"test"[..]),
+                user: "test".into(),
                 time: 123456789.5,
                 tz: -7200,
                 extra: vec![(
@@ -337,7 +337,7 @@ mod tests {
                 preds: vec![nodes[0]],
                 split: vec![nodes[5], nodes[6]],
                 op: "split".into(),
-                user: Box::from(&b"test"[..]),
+                user: "test".into(),
                 time: 123456789.5,
                 tz: -7200,
                 extra: vec![],
@@ -394,7 +394,7 @@ mod tests {
                     .expect("can get mutation entry")
                     .unwrap()
                     .user,
-                &Box::from(&b"test"[..])
+                "test",
             );
             assert_eq!(
                 &ms.get(nodes[1])
