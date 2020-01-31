@@ -221,14 +221,14 @@ class rebaseruntime(object):
     def _writestatus(self, f):
         repo = self.repo
         assert repo.filtername is None
-        f.write(repo[self.originalwd].hex() + "\n")
+        f.write(pycompat.encodeutf8(repo[self.originalwd].hex() + "\n"))
         # was "dest". we now write dest per src root below.
-        f.write("\n")
-        f.write(repo[self.external].hex() + "\n")
-        f.write("%d\n" % int(self.collapsef))
-        f.write("%d\n" % int(self.keepf))
-        f.write("0\n")  # used to be the "keepbranches" flag.
-        f.write("%s\n" % (self.activebookmark or ""))
+        f.write(b"\n")
+        f.write(pycompat.encodeutf8(repo[self.external].hex() + "\n"))
+        f.write(b"%d\n" % int(self.collapsef))
+        f.write(b"%d\n" % int(self.keepf))
+        f.write(b"0\n")  # used to be the "keepbranches" flag.
+        f.write(b"%s\n" % (self.activebookmark or b""))
         destmap = self.destmap
         for d, v in pycompat.iteritems(self.state):
             oldrev = repo[d].hex()
@@ -237,7 +237,7 @@ class rebaseruntime(object):
             else:
                 newrev = v
             destnode = repo[destmap[d]].hex()
-            f.write("%s:%s:%s\n" % (oldrev, newrev, destnode))
+            f.write(pycompat.encodeutf8("%s:%s:%s\n" % (oldrev, newrev, destnode)))
         repo.ui.debug("rebase status stored\n")
 
     def restorestatus(self):
@@ -1806,9 +1806,9 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
 
 def storecollapsemsg(repo, collapsemsg):
     "Store the collapse message to allow recovery"
-    collapsemsg = collapsemsg or ""
+    collapsemsg = collapsemsg or b""
     f = repo.localvfs("last-message.txt", "w")
-    f.write("%s\n" % collapsemsg)
+    f.write(b"%s\n" % collapsemsg)
     f.close()
 
 
@@ -1828,7 +1828,7 @@ def restorecollapsemsg(repo, isabort):
             raise
         if isabort:
             # Oh well, just abort like normal
-            collapsemsg = ""
+            collapsemsg = b""
         else:
             raise error.Abort(_("missing .hg/last-message.txt for rebase"))
     return collapsemsg
