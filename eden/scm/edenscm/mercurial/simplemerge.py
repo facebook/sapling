@@ -92,9 +92,9 @@ class Merge3Text(object):
         name_a=None,
         name_b=None,
         name_base=None,
-        start_marker="<<<<<<<",
-        mid_marker="=======",
-        end_marker=">>>>>>>",
+        start_marker=b"<<<<<<<",
+        mid_marker=b"=======",
+        end_marker=b">>>>>>>",
         base_marker=None,
         localorother=None,
         minimize=False,
@@ -103,18 +103,18 @@ class Merge3Text(object):
         """
         self.conflicts = False
         self.conflictscount = 0
-        newline = "\n"
+        newline = b"\n"
         if len(self.a) > 0:
-            if self.a[0].endswith("\r\n"):
-                newline = "\r\n"
-            elif self.a[0].endswith("\r"):
-                newline = "\r"
+            if self.a[0].endswith(b"\r\n"):
+                newline = b"\r\n"
+            elif self.a[0].endswith(b"\r"):
+                newline = b"\r"
         if name_a and start_marker:
-            start_marker = start_marker + " " + name_a
+            start_marker = start_marker + b" " + name_a
         if name_b and end_marker:
-            end_marker = end_marker + " " + name_b
+            end_marker = end_marker + b" " + name_b
         if name_base and base_marker:
-            base_marker = base_marker + " " + name_base
+            base_marker = base_marker + b" " + name_base
         merge_regions = self.merge_regions()
         if minimize:
             merge_regions = self.minimize(merge_regions)
@@ -424,9 +424,9 @@ def _verifytext(text, path, ui, opts):
 def _picklabels(defaults, overrides):
     if len(overrides) > 3:
         raise error.Abort(_("can only specify three labels."))
-    result = defaults[:]
+    result = list((pycompat.encodeutf8(d) if d is not None else None) for d in defaults)
     for i, override in enumerate(overrides):
-        result[i] = override
+        result[i] = pycompat.encodeutf8(override)
     return result
 
 
@@ -470,11 +470,11 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         extrakwargs["mid_marker"] = None
         extrakwargs["end_marker"] = None
     elif name_base is not None:
-        extrakwargs["base_marker"] = "|||||||"
+        extrakwargs["base_marker"] = b"|||||||"
         extrakwargs["name_base"] = name_base
         extrakwargs["minimize"] = False
 
-    mergedtext = ""
+    mergedtext = b""
     for line in m3.merge_lines(
         name_a=name_a, name_b=name_b, **pycompat.strkwargs(extrakwargs)
     ):
