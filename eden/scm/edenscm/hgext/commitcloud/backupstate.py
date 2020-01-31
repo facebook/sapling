@@ -31,25 +31,24 @@ class BackupState(object):
         )
         self.heads = set()
         if repo.sharedvfs.exists(self.filename):
-            with repo.sharedvfs.open(self.filename) as f:
-                lines = f.readlines()
-                if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
-                    repo.ui.debug(
-                        "unrecognised backedupheads version '%s', ignoring\n"
-                        % lines[0].strip()
-                    )
-                    self.initfromserver()
-                    return
-                if lines[1].strip() != remotepath:
-                    repo.ui.debug(
-                        "backupheads file is for a different remote ('%s' instead of '%s'), reinitializing\n"
-                        % (lines[1].strip(), remotepath)
-                    )
-                    self.initfromserver()
-                    return
-                heads = (nodemod.bin(head.strip()) for head in lines[2:])
-                hasnode = repo.unfiltered().changelog.hasnode
-                self.heads = {h for h in heads if hasnode(h)}
+            lines = repo.sharedvfs.readutf8(self.filename).splitlines()
+            if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
+                repo.ui.debug(
+                    "unrecognised backedupheads version '%s', ignoring\n"
+                    % lines[0].strip()
+                )
+                self.initfromserver()
+                return
+            if lines[1].strip() != remotepath:
+                repo.ui.debug(
+                    "backupheads file is for a different remote ('%s' instead of '%s'), reinitializing\n"
+                    % (lines[1].strip(), remotepath)
+                )
+                self.initfromserver()
+                return
+            heads = (nodemod.bin(head.strip()) for head in lines[2:])
+            hasnode = repo.unfiltered().changelog.hasnode
+            self.heads = {h for h in heads if hasnode(h)}
         else:
             self.initfromserver()
 
