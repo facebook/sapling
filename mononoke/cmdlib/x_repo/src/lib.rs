@@ -24,10 +24,29 @@ use slog::Logger;
 use sql_ext::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
+// Creates commits syncer from source to target
 pub async fn create_commit_syncer_from_matches<'a>(
     fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    create_commit_syncer_from_matches_impl(fb, logger, matches, false /*reverse*/).await
+}
+
+// Creates commit syncer from target to source
+pub async fn create_reverse_commit_syncer_from_matches<'a>(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    create_commit_syncer_from_matches_impl(fb, logger, matches, true /*reverse*/).await
+}
+
+async fn create_commit_syncer_from_matches_impl<'a>(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+    reverse: bool,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     let source_repo_id = args::get_source_repo_id(fb, &matches)?;
     let target_repo_id = args::get_target_repo_id(fb, &matches)?;
@@ -41,14 +60,26 @@ pub async fn create_commit_syncer_from_matches<'a>(
 
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
-    create_commit_syncer(
-        fb,
-        (source_repo, source_repo_config),
-        (target_repo, target_repo_config),
-        mysql_options,
-        readonly_storage,
-    )
-    .await
+
+    if reverse {
+        create_commit_syncer(
+            fb,
+            (target_repo, target_repo_config),
+            (source_repo, source_repo_config),
+            mysql_options,
+            readonly_storage,
+        )
+        .await
+    } else {
+        create_commit_syncer(
+            fb,
+            (source_repo, source_repo_config),
+            (target_repo, target_repo_config),
+            mysql_options,
+            readonly_storage,
+        )
+        .await
+    }
 }
 
 async fn create_commit_syncer<'a>(

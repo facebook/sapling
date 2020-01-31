@@ -22,6 +22,7 @@ use synced_commit_mapping::{
 
 use cross_repo_sync::{
     rewrite_commit_compat, update_mapping, upload_commits_compat, CommitSyncRepos, CommitSyncer,
+    Syncers,
 };
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
@@ -104,7 +105,7 @@ where
 
 pub async fn init_small_large_repo(
     ctx: &CoreContext,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<Syncers<SqlSyncedCommitMapping>, Error> {
     let sqlite_con = SqliteConnection::open_in_memory()?;
     sqlite_con.execute_batch(SqlSyncedCommitMapping::get_up_query())?;
     let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
@@ -124,7 +125,17 @@ pub async fn init_small_large_repo(
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
     };
-    let commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
+    let small_to_large_commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
+
+    let repos = CommitSyncRepos::LargeToSmall {
+        small_repo: smallrepo.clone(),
+        large_repo: megarepo.clone(),
+        mover: Arc::new(reverse_prefix_mover),
+        reverse_mover: Arc::new(prefix_mover),
+        bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
+    };
+    let large_to_small_commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &smallrepo)
         .add_file("file", "content")
@@ -135,10 +146,10 @@ pub async fn init_small_large_repo(
         .commit()
         .await?;
 
-    commit_syncer
+    small_to_large_commit_syncer
         .preserve_commit(ctx.clone(), first_bcs_id)
         .await?;
-    commit_syncer
+    small_to_large_commit_syncer
         .preserve_commit(ctx.clone(), second_bcs_id)
         .await?;
     bookmark(&ctx, &smallrepo, "premove")
@@ -193,7 +204,7 @@ pub async fn init_small_large_repo(
     update_mapping(
         ctx.clone(),
         hashmap! { small_master_bcs_id => large_master_bcs_id},
-        &commit_syncer,
+        &small_to_large_commit_syncer,
     )
     .await?;
 
@@ -203,11 +214,14 @@ pub async fn init_small_large_repo(
     );
     println!(
         "{:?}",
-        commit_syncer
+        small_to_large_commit_syncer
             .get_commit_sync_outcome(ctx.clone(), small_master_bcs_id)
             .await?
     );
-    Ok(commit_syncer)
+    Ok(Syncers {
+        small_to_large: small_to_large_commit_syncer,
+        large_to_small: large_to_small_commit_syncer,
+    })
 }
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
