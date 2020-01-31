@@ -82,7 +82,7 @@ def savepinnednodes(repo, newpin, newunpin, fullargs):
         nodes |= set(newpin)
         nodes -= set(newunpin)
         with util.atomictempfile(repo.svfs.join("obsinhibit")) as f:
-            f.write("".join(nodes))
+            f.write(b"".join(nodes))
 
         desc = lambda s: [short(n) for n in s]
         repo.ui.log(
