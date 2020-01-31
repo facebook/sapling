@@ -228,7 +228,10 @@ class rebaseruntime(object):
         f.write(b"%d\n" % int(self.collapsef))
         f.write(b"%d\n" % int(self.keepf))
         f.write(b"0\n")  # used to be the "keepbranches" flag.
-        f.write(b"%s\n" % (self.activebookmark or b""))
+        activebookmark = b""
+        if self.activebookmark:
+            activebookmark = pycompat.encodeutf8(self.activebookmark)
+        f.write(b"%s\n" % activebookmark)
         destmap = self.destmap
         for d, v in pycompat.iteritems(self.state):
             oldrev = repo[d].hex()
