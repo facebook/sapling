@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import errno
 import struct
+import typing
 
 from . import (
     encoding,
@@ -540,6 +541,7 @@ _binaryentry = struct.Struct(">20sH")
 
 
 def binaryencode(bookmarks):
+    # type: (typing.Iterable[typing.Tuple[str, bytes]]) -> bytes
     """encode a '(bookmark, node)' iterable into a binary stream
 
     the binary format is:
@@ -557,8 +559,8 @@ def binaryencode(bookmarks):
         if not node:  # None or ''
             node = wdirid
         binarydata.append(_binaryentry.pack(node, len(book)))
-        binarydata.append(book)
-    return "".join(binarydata)
+        binarydata.append(pycompat.encodeutf8(book))
+    return b"".join(binarydata)
 
 
 def binarydecode(stream):
