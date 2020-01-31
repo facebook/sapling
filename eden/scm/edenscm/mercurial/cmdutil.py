@@ -1633,7 +1633,14 @@ extraexport = []
 extraexportmap = {}
 
 
-def _exportsingle(repo, ctx, match, switch_parent, rev, seqno, write, diffopts):
+def _exportsingle(
+    repo, ctx, match, switch_parent, rev, seqno, write, diffopts, writestr=None
+):
+    if writestr is None:
+
+        def writestr(s):
+            write(pycompat.encodeutf8(s))
+
     node = scmutil.binnode(ctx)
     parents = [p.node() for p in ctx.parents() if p]
     branch = ctx.branch()
@@ -1645,23 +1652,23 @@ def _exportsingle(repo, ctx, match, switch_parent, rev, seqno, write, diffopts):
     else:
         prev = nullid
 
-    write("# HG changeset patch\n")
-    write("# User %s\n" % ctx.user())
-    write("# Date %d %d\n" % ctx.date())
-    write("#      %s\n" % util.datestr(ctx.date()))
+    writestr("# HG changeset patch\n")
+    writestr("# User %s\n" % ctx.user())
+    writestr("# Date %d %d\n" % ctx.date())
+    writestr("#      %s\n" % util.datestr(ctx.date()))
     if branch and branch != "default":
-        write("# Branch %s\n" % branch)
-    write("# Node ID %s\n" % hex(node))
-    write("# Parent  %s\n" % hex(prev))
+        writestr("# Branch %s\n" % branch)
+    writestr("# Node ID %s\n" % hex(node))
+    writestr("# Parent  %s\n" % hex(prev))
     if len(parents) > 1:
-        write("# Parent  %s\n" % hex(parents[1]))
+        writestr("# Parent  %s\n" % hex(parents[1]))
 
     for headerid in extraexport:
         header = extraexportmap[headerid](seqno, ctx)
         if header is not None:
-            write("# %s\n" % header)
-    write(ctx.description().rstrip())
-    write("\n\n")
+            writestr("# %s\n" % header)
+    writestr(ctx.description().rstrip())
+    writestr("\n\n")
 
     for chunk, label in patch.diffui(repo, prev, node, match, opts=diffopts):
         write(chunk, label=label)
@@ -1706,6 +1713,7 @@ def export(
     filemode = {}
 
     write = None
+    writestr = None
     dest = "<unnamed>"
     if fp:
         dest = getattr(fp, "name", dest)
@@ -1714,7 +1722,8 @@ def export(
             fp.write(s)
 
     elif not fntemplate:
-        write = repo.ui.write
+        write = repo.ui.writebytes
+        writestr = repo.ui.write
 
     for seqno, rev in enumerate(revs, 1):
         ctx = repo[rev]
@@ -1740,7 +1749,9 @@ def export(
 
         if not dest.startswith("<"):
             repo.ui.note("%s\n" % dest)
-        _exportsingle(repo, ctx, match, switch_parent, rev, seqno, write, opts)
+        _exportsingle(
+            repo, ctx, match, switch_parent, rev, seqno, write, opts, writestr
+        )
         if fo is not None:
             fo.close()
 
