@@ -6,9 +6,6 @@ from edenscm.mercurial import hg, merge, ui as uimod
 from hghave import require
 
 
-require(["py2"])
-
-
 u = uimod.ui.load()
 
 repo = hg.repository(u, "test1", create=1)

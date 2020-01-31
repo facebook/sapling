@@ -6,9 +6,6 @@ from edenscm.mercurial import ui as uimod
 from hghave import require
 
 
-require(["py2"])
-
-
 hgrc = os.environ["HGRCPATH"]
 f = open(hgrc)
 basehgrc = f.read()

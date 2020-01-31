@@ -1,4 +1,3 @@
-#require py2
 
   $ newext signal <<EOF
   > from edenscm.mercurial import registrar

@@ -11,9 +11,6 @@ from edenscm.mercurial import error, peer, util, wireproto
 from hghave import require
 
 
-require(["py2"])
-
-
 # equivalent of repo.repository
 class thing(object):
     def hello(self):

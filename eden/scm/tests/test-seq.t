@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ $TESTDIR/seq.py 1 10 > file

@@ -8,9 +8,6 @@ from edenscm.mercurial import util
 from hghave import require
 
 
-require(["py2"])
-
-
 if not sys.platform.startswith("linux"):
     sys.stderr.write("skipped: linux required\n")
     sys.exit(80)

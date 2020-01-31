@@ -4,9 +4,6 @@ from edenscm.hgext.lfs import pointer
 from hghave import require
 
 
-require(["py2"])
-
-
 def tryparse(text):
     r = {}
     try:

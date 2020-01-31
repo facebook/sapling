@@ -10,9 +10,6 @@ from testutil.dott import feature
 from testutil.dott.translate import translatebody
 
 
-feature.require(["py2"])
-
-
 def translateeq(code, expected):
     eq(translatebody(code + "\n").strip(), expected, nested=1)
 

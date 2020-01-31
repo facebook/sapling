@@ -9,9 +9,6 @@ import re
 from hghave import require
 
 
-require(["py2"])
-
-
 def checkpath(path, dllnames):
     content = open(path).read()
     for name in dllnames:

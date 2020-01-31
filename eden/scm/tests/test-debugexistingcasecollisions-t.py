@@ -8,9 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh
 
 
-feature.require(["py2"])
-
-
 feature.require(["no-icasefs"])
 
 sh % "newrepo"

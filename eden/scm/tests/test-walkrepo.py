@@ -6,9 +6,6 @@ from edenscm.mercurial import hg, scmutil, ui as uimod, util
 from hghave import require
 
 
-require(["py2"])
-
-
 chdir = os.chdir
 mkdir = os.mkdir
 pjoin = os.path.join

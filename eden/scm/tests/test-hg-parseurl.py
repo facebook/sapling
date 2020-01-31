@@ -4,9 +4,6 @@ from edenscm.mercurial import hg
 from hghave import require
 
 
-require(["py2"])
-
-
 def testparse(url, branch=[]):
     print("%s, branches: %r" % hg.parseurl(url, branch))
 

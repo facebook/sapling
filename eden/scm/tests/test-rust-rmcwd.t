@@ -1,4 +1,3 @@
-#require py2
 #require rmcwd normal-layout
 
 Note: With buck build the hg script can be a wrapper that runs shell commands.

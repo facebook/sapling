@@ -4,9 +4,6 @@ from edenscm.mercurial import util
 from hghave import require
 
 
-require(["py2"])
-
-
 def printifpresent(d, xs, name="d"):
     for x in xs:
         present = x in d

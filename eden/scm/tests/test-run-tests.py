@@ -12,9 +12,6 @@ import re
 from hghave import require
 
 
-require(["py2"])
-
-
 # this is hack to make sure no escape characters are inserted into the output
 if "TERM" in os.environ:
     del os.environ["TERM"]

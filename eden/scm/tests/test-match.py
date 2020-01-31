@@ -7,9 +7,6 @@ from edenscm.mercurial import match as matchmod
 from hghave import require
 
 
-require(["py2"])
-
-
 class NeverMatcherTests(unittest.TestCase):
     def testVisitdir(self):
         m = matchmod.nevermatcher("", "")

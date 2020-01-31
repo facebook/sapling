@@ -4,9 +4,6 @@ from edenscm.mercurial import dispatch, error, ui as uimod
 from hghave import require
 
 
-require(["py2"])
-
-
 testui = uimod.ui.load()
 
 # disable the configuration registration warning

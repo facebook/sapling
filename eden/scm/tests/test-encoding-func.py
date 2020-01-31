@@ -6,9 +6,6 @@ from edenscm.mercurial import encoding
 from hghave import require
 
 
-require(["py2"])
-
-
 class IsasciistrTest(unittest.TestCase):
     asciistrs = [b"a", b"ab", b"abc", b"abcd", b"abcde", b"abcdefghi", b"abcd\0fghi"]
 

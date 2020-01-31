@@ -13,9 +13,6 @@ from edenscm.mercurial import error, vfs, worker
 from hghave import require
 
 
-require(["py2"])
-
-
 locktimeout = 25
 locksuccess = 24
 

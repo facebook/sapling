@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test sortdictfilter.py which stabilizes dict output

@@ -6,9 +6,6 @@ from edenscm.mercurial import dispatch, ui as uimod
 from hghave import require
 
 
-require(["py2"])
-
-
 # ensure errors aren't buffered
 testui = uimod.ui()
 testui.pushbuffer()

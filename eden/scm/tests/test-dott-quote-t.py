@@ -10,9 +10,6 @@ import os
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "echo 1" > "B1"
 sh % "echo 2" > "B2"
 
