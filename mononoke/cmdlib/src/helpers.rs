@@ -37,6 +37,7 @@ use crate::args;
 use crate::monitoring;
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use changesets::SqlConstructors;
 use context::CoreContext;
@@ -299,7 +300,7 @@ pub fn get_root_manifest_id(
         repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
             .and_then({
                 cloned!(ctx, repo);
-                move |hg_cs_id| repo.get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+                move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
             })
             .map(|cs| cs.manifestid())
     })

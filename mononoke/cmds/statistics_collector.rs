@@ -8,7 +8,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
@@ -149,7 +149,9 @@ pub fn get_manifest_from_changeset(
     repo: BlobRepo,
     changeset: HgChangesetId,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
-    repo.get_changeset_by_changesetid(ctx.clone(), changeset.clone())
+    changeset
+        .load(ctx, repo.blobstore())
+        .from_err()
         .map(move |changeset| changeset.manifestid())
 }
 
@@ -158,7 +160,9 @@ pub fn get_changeset_timestamp_from_changeset(
     repo: BlobRepo,
     hg_cs_id: HgChangesetId,
 ) -> impl Future<Item = i64, Error = Error> {
-    repo.get_changeset_by_changesetid(ctx.clone(), hg_cs_id.clone())
+    hg_cs_id
+        .load(ctx, repo.blobstore())
+        .from_err()
         .map(move |changeset| changeset.time().timestamp_secs())
 }
 

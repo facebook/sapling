@@ -276,7 +276,8 @@ fn hg_changeset_step(
     repo: &BlobRepo,
     id: HgChangesetId,
 ) -> BoxFuture<StepOutput, Error> {
-    repo.get_changeset_by_changesetid(ctx, id)
+    id.load(ctx, repo.blobstore())
+        .from_err()
         .map(|hgchangeset| {
             let manifest_id = hgchangeset.manifestid();
             let mut recurse = vec![OutgoingEdge::new(

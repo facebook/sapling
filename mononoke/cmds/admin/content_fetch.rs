@@ -115,7 +115,7 @@ fn fetch_content(
     let mf = resolved_hg_cs_id
         .and_then({
             cloned!(ctx, repo);
-            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
+            move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
         })
         .map(|cs| cs.manifestid().clone())
         .and_then({

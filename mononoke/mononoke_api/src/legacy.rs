@@ -34,7 +34,9 @@ pub fn get_content_by_path(
     changesetid: HgChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = Content, Error = Error> {
-    repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
+    changesetid
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
         .and_then({
             cloned!(repo, ctx);
             move |changeset| {

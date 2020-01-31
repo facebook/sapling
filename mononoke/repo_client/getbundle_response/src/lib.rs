@@ -11,6 +11,7 @@
 use crate::errors::ErrorKind;
 use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
@@ -192,8 +193,8 @@ async fn create_hg_changeset_part(
                     .and_then({
                         cloned!(ctx, blobrepo);
                         move |node| {
-                            blobrepo
-                                .get_changeset_by_changesetid(ctx, node)
+                            node.load(ctx, blobrepo.blobstore())
+                                .from_err()
                                 .map(move |cs| (node.into_nodehash(), cs))
                         }
                     })

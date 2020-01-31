@@ -8,6 +8,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
@@ -45,7 +46,9 @@ fn blobstore_and_filenodes_warmup(
 ) -> impl Future<Item = (), Error = Error> {
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
-    repo.get_changeset_by_changesetid(ctx.clone(), revision)
+    revision
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
         .map({
             cloned!(ctx, repo);
             move |cs| {

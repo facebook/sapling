@@ -82,7 +82,6 @@ define_stats! {
     many_changesets_exists: timeseries(Rate, Sum),
     get_changeset_parents: timeseries(Rate, Sum),
     get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
-    get_changeset_by_changesetid: timeseries(Rate, Sum),
     get_hg_file_copy_from_blobstore: timeseries(Rate, Sum),
     get_hg_from_bonsai_changeset: timeseries(Rate, Sum),
     generate_hg_from_bonsai_changeset: timeseries(Rate, Sum),
@@ -459,17 +458,6 @@ impl BlobRepo {
                         maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(bonsai).into())
                     })
             })
-    }
-
-    pub fn get_changeset_by_changesetid(
-        &self,
-        ctx: CoreContext,
-        changesetid: HgChangesetId,
-    ) -> BoxFuture<HgBlobChangeset, Error> {
-        STATS::get_changeset_by_changesetid.add_value(1);
-        HgBlobChangeset::load(ctx, &self.blobstore.boxed(), changesetid)
-            .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(changesetid).into()))
-            .boxify()
     }
 
     pub fn get_bookmark(
@@ -1541,11 +1529,10 @@ impl BlobRepo {
             let bonsai_hg_mapping = repo.bonsai_hg_mapping.clone();
             let repoid = repo.repoid;
 
-            cloned!(repo);
             bonsai_hg_mapping
                 .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
                 .and_then(move |maybe_hg| match maybe_hg {
-                    Some(hg_cs_id) => repo.get_changeset_by_changesetid(ctx, hg_cs_id),
+                    Some(hg_cs_id) => hg_cs_id.load(ctx, repo.blobstore()).from_err(),
                     None => panic!("hg changeset must be generated already"),
                 })
         }

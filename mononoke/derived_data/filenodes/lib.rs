@@ -10,6 +10,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
@@ -395,8 +396,8 @@ async fn fetch_root_manifest_id(
         .compat()
         .await?;
 
-    let hg_cs = repo
-        .get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+    let hg_cs = hg_cs_id
+        .load(ctx.clone(), repo.blobstore())
         .compat()
         .await?;
 

@@ -8,6 +8,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{Future, Stream};
@@ -36,8 +37,9 @@ impl FileContentStore for BlobRepoFileContentStore {
         changeset_id: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<HgFileNodeId>, Error> {
-        self.repo
-            .get_changeset_by_changesetid(ctx.clone(), changeset_id)
+        changeset_id
+            .load(ctx.clone(), self.repo.blobstore())
+            .from_err()
             .and_then({
                 cloned!(self.repo, ctx);
                 move |changeset| {
@@ -79,7 +81,10 @@ impl ChangesetStore for BlobRepoChangesetStore {
         ctx: CoreContext,
         changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
-        self.repo.get_changeset_by_changesetid(ctx, changesetid)
+        changesetid
+            .load(ctx, self.repo.blobstore())
+            .from_err()
+            .boxify()
     }
 
     fn get_changed_files(
@@ -88,8 +93,9 @@ impl ChangesetStore for BlobRepoChangesetStore {
         changesetid: HgChangesetId,
     ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
         cloned!(self.repo);
-        self.repo
-            .get_changeset_by_changesetid(ctx.clone(), changesetid)
+        changesetid
+            .load(ctx.clone(), self.repo.blobstore())
+            .from_err()
             .map({
                 cloned!(ctx);
                 move |cs| {
@@ -97,8 +103,9 @@ impl ChangesetStore for BlobRepoChangesetStore {
                     let parents = cs.parents();
                     let (maybe_p1, _) = parents.get_nodes();
                     match maybe_p1 {
-                        Some(p1) => repo
-                            .get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(p1))
+                        Some(p1) => HgChangesetId::new(p1)
+                            .load(ctx.clone(), repo.blobstore())
+                            .from_err()
                             .map(|p1| p1.manifestid())
                             .map({
                                 cloned!(repo);

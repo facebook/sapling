@@ -11,6 +11,7 @@ use anyhow::{bail, Error};
 use blobrepo::derive_hg_manifest::derive_hg_manifest;
 use blobrepo::internal::IncompleteFilenodes;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -201,7 +202,9 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
         let parents = parents
             .into_iter()
             .map(|p| {
-                repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(p))
+                HgChangesetId::new(p)
+                    .load(ctx.clone(), repo.blobstore())
+                    .from_err()
                     .map(|cs| cs.manifestid())
             })
             .collect::<Vec<_>>();

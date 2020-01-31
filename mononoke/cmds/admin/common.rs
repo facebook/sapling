@@ -8,6 +8,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
@@ -78,7 +79,9 @@ pub fn get_file_nodes(
     cs_id: HgChangesetId,
     paths: Vec<MPath>,
 ) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
-    repo.get_changeset_by_changesetid(ctx.clone(), cs_id)
+    cs_id
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
         .map(|cs| cs.manifestid().clone())
         .and_then({
             cloned!(ctx, repo);

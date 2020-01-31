@@ -172,7 +172,9 @@ fn get_parents(
             move |parent_hg_cs_ids| {
                 cloned!(ctx, repo);
                 let parents = parent_hg_cs_ids.into_iter().map(|cs_id| {
-                    repo.get_changeset_by_changesetid(ctx.clone(), cs_id)
+                    cs_id
+                        .load(ctx.clone(), repo.blobstore())
+                        .from_err()
                         .map(move |blob_changeset| blob_changeset.manifestid().clone())
                 });
 

@@ -10,8 +10,8 @@
 
 use ascii::AsciiString;
 use mercurial_types::{
-    blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, MPath, RepoPath, Type,
+    blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath,
+    RepoPath, Type,
 };
 use mononoke_types::{hash::Sha256, ChangesetId, FileType};
 use std::fmt;
@@ -46,12 +46,8 @@ impl fmt::Display for StateOpenError {
 pub enum ErrorKind {
     #[error("Error while opening state for {0}")]
     StateOpen(StateOpenError),
-    #[error("Changeset id {0} is missing")]
-    ChangesetMissing(HgChangesetId),
     #[error("Error while deserializing changeset retrieved from key '{0}'")]
     ChangesetDeserializeFailed(String),
-    #[error("Manifest id {0} is missing")]
-    ManifestMissing(HgManifestId),
     #[error("Node id {0} is missing")]
     NodeMissing(HgNodeHash),
     #[error("Content missing nodeid {0}")]

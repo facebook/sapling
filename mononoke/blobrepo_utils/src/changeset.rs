@@ -8,6 +8,7 @@
 
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
@@ -199,9 +200,9 @@ where
                 }
             });
 
-        let visit_fut = shared
-            .repo
-            .get_changeset_by_changesetid(ctx.clone(), changeset_id)
+        let visit_fut = changeset_id
+            .load(ctx.clone(), shared.repo.blobstore())
+            .from_err()
             .and_then({
                 cloned!(ctx, shared.visitor, shared.repo);
                 move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)

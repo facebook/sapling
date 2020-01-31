@@ -142,6 +142,7 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use cloned::cloned;
     use fbinit::FacebookInit;
@@ -161,7 +162,9 @@ mod test {
         repo: BlobRepo,
         hg_cs_id: HgChangesetId,
     ) -> impl Future<Item = HgManifestId, Error = Error> {
-        repo.get_changeset_by_changesetid(ctx, hg_cs_id)
+        hg_cs_id
+            .load(ctx, repo.blobstore())
+            .from_err()
             .map(|hg_cs| hg_cs.manifestid())
     }
 

@@ -271,10 +271,9 @@ fn redaction_list(
                 "Listing blacklisted files for ChangesetId: {:?}", cs_id
             );
             info!(logger, "Please be patient.");
-            let changeset_fut = blobrepo.get_changeset_by_changesetid(ctx.clone(), cs_id);
             redacted_blobs
                 .get_all_redacted_blobs()
-                .join(changeset_fut)
+                .join(cs_id.load(ctx.clone(), blobrepo.blobstore()).from_err())
                 .and_then({
                     cloned!(logger);
                     move |(redacted_blobs, hg_cs)| {

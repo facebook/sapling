@@ -147,18 +147,7 @@ impl From<LoadableError> for ErrorKind {
 
 impl From<BlobRepoError> for ErrorKind {
     fn from(e: BlobRepoError) -> ErrorKind {
-        use self::BlobRepoError::*;
-
-        // TODO: changes this match to P59854201 when NLL is stabilized
-        match e {
-            ChangesetMissing(id) => {
-                ErrorKind::NotFound(id.to_string(), Some(ChangesetMissing(id).into()))
-            }
-            ManifestMissing(id) => {
-                ErrorKind::NotFound(id.to_string(), Some(ManifestMissing(id).into()))
-            }
-            _ => ErrorKind::InternalError(e.into()),
-        }
+        ErrorKind::InternalError(e.into())
     }
 }
 

@@ -12,6 +12,7 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use super::{CommitSyncOutcome, CommitSyncer};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
@@ -375,8 +376,8 @@ async fn fetch_root_mf_id(
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
         .await?;
-    let changeset = repo
-        .get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+    let changeset = hg_cs_id
+        .load(ctx.clone(), repo.blobstore())
         .compat()
         .await?;
     Ok(changeset.manifestid())

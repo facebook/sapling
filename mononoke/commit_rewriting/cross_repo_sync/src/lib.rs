@@ -13,6 +13,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use anyhow::{bail, format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobstore::Loadable;
 use blobsync::copy_content;
 use bookmark_renaming::{
     get_bookmark_renamers, get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer,
@@ -87,7 +88,7 @@ async fn get_manifest_ids<I: IntoIterator<Item = ChangesetId>>(
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                     .and_then({
                         cloned!(ctx, repo);
-                        move |hg_cs_id| repo.get_changeset_by_changesetid(ctx, hg_cs_id)
+                        move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
                     })
                     .map(|hg_blob_changeset| hg_blob_changeset.manifestid())
                     .compat()

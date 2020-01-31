@@ -50,6 +50,7 @@
 use anyhow::{Context, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
@@ -665,8 +666,8 @@ async fn id_to_manifestid(
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
         .compat()
         .await?;
-    let hg_cs = repo
-        .get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+    let hg_cs = hg_cs_id
+        .load(ctx.clone(), repo.blobstore())
         .compat()
         .await?;
     Ok(hg_cs.manifestid())
@@ -2354,10 +2355,7 @@ mod tests {
                 let path_1 = MPath::new("1")?;
 
                 let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let root_cs = repo
-                    .get_changeset_by_changesetid(ctx.clone(), root_hg)
-                    .compat()
-                    .await?;
+                let root_cs = root_hg.load(ctx.clone(), repo.blobstore()).compat().await?;
 
                 let root_1_id = root_cs
                     .manifestid()
@@ -2430,8 +2428,8 @@ mod tests {
                     .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
                     .compat()
                     .await?;
-                let result_cs = repo
-                    .get_changeset_by_changesetid(ctx.clone(), result_hg)
+                let result_cs = result_hg
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await?;
                 let result_1_id = result_cs
@@ -3360,8 +3358,8 @@ mod tests {
         repo: &BlobRepo,
         expected: BTreeMap<String, String>,
     ) -> Result<(), Error> {
-        let cs = repo
-            .get_changeset_by_changesetid(ctx.clone(), hg_cs_id)
+        let cs = hg_cs_id
+            .load(ctx.clone(), repo.blobstore())
             .compat()
             .await?;
 

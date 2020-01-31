@@ -342,10 +342,7 @@ impl MononokeRepo {
                         .from_err()
                 }
             })
-            .and_then(move |hg_changeset_id| {
-                repo.get_changeset_by_changesetid(ctx, hg_changeset_id)
-                    .from_err()
-            })
+            .and_then(move |hg_changeset_id| hg_changeset_id.load(ctx, repo.blobstore()).from_err())
             .boxify()
     }
 
@@ -455,10 +452,7 @@ impl MononokeRepo {
         let mut cs_futs = vec![];
         for cs_id in changeset_ids.into_iter() {
             cloned!(ctx, self.repo);
-            cs_futs.push(
-                repo.get_changeset_by_changesetid(ctx.clone(), cs_id)
-                    .from_err(),
-            );
+            cs_futs.push(cs_id.load(ctx, repo.blobstore()).from_err());
         }
         futures_ordered(cs_futs).collect().boxify()
     }
@@ -901,7 +895,7 @@ impl MononokeRepo {
         STATS::get_changeset.add_value(1);
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
-            .and_then(move |changesetid| repo.get_changeset_by_changesetid(ctx, changesetid))
+            .and_then(move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err())
             .and_then(|changeset| changeset.try_into().map_err(From::from))
             .map(|changeset| MononokeRepoResponse::GetChangeset { changeset })
             .from_err()

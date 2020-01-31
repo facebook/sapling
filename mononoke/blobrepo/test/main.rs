@@ -694,10 +694,8 @@ fn test_compute_changed_files_no_parents(fb: FacebookInit) {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs = run_future(
-            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
-        )
-        .unwrap();
+        let cs =
+            run_future(HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore())).unwrap();
 
         let diff = run_future(compute_changed_files(
             ctx.clone(),
@@ -736,15 +734,11 @@ fn test_compute_changed_files_one_parent(fb: FacebookInit) {
             MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
         ];
 
-        let cs = run_future(
-            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
-        )
-        .unwrap();
+        let cs =
+            run_future(HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore())).unwrap();
 
-        let parent_cs = run_future(
-            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(parenthash)),
-        )
-        .unwrap();
+        let parent_cs =
+            run_future(HgChangesetId::new(parenthash).load(ctx.clone(), repo.blobstore())).unwrap();
 
         let diff = run_future(compute_changed_files(
             ctx.clone(),
@@ -806,10 +800,10 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let get_manifest_for_changeset = {
             cloned!(ctx, repo);
             move |cs_nodehash: &str| -> HgManifestId {
-                run_future(repo.get_changeset_by_changesetid(
-                    ctx.clone(),
-                    HgChangesetId::new(string_to_nodehash(cs_nodehash)),
-                ))
+                run_future(
+                    HgChangesetId::new(string_to_nodehash(cs_nodehash))
+                        .load(ctx.clone(), repo.blobstore()),
+                )
                 .unwrap()
                 .manifestid()
             }
@@ -932,7 +926,7 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = many_files_dirs::getrepo(fb);
         let get_manifest_for_changeset = |cs_id: HgChangesetId| -> HgManifestId {
-            run_future(repo.get_changeset_by_changesetid(ctx.clone(), cs_id))
+            run_future(cs_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap()
                 .manifestid()
         };

@@ -875,7 +875,7 @@ mod tests {
             .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
             .unwrap();
         let hg_cs = runtime
-            .block_on(repo.get_changeset_by_changesetid(ctx.clone(), hg_cs_id))
+            .block_on(hg_cs_id.load(ctx.clone(), repo.blobstore()))
             .unwrap();
 
         HgFileNodeId::new(hg_cs.manifestid().into_nodehash())

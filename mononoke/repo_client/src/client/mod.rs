@@ -12,6 +12,7 @@ use unbundle::{run_hooks, run_post_resolve_action, PushRedirector};
 
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
@@ -786,9 +787,10 @@ impl HgCommands for RepoClient {
 
                 self.wait_cs = self.wait_cs.take().or_else(|| {
                     Some(
-                        self.repo
-                            .blobrepo()
-                            .get_changeset_by_changesetid(self.ctx.clone(), self.n),
+                        self.n
+                            .load(self.ctx.clone(), self.repo.blobrepo().blobstore())
+                            .from_err()
+                            .boxify(),
                     )
                 });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());

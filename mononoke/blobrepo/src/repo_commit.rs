@@ -24,7 +24,7 @@ use stats::prelude::*;
 use tracing::{trace_args, Traced};
 
 use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{
@@ -89,8 +89,6 @@ impl ChangesetHandle {
                 move |bonsai_id| repo.get_bonsai_changeset(ctx, bonsai_id)
             });
 
-        let cs = repo.get_changeset_by_changesetid(ctx, hg_cs);
-
         let (trigger, can_be_parent) = oneshot::channel();
 
         let can_be_parent = can_be_parent
@@ -101,7 +99,7 @@ impl ChangesetHandle {
             .shared();
 
         let completion_future = bonsai_cs
-            .join(cs)
+            .join(hg_cs.load(ctx, repo.blobstore()).from_err())
             .map_err(Compat)
             .inspect(move |(bonsai_cs, hg_cs)| {
                 let _ = trigger.send((

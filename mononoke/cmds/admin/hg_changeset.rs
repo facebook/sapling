@@ -8,6 +8,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
@@ -129,10 +130,11 @@ fn hg_changeset_diff(
     right_id: HgChangesetId,
 ) -> impl Future<Item = ChangesetDiff, Error = Error> {
     (
-        repo.get_changeset_by_changesetid(ctx.clone(), left_id),
-        repo.get_changeset_by_changesetid(ctx.clone(), right_id),
+        left_id.load(ctx.clone(), repo.blobstore()),
+        right_id.load(ctx.clone(), repo.blobstore()),
     )
         .into_future()
+        .from_err()
         .and_then({
             cloned!(repo, left_id, right_id);
             move |(left, right)| {

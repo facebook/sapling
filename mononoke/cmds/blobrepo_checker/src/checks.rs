@@ -9,6 +9,7 @@
 use crate::errors::ErrorKind;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
@@ -206,8 +207,9 @@ fn check_hg_cs(
     cs_queue: mpsc::Sender<ChangesetId>,
 ) -> impl Future<Item = (), Error = Error> {
     // Fetch the changeset and check its hash
-    let changeset = repo
-        .get_changeset_by_changesetid(ctx.clone(), cs)
+    let changeset = cs
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
         .and_then(move |changeset| {
             if changeset.get_changeset_id() == cs {
                 future::ok(changeset)

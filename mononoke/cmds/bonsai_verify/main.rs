@@ -12,6 +12,7 @@ mod config;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
+use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
@@ -346,7 +347,7 @@ fn subcommmand_hg_manifest_verify(
                             repo.get_hg_from_bonsai_changeset(ctx.clone(), csid)
                                 .and_then({
                                     cloned!(ctx, repo);
-                                    move |hg_csid| repo.get_changeset_by_changesetid(ctx, hg_csid)
+                                    move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
                                 })
                                 .and_then({
                                     cloned!(ctx, repo);
@@ -361,11 +362,10 @@ fn subcommmand_hg_manifest_verify(
                                         let parents = parents
                                             .into_iter()
                                             .map(|p| {
-                                                repo.get_changeset_by_changesetid(
-                                                    ctx.clone(),
-                                                    HgChangesetId::new(p),
-                                                )
-                                                .map(|cs| cs.manifestid())
+                                                HgChangesetId::new(p)
+                                                    .load(ctx.clone(), repo.blobstore())
+                                                    .from_err()
+                                                    .map(|cs| cs.manifestid())
                                             })
                                             .collect::<Vec<_>>();
 

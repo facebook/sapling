@@ -103,7 +103,7 @@ test cat renamed file
   I_AM_ALIVE (no-eol)
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000000000000000000000000000000000000001/test | extract_json_error
-  0000000000000000000000000000000000000001 is not found
+  hgchangeset.sha1.0000000000000000000000000000000000000001 is not found
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/other/raw/0000000000000000000000000000000000000001/test | extract_json_error
@@ -270,7 +270,7 @@ test get changeset
   }
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000000000000000000000000000000000000001 | extract_json_error
-  0000000000000000000000000000000000000001 is not found
+  hgchangeset.sha1.0000000000000000000000000000000000000001 is not found
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000 | extract_json_error

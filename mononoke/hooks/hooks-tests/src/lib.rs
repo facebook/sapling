@@ -10,6 +10,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -1228,10 +1229,7 @@ fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     let repo = many_files_dirs::getrepo(fb);
     // Load up an in memory store with a single commit from the many_files_dirs store
     let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
-    let cs = repo
-        .get_changeset_by_changesetid(ctx.clone(), cs_id)
-        .wait()
-        .unwrap();
+    let cs = cs_id.load(ctx.clone(), repo.blobstore()).wait().unwrap();
     let mut changeset_store = InMemoryChangesetStore::new();
     changeset_store.insert_changeset(cs_id, cs);
     let files = vec![
