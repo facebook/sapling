@@ -131,6 +131,8 @@ void Overlay::initOverlay() {
     checker.repairErrors();
 
     optNextInodeNumber = checker.getNextInodeNumber();
+  } else {
+    hadCleanStartup_ = true;
   }
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);
 

@@ -254,6 +254,43 @@ TEST_F(OverlayTest, getFilePath) {
   EXPECT_EQ("10/16"_relpath, path);
 }
 
+TEST(PlainOverlayTest, new_overlay_is_clean) {
+  folly::test::TemporaryDirectory testDir;
+  auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+  overlay->initialize().get();
+  EXPECT_TRUE(overlay->hadCleanStartup());
+}
+
+TEST(PlainOverlayTest, reopened_overlay_is_clean) {
+  folly::test::TemporaryDirectory testDir;
+  {
+    auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+    overlay->initialize().get();
+  }
+
+  auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+  overlay->initialize().get();
+  EXPECT_TRUE(overlay->hadCleanStartup());
+}
+
+TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
+  folly::test::TemporaryDirectory testDir;
+  auto localDir = AbsolutePath{testDir.path().string()};
+
+  {
+    auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+    overlay->initialize().get();
+  }
+
+  if (unlink((localDir + "next-inode-number"_pc).c_str())) {
+    folly::throwSystemError("removing saved inode numebr");
+  }
+
+  auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+  overlay->initialize().get();
+  EXPECT_FALSE(overlay->hadCleanStartup());
+}
+
 enum class OverlayRestartMode {
   CLEAN,
   UNCLEAN,

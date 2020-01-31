@@ -90,7 +90,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * - Upgrading the on-disk data from older formats if the Overlay was created
    *   by an older version of the software.
    */
-  folly::SemiFuture<folly::Unit> initialize();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize();
 
   /**
    * Closes the overlay. It is undefined behavior to access the
@@ -108,6 +108,15 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * closing. This function is primarily for debugging.
    */
   bool isClosed();
+
+  /**
+   * True if either a new verlay was created on disk or initialize() returned
+   * after opening an overlay that had been cleanly shut down. False prior to
+   * initialize() being called or if a consistency check was required.
+   */
+  bool hadCleanStartup() const {
+    return hadCleanStartup_;
+  }
 
   /**
    * Get the maximum inode number that has ever been allocated to an inode.
@@ -228,6 +237,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool tryIncOutstandingIORequests();
   void decOutstandingIORequests();
   void closeAndWaitForOutstandingIO();
+
+  bool hadCleanStartup_{false};
 
   /**
    * The next inode number to allocate.  Zero indicates that neither

@@ -89,6 +89,26 @@ struct FinishedCheckout {
   }
 };
 
+struct FinishedMount {
+  static constexpr const char* type = "mount";
+
+  std::string repoType;
+  std::string repoSource;
+  bool isTakeover = false;
+  double duration = 0.0;
+  bool success = false;
+  bool clean = false;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("repo_type", repoType);
+    event.addString("repo_source", repoSource);
+    event.addBool("is_takeover", isTakeover);
+    event.addDouble("duration", duration);
+    event.addBool("success", success);
+    event.addBool("clean", clean);
+  }
+};
+
 struct FuseError {
   static constexpr const char* type = "fuse_error";
 

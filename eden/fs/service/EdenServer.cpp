@@ -59,6 +59,7 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
@@ -943,6 +944,8 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
+  folly::stop_watch<> mountStopWatch;
+
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
   auto objectStore = ObjectStore::create(
@@ -963,6 +966,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   edenMount->initialize(std::make_unique<PrjfsChannel>(edenMount.get()));
   addToMountPoints(edenMount);
   edenMount->start();
+  (void)mountStopWatch;
   return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
 
 #else
@@ -985,6 +989,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       .thenTry([this,
                 doTakeover,
                 edenMount,
+                mountStopWatch,
                 optionalTakeover = std::move(optionalTakeover)](
                    folly::Try<Unit>&& result) mutable {
         if (result.hasException()) {
@@ -1037,6 +1042,20 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                     })
                     .via(getServerState()->getThreadPool().get());
               }
+            })
+            .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
+              FinishedMount event;
+              event.repoType = edenMount->getConfig()->getRepoType();
+              event.repoSource =
+                  basename(edenMount->getConfig()->getRepoSource()).str();
+              event.isTakeover = doTakeover;
+              event.duration =
+                  std::chrono::duration<double>{mountStopWatch.elapsed()}
+                      .count();
+              event.success = !t.hasException();
+              event.clean = edenMount->getOverlay()->hadCleanStartup();
+              serverState_->getStructuredLogger()->logEvent(event);
+              return makeFuture(std::move(t));
             });
       });
 #endif
