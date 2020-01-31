@@ -14,11 +14,16 @@ use anyhow::Error;
 use blame::{fetch_blame, BlameError};
 use bytes::Bytes;
 use cloned::cloned;
+use fastlog::list_file_history;
 use filestore::FetchKey;
-use futures::Future as FutureLegacy;
+use futures::{stream::Stream as StreamLegacy, Future as FutureLegacy};
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future::{FutureExt, Shared};
-use futures_util::{stream::TryStreamExt, try_join};
+use futures_preview::future::{ready, FutureExt, Shared};
+use futures_preview::stream::Stream;
+use futures_util::{
+    stream::{StreamExt, TryStreamExt},
+    try_join,
+};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,
@@ -263,6 +268,59 @@ impl ChangesetPathContext {
             })
             .compat()
             .await
+    }
+
+    /// Returns a list of `ChangesetContext` for the file at this path that represents
+    /// a history of the path.
+    pub async fn history<'a>(
+        &'a self,
+        skip: usize,
+        after_timestamp: Option<i64>,
+        before_timestamp: Option<i64>,
+    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
+    {
+        let ctx = self.changeset.ctx().clone();
+        let repo = self.repo().blob_repo().clone();
+        let unode_entry = (self.unode_id().await?).ok_or_else(|| {
+            MononokeError::InvalidRequest(format!(
+                "path '{}' does not exist in the given commit",
+                self.path(),
+            ))
+        })?;
+        let mpath = self.path.as_mpath();
+
+        if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
+            return Err(MononokeError::InvalidRequest(
+                "Time filters cannot be applied if skip is not 0".to_string(),
+            ));
+        }
+
+        Ok(list_file_history(ctx, repo, mpath.cloned(), unode_entry)
+            .map_err(|error| MononokeError::from(Error::from(error)))
+            .compat()
+            .skip(skip)
+            .map(move |changeset_id| {
+                async move {
+                    let changeset_id = changeset_id?;
+                    let changeset = ChangesetContext::new(self.repo().clone(), changeset_id);
+                    let date = changeset.author_date().await?;
+
+                    if let Some(after) = after_timestamp {
+                        if after > date.timestamp() {
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(before) = before_timestamp {
+                        if before < date.timestamp() {
+                            return Ok(None);
+                        }
+                    }
+
+                    Ok(Some(changeset))
+                }
+            })
+            .buffered(100)
+            .try_filter_map(|x| ready(Ok(x))))
     }
 }
 

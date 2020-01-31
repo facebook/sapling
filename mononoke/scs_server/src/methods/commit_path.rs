@@ -8,7 +8,10 @@
 
 use context::CoreContext;
 use dedupmap::DedupMap;
-use futures_util::future;
+use futures_util::{
+    future,
+    stream::{StreamExt, TryStreamExt},
+};
 use mononoke_api::{ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
@@ -16,7 +19,8 @@ use std::collections::{BTreeSet, HashMap};
 
 use crate::commit_id::map_commit_identities;
 use crate::errors;
-use crate::into_response::IntoResponse;
+use crate::from_request::check_range_and_convert;
+use crate::into_response::{AsyncIntoResponse, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -192,5 +196,48 @@ impl SourceControlServiceImpl {
         Ok(thrift::CommitPathBlameResponse {
             blame: thrift::Blame::blame_compact(blame),
         })
+    }
+
+    pub(crate) async fn commit_path_history(
+        &self,
+        ctx: CoreContext,
+        commit_path: thrift::CommitPathSpecifier,
+        params: thrift::CommitPathHistoryParams,
+    ) -> Result<thrift::CommitPathHistoryResponse, errors::ServiceError> {
+        let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let path = changeset.path(&commit_path.path)?;
+
+        let number: usize = check_range_and_convert("limit", params.limit, 0..)?;
+        let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
+
+        let history = path
+            .history(skip, params.after_timestamp, params.before_timestamp)
+            .await?;
+
+        if params.format == thrift::HistoryFormat::COMMIT_INFO {
+            let history_resp = history
+                .map_err(errors::ServiceError::from)
+                .map(|cs_ctx| {
+                    async {
+                        match cs_ctx {
+                            Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
+                            Err(er) => Err(er),
+                        }
+                    }
+                })
+                .buffered(100)
+                .take(number)
+                .try_collect::<Vec<_>>()
+                .await?;
+            Ok(thrift::CommitPathHistoryResponse {
+                history: thrift::History::commit_infos(history_resp),
+            })
+        } else {
+            Err(errors::invalid_request(format!(
+                "unsupported file history format {}",
+                params.format
+            ))
+            .into())
+        }
     }
 }

@@ -357,6 +357,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitPathBlameParams,
         ) -> Result<thrift::CommitPathBlameResponse, service::CommitPathBlameExn>;
 
+        async fn commit_path_history(
+            commit_path: thrift::CommitPathSpecifier,
+            params: thrift::CommitPathHistoryParams,
+        ) -> Result<thrift::CommitPathHistoryResponse, service::CommitPathHistoryExn>;
+
         async fn tree_list(
             tree: thrift::TreeSpecifier,
             params: thrift::TreeListParams,

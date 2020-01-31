@@ -53,13 +53,26 @@ A commit with file move and copy
   $ hg cp b copied_b
   $ commit D
 
-A commit that adds thigs in two different subdirectories
+A commit that adds things in two different subdirectories
   $ mkdir dir_a dir_b
   $ hg move moved_a dir_a/a
   $ echo x >> dir_a/a
   $ echo y > dir_b/y
   $ hg add dir_b/y
   $ commit E
+
+Commits with dates to test log
+
+  $ hg update -q $COMMIT_C
+  $ echo "log-check-1" >> b
+  $ hg commit -qm "log-check-1" -d "2015-01-01"
+  $ echo "log-check-2" >> b
+  $ hg commit -qm "log-check-2" -d "2017-01-01"
+  $ echo "log-check-1" >> b
+  $ hg commit -qm "log-check-3" -d "2019-01-01"
+  $ echo "log-check-1" >> b
+  $ hg commit -qm "log-check-4" -d "2020-01-01"
+  $ COMMIT_F="$(hg --debug id -i)"
 
 import testing repo to mononoke
   $ cd ..
@@ -359,6 +372,150 @@ blame
       "path": "b"
     }
   ]
+
+log
+  $ scsc log --repo repo -i "$COMMIT_C" --path b 
+  Commit: c29e0e474e30ae40ed639fa6292797a7502bc590
+  Parent: 323afe77a1b1e632e54e8d5a683ba2cc8511f299
+  Date: 1970-01-01 00:00:00 +00:00
+  Author: test
+  
+  C
+  
+  Commit: 323afe77a1b1e632e54e8d5a683ba2cc8511f299
+  Parent: 0ff73aedebab61e96d59d9fbe12b543b8f05b7af
+  Date: 1970-01-01 00:00:00 +00:00
+  Author: test
+  
+  B
+  
+
+  $ scsc --json log --repo repo -i "$COMMIT_C" --path b | jq -S .
+  [
+    {
+      "author": "test",
+      "date": "1970-01-01T00:00:00+00:00",
+      "extra": {},
+      "extra_hex": {},
+      "ids": {
+        "bonsai": "d5ded5e738f4fc36b03c3e09db9cdd9259d167352a03fb6130f5ee138b52972f",
+        "hg": "c29e0e474e30ae40ed639fa6292797a7502bc590"
+      },
+      "message": "C",
+      "parents": [
+        {
+          "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+          "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
+        }
+      ],
+      "timestamp": 0,
+      "timezone": 0,
+      "type": "commit"
+    },
+    {
+      "author": "test",
+      "date": "1970-01-01T00:00:00+00:00",
+      "extra": {},
+      "extra_hex": {},
+      "ids": {
+        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
+        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
+      },
+      "message": "B",
+      "parents": [
+        {
+          "bonsai": "a909d8eb147b48c25cd0e15c9c3098ad95c970a8cf209b21ea7b523c7fa9985b",
+          "hg": "0ff73aedebab61e96d59d9fbe12b543b8f05b7af"
+        }
+      ],
+      "timestamp": 0,
+      "timezone": 0,
+      "type": "commit"
+    }
+  ]
+
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --limit 2 --skip 1
+  Commit: 29012511b62d6aab72218098bc5a9e1de1ad308f
+  Parent: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
+  Date: 2019-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-3
+  
+  Commit: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
+  Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-2
+  
+
+log between 2000/01/01 and 2018/01/01
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --after 946684800 --before 1514764800
+  Commit: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
+  Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-2
+  
+  Commit: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
+  Parent: c29e0e474e30ae40ed639fa6292797a7502bc590
+  Date: 2015-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-1
+  
+
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --after "2000-01-01 00:00:00" --before "2018-05-05 13:00:00"
+  Commit: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
+  Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-2
+  
+  Commit: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
+  Parent: c29e0e474e30ae40ed639fa6292797a7502bc590
+  Date: 2015-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-1
+  
+
+log check the timezone parsing
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --after "2017-01-01 05:00:00 +08:00"
+  Commit: 96b51bc6787d9cb7ba1336d22674536bea2ef54e
+  Parent: 29012511b62d6aab72218098bc5a9e1de1ad308f
+  Date: 2020-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-4
+  
+  Commit: 29012511b62d6aab72218098bc5a9e1de1ad308f
+  Parent: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
+  Date: 2019-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-3
+  
+  Commit: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
+  Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-2
+  
+
+log skip and time filters conflict
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --after "2017-01-01 05:00:00 +08:00" --skip 5
+  error: The argument '--skip <SKIP>' cannot be used with '--after <AFTER>'
+  
+  USAGE:
+      scsc <--tier <TIER>|--host <HOST:PORT>> log --after <AFTER> --limit <LIMIT> --path <PATH> --repo <REPO> --schemes <SCHEMES>... --skip <SKIP> <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--hg-commit-id <HG_COMMIT_ID>|--bonsai-id <BONSAI_ID>|--globalrev <GLOBALREV>>
+  
+  For more information try --help
+  [1]
 
 lookup, commit without globalrev
   $ scsc lookup --repo repo  -B BOOKMARK_B -S bonsai,hg,globalrev
