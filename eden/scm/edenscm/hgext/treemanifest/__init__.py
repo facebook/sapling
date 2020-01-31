@@ -2772,7 +2772,7 @@ class cachestoreserializer(object):
     """Simple serializer that attaches key and sha1 to the content"""
 
     def __init__(self, key):
-        self.key = key
+        self.key = pycompat.encodeutf8(key)
 
     def serialize(self, value):
         sha = hashlib.sha1(value).digest()
@@ -2806,7 +2806,7 @@ class cachestorecommon(object):
     ########### HELPERS ########################################
 
     def _key(self, name, node, category):
-        shakey = hex(hashlib.sha1(name + node).digest())
+        shakey = hex(hashlib.sha1(pycompat.encodeutf8(name) + node).digest())
         return os.path.join(
             "trees", "v" + str(self.version), category, shakey[:2], shakey[2:]
         )
