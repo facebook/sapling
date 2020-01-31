@@ -76,7 +76,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   >>> commands = []
   >>> with open('edenscm/mercurial/commands/debug.py', 'rb') as fh:
   ...     for line in fh:
-  ...         m = re.match("^@command\('([a-z]+)", line)
+  ...         m = re.match(b"^@command\('([a-z]+)", line)
   ...         if m:
   ...             commands.append(m.group(1))
   >>> scommands = list(sorted(commands))
