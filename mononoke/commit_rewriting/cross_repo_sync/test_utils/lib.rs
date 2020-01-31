@@ -13,11 +13,22 @@ use futures::Future;
 use anyhow::{format_err, Error};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use mononoke_types::ChangesetId;
-use std::collections::HashMap;
-use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
+use futures_preview::compat::Future01CompatExt;
+use mononoke_types::{ChangesetId, DateTime, MPath};
+use std::{collections::HashMap, sync::Arc};
+use synced_commit_mapping::{
+    SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
+};
 
-use cross_repo_sync::{rewrite_commit_compat, upload_commits_compat, CommitSyncer};
+use cross_repo_sync::{
+    rewrite_commit_compat, update_mapping, upload_commits_compat, CommitSyncRepos, CommitSyncer,
+};
+use maplit::hashmap;
+use megarepolib::{common::ChangesetArgs, perform_move};
+use mononoke_types::RepositoryId;
+use sql::rusqlite::Connection as SqliteConnection;
+use sql_ext::SqlConstructors;
+use tests_utils::{bookmark, CreateCommitContext};
 
 // Helper function that takes a root commit from source repo and rebases it on master bookmark
 // in target repo
@@ -89,4 +100,130 @@ where
     commit_syncer.get_mapping().add(ctx.clone(), entry).wait()?;
 
     Ok(target_bcs.get_changeset_id())
+}
+
+pub async fn init_small_large_repo(
+    ctx: &CoreContext,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    let sqlite_con = SqliteConnection::open_in_memory()?;
+    sqlite_con.execute_batch(SqlSyncedCommitMapping::get_up_query())?;
+    let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+        sqlite_con,
+        RepositoryId::new(1),
+    )?;
+
+    let mapping = SqlSyncedCommitMapping::from_connections(con.clone(), con.clone(), con.clone());
+    let (smallrepo, _) =
+        blobrepo_factory::new_memblob_with_connection_with_id(con.clone(), RepositoryId::new(0))?;
+
+    let repos = CommitSyncRepos::SmallToLarge {
+        small_repo: smallrepo.clone(),
+        large_repo: megarepo.clone(),
+        mover: Arc::new(prefix_mover),
+        reverse_mover: Arc::new(reverse_prefix_mover),
+        bookmark_renamer: Arc::new(identity_renamer),
+        reverse_bookmark_renamer: Arc::new(identity_renamer),
+    };
+    let commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
+
+    let first_bcs_id = CreateCommitContext::new_root(&ctx, &smallrepo)
+        .add_file("file", "content")
+        .commit()
+        .await?;
+    let second_bcs_id = CreateCommitContext::new(&ctx, &smallrepo, vec![first_bcs_id])
+        .add_file("file2", "content")
+        .commit()
+        .await?;
+
+    commit_syncer
+        .preserve_commit(ctx.clone(), first_bcs_id)
+        .await?;
+    commit_syncer
+        .preserve_commit(ctx.clone(), second_bcs_id)
+        .await?;
+    bookmark(&ctx, &smallrepo, "premove")
+        .set_to(second_bcs_id)
+        .await?;
+    bookmark(&ctx, &megarepo, "premove")
+        .set_to(second_bcs_id)
+        .await?;
+
+    let move_cs_args = ChangesetArgs {
+        author: "Author Authorov".to_string(),
+        message: "move commit".to_string(),
+        datetime: DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap(),
+        bookmark: None,
+        mark_public: false,
+    };
+    let move_hg_cs = perform_move(
+        ctx.clone(),
+        megarepo.clone(),
+        second_bcs_id,
+        Arc::new(prefix_mover),
+        move_cs_args,
+    )
+    .compat()
+    .await?;
+
+    let maybe_move_bcs_id = megarepo
+        .get_bonsai_from_hg(ctx.clone(), move_hg_cs)
+        .compat()
+        .await?;
+    let move_bcs_id = maybe_move_bcs_id.unwrap();
+
+    // Master commit in the small repo after "big move"
+    let small_master_bcs_id = CreateCommitContext::new(&ctx, &smallrepo, vec![second_bcs_id])
+        .add_file("file3", "content3")
+        .commit()
+        .await?;
+
+    // Master commit in large repo after "big move"
+    let large_master_bcs_id = CreateCommitContext::new(&ctx, &megarepo, vec![move_bcs_id])
+        .add_file("prefix/file3", "content3")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &smallrepo, "master")
+        .set_to(small_master_bcs_id)
+        .await?;
+    bookmark(&ctx, &megarepo, "master")
+        .set_to(large_master_bcs_id)
+        .await?;
+
+    update_mapping(
+        ctx.clone(),
+        hashmap! { small_master_bcs_id => large_master_bcs_id},
+        &commit_syncer,
+    )
+    .await?;
+
+    println!(
+        "small master: {}, large master: {}",
+        small_master_bcs_id, large_master_bcs_id
+    );
+    println!(
+        "{:?}",
+        commit_syncer
+            .get_commit_sync_outcome(ctx.clone(), small_master_bcs_id)
+            .await?
+    );
+    Ok(commit_syncer)
+}
+
+fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
+    Some(b.clone())
+}
+
+fn prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
+    let prefix = MPath::new("prefix").unwrap();
+    Ok(Some(MPath::join(&prefix, v)))
+}
+
+fn reverse_prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
+    let prefix = MPath::new("prefix").unwrap();
+    if prefix.is_prefix_of(v) {
+        Ok(v.remove_prefix_component(&prefix))
+    } else {
+        Ok(None)
+    }
 }
