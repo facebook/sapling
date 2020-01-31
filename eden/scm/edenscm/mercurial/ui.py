@@ -54,7 +54,7 @@ from .pycompat import decodeutf8, encodeutf8
 urlreq = util.urlreq
 
 samplehgrcs = {
-    "user": b"""# example user config (see 'hg help config' for more info)
+    "user": """# example user config (see 'hg help config' for more info)
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
@@ -74,7 +74,7 @@ username =
 #
 # churn =
 """,
-    "cloned": b"""# example repository config (see 'hg help config' for more info)
+    "cloned": """# example repository config (see 'hg help config' for more info)
 [paths]
 default = %s
 
@@ -89,7 +89,7 @@ default = %s
 # name and email (local to this repository, optional), e.g.
 # username = Jane Doe <jdoe@example.com>
 """,
-    "local": b"""# example repository config (see 'hg help config' for more info)
+    "local": """# example repository config (see 'hg help config' for more info)
 [paths]
 # path aliases to other clones of this repo in URLs or filesystem paths
 # (see 'hg help config.paths' for more info)
@@ -103,7 +103,7 @@ default = %s
 # name and email (local to this repository, optional), e.g.
 # username = Jane Doe <jdoe@example.com>
 """,
-    "global": b"""# example system-wide hg config (see 'hg help config' for more info)
+    "global": """# example system-wide hg config (see 'hg help config' for more info)
 
 [ui]
 # uncomment to disable color in command output

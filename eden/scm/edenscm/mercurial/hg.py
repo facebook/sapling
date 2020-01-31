@@ -37,6 +37,7 @@ from . import (
     perftrace,
     phases,
     progress,
+    pycompat,
     repoview,
     scmutil,
     sshpeer,
@@ -760,7 +761,7 @@ def clone(
                 u = util.url(abspath)
                 u.passwd = None
                 defaulturl = str(u)
-                fp.write(util.tonativeeol(template % defaulturl))
+                fp.write(pycompat.encodeutf8(util.tonativeeol(template % defaulturl)))
                 fp.close()
 
                 destrepo.ui.setconfig("paths", "default", defaulturl, "clone")

@@ -2400,7 +2400,7 @@ bytecount = unitcountfn(
 # Matches a single EOL which can either be a CRLF where repeated CR
 # are removed or a LF. We do not care about old Macintosh files, so a
 # stray CR is an error.
-_eolre = remod.compile(br"\r*\n")
+_eolre = remod.compile(r"\r*\n")
 
 
 def tolf(s):

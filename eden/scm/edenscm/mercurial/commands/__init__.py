@@ -1843,7 +1843,7 @@ def config(ui, repo, *values, **opts):
 
             f = paths[0]
             fp = open(f, "wb")
-            fp.write(util.tonativeeol(samplehgrc))
+            fp.write(pycompat.encodeutf8(util.tonativeeol(samplehgrc)))
             fp.close()
 
         editor = ui.geteditor()
