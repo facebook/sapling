@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Initialize scm prompt compatibility layer

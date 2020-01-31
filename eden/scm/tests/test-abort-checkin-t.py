@@ -9,9 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "cat" << r"""
 from edenscm.mercurial import error
 def hook(**args):

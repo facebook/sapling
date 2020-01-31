@@ -1,4 +1,3 @@
-#require py2
 #require no-windows
 
 Explore the semi-mysterious matchmod.match API

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Quote from test-revert.t but this version is stronger - mtime was changed

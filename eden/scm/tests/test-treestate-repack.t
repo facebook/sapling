@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Fsmonitor makes the size numbers less predicatable.

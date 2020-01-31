@@ -13,9 +13,6 @@ from edenscm.mercurial import hg, localrepo, ui as uimod, util
 from hghave import require
 
 
-require(["py2"])
-
-
 # create some special property cache that trace they call
 
 calllog = []

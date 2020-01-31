@@ -624,7 +624,7 @@ def encodecaps(caps):
         ca = urllibcompat.quote(ca)
         vals = [urllibcompat.quote(v) for v in vals]
         if vals:
-            ca = b"%s=%s" % (ca, b",".join(vals))
+            ca = "%s=%s" % (ca, ",".join(vals))
         chunks.append(ca)
     return pycompat.encodeutf8("\n".join(chunks))
 

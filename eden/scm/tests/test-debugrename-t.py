@@ -9,9 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "hg init"
 sh % "echo a" > "a"
 sh % "hg ci -Am t" == "adding a"

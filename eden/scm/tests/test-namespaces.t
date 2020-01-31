@@ -1,4 +1,3 @@
-#require py2
 Test namespace registration using registrar
 
   $ shorttraceback

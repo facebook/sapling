@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Create a repo, set the username to something more than 255 bytes, then run hg amend on it.

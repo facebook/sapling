@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 https://bz.mercurial-scm.org/1877
