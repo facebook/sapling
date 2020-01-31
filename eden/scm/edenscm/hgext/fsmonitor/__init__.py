@@ -596,7 +596,7 @@ def _walk(self, match, event):
     for f in auditfail:
         # For auditfail paths, they should be treated as not existed in working
         # copy.
-        filestate = dmap.get(f, ("?",))[0]
+        filestate = dmap.get(f, ("?", 0, 0, 0))[0]
         if filestate in ("?",):
             # do not exist in working parents, remove them from treestate and
             # avoid walking through them.
