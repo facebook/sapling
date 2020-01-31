@@ -2115,7 +2115,7 @@ def precachedistance(repo):
                 bmark = repo[revs[0]].bookmarks()[0]
                 distance = len(repo.revs("only(%d, .)" % revs[0]))
                 cachevfs = shareawarecachevfs(repo)
-                cachevfs.write("distance.current", "%s %d" % (bmark, distance))
+                cachevfs.writeutf8("distance.current", "%s %d" % (bmark, distance))
 
     finally:
         wlock.release()
