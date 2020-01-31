@@ -13,9 +13,11 @@
 from __future__ import absolute_import
 
 import re
+from typing import Union
 
 from . import encoding, pycompat, util
 from .i18n import _
+from .pycompat import encodeutf8
 
 
 try:
@@ -387,7 +389,8 @@ def _effect_str(ui, effect):
         return curses.tparm(curses.tigetstr("setaf"), val)
 
 
-def _mergeeffects(text, start, stop):
+def _mergeeffects(text, start, stop, usebytes=False):
+    # type: (Union[str, bytes], str, str, bool) -> Union[str, bytes]
     """Insert start sequence at every occurrence of stop sequence
 
     >>> s = _mergeeffects(b'cyan', b'[C]', b'|')
@@ -398,14 +401,23 @@ def _mergeeffects(text, start, stop):
     '[R]red[M]ma[Y][C]cyan|[R][M][Y]yellow|[R][M]genta|'
     """
     parts = []
-    for t in text.split(stop):
-        if not t:
-            continue
-        parts.extend([start, t, stop])
-    return "".join(parts)
+    if usebytes:
+        assert isinstance(text, bytes)
+        for t in text.split(encodeutf8(stop)):
+            if not t:
+                continue
+            parts.extend([encodeutf8(start), t, encodeutf8(stop)])
+        return b"".join(parts)
+    else:
+        assert isinstance(text, str)
+        for t in text.split(stop):
+            if not t:
+                continue
+            parts.extend([start, t, stop])
+        return "".join(parts)
 
 
-def _render_effects(ui, text, effects):
+def _render_effects(ui, text, effects, usebytes=False):
     "Wrap text in commands to turn on each effect."
     if not text:
         return text
@@ -419,7 +431,7 @@ def _render_effects(ui, text, effects):
         start = [pycompat.bytestr(activeeffects[e]) for e in ["none"] + effects.split()]
         start = "\033[" + ";".join(start) + "m"
         stop = "\033[" + pycompat.bytestr(activeeffects["none"]) + "m"
-    return _mergeeffects(text, start, stop)
+    return _mergeeffects(text, start, stop, usebytes=usebytes)
 
 
 _ansieffectre = re.compile(r"\x1b\[[0-9;]*m")
@@ -431,14 +443,20 @@ def stripeffects(text):
     return _ansieffectre.sub("", text)
 
 
-def colorlabel(ui, msg, label):
+def colorlabel(ui, msg, label, usebytes=False):
     """add color control code according to the mode"""
     if ui._colormode == "debug":
         if label and msg:
             if msg[-1] == "\n":
-                msg = "[%s|%s]\n" % (label, msg[:-1])
+                if usebytes:
+                    msg = b"[%s|%s]\n" % (label, msg[:-1])
+                else:
+                    msg = "[%s|%s]\n" % (label, msg[:-1])
             else:
-                msg = "[%s|%s]" % (label, msg)
+                if usebytes:
+                    msg = b"[%s|%s]" % (label, msg)
+                else:
+                    msg = "[%s|%s]" % (label, msg)
     elif ui._colormode is not None:
         effects = []
         for l in label.split():
@@ -451,9 +469,17 @@ def colorlabel(ui, msg, label):
                 effects.append(l)
         effects = " ".join(effects)
         if effects:
-            msg = "\n".join(
-                [_render_effects(ui, line, effects) for line in msg.split("\n")]
-            )
+            if usebytes:
+                msg = b"\n".join(
+                    [
+                        _render_effects(ui, line, effects, usebytes=True)
+                        for line in msg.split(b"\n")
+                    ]
+                )
+            else:
+                msg = "\n".join(
+                    [_render_effects(ui, line, effects) for line in msg.split("\n")]
+                )
     return msg
 
 

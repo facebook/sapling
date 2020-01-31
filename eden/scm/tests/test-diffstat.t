@@ -38,7 +38,7 @@ Narrow diffstat:
 
   $ hg ci -m appenda
 
-  >>> open("c", "wb").write("\0")
+  >>> open("c", "wb").write(b"\0")
   $ touch d
   $ hg add c d
 

@@ -16,16 +16,21 @@ import re
 import struct
 import zlib
 from hashlib import sha1
+from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple
 
 # pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import xdiff
 
 from . import error, policy, pycompat, util
 from .i18n import _
-from .pycompat import range
+from .pycompat import encodeutf8, range
 
 
-_missing_newline_marker = "\\ No newline at end of file\n"
+if TYPE_CHECKING:
+    from .types import UI
+
+
+_missing_newline_marker = b"\\ No newline at end of file\n"
 
 bdiff = policy.importmod(r"bdiff")
 mpatch = policy.importmod(r"mpatch")
@@ -39,16 +44,18 @@ textdiff = bdiff.bdiff
 
 # called by dispatch.py
 def init(ui):
+    # type: (UI) -> None
     if ui.configbool("experimental", "xdiff"):
         global blocks
         blocks = xdiff.blocks
 
 
 def splitnewlines(text):
+    # type: (bytes) -> List[bytes]
     """like str.splitlines, but only split on newlines."""
-    lines = [l + "\n" for l in text.split("\n")]
+    lines = [l + b"\n" for l in text.split(b"\n")]
     if lines:
-        if lines[-1] == "\n":
+        if lines[-1] == b"\n":
             lines.pop()
         else:
             lines[-1] = lines[-1][:-1]
@@ -91,6 +98,7 @@ class diffopts(object):
     }
 
     def __init__(self, **opts):
+        # (...) -> None
         opts = pycompat.byteskwargs(opts)
         for k in self.defaults.keys():
             v = opts.get(k)
@@ -102,8 +110,7 @@ class diffopts(object):
             self.context = int(self.context)
         except ValueError:
             raise error.Abort(
-                _("diff context lines count must be " "an integer, not %r")
-                % self.context
+                _("diff context lines count must be an integer, not %r") % self.context
             )
 
     def copy(self, **kwargs):
@@ -122,9 +129,9 @@ def wsclean(opts, text, blank=True):
     elif opts.ignorewsamount:
         text = bdiff.fixws(text, 0)
     if blank and opts.ignoreblanklines:
-        text = re.sub("\n+", "\n", text).strip("\n")
+        text = re.sub(b"\n+", b"\n", text).strip(b"\n")
     if opts.ignorewseol:
-        text = re.sub(r"[ \t\r\f]+\n", r"\n", text)
+        text = re.sub(b"[ \t\r\f]+\n", b"\n", text)
     return text
 
 
@@ -155,6 +162,7 @@ def splitblock(base1, lines1, base2, lines2, opts):
 
 
 def hunkinrange(hunk, linerange):
+    # type: (Tuple[int, int], Tuple[int,int]) -> bool
     """Return True if `hunk` defined as (start, length) is in `linerange`
     defined as (lowerbound, upperbound).
 
@@ -254,8 +262,8 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
                     lines1 = splitnewlines(text1)
                 if lines2 is None:
                     lines2 = splitnewlines(text2)
-                old = wsclean(opts, "".join(lines1[s[0] : s[1]]))
-                new = wsclean(opts, "".join(lines2[s[2] : s[3]]))
+                old = wsclean(opts, b"".join(lines1[s[0] : s[1]]))
+                new = wsclean(opts, b"".join(lines2[s[2] : s[3]]))
                 if old == new:
                     type = "~"
             yield s, type
@@ -263,6 +271,9 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
 
 
 def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
+    # type: (bytes, str, bytes, str, str, str, diffopts, bool) ->
+    # type: Tuple[List[bytes],
+    #            Iterator[Tuple[Optional[Tuple[int,int,int,int], List[bytes]]]]]
     """Return a unified diff as a (headers, hunks) tuple.
 
     If the diff is not null, `headers` is a list with unified diff header
@@ -275,21 +286,22 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     """
 
     def datetag(date, fn=None):
+        # type: (str, Optional[str]) -> bytes
         if not opts.git and not opts.nodates:
-            return "\t%s" % date
+            return b"\t%s" % encodeutf8(date)
         if fn and " " in fn:
-            return "\t"
-        return ""
+            return b"\t"
+        return b""
 
-    sentinel = [], ()
+    sentinel = ([], iter([]))
     if not a and not b:
         return sentinel
 
     if opts.noprefix:
-        aprefix = bprefix = ""
+        aprefix = bprefix = b""
     else:
-        aprefix = "a/"
-        bprefix = "b/"
+        aprefix = b"a/"
+        bprefix = b"b/"
 
     epoch = util.datestr((0, 0))
 
@@ -301,56 +313,60 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
             return sentinel
         headerlines = []
         if opts.hashbinary:
-            message = "Binary file %s has changed to %s\n" % (fn1, sha1(b).hexdigest())
+            message = b"Binary file %s has changed to %s\n" % (
+                encodeutf8(fn1),
+                encodeutf8(sha1(b).hexdigest()),
+            )
         else:
-            message = "Binary file %s has changed\n" % fn1
-        hunks = ((None, [message]),)
+            message = b"Binary file %s has changed\n" % encodeutf8(fn1)
+        hunks = iter([(None, [message])])
     elif not a:
-        without_newline = b[-1] != "\n"
-        b = splitnewlines(b)
+        without_newline = b[-1:] != "\n"
+        bl = splitnewlines(b)
         if a is None:
-            l1 = "--- /dev/null%s" % datetag(epoch)
+            l1 = b"--- /dev/null%s" % datetag(epoch)
         else:
-            l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
-        l2 = "+++ %s%s" % (bprefix + fn2, datetag(bd, fn2))
+            l1 = b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1))
+        l2 = b"+++ %s%s" % (bprefix + encodeutf8(fn2), datetag(bd, fn2))
         headerlines = [l1, l2]
-        size = len(b)
+        size = len(bl)
         hunkrange = (0, 0, 1, size)
-        hunklines = ["@@ -0,0 +1,%d @@\n" % size] + ["+" + e for e in b]
+        hunklines = [b"@@ -0,0 +1,%d @@\n" % size] + [b"+" + e for e in bl]
         if without_newline:
-            hunklines[-1] += "\n"
+            hunklines[-1] += b"\n"
             hunklines.append(_missing_newline_marker)
-        hunks = ((hunkrange, hunklines),)
+        hunks = iter([(hunkrange, hunklines)])
     elif not b:
-        without_newline = a[-1] != "\n"
-        a = splitnewlines(a)
-        l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
+        without_newline = a[-1:] != b"\n"
+        al = splitnewlines(a)
+        l1 = b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1))
         if b is None:
-            l2 = "+++ /dev/null%s" % datetag(epoch)
+            l2 = b"+++ /dev/null%s" % datetag(epoch)
         else:
-            l2 = "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2))
+            l2 = b"+++ %s%s%s" % (bprefix, encodeutf8(fn2), datetag(bd, fn2))
         headerlines = [l1, l2]
-        size = len(a)
+        size = len(al)
         hunkrange = (1, size, 0, 0)
-        hunklines = ["@@ -1,%d +0,0 @@\n" % size] + ["-" + e for e in a]
+        hunklines = [b"@@ -1,%d +0,0 @@\n" % size] + [b"-" + e for e in al]
         if without_newline:
-            hunklines[-1] += "\n"
+            hunklines[-1] += b"\n"
             hunklines.append(_missing_newline_marker)
-        hunks = ((hunkrange, hunklines),)
+        hunks = iter([(hunkrange, hunklines)])
     else:
         hunks = _unidiff(a, b, opts=opts)
         if not next(hunks):
             return sentinel
 
         headerlines = [
-            "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1)),
-            "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)),
+            b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1)),
+            b"+++ %s%s%s" % (bprefix, encodeutf8(fn2), datetag(bd, fn2)),
         ]
 
     return headerlines, hunks
 
 
 def _unidiff(t1, t2, opts=defaultopts):
+    # type: (bytes, bytes, diffopts) -> Iterator[Tuple[Tuple[int,int,int,int], List[bytes]]]
     """Yield hunks of a headerless unified diff from t1 and t2 texts.
 
     Each hunk consists of a (hunkrange, hunklines) tuple where `hunkrange` is a
@@ -376,7 +392,7 @@ def _unidiff(t1, t2, opts=defaultopts):
             return 0
         return ret
 
-    lastfunc = [0, ""]
+    lastfunc = [0, b""]
 
     def yieldhunk(hunk):
         (astart, a2, bstart, b2, delta) = hunk
@@ -384,15 +400,15 @@ def _unidiff(t1, t2, opts=defaultopts):
         alen = aend - astart
         blen = b2 - bstart + aend - a2
 
-        func = ""
+        func = b""
         if opts.showfunc:
             lastpos, func = lastfunc
             # walk backwards from the start of the context up to the start of
             # the previous hunk context until we find a line starting with an
             # alphanumeric char.
             for i in range(astart - 1, lastpos - 1, -1):
-                if l1[i][0].isalnum():
-                    func = " " + l1[i].rstrip()[:40]
+                if l1[i][0:1].isalnum():
+                    func = b" " + l1[i].rstrip()[:40]
                     lastfunc[1] = func
                     break
             # by recording this hunk's starting point as the next place to
@@ -408,9 +424,9 @@ def _unidiff(t1, t2, opts=defaultopts):
 
         hunkrange = astart, alen, bstart, blen
         hunklines = (
-            ["@@ -%d,%d +%d,%d @@%s\n" % (hunkrange + (func,))]
+            [b"@@ -%d,%d +%d,%d @@%s\n" % (hunkrange + (func,))]
             + delta
-            + [" " + l1[x] for x in range(a2, aend)]
+            + [b" " + l1[x] for x in range(a2, aend)]
         )
         # If either file ends without a newline and the last line of
         # that file is part of a hunk, a marker is printed. If the
@@ -418,18 +434,18 @@ def _unidiff(t1, t2, opts=defaultopts):
         # a newline, print only one marker. That's the only case in
         # which the hunk can end in a shared line without a newline.
         skip = False
-        if t1[-1] != "\n" and astart + alen == len(l1) + 1:
+        if t1[-1:] != b"\n" and astart + alen == len(l1) + 1:
             for i in range(len(hunklines) - 1, -1, -1):
-                if hunklines[i][0] in ("-", " "):
-                    if hunklines[i][0] == " ":
+                if hunklines[i][0:1] in (b"-", b" "):
+                    if hunklines[i][0:1] == b" ":
                         skip = True
-                    hunklines[i] += "\n"
+                    hunklines[i] += b"\n"
                     hunklines.insert(i + 1, _missing_newline_marker)
                     break
-        if not skip and t2[-1] != "\n" and bstart + blen == len(l2) + 1:
+        if not skip and t2[-1:] != b"\n" and bstart + blen == len(l2) + 1:
             for i in range(len(hunklines) - 1, -1, -1):
-                if hunklines[i][0] == "+":
-                    hunklines[i] += "\n"
+                if hunklines[i][0:1] == b"+":
+                    hunklines[i] += b"\n"
                     hunklines.insert(i + 1, _missing_newline_marker)
                     break
         yield hunkrange, hunklines
@@ -481,9 +497,9 @@ def _unidiff(t1, t2, opts=defaultopts):
             # create a new hunk
             hunk = [astart, a2, bstart, b2, delta]
 
-        delta[len(delta) :] = [" " + x for x in l1[astart:a1]]
-        delta[len(delta) :] = ["-" + x for x in old]
-        delta[len(delta) :] = ["+" + x for x in new]
+        delta[len(delta) :] = [b" " + x for x in l1[astart:a1]]
+        delta[len(delta) :] = [b"-" + x for x in old]
+        delta[len(delta) :] = [b"+" + x for x in new]
 
     if hunk:
         if not has_hunks:
@@ -501,10 +517,10 @@ def b85diff(to, tn):
     def fmtline(line):
         l = len(line)
         if l <= 26:
-            l = chr(ord("A") + l - 1)
+            l = ord("A") + l - 1
         else:
-            l = chr(l - 26 + ord("a") - 1)
-        return "%c%s\n" % (l, util.b85encode(line, True))
+            l = l - 26 + ord("a") - 1
+        return b"%c%s\n" % (l, util.b85encode(line, True))
 
     def chunk(text, csize=52):
         l = len(text)
@@ -514,29 +530,30 @@ def b85diff(to, tn):
             i += csize
 
     if to is None:
-        to = ""
+        to = b""
     if tn is None:
-        tn = ""
+        tn = b""
 
     if to == tn:
-        return ""
+        return b""
 
     # TODO: deltas
     ret = []
-    ret.append("GIT binary patch\n")
-    ret.append("literal %d\n" % len(tn))
+    ret.append(b"GIT binary patch\n")
+    ret.append(b"literal %d\n" % len(tn))
     for l in chunk(zlib.compress(tn)):
         ret.append(fmtline(l))
-    ret.append("\n")
+    ret.append(b"\n")
 
-    return "".join(ret)
+    return b"".join(ret)
 
 
 def patchtext(bin):
+    # type: (bytes) -> bytes
     pos = 0
     t = []
     while pos < len(bin):
-        p1, p2, l = struct.unpack(">lll", bin[pos : pos + 12])
+        p1, p2, l = struct.unpack(b">lll", bin[pos : pos + 12])
         pos += 12
         t.append(bin[pos : pos + l])
         pos += l
@@ -556,8 +573,10 @@ def get_matching_blocks(a, b):
 
 
 def trivialdiffheader(length):
-    return struct.pack(">lll", 0, 0, length) if length else ""
+    # type: (int) -> bytes
+    return struct.pack(">lll", 0, 0, length) if length else b""
 
 
 def replacediffheader(oldlen, newlen):
+    # type: (int, int) -> bytes
     return struct.pack(">lll", 0, oldlen, newlen)

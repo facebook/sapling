@@ -15,13 +15,15 @@ from __future__ import absolute_import
 import difflib
 import re
 import struct
+from typing import List
 
 
 def splitnewlines(text):
+    # type: (bytes) -> List[bytes]
     """like str.splitlines, but only split on newlines."""
-    lines = [l + "\n" for l in text.split("\n")]
+    lines = [l + b"\n" for l in text.split(b"\n")]
     if lines:
-        if lines[-1] == "\n":
+        if lines[-1] == b"\n":
             lines.pop()
         else:
             lines[-1] = lines[-1][:-1]

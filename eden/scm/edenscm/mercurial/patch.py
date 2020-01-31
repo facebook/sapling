@@ -42,7 +42,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, short
-from .pycompat import range
+from .pycompat import decodeutf8, encodeutf8, range
 
 
 diffhelpers = policy.importmod(r"diffhelpers")
@@ -2502,9 +2502,9 @@ def diff(
             # cmdutil.getloglinerangerevs() for 'hg log -L'.
             assert fctx2 is not None, "fctx2 unexpectly None in diff hunks filtering"
             hunks = hunksfilterfn(fctx2, hunks)
-        text = "".join(sum((list(hlines) for hrange, hlines in hunks), []))
+        text = b"".join(sum((list(hlines) for hrange, hlines in hunks), []))
         if hdr and (text or len(hdr) > 1):
-            yield "\n".join(hdr) + "\n"
+            yield b"\n".join(hdr) + b"\n"
         if text:
             yield text
 
@@ -2667,12 +2667,12 @@ def diffsinglehunk(hunklines):
     """yield tokens for a list of lines in a single hunk"""
     for line in hunklines:
         # chomp
-        chompline = line.rstrip("\n")
+        chompline = line.rstrip(b"\n")
         # highlight tabs and trailing whitespace
         stripline = chompline.rstrip()
-        if line[0] == "-":
+        if line[0:1] == b"-":
             label = "diff.deleted"
-        elif line[0] == "+":
+        elif line[0:1] == b"+":
             label = "diff.inserted"
         else:
             raise error.ProgrammingError("unexpected hunk line: %s" % line)
@@ -2691,12 +2691,12 @@ def diffsinglehunk(hunklines):
 def diffsinglehunkinline(hunklines):
     """yield tokens for a list of lines in a single hunk, with inline colors"""
     # prepare deleted, and inserted content
-    a = ""
-    b = ""
+    a = b""
+    b = b""
     for line in hunklines:
-        if line[0] == "-":
+        if line[0:1] == b"-":
             a += line[1:]
-        elif line[0] == "+":
+        elif line[0:1] == b"+":
             b += line[1:]
         else:
             raise error.ProgrammingError("unexpected hunk line: %s" % line)
@@ -2709,25 +2709,25 @@ def diffsinglehunkinline(hunklines):
     al = wordsplitter.findall(a)
     bl = wordsplitter.findall(b)
     # re-arrange the words to lines since the diff algorithm is line-based
-    aln = [s if s == "\n" else s + "\n" for s in al]
-    bln = [s if s == "\n" else s + "\n" for s in bl]
-    an = "".join(aln)
-    bn = "".join(bln)
+    aln = [s if s == b"\n" else s + b"\n" for s in al]
+    bln = [s if s == b"\n" else s + b"\n" for s in bl]
+    an = b"".join(aln)
+    bn = b"".join(bln)
     # run the diff algorithm, prepare atokens and btokens
     atokens = []
     btokens = []
     blocks = mdiff.allblocks(an, bn, lines1=aln, lines2=bln)
     for (a1, a2, b1, b2), btype in blocks:
         changed = btype == "!"
-        for token in mdiff.splitnewlines("".join(al[a1:a2])):
+        for token in mdiff.splitnewlines(b"".join(al[a1:a2])):
             atokens.append((changed, token))
-        for token in mdiff.splitnewlines("".join(bl[b1:b2])):
+        for token in mdiff.splitnewlines(b"".join(bl[b1:b2])):
             btokens.append((changed, token))
 
     # yield deleted tokens, then inserted ones
     for prefix, label, tokens in [
-        ("-", "diff.deleted", atokens),
-        ("+", "diff.inserted", btokens),
+        (b"-", "diff.deleted", atokens),
+        (b"+", "diff.inserted", btokens),
     ]:
         nextisnewline = True
         for changed, token in tokens:
@@ -2735,14 +2735,14 @@ def diffsinglehunkinline(hunklines):
                 yield (prefix, label)
                 nextisnewline = False
             # special handling line end
-            isendofline = token.endswith("\n")
+            isendofline = token.endswith(b"\n")
             if isendofline:
                 chomp = token[:-1]  # chomp
                 token = chomp.rstrip()  # detect spaces at the end
                 endspaces = chomp[len(token) :]
             # scan tabs
             for maybetab in tabsplitter.findall(token):
-                if "\t" == maybetab[0]:
+                if b"\t" == maybetab[0]:
                     currentlabel = "diff.tab"
                 else:
                     if changed:
@@ -2753,7 +2753,7 @@ def diffsinglehunkinline(hunklines):
             if isendofline:
                 if endspaces:
                     yield (endspaces, "diff.trailingwhitespace")
-                yield ("\n", "")
+                yield (b"\n", "")
                 nextisnewline = True
 
 
@@ -2764,19 +2764,19 @@ def difflabel(func, *args, **kw):
     else:
         dodiffhunk = diffsinglehunk
     headprefixes = [
-        ("diff", "diff.diffline"),
-        ("copy", "diff.extended"),
-        ("rename", "diff.extended"),
-        ("old", "diff.extended"),
-        ("new", "diff.extended"),
-        ("deleted", "diff.extended"),
-        ("index", "diff.extended"),
-        ("similarity", "diff.extended"),
-        ("---", "diff.file_a"),
-        ("+++", "diff.file_b"),
+        (b"diff", "diff.diffline"),
+        (b"copy", "diff.extended"),
+        (b"rename", "diff.extended"),
+        (b"old", "diff.extended"),
+        (b"new", "diff.extended"),
+        (b"deleted", "diff.extended"),
+        (b"index", "diff.extended"),
+        (b"similarity", "diff.extended"),
+        (b"---", "diff.file_a"),
+        (b"+++", "diff.file_b"),
     ]
     textprefixes = [
-        ("@", "diff.hunk"),
+        (b"@", "diff.hunk"),
         # - and + are handled by diffsinglehunk
     ]
     head = False
@@ -2791,17 +2791,17 @@ def difflabel(func, *args, **kw):
             hunkbuffer[:] = []
 
     for chunk in func(*args, **kw):
-        lines = chunk.split("\n")
+        lines = chunk.split(b"\n")
         linecount = len(lines)
         for i, line in enumerate(lines):
             if head:
-                if line.startswith("@"):
+                if line.startswith(b"@"):
                     head = False
             else:
-                if line and line[0] not in " +-@\\":
+                if line and line[0] not in b" +-@\\":
                     head = True
             diffline = False
-            if not head and line and line[0] in "+-":
+            if not head and line and line[0] in b"+-":
                 diffline = True
 
             prefixes = textprefixes
@@ -2811,7 +2811,7 @@ def difflabel(func, *args, **kw):
                 # buffered
                 bufferedline = line
                 if i + 1 < linecount:
-                    bufferedline += "\n"
+                    bufferedline += b"\n"
                 hunkbuffer.append(bufferedline)
             else:
                 # unbuffered
@@ -2827,7 +2827,7 @@ def difflabel(func, *args, **kw):
                 else:
                     yield (line, "")
                 if i + 1 < linecount:
-                    yield ("\n", "")
+                    yield (b"\n", "")
         for token in consumehunkbuffer():
             yield token
 
@@ -2857,10 +2857,10 @@ def _filepairs(modified, added, removed, copy, opts):
                 if opts.git:
                     f1 = copy[f]
                     if f1 in removedset and f1 not in gone:
-                        copyop = "rename"
+                        copyop = b"rename"
                         gone.add(f1)
                     else:
-                        copyop = "copy"
+                        copyop = b"copy"
         elif f in removedset:
             f2 = None
             if opts.git:
@@ -2897,21 +2897,21 @@ def trydiff(
 
     def gitindex(text):
         if not text:
-            text = ""
+            text = b""
         l = len(text)
-        s = hashlib.sha1("blob %d\0" % l)
+        s = hashlib.sha1(b"blob %d\0" % l)
         s.update(text)
-        return s.hexdigest()
+        return encodeutf8(s.hexdigest())
 
     if opts.noprefix:
-        aprefix = bprefix = ""
+        aprefix = bprefix = b""
     else:
-        aprefix = "a/"
-        bprefix = "b/"
+        aprefix = b"a/"
+        bprefix = b"b/"
 
     def diffline(f, revs):
-        revinfo = " ".join(["-r %s" % rev for rev in revs])
-        return "diff %s %s" % (revinfo, f)
+        revinfo = b" ".join([b"-r %s" % encodeutf8(rev) for rev in revs])
+        return b"diff %s %s" % (revinfo, encodeutf8(f))
 
     def isempty(fctx):
         return fctx is None or fctx.size() == 0
@@ -2919,7 +2919,7 @@ def trydiff(
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
 
-    gitmode = {"l": "120000", "x": "100755", "": "100644"}
+    gitmode = {"l": b"120000", "x": b"100755", "": b"100644"}
 
     if relroot != "" and (
         repo.ui.configbool("devel", "all-warnings")
@@ -2981,22 +2981,25 @@ def trydiff(
         path2 = posixpath.join(prefix, path2[len(relroot) :])
         header = []
         if opts.git:
-            header.append("diff --git %s%s %s%s" % (aprefix, path1, bprefix, path2))
+            header.append(
+                b"diff --git %s%s %s%s"
+                % (aprefix, encodeutf8(path1), bprefix, encodeutf8(path2))
+            )
             if not f1:  # added
-                header.append("new file mode %s" % gitmode[flag2])
+                header.append(b"new file mode %s" % gitmode[flag2])
             elif not f2:  # removed
-                header.append("deleted file mode %s" % gitmode[flag1])
+                header.append(b"deleted file mode %s" % gitmode[flag1])
             else:  # modified/copied/renamed
                 mode1, mode2 = gitmode[flag1], gitmode[flag2]
                 if mode1 != mode2:
-                    header.append("old mode %s" % mode1)
-                    header.append("new mode %s" % mode2)
+                    header.append(b"old mode %s" % mode1)
+                    header.append(b"new mode %s" % mode2)
                 if copyop is not None:
                     if opts.showsimilarity:
                         sim = similar.score(ctx1[path1], ctx2[path2]) * 100
-                        header.append("similarity index %d%%" % sim)
-                    header.append("%s from %s" % (copyop, path1))
-                    header.append("%s to %s" % (copyop, path2))
+                        header.append(b"similarity index %d%%" % sim)
+                    header.append(b"%s from %s" % (copyop, encodeutf8(path1)))
+                    header.append(b"%s to %s" % (copyop, encodeutf8(path2)))
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
@@ -3032,7 +3035,9 @@ def trydiff(
         if binary and opts.git and not opts.nobinary and not opts.hashbinary:
             text = mdiff.b85diff(content1, content2)
             if text:
-                header.append("index %s..%s" % (gitindex(content1), gitindex(content2)))
+                header.append(
+                    b"index %s..%s" % (gitindex(content1), gitindex(content2))
+                )
             hunks = ((None, [text]),)
         else:
             if opts.git and opts.index > 0:
@@ -3040,7 +3045,7 @@ def trydiff(
                 if flag is None:
                     flag = flag2
                 header.append(
-                    "index %s..%s %s"
+                    b"index %s..%s %s"
                     % (
                         gitindex(content1)[0 : opts.index],
                         gitindex(content2)[0 : opts.index],
@@ -3075,7 +3080,7 @@ def diffstatsum(stats):
 
 
 def diffstatdata(lines):
-    diffre = re.compile("^diff .*-r [a-z0-9]+\s(.*)$")
+    diffre = re.compile(b"^diff .*-r [a-z0-9]+\\s(.*)$")
 
     results = []
     filename, adds, removes, isbinary = None, 0, 0, False
@@ -3090,24 +3095,24 @@ def diffstatdata(lines):
     inheader = False
 
     for line in lines:
-        if line.startswith("diff"):
+        if line.startswith(b"diff"):
             addresult()
             # starting a new file diff
             # set numbers to 0 and reset inheader
             inheader = True
             adds, removes, isbinary = 0, 0, False
-            if line.startswith("diff --git a/"):
-                filename = gitre.search(line).group(2)
-            elif line.startswith("diff -r"):
+            if line.startswith(b"diff --git a/"):
+                filename = decodeutf8(gitre.search(line).group(2))
+            elif line.startswith(b"diff -r"):
                 # format: "diff -r ... -r ... filename"
-                filename = diffre.search(line).group(1)
-        elif line.startswith("@@"):
+                filename = decodeutf8(diffre.search(line).group(1))
+        elif line.startswith(b"@@"):
             inheader = False
-        elif line.startswith("+") and not inheader:
+        elif line.startswith(b"+") and not inheader:
             adds += 1
-        elif line.startswith("-") and not inheader:
+        elif line.startswith(b"-") and not inheader:
             removes += 1
-        elif line.startswith("GIT binary patch") or line.startswith("Binary file"):
+        elif line.startswith(b"GIT binary patch") or line.startswith(b"Binary file"):
             isbinary = True
     addresult()
     return results
@@ -3183,10 +3188,10 @@ def diffstatui(*args, **kw):
         if line and line[-1] in "+-":
             name, graph = line.rsplit(" ", 1)
             yield (name + " ", "")
-            m = re.search(br"\++", graph)
+            m = re.search(r"\++", graph)
             if m:
                 yield (m.group(0), "diffstat.inserted")
-            m = re.search(br"-+", graph)
+            m = re.search(r"-+", graph)
             if m:
                 yield (m.group(0), "diffstat.deleted")
         else:

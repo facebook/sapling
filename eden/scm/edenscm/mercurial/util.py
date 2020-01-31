@@ -76,6 +76,7 @@ socketserver = pycompat.socketserver
 stderr = pycompat.stderr
 stdin = pycompat.stdin
 stdout = pycompat.stdout
+stdoutbytes = pycompat.stdoutbytes
 stringio = pycompat.stringio
 
 httpserver = urllibcompat.httpserver

@@ -56,7 +56,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, nullrev, short
-from .pycompat import range
+from .pycompat import ensurestr, range
 
 
 stringio = util.stringio
@@ -1760,7 +1760,10 @@ def diffordiffstat(
 ):
     """show diff or diffstat."""
     if fp is None:
-        write = ui.write
+        if stat:
+            write = ui.write
+        else:
+            write = ui.writebytes
     else:
 
         def write(s, **kw):
@@ -1850,7 +1853,11 @@ class changeset_printer(object):
                 self.ui.write(h)
             del self.header[rev]
         if rev in self.hunk:
-            self.ui.write(self.hunk[rev])
+            for elem in self.hunk[rev]:
+                if isinstance(elem, str):
+                    self.ui.write(elem)
+                else:
+                    self.ui.writebytes(elem)
             del self.hunk[rev]
             return 1
         return 0
@@ -1864,7 +1871,7 @@ class changeset_printer(object):
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
             self._show(ctx, copies, matchfn, hunksfilterfn, props)
-            self.hunk[ctx.rev()] = self.ui.popbuffer()
+            self.hunk[ctx.rev()] = self.ui.popbufferlist()
         else:
             self._show(ctx, copies, matchfn, hunksfilterfn, props)
 
@@ -3106,7 +3113,9 @@ def displaygraph(
             _graphwidth=width,
             **pycompat.strkwargs(props)
         )
-        lines = displayer.hunk.pop(rev).split("\n")
+        # In case of graph display we don't preserve the original encoding
+        hunk = "".join(ensurestr(s) for s in displayer.hunk.pop(rev))
+        lines = hunk.split("\n")
         if not lines[-1]:
             del lines[-1]
         displayer.flush(ctx)
@@ -3167,7 +3176,8 @@ def rustdisplaygraph(
             _graphwidth=width,
             **pycompat.strkwargs(props)
         )
-        msg = displayer.hunk.pop(rev)
+        # In case of graph display we don't preserve the original encoding
+        msg = "".join(ensurestr(s) for s in displayer.hunk.pop(rev))
         ui.write(encoding.unitolocal(renderer.nextrow(rev, parents, char, msg)))
         displayer.flush(ctx)
 

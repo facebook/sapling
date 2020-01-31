@@ -47,6 +47,6 @@ def autodiff(ui, repo, *pats, **opts):
     m = scmutil.match(repo[node2], pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=diffopts, losedatafn=losedatafn)
     for chunk in it:
-        ui.write(chunk)
+        ui.writebytes(chunk)
     for fn in sorted(brokenfiles):
         ui.write(("data lost for: %s\n" % fn))

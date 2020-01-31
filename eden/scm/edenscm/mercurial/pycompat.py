@@ -76,7 +76,6 @@ if sys.version_info[0] >= 3:
     # should probably remove stringio.
     stringio = io.BytesIO
     stringutf8io = io.StringIO
-
     maplist = lambda *args: list(map(*args))
     ziplist = lambda *args: list(zip(*args))
     rawinput = input
@@ -84,6 +83,7 @@ if sys.version_info[0] >= 3:
 
     stdin = sys.stdin
     stdout = sys.stdout
+    stdoutbytes = sys.stdout.buffer
     stderr = sys.stderr
 
     sysargv = sys.argv
@@ -189,6 +189,7 @@ else:
     osaltsep = os.altsep
     stdin = sys.stdin
     stdout = sys.stdout
+    stdoutbytes = sys.stdout
     stderr = sys.stderr
     if getattr(sys, "argv", None) is not None:
         sysargv = sys.argv

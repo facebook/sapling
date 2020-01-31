@@ -26,7 +26,8 @@ import sys
 import tempfile
 import time
 import traceback
-from typing import Optional
+from enum import Enum
+from typing import List, Optional, Union
 
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import configparser
@@ -165,6 +166,12 @@ class httppasswordmgrdbproxy(object):
         )
 
 
+class stdoutkind(Enum):
+    "used to remember the last output stream we used (we need to flush if we switch)"
+    TEXT = 1
+    BYTES = 2
+
+
 def _catchterm(*args):
     raise error.SignalInterrupt
 
@@ -200,11 +207,13 @@ class ui(object):
         self._colormode = None
         self._terminfoparams = {}
         self._styles = {}
+        self.laststdout = None
 
         if src:
             self._uiconfig = src._uiconfig.copy()
 
             self.fout = src.fout
+            self.foutbytes = src.foutbytes
             self.ferr = src.ferr
             self.fin = src.fin
             self.pageractive = src.pageractive
@@ -226,6 +235,7 @@ class ui(object):
             self._uiconfig = uiconfig.uiconfig()
 
             self.fout = util.stdout
+            self.foutbytes = util.stdoutbytes
             self.ferr = util.stderr
             self.fin = util.stdin
             self.pageractive = False
@@ -565,28 +575,68 @@ class ui(object):
         self._bufferapplylabels = labeled
 
     def popbuffer(self):
-        """pop the last buffer and return the buffered output"""
+        # type: () -> str
+        """pop the last buffer and return the buffered output
+
+        Throws if any element of the buffer is not str.
+        """
         self._bufferstates.pop()
         if self._bufferstates:
             self._bufferapplylabels = self._bufferstates[-1][2]
         else:
             self._bufferapplylabels = None
 
-        return "".join(self._buffers.pop())
+        buf = self._buffers.pop()
+        if any(not isinstance(s, str) for s in buf):
+            raise error.ProgrammingError("popbuffer cannot be used on bytes buffer")
+        return "".join(buf)
 
-    def _addprefixesandlabels(self, args, opts, addlabels):
+    def popbufferbytes(self):
+        # type: () -> bytes
+        """pop the last buffer and return the buffered output
+
+        Throws if any element of the buffer is not bytes.
+        """
+        self._bufferstates.pop()
+        if self._bufferstates:
+            self._bufferapplylabels = self._bufferstates[-1][2]
+        else:
+            self._bufferapplylabels = None
+
+        buf = self._buffers.pop()
+        if any(not isinstance(s, bytes) for s in buf):
+            raise error.ProgrammingError("popbufferbytes cannot be used on str buffer")
+        return b"".join(buf)
+
+    def popbufferlist(self):
+        # type: () -> List[Union[str, bytes]]
+        """pop the last buffer and return the buffered output as a list
+
+        May contain both str and bytes.
+        """
+        self._bufferstates.pop()
+        if self._bufferstates:
+            self._bufferapplylabels = self._bufferstates[-1][2]
+        else:
+            self._bufferapplylabels = None
+
+        return self._buffers.pop()
+
+    def _addprefixesandlabels(self, args, opts, addlabels, usebytes=False):
         msgs = []
         for item in r"error", r"notice", r"component":
             itemvalue = opts.get(item)
             if itemvalue:
                 itemvalue = "%s:" % itemvalue
                 if addlabels:
-                    itemvalue = self.label(itemvalue, "ui.prefix.%s" % item)
+                    itemvalue = self.label(
+                        itemvalue, "ui.prefix.%s" % item, usebytes=usebytes
+                    )
                 msgs.extend((itemvalue, " "))
         msgs.extend(args)
         if addlabels:
             label = opts.get(r"label", "")
-            msgs = [self.label(m, label) for m in msgs]
+            msgs = [self.label(m, label, usebytes=usebytes) for m in msgs]
         return msgs
 
     def write(self, *args, **opts):
@@ -624,8 +674,54 @@ class ui(object):
     def _write(self, *msgs, **opts):
         with progress.suspend():
             starttime = util.timer()
+            if self.laststdout != stdoutkind.TEXT and not getattr(
+                self.foutbytes, "closed", False
+            ):
+                self.foutbytes.flush()
+            self.laststdout = stdoutkind.TEXT
             try:
                 self.fout.write("".join(msgs))
+            except IOError as err:
+                raise error.StdioError(err)
+            finally:
+                # Assuming the only way to be blocked on stdout is the pager.
+                seconds = util.timer() - starttime
+                blackbox.logblocked("pager", seconds, ignorefast=True)
+                self._measuredtimes["stdio_blocked"] += (seconds) * 1000
+
+    def writebytes(self, *args, **opts):
+        """Like `write` but taking bytes instead of str as arguments.
+
+        Can be used only when we're outputing the file contents to stdout,
+        for example in diff, cat, or blame commands.
+        """
+        if self._buffers and not opts.get(r"prompt", False):
+            msgs = self._addprefixesandlabels(
+                args, opts, self._bufferapplylabels, usebytes=True
+            )
+            self._buffers[-1].extend(msgs)
+        else:
+            msgs = self._addprefixesandlabels(
+                args, opts, self._colormode, usebytes=True
+            )
+            if self._colormode == "win32":
+                # windows color printing is its own can of crab
+                color.win32print(self, self._write, *msgs, **opts)
+            else:
+                self._writebytes(*msgs, **opts)
+
+    def _writebytes(self, *msgs, **opts):
+        with progress.suspend():
+            starttime = util.timer()
+            if self.laststdout != stdoutkind.BYTES and not getattr(
+                self.fout, "closed", False
+            ):
+                self.fout.flush()
+            self.laststdout = stdoutkind.BYTES
+            try:
+                if not getattr(self.fout, "closed", False):
+                    self.fout.flush()
+                self.foutbytes.write(b"".join(msgs))
             except IOError as err:
                 raise error.StdioError(err)
             finally:
@@ -1362,7 +1458,7 @@ class ui(object):
         except UnicodeDecodeError:
             pass
 
-    def label(self, msg, label):
+    def label(self, msg, label, usebytes=False):
         """style msg based on supplied label
 
         If some color mode is enabled, this will add the necessary control
@@ -1373,7 +1469,7 @@ class ui(object):
         ui.write(ui.label(s, 'label')).
         """
         if self._colormode is not None:
-            return color.colorlabel(self, msg, label)
+            return color.colorlabel(self, msg, label, usebytes=usebytes)
         return msg
 
     def develwarn(self, msg, stacklevel=1, config=None):
