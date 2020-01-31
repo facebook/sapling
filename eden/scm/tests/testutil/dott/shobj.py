@@ -12,6 +12,7 @@ import glob
 import os
 import re
 import sys
+import traceback
 
 from .. import autofix
 from . import shlex, shlib
@@ -67,7 +68,7 @@ class LazyCommand(object):
                     if self._stdoutpath is not None and self._output:
                         outpath = os.path.expandvars(self._stdoutpath)
                         mode = self._stdoutappend and "ab" or "wb"
-                        open(outpath, mode).write(self._output)
+                        open(outpath, mode).write(self._output.encode("utf-8"))
                         self._output = ""
                 else:
                     raise NotImplementedError("shell command %r is unknown" % (args,))
@@ -194,12 +195,14 @@ _delayedexception = []
 @atexit.register
 def _checkdelayedexception(_delayedexception=_delayedexception):
     if _delayedexception:
-        exctype, excvalue, traceback = _delayedexception[0]
+        exctype, excvalue, tb = _delayedexception[0]
         # Only raise the first "delayed exception"
         _delayedexception[:] = [(None, None, None)]
         if excvalue is not None:
-            # Workaround Python 2 syntax check by black.
-            exec("raise exctype, excvalue, traceback")
+            traceback.print_exception(exctype, excvalue, tb)
+            if isinstance(excvalue, SystemExit):
+                raise excvalue
+            sys.exit(1)
 
 
 # Functions to normalize outputs (ex. replace "$TESTTMP")
@@ -211,17 +214,17 @@ normalizeoutput = _normalizefuncs.append
 
 
 _errors = {
-    br"$ENOENT$": (
+    r"$ENOENT$": (
         # strerror()
-        br"No such file or directory",
+        r"No such file or directory",
         # FormatMessage(ERROR_FILE_NOT_FOUND)
-        br"The system cannot find the file specified",
+        r"The system cannot find the file specified",
     ),
-    br"$ENOTDIR$": (
+    r"$ENOTDIR$": (
         # strerror()
-        br"Not a directory",
+        r"Not a directory",
         # FormatMessage(ERROR_PATH_NOT_FOUND)
-        br"The system cannot find the path specified",
+        r"The system cannot find the path specified",
     ),
 }
 

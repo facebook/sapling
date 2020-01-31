@@ -1591,7 +1591,7 @@ class Test(unittest.TestCase):
         if self._debug:
             proc = subprocess.Popen(cmd, shell=True, cwd=self._testtmp, env=env)
             ret = proc.wait()
-            return (ret, None)
+            return (ret, [])
 
         proc = Popen4(cmd, self._testtmp, self._timeout, env)
         track(proc)

@@ -292,7 +292,7 @@ def hg(*args, **kwargs):
     if status:
         if not buf.endswith("\n") and buf:
             buf += "\n"
-        buf += "[%s]" % status
+        buf += "[%d]" % status
     return buf
 
 
@@ -339,7 +339,7 @@ def setconfig(*args):
     for config in args:
         section, namevalue = config.split(".", 1)
         content = "\n[%s]\n%s\n" % (section, namevalue)
-        util.appendfile(hgrcpath, content)
+        util.appendfile(hgrcpath, content.encode("utf-8"))
 
 
 def setmodernconfig():
