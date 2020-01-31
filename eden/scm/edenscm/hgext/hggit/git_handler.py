@@ -4,21 +4,6 @@ import os
 import re
 import shutil
 
-# pyre-fixme[21]: Could not find `_ssh`.
-import _ssh
-
-# pyre-fixme[21]: Could not find `compat`.
-import compat
-
-# pyre-fixme[21]: Could not find `git2hg`.
-import git2hg
-
-# pyre-fixme[21]: Could not find `hg2git`.
-import hg2git
-
-# pyre-fixme[21]: Could not find `util`.
-import util
-
 # pyre-fixme[21]: Could not find `bindings`.
 from bindings import nodemap
 from dulwich import client, config as dul_config, diff_tree
@@ -41,8 +26,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
 
-# pyre-fixme[21]: Could not find `overlay`.
-from overlay import overlayrepo
+from . import _ssh, compat, git2hg, hg2git, util
+from .overlay import overlayrepo
 
 
 RE_GIT_AUTHOR = re.compile("^(.*?) ?\<(.*?)(?:\>(.*))?$")

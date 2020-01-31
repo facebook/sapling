@@ -3,16 +3,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-fixme[21]: Could not find `util`.
-import util
 from edenscm.mercurial import localrepo, pycompat, util as hgutil
 from edenscm.mercurial.node import bin
 
-# pyre-fixme[21]: Could not find `git_handler`.
-from git_handler import GitHandler
-
-# pyre-fixme[21]: Could not find `gitrepo`.
-from gitrepo import gitrepo
+from . import util
+from .git_handler import GitHandler
+from .gitrepo import gitrepo
 
 
 def generate_repo_subclass(baseclass):
