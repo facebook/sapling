@@ -131,7 +131,7 @@ class FileChangeMonitor {
   void resetToForceChange() {
     // Set values for stat to force changedSinceUpdate() to return TRUE.
     // We use a novel setting to force change to be detected
-    memset(&fileStat_, 0, sizeof(struct stat));
+    fileStat_ = {};
     fileStat_.st_mtime = 1;
 
     statErrno_ = 0;
@@ -142,7 +142,7 @@ class FileChangeMonitor {
   }
 
   AbsolutePath filePath_;
-  struct stat fileStat_;
+  struct stat fileStat_ {};
   int statErrno_{0};
   int openErrno_{0};
   std::chrono::milliseconds throttleDuration_;

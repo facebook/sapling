@@ -88,8 +88,7 @@ FakeFuse::Response FakeFuse::recvResponse() {
   iov[0].iov_base = &response.header;
   iov[0].iov_len = sizeof(response.header);
 
-  msghdr message;
-  memset(&message, 0, sizeof(msghdr));
+  msghdr message{};
   message.msg_iov = iov.data();
   message.msg_iovlen = 1;
 

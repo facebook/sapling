@@ -55,7 +55,7 @@ void getConfigStat(
 
   // We use all 0's to check if a file is created/deleted
   if (statRslt != 0) {
-    memset(configStat, 0, sizeof(struct stat));
+    configStat = {};
   }
 }
 } // namespace
@@ -266,7 +266,7 @@ bool hasConfigFileChanged(
                  << folly::errnoStr(errno);
     }
     // We use all 0's to check if a file is created/deleted
-    memset(&currentStat, 0, sizeof(currentStat));
+    currentStat = {};
   }
 
   return !equalStats(currentStat, *oldStat);
