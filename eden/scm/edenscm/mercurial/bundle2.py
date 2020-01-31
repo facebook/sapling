@@ -1065,6 +1065,11 @@ class bundlepart(object):
         # type: bytes -> None
         if self._generated is not None:
             raise error.ReadOnlyPartError("part is being generated")
+        if not (
+            util.safehasattr(self.data, "next")
+            or util.safehasattr(self.data, "__next__")
+        ):
+            assert isinstance(data, bytes)
         self._data = data
 
     @property
@@ -1138,7 +1143,7 @@ class bundlepart(object):
         ## parttype
         header = [
             _pack(_fparttypesize, len(parttype)),
-            parttype,
+            pycompat.encodeutf8(parttype),
             _pack(_fpartid, self.id),
         ]
         ## parameters
