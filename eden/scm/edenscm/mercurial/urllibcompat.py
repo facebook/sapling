@@ -105,12 +105,9 @@ if sys.version_info[0] >= 3:
         ),
     )
 
-    # urllib.parse.quote() accepts both str and bytes, decodes bytes
-    # (if necessary), and returns str. This is wonky. We provide a custom
-    # implementation that only accepts bytes and emits bytes.
-    def quote(s, safe=r"/"):
-        s = pycompat.encodeutf8(urllib.parse.quote(s, safe=safe))
-        return s
+    # quote() and unquote() both operate on and return strings (not bytes)
+    quote = urllib.parse.quote
+    unquote = urllib.parse.unquote
 
     # urllib.parse.urlencode() returns str. We use this function to make
     # sure we return bytes.
@@ -209,3 +206,6 @@ else:
 
     def hasdata(req):
         return req.has_data()
+
+    quote = urllib.quote
+    unquote = urllib.unquote

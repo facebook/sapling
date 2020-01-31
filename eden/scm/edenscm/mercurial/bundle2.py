@@ -171,14 +171,12 @@ from . import (
     pushkey,
     pycompat,
     url,
+    urllibcompat,
     util,
 )
 from .i18n import _
 from .vfs import abstractvfs
 
-
-urlerr = util.urlerr
-urlreq = util.urlreq
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -602,16 +600,17 @@ def decodecaps(blob):
 
     The values are always a list."""
     caps = {}
-    for line in blob.splitlines():
+    data = pycompat.decodeutf8(blob)
+    for line in data.splitlines():
         if not line:
             continue
-        if b"=" not in line:
+        if "=" not in line:
             key, vals = line, list()
         else:
-            key, vals = line.split(b"=", 1)
-            vals = vals.split(b",")
-        key = urlreq.unquote(key)
-        vals = [urlreq.unquote(v) for v in vals]
+            key, vals = line.split("=", 1)
+            vals = vals.split(",")
+        key = urllibcompat.unquote(key)
+        vals = [urllibcompat.unquote(v) for v in vals]
         caps[key] = tuple(vals)
     return caps
 
@@ -622,12 +621,12 @@ def encodecaps(caps):
     chunks = []
     for ca in sorted(caps):
         vals = caps[ca]
-        ca = urlreq.quote(ca)
-        vals = [urlreq.quote(v) for v in vals]
+        ca = urllibcompat.quote(ca)
+        vals = [urllibcompat.quote(v) for v in vals]
         if vals:
             ca = b"%s=%s" % (ca, b",".join(vals))
         chunks.append(ca)
-    return b"\n".join(chunks)
+    return pycompat.encodeutf8("\n".join(chunks))
 
 
 bundletypes = {
@@ -735,12 +734,12 @@ class bundle20(object):
         """return a encoded version of all stream parameters"""
         blocks = []
         for par, value in self._params:
-            par = urlreq.quote(par)
+            par = urllibcompat.quote(par)
             if value is not None:
-                value = urlreq.quote(value)
-                par = b"%s=%s" % (par, value)
+                value = urllibcompat.quote(value)
+                par = "%s=%s" % (par, value)
             blocks.append(par)
-        return b" ".join(blocks)
+        return pycompat.encodeutf8(" ".join(blocks))
 
     def _getcorechunk(self):
         # type: () -> Iterable[bytes]
@@ -860,9 +859,10 @@ class unbundle20(unpackermixin):
         # type: (bytes) -> Dict[str, str]
         """"""
         params = util.sortdict()
-        for p in paramsblock.split(b" "):
-            p = p.split(b"=", 1)
-            p = [urlreq.unquote(i) for i in p]
+        data = pycompat.decodeutf8(paramsblock)
+        for param in data.split(" "):
+            p = param.split("=", 1)
+            p = [urllibcompat.unquote(i) for i in p]
             if len(p) < 2:
                 p.append(None)
             self._processparam(*p)
@@ -1642,7 +1642,7 @@ def bundle2caps(remote):
     raw = remote.capable("bundle2")
     if not raw and raw != "":
         return {}
-    capsblob = urlreq.unquote(remote.capable("bundle2"))
+    capsblob = urllibcompat.unquote(remote.capable("bundle2"))
     return decodecaps(capsblob)
 
 
