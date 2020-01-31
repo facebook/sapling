@@ -52,6 +52,7 @@ IF UNAME_SYSNAME != "Windows":
         return n
 
     def _rmdir(orig, path):
+        path = pycompat.encodeutf8(path)
         n = _countdir(path)
         if n >= 3:
             # The number 3 is because most systems have "." and "..". For systems
