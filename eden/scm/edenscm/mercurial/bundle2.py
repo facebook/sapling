@@ -590,8 +590,8 @@ def _processpart(op, part):
 
 
 def decodecaps(blob):
-    # type: (bytes) -> Dict[str, Tuple[str, ...]]
-    """decode a bundle2 caps bytes blob into a dictionary
+    # type: (str) -> Dict[str, Tuple[str, ...]]
+    """decode a bundle2 caps string blob into a dictionary
 
     The blob is a list of capabilities (one per line)
     Capabilities may have values using a line of the form::
@@ -600,8 +600,7 @@ def decodecaps(blob):
 
     The values are always a list."""
     caps = {}
-    data = pycompat.decodeutf8(blob)
-    for line in data.splitlines():
+    for line in blob.splitlines():
         if not line:
             continue
         if "=" not in line:
@@ -616,8 +615,8 @@ def decodecaps(blob):
 
 
 def encodecaps(caps):
-    # type (Dict[str, List[str]]) -> bytes
-    """encode a bundle2 caps dictionary into a bytes blob"""
+    # type (Dict[str, List[str]]) -> str
+    """encode a bundle2 caps dictionary into a string blob"""
     chunks = []
     for ca in sorted(caps):
         vals = caps[ca]
@@ -626,7 +625,7 @@ def encodecaps(caps):
         if vals:
             ca = "%s=%s" % (ca, ",".join(vals))
         chunks.append(ca)
-    return pycompat.encodeutf8("\n".join(chunks))
+    return "\n".join(chunks)
 
 
 bundletypes = {
@@ -1814,7 +1813,7 @@ def handlechangegroup(op, inpart):
     inflicted to any end-user.
     """
     tr = op.gettransaction()
-    unpackerversion = pycompat.decodeutf8(inpart.params.get("version", b"01"))
+    unpackerversion = inpart.params.get("version", "01")
     # We should raise an appropriate exception here
     cg = changegroup.getunbundler(unpackerversion, inpart, None)
     # the source and url passed here are overwritten by the one contained in
@@ -2015,7 +2014,7 @@ def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
 
     The payload contains the capabilities information for the reply"""
-    caps = decodecaps(inpart.read())
+    caps = decodecaps(pycompat.decodeutf8(inpart.read()))
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 

@@ -2003,7 +2003,7 @@ def _registerbundle2parts():
                 _("unknown treegroup bundle2 part version: %s") % versionstr
             )
 
-        category = decodeutf8(part.params.get("category", ""))
+        category = part.params.get("category", "")
         if category != PACK_CATEGORY:
             raise error.Abort(_("invalid treegroup pack category: %s") % category)
 
