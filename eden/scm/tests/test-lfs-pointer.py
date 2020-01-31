@@ -1,10 +1,10 @@
 from __future__ import absolute_import, print_function
 
 from edenscm.hgext.lfs import pointer
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 def tryparse(text):

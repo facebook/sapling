@@ -6,10 +6,10 @@ import unittest
 
 import silenttestrunner
 from edenscm.mercurial import manifest as manifestmod, match as matchmod
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 EMTPY_MANIFEST = b""

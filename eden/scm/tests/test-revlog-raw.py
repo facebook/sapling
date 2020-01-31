@@ -5,10 +5,10 @@ from __future__ import absolute_import, print_function
 import sys
 
 from edenscm.mercurial import encoding, node, revlog, transaction, vfs
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 # TESTTMP is optional. This makes it convenient to run without run-tests.py

@@ -18,10 +18,10 @@ from __future__ import absolute_import
 import unittest
 
 from edenscm.mercurial import error, simplemerge, util
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 TestCase = unittest.TestCase

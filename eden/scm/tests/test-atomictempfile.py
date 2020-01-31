@@ -7,10 +7,10 @@ import tempfile
 import unittest
 
 from edenscm.mercurial import util
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 atomictempfile = util.atomictempfile

@@ -10,10 +10,10 @@ import time
 
 from edenscm.mercurial import ancestor, debugcommands, hg, pycompat, ui as uimod, util
 from edenscm.mercurial.node import nullrev
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 if sys.version_info[0] >= 3:
     long = int

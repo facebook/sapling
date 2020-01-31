@@ -9,10 +9,10 @@ import unittest
 
 import silenttestrunner
 from bindings import treestate
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 testtmp = os.getenv("TESTTMP") or tempfile.mkdtemp("test-treestate")

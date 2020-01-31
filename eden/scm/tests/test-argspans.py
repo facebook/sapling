@@ -9,11 +9,11 @@ from __future__ import absolute_import
 import os
 import sys
 
+from hghave import require
 from testutil import argspans
-from testutil.dott import feature
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 try:

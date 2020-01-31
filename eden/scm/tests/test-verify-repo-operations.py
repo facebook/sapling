@@ -11,9 +11,9 @@ unexpected errors and to compare different versions of it."""
 import os
 import subprocess
 import sys
-from testutil.dott import feature
+from hghave import require
 
-feature.require(["py2"])
+require(["py2"])
 
 # Only run if slow tests are allowed
 if subprocess.call(["python", "%s/hghave" % os.environ["TESTDIR"], "slow"]):

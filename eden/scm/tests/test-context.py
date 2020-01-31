@@ -4,10 +4,10 @@ import os
 
 from edenscm.mercurial import context, encoding, hg, scmutil, ui as uimod
 from edenscm.mercurial.node import hex
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 u = uimod.ui.load()

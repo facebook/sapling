@@ -4,10 +4,10 @@ import os
 import tempfile
 
 from edenscm.hgext.fastannotate import error, revmap
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 try:

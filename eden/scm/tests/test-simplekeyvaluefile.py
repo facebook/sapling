@@ -5,10 +5,10 @@ import unittest
 import silenttestrunner
 from edenscm.mercurial import error, scmutil
 from edenscm.mercurial.pycompat import encodeutf8
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 class mockfile(object):

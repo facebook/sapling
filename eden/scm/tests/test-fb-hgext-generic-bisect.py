@@ -3,10 +3,10 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 class BisectTests(unittest.TestCase):

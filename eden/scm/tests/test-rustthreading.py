@@ -49,11 +49,6 @@
 
 from __future__ import absolute_import
 
-
-from testutil.dott import feature
-
-feature.require(["py2"])
-
 import os
 import thread
 import threading
@@ -63,6 +58,10 @@ from thread import get_ident, start_new_thread
 
 import silenttestrunner
 from bindings import threading as rustthreading
+from hghave import require
+
+
+require(["py2"])
 
 
 # From test_support.py

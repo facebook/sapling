@@ -6,10 +6,10 @@
 import os
 import re
 
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 def checkpath(path, dllnames):

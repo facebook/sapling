@@ -6,10 +6,10 @@ from __future__ import absolute_import, print_function
 
 from edenscm.mercurial import hg, ui as uimod
 from edenscm.mercurial.node import hex, nullid
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 myui = uimod.ui.load()

@@ -4,10 +4,10 @@ import unittest
 
 import silenttestrunner
 from edenscm.mercurial import match as matchmod
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 class NeverMatcherTests(unittest.TestCase):

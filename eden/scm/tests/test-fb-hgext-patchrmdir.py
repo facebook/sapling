@@ -5,10 +5,10 @@ import sys
 
 from edenscm.hgext import patchrmdir
 from edenscm.mercurial import util
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 if not sys.platform.startswith("linux"):

@@ -3,10 +3,10 @@ from __future__ import absolute_import, print_function
 import os
 
 from edenscm.mercurial import hg, scmutil, ui as uimod, util
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 chdir = os.chdir

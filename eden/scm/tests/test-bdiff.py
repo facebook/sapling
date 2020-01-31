@@ -5,10 +5,10 @@ import struct
 import unittest
 
 from edenscm.mercurial import mdiff
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 class diffreplace(collections.namedtuple("diffreplace", "start end from_ to")):

@@ -3,10 +3,10 @@ from __future__ import absolute_import, print_function
 import os
 
 from edenscm.mercurial import commands, extensions, ui as uimod
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 ignore = {

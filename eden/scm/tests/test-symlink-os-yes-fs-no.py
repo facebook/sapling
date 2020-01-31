@@ -5,10 +5,10 @@ import sys
 import time
 
 from edenscm.mercurial import commands, fscap, hg, ui as uimod, util
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 TESTDIR = os.environ["TESTDIR"]

@@ -8,10 +8,10 @@
 from __future__ import absolute_import, print_function
 
 from edenscm.mercurial import error, peer, util, wireproto
-from testutil.dott import feature
+from hghave import require
 
 
-feature.require(["py2"])
+require(["py2"])
 
 
 # equivalent of repo.repository
