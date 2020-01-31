@@ -2784,7 +2784,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             cwd=reporoot,
         )
         out, err = p.communicate()
-        lines = out.rstrip().split("\n")
+        lines = pycompat.decodeutf8(out.rstrip()).split("\n")
         # the first line has the revision for the corpus; parse it out
         # the format is "#HASH:timestamp"
         revisionline = lines[0][1:]
@@ -2932,7 +2932,7 @@ def _rungrep(cmd, files, match):
     )
     write = p.stdin.write
     for f in files:
-        write(match.rel(f) + "\0")
+        write(pycompat.encodeutf8(match.rel(f) + "\0"))
 
     p.stdin.close()
     return p.wait()
