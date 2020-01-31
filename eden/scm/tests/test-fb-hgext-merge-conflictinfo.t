@@ -494,7 +494,7 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
 
   $ hg rebase -d 2 -s 1
   rebasing ed93aeac6b3c "source"
-  abort:*: '$TESTTMP/cornercases/foo/foo/foo/foo/file' (glob)
+  abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
   [abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
@@ -526,7 +526,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
 
   $ hg rebase -d 2 -s 1
   rebasing ec87889f5f90 "source"
-  abort:*: '$TESTTMP/cornercases/foo/foo/foo/foo/file' (glob)
+  abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
   [

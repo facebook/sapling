@@ -496,7 +496,7 @@ Inaccessible destination
   $ hg init b
   $ cd b
   $ hg clone . ../a
-  abort: Permission denied: '../a'
+  abort: Permission denied: ../a
   [255]
   $ cd ..
   $ chmod 700 a

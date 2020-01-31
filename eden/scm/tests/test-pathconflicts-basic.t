@@ -88,7 +88,7 @@ Basic clean update - local directory conflicts with changed remote file
   $ mkdir a
   $ echo 4 > a/b
   $ hg up file2
-  abort: *: '$TESTTMP/repo/a' (glob)
+  abort: *: $TESTTMP/repo/a (glob)
   [255]
   $ hg up --clean file2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -71,4 +71,4 @@ Make upload to bundlestore fail
   remote: infinitepush: bundlestore \(bundlesize=1067, eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: bundlestore \(bundlesize=1067, elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepush \(elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: abort: \$ENOTDIR\$: '/dev/null/\d+' (re)
+  remote: abort: \$ENOTDIR\$: /dev/null/\d+ (re)

@@ -260,7 +260,7 @@ def callcatch(ui, func):
     except OSError as inst:
         if getattr(inst, "filename", None) is not None:
             ui.warn(
-                _("%s: '%s'\n") % (encoding.strtolocal(inst.strerror), inst.filename),
+                _("%s: %s\n") % (encoding.strtolocal(inst.strerror), inst.filename),
                 error=_("abort"),
             )
         else:
