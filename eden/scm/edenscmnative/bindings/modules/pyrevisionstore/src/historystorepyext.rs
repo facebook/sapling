@@ -105,7 +105,7 @@ fn to_node_info(
     // Not only can copyfrom be None, it can also be an empty string. In both cases that means that
     // `name` should be used.
     let copyfrom = copyfrom.unwrap_or(name);
-    let p1path = if copyfrom.as_ref().as_os_str().is_empty() {
+    let p1path = if copyfrom.as_path().as_os_str().is_empty() {
         name
     } else {
         copyfrom

@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use cpython::*;
 
 use ::bookmarkstore::BookmarkStore;
-use cpython_ext::{PyNone, PyPathBuf};
+use cpython_ext::{PyNone, PyPath};
 use types::hgid::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -25,9 +25,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class bookmarkstore |py| {
     data bm_store: RefCell<BookmarkStore>;
 
-    def __new__(_cls, path: PyPathBuf) -> PyResult<bookmarkstore> {
+    def __new__(_cls, path: &PyPath) -> PyResult<bookmarkstore> {
         let bm_store = {
-            BookmarkStore::new(path.as_ref())
+            BookmarkStore::new(path.as_path())
                 .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?
         };
         bookmarkstore::create_instance(py, RefCell::new(bm_store))

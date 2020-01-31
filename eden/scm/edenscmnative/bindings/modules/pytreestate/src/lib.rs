@@ -25,7 +25,7 @@ use std::path::PathBuf;
 
 use anyhow::Error;
 use cpython::*;
-use cpython_ext::PyNone;
+use cpython_ext::{AnyhowResultExt, PyNone, PyPath, PyPathBuf, ResultPyErrExt};
 
 use ::treestate::{
     errors::ErrorKind,
@@ -35,7 +35,6 @@ use ::treestate::{
     treedirstate::TreeDirstate,
     treestate::TreeState,
 };
-use cpython_ext::{AnyhowResultExt, PyPathBuf, ResultPyErrExt};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -427,7 +426,7 @@ py_class!(class treestate |py| {
 
     def __new__(
         _cls,
-        path: PyPathBuf,
+        path: &PyPath,
         root_id: u64
     ) -> PyResult<treestate> {
         let root_id = if root_id == 0 {
@@ -446,7 +445,7 @@ py_class!(class treestate |py| {
         Ok(root_id.0)
     }
 
-    def saveas(&self, path: PyPathBuf) -> PyResult<u64> {
+    def saveas(&self, path: &PyPath) -> PyResult<u64> {
         // Save as a new file. Return `BlockId` that can be used in constructor.
         let mut state = self.state(py).borrow_mut();
         let root_id = convert_result(py, state.write_as(path))?;
@@ -469,7 +468,7 @@ py_class!(class treestate |py| {
         })
     }
 
-    def get(&self, path: PyPathBuf, default: Option<(u16, u32, i32, i32, Option<PyPathBuf>)>) -> PyResult<Option<(u16, u32, i32, i32, Option<PyPathBuf>)>> {
+    def get(&self, path: &PyPath, default: Option<(u16, u32, i32, i32, Option<PyPathBuf>)>) -> PyResult<Option<(u16, u32, i32, i32, Option<PyPathBuf>)>> {
         let mut state = self.state(py).borrow_mut();
         let path = path.as_utf8_bytes();
 
@@ -485,7 +484,7 @@ py_class!(class treestate |py| {
     }
 
     def insert(
-        &self, path: PyPathBuf, bits: u16, mode: u32, size: i32, mtime: i32, copied: Option<PyPathBuf>
+        &self, path: &PyPath, bits: u16, mode: u32, size: i32, mtime: i32, copied: Option<PyPathBuf>
     ) -> PyResult<PyObject> {
         let mut flags = StateFlags::from_bits_truncate(bits);
         // For special mtime or size, mark them as "NEED_CHECK" automatically.
@@ -507,12 +506,12 @@ py_class!(class treestate |py| {
         Ok(py.None())
     }
 
-    def remove(&self, path: PyPathBuf) -> PyResult<bool> {
+    def remove(&self, path: &PyPath) -> PyResult<bool> {
         let mut state = self.state(py).borrow_mut();
         convert_result(py, state.remove(path.as_utf8_bytes()))
     }
 
-    def getdir(&self, path: PyPathBuf) -> PyResult<Option<(u16, u16)>> {
+    def getdir(&self, path: &PyPath) -> PyResult<Option<(u16, u16)>> {
         let mut state = self.state(py).borrow_mut();
         let path = path.as_utf8_bytes();
 
@@ -520,7 +519,7 @@ py_class!(class treestate |py| {
         Ok(dir.map(|state| (state.union.to_bits(), state.intersection.to_bits())))
     }
 
-    def hasdir(&self, path: PyPathBuf) -> PyResult<bool> {
+    def hasdir(&self, path: &PyPath) -> PyResult<bool> {
         let mut state = self.state(py).borrow_mut();
         let path = path.as_utf8_bytes();
         Ok(convert_result(py, state.has_dir(path))?)
@@ -570,7 +569,7 @@ py_class!(class treestate |py| {
         Ok(result)
     }
 
-    def tracked(&self, prefix: PyPathBuf) -> PyResult<Vec<PyPathBuf>> {
+    def tracked(&self, prefix: &PyPath) -> PyResult<Vec<PyPathBuf>> {
         // prefix limits the result to given prefix (ex. ["dir1/", "dir2/"]). To get all tracked
         // files, set prefix to an empty list.
         // Not ideal as a special case. But the returned list is large and it needs to be fast.
@@ -612,7 +611,7 @@ py_class!(class treestate |py| {
     }
 
     def getfiltered(
-        &self, path: PyPathBuf, filter: PyObject, filterid: u64
+        &self, path: &PyPath, filter: PyObject, filterid: u64
     ) -> PyResult<Vec<PyPathBuf>> {
         let mut state = self.state(py).borrow_mut();
 
@@ -632,7 +631,7 @@ py_class!(class treestate |py| {
     }
 
     def pathcomplete(
-        &self, prefix: PyPathBuf, setbits: u16, unsetbits: u16, matchcallback: PyObject,
+        &self, prefix: &PyPath, setbits: u16, unsetbits: u16, matchcallback: PyObject,
         fullpaths: bool
     ) -> PyResult<PyObject> {
         let setbits = StateFlags::from_bits_truncate(setbits);

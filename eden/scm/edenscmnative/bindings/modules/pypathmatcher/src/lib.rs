@@ -11,7 +11,7 @@ use std::path::Path;
 
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
-use cpython_ext::{PyPathBuf, Str};
+use cpython_ext::{PyPath, PyPathBuf, Str};
 
 use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
@@ -34,18 +34,18 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class gitignorematcher |py| {
     data matcher: GitignoreMatcher;
 
-    def __new__(_cls, root: PyPathBuf, global_paths: Vec<PyPathBuf>) -> PyResult<gitignorematcher> {
-        let global_paths: Vec<&Path> = global_paths.iter().map(AsRef::as_ref).collect();
-        let matcher = GitignoreMatcher::new(&root, global_paths);
+    def __new__(_cls, root: &PyPath, global_paths: Vec<PyPathBuf>) -> PyResult<gitignorematcher> {
+        let global_paths: Vec<&Path> = global_paths.iter().map(PyPathBuf::as_path).collect();
+        let matcher = GitignoreMatcher::new(root, global_paths);
         gitignorematcher::create_instance(py, matcher)
     }
 
-    def match_relative(&self, path: PyPathBuf, is_dir: bool) -> PyResult<bool> {
-        Ok(self.matcher(py).match_relative(&path, is_dir))
+    def match_relative(&self, path: &PyPath, is_dir: bool) -> PyResult<bool> {
+        Ok(self.matcher(py).match_relative(path, is_dir))
     }
 
-    def explain(&self, path: PyPathBuf, is_dir: bool) -> PyResult<Str> {
-        Ok(self.matcher(py).explain(&path, is_dir).into())
+    def explain(&self, path: &PyPath, is_dir: bool) -> PyResult<Str> {
+        Ok(self.matcher(py).explain(path, is_dir).into())
     }
 });
 
@@ -57,12 +57,12 @@ py_class!(class treematcher |py| {
         Self::create_instance(py, matcher)
     }
 
-    def matches(&self, path: PyPathBuf) -> PyResult<bool> {
+    def matches(&self, path: &PyPath) -> PyResult<bool> {
         Ok(self.matcher(py).matches(path))
     }
 
-    def match_recursive(&self, path: PyPathBuf) -> PyResult<Option<bool>> {
-        if path.as_ref().as_os_str().is_empty() {
+    def match_recursive(&self, path: &PyPath) -> PyResult<Option<bool>> {
+        if path.as_path().as_os_str().is_empty() {
             Ok(None)
         } else {
             Ok(self.matcher(py).match_recursive(path))

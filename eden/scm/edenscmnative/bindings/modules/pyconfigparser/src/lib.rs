@@ -15,7 +15,7 @@ use configparser::{
     config::{ConfigSet, Options},
     hg::{parse_list, ConfigSetHgExt, OptionsHgExt, HGRCPATH},
 };
-use cpython_ext::{PyNone, PyPathBuf, Str};
+use cpython_ext::{PyNone, PyPath, PyPathBuf, Str};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");
@@ -39,7 +39,7 @@ py_class!(pub class config |py| {
 
     def readpath(
         &self,
-        path: PyPathBuf,
+        path: &PyPath,
         source: String,
         sections: Option<Vec<String>>,
         remap: Option<Vec<(String, String)>>,

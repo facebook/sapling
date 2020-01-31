@@ -11,7 +11,7 @@ use cpython::{
     ToPyObject,
 };
 
-use cpython_ext::{PyErr as ExtPyErr, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyErr as ExtPyErr, PyPath, PyPathBuf, ResultPyErrExt};
 use revisionstore::datastore::{Delta, Metadata};
 use types::{Key, Node, RepoPathBuf};
 
@@ -21,13 +21,13 @@ pub fn to_node(py: Python, node: &PyBytes) -> Node {
     (&bytes).into()
 }
 
-pub fn to_path(py: Python, name: &PyPathBuf) -> PyResult<RepoPathBuf> {
+pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
     name.to_repo_path()
         .map_pyerr(py)
         .map(|path| path.to_owned())
 }
 
-pub fn to_key(py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<Key> {
+pub fn to_key(py: Python, name: &PyPath, node: &PyBytes) -> PyResult<Key> {
     let node = to_node(py, node);
     let path = to_path(py, name)?;
     Ok(Key::new(path, node))
@@ -42,7 +42,7 @@ pub fn from_key(py: Python, key: &Key) -> (PyPathBuf, PyBytes) {
 
 pub fn to_delta(
     py: Python,
-    name: &PyPathBuf,
+    name: &PyPath,
     node: &PyBytes,
     deltabasenode: &PyBytes,
     data: &PyBytes,

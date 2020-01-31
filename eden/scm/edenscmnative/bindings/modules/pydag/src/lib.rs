@@ -9,7 +9,7 @@
 
 use anyhow::Error;
 use cpython::*;
-use cpython_ext::{AnyhowResultExt, PyNone, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt};
 use dag::{
     id::{Group, Id, VertexName},
     idmap::IdMap,
@@ -168,9 +168,9 @@ py_class!(class dagindex |py| {
     data dag: RefCell<IdDag>;
     data map: RefCell<IdMap>;
 
-    def __new__(_cls, path: PyPathBuf, segment_size: usize = 16) -> PyResult<dagindex> {
-        let mut dag = IdDag::open(path.as_ref().join("segment")).map_pyerr(py)?;
-        let map = IdMap::open(path.as_ref().join("idmap")).map_pyerr(py)?;
+    def __new__(_cls, path: &PyPath, segment_size: usize = 16) -> PyResult<dagindex> {
+        let mut dag = IdDag::open(path.as_path().join("segment")).map_pyerr(py)?;
+        let map = IdMap::open(path.as_path().join("idmap")).map_pyerr(py)?;
         dag.set_new_segment_size(segment_size);
         Self::create_instance(py, RefCell::new(dag), RefCell::new(map))
     }

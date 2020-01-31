@@ -137,7 +137,7 @@ py_class!(class client |py| {
             .stream_trees(streamtrees);
 
         if let Some((cert, key)) = creds {
-            config = config.client_creds(cert, key).map_err(|e| into_exception(py, e))?;
+            config = config.client_creds(cert.as_path(), key.as_path()).map_err(|e| into_exception(py, e))?;
         }
 
         let inner = EdenApiCurlClient::new(config).map_err(|e| into_exception(py, e))?;

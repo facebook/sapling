@@ -12,7 +12,7 @@ use std::{cell::RefCell, io::Cursor};
 use anyhow::Error;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
-use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
 use thiserror::Error;
 
 use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore, Repair};
@@ -183,7 +183,7 @@ py_class!(class mutationentry |py| {
 py_class!(class mutationstore |py| {
     data mut_store: RefCell<MutationStore>;
 
-    def __new__(_cls, path: PyPathBuf) -> PyResult<mutationstore> {
+    def __new__(_cls, path: &PyPath) -> PyResult<mutationstore> {
         let ms = MutationStore::open(path).map_pyerr(py)?;
         mutationstore::create_instance(py, RefCell::new(ms))
     }
