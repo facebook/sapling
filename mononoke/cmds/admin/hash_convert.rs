@@ -35,7 +35,7 @@ pub fn subcommand_hash_convert(
         (source == "hg") ^ (target == "bonsai"),
         "source and target should be different"
     );
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     args::open_repo(fb, &logger, &matches)
         .and_then(move |repo| {

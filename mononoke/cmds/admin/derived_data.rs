@@ -54,7 +54,7 @@ pub fn subcommand_derived_data(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Pin<Box<dyn Future<Output = Result<(), SubcommandError>> + Send>> {
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches);
 

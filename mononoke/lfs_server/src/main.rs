@@ -210,7 +210,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches();
 
-    let caching = args::init_cachelib(fb, &matches);
+    let caching = args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);

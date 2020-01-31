@@ -47,7 +47,7 @@ pub fn subcommand_hg_changeset(
                 .ok_or(format_err!("RIGHT_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
 
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             args::open_repo(fb, &logger, &matches)
                 .and_then(move |repo| {
                     (left_cs, right_cs)
@@ -74,7 +74,7 @@ pub fn subcommand_hg_changeset(
                 .ok_or(format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
 
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             args::open_repo(fb, &logger, &matches)
                 .and_then(move |repo| {
                     (start_cs, stop_cs)

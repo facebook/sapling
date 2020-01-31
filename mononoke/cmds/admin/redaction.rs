@@ -183,7 +183,7 @@ fn get_ctx_blobrepo_redacted_blobs_cs_id(
         None => return future::err(SubcommandError::InvalidArgs).boxify(),
     };
 
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, &matches)

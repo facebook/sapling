@@ -190,7 +190,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 ),
         );
     let matches = app.get_matches();
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

@@ -49,7 +49,7 @@ pub fn subcommand_crossrepo(
     let source_repo_id = try_boxfuture!(args::get_source_repo_id(fb, matches));
     let target_repo_id = try_boxfuture!(args::get_target_repo_id(fb, matches));
 
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

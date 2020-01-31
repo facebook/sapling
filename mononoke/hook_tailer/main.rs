@@ -86,7 +86,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
-    let caching = cmdlib::args::init_cachelib(fb, &matches);
+    let caching = cmdlib::args::init_cachelib(fb, &matches, None);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobrepo = open_blobrepo(
         fb,

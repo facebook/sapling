@@ -28,7 +28,7 @@ pub fn subcommand_bonsai_fetch(
 ) -> BoxFuture<(), SubcommandError> {
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
 
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let json_flag = sub_m.is_present("json");

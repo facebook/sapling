@@ -567,7 +567,7 @@ pub fn setup_common(
         Redaction::Disabled
     };
 
-    let caching = cmdlib::args::init_cachelib(fb, &matches);
+    let caching = cmdlib::args::init_cachelib(fb, &matches, None);
 
     let include_edge_types = parse_edge_types(
         sub_m,

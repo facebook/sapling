@@ -111,7 +111,7 @@ fn subcommand_round_trip(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(ctx.fb, &matches);
+    args::init_cachelib(ctx.fb, &matches, None);
     let repo = args::open_repo(ctx.fb, &logger, &matches);
 
     let config = config::get_config(&matches).expect("getting configuration failed");
@@ -318,7 +318,7 @@ fn subcommmand_hg_manifest_verify(
         .ok_or(Error::msg("required parameter `count` is not set"))
         .and_then(|count_str| Ok(count_str.parse()?));
 
-    args::init_cachelib(ctx.fb, &matches);
+    args::init_cachelib(ctx.fb, &matches, None);
 
     let total = Arc::new(AtomicUsize::new(0));
     let total_millis = Arc::new(AtomicU64::new(0));

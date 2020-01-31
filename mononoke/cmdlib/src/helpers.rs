@@ -6,7 +6,15 @@
  * directory of this source tree.
  */
 
-use std::{cmp::min, fs, future::Future, io, path::Path, str::FromStr, time::Duration};
+use std::{
+    cmp::{max, min},
+    fs,
+    future::Future,
+    io,
+    path::Path,
+    str::FromStr,
+    time::Duration,
+};
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
@@ -40,6 +48,8 @@ use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 pub const ARG_FORCE_SHUTDOWN_PERIOD: &str = "force-shutdown-period";
+
+const MIN_BUCKET_POWER: u32 = 20;
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl OldFuture<Item = (), Error = !> {
     if !ctx.trace().is_enabled() {
@@ -86,6 +96,7 @@ pub struct CachelibSettings {
     pub cache_size: usize,
     pub max_process_size_gib: Option<u32>,
     pub min_process_size_gib: Option<u32>,
+    pub buckets_power: Option<u32>,
     pub use_tupperware_shrinker: bool,
     pub presence_cache_size: Option<usize>,
     pub changesets_cache_size: Option<usize>,
@@ -103,6 +114,7 @@ impl Default for CachelibSettings {
             cache_size: 20 * 1024 * 1024 * 1024,
             max_process_size_gib: None,
             min_process_size_gib: None,
+            buckets_power: None,
             use_tupperware_shrinker: false,
             presence_cache_size: None,
             changesets_cache_size: None,
@@ -116,19 +128,28 @@ impl Default for CachelibSettings {
     }
 }
 
-pub fn init_cachelib_from_settings(fb: FacebookInit, settings: CachelibSettings) -> Result<()> {
+pub fn init_cachelib_from_settings(
+    fb: FacebookInit,
+    settings: CachelibSettings,
+    expected_item_size_bytes: Option<usize>,
+) -> Result<()> {
     // Millions of lookups per second
     let lock_power = 10;
-    // Assume 200 bytes average cache item size and compute bucketsPower
-    let expected_item_size_bytes = 200;
+
+    let expected_item_size_bytes = expected_item_size_bytes.unwrap_or(200);
     let cache_size_bytes = settings.cache_size;
     let item_count = cache_size_bytes / expected_item_size_bytes;
 
-    // Because `bucket_count` is a power of 2, bucket_count.trailing_zeros() is log2(bucket_count)
-    let bucket_count = item_count
-        .checked_next_power_of_two()
-        .ok_or_else(|| Error::msg("Cache has too many objects to fit a `usize`?!?"))?;
-    let buckets_power = min(bucket_count.trailing_zeros() + 1 as u32, 32);
+    let buckets_power = if let Some(buckets_power) = settings.buckets_power {
+        max(buckets_power, MIN_BUCKET_POWER)
+    } else {
+        // Because `bucket_count` is a power of 2, bucket_count.trailing_zeros() is log2(bucket_count)
+        let bucket_count = item_count
+            .checked_next_power_of_two()
+            .ok_or_else(|| Error::msg("Cache has too many objects to fit a `usize`?!?"))?;
+
+        min(bucket_count.trailing_zeros() + 1 as u32, 32)
+    };
 
     let mut cache_config = cachelib::LruCacheConfig::new(cache_size_bytes)
         .set_pool_rebalance(cachelib::PoolRebalanceConfig {

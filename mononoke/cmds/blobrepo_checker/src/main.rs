@@ -47,7 +47,7 @@ fn main(fb: FacebookInit) {
         )
         .get_matches();
 
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
 

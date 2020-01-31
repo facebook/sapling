@@ -134,7 +134,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         config.common,
         config.repos.into_iter(),
         cmdlib::args::parse_mysql_options(&matches),
-        cmdlib::args::init_cachelib(fb, &matches),
+        cmdlib::args::init_cachelib(fb, &matches, None),
         cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
         &root_log,
         matches

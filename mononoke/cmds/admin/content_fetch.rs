@@ -32,7 +32,7 @@ pub fn subcommand_content_fetch(
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
     let path = sub_m.value_of("PATH").unwrap().to_string();
 
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

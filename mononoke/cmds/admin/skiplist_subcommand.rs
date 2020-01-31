@@ -44,7 +44,7 @@ pub fn subcommand_skiplist(
                 .expect("blobstore key is not specified")
                 .to_string();
 
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
             let sql_changesets = args::open_sql::<SqlChangesets>(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches);
@@ -61,7 +61,7 @@ pub fn subcommand_skiplist(
                 .expect("blobstore key is not specified")
                 .to_string();
 
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             let ctx = CoreContext::test_mock(fb);
             args::open_repo(fb, &logger, &matches)
                 .and_then({

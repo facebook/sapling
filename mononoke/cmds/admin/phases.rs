@@ -44,7 +44,7 @@ pub fn subcommand_phases(
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let repo = args::open_repo(fb, &logger, &matches);
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {

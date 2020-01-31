@@ -193,7 +193,7 @@ pub fn subcommand_filenodes(
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let blobrepo = args::open_repo(fb, &ctx.logger(), &matches);
     let log_envelope = sub_m.is_present(ARG_ENVELOPE);

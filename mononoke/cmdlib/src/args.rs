@@ -77,6 +77,7 @@ const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
+const BUCKETS_POWER: &str = "buckets-power";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -101,6 +102,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
         "override size of the content SHA1 cache",
     ),
     (PHASES_CACHE_SIZE, "override size of the phases cache"),
+    (
+        BUCKETS_POWER,
+        "override the bucket power for cachelib's hashtable",
+    ),
 ];
 
 pub struct MononokeApp {
@@ -721,7 +726,11 @@ pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     }
 }
 
-pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching {
+pub fn init_cachelib<'a>(
+    fb: FacebookInit,
+    matches: &ArgMatches<'a>,
+    expected_item_size_bytes: Option<usize>,
+) -> Caching {
     let caching = parse_caching(matches);
 
     if caching == Caching::Enabled || caching == Caching::CachelibOnlyBlobstore {
@@ -758,8 +767,11 @@ pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching 
         if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
             settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
         }
+        if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
+            settings.buckets_power = Some(buckets_power.parse().unwrap());
+        }
 
-        init_cachelib_from_settings(fb, settings).unwrap();
+        init_cachelib_from_settings(fb, settings, expected_item_size_bytes).unwrap();
     }
 
     caching

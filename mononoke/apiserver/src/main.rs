@@ -494,7 +494,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = cmdlib::args::add_logger_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
-    let with_cachelib = cmdlib::args::init_cachelib(fb, &matches);
+    let with_cachelib = cmdlib::args::init_cachelib(fb, &matches, None);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");

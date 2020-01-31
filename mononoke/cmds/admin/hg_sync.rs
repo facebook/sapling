@@ -248,7 +248,7 @@ pub fn subcommand_process_hg_sync(
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
             let limit = args::get_u64(sub_m, "limit", 10);
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             let repo = args::open_repo(fb, &logger, &matches);
 
             repo.join3(mutable_counters, bookmarks)
@@ -308,7 +308,7 @@ pub fn subcommand_process_hg_sync(
                 .boxify()
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             let repo_fut = args::open_repo(fb, &logger, &matches);
             let id = args::get_u64_opt(sub_m, "id");
             let id = try_boxfuture!(id.ok_or(Error::msg("--id is not specified")));

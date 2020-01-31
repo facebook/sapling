@@ -188,7 +188,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
     let mut runtime = args::init_runtime(&matches)?;
 
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = runtime.block_on_std(args::create_repo(fb, &logger, &matches).compat())?;

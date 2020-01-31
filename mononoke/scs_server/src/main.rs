@@ -79,7 +79,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .get_matches();
 
     let logger = args::init_logging(fb, &matches);
-    let caching = args::init_cachelib(fb, &matches);
+    let caching = args::init_cachelib(fb, &matches, None);
     let port = value_t!(matches.value_of(ARG_PORT), u16)?;
     let host = matches.value_of(ARG_HOST).unwrap_or("::");
     let config_path = matches

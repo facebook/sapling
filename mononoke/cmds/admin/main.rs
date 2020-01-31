@@ -399,7 +399,7 @@ fn main(fb: FacebookInit) -> ExitCode {
         (BONSAI_FETCH, Some(sub_m)) => subcommand_bonsai_fetch(fb, logger, &matches, sub_m),
         (CONTENT_FETCH, Some(sub_m)) => subcommand_content_fetch(fb, logger, &matches, sub_m),
         (BOOKMARKS, Some(sub_m)) => {
-            args::init_cachelib(fb, &matches);
+            args::init_cachelib(fb, &matches, None);
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
             let repo_fut = args::open_repo(fb, &logger, &matches).boxify();
             bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)

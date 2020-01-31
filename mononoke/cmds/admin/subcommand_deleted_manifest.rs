@@ -72,7 +72,7 @@ pub fn subcommand_deleted_manifest(
     matches: &ArgMatches<'_>,
     sub_matches: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, &matches, None);
 
     let repo = args::open_repo(fb, &logger, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
