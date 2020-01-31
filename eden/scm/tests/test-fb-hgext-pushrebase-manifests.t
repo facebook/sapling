@@ -89,6 +89,7 @@ Make some non-conflicting commits in all three repos.
 
 Add an extension that logs whenever `manifest.readmf()` is called when the lock is held.
   $ cat >> $TESTTMP/manifestcheck.py <<EOF
+  > from __future__ import print_function
   > import sys, traceback, os
   > from edenscm.mercurial import extensions, manifest
   > from edenscm.mercurial.node import nullrev
@@ -99,16 +100,16 @@ Add an extension that logs whenever `manifest.readmf()` is called when the lock 
   >     try:
   >       haslock = os.path.lexists(os.path.join(self.opener.join(''), "../wlock"))
   >     except Exception as e:
-  >       print >> sys.stderr, 'manifest: %s' % e
+  >       print('manifest: %s' % e, file=sys.stderr)
   >       pass
   >     if nodeorrev != nullrev:
   >         if haslock:
-  >           print >> sys.stderr, 'read flat manifest :('
+  >           print('read flat manifest :(', file=sys.stderr)
   >           stack = traceback.extract_stack()
   >           # Uncomment for context:
-  >           # print >> sys.stderr, ''.join(traceback.format_list(stack[-5:-3]))
+  >           # print(''.join(traceback.format_list(stack[-5:-3])), file=sys.stderr)
   >         else:
-  >           print >> sys.stderr, "read manifest outside the lock :)"
+  >           print("read manifest outside the lock :)", file=sys.stderr)
   >     return orig(self, nodeorrev, **kwargs)
   > EOF
 

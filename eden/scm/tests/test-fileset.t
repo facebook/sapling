@@ -160,8 +160,8 @@ Test files properties
   $ hg --config ui.portablefilenames=ignore add con.xml
 #endif
 
-  >>> file('1k', 'wb').write(' '*1024)
-  >>> file('2k', 'wb').write(' '*2048)
+  >>> open('1k', 'wb').write(b' '*1024)
+  >>> open('2k', 'wb').write(b' '*2048)
   $ hg add 1k 2k
   $ fileset 'size("bar")'
   hg: parse error: couldn't parse size: bar

@@ -8,15 +8,16 @@ This file tests that normal mercurial operations never read the flat manifests
 
 
   $ cat >> $TESTTMP/flatcheck.py <<EOF
+  > from __future__ import print_function
   > import sys, traceback
   > from edenscm.mercurial import extensions, manifest
   > def uisetup(ui):
   >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', readmf)
   > def readmf(orig, self, nodeorrev, **kwargs):
   >     if nodeorrev != -1:
-  >         print >> sys.stderr, 'read flat manifest'
+  >         print('read flat manifest', file=sys.stderr)
   >         stack = traceback.extract_stack()
-  >         print >> sys.stderr, ''.join(traceback.format_list(stack[-3:-2]))
+  >         print(''.join(traceback.format_list(stack[-3:-2])), file=sys.stderr)
   >     return orig(self, nodeorrev, **kwargs)
   > EOF
 

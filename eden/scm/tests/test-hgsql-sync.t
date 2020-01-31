@@ -151,6 +151,7 @@
 
 # Update one bookmark but not the other
   $ cat >> $TESTTMP/inspectsql.py <<EOF
+  > from __future__ import print_function
   > import os, sys
   > from edenscm.mercurial import demandimport, extensions
   > with demandimport.deactivated():
@@ -160,7 +161,7 @@
   >     watchstrings = watchstrings.split(',')
   > def printsql(orig, *args, **kwargs):
   >     if not watchstrings or any(s for s in watchstrings if s in args[1]):
-  >         print >> sys.stderr, args[1] % args[2]
+  >         print(args[1] % args[2], file=sys.stderr)
   >     return orig(*args, **kwargs)
   > extensions.wrapfunction(mysql.connector.cursor.MySQLCursor, "execute", printsql)
   > EOF

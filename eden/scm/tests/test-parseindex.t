@@ -13,33 +13,34 @@
 Test SEGV caused by bad revision passed to reachableroots() (issue4775):
 
   $ hg debugpython -- <<EOF
+  > from __future__ import print_function
   > from edenscm.mercurial import changelog, uiconfig, vfs
   > cl = changelog.changelog(vfs.vfs('.hg/store'), uiconfig.uiconfig())
-  > print 'good heads:'
+  > print('good heads:')
   > for head in [0, len(cl) - 1, -1]:
-  >     print'%s: %r' % (head, cl.reachableroots(0, [head], [0]))
-  > print 'bad heads:'
+  >     print('%s: %r' % (head, cl.reachableroots(0, [head], [0])))
+  > print('bad heads:')
   > for head in [len(cl), 10000, -2, -10000, None]:
-  >     print '%s:' % head,
+  >     print('%s:' % head, end=' ')
   >     try:
   >         cl.reachableroots(0, [head], [0])
-  >         print 'uncaught buffer overflow?'
+  >         print('uncaught buffer overflow?')
   >     except (IndexError, TypeError) as inst:
-  >         print inst
-  > print 'good roots:'
+  >         print(inst)
+  > print('good roots:')
   > for root in [0, len(cl) - 1, -1]:
-  >     print '%s: %r' % (root, cl.reachableroots(root, [len(cl) - 1], [root]))
-  > print 'out-of-range roots are ignored:'
+  >     print('%s: %r' % (root, cl.reachableroots(root, [len(cl) - 1], [root])))
+  > print('out-of-range roots are ignored:')
   > for root in [len(cl), 10000, -2, -10000]:
-  >     print '%s: %r' % (root, cl.reachableroots(root, [len(cl) - 1], [root]))
-  > print 'bad roots:'
+  >     print('%s: %r' % (root, cl.reachableroots(root, [len(cl) - 1], [root])))
+  > print('bad roots:')
   > for root in [None]:
-  >     print '%s:' % root,
+  >     print('%s:' % root, end=' ')
   >     try:
   >         cl.reachableroots(root, [len(cl) - 1], [root])
-  >         print 'uncaught error?'
+  >         print('uncaught error?')
   >     except TypeError as inst:
-  >         print inst
+  >         print(inst)
   > EOF
   good heads:
   0: [0]

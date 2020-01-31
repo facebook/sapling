@@ -191,7 +191,7 @@ Test a push that comes with out-of-date bookmark discovery
   >         if tr:
   >             tr.release()
   >         lockmod.release(lock)
-  >     print "moved bookmark to rev 1"
+  >     print("moved bookmark to rev 1")
   > EOF
   $ cat >> server/.hg/hgrc <<EOF
   > [hooks]

@@ -30,9 +30,9 @@ Implement a basic verification hook
   > if expected_book == actual_book:
   >     if ((expected_head is None and actual_head is None) or
   >           (expected_head == actual_head)):
-  >       print "[ReplayVerification] Everything seems in order"
+  >       print("[ReplayVerification] Everything seems in order")
   >       sys.exit(0)
-  > print "[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)" % (expected_book, expected_head, actual_book, actual_head)
+  > print("[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)" % (expected_book, expected_head, actual_book, actual_head))
   > sys.exit(1)
   > EOF
 
