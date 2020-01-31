@@ -1308,10 +1308,11 @@ class GitHandler(object):
                     f.seek(0)
                     self.git.object_store.add_thin_pack(f.read, None)
 
-            # For empty repos dulwich gives us None, but since later
-            # we want to iterate over this, we really want an empty
-            # iterable
-            if ret is None or ret.refs is None:
+            # For empty repos dulwich may give us None.  Alternatively, it may
+            # give us an object which is normally iterable, but because of a
+            # bug, the empty version can raise exceptions if treated like a
+            # sequence.  In either case, replace it with an empty iterable.
+            if ret is None or getattr(ret, "refs", ()) is None:
                 ret = {}
             return ret
         except (HangupException, GitProtocolError) as e:
