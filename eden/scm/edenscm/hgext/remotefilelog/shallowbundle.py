@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 import os
+from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, Sequence
 
 from edenscm.mercurial import (
     bundlerepo,
@@ -67,6 +68,7 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
 @shallowutil.interposeclass(changegroup, "cg1packer")
 class shallowcg1packer(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
+        # type: (Sequence[int], Sequence[bytes], bool, Any) -> Iterable[bytes]
         if "remotefilelog" in self._repo.requirements:
             fastpathlinkrev = False
 
@@ -74,8 +76,9 @@ class shallowcg1packer(changegroup.cg1packer):
             commonrevs, clnodes, fastpathlinkrev, source
         )
 
-    def group(self, nodelist, rlog, lookup, prog=None, reorder=None):
-        return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup, prog=prog)
+    def group(self, nodelist, revlog, lookup, prog=None, reorder=None):
+        # type: (Sequence[bytes], Any, Callable[..., Any], Any) -> Iterable[bytes]
+        return shallowgroup(shallowcg1packer, self, nodelist, revlog, lookup, prog=prog)
 
     def _cansendflat(self, mfnodes):
         repo = self._repo
@@ -107,6 +110,7 @@ class shallowcg1packer(changegroup.cg1packer):
     def generatemanifests(
         self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
     ):
+        # type: (Sequence[int], Mapping[bytes, int], bool, Any, MutableMapping[str, Any], Any) -> Iterable[bytes]
         """
         - `commonrevs` is the set of known commits on both sides
         - `clrevorder` is a mapping from cl node to rev number, used for
@@ -347,8 +351,9 @@ class shallowcg1packer(changegroup.cg1packer):
 if util.safehasattr(changegroup, "cg2packer"):
     # Mercurial >= 3.3
     @shallowutil.interposeclass(changegroup, "cg2packer")
-    class shallowcg2packer(changegroup.cg2packer):
-        def group(self, nodelist, rlog, lookup, prog=None, reorder=None):
+    class shallowcg2packer(changegroup.cg2packer, shallowcg1packer):
+        def group(self, nodelist, revlog, lookup, prog=None, reorder=None):
+            # type: (Sequence[bytes], Any, Callable[..., Any], Optional[Any]) -> Iterable[bytes]
             # for revlogs, shallowgroup will be called twice in the same stack
             # -- once here, once up the inheritance hierarchy in
             # shallowcg1packer. That's fine though because for revlogs,
@@ -356,17 +361,18 @@ if util.safehasattr(changegroup, "cg2packer"):
             # function. If that assumption changes this will have to be
             # revisited.
             return shallowgroup(
-                shallowcg2packer, self, nodelist, rlog, lookup, prog=prog
+                shallowcg2packer, self, nodelist, revlog, lookup, prog=prog
             )
 
 
 if util.safehasattr(changegroup, "cg3packer"):
 
     @shallowutil.interposeclass(changegroup, "cg3packer")
-    class shallowcg3packer(changegroup.cg3packer):
+    class shallowcg3packer(changegroup.cg3packer, shallowcg1packer):
         def generatemanifests(
             self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
         ):
+            # type: (Sequence[int], Mapping[bytes, int], bool, Any, MutableMapping[str, Any], Any) -> Iterable[bytes]
             chunks = super(shallowcg3packer, self).generatemanifests(
                 commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
             )
