@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import json as _sysjson
+import sys
 
 from edenscm.mercurial import encoding, error, pycompat, util
 
@@ -67,8 +68,11 @@ def loads(string):
     Warning: this does not round-trip with "dumps". "dumps" supports non-utf8
     binary content that is unsupported by this function.
     """
-    # XXX: This should round-trip with "dumps". But it might be non-trivial to
-    # do so.
-    return _rapply(
-        lambda s: pycompat.decodeutf8(s.encode("utf-8")), _sysjson.loads(string)
-    )
+    if sys.version_info[0] < 3:
+        # XXX: This should round-trip with "dumps". But it might be non-trivial to
+        # do so.
+        return _rapply(
+            lambda s: pycompat.decodeutf8(s.encode("utf-8")), _sysjson.loads(string)
+        )
+    else:
+        return _sysjson.loads(string)
