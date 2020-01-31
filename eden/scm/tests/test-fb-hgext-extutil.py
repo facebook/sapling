@@ -56,12 +56,12 @@ class ExtutilTests(unittest.TestCase):
 
         with extutil.flock(opener.join(name), "testing a lock", timeout=0):
             otherlock = self.otherprocesslock(opener, name)
-            self.assertEquals(
+            self.assertEqual(
                 otherlock, locktimeout, "other process should not have taken the lock"
             )
 
         otherlock = self.otherprocesslock(opener, name)
-        self.assertEquals(
+        self.assertEqual(
             otherlock, locksuccess, "other process should have taken the lock"
         )
 
