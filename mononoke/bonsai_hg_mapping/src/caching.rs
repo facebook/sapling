@@ -24,7 +24,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
 use iobuf::IOBuf;
 use memcache::{KeyGen, MemcacheClient};
-use mercurial_types::HgChangesetId;
+use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mononoke_types::{ChangesetId, RepositoryId};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -200,6 +200,17 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
             .run(keys)
             .map(|map| map.into_iter().map(|(_, val)| val).collect())
             .boxify()
+    }
+
+    fn get_many_hg_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: HgChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+        self.mapping
+            .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
     }
 }
 

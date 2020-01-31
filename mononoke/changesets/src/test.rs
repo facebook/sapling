@@ -16,10 +16,12 @@ use caching_ext::MockStoreStats;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::hashset;
+use mononoke_types::{ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix};
 use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio_compat::runtime::Runtime;
 
@@ -465,6 +467,122 @@ fn get_many_missing<C: Changesets>(fb: FacebookInit, changesets: C) {
     );
 }
 
+fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) {
+    let mut rt = Runtime::new().unwrap();
+    let ctx = CoreContext::test_mock(fb);
+
+    let row1 = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: ONES_CSID,
+        parents: vec![],
+    };
+    let row2 = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: TWOS_CSID,
+        parents: vec![],
+    };
+    let row3 = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: FS_ES_CSID,
+        parents: vec![],
+    };
+    let row4 = ChangesetInsert {
+        repo_id: REPO_ZERO,
+        cs_id: FS_CSID,
+        parents: vec![],
+    };
+
+    rt.block_on(changesets.add(ctx.clone(), row1))
+        .expect("Adding row 1 failed");
+    rt.block_on(changesets.add(ctx.clone(), row2))
+        .expect("Adding row 2 failed");
+    rt.block_on(changesets.add(ctx.clone(), row3))
+        .expect("Adding row 3 failed");
+    rt.block_on(changesets.add(ctx.clone(), row4))
+        .expect("Adding row 4 failed");
+
+    // found a single changeset
+    let actual = rt
+        .block_on(changesets.get_many_by_prefix(
+            ctx.clone(),
+            REPO_ZERO,
+            ChangesetIdPrefix::from_bytes(&ONES_CSID.as_ref()[0..8]).unwrap(),
+            10,
+        ))
+        .expect("get_many_by_prefix failed");
+
+    assert_eq!(actual, ChangesetIdsResolvedFromPrefix::Single(ONES_CSID));
+
+    // found a single changeset
+    let actual = rt
+        .block_on(changesets.get_many_by_prefix(
+            ctx.clone(),
+            REPO_ZERO,
+            ChangesetIdPrefix::from_bytes(&TWOS_CSID.as_ref()[0..12]).unwrap(),
+            1,
+        ))
+        .expect("get_many_by_prefix failed");
+
+    assert_eq!(actual, ChangesetIdsResolvedFromPrefix::Single(TWOS_CSID));
+
+    // found several changesets within the limit
+    let actual = rt
+        .block_on(changesets.get_many_by_prefix(
+            ctx.clone(),
+            REPO_ZERO,
+            ChangesetIdPrefix::from_bytes(&FS_CSID.as_ref()[0..8]).unwrap(),
+            10,
+        ))
+        .expect("get_many_by_prefix failed");
+
+    assert_eq!(
+        actual,
+        ChangesetIdsResolvedFromPrefix::Multiple(vec![FS_ES_CSID, FS_CSID]),
+    );
+
+    // found several changesets within the limit by hex string prefix
+    let actual = rt
+        .block_on(changesets.get_many_by_prefix(
+            ctx.clone(),
+            REPO_ZERO,
+            ChangesetIdPrefix::from_str(&"fff").unwrap(),
+            10,
+        ))
+        .expect("get_many_by_prefix failed");
+
+    assert_eq!(
+        actual,
+        ChangesetIdsResolvedFromPrefix::Multiple(vec![FS_ES_CSID, FS_CSID]),
+    );
+
+    // found several changesets exceeding the limit
+    let actual = rt
+        .block_on(changesets.get_many_by_prefix(
+            ctx.clone(),
+            REPO_ZERO,
+            ChangesetIdPrefix::from_bytes(&FS_CSID.as_ref()[0..8]).unwrap(),
+            1,
+        ))
+        .expect("get_many_by_prefix failed");
+
+    assert_eq!(
+        actual,
+        ChangesetIdsResolvedFromPrefix::TooMany(vec![FS_ES_CSID]),
+    );
+
+    // not found
+    let actual = rt
+        .block_on(changesets.get_many_by_prefix(
+            ctx.clone(),
+            REPO_ZERO,
+            ChangesetIdPrefix::from_bytes(&THREES_CSID.as_ref()[0..16]).unwrap(),
+            10,
+        ))
+        .expect("get_many_by_prefix failed");
+
+    assert_eq!(actual, ChangesetIdsResolvedFromPrefix::NoMatch);
+}
+
 fn caching_fill<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
 
@@ -817,6 +935,11 @@ testify!(
 );
 testify!(test_complex, test_caching_complex, complex);
 testify!(test_get_many, test_caching_get_many, get_many);
+testify!(
+    test_get_many_by_prefix,
+    test_caching_get_many_by_prefix,
+    get_many_by_prefix
+);
 testify!(
     test_get_many_missing,
     test_caching_get_many_missing,

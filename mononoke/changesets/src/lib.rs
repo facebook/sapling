@@ -17,7 +17,9 @@ use fbthrift::compact_protocol;
 use futures::{future::ok, stream, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize_derive::HeapSizeOf;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::{
+    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
+};
 use sql::{queries, Connection, Transaction};
 pub use sql_ext::SqlConstructors;
 use stats::prelude::*;
@@ -39,6 +41,7 @@ define_stats! {
     get_many: timeseries(Rate, Sum),
     gets_master: timeseries(Rate, Sum),
     get_many_master: timeseries(Rate, Sum),
+    get_many_by_prefix: timeseries(Rate, Sum),
     adds: timeseries(Rate, Sum),
 }
 
@@ -143,6 +146,15 @@ pub trait Changesets: Send + Sync {
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetEntry>, Error>;
+
+    /// Retrieve the rows for all the commits with the given prefix up to the given limit
+    fn get_many_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: ChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error>;
 }
 
 #[derive(Clone)]
@@ -205,6 +217,15 @@ queries! {
          FROM changesets
          WHERE repo_id = {repo_id}
            AND cs_id IN {cs_id}"
+    }
+
+    read SelectChangesetsRange(repo_id: RepositoryId, min: &[u8], max: &[u8], limit: usize) -> (ChangesetId) {
+        "SELECT cs_id
+         FROM changesets
+         WHERE repo_id = {repo_id}
+           AND cs_id >= {min} AND cs_id <= {max}
+           LIMIT {limit}
+        "
     }
 
     read SelectAllChangesetsIdsInRange(repo_id: RepositoryId, min_id: u64, max_id: u64) -> (ChangesetId) {
@@ -364,6 +385,57 @@ impl Changesets for SqlChangesets {
                 .boxify()
         }
     }
+
+    fn get_many_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: ChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+        STATS::get_many_by_prefix.add_value(1);
+        cloned!(self.read_master_connection);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        fetch_many_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit)
+            .and_then(move |resolved_cs| match resolved_cs {
+                ChangesetIdsResolvedFromPrefix::NoMatch => {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlReadsMaster);
+                    fetch_many_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
+                }
+                _ => ok(resolved_cs).boxify(),
+            })
+            .boxify()
+    }
+}
+
+fn fetch_many_by_prefix(
+    connection: &Connection,
+    repo_id: RepositoryId,
+    cs_prefix: &ChangesetIdPrefix,
+    limit: usize,
+) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+    SelectChangesetsRange::query(
+        &connection,
+        &repo_id,
+        &cs_prefix.min_as_ref(),
+        &cs_prefix.max_as_ref(),
+        &(limit + 1),
+    )
+    .map(move |rows| {
+        let mut fetched_cs: Vec<ChangesetId> = rows.into_iter().map(|row| row.0).collect();
+        match fetched_cs.len() {
+            0 => ChangesetIdsResolvedFromPrefix::NoMatch,
+            1 => ChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
+            l if l <= limit => ChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
+            _ => ChangesetIdsResolvedFromPrefix::TooMany({
+                fetched_cs.pop();
+                fetched_cs
+            }),
+        }
+    })
+    .boxify()
 }
 
 impl SqlChangesets {

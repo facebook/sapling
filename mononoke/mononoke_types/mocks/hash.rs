@@ -26,9 +26,16 @@ pub const DS: Blake2 = Blake2::from_byte_array([0xdd; 32]);
 pub const ES: Blake2 = Blake2::from_byte_array([0xee; 32]);
 pub const FS: Blake2 = Blake2::from_byte_array([0xff; 32]);
 
+// Definition for the hash ff...ffee..eee
+pub const FS_ES: Blake2 = Blake2::from_byte_array([
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+]);
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use mononoke_types::hash::Blake2Prefix;
 
     #[test]
     fn verify() {
@@ -91,6 +98,12 @@ mod test {
         assert_eq!(
             format!("{}", FS),
             "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        );
+
+        // Test format for 'Blake2Prefix' type
+        assert_eq!(
+            format!("{}", Blake2Prefix::from_bytes(&FS.as_ref()[0..16]).unwrap()),
+            "ffffffffffffffffffffffffffffffff"
         );
     }
 }

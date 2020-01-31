@@ -24,7 +24,9 @@ use futures_ext::{BoxFuture, FutureExt};
 use iobuf::IOBuf;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::{
+    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
+};
 use stats::prelude::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -171,6 +173,18 @@ impl Changesets for CachingChangesets {
         self.req(ctx, repo_id)
             .run(keys)
             .map(|map| map.into_iter().map(|(_, val)| val).collect())
+            .boxify()
+    }
+
+    fn get_many_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: ChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+        self.changesets
+            .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
             .boxify()
     }
 }

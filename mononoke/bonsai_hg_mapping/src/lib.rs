@@ -21,7 +21,9 @@ use context::{CoreContext, PerfCounterType};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::{
+    HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
+};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::queries;
 use stats::prelude::*;
@@ -37,6 +39,7 @@ define_stats! {
     gets: timeseries(Rate, Sum),
     gets_master: timeseries(Rate, Sum),
     adds: timeseries(Rate, Sum),
+    get_many_hg_by_prefix: timeseries(Rate, Sum),
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
@@ -142,6 +145,14 @@ pub trait BonsaiHgMapping: Send + Sync {
             .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
             .boxify()
     }
+
+    fn get_many_hg_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: HgChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error>;
 }
 
 impl BonsaiHgMapping for Arc<dyn BonsaiHgMapping> {
@@ -156,6 +167,16 @@ impl BonsaiHgMapping for Arc<dyn BonsaiHgMapping> {
         cs_id: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         (**self).get(ctx, repo_id, cs_id)
+    }
+
+    fn get_many_hg_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: HgChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+        (**self).get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
     }
 }
 
@@ -194,6 +215,15 @@ queries! {
          FROM bonsai_hg_mapping
          WHERE repo_id = {repo_id}
            AND hg_cs_id IN {hg_cs_id}"
+    }
+
+    read SelectHgChangesetsByRange(repo_id: RepositoryId, hg_cs_min: &[u8], hg_cs_max: &[u8], limit: usize) -> (HgChangesetId) {
+        "SELECT hg_cs_id
+         FROM bonsai_hg_mapping
+         WHERE repo_id = {repo_id}
+           AND hg_cs_id >= {hg_cs_min} AND hg_cs_id <= {hg_cs_max}
+           LIMIT {limit}
+        "
     }
 }
 
@@ -309,6 +339,57 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             })
             .boxify()
     }
+
+    fn get_many_hg_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: HgChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+        STATS::get_many_hg_by_prefix.add_value(1);
+        cloned!(self.read_master_connection);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        fetch_many_hg_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit)
+            .and_then(move |resolved_cs| match resolved_cs {
+                HgChangesetIdsResolvedFromPrefix::NoMatch => {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlReadsMaster);
+                    fetch_many_hg_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
+                }
+                _ => future::ok(resolved_cs).boxify(),
+            })
+            .boxify()
+    }
+}
+
+fn fetch_many_hg_by_prefix(
+    connection: &Connection,
+    repo_id: RepositoryId,
+    cs_prefix: &HgChangesetIdPrefix,
+    limit: usize,
+) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+    SelectHgChangesetsByRange::query(
+        &connection,
+        &repo_id,
+        &cs_prefix.min_as_ref(),
+        &cs_prefix.max_as_ref(),
+        &(limit + 1),
+    )
+    .map(move |rows| {
+        let mut fetched_cs: Vec<HgChangesetId> = rows.into_iter().map(|row| row.0).collect();
+        match fetched_cs.len() {
+            0 => HgChangesetIdsResolvedFromPrefix::NoMatch,
+            1 => HgChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
+            l if l <= limit => HgChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
+            _ => HgChangesetIdsResolvedFromPrefix::TooMany({
+                fetched_cs.pop();
+                fetched_cs
+            }),
+        }
+    })
+    .boxify()
 }
 
 fn filter_fetched_ids(

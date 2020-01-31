@@ -13,7 +13,9 @@ use std::sync::Arc;
 use anyhow::Error;
 use context::CoreContext;
 use futures_ext::BoxFuture;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::{
+    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
+};
 
 use crate::{ChangesetEntry, ChangesetInsert, Changesets};
 
@@ -38,5 +40,15 @@ impl Changesets for Arc<dyn Changesets> {
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
         (**self).get_many(ctx, repo_id, cs_ids)
+    }
+
+    fn get_many_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: ChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+        (**self).get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
     }
 }

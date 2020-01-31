@@ -37,6 +37,10 @@ use crate::thrift;
 /// hashes.
 ///
 /// For more on BLAKE2b, see https://blake2.net/
+
+pub const BLAKE2_HASH_LENGTH_BYTES: usize = 32;
+pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
+
 #[derive(
     Abomonation,
     Clone,
@@ -50,27 +54,27 @@ use crate::thrift;
     Deserialize,
     HeapSizeOf
 )]
-pub struct Blake2([u8; 32]);
+pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
 
 impl Blake2 {
-    /// Construct a `Blake2` from an array of 32 bytes containing a
+    /// Construct a `Blake2` from an array of BLAKE2_HASH_LENGTH_BYTES bytes containing a
     /// BLAKE2b hash (ie, *not* a hash of the bytes).
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Self> {
         let bytes = bytes.as_ref();
-        if bytes.len() != 32 {
+        if bytes.len() != BLAKE2_HASH_LENGTH_BYTES {
             bail!(ErrorKind::InvalidBlake2Input(
-                "need exactly 32 bytes".into()
+                format!("need exactly {} bytes", BLAKE2_HASH_LENGTH_BYTES).into()
             ));
         } else {
-            let mut ret = Blake2([0; 32]);
+            let mut ret = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
             &mut ret.0[..].copy_from_slice(bytes);
             Ok(ret)
         }
     }
 
-    /// Construct a `Blake2` from an array of 32 bytes.
+    /// Construct a `Blake2` from an array of BLAKE2_HASH_LENGTH_BYTES bytes.
     #[inline]
-    pub const fn from_byte_array(arr: [u8; 32]) -> Self {
+    pub const fn from_byte_array(arr: [u8; BLAKE2_HASH_LENGTH_BYTES]) -> Self {
         Blake2(arr)
     }
 
@@ -78,14 +82,18 @@ impl Blake2 {
     pub fn from_thrift(b: thrift::Blake2) -> Result<Self> {
         // Currently this doesn't require consuming b, but hopefully with T26959816 this
         // code will be able to convert a SmallVec directly into an array.
-        if b.0.len() != 32 {
+        if b.0.len() != BLAKE2_HASH_LENGTH_BYTES {
             bail!(ErrorKind::InvalidThrift(
                 "Blake2".into(),
-                format!("wrong length: expected 32, got {}", b.0.len())
+                format!(
+                    "wrong length: expected {}, got {}",
+                    BLAKE2_HASH_LENGTH_BYTES,
+                    b.0.len()
+                )
             ));
         }
         // BigEndian here is matched with `to_thrift` below.
-        let mut arr = [0u8; 32];
+        let mut arr = [0u8; BLAKE2_HASH_LENGTH_BYTES];
         arr.copy_from_slice(&b.0[..]);
         Ok(Blake2(arr))
     }
@@ -97,7 +105,7 @@ impl Blake2 {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v = vec![0; 64];
+        let mut v = vec![0; BLAKE2_HASH_LENGTH_HEX];
 
         // This can only panic if buffer size of Vec isn't correct, which would be
         // a programming error.
@@ -124,7 +132,7 @@ impl Context {
     /// Construct a `Context`
     #[inline]
     pub fn new(key: &[u8]) -> Self {
-        Context(VarBlake2b::new_keyed(key, 32))
+        Context(VarBlake2b::new_keyed(key, BLAKE2_HASH_LENGTH_BYTES))
     }
 
     #[inline]
@@ -137,11 +145,12 @@ impl Context {
 
     #[inline]
     pub fn finish(self) -> Blake2 {
-        let mut ret = [0u8; 32];
+        let mut ret = [0u8; BLAKE2_HASH_LENGTH_BYTES];
         self.0.variable_result(|res| {
-            ret.as_mut()
-                .write_all(res)
-                .expect("32-byte array must work with 32-byte blake2b");
+            ret.as_mut().write_all(res).expect(&format!(
+                "{}-byte array must work with {}-byte blake2b",
+                BLAKE2_HASH_LENGTH_BYTES, BLAKE2_HASH_LENGTH_BYTES
+            ));
         });
         Blake2(ret)
     }
@@ -158,13 +167,13 @@ impl FromStr for Blake2 {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        if s.len() != 64 {
+        if s.len() != BLAKE2_HASH_LENGTH_HEX {
             bail!(ErrorKind::InvalidBlake2Input(
-                "need exactly 64 hex digits".into()
+                "need exactly BLAKE2_HASH_LENGTH_HEX hex digits".into()
             ));
         }
 
-        let mut ret = Blake2([0; 32]);
+        let mut ret = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
         match hex_decode(s.as_bytes(), &mut ret.0) {
             Ok(_) => Ok(ret),
             Err(_) => bail!(ErrorKind::InvalidBlake2Input("bad hex character".into())),
@@ -187,13 +196,115 @@ impl Debug for Blake2 {
 
 impl Arbitrary for Blake2 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let mut bytes = [0; 32];
+        let mut bytes = [0; BLAKE2_HASH_LENGTH_BYTES];
         g.fill_bytes(&mut bytes);
         Blake2(bytes)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         empty_shrinker()
+    }
+}
+
+#[derive(
+    Abomonation,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Serialize,
+    Deserialize,
+    HeapSizeOf
+)]
+pub struct Blake2Prefix(Blake2, Blake2);
+
+impl Blake2Prefix {
+    /// Construct a `Blake2Prefix` from an array of bytes.
+    pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
+        let bytes = bytes.as_ref();
+        if bytes.len() > BLAKE2_HASH_LENGTH_BYTES {
+            bail!(ErrorKind::InvalidBlake2Input(
+                format!(
+                    "prefix needs to be less or equal to {} bytes",
+                    BLAKE2_HASH_LENGTH_BYTES
+                )
+                .into()
+            ))
+        } else {
+            let min_tail: Vec<u8> = vec![0x00; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
+            let max_tail: Vec<u8> = vec![0xff; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
+            Ok(Blake2Prefix(
+                Blake2::from_bytes(&(bytes.iter().chain(&min_tail).cloned().collect::<Vec<_>>()))?,
+                Blake2::from_bytes(&(bytes.iter().chain(&max_tail).cloned().collect::<Vec<_>>()))?,
+            ))
+        }
+    }
+
+    #[inline]
+    /// Get a reference to the underlying bytes of the `Blake2` lower bound object.
+    pub fn min_as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+
+    #[inline]
+    /// Get a reference to the underlying bytes of the `Blake2` inclusive upper bound object.
+    pub fn max_as_ref(&self) -> &[u8] {
+        self.1.as_ref()
+    }
+
+    pub fn to_hex(&self) -> AsciiString {
+        let mut v_min_hex = vec![0; BLAKE2_HASH_LENGTH_HEX];
+        hex_encode(self.0.as_ref(), &mut v_min_hex).expect("failed to hex encode");
+        let mut v_max_hex = vec![0; BLAKE2_HASH_LENGTH_HEX];
+        hex_encode(self.1.as_ref(), &mut v_max_hex).expect("failed to hex encode");
+        for i in 0..BLAKE2_HASH_LENGTH_HEX {
+            if v_min_hex[i] != v_max_hex[i] {
+                v_min_hex.truncate(i);
+                break;
+            }
+        }
+        unsafe {
+            // A hex string is always a pure ASCII string.
+            AsciiString::from_ascii_unchecked(v_min_hex)
+        }
+    }
+}
+
+/// Construct a `Blake2Prefix` from a hex-encoded string.
+impl FromStr for Blake2Prefix {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Blake2Prefix> {
+        if s.len() > BLAKE2_HASH_LENGTH_HEX {
+            bail!(ErrorKind::InvalidBlake2Input(
+                format!(
+                    "prefix needs to be less or equal {} hex digits",
+                    BLAKE2_HASH_LENGTH_HEX
+                )
+                .into()
+            ));
+        }
+        let min_tail: String = String::from_utf8(vec![b'0'; BLAKE2_HASH_LENGTH_HEX - s.len()])?;
+        let max_tail: String = String::from_utf8(vec![b'f'; BLAKE2_HASH_LENGTH_HEX - s.len()])?;
+        Ok(Blake2Prefix(
+            Blake2::from_str(&(s.to_owned() + &min_tail))?,
+            Blake2::from_str(&(s.to_owned() + &max_tail))?,
+        ))
+    }
+}
+
+impl Display for Blake2Prefix {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+/// Custom `Debug` output for `Blake2Prefix` so it prints in hex.
+impl Debug for Blake2Prefix {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Blake2Prefix({})", self)
     }
 }
 
@@ -382,7 +493,7 @@ mod test {
     use quickcheck::{quickcheck, TestResult};
 
     // NULL is not exposed because no production code should use it.
-    const NULL: Blake2 = Blake2([0; 32]);
+    const NULL: Blake2 = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
 
     // This hash is from https://asecuritysite.com/encryption/blake.
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -422,8 +533,40 @@ mod test {
     }
 
     #[test]
+    fn parse_and_display_prefix_ok() {
+        // max length
+        assert_eq!(
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            format!(
+                "{}",
+                Blake2Prefix::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000"
+                )
+                .unwrap()
+            )
+        );
+        // empty
+        assert_eq!("", format!("{}", Blake2Prefix::from_str("").unwrap()));
+        // capital case
+        assert_eq!(
+            "0e5751c026",
+            format!("{}", Blake2Prefix::from_str("0E5751C026").unwrap())
+        );
+        // odd length
+        assert_eq!(
+            "0e5751c02",
+            format!("{}", Blake2Prefix::from_str("0e5751c02").unwrap())
+        );
+        // even length
+        assert_eq!(
+            "0e5751c0",
+            format!("{}", Blake2Prefix::from_str("0e5751c0").unwrap())
+        );
+    }
+
+    #[test]
     fn parse_thrift() {
-        let null_thrift = thrift::Blake2(vec![0; 32]);
+        let null_thrift = thrift::Blake2(vec![0; BLAKE2_HASH_LENGTH_BYTES]);
         assert_eq!(NULL, Blake2::from_thrift(null_thrift.clone()).unwrap());
         assert_eq!(NULL.into_thrift(), null_thrift);
 
@@ -466,7 +609,7 @@ mod test {
 
     quickcheck! {
         fn parse_roundtrip(v: Vec<u8>) -> TestResult {
-            if v.len() != 32 {
+            if v.len() != BLAKE2_HASH_LENGTH_BYTES {
                 return TestResult::discard()
             }
             let h = Blake2::from_bytes(v).unwrap();

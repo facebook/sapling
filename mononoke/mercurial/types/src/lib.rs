@@ -87,8 +87,8 @@ pub use globalrev::Globalrev;
 pub use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
 pub use node::Node;
 pub use nodehash::{
-    HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey, NULL_CSID,
-    NULL_HASH,
+    HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgEntryId, HgFileNodeId,
+    HgManifestId, HgNodeHash, HgNodeKey, NULL_CSID, NULL_HASH,
 };
 pub use phase::HgPhase;
 pub use remotefilelog::{convert_parents_to_remotefilelog_format, HgFileHistoryEntry};

@@ -28,6 +28,12 @@ pub const DS: Sha1 = Sha1::from_byte_array([0xdd; 20]);
 pub const ES: Sha1 = Sha1::from_byte_array([0xee; 20]);
 pub const FS: Sha1 = Sha1::from_byte_array([0xff; 20]);
 
+// Definition for the hash ff...ffee..eee
+pub const FS_ES: Sha1 = Sha1::from_byte_array([
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+    0xee, 0xee, 0xee, 0xee,
+]);
+
 #[cfg(test)]
 mod test {
     use super::*;

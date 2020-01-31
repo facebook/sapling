@@ -24,7 +24,7 @@ use std::{
 /// Node hash type from Mercurial's Rust code (essentially equivalent to [HgNodeHash]).
 use types::Node as HgTypesNode;
 
-use crate::hash::{self, Sha1};
+use crate::hash::{self, Sha1, Sha1Prefix};
 use crate::manifest::Type;
 use crate::thrift;
 use crate::RepoPath;
@@ -315,6 +315,57 @@ impl Arbitrary for HgChangesetId {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         HgChangesetId(HgNodeHash::arbitrary(g))
     }
+}
+
+/// An identifier for a changeset hash prefix in Nercurial.
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf, Abomonation)]
+pub struct HgChangesetIdPrefix(Sha1Prefix);
+
+impl HgChangesetIdPrefix {
+    pub const fn new(sha1prefix: Sha1Prefix) -> Self {
+        HgChangesetIdPrefix(sha1prefix)
+    }
+
+    pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
+        Sha1Prefix::from_bytes(bytes).map(Self::new)
+    }
+
+    #[inline]
+    pub fn min_as_ref(&self) -> &[u8] {
+        self.0.min_as_ref()
+    }
+
+    #[inline]
+    pub fn max_as_ref(&self) -> &[u8] {
+        self.0.max_as_ref()
+    }
+}
+
+impl FromStr for HgChangesetIdPrefix {
+    type Err = <Sha1Prefix as FromStr>::Err;
+    fn from_str(s: &str) -> result::Result<HgChangesetIdPrefix, Self::Err> {
+        Sha1Prefix::from_str(s).map(HgChangesetIdPrefix)
+    }
+}
+
+impl Display for HgChangesetIdPrefix {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+/// The type for resolving changesets by prefix of the hash
+pub enum HgChangesetIdsResolvedFromPrefix {
+    /// Found single changeset
+    Single(HgChangesetId),
+    /// Found several changesets within the limit provided
+    Multiple(Vec<HgChangesetId>),
+    /// Found too many changesets exceeding the limit provided
+    TooMany(Vec<HgChangesetId>),
+    /// Changeset was not found
+    NoMatch,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]

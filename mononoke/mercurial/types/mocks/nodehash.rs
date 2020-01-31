@@ -32,6 +32,9 @@ pub const DS_HASH: HgNodeHash = HgNodeHash::new(hash::DS);
 pub const ES_HASH: HgNodeHash = HgNodeHash::new(hash::ES);
 pub const FS_HASH: HgNodeHash = HgNodeHash::new(hash::FS);
 
+// Definition for the hash ff...ffee..eee
+pub const FS_ES_CSID_HASH: HgNodeHash = HgNodeHash::new(hash::FS_ES);
+
 // Definitions for changeset IDs 1111...ffff
 pub const ONES_CSID: HgChangesetId = HgChangesetId::new(ONES_HASH);
 pub const TWOS_CSID: HgChangesetId = HgChangesetId::new(TWOS_HASH);
@@ -48,6 +51,9 @@ pub const CS_CSID: HgChangesetId = HgChangesetId::new(CS_HASH);
 pub const DS_CSID: HgChangesetId = HgChangesetId::new(DS_HASH);
 pub const ES_CSID: HgChangesetId = HgChangesetId::new(ES_HASH);
 pub const FS_CSID: HgChangesetId = HgChangesetId::new(FS_HASH);
+
+// Definition for the changeset ff...ffee..eee
+pub const FS_ES_CSID: HgChangesetId = HgChangesetId::new(FS_ES_CSID_HASH);
 
 // Definitions for manifest IDs 1111...ffff
 pub const ONES_MID: HgManifestId = HgManifestId::new(ONES_HASH);

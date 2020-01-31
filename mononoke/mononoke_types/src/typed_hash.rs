@@ -7,7 +7,7 @@
  */
 
 use std::fmt::{self, Display};
-use std::str::FromStr;
+use std::{result, str::FromStr};
 
 use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
@@ -29,7 +29,7 @@ use crate::{
     fastlog_batch::FastlogBatch,
     file_contents::FileContents,
     fsnode::Fsnode,
-    hash::{Blake2, Context},
+    hash::{Blake2, Blake2Prefix, Context},
     rawbundle2::RawBundle2,
     thrift,
     unode::{FileUnode, ManifestUnode},
@@ -64,6 +64,34 @@ pub trait MononokeId: Copy + Sync + Send + 'static {
     Abomonation
 )]
 pub struct ChangesetId(Blake2);
+
+/// An identifier for a changeset hash prefix in Mononoke.
+#[derive(
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Debug,
+    Hash,
+    HeapSizeOf,
+    Abomonation
+)]
+pub struct ChangesetIdPrefix(Blake2Prefix);
+
+/// The type for resolving changesets by prefix of the hash
+#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+pub enum ChangesetIdsResolvedFromPrefix {
+    /// Found single changeset
+    Single(ChangesetId),
+    /// Found several changesets within the limit provided
+    Multiple(Vec<ChangesetId>),
+    /// Found too many changesets exceeding the limit provided
+    TooMany(Vec<ChangesetId>),
+    /// Changeset was not found
+    NoMatch,
+}
 
 /// An identifier for file contents in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
@@ -413,6 +441,39 @@ impl MononokeId for ContentMetadataId {
     #[inline]
     fn blobstore_key_prefix() -> String {
         Self::PREFIX.to_string()
+    }
+}
+
+impl ChangesetIdPrefix {
+    pub const fn new(blake2prefix: Blake2Prefix) -> Self {
+        ChangesetIdPrefix(blake2prefix)
+    }
+
+    pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
+        Blake2Prefix::from_bytes(bytes).map(Self::new)
+    }
+
+    #[inline]
+    pub fn min_as_ref(&self) -> &[u8] {
+        self.0.min_as_ref()
+    }
+
+    #[inline]
+    pub fn max_as_ref(&self) -> &[u8] {
+        self.0.max_as_ref()
+    }
+}
+
+impl FromStr for ChangesetIdPrefix {
+    type Err = <Blake2Prefix as FromStr>::Err;
+    fn from_str(s: &str) -> result::Result<ChangesetIdPrefix, Self::Err> {
+        Blake2Prefix::from_str(s).map(ChangesetIdPrefix)
+    }
+}
+
+impl Display for ChangesetIdPrefix {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
     }
 }
 

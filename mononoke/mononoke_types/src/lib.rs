@@ -46,8 +46,9 @@ pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, RepoPath, R
 pub use rawbundle2::RawBundle2;
 pub use repo::RepositoryId;
 pub use typed_hash::{
-    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, DeletedManifestId, FastlogBatchId,
-    FileUnodeId, FsnodeId, ManifestUnodeId, MononokeId, RawBundle2Id,
+    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId, ContentId,
+    ContentMetadataId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId,
+    MononokeId, RawBundle2Id,
 };
 
 mod macros;

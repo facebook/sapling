@@ -22,7 +22,10 @@ use serde_derive::{Deserialize, Serialize};
 use crate::errors::ErrorKind;
 use crate::thrift;
 
-pub const NULL: Sha1 = Sha1([0; 20]);
+pub const SHA1_HASH_LENGTH_BYTES: usize = 20;
+pub const SHA1_HASH_LENGTH_HEX: usize = SHA1_HASH_LENGTH_BYTES * 2;
+
+pub const NULL: Sha1 = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
 
 /// Raw SHA-1 hash
 ///
@@ -30,17 +33,19 @@ pub const NULL: Sha1 = Sha1([0; 20]);
 /// more specific typed hashes.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf, Abomonation)]
-pub struct Sha1([u8; 20]);
+pub struct Sha1([u8; SHA1_HASH_LENGTH_BYTES]);
 
 impl Sha1 {
-    /// Construct a `Sha1` from an array of 20 bytes containing a
+    /// Construct a `Sha1` from an array of SHA1_HASH_LENGTH_BYTES (20) bytes containing a
     /// SHA-1 (ie, *not* a hash of the bytes).
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Sha1> {
         let bytes = bytes.as_ref();
-        if bytes.len() != 20 {
-            bail!(ErrorKind::InvalidSha1Input("need exactly 20 bytes".into()));
+        if bytes.len() != SHA1_HASH_LENGTH_BYTES {
+            bail!(ErrorKind::InvalidSha1Input(
+                format!("need exactly {} bytes", SHA1_HASH_LENGTH_BYTES).into()
+            ));
         } else {
-            let mut ret = Sha1([0; 20]);
+            let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
             &mut ret.0[..].copy_from_slice(bytes);
             Ok(ret)
         }
@@ -49,26 +54,30 @@ impl Sha1 {
     pub fn from_thrift(h: thrift::Sha1) -> Result<Self> {
         // Currently this doesn't require consuming b, but hopefully with T26959816 this
         // code will be able to convert a SmallVec directly into an array.
-        if h.0.len() != 20 {
+        if h.0.len() != SHA1_HASH_LENGTH_BYTES {
             bail!(ErrorKind::InvalidThrift(
                 "Sha1".into(),
-                format!("wrong length: expected 20, got {}", h.0.len())
+                format!(
+                    "wrong length: expected {}, got {}",
+                    SHA1_HASH_LENGTH_BYTES,
+                    h.0.len()
+                )
             ));
         }
-        let mut arr = [0u8; 20];
+        let mut arr = [0u8; SHA1_HASH_LENGTH_BYTES];
         arr.copy_from_slice(&h.0[..]);
         Ok(Sha1(arr))
     }
 
-    /// Construct a `Sha1` from an array of 20 bytes.
+    /// Construct a `Sha1` from an array of SHA1_HASH_LENGTH_BYTES bytes.
     #[inline]
-    pub const fn from_byte_array(arr: [u8; 20]) -> Sha1 {
+    pub const fn from_byte_array(arr: [u8; SHA1_HASH_LENGTH_BYTES]) -> Sha1 {
         Sha1(arr)
     }
 
     /// Extract this hash's underlying byte array.
     #[inline]
-    pub(crate) fn into_byte_array(self) -> [u8; 20] {
+    pub(crate) fn into_byte_array(self) -> [u8; SHA1_HASH_LENGTH_BYTES] {
         self.0
     }
 
@@ -79,7 +88,7 @@ impl Sha1 {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v = vec![0; 40];
+        let mut v = vec![0; SHA1_HASH_LENGTH_HEX];
 
         // This can only panic if buffer size of Vec isn't correct, which would be
         // a programming error.
@@ -125,13 +134,13 @@ impl FromStr for Sha1 {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Sha1> {
-        if s.len() != 40 {
+        if s.len() != SHA1_HASH_LENGTH_HEX {
             bail!(ErrorKind::InvalidSha1Input(
-                "need exactly 40 hex digits".into()
+                format!("need exactly {} hex digits", SHA1_HASH_LENGTH_HEX).into()
             ));
         }
 
-        let mut ret = Sha1([0; 20]);
+        let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
         match hex_decode(s.as_bytes(), &mut ret.0) {
             Ok(_) => Ok(ret),
             Err(_) => bail!(ErrorKind::InvalidSha1Input("bad hex character".into())),
@@ -154,9 +163,9 @@ impl Debug for Sha1 {
 
 impl Arbitrary for Sha1 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let mut bytes = [0; 20];
+        let mut bytes = [0; SHA1_HASH_LENGTH_BYTES];
         // The null hash is special, so give it a 5% chance of happening
-        if !g.gen_ratio(1, 20) {
+        if !g.gen_ratio(1, SHA1_HASH_LENGTH_BYTES as u32) {
             g.fill_bytes(&mut bytes);
         }
         Sha1::from_bytes(&bytes).unwrap()
@@ -164,6 +173,102 @@ impl Arbitrary for Sha1 {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         single_shrinker(NULL)
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Serialize, Deserialize, HeapSizeOf, Abomonation)]
+/// Raw SHA-1 hash prefix.
+/// Internal implementation is the inclusive range of Sha1 objects.
+/// If can be build from a from a hex-encoded string (len <= SHA1_HASH_LENGTH_HEX (40))
+/// or from an array of bytes (len <= SHA1_HASH_LENGTH_BYTES (20)).
+pub struct Sha1Prefix(Sha1, Sha1);
+
+impl Sha1Prefix {
+    /// Construct a `Sha1Prefix` from an array of bytes.
+    pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
+        let bytes = bytes.as_ref();
+        if bytes.len() > SHA1_HASH_LENGTH_BYTES {
+            bail!(ErrorKind::InvalidSha1Input(
+                format!(
+                    "prefix needs to be less or equal to {} bytes",
+                    SHA1_HASH_LENGTH_BYTES
+                )
+                .into()
+            ))
+        } else {
+            let min_tail: Vec<u8> = vec![0x00; SHA1_HASH_LENGTH_BYTES - bytes.len()];
+            let max_tail: Vec<u8> = vec![0xff; SHA1_HASH_LENGTH_BYTES - bytes.len()];
+            Ok(Sha1Prefix(
+                Sha1::from_bytes(&(bytes.iter().chain(&min_tail).cloned().collect::<Vec<_>>()))?,
+                Sha1::from_bytes(&(bytes.iter().chain(&max_tail).cloned().collect::<Vec<_>>()))?,
+            ))
+        }
+    }
+
+    #[inline]
+    /// Get a reference to the underlying bytes of the `Sha1` lower bound object.
+    pub fn min_as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+
+    #[inline]
+    /// Get a reference to the underlying bytes of the `Sha1` inclusive upper bound object.
+    pub fn max_as_ref(&self) -> &[u8] {
+        self.1.as_ref()
+    }
+
+    pub fn to_hex(&self) -> AsciiString {
+        let mut v_min_hex = vec![0; SHA1_HASH_LENGTH_HEX];
+        hex_encode(self.0.as_ref(), &mut v_min_hex).expect("failed to hex encode");
+        let mut v_max_hex = vec![0; SHA1_HASH_LENGTH_HEX];
+        hex_encode(self.1.as_ref(), &mut v_max_hex).expect("failed to hex encode");
+        for i in 0..SHA1_HASH_LENGTH_HEX {
+            if v_min_hex[i] != v_max_hex[i] {
+                v_min_hex.truncate(i);
+                break;
+            }
+        }
+        unsafe {
+            // A hex string is always a pure ASCII string.
+            AsciiString::from_ascii_unchecked(v_min_hex)
+        }
+    }
+}
+
+/// Construct a `Sha1Prefix` from a hex-encoded string.
+impl FromStr for Sha1Prefix {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Sha1Prefix> {
+        if s.len() > SHA1_HASH_LENGTH_HEX {
+            bail!(ErrorKind::InvalidSha1Input(
+                format!(
+                    "prefix needs to be less or equal {} hex digits",
+                    SHA1_HASH_LENGTH_HEX
+                )
+                .into()
+            ));
+        }
+        let min_tail: String = String::from_utf8(vec![b'0'; SHA1_HASH_LENGTH_HEX - s.len()])?;
+        let max_tail: String = String::from_utf8(vec![b'f'; SHA1_HASH_LENGTH_HEX - s.len()])?;
+        Ok(Sha1Prefix(
+            Sha1::from_str(&(s.to_owned() + &min_tail))?,
+            Sha1::from_str(&(s.to_owned() + &max_tail))?,
+        ))
+    }
+}
+
+/// Custom `Display` output for `Sha1Prefix` so it prints in hex.
+impl Display for Sha1Prefix {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+/// Custom `Debug` output for `Sha1Prefix` so it prints in hex.
+impl Debug for Sha1Prefix {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha1Prefix({})", self)
     }
 }
 
@@ -204,7 +309,7 @@ mod test {
 
     #[test]
     fn test_null() {
-        assert_eq!(NULL, Sha1([0_u8; 20]));
+        assert_eq!(NULL, Sha1([0_u8; SHA1_HASH_LENGTH_BYTES]));
     }
 
     #[test]
@@ -242,6 +347,38 @@ mod test {
     }
 
     #[test]
+    fn test_parse_and_display_prefix() {
+        // even length
+        assert_eq!(
+            format!("{}", Sha1Prefix::from_str("da39a3").unwrap()),
+            "da39a3"
+        );
+        // odd length
+        assert_eq!(
+            format!("{}", Sha1Prefix::from_str("da39a").unwrap()),
+            "da39a"
+        );
+        // max length
+        assert_eq!(
+            format!(
+                "{}",
+                Sha1Prefix::from_str("da39a3ee5e6b4b0d3255bfef95601890afd80709").unwrap()
+            ),
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        );
+        // capital case
+        assert_eq!(
+            format!(
+                "{}",
+                Sha1Prefix::from_str("DA39A3EE5E6B4B0D3255BFEF95601890AFD80709").unwrap()
+            ),
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        );
+        // zero length
+        assert_eq!(format!("{}", Sha1Prefix::from_str("").unwrap()), "");
+    }
+
+    #[test]
     fn parse_bad() {
         match Sha1::from_str("") {
             Ok(_) => panic!("unexpected OK - zero len"),
@@ -271,7 +408,7 @@ mod test {
 
     #[test]
     fn parse_thrift() {
-        let null_thrift = thrift::Sha1(vec![0; 20]);
+        let null_thrift = thrift::Sha1(vec![0; SHA1_HASH_LENGTH_BYTES]);
         assert_eq!(NULL, Sha1::from_thrift(null_thrift.clone()).unwrap());
         assert_eq!(NULL.into_thrift(), null_thrift);
 
@@ -289,7 +426,7 @@ mod test {
 
     quickcheck! {
         fn parse_roundtrip(v: Vec<u8>) -> TestResult {
-            if v.len() != 20 {
+            if v.len() != SHA1_HASH_LENGTH_BYTES {
                 return TestResult::discard()
             }
             let h = Sha1::from_bytes(v).unwrap();

@@ -26,8 +26,11 @@ use filestore::FilestoreConfig;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memblob::EagerMemblob;
-use mercurial_types::HgFileNodeId;
-use mononoke_types::{BlobstoreBytes, ChangesetId, RepoPath, RepositoryId};
+use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
+use mononoke_types::{
+    BlobstoreBytes, ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath,
+    RepositoryId,
+};
 use phases::{SqlPhasesFactory, SqlPhasesStore};
 use rand::Rng;
 use rand_distr::Distribution;
@@ -303,6 +306,21 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
     ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
         delay(self.get_dist, self.inner.get_many(ctx, repo_id, cs_ids)).boxify()
     }
+
+    fn get_many_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: ChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+        delay(
+            self.get_dist,
+            self.inner
+                .get_many_by_prefix(ctx, repo_id, cs_prefix, limit),
+        )
+        .boxify()
+    }
 }
 
 struct DelayedBonsaiHgMapping<M> {
@@ -333,5 +351,20 @@ impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
         cs_id: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         delay(self.get_dist, self.inner.get(ctx, repo_id, cs_id)).boxify()
+    }
+
+    fn get_many_hg_by_prefix(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_prefix: HgChangesetIdPrefix,
+        limit: usize,
+    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+        delay(
+            self.get_dist,
+            self.inner
+                .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit),
+        )
+        .boxify()
     }
 }

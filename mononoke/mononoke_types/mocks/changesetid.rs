@@ -26,3 +26,6 @@ pub const CS_CSID: ChangesetId = ChangesetId::new(hash::CS);
 pub const DS_CSID: ChangesetId = ChangesetId::new(hash::DS);
 pub const ES_CSID: ChangesetId = ChangesetId::new(hash::ES);
 pub const FS_CSID: ChangesetId = ChangesetId::new(hash::FS);
+
+// Definition for the hash ff...ffee..eee
+pub const FS_ES_CSID: ChangesetId = ChangesetId::new(hash::FS_ES);
