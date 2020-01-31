@@ -111,7 +111,7 @@ def createrevlogtext(text, copyfrom=None, copyrev=None):
     traditional revlog
     """
     meta = {}
-    if copyfrom or text.startswith("\1\n"):
+    if copyfrom or text.startswith(b"\1\n"):
         if copyfrom:
             meta["copy"] = copyfrom
             meta["copyrev"] = copyrev
@@ -128,8 +128,8 @@ def parsemeta(text, flags=0):
         meta = p.hgmeta()
     else:
         meta, size = filelog.parsemeta(text)
-        if text.startswith("\1\n"):
-            s = text.index("\1\n", 2)
+        if text.startswith(b"\1\n"):
+            s = text.index(b"\1\n", 2)
             text = text[s + 2 :]
     return meta or {}, text
 
