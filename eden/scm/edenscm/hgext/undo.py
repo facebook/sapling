@@ -1128,10 +1128,10 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
         sign = None
     if not absolute:
         try:  # attempt to get relative shift
-            nodebranch = repo.localvfs.read("undolog/redonode").split("\0")
-            hexnode = nodebranch[0]
+            nodebranch = repo.localvfs.read("undolog/redonode").split(b"\0")
+            hexnode = pycompat.decodeutf8(nodebranch[0])
             try:
-                oldbranch = nodebranch[1]
+                oldbranch = pycompat.decodeutf8(nodebranch[1])
             except IndexError:
                 oldbranch = ""
             rlog = _getrevlog(repo, "index.i")
