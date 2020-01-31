@@ -92,17 +92,17 @@ struct FinishedCheckout {
 struct FinishedMount {
   static constexpr const char* type = "mount";
 
-  std::string repoType;
-  std::string repoSource;
-  bool isTakeover = false;
+  std::string repo_type;
+  std::string repo_source;
+  bool is_takeover = false;
   double duration = 0.0;
   bool success = false;
   bool clean = false;
 
   void populate(DynamicEvent& event) const {
-    event.addString("repo_type", repoType);
-    event.addString("repo_source", repoSource);
-    event.addBool("is_takeover", isTakeover);
+    event.addString("repo_type", repo_type);
+    event.addString("repo_source", repo_source);
+    event.addBool("is_takeover", is_takeover);
     event.addDouble("duration", duration);
     event.addBool("success", success);
     event.addBool("clean", clean);
@@ -112,12 +112,12 @@ struct FinishedMount {
 struct FuseError {
   static constexpr const char* type = "fuse_error";
 
-  int64_t fuseOp = 0;
-  int64_t errorCode = 0;
+  int64_t fuse_op = 0;
+  int64_t error_code = 0;
 
   void populate(DynamicEvent& event) const {
-    event.addInt("fuse_op", fuseOp);
-    event.addInt("error_code", errorCode);
+    event.addInt("fuse_op", fuse_op);
+    event.addInt("error_code", error_code);
   }
 };
 
@@ -126,35 +126,35 @@ struct RocksDbAutomaticGc {
 
   double duration = 0.0;
   bool success = false;
-  int64_t sizeBefore = 0;
-  int64_t sizeAfter = 0;
+  int64_t size_before = 0;
+  int64_t size_after = 0;
 
   void populate(DynamicEvent& event) const {
     event.addDouble("duration", duration);
     event.addBool("success", success);
-    event.addInt("size_before", sizeBefore);
-    event.addInt("size_after", sizeAfter);
+    event.addInt("size_before", size_before);
+    event.addInt("size_after", size_after);
   }
 };
 
 struct ThriftError {
   static constexpr const char* type = "thrift_error";
 
-  std::string thriftMethod;
+  std::string thrift_method;
 
   void populate(DynamicEvent& event) const {
-    event.addString("method", thriftMethod);
+    event.addString("thrift_method", thrift_method);
   }
 };
 
 struct ThriftAuthFailure {
   static constexpr const char* type = "thrift_auth_failure";
 
-  std::string thriftMethod;
+  std::string thrift_method;
   std::string reason;
 
   void populate(DynamicEvent& event) const {
-    event.addString("method", thriftMethod);
+    event.addString("thrift_method", thrift_method);
     event.addString("reason", reason);
   }
 };
