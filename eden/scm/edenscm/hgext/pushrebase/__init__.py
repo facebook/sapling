@@ -1116,7 +1116,6 @@ def _getmanifest(op, rev):
         m = rev.manifest()
     else:
         store = repo.manifestlog.datastore
-        # pyre-fixme[21]: Could not find `edenscmnative`.
         from bindings import manifest
 
         m = manifest.treemanifest(store, rev.manifestnode())

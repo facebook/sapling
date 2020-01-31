@@ -9,7 +9,6 @@ import contextlib
 import os
 import typing
 
-# pyre-fixme[21]
 from bindings import metalog, mutationstore, nodemap, revisionstore, tracing
 
 from .. import error, hg, progress, util, vfs as vfsmod

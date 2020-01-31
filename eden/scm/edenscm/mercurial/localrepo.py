@@ -21,7 +21,6 @@ import time
 import weakref
 from contextlib import contextmanager
 
-# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 from edenscm.hgext.extlib.phabricator import diffprops
 

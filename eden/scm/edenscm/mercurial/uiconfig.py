@@ -13,7 +13,6 @@ from __future__ import absolute_import
 import contextlib
 import os
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import configparser
 
 from . import configitems, error, pycompat, util

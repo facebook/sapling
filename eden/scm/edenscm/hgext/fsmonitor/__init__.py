@@ -784,7 +784,6 @@ def poststatustreestate(wctx, status):
         else:
             # Remove ignored files from treestate
             ignore = dirstate._ignore
-            # pyre-fixme[21]: Could not find `bindings`.
             from bindings import treestate
 
             repo.ui.debug("stop tracking ignored files\n")

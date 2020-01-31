@@ -54,7 +54,6 @@ import struct
 import time
 from typing import BinaryIO, Callable, Dict, List, Optional
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import commands, hgtime
 
 from . import commandserver, encoding, error, extensions, pycompat, ui as uimod, util

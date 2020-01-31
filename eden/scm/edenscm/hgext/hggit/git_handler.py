@@ -4,7 +4,6 @@ import os
 import re
 import shutil
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import nodemap
 from dulwich import client, config as dul_config, diff_tree
 from dulwich.errors import GitProtocolError, HangupException

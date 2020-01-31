@@ -20,7 +20,6 @@ import stat
 import tempfile
 from typing import Dict
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import renderdag
 
 from . import (

@@ -16,7 +16,6 @@ import itertools
 import os
 import textwrap
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import cliparser
 
 from . import (

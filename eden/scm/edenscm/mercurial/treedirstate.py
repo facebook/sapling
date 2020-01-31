@@ -16,7 +16,6 @@ import string
 import struct
 import time
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import treestate as rusttreestate
 
 from . import error, node, pycompat, treestate, txnutil, util

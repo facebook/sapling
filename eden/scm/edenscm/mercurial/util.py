@@ -53,7 +53,6 @@ import types
 import warnings
 import zlib
 
-# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat

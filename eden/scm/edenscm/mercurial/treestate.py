@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import errno
 import uuid
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import treestate
 
 from . import error, node, pycompat, txnutil, util

@@ -156,7 +156,6 @@ import shutil
 import struct
 import time
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import manifest as rustmanifest, revisionstore
 from edenscm.mercurial import (
     bundle2,

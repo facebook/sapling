@@ -8,7 +8,6 @@
 import inspect
 from contextlib import contextmanager
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import tracing
 
 from . import util

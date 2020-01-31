@@ -17,7 +17,6 @@ import errno
 import threading
 import time
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import threading as rustthreading, tracing
 
 from . import encoding, util

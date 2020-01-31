@@ -29,7 +29,6 @@ import traceback
 from enum import Enum
 from typing import List, Optional, Union
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import configparser
 
 from . import (

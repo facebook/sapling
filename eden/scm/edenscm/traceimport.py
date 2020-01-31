@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import sys
 import types
 
-# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 

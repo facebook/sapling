@@ -10,7 +10,6 @@ import hashlib
 import os
 import sys
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import revisionstore
 from edenscm.hgext import extutil
 from edenscm.mercurial import error, filelog, progress, pycompat, revlog, util

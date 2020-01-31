@@ -54,7 +54,6 @@ from __future__ import absolute_import
 
 import struct
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import nodemap as nodemapmod
 from edenscm.mercurial import (
     error,

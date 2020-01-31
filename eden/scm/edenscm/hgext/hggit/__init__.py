@@ -23,7 +23,6 @@ import shutil
 import warnings
 from bisect import insort
 
-# pyre-fixme[21]: Could not find `bindings`.
 from bindings import nodemap as nodemapmod
 from edenscm.mercurial import (
     bundlerepo,

@@ -42,7 +42,6 @@ import errno
 import json
 from typing import Optional
 
-# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 from edenscm.mercurial import (
     bundle2,

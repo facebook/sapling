@@ -27,14 +27,13 @@ import os
 import struct
 import zlib
 
-# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from . import ancestor, error, mdiff, policy, pycompat, templatefilters, util
 from .i18n import _
 
 # import stuff from node for others to import from revlog
-from .node import bin, hex, bbin, bhex, nullid, nullrev, wdirhex, wdirid, wdirrev
+from .node import bbin, bhex, bin, hex, nullid, nullrev, wdirhex, wdirid, wdirrev
 from .pycompat import range
 
 

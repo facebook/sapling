@@ -21,7 +21,6 @@ import subprocess
 import sys
 import time
 
-# pyre-fixme[21]: Could not find `bindings`.
 import bindings
 
 from ... import hgdemandimport
