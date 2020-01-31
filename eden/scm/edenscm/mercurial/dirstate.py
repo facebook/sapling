@@ -1434,7 +1434,7 @@ class dirstatemap(object):
 
     @propertycache
     def _dirs(self):
-        return util.dirs(self._map, "r")
+        return util.dirs((p for (p, s) in pycompat.iteritems(self._map) if s[0] != "r"))
 
     @propertycache
     def _alldirs(self):

@@ -3388,11 +3388,7 @@ class puredirs(object):
         return d in self._dirs
 
 
-# TODO(py3): Consider implementing a native "dirs" in Rust.
-if sys.version_info.major == 3:
-    dirs = puredirs
-else:
-    dirs = getattr(parsers, "dirs", puredirs)
+dirs = bindings.dirs.dirs
 
 
 def finddirs(path):

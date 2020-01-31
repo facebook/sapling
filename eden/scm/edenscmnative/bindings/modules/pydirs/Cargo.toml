@@ -1,0 +1,14 @@
+[package]
+name = "pydirs"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = []
+python2 = ["cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["cpython/python3-sys", "cpython-ext/python3"]
+
+[dependencies]
+cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.4", default-features = false }
+encoding = { path = "../../../../lib/encoding" }

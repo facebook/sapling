@@ -8,8 +8,8 @@ name = "bindings"
 
 [features]
 default = []
-python2 = ["pytracing/python2", "pyindexes/python2"]
-python3 = ["pytracing/python3", "pyindexes/python3"]
+python2 = ["pytracing/python2", "pyindexes/python2", "pydirs/python2"]
+python3 = ["pytracing/python3", "pyindexes/python3", "pydirs/python3"]
 
 [profile.release]
 debug = true
@@ -25,6 +25,7 @@ pybookmarkstore = { path = "modules/pybookmarkstore" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
+pydirs = { path = "modules/pydirs" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
 pyhgtime = { path = "modules/pyhgtime" }
