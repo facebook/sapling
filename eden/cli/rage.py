@@ -8,6 +8,7 @@ import getpass
 import io
 import socket
 import subprocess
+import sys
 import traceback
 from pathlib import Path
 from typing import IO
@@ -106,15 +107,20 @@ def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
 def print_running_eden_process(out: IO[bytes]) -> None:
     try:
         out.write(b"\nList of running Eden processes:\n")
+        # Note well: `comm` must be the last column otherwise it will be
+        # truncated to ~12 characters wide on darwin, which is useless
+        # because almost everything is started via an absolute path
         output = subprocess.check_output(
-            ["ps", "-eo", "pid,ppid,comm,start_time,etime"]
+            ["ps", "-eo", "pid,ppid,start_time,etime,comm"]
+            if sys.platform == "linux"
+            else ["ps", "-Awwx", "-eo", "pid,ppid,start,etime,comm"]
         )
         output = output.decode()
         lines = output.split("\n")
-        format_str = "{:>20} {:>20} {:>10} {:>20} {:>20}\n"
+        format_str = "{:>20} {:>20} {:>10} {:>20} {}\n"
         out.write(
             format_str.format(
-                "Pid", "PPid", "Command", "Start Time", "Elapsed Time"
+                "Pid", "PPid", "Start Time", "Elapsed Time", "Command"
             ).encode()
         )
         for line in lines:
@@ -126,6 +132,8 @@ def print_running_eden_process(out: IO[bytes]) -> None:
 
 
 def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
+    if sys.platform != "linux":
+        return
     try:
         out.write(b"\nedenfs process tree:\n")
         output = subprocess.check_output(
