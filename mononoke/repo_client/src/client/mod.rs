@@ -36,8 +36,9 @@ use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
 use mercurial_types::{
     blobs::HgBlobChangeset, calculate_hg_node_id, convert_parents_to_remotefilelog_format,
-    fetch_manifest_envelope, percent_encode, Delta, HgChangesetId, HgFileNodeId, HgManifestId,
-    HgNodeHash, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,
+    fetch_manifest_envelope, percent_encode, Delta, HgChangesetId, HgChangesetIdPrefix,
+    HgChangesetIdsResolvedFromPrefix, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
+    RepoPath, NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
@@ -903,7 +904,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         let (ctx, command_logger) = self.start_command(ops::LOOKUP);
-        // TODO(stash): T25928839 lookup should support prefixes
+
         let repo = self.repo.blobrepo().clone();
 
         fn generate_resp_buf(success: bool, message: &[u8]) -> Bytes {
@@ -932,33 +933,52 @@ impl HgCommands for RepoClient {
                 .boxify()
         }
 
-        let node = HgChangesetId::from_str(&key).ok();
+        // If the string is a valid full changeset hash, parse it.
+        // If the string is a valid prefix of changeset hash, resolve it to a changeset.
+        // TODO(liubovd): support ambiguity and suggestions
+        let node_fut = match HgChangesetId::from_str(&key) {
+            Ok(node) => ok(Some(node)).boxify(),
+            Err(_) => match HgChangesetIdPrefix::from_str(&key) {
+                Ok(cs_prefix) => repo
+                    .get_bonsai_hg_mapping()
+                    .get_many_hg_by_prefix(ctx.clone(), repo.get_repoid(), cs_prefix, 1)
+                    .map(move |resolved_cids| match resolved_cids {
+                        HgChangesetIdsResolvedFromPrefix::Single(cs) => Some(cs),
+                        _ => None,
+                    })
+                    .boxify(),
+                Err(_) => ok(None).boxify(),
+            },
+        };
+
         let bookmark = BookmarkName::new(&key).ok();
 
-        let lookup_fut = match (node, bookmark) {
-            (Some(node), Some(bookmark)) => {
-                let csid = node;
-                repo.changeset_exists(ctx.clone(), csid)
-                    .and_then({
-                        cloned!(ctx);
-                        move |exists| {
-                            if exists {
-                                Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
-                                    .into_future()
-                                    .boxify()
-                            } else {
-                                check_bookmark_exists(ctx, repo, bookmark)
+        let lookup_fut = node_fut
+            .and_then(move |node| match (node, bookmark) {
+                (Some(node), Some(bookmark)) => {
+                    let csid = node;
+                    repo.changeset_exists(ctx.clone(), csid)
+                        .and_then({
+                            cloned!(ctx);
+                            move |exists| {
+                                if exists {
+                                    Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
+                                        .into_future()
+                                        .boxify()
+                                } else {
+                                    check_bookmark_exists(ctx, repo, bookmark)
+                                }
                             }
-                        }
-                    })
-                    .boxify()
-            }
-            (None, Some(bookmark)) => check_bookmark_exists(ctx.clone(), repo, bookmark),
-            // Failed to parse as a hash or bookmark.
-            _ => Ok(generate_resp_buf(false, "invalid input".as_bytes()))
-                .into_future()
-                .boxify(),
-        };
+                        })
+                        .boxify()
+                }
+                (None, Some(bookmark)) => check_bookmark_exists(ctx.clone(), repo, bookmark),
+                // Failed to parse as a hash or bookmark.
+                _ => Ok(generate_resp_buf(false, "invalid input".as_bytes()))
+                    .into_future()
+                    .boxify(),
+            })
+            .boxify();
 
         lookup_fut
             .timeout(*TIMEOUT)

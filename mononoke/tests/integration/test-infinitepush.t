@@ -115,7 +115,7 @@ Do infinitepush (aka commit cloud) push
   > server=False
   > branchpattern=re:scratch/.+
   > EOF
-  $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
+  $ hgmn pull -r 47da8b81097c
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
@@ -273,7 +273,7 @@ Pushbackup also works
   
 
   $ cd ../repo-pull
-  $ hgmn pull -r 2cfeca6399fdb0084a6eba69275ea7aeb1d07667
+  $ hgmn pull -r 2cfeca6399fd
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
@@ -341,7 +341,7 @@ Finally, try to push existing commit to a public bookmark
 
 Check phases on another side (for pull command and pull -r)
   $ cd ../repo-pull
-  $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
+  $ hgmn pull -r 47da8b81097c
   pulling from ssh://user@dummy/repo
   no changes found
   adding changesets
@@ -418,7 +418,7 @@ Check phases on another side (for pull command and pull -r)
   eca836c7c6519b769367cc438ce09d83b4a4e8e1
 
   $ cd ../repo-pull
-  $ hgmn pull -r eca836c7c6519b769367cc438ce09d83b4a4e8e1 # draft revision based on different public bookmark
+  $ hgmn pull -r eca836c7c651 # draft revision based on different public bookmark
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
@@ -597,13 +597,6 @@ More sophisticated test for phases
   |/
   o  0: 3903775176ed public 'a' master_bookmark
   
-At the moment short hahses are not working, print the full hashes to use then in hg pull command
-  $ hg log -T '{node}\n' -r 'heads(all())'
-  500658c138a447f7ba651547d45ac510ae4e6db2
-  5e59ac0f4dd00fd4d751f9f3663be99df0f4765d
-  bf677f20a49dc5ac94946f3d91ad181f8a6fdbab
-  7d67c7248d486cb264270530ef906f1d09d6c650
-  b9f080ea95005f3513a22aa15f1f74d7371ce5d4
 
   $ cd ../repo-pull
 
@@ -611,9 +604,9 @@ At the moment short hahses are not working, print the full hashes to use then in
   abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
   [255]
 
-  $ hgmn pull -r 5e59ac0f4dd00fd4d751f9f3663be99df0f4765d -r bf677f20a49dc5ac94946f3d91ad181f8a6fdbab -r 7d67c7248d486cb264270530ef906f1d09d6c650 -r b9f080ea95005f3513a22aa15f1f74d7371ce5d4 -q
+  $ hgmn pull -r 5e59ac0f4dd0 -r bf677f20a49d -r 7d67c7248d48 -r b9f080ea9500 -q
 
-  $ tglogpnr -r "::b9f080ea95005f3513a22aa15f1f74d7371ce5d4 - ::default/master_bookmark"
+  $ tglogpnr -r "::b9f080ea9500 - ::default/master_bookmark"
   o  b9f080ea9500 public 'zzzzz'
   |
   o  6e068f112af8 public 'yyyyy'
@@ -623,7 +616,7 @@ At the moment short hahses are not working, print the full hashes to use then in
   o  8be205326fcf public 'wwwww'
   |
   ~
-  $ tglogpnr -r "::7d67c7248d486cb264270530ef906f1d09d6c650 - ::default/master_bookmark"
+  $ tglogpnr -r "::7d67c7248d48 - ::default/master_bookmark"
   o  7d67c7248d48 draft 'zzzz'
   |
   o  859e9fdde968 public 'yyyy'
@@ -633,7 +626,7 @@ At the moment short hahses are not working, print the full hashes to use then in
   o  4710fc0238de public 'wwww'
   |
   ~
-  $ tglogpnr -r "::bf677f20a49dc5ac94946f3d91ad181f8a6fdbab - ::default/master_bookmark"
+  $ tglogpnr -r "::bf677f20a49d - ::default/master_bookmark"
   o  bf677f20a49d draft 'zzz'
   |
   o  43db2471732d draft 'yyy'
@@ -643,7 +636,7 @@ At the moment short hahses are not working, print the full hashes to use then in
   o  83da839eb4d2 public 'www'
   |
   ~
-  $ tglogpnr -r "::5e59ac0f4dd00fd4d751f9f3663be99df0f4765d - ::default/master_bookmark"
+  $ tglogpnr -r "::5e59ac0f4dd0 - ::default/master_bookmark"
   o  5e59ac0f4dd0 draft 'zz'
   |
   o  1a4fd3035391 draft 'yy'
