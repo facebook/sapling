@@ -95,10 +95,10 @@ testing hghave
   $ hg debugpython -- "$TESTDIR/hghave" true
   $ hg debugpython -- "$TESTDIR/hghave" false
   skipped: missing feature: nail clipper
-  [1]
+  [80]
   $ hg debugpython -- "$TESTDIR/hghave" no-true
   skipped: system supports yak shaving
-  [1]
+  [80]
   $ hg debugpython -- "$TESTDIR/hghave" no-false
 
 Conditional sections based on hghave:
