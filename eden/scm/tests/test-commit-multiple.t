@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 # reproduce issue2264, issue2516
