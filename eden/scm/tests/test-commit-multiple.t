@@ -88,15 +88,15 @@ now test that we fixed the bug for all scripts/extensions
   > assert len(repo) == 6, \
   >        "initial: len(repo): %d, expected: 6" % len(repo)
   > 
-  > replacebyte("bugfix", "u")
+  > replacebyte("bugfix", b"u")
   > sleep(2)
   > try:
   >     print("PRE: len(repo): %d" % len(repo))
   >     wlock = repo.wlock()
   >     lock = repo.lock()
-  >     replacebyte("file1", "x")
+  >     replacebyte("file1", b"x")
   >     repo.commit(text="x", user="test", date=(0, 0))
-  >     replacebyte("file1", "y")
+  >     replacebyte("file1", b"y")
   >     repo.commit(text="y", user="test", date=(0, 0))
   >     print("POST: len(repo): %d" % len(repo))
   > finally:
