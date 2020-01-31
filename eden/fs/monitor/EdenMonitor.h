@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <folly/Range.h>
 #include <folly/io/async/EventBase.h>
 
 #include "eden/fs/utils/PathFuncs.h"
@@ -40,7 +41,10 @@ class LogFile;
  */
 class EdenMonitor {
  public:
-  explicit EdenMonitor(AbsolutePathPiece edenDir);
+  explicit EdenMonitor(
+      AbsolutePathPiece edenDir,
+      folly::StringPiece selfExe,
+      const std::vector<std::string>& selfArgv);
   ~EdenMonitor();
 
   void run();
@@ -60,6 +64,11 @@ class EdenMonitor {
    * will still be in progress when this function returns.
    */
   std::shared_ptr<EdenServiceAsyncClient> createEdenThriftClient();
+
+  /**
+   * Request that this monitor daemon restart itself.
+   */
+  void performSelfRestart();
 
   /**
    * edenInstanceFinished() should be called by the EdenInstance object when the
@@ -88,6 +97,9 @@ class EdenMonitor {
   std::unique_ptr<SignalHandler> signalHandler_;
   std::unique_ptr<EdenInstance> edenfs_;
   std::shared_ptr<LogFile> log_;
+
+  std::string selfExe_;
+  std::vector<std::string> selfArgv_;
 
   // If we are performing a graceful restart this contains the new EdenFS
   // process that is starting and attempting to take over state from edenfs_.

@@ -215,11 +215,7 @@ Future<Unit> SpawnedEdenInstance::start() {
   XCHECK_EQ(pipes[0].childFd, STDOUT_FILENO);
   logPipe_ = std::move(pipes[0].pipe);
 
-  // Start reading from Eden's stdout, and forwarding it to our log file
-  auto rc = ::fcntl(logPipe_.fd(), F_SETFL, O_NONBLOCK);
-  folly::checkUnixError(rc, "failed to make edenfs output pipe non-blocking");
-  changeHandlerFD(folly::NetworkSocket(logPipe_.fd()));
-  registerHandler(EventHandler::READ | EventHandler::PERSIST);
+  beginProcessingLogPipe();
 
   // Wait for EdenFS to become healthy.
   //
@@ -236,6 +232,19 @@ Future<Unit> SpawnedEdenInstance::start() {
     startupChecker_.reset();
     return result;
   });
+}
+
+void SpawnedEdenInstance::takeover(pid_t pid, int logFD) {
+  cmd_ = Subprocess::fromExistingProcess(pid);
+  pid_ = pid;
+
+  logPipe_ = folly::File(logFD);
+  auto rc = fcntl(logPipe_.fd(), F_SETFD, FD_CLOEXEC);
+  if (rc != 0) {
+    XLOG(ERR) << "failed to restore CLOEXEC flag on log pipe during restart: "
+              << folly::errnoStr(errno);
+  }
+  beginProcessingLogPipe();
 }
 
 void SpawnedEdenInstance::handlerReady(uint16_t events) noexcept {
@@ -284,6 +293,14 @@ void SpawnedEdenInstance::timeoutExpired() noexcept {
   }
 
   monitor_->edenInstanceFinished(this);
+}
+
+void SpawnedEdenInstance::beginProcessingLogPipe() {
+  // Start reading from Eden's stdout, and forwarding it to our log file
+  auto rc = ::fcntl(logPipe_.fd(), F_SETFL, O_NONBLOCK);
+  folly::checkUnixError(rc, "failed to make edenfs output pipe non-blocking");
+  changeHandlerFD(folly::NetworkSocket(logPipe_.fd()));
+  registerHandler(EventHandler::READ | EventHandler::PERSIST);
 }
 
 void SpawnedEdenInstance::forwardLogOutput() {

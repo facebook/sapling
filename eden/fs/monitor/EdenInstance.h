@@ -100,8 +100,14 @@ class SpawnedEdenInstance : public EdenInstance,
 
   FOLLY_NODISCARD folly::Future<folly::Unit> start() override;
 
+  void takeover(pid_t pid, int logFD);
+
   pid_t getPid() const override {
     return pid_;
+  }
+
+  int getLogPipeFD() const {
+    return logPipe_.fd();
   }
 
   void checkLiveness() override;
@@ -114,6 +120,7 @@ class SpawnedEdenInstance : public EdenInstance,
   void handlerReady(uint16_t events) noexcept override;
   void timeoutExpired() noexcept override;
 
+  void beginProcessingLogPipe();
   void forwardLogOutput();
   void closeLogPipe();
   void checkLivenessImpl();

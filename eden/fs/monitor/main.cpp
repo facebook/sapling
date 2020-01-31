@@ -51,6 +51,16 @@ FOLLY_NODISCARD folly::File openLockFile(AbsolutePathPiece edenDir) {
   return lockFile;
 }
 
+std::string findSelfExe() {
+  // The maximum symlink limit is filesystem dependent, but many common Linux
+  // filesystems have a limit of 4096.
+  constexpr size_t pathMax = 4096;
+  std::array<char, pathMax> buf;
+  auto result = readlink("/proc/self/exe", buf.data(), buf.size());
+  folly::checkUnixError(result, "failed to read /proc/self/exe");
+  return std::string(buf.data(), static_cast<size_t>(result));
+}
+
 pid_t childPid;
 
 void forwardSignal(int signum) {
@@ -115,6 +125,10 @@ void newProcessGroup() {
 } // namespace
 
 int main(int argc, char* argv[]) {
+  std::vector<std::string> initialArgv;
+  for (int n = 0; n < argc; ++n) {
+    initialArgv.push_back(argv[n]);
+  }
   folly::init(&argc, &argv);
 
   // If we happen to have been started attached to a controlling TTY,
@@ -132,6 +146,9 @@ int main(int argc, char* argv[]) {
   // Change directory to /
   rc = chdir("/");
   folly::checkUnixError(rc, "failed to chdir");
+
+  // Find the location of our executable
+  auto selfExe = findSelfExe();
 
   // Read the configuration to determine the EdenFS state directory
   auto identity = UserInfo::lookup();
@@ -155,7 +172,8 @@ int main(int argc, char* argv[]) {
     return EX_SOFTWARE;
   }
 
-  EdenMonitor monitor(edenDir);
+  XLOG(INFO) << "Starting EdenFS monitor: pid " << getpid();
+  EdenMonitor monitor(edenDir, selfExe, initialArgv);
   monitor.run();
   return EX_OK;
 }
