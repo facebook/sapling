@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import re
 import struct
+from typing import Dict
 
 from . import error, mdiff, revlog
 from .pycompat import decodeutf8, encodeutf8
@@ -37,9 +38,10 @@ def parsemeta(text):
 
 
 def packmeta(meta, text):
+    # type: (Dict[str, str], bytes) -> bytes
     keys = sorted(meta)
     metatext = encodeutf8("".join("%s: %s\n" % (k, meta[k]) for k in keys))
-    return b"\1\n%s\1\n%b" % (metatext, text)
+    return b"".join((b"\1\n", metatext, b"\1\n", text))
 
 
 def _censoredtext(text):
