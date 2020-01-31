@@ -618,9 +618,17 @@ fm1readmarker(const char* databegin, const char* dataend, uint32_t* msize) {
     if (meta + leftsize + rightsize > dataend) {
       goto overflow;
     }
+#ifdef IS_PY3K
+    left = PyUnicode_FromStringAndSize(meta, leftsize);
+#else
     left = PyBytes_FromStringAndSize(meta, leftsize);
+#endif
     meta += leftsize;
+#ifdef IS_PY3K
+    right = PyUnicode_FromStringAndSize(meta, rightsize);
+#else
     right = PyBytes_FromStringAndSize(meta, rightsize);
+#endif
     meta += rightsize;
     tmp = PyTuple_New(2);
     if (!left || !right || !tmp) {
