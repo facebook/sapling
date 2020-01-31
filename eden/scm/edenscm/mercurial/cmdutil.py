@@ -907,7 +907,9 @@ def logmessage(repo, opts):
             if isstdiofilename(logfile):
                 message = ui.fin.read()
             else:
-                message = "\n".join(util.readfile(logfile).splitlines())
+                message = pycompat.decodeutf8(
+                    b"\n".join(util.readfile(logfile).splitlines())
+                )
         except IOError as inst:
             raise error.Abort(
                 _("can't read commit message '%s': %s")

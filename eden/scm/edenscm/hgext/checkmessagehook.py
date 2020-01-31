@@ -5,7 +5,7 @@
 
 import string
 
-from edenscm.mercurial import registrar
+from edenscm.mercurial import pycompat, registrar
 from edenscm.mercurial.i18n import _
 
 
@@ -25,7 +25,7 @@ def checkcommitmessage(ui, repo, **kwargs):
     """
     hg_commit_message = repo["tip"].description()
     try:
-        hg_commit_message.decode("utf8")
+        pycompat.ensurestr(hg_commit_message)
     except UnicodeDecodeError:
         ui.warn(_("commit message is not utf-8\n"))
         return True
