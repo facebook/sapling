@@ -527,7 +527,7 @@ def exclone(orig, ui, *args, **opts):
             ui.debug("remotenames: removing cloned bookmarks\n")
             for vfs in [repo.localvfs, repo.sharedvfs, repo.svfs]:
                 if vfs.tryread("bookmarks"):
-                    vfs.write("bookmarks", "")
+                    vfs.write("bookmarks", b"")
             # Invalidate bookmark caches.
             repo._filecache.pop("_bookmarks", None)
             repo.unfiltered().__dict__.pop("_bookmarks", None)
@@ -1468,7 +1468,7 @@ def _readtracking(repo):
     tracking = {}
     try:
         vfs = repo.sharedvfs
-        for line in vfs.read("bookmarks.tracking").strip().split("\n"):
+        for line in vfs.readutf8("bookmarks.tracking").strip().split("\n"):
             try:
                 book, track = line.strip().split(" ", 1)
                 tracking[book] = track
@@ -1486,7 +1486,7 @@ def _writetracking(repo, tracking):
         for book, track in pycompat.iteritems(tracking):
             data += "%s %s\n" % (book, track)
         vfs = repo.sharedvfs
-        vfs.write("bookmarks.tracking", data)
+        vfs.write("bookmarks.tracking", pycompat.encodeutf8(data))
 
 
 def _removetracking(repo, bookmarks):
@@ -2023,7 +2023,7 @@ def writedistancecache(repo, distance):
         cachevfs = shareawarecachevfs(repo)
         f = cachevfs("distance", "w", atomictemp=True)
         for k, v in pycompat.iteritems(distance):
-            f.write("%s %d %d\n" % (k, v[0], v[1]))
+            f.write(pycompat.encodeutf8("%s %d %d\n" % (k, v[0], v[1])))
     except (IOError, OSError):
         pass
 
@@ -2032,7 +2032,7 @@ def readdistancecache(repo):
     distances = {}
     try:
         cachevfs = shareawarecachevfs(repo)
-        for line in cachevfs.read("distance").splitlines():
+        for line in cachevfs.readutf8("distance").splitlines():
             line = line.rsplit(" ", 2)
             try:
                 d = (int(line[1]), int(line[2]))
