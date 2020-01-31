@@ -16,6 +16,7 @@ import collections
 import errno
 import os
 import weakref
+from typing import NamedTuple, Tuple
 
 from edenscm.mercurial import (
     bookmarks,
@@ -181,19 +182,32 @@ def unsharejournal(orig, ui, repo, repopath):
     return orig(ui, repo, repopath)
 
 
+# TODO: Once we fully convert to Python 3 we can change this to the much nicer Python 3
+# style attribute annotations for these NamedTuple members.  For now we are stuck with
+# this uglier legacy syntax.
 class journalentry(
-    collections.namedtuple(
-        u"journalentry", u"timestamp user command namespace name oldhashes newhashes"
+    NamedTuple(
+        "journalentry",
+        [
+            ("timestamp", Tuple[float, int]),
+            ("user", str),
+            ("command", str),
+            ("namespace", str),
+            ("name", str),
+            ("oldhashes", Tuple[bytes, ...]),
+            ("newhashes", Tuple[bytes, ...]),
+        ],
     )
 ):
+
     """Individual journal entry
 
     * timestamp: a mercurial (time, timezone) tuple
     * user: the username that ran the command
+    * command: the hg command that triggered this record
     * namespace: the entry namespace, an opaque string
     * name: the name of the changed item, opaque string with meaning in the
       namespace
-    * command: the hg command that triggered this record
     * oldhashes: a tuple of one or more binary hashes for the old location
     * newhashes: a tuple of one or more binary hashes for the new location
 
@@ -205,6 +219,7 @@ class journalentry(
 
     @classmethod
     def fromstorage(cls, line):
+        # type: (bytes) -> journalentry
         (
             time,
             user,
@@ -223,8 +238,8 @@ class journalentry(
         )
 
     def serialize(self):
-        """String representation for storage"""
         # type: () -> bytes
+        """String representation for storage"""
         time = " ".join(map(str, self.timestamp))
         oldhashes = ",".join([node.hex(hash) for hash in self.oldhashes])
         newhashes = ",".join([node.hex(hash) for hash in self.newhashes])
