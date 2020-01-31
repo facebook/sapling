@@ -34,7 +34,7 @@ use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
-use futures_stats::{FutureStats, Timed};
+use futures_stats::Timed;
 use manifest::ManifestOps;
 use maplit::hashmap;
 use mercurial_types::{
@@ -51,13 +51,13 @@ use mercurial_types::{
     HgManifest, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
 };
 use mononoke_types::{
-    hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
-    ContentMetadata, FileChange, Generation, MPath, MononokeId, RepositoryId, Timestamp,
+    hash::Sha256, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
+    FileChange, Generation, MPath, RepositoryId, Timestamp,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::{debug, trace, Logger};
+use slog::debug;
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -104,7 +104,6 @@ define_stats! {
     get_all_filenodes: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
     get_generation_number_by_bonsai: timeseries(Rate, Sum),
-    upload_blob: timeseries(Rate, Sum),
     create_changeset: timeseries(Rate, Sum),
     create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; Rate, Sum),
     create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; Rate, Sum),
@@ -873,59 +872,6 @@ impl BlobRepo {
 
     pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {
         (self.changeset_fetcher_factory)()
-    }
-
-    fn upload_blobstore_bytes(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        contents: BlobstoreBytes,
-    ) -> impl Future<Item = (), Error = Error> + Send {
-        fn log_upload_stats(
-            logger: Logger,
-            blobstore_key: String,
-            phase: &str,
-            stats: FutureStats,
-        ) {
-            trace!(logger, "Upload blob stats";
-                "phase" => String::from(phase),
-                "blobstore_key" => blobstore_key,
-                "poll_count" => stats.poll_count,
-                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
-                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
-            );
-        }
-
-        self.blobstore
-            .put(ctx.clone(), key.clone(), contents)
-            .timed({
-                let logger = ctx.logger().clone();
-                move |stats, result| {
-                    if result.is_ok() {
-                        log_upload_stats(logger, key, "blob uploaded", stats)
-                    }
-                    Ok(())
-                }
-            })
-    }
-
-    // TODO: Should we get rid of this function? It's only used for test code and Bundle2 upload.
-    pub fn upload_blob<Id>(
-        &self,
-        ctx: CoreContext,
-        blob: Blob<Id>,
-    ) -> impl Future<Item = Id, Error = Error> + Send
-    where
-        Id: MononokeId,
-    {
-        STATS::upload_blob.add_value(1);
-        let id = blob.id().clone();
-        let blobstore_key = id.blobstore_key();
-        let blob_contents: BlobstoreBytes = blob.into();
-
-        // Upload {blobstore_key: blob_contents}
-        self.upload_blobstore_bytes(ctx, blobstore_key, blob_contents.clone())
-            .map(move |_| id)
     }
 
     pub fn upload_file(

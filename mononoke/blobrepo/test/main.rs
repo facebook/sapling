@@ -1408,7 +1408,7 @@ fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     let content_len = content_blob.len() as u64;
 
     let mut rt = Runtime::new()?;
-    let _ = rt.block_on(repo.upload_blob(ctx.clone(), content_blob))?;
+    rt.block_on(content_blob.store(ctx.clone(), repo.blobstore()))?;
 
     let path1 = RepoPath::file("path/1")?;
     let path2 = RepoPath::file("path/2")?;
@@ -1515,7 +1515,7 @@ fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error> {
     let content_len = content_blob.len() as u64;
 
     let mut rt = Runtime::new()?;
-    let _ = rt.block_on(repo.upload_blob(ctx.clone(), content_blob))?;
+    rt.block_on(content_blob.store(ctx.clone(), repo.blobstore()))?;
 
     let path1 = RepoPath::file("path/1")?;
     let path2 = RepoPath::file("path/2")?;

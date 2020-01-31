@@ -16,6 +16,7 @@ use crate::upload_changesets::upload_changeset;
 use anyhow::{bail, ensure, format_err, Error, Result};
 use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle};
+use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
@@ -794,8 +795,7 @@ impl Bundle2Resolver {
             Some(full_content) => {
                 let blob = RawBundle2::new_bytes(full_content.lock().unwrap().clone()).into_blob();
                 let ctx = self.ctx.clone();
-                self.repo
-                    .upload_blob(ctx.clone(), blob)
+                blob.store(ctx.clone(), self.repo.blobstore())
                     .map(move |id| {
                         debug!(ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
                         ctx.scuba()
