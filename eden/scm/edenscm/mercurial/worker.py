@@ -174,7 +174,10 @@ def _posixworker(ui, func, staticargs, args):
                 def workerfunc():
                     os.close(rfd)
                     for i, size, item in func(*(staticargs + (pargs,))):
-                        os.write(wfd, "%d %d %s\n" % (i, size, item))
+                        os.write(
+                            wfd,
+                            b"%d %d %s\n" % (i, size, pycompat.encodeutf8(str(item))),
+                        )
                     return 0
 
                 ret = scmutil.callcatch(ui, workerfunc)
@@ -208,8 +211,8 @@ def _posixworker(ui, func, staticargs, args):
 
     try:
         for line in util.iterfile(fp):
-            l = line.split(" ", 2)
-            yield int(l[0]), int(l[1]), l[2][:-1]
+            l = line.split(b" ", 2)
+            yield int(l[0]), int(l[1]), pycompat.decodeutf8(l[2][:-1])
     except:  # re-raises
         killworkers()
         cleanup()

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test UI worker interaction
@@ -86,8 +85,8 @@ Known exception should be caught, but printed if --traceback is enabled
   [255]
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=8' \
-  > test 100000.0 abort --traceback 2>&1 | egrep '^(SystemExit|Abort)'
-  Abort: known exception
+  > test 100000.0 abort --traceback 2>&1 | egrep '^(SystemExit|(edenscm.mercurial.error.)?Abort)'
+  *Abort: known exception (glob)
   SystemExit: 255
 
 Traceback must be printed for unknown exceptions
