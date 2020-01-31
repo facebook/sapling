@@ -87,6 +87,11 @@ const ARG_MAX_UPLOAD_SIZE: &str = "max-upload-size";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
+// Used to determine how many entries are in cachelib's HashTable. A smaller
+// object size results in more entries and possibly higher idle memory usage.
+// More info: https://fburl.com/wiki/i78i3uzk
+const CACHE_OBJECT_SIZE: usize = 256 * 1024;
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp::new("Mononoke LFS Server")
@@ -210,7 +215,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches();
 
-    let caching = args::init_cachelib(fb, &matches, None);
+    let caching = args::init_cachelib(fb, &matches, Some(CACHE_OBJECT_SIZE));
     let logger = args::init_logging(fb, &matches);
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
