@@ -1,4 +1,3 @@
-#require py2
 TODO: configure mutation
   $ configure noevolution
 Test mergedriver invalidation with IMM.

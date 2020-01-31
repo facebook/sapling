@@ -8,9 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 feature.require(["symlink"])
 
 sh % "mkdir -p a"
