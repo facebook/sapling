@@ -202,6 +202,11 @@ class baseformatter(object):
         data = pycompat.byteskwargs(data)
         self._item.update(data)
 
+    def templatedata(self, **data):
+        """insert extra data into item that is available to template formatters but
+        is not shown by default in other output formatter types"""
+        pass
+
     def write(self, fields, deftext, *fielddata, **opts):
         """do default text output while assigning data to item"""
         fieldkeys = fields.split()
@@ -419,6 +424,9 @@ class templateformatter(baseformatter):
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
         self._renderitem("docheader", {})
+
+    def templatedata(self, **data):
+        self.data(**data)
 
     def _showitem(self):
         item = self._item.copy()

@@ -1162,7 +1162,7 @@ def relpath(context, mapping, args):
         # i18n: "relpath" is a keyword
         raise error.ParseError(_("relpath expects one argument"))
 
-    repo = mapping["ctx"].repo()
+    repo = mapping["repo"]
     path = evalstring(context, mapping, args[0])
     return repo.pathto(path)
 

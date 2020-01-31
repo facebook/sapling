@@ -267,6 +267,16 @@ Test templater support:
   $ hg status -T compact
   abort: "status" not in template map
   [255]
+  $ hg status --cwd ignoreddir -AT "{status}: {path} :: {relpath(path)}\n"
+  M: .gitignore :: ../.gitignore
+  A: added :: ../added
+  A: copied :: ../copied
+  R: removed :: ../removed
+  !: deleted :: ../deleted
+  ?: ignored :: ../ignored
+  ?: unknown :: ../unknown
+  I: ignoreddir/file :: file
+  C: modified :: ../modified
 
 hg status ignoreddir/file:
 

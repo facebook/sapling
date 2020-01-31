@@ -5893,6 +5893,7 @@ def status(ui, repo, *pats, **opts):
             label = "status." + state
             for f in files:
                 fm.startitem()
+                fm.templatedata(repo=repo)
                 fm.condwrite(showchar, "status", "%s ", char, label=label)
                 fm.write("path", fmt, repo.pathto(f, cwd), label=label)
                 if f in copy:
