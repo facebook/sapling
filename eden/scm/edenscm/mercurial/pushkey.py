@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 from . import bookmarks, encoding, obsolete, phases, util
-from .pycompat import decodeutf8
+from .pycompat import decodeutf8, encodeutf8
 
 
 def _nslist(repo):
@@ -53,14 +53,9 @@ def list(repo, namespace):
     return lk(repo)
 
 
-encode = encoding.fromlocal
-
-decode = encoding.tolocal
-
-
 def encodekeys(keys):
     """encode the content of a pushkey namespace for exchange over the wire"""
-    return "\n".join(["%s\t%s" % (encode(k), encode(v)) for k, v in keys])
+    return b"\n".join([b"%s\t%s" % (encodeutf8(k), encodeutf8(v)) for k, v in keys])
 
 
 def decodekeys(data):
@@ -71,5 +66,5 @@ def decodekeys(data):
     result = util.sortdict()
     for l in data.splitlines():
         k, v = l.split(b"\t")
-        result[decodeutf8(decode(k))] = decodeutf8(decode(v))
+        result[decodeutf8(k)] = decodeutf8(v)
     return result

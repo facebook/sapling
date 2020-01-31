@@ -2102,11 +2102,10 @@ def handlelistkeys(op, inpart):
 def handlepushkey(op, inpart):
     # type: (bundleoperation, unbundlepart) -> None
     """process a pushkey request"""
-    dec = pushkey.decode
-    namespace = dec(inpart.params["namespace"])
-    key = dec(inpart.params["key"])
-    old = dec(inpart.params["old"])
-    new = dec(inpart.params["new"])
+    namespace = inpart.params["namespace"]
+    key = inpart.params["key"]
+    old = inpart.params["old"]
+    new = inpart.params["new"]
 
     # The lock may be lazy, so grab it to ensure that we have the lock before
     # performing the pushkey.

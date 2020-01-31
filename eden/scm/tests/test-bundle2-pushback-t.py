@@ -30,8 +30,7 @@ def _newhandlechangegroup(op, inpart):
                   'key': 'new-server-mark',
                   'old': '',
                   'new': 'tip'}
-        encodedparams = [(k, pushkey.encode(v)) for (k,v) in params.items()]
-        op.reply.newpart('pushkey', mandatoryparams=encodedparams)
+        op.reply.newpart('pushkey', mandatoryparams=params.items())
     else:
         op.reply.newpart('output', data='pushback not enabled')
     return result

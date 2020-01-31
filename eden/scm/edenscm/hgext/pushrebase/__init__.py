@@ -1538,15 +1538,16 @@ def bundle2pushkey(orig, op, part):
         sum([record.items() for record in op.records[rebaseparttype]], [])
     )
 
-    namespace = pushkey.decode(part.params["namespace"])
+    namespace = part.params["namespace"]
+    assert isinstance(namespace, str)
     if namespace == "phases":
-        key = pushkey.decode(part.params["key"])
-        part.params["key"] = pushkey.encode(replacements.get(key, key))
+        key = part.params["key"]
+        part.params["key"] = replacements.get(key, key)
     if namespace == "bookmarks":
-        new = pushkey.decode(part.params["new"])
-        part.params["new"] = pushkey.encode(replacements.get(new, new))
+        new = part.params["new"]
+        part.params["new"] = replacements.get(new, new)
         serverbin = op.repo._bookmarks.get(part.params["key"])
-        clienthex = pushkey.decode(part.params["old"])
+        clienthex = part.params["old"]
 
         if serverbin and clienthex:
             cl = op.repo.changelog
@@ -1557,7 +1558,7 @@ def bundle2pushkey(orig, op, part):
                 # server's location for that bookmark (usual for pushrebase),
                 # and the commit being pushed was indeed pushrebased then update
                 # the old location to match the real location
-                part.params["old"] = pushkey.encode(hex(serverbin))
+                part.params["old"] = hex(serverbin)
 
     return orig(op, part)
 

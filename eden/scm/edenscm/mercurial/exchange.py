@@ -854,13 +854,12 @@ def _pushb2phasespushkey(pushop, bundler):
             if partid == targetid:
                 raise error.Abort(_("updating %s to public failed") % node)
 
-    enc = pushkey.encode
     for newremotehead in pushop.outdatedphases:
         part = bundler.newpart("pushkey")
-        part.addparam("namespace", enc("phases"))
-        part.addparam("key", enc(newremotehead.hex()))
-        part.addparam("old", enc("%d" % phases.draft))
-        part.addparam("new", enc("%d" % phases.public))
+        part.addparam("namespace", "phases")
+        part.addparam("key", newremotehead.hex())
+        part.addparam("old", "%d" % phases.draft)
+        part.addparam("new", "%d" % phases.public)
         part2node.append((part.id, newremotehead))
         pushop.pkfailcb[part.id] = handlefailure
 
@@ -944,7 +943,6 @@ def _pushb2bookmarkspart(pushop, bundler):
 def _pushb2bookmarkspushkey(pushop, bundler):
     pushop.stepsdone.add("bookmarks")
     part2book = []
-    enc = pushkey.encode
 
     def handlefailure(pushop, exc):
         targetid = int(exc.partid)
@@ -956,10 +954,10 @@ def _pushb2bookmarkspushkey(pushop, bundler):
 
     for book, old, new in pushop.outbookmarks:
         part = bundler.newpart("pushkey")
-        part.addparam("namespace", enc("bookmarks"))
-        part.addparam("key", enc(book))
-        part.addparam("old", enc(old))
-        part.addparam("new", enc(new))
+        part.addparam("namespace", "bookmarks")
+        part.addparam("key", book)
+        part.addparam("old", old)
+        part.addparam("new", new)
         action = "update"
         if not old:
             action = "export"

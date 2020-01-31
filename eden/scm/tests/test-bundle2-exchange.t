@@ -727,12 +727,11 @@ Check abort from mandatory pushkey
   > from edenscm.mercurial import error
   > @exchange.b2partsgenerator('failingpuskey')
   > def addfailingpushey(pushop, bundler):
-  >     enc = pushkey.encode
   >     part = bundler.newpart('pushkey')
-  >     part.addparam('namespace', enc('phases'))
-  >     part.addparam('key', enc(pushop.repo['cd010b8cd998'].hex()))
-  >     part.addparam('old', enc(str(0))) # successful update
-  >     part.addparam('new', enc(str(0)))
+  >     part.addparam('namespace', 'phases')
+  >     part.addparam('key', pushop.repo['cd010b8cd998'].hex())
+  >     part.addparam('old', str(0)) # successful update
+  >     part.addparam('new', str(0))
   >     def fail(pushop, exc):
   >         raise error.Abort('Correct phase push failed (because hooks)')
   >     pushop.pkfailcb[part.id] = fail
@@ -804,12 +803,11 @@ Check abort from mandatory pushkey
   > from edenscm.mercurial import error
   > @exchange.b2partsgenerator('failingpuskey')
   > def addfailingpushey(pushop, bundler):
-  >     enc = pushkey.encode
   >     part = bundler.newpart('pushkey')
-  >     part.addparam('namespace', enc('phases'))
-  >     part.addparam('key', enc(pushop.repo['cd010b8cd998'].hex()))
-  >     part.addparam('old', enc(str(4))) # will fail
-  >     part.addparam('new', enc(str(3)))
+  >     part.addparam('namespace', 'phases')
+  >     part.addparam('key', pushop.repo['cd010b8cd998'].hex())
+  >     part.addparam('old', str(4)) # will fail
+  >     part.addparam('new', str(3))
   >     def fail(pushop, exc):
   >         raise error.Abort('Clown phase push failed')
   >     pushop.pkfailcb[part.id] = fail
