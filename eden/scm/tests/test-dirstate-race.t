@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Race detector will complain about this test.

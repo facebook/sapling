@@ -5,6 +5,10 @@ import unittest
 
 import silenttestrunner
 from bindings import zstd
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 class testzstd(unittest.TestCase):

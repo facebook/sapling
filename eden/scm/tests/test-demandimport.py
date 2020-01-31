@@ -9,6 +9,9 @@ demandimport.enable()
 import os
 import subprocess
 import sys
+from testutil.dott import feature
+
+feature.require(["py2"])
 
 # Only run if demandimport is allowed
 if subprocess.call(["python", "%s/hghave" % os.environ["TESTDIR"], "demandimport"]):

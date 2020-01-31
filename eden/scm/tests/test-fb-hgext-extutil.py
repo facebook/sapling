@@ -10,6 +10,10 @@ import unittest
 import silenttestrunner
 from edenscm.hgext import extutil
 from edenscm.mercurial import error, vfs, worker
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 locktimeout = 25

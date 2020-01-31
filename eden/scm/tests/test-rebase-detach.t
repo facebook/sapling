@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 TODO: configure mutation

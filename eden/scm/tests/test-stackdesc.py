@@ -6,6 +6,9 @@
 
 import os
 import sys
+from testutil.dott import feature
+
+feature.require(["py2"])
 
 if os.name == "nt":
     sys.exit(80)

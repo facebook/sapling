@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
 This test demonstrates how Hg works with remote Hg bookmarks compared with
 remote branches via Hg-Git.  Ideally, they would behave identically.  In

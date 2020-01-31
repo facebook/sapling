@@ -3,6 +3,10 @@ from __future__ import absolute_import
 import unittest
 
 from edenscm.mercurial import error, mdiff
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 # for readability, line numbers are 0-origin

@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 ensure that failing ui.atexit handlers report sensibly

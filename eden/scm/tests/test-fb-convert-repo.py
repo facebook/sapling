@@ -2,6 +2,10 @@ import os
 import unittest
 
 from edenscm.hgext.convert.repo import gitutil, repo
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 def draft(test_func):

@@ -6,6 +6,11 @@
 import os
 import re
 
+from testutil.dott import feature
+
+
+feature.require(["py2"])
+
 
 def checkpath(path, dllnames):
     content = open(path).read()

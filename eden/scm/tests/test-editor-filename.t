@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Test temp file used with an editor has the expected suffix.

@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Emulate situations where NEED_CHECK was added to normal files and there should

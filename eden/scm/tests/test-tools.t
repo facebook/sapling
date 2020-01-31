@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Tests of the file helper tool

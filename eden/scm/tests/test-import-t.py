@@ -10,6 +10,9 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 sh % "setconfig 'extensions.treemanifest=!'"
 
 sh % "hg init a"

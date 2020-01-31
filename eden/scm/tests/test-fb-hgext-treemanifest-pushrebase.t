@@ -1,3 +1,4 @@
+#require py2
   $ setconfig treemanifest.flatcompat=False
 TODO: configure mutation
   $ configure noevolution

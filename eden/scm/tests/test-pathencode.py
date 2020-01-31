@@ -17,6 +17,10 @@ import sys
 import time
 
 from edenscm.mercurial import pycompat, store
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 try:

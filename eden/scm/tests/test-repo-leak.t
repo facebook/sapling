@@ -1,3 +1,4 @@
+#require py2
 Test native objects attached to the "repo" object gets properly released at the
 end of process.
 

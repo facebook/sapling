@@ -1,6 +1,10 @@
 from __future__ import absolute_import, print_function
 
 from edenscm.mercurial import store
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 def show(s):

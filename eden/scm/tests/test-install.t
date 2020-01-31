@@ -1,3 +1,4 @@
+#require py2
 hg debuginstall
   $ hg debuginstall
   checking encoding (utf-8)...

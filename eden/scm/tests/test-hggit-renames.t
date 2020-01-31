@@ -1,3 +1,4 @@
+#require py2
 Test that rename detection works
   $ . "$TESTDIR/hggit/testutil"
 

@@ -11,6 +11,9 @@ from edenscm.mercurial import extensions, hg, obsolete
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
 sh % ". helpers-usechg.sh"

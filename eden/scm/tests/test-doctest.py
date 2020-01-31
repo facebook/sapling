@@ -7,6 +7,11 @@ import os
 import re
 import sys
 
+from testutil.dott import feature
+
+
+feature.require(["py2"])
+
 
 ispy3 = sys.version_info[0] >= 3
 

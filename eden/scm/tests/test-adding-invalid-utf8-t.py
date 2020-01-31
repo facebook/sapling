@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 feature.require(["no-windows", "no-osx"])
 
 # Test that trying to add invalid utf8 files to the repository will fail.

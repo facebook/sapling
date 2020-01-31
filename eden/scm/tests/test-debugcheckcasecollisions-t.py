@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 sh % "setconfig 'extensions.treemanifest=!'"
 sh % "newrepo"
 sh % "mkdir -p dirA/subdirA dirA/subdirB dirB"

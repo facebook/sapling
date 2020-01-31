@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Path conflict checking is currently disabled by default because of issue5716.

@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Tests rebasing with part of the rebase set already in the

@@ -3,6 +3,10 @@ from __future__ import absolute_import, print_function
 import pprint
 
 from edenscm.mercurial import minirst
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 def debugformat(text, form, **kwargs):

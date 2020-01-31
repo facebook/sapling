@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 # Here we create a simple DAG which has just enough of the required

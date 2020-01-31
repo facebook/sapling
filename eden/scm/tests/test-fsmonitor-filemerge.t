@@ -1,3 +1,4 @@
+#require py2
 #require fsmonitor
 
 (Run this test using HGFSMONITOR_TESTS=1)

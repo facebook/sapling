@@ -1,3 +1,4 @@
+#require py2
 #require test-repo jshint
 
   $ . "$TESTDIR/helpers-testrepo.sh"

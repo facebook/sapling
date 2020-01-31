@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 # The tests in test-bisect are done on a linear history. Here the

@@ -1,3 +1,4 @@
+#require py2
 
   $ newext buggylocking <<EOF
   > """A small extension that tests our developer warnings

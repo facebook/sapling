@@ -1,3 +1,4 @@
+#require py2
 #require no-symlink
   $ disable treemanifest
 

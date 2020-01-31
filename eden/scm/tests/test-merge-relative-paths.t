@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Test that checks that relative paths are used in merge

@@ -14,6 +14,9 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 def listcommitandmanifesthashes(rev):
     # returns dictionary from descrition to commit node and manifest node
     # { commit_name: (commit_hash, manifest_hash)}

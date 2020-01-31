@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 # Create a treedirstate repo
 
 sh % "hg init repo1 --config 'format.dirstate=1'"

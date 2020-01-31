@@ -5,6 +5,10 @@ import doctest
 import os
 
 from edenscm.mercurial import sslutil
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 def check(a, b):

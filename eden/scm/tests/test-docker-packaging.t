@@ -1,3 +1,4 @@
+#require py2
 #require test-repo slow docker
 
   $ . "$TESTDIR/helpers-testrepo.sh"

@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may

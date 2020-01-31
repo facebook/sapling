@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 To run this test against other shells, use the shell argument, eg:

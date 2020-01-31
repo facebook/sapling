@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
 # -*- coding: utf-8 -*-
 

@@ -7,7 +7,10 @@ from __future__ import absolute_import
 
 import os
 
-from testutil.dott import sh, testtmp  # noqa: F401
+from testutil.dott import feature, sh, testtmp  # noqa: F401
+
+
+feature.require(["py2"])
 
 
 sh % "echo 1" > "B1"

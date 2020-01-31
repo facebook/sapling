@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 #require no-windows

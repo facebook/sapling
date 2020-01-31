@@ -1,3 +1,4 @@
+#require py2
 Test character encoding
 
   $ hg init t

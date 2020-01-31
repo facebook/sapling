@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 'narrow-heads' requires remotenames and visibility

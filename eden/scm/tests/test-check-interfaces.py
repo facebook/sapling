@@ -3,6 +3,10 @@
 from __future__ import absolute_import, print_function
 
 from edenscm.mercurial import bundlerepo, httppeer, localrepo, sshpeer, ui as uimod
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 def checkobject(o):

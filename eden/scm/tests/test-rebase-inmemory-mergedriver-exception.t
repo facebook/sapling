@@ -1,3 +1,4 @@
+#require py2
 TODO: configure mutation
   $ configure noevolution
 Test a mergedriver that raises exceptions in its preprocess() hook:

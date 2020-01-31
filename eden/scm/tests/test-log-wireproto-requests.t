@@ -1,3 +1,4 @@
+#require py2
   $ . "$TESTDIR/helpers-wireprotologging.sh"
   $ disable treemanifest
   $ CACHEDIR="$TESTTMP/hgcache"

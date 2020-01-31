@@ -1,3 +1,4 @@
+#require py2
   $ enable remotenames
   $ FILTERPWD="sed s%`pwd`/%%g"
   > mkcommit()

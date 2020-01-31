@@ -15,6 +15,10 @@ from bindings import revisionstore
 from edenscm.hgext.remotefilelog.metadatastore import unionmetadatastore
 from edenscm.mercurial import error, ui as uimod, util
 from edenscm.mercurial.node import nullid
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 SMALLFANOUTCUTOFF = 2 ** 16 / 8

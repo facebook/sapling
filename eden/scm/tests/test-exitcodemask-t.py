@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 # Command line flag is effective:
 
 sh % "hg add a --config 'ui.exitcodemask=63'" == r"""

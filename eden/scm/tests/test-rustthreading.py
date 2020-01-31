@@ -49,6 +49,11 @@
 
 from __future__ import absolute_import
 
+
+from testutil.dott import feature
+
+feature.require(["py2"])
+
 import os
 import thread
 import threading

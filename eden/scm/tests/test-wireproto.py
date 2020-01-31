@@ -1,6 +1,10 @@
 from __future__ import absolute_import, print_function
 
 from edenscm.mercurial import ui, util, wireproto
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 stringio = util.stringio

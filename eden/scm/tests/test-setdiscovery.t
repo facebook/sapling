@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
 
 Function to test discovery between two repos in both directions, using both the local shortcut

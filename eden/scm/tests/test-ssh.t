@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
 
 This test tries to exercise the ssh functionality with a dummy script

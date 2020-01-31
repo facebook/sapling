@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
 #testcases vfscachestore simplecachestore
 

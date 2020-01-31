@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Tests for the journal extension; records bookmark locations.

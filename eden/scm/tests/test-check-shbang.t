@@ -1,3 +1,4 @@
+#require py2
 #require test-repo hg10 slow
 
   $ . "$TESTDIR/helpers-testrepo.sh"

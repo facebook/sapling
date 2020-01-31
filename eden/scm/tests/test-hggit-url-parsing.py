@@ -5,6 +5,10 @@ import sys
 import tempfile
 
 from edenscm.mercurial import commands, hg, ui
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 try:

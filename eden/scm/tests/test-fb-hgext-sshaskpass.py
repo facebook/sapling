@@ -7,6 +7,10 @@ import sys
 # Make sure we use sshaskpass.py in this repo, unaffected by PYTHONPATH
 from edenscm.hgext import sshaskpass
 from edenscm.mercurial import error
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 if not sys.platform.startswith("linux"):

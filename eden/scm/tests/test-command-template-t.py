@@ -13,6 +13,8 @@ import os
 from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
+feature.require(["py2"])
+
 from edenscm.mercurial import namespaces
 
 

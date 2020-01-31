@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Tests JSON Input support for histedit

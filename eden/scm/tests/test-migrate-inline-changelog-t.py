@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 sh % "setconfig format.inline-changelog=1 visibility.enabled=true mutation.enabled=true"
 sh % "newrepo"
 sh % "echo A" | "hg debugdrawdag"

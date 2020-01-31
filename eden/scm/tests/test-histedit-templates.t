@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Testing templating for histedit command

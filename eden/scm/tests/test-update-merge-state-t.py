@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 sh % "enable morestatus"
 sh % "setconfig morestatus.show=True ui.origbackuppath=.hg/origs"
 

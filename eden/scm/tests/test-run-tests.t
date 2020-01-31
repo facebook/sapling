@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 This file tests the behavior of run-tests.py itself.

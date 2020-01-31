@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
   $ setconfig ui.color=always color.mode=ansi

@@ -8,6 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh
 
 
+feature.require(["py2"])
+
+
 exist_dirs = ["a", "a/b", "a/b/c", "a/b/d", "b/c/", "b/d"]
 non_exist_dirs = ["m", "m/n", "a/b/m", "b/m/", "b/m/n"]
 all_dirs = " ".join(non_exist_dirs + exist_dirs)

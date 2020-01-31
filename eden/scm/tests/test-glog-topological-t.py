@@ -9,6 +9,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 # This test file aims at test topological iteration and the various configuration it can has.
 
 sh % "cat" << r"""

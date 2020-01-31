@@ -1,3 +1,4 @@
+#require py2
 #require no-fsmonitor
 
   $ setconfig tracing.threshold=0

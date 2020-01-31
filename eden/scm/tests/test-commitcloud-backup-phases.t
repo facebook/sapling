@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Create an ondisk bundlestore in .hg/scratchbranches

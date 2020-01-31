@@ -1,3 +1,4 @@
+#require py2
 #require no-fsmonitor
   $ hg debugpython -- -c 'from edenscm.mercurial.dirstate import rootcache' || exit 80
 

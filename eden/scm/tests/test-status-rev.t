@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 Tests of 'hg status --rev <rev>' to make sure status between <rev> and '.' get

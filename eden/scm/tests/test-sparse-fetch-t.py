@@ -12,6 +12,9 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+feature.require(["py2"])
+
+
 os.environ["EDENSCM_TRACE_LEVEL"] = "trace"
 idtopath = {}
 

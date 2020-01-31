@@ -1,3 +1,4 @@
+#require py2
 #require fsmonitor
 
   $ setconfig fsmonitor.warn-fresh-instance=true

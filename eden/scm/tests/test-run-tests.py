@@ -9,6 +9,11 @@ import doctest
 import os
 import re
 
+from testutil.dott import feature
+
+
+feature.require(["py2"])
+
 
 # this is hack to make sure no escape characters are inserted into the output
 if "TERM" in os.environ:

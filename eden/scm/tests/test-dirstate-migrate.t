@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
   $ for src in 0 1 2; do

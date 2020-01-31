@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 The ordering and format of case collisions detected using treemanifest is

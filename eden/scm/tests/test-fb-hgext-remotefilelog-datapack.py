@@ -18,6 +18,10 @@ from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.datapack import datapackstore
 from edenscm.mercurial import error
 from edenscm.mercurial.node import nullid
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 SMALLFANOUTCUTOFF = 2 ** 16 / 8

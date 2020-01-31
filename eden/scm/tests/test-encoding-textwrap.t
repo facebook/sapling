@@ -1,3 +1,4 @@
+#require py2
 Test text wrapping for multibyte characters
 
   $ mkdir t

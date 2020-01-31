@@ -3,6 +3,10 @@ from __future__ import absolute_import
 import itertools
 
 from edenscm.hgext import absorb
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 class simplefctx(object):

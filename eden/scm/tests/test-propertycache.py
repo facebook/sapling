@@ -10,6 +10,10 @@ import os
 import subprocess
 
 from edenscm.mercurial import hg, localrepo, ui as uimod, util
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 # create some special property cache that trace they call

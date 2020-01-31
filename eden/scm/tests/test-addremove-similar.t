@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
   $ hg init rep; cd rep

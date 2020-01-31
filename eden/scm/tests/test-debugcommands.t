@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
   $ setconfig ui.interactive=yes format.usegeneraldelta=yes
 

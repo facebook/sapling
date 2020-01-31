@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
 commit hooks can see env vars
 (and post-transaction one are run unlocked)

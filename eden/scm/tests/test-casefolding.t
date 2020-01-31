@@ -1,3 +1,4 @@
+#require py2
 #require icasefs
 
   $ hg debugfsinfo | grep 'case-sensitive:'

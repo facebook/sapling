@@ -1,3 +1,4 @@
+#require py2
   $ disable treemanifest
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1

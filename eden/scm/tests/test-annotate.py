@@ -4,7 +4,10 @@ import unittest
 
 from edenscm.mercurial import mdiff
 from edenscm.mercurial.context import _annotatepair, annotateline
+from testutil.dott import feature
 
+
+feature.require(["py2"])
 
 try:
     xrange(0)

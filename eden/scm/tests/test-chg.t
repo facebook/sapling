@@ -1,3 +1,4 @@
+#require py2
 #require chg
 
   $ cp $HGRCPATH $HGRCPATH.orig

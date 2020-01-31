@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 test that a commit clears the merge state.

@@ -10,6 +10,10 @@ import os
 import sys
 
 from testutil import argspans
+from testutil.dott import feature
+
+
+feature.require(["py2"])
 
 
 try:

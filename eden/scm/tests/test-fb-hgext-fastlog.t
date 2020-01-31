@@ -1,3 +1,4 @@
+#require py2
   $ enable tweakdefaults fastlog
   $ setconfig fastlog.enabled=true
   $ readconfig <<EOF
