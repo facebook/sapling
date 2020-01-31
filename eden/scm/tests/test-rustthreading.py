@@ -50,15 +50,21 @@
 from __future__ import absolute_import
 
 import os
-import thread
 import threading
 import time
 import unittest
-from thread import get_ident, start_new_thread
 
 import silenttestrunner
 from bindings import threading as rustthreading
 from hghave import require
+
+
+try:
+    import thread
+    from thread import get_ident, start_new_thread
+except ImportError:
+    import _thread as thread
+    from _thread import get_ident, start_new_thread
 
 
 require(["py2"])
