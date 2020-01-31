@@ -42,11 +42,10 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
 namespace {
 
 /** Compute a fuse_entry_out */
-fuse_entry_out computeEntryParam(
-    InodeNumber number,
-    const Dispatcher::Attr& attr) {
+fuse_entry_out computeEntryParam(const Dispatcher::Attr& attr) {
+  DCHECK(attr.st.st_ino) << "We should never return a 0 inode to FUSE";
   fuse_entry_out entry = {};
-  entry.nodeid = number.get();
+  entry.nodeid = attr.st.st_ino;
   entry.generation = 0;
   auto fuse_attr = attr.asFuseAttr();
   entry.attr = fuse_attr.attr;
@@ -57,11 +56,13 @@ fuse_entry_out computeEntryParam(
   return entry;
 }
 
-Dispatcher::Attr attrForInodeWithCorruptOverlay() noexcept {
-  struct stat st;
-  std::memset(&st, 0, sizeof(st));
+constexpr int64_t kBrokenInodeCacheSeconds = 5;
+
+Dispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
+  struct stat st = {};
+  st.st_ino = ino.get();
   st.st_mode = S_IFREG;
-  return Dispatcher::Attr{st};
+  return Dispatcher::Attr{st, kBrokenInodeCacheSeconds};
 }
 } // namespace
 
@@ -106,7 +107,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
             .thenTry([inode](folly::Try<Dispatcher::Attr> maybeAttr) {
               if (maybeAttr.hasValue()) {
                 inode->incFuseRefcount();
-                return computeEntryParam(inode->getNodeId(), maybeAttr.value());
+                return computeEntryParam(maybeAttr.value());
               } else {
                 // The most common case for getattr() failing is if this file is
                 // materialized but the data for it in the overlay is missing
@@ -127,7 +128,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
                            << "): " << maybeAttr.exception().what();
                 inode->incFuseRefcount();
                 return computeEntryParam(
-                    inode->getNodeId(), attrForInodeWithCorruptOverlay());
+                    attrForInodeWithCorruptOverlay(inode->getNodeId()));
               }
             });
       })
@@ -197,7 +198,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
         return child->getattr().thenValue(
             [child](Dispatcher::Attr attr) -> fuse_entry_out {
               child->incFuseRefcount();
-              return computeEntryParam(child->getNodeId(), attr);
+              return computeEntryParam(attr);
             });
       });
 }
@@ -302,7 +303,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
         return child->getattr().thenValue(
             [child](Dispatcher::Attr attr) -> fuse_entry_out {
               child->incFuseRefcount();
-              return computeEntryParam(child->getNodeId(), attr);
+              return computeEntryParam(attr);
             });
       });
 }
@@ -323,7 +324,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
         auto child = inode->mkdir(childName, mode);
         return child->getattr().thenValue([child](Dispatcher::Attr attr) {
           child->incFuseRefcount();
-          return computeEntryParam(child->getNodeId(), attr);
+          return computeEntryParam(attr);
         });
       });
 }
@@ -359,9 +360,8 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
        childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode = inode->symlink(childName, linkContents);
         symlinkInode->incFuseRefcount();
-        return symlinkInode->getattr().thenValue([symlinkInode](Attr&& attr) {
-          return computeEntryParam(symlinkInode->getNodeId(), attr);
-        });
+        return symlinkInode->getattr().thenValue(
+            [symlinkInode](Attr&& attr) { return computeEntryParam(attr); });
       });
 }
 

@@ -10,7 +10,9 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include "eden/fs/model/Blob.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/StoredObject.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
@@ -95,4 +97,28 @@ TEST_F(EdenDispatcherTest, createReturnsNameTooLong) {
   } catch (std::system_error& e) {
     EXPECT_EQ(ENAMETOOLONG, e.code().value());
   }
+}
+
+TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_good_file) {
+  FakeTreeBuilder builder;
+  builder.setFile("good", "contents");
+  TestMount mount{builder};
+
+  auto entry = mount.getDispatcher()->lookup(kRootNodeId, "good"_pc).get(0ms);
+  EXPECT_NE(0, entry.nodeid);
+  EXPECT_NE(0, entry.attr.ino);
+  EXPECT_EQ(entry.nodeid, entry.attr.ino);
+}
+
+TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
+  FakeTreeBuilder builder;
+  builder.setFile("bad", "contents");
+  TestMount mount{builder, /*startReady=*/false};
+  auto entryFuture = mount.getDispatcher()->lookup(kRootNodeId, "bad"_pc);
+  builder.getStoredBlob("bad"_relpath)
+      ->triggerError(std::runtime_error("failed to load"));
+  auto entry = std::move(entryFuture).get(0ms);
+  EXPECT_NE(0, entry.nodeid);
+  EXPECT_NE(0, entry.attr.ino);
+  EXPECT_EQ(entry.nodeid, entry.attr.ino);
 }
