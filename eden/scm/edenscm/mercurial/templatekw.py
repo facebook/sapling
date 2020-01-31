@@ -215,7 +215,7 @@ def _showlist(name, values, mapping, plural=None, separator=" "):
             yield templ(noname, **strmapping)
         return
     if name not in templ:
-        if isinstance(values[0], bytes):
+        if isinstance(values[0], str):
             yield separator.join(values)
         else:
             count = len(values)
