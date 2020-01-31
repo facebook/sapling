@@ -150,7 +150,7 @@ Check "from __future__ import absolute_import" support for external libraries
   ambigabs.s=libroot/ambig.py
   foo
 
-#if no-py3k
+#if py2
   $ cat > $TESTTMP/libroot/mod/ambigrel.py <<EOF
   > import ambig # should load "libroot/mod/ambig.py"
   > s = ambig.s
@@ -215,7 +215,7 @@ Check absolute/relative import of extension specific modules
   (extroot) import extroot.bar in func(): this is extroot.bar
   foo
 
-#if no-py3k
+#if py2
   $ rm "$TESTTMP"/extroot/foo.*
   $ rm -Rf "$TESTTMP/extroot/__pycache__"
   $ cat > $TESTTMP/extroot/foo.py <<EOF

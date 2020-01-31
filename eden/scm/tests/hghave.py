@@ -717,25 +717,9 @@ def has_demandimport():
     return (not has_chg()) and os.environ.get("HGDEMANDIMPORT") != "disable"
 
 
-@check("py3k", "running with Python 3.x")
-def has_py3k():
-    return 3 == sys.version_info[0]
-
-
-@check("py3exe", "a Python 3.x interpreter is available")
-def has_python3exe():
-    return "PYTHON3" in os.environ
-
-
-@check("py3pygments", "Pygments available on Python 3.x")
-def has_py3pygments():
-    if has_py3k():
-        return has_pygments()
-    elif has_python3exe():
-        # just check exit status (ignoring output)
-        py3 = os.environ["PYTHON3"]
-        return matchoutput('%s -c "import pygments"' % py3, br"")
-    return False
+@check("py2", "running with Python 3.x")
+def has_py2():
+    return 2 == sys.version_info[0] or "HGTEST_FORCE_PY2" in os.environ
 
 
 @check("slow", "allow slow tests (use --allow-slow-tests)")
