@@ -69,6 +69,10 @@ class EdenMonitor {
 
  private:
   class SignalHandler;
+  enum class State {
+    Starting,
+    Running,
+  };
 
   EdenMonitor(EdenMonitor const&) = delete;
   EdenMonitor& operator=(EdenMonitor const&) = delete;
@@ -78,6 +82,7 @@ class EdenMonitor {
 
   void signalReceived(int sig);
 
+  State state_{State::Starting};
   AbsolutePath const edenDir_;
   folly::EventBase eventBase_;
   std::unique_ptr<SignalHandler> signalHandler_;

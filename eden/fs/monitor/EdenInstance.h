@@ -96,6 +96,7 @@ class SpawnedEdenInstance : public EdenInstance,
                             private folly::AsyncTimeout {
  public:
   SpawnedEdenInstance(EdenMonitor* monitor, std::shared_ptr<LogFile> log);
+  ~SpawnedEdenInstance() override;
 
   FOLLY_NODISCARD folly::Future<folly::Unit> start() override;
 
@@ -107,6 +108,8 @@ class SpawnedEdenInstance : public EdenInstance,
 
  private:
   static constexpr size_t kLogBufferSize = 64 * 1024;
+
+  class StartupStatusChecker;
 
   void handlerReady(uint16_t events) noexcept override;
   void timeoutExpired() noexcept override;
@@ -120,6 +123,7 @@ class SpawnedEdenInstance : public EdenInstance,
   pid_t pid_{0};
   folly::File logPipe_;
   std::shared_ptr<LogFile> log_;
+  std::unique_ptr<StartupStatusChecker> startupChecker_;
 
   // EdenInstance objects are always allocated on the heap, so we just
   // keep the log buffer in an inline array, rather than in a separately

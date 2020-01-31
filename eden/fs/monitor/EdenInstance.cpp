@@ -17,8 +17,10 @@
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
 
+using facebook::fb303::cpp2::fb303_status;
 using folly::Future;
 using folly::Subprocess;
+using folly::Try;
 using folly::Unit;
 using namespace std::chrono_literals;
 
@@ -83,6 +85,69 @@ bool ExistingEdenInstance::isAlive() {
   return true;
 }
 
+class SpawnedEdenInstance::StartupStatusChecker : private AsyncTimeout {
+ public:
+  explicit StartupStatusChecker(SpawnedEdenInstance* instance)
+      : AsyncTimeout(instance->monitor_->getEventBase()), instance_{instance} {}
+  ~StartupStatusChecker() override {
+    if (instance_) {
+      startupAborted();
+    }
+  }
+
+  Future<Unit> start() {
+    scheduleTimeout(pollInterval_);
+    return promise_.getFuture();
+  }
+  void startupAborted() {
+    instance_ = nullptr;
+    client_.reset();
+    promise_.setException(std::runtime_error("start attempt aborted"));
+  }
+
+ private:
+  void timeoutExpired() noexcept override {
+    folly::makeFutureWith([this]() { return checkRunning(); })
+        .thenTry([this](Try<bool> result) {
+          client_.reset();
+          if (result.hasValue() && result.value()) {
+            edenRunning();
+          } else {
+            reschedule();
+          }
+        });
+  }
+
+  void edenRunning() {
+    if (!instance_) {
+      return;
+    }
+    instance_ = nullptr;
+    promise_.setValue();
+  }
+
+  void reschedule() {
+    if (!instance_) {
+      return;
+    }
+    scheduleTimeout(pollInterval_);
+  }
+
+  Future<bool> checkRunning() {
+    // Save client_ as a member variable so that we can destroy it in
+    // startupAborted() to cancel the pending thrift call.
+    client_ = instance_->monitor_->createEdenThriftClient();
+    return client_->future_getStatus().thenTry([](Try<fb303_status> status) {
+      return status.hasValue() && (status.value() == fb303_status::ALIVE);
+    });
+  }
+
+  folly::Promise<Unit> promise_;
+  std::chrono::milliseconds pollInterval_{200};
+  SpawnedEdenInstance* instance_{nullptr};
+  std::shared_ptr<EdenServiceAsyncClient> client_;
+};
+
 SpawnedEdenInstance::SpawnedEdenInstance(
     EdenMonitor* monitor,
     std::shared_ptr<LogFile> log)
@@ -91,6 +156,21 @@ SpawnedEdenInstance::SpawnedEdenInstance(
       AsyncTimeout(monitor->getEventBase()),
       edenfsExe_(FLAGS_edenfs),
       log_(std::move(log)) {}
+
+SpawnedEdenInstance::~SpawnedEdenInstance() {
+  // If we are still waiting on the StartupStatusChecker, explicitly
+  // startupAborted() it when we are being destroyed.  Aborting/destroying it
+  // will automatically trigger its pending promise to fail with an error.
+  // Letting this happen automatically inside the StartupStatusChecker
+  // destructor is a bit fragile with regards to destruction ordering, so
+  // explicitly abort it now before any of our member variables are destroyed.
+  if (startupChecker_) {
+    startupChecker_->startupAborted();
+    // We automatically reset startupChecker_ to null when its promise
+    // completes.  Check that this has happened.
+    XCHECK(!startupChecker_);
+  }
+}
 
 Future<Unit> SpawnedEdenInstance::start() {
   auto startupLog = monitor_->getEdenDir() + "logs/startup.log"_relpath;
@@ -141,8 +221,21 @@ Future<Unit> SpawnedEdenInstance::start() {
   changeHandlerFD(folly::NetworkSocket(logPipe_.fd()));
   registerHandler(EventHandler::READ | EventHandler::PERSIST);
 
-  // TODO: wait for EdenFS to become healthy.
-  return folly::makeFuture();
+  // Wait for EdenFS to become healthy.
+  //
+  // Currently we do this by periodically polling with getStatus() calls.
+  // Eventually it might be nicer to do this by having EdenFS write the startup
+  // log messages to a pipe, and we could use the pipe closing to tell when
+  // startup has finished.  For now just polling getStatus() is simplest.
+  //
+  // We store startupChecker_ as a member variable so that it will be destroyed
+  // (and the checking cancelled) if we are destroyed.
+  startupChecker_ = std::make_unique<StartupStatusChecker>(this);
+  return startupChecker_->start().thenTry([this](Try<Unit> result) {
+    XLOG(INFO) << "EdenFS pid " << getPid() << " has finished starting";
+    startupChecker_.reset();
+    return result;
+  });
 }
 
 void SpawnedEdenInstance::handlerReady(uint16_t events) noexcept {

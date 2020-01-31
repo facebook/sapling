@@ -89,6 +89,7 @@ void EdenMonitor::run() {
 Future<Unit> EdenMonitor::start() {
   return getEdenInstance().thenValue([this](auto&&) {
     XCHECK(edenfs_ != nullptr);
+    state_ = State::Running;
 #if EDEN_HAVE_SYSTEMD
     auto rc = sd_notify(/*unset_environment=*/false, "READY=1");
     if (rc < 0) {
