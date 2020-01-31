@@ -22,7 +22,7 @@ use cmdlib::args;
 use fbinit::FacebookInit;
 use futures_preview::{
     compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
 };
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
@@ -673,7 +673,7 @@ pub fn setup_common(
         .transpose()?;
 
     // Open the blobstore explicitly so we can do things like run on one side of a multiplex
-    let datasources_fut = blobstore::open_blobstore(
+    let datasources = blobstore::open_blobstore(
         fb,
         myrouter_port,
         storage_config,
@@ -686,11 +686,13 @@ pub fn setup_common(
         args::get_repo_name(fb, &matches)?,
         blobstore_options,
         logger.clone(),
-    );
+    )
+    .boxed()
+    .compat();
 
     let blobrepo = open_blobrepo_given_datasources(
         fb,
-        datasources_fut,
+        Box::new(datasources),
         config.repoid,
         caching,
         config.bookmarks_cache_ttl,

@@ -16,11 +16,9 @@ use blobstore_factory::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    self,
-    future::{self, Future},
-};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::future::Future as OldFuture;
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
+use futures_preview::{compat::Future01CompatExt, future::TryFutureExt};
 use inlinable_string::InlinableString;
 use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction, StorageConfig};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
@@ -139,7 +137,7 @@ fn get_blobconfig(
     }
 }
 
-pub fn open_blobstore(
+pub async fn open_blobstore(
     fb: FacebookInit,
     mysql_options: MysqlOptions,
     storage_config: StorageConfig,
@@ -153,11 +151,8 @@ pub fn open_blobstore(
     repo_stats_key: String,
     blobstore_options: BlobstoreOptions,
     logger: Logger,
-) -> BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
-    // Allow open of just one inner store
-    let mut blobconfig =
-        try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
-
+) -> Result<(OldBoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
+    let mut blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
     let scrub_handler = scrub_action.map(|scrub_action| {
         blobconfig.set_scrubbed(scrub_action);
         Arc::new(StatsScrubHandler::new(
@@ -230,27 +225,26 @@ pub fn open_blobstore(
                 blobstore_options,
             ),
             (Some(_), _) => {
-                future::err(format_err!("Scrub action passed for non-scrubbable store")).boxify()
+                futures::future::err(format_err!("Scrub action passed for non-scrubbable store"))
+                    .boxify()
             }
         };
-        future::ok((blobstore, sql_factory))
-    });
+        futures::future::ok((blobstore, sql_factory)).boxify()
+    })
+    .compat();
 
     datasources
-        .map(move |(storage, sql_factory)| {
-            // Only need to prefix at this level if not using via blob repo, e.g. GC
-            let maybe_prefixed = match prefix {
-                Some(prefix) => storage
+        .map_ok(move |(storage, sql_factory)| match prefix {
+            None => (storage, sql_factory),
+            Some(prefix) => (
+                storage
                     .map(|s| {
                         Arc::new(PrefixBlobstore::new(s, InlinableString::from(prefix)))
                             as Arc<dyn Blobstore>
                     })
-                    .left_future(),
-                None => storage.right_future(),
-            };
-
-            // Redaction would go here if needed
-            (maybe_prefixed.boxify(), sql_factory)
+                    .boxify(),
+                sql_factory,
+            ),
         })
-        .boxify()
+        .await
 }
