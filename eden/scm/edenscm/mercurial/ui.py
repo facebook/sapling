@@ -27,7 +27,7 @@ import tempfile
 import time
 import traceback
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from bindings import configparser
 
@@ -622,6 +622,7 @@ class ui(object):
         return self._buffers.pop()
 
     def _addprefixesandlabels(self, args, opts, addlabels, usebytes=False):
+        # type: (Tuple[str, ...], Dict[str, Any], bool, bool) -> List[str]
         msgs = []
         for item in r"error", r"notice", r"component":
             itemvalue = opts.get(item)
@@ -639,6 +640,7 @@ class ui(object):
         return msgs
 
     def write(self, *args, **opts):
+        # type: (str, Any) -> None
         """write args to output
 
         By default, this method simply writes to the buffer or stdout.
@@ -660,17 +662,18 @@ class ui(object):
         label.
         """
         if self._buffers and not opts.get(r"prompt", False):
-            msgs = self._addprefixesandlabels(args, opts, self._bufferapplylabels)
+            msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
         else:
-            msgs = self._addprefixesandlabels(args, opts, self._colormode)
+            msgs = self._addprefixesandlabels(args, opts, bool(self._colormode))
             if self._colormode == "win32":
                 # windows color printing is its own can of crab
-                color.win32print(self, self._write, *msgs, **opts)
+                color.win32print(self, self._write, *msgs)
             else:
-                self._write(*msgs, **opts)
+                self._write(*msgs)
 
-    def _write(self, *msgs, **opts):
+    def _write(self, *msgs):
+        # type: (str) -> None
         with progress.suspend():
             starttime = util.timer()
             if self.laststdout != stdoutkind.TEXT and not getattr(

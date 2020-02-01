@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 import re
-from typing import Union
+from typing import Any, Callable, Union
 
 from . import encoding, pycompat, util
 from .i18n import _
@@ -592,14 +592,17 @@ if pycompat.iswindows:
                 "\033\\[([^m]*)m([^\033]*)(.*)", re.MULTILINE | re.DOTALL
             )
 
-    def win32print(ui, writefunc, *msgs, **opts):
+    def win32print(ui, writefunc, *msgs):
+        # type: (Any, str, Callable[str, None], str) -> None
         for text in msgs:
-            _win32print(ui, text, writefunc, **opts)
+            _win32print(ui, text, writefunc)
 
-    def _win32print(ui, text, writefunc, **opts):
+    def _win32print(ui, text, writefunc):
+        # type: (Any, str, Callable[str, None]) -> None
         attr = origattr
 
         def mapcolor(val, attr):
+            # type: (int, int) -> int
             if val == -1:
                 return origattr
             elif val in passthrough:
@@ -619,14 +622,14 @@ if pycompat.iswindows:
                             attr = mapcolor(int(sattr), attr)
                     ui.flush()
                     _kernel32.SetConsoleTextAttribute(stdout, attr)
-                    writefunc(m.group(2), **opts)
+                    writefunc(m.group(2))
                     m = re.match(ansire, m.group(3))
             finally:
                 # Explicitly reset original attributes
                 ui.flush()
                 _kernel32.SetConsoleTextAttribute(stdout, origattr)
         else:
-            writefunc(text, **opts)
+            writefunc(text)
 
 
 def supportedcolors():
