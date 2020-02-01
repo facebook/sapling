@@ -186,7 +186,7 @@ def parsedag(desc):
         else:
             return labels[ref]
 
-    chiter = pycompat.iterbytestr(desc)
+    chiter = iter(desc)
 
     def nextch():
         return next(chiter, "\0")

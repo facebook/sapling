@@ -5875,7 +5875,7 @@ def status(ui, repo, *pats, **opts):
             node1, node2, m, "ignored" in show, "clean" in show, "unknown" in show
         )
 
-    changestates = zip(states, pycompat.iterbytestr("MAR!?IC"), stat)
+    changestates = zip(states, iter("MAR!?IC"), stat)
 
     if (
         opts.get("all") or opts.get("copies") or ui.configbool("ui", "statuscopies")

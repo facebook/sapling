@@ -90,7 +90,6 @@ if sys.version_info[0] >= 3:
 
     bytechr = chr
     bytestr = str
-    iterbytestr = iter
     sysbytes = identity
     sysstr = identity
     strurl = identity
@@ -145,7 +144,6 @@ else:
 
     bytechr = chr
     bytestr = str
-    iterbytestr = iter
     sysbytes = identity
     sysstr = identity
     strurl = identity
