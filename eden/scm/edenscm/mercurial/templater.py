@@ -446,7 +446,7 @@ def runsymbol(context, mapping, key, default=""):
             v = default
     if callable(v):
         try:
-            v = util.checksignature(v)(**pycompat.strkwargs(mapping))
+            v = util.checksignature(v)(**mapping)
         except error.SignatureError:
             # If certain data requested is missing. Pretend the template
             # function does not exist.
@@ -1196,7 +1196,7 @@ def revset(context, mapping, args):
             revs = list(revs)
             revsetcache[raw] = revs
 
-    return templatekw.showrevslist("revision", revs, **pycompat.strkwargs(mapping))
+    return templatekw.showrevslist("revision", revs, **mapping)
 
 
 @templatefunc("rstdoc(text, style)")
@@ -2004,11 +2004,11 @@ class templater(object):
 
     def render(self, mapping):
         """Render the default unnamed template and return result as string"""
-        mapping = pycompat.strkwargs(mapping)
+        mapping = mapping
         return stringify(self("", **mapping))
 
     def __call__(self, t, **mapping):
-        mapping = pycompat.byteskwargs(mapping)
+        mapping = mapping
         ttype = t in self.map and self.map[t][0] or "default"
         if ttype not in self.ecache:
             try:

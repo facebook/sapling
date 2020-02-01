@@ -425,7 +425,7 @@ def dispatch(req):
     def logatexit():
         ui = req.ui
         if ui.logmeasuredtimes:
-            ui.log("measuredtimes", **pycompat.strkwargs(ui._measuredtimes))
+            ui.log("measuredtimes", **(ui._measuredtimes))
         if ui.metrics.stats:
             # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
             # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
@@ -1195,7 +1195,7 @@ def _dispatch(req):
             ui.log("command", "%s\n", msg)
             if repo:
                 repo.dirstate.loginfo(ui, "pre")
-            strcmdopt = pycompat.strkwargs(cmdoptions)
+            strcmdopt = cmdoptions
             d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
             ret = runcommand(
                 lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions

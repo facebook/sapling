@@ -54,7 +54,7 @@ Doctest helper:
 ...     ui.pushbuffer()
 ...     try:
 ...         return fn(ui, ui.formatter(pycompat.sysbytes(fn.__name__),
-...                   pycompat.byteskwargs(opts)))
+...                   opts))
 ...     finally:
 ...         print(pycompat.sysstr(ui.popbuffer()), end='')
 
@@ -192,14 +192,14 @@ class baseformatter(object):
 
     def context(self, **ctxs):
         """insert context objects to be used to render template keywords"""
-        ctxs = pycompat.byteskwargs(ctxs)
+        ctxs = ctxs
         assert all(k == "ctx" for k in ctxs)
         if self._converter.storecontext:
             self._item.update(ctxs)
 
     def data(self, **data):
         """insert data into item that's not shown in default output"""
-        data = pycompat.byteskwargs(data)
+        data = data
         self._item.update(data)
 
     def templatedata(self, **data):
@@ -453,7 +453,7 @@ class templateformatter(baseformatter):
             props["templ"] = self._t
             props["repo"] = props["ctx"].repo()
             props["revcache"] = {}
-        props = pycompat.strkwargs(props)
+        props = props
         g = self._t(ref, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
 

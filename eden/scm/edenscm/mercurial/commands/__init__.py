@@ -220,7 +220,7 @@ def add(ui, repo, *pats, **opts):
     Returns 0 if all files are successfully added.
     """
 
-    m = scmutil.match(repo[None], pats, pycompat.byteskwargs(opts))
+    m = scmutil.match(repo[None], pats, opts)
     rejected = cmdutil.add(ui, repo, m, "", False, **opts)
     return rejected and 1 or 0
 
@@ -293,7 +293,6 @@ def addremove(ui, repo, *pats, **opts):
 
     Returns 0 if all files are successfully added.
     """
-    opts = pycompat.byteskwargs(opts)
     try:
         sim = float(opts.get("similarity") or 100)
     except ValueError:
@@ -343,7 +342,6 @@ def annotate(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     if not pats:
         raise error.Abort(_("at least one filename or pattern is required"))
 
@@ -557,7 +555,6 @@ def archive(ui, repo, dest, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     if not ctx:
         raise error.Abort(_("no working directory: please specify a revision"))
@@ -667,7 +664,6 @@ def backout(ui, repo, node=None, rev=None, **opts):
 
 
 def _dobackout(ui, repo, node=None, rev=None, **opts):
-    opts = pycompat.byteskwargs(opts)
     if opts.get("commit") and opts.get("no_commit"):
         raise error.Abort(_("cannot use --commit with --no-commit"))
     if opts.get("merge") and opts.get("no_commit"):
@@ -744,7 +740,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             node
         ).description.splitlines()[0]
         editform = "backout"
-        e = cmdutil.getcommiteditor(editform=editform, **pycompat.strkwargs(opts))
+        e = cmdutil.getcommiteditor(editform=editform, **opts)
 
         addmessage = "\n\nOriginal commit changeset: %s" % short(node)
         if not message:
@@ -1319,7 +1315,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     Returns 0 on success, 1 if no changes found.
     """
-    opts = pycompat.byteskwargs(opts)
     revs = None
     if "rev" in opts:
         revstrings = opts["rev"]
@@ -1455,7 +1450,6 @@ def cat(ui, repo, file1, *pats, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     m = scmutil.match(ctx, (file1,) + pats, opts)
     fntemplate = opts.pop("output", "")
@@ -1468,9 +1462,7 @@ def cat(ui, repo, file1, *pats, **opts):
         ui.pager("cat")
         fm = ui.formatter("cat", opts)
     with fm:
-        return cmdutil.cat(
-            ui, repo, ctx, m, fm, fntemplate, "", **pycompat.strkwargs(opts)
-        )
+        return cmdutil.cat(ui, repo, ctx, m, fm, fntemplate, "", **opts)
 
 
 @command(
@@ -1596,7 +1588,6 @@ def clone(ui, source, dest=None, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     if opts.get("noupdate") and opts.get("updaterev"):
         raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
 
@@ -1717,8 +1708,6 @@ def _docommit(ui, repo, *pats, **opts):
         # commit(), 1 if nothing changed or None on success.
         return 1 if ret == 0 else ret
 
-    opts = pycompat.byteskwargs(opts)
-
     cmdutil.checkunfinished(repo, commit=True)
 
     branch = repo[None].branch()
@@ -1749,9 +1738,7 @@ def _docommit(ui, repo, *pats, **opts):
 
         def commitfunc(ui, repo, message, match, opts):
             editform = cmdutil.mergeeditform(repo[None], "commit.normal")
-            editor = cmdutil.getcommiteditor(
-                editform=editform, **pycompat.strkwargs(opts)
-            )
+            editor = cmdutil.getcommiteditor(editform=editform, **opts)
             return repo.commit(
                 message,
                 opts.get("user"),
@@ -1815,7 +1802,6 @@ def config(ui, repo, *values, **opts):
 
     """
 
-    opts = pycompat.byteskwargs(opts)
     if opts.get("edit") or opts.get("local") or opts.get("global"):
         if opts.get("local") and opts.get("global"):
             raise error.Abort(_("can't use --local and --global together"))
@@ -1944,7 +1930,6 @@ def copy(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if errors are encountered.
     """
-    opts = pycompat.byteskwargs(opts)
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
@@ -2062,7 +2047,6 @@ def diff(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     revs = opts.get("rev")
     change = opts.get("change")
     stat = opts.get("stat")
@@ -2167,9 +2151,8 @@ def export(ui, repo, *changesets, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     changesets += tuple(opts.get("rev", []))
-    m = scmutil.match(repo[None], opts.get("pattern", []), pycompat.byteskwargs(opts))
+    m = scmutil.match(repo[None], opts.get("pattern", []), opts)
     if not changesets:
         changesets = ["."]
     revs = scmutil.revrange(repo, changesets)
@@ -2246,7 +2229,6 @@ def files(ui, repo, *pats, **opts):
 
     """
 
-    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get("rev"), None)
 
     end = "\n"
@@ -2293,7 +2275,6 @@ def forget(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     if not pats:
         raise error.Abort(_("no files specified"))
 
@@ -2394,7 +2375,6 @@ def graft(ui, repo, *revs, **opts):
 
 
 def _dograft(ui, repo, *revs, **opts):
-    opts = pycompat.byteskwargs(opts)
     if revs and opts.get("rev"):
         ui.warn(
             _(
@@ -2411,7 +2391,7 @@ def _dograft(ui, repo, *revs, **opts):
     if not opts.get("date") and opts.get("currentdate"):
         opts["date"] = "%d %d" % util.makedate()
 
-    editor = cmdutil.getcommiteditor(editform="graft", **pycompat.strkwargs(opts))
+    editor = cmdutil.getcommiteditor(editform="graft", **opts)
 
     cont = False
     if opts.get("continue") or opts.get("abort"):
@@ -2980,7 +2960,6 @@ def heads(ui, repo, *branchrevs, **opts):
     Returns 0 if matching heads are found, 1 if not.
     """
 
-    opts = pycompat.byteskwargs(opts)
     start = None
     if "rev" in opts:
         start = scmutil.revsingle(repo, opts["rev"], None).node()
@@ -3150,7 +3129,6 @@ def histgrep(ui, repo, pattern, *pats, **opts):
         h = _("this is disabled to avoid very slow greps over the whole repo")
         raise error.Abort(m, hint=h)
 
-    opts = pycompat.byteskwargs(opts)
     reflags = re.M
     if opts.get("ignore_case"):
         reflags |= re.I
@@ -3429,7 +3407,6 @@ def identify(
     Returns 0 if successful.
     """
 
-    opts = pycompat.byteskwargs(opts)
     if not repo and not source:
         raise error.Abort(_("there is no Mercurial repository here " "(.hg not found)"))
 
@@ -3676,7 +3653,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     Returns 0 on success, 1 on partial success (see --partial).
     """
 
-    opts = pycompat.byteskwargs(opts)
     if not patch1:
         raise error.Abort(_("need at least one patch to import"))
 
@@ -3841,7 +3817,6 @@ def incoming(ui, repo, source="default", **opts):
 
     if not ui.configbool("ui", "enableincomingoutgoing"):
         raise error.Abort(_("incoming is not supported for this repository"))
-    opts = pycompat.byteskwargs(opts)
     if opts.get("graph"):
         cmdutil.checkunsupportedgraphflags([], opts)
 
@@ -3883,7 +3858,6 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     hg.peer(ui, opts, ui.expandpath(dest), create=True)
 
 
@@ -3919,7 +3893,6 @@ def locate(ui, repo, *pats, **opts):
 
     Returns 0 if a match is found, 1 otherwise.
     """
-    opts = pycompat.byteskwargs(opts)
     if opts.get("print0"):
         end = "\0"
     else:
@@ -4120,7 +4093,6 @@ def log(ui, repo, *pats, **opts):
     Returns 0 on success.
 
     """
-    opts = pycompat.byteskwargs(opts)
     linerange = opts.get("line_range")
 
     if linerange and not opts.get("follow"):
@@ -4221,7 +4193,6 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     fm = ui.formatter("manifest", opts)
 
     if opts.get("all"):
@@ -4317,7 +4288,6 @@ def merge(ui, repo, node=None, **opts):
             _("merging is not supported for this repository"),
             hint=_("use rebase instead"),
         )
-    opts = pycompat.byteskwargs(opts)
     if opts.get("rev") and node:
         raise error.Abort(_("please specify just one revision"))
     if not node:
@@ -4408,7 +4378,6 @@ def outgoing(ui, repo, dest=None, **opts):
     if not ui.configbool("ui", "enableincomingoutgoing"):
         raise error.Abort(_("outgoing is not supported for this repository"))
 
-    opts = pycompat.byteskwargs(opts)
     if opts.get("graph"):
         cmdutil.checkunsupportedgraphflags([], opts)
         o, other = hg._outgoing(ui, repo, dest, opts)
@@ -4469,7 +4438,6 @@ def parents(ui, repo, file_=None, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get("rev"), None)
 
     if file_:
@@ -4534,7 +4502,6 @@ def paths(ui, repo, search=None, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     ui.pager("paths")
     if search:
         pathitems = [
@@ -4604,7 +4571,6 @@ def phase(ui, repo, *revs, **opts):
 
     (For more information about the phases concept, see :hg:`help phases`.)
     """
-    opts = pycompat.byteskwargs(opts)
     # search for a unique phase argument
     targetphase = None
     for idx, name in enumerate(phases.phasenames):
@@ -4726,7 +4692,6 @@ def pull(ui, repo, source="default", **opts):
     if ui.configbool("pull", "automigrate"):
         repo.automigratestart()
 
-    opts = pycompat.byteskwargs(opts)
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):
         msg = _("update destination required by configuration")
         hint = _("use hg pull followed by hg update DEST")
@@ -4893,7 +4858,6 @@ def push(ui, repo, dest=None, **opts):
     Returns 0 if push was successful, 1 if nothing to push.
     """
 
-    opts = pycompat.byteskwargs(opts)
     if opts.get("bookmark"):
         ui.setconfig("bookmarks", "pushing", opts["bookmark"], "push")
         for b in opts["bookmark"]:
@@ -5098,7 +5062,6 @@ def remove(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if any warnings encountered.
     """
 
-    opts = pycompat.byteskwargs(opts)
     after, force = opts.get("after"), opts.get("force")
     if not pats and not after:
         raise error.Abort(_("no files specified"))
@@ -5133,7 +5096,6 @@ def rename(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if errors are encountered.
     """
-    opts = pycompat.byteskwargs(opts)
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts, rename=True)
 
@@ -5196,7 +5158,6 @@ def resolve(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if any files fail a resolve attempt.
     """
 
-    opts = pycompat.byteskwargs(opts)
     flaglist = "all mark unmark list no_status root_relative".split()
     all, mark, unmark, show, nostatus, rootrel = [opts.get(o) for o in flaglist]
 
@@ -5434,7 +5395,6 @@ def revert(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     if opts.get("date"):
         if opts.get("rev"):
             raise error.Abort(_("you can't specify a revision and a date"))
@@ -5486,9 +5446,7 @@ def revert(ui, repo, *pats, **opts):
             hint = _("use --all to revert all files")
         raise error.Abort(msg, hint=hint)
 
-    return cmdutil.revert(
-        ui, repo, ctx, (parent, p2), *pats, **pycompat.strkwargs(opts)
-    )
+    return cmdutil.revert(ui, repo, ctx, (parent, p2), *pats, **opts)
 
 
 @command("rollback", dryrunopts + [("f", "force", False, _("ignore safety measures"))])
@@ -5633,7 +5591,6 @@ def serve(ui, repo, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     if opts["stdio"] and opts["cmdserver"]:
         raise error.Abort(_("cannot use --stdio with --cmdserver"))
 
@@ -5824,7 +5781,6 @@ def status(ui, repo, *pats, **opts):
 
     """
 
-    opts = pycompat.byteskwargs(opts)
     revs = opts.get("rev")
     change = opts.get("change")
     terse = opts.get("terse")
@@ -5926,7 +5882,6 @@ def summary(ui, repo, **opts):
     Returns 0 on success.
     """
 
-    opts = pycompat.byteskwargs(opts)
     ui.pager("summary")
     ctx = repo[None]
     parents = ctx.parents()
@@ -6224,7 +6179,6 @@ def tip(ui, repo, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     displayer = cmdutil.show_changeset(ui, repo, opts)
     displayer.show(repo["tip"])
     displayer.close()
@@ -6474,7 +6428,6 @@ def verify(ui, repo, **opts):
 @command("version|vers|versi|versio", [] + formatteropts, norepo=True, cmdtype=readonly)
 def version_(ui, **opts):
     """output version and copyright information"""
-    opts = pycompat.byteskwargs(opts)
     if ui.verbose:
         ui.pager("version")
     fm = ui.formatter("version", opts)

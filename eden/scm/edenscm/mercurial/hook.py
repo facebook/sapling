@@ -89,7 +89,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
     starttime = util.timer()
 
     try:
-        r = obj(ui=ui, repo=repo, hooktype=htype, **pycompat.strkwargs(args))
+        r = obj(ui=ui, repo=repo, hooktype=htype, **args)
     except Exception as exc:
         if isinstance(exc, error.Abort):
             ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
@@ -233,7 +233,7 @@ def hook(ui, repo, htype, throw=False, **args):
 
 
 def runhooks(ui, repo, htype, hooks, throw=False, **args):
-    args = pycompat.byteskwargs(args)
+    args = args
     res = {}
     oldstdout = -1
 

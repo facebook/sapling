@@ -1020,7 +1020,7 @@ def main(argv=None):
 
     load_data(path=path)
 
-    display(**pycompat.strkwargs(displayargs))
+    display(**displayargs)
 
     return 0
 

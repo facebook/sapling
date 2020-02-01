@@ -55,7 +55,6 @@ def changedlines(ui, repo, ctx1, ctx2, fns):
 
 def countrate(ui, repo, amap, *pats, **opts):
     """Calculate stats"""
-    opts = pycompat.byteskwargs(opts)
     if opts.get("dateformat"):
 
         def getkey(ctx):

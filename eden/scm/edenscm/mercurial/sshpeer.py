@@ -312,7 +312,7 @@ class sshpeer(wireproto.wirepeer):
         yield wireproto.unescapearg(work)
 
     def _callstream(self, cmd, **args):
-        args = pycompat.byteskwargs(args)
+        args = args
         self.ui.debug("sending %s command\n" % cmd)
         self._pipeo.write(encodeutf8("%s\n" % cmd))
         _func, names = wireproto.commands[cmd]

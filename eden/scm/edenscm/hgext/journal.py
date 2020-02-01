@@ -533,7 +533,6 @@ def journal(ui, repo, *args, **opts):
        with 're:', use the prefix 'literal:'.
 
     """
-    opts = pycompat.byteskwargs(opts)
     name = "."
     if opts.get("all"):
         if args:

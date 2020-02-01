@@ -442,9 +442,7 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     """
     if opargs is None:
         opargs = {}
-    pushop = pushoperation(
-        repo, remote, force, revs, bookmarks, **pycompat.strkwargs(opargs)
-    )
+    pushop = pushoperation(repo, remote, force, revs, bookmarks, **opargs)
     if pushop.remote.local():
         missing = set(pushop.repo.requirements) - pushop.remote.local().supported
         if missing:
@@ -1361,7 +1359,7 @@ def pull(
         force,
         bookmarks=bookmarks,
         streamclonerequested=streamclonerequested,
-        **pycompat.strkwargs(opargs)
+        **opargs
     )
 
     peerlocal = pullop.remote.local()
@@ -1573,7 +1571,7 @@ def _pullbundle2(pullop):
             kwargs["obsmarkers"] = True
             pullop.stepsdone.add("obsmarkers")
     _pullbundle2extraprepare(pullop, kwargs)
-    bundle = pullop.remote.getbundle("pull", **pycompat.strkwargs(kwargs))
+    bundle = pullop.remote.getbundle("pull", **kwargs)
     try:
         op = bundle2.bundleoperation(pullop.repo, pullop.gettransaction)
         op.modes["bookmarks"] = "records"
@@ -1817,7 +1815,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None, **kw
 
     Returns an iterator over raw chunks (of varying sizes).
     """
-    kwargs = pycompat.byteskwargs(kwargs)
+    kwargs = kwargs
     usebundle2 = bundle2requested(bundlecaps)
     # bundle10 case
     if not usebundle2:
@@ -1847,14 +1845,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None, **kw
 
     for name in getbundle2partsorder:
         func = getbundle2partsmapping[name]
-        func(
-            bundler,
-            repo,
-            source,
-            bundlecaps=bundlecaps,
-            b2caps=b2caps,
-            **pycompat.strkwargs(kwargs)
-        )
+        func(bundler, repo, source, bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
 
     return bundler.getchunks()
 

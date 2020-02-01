@@ -99,7 +99,6 @@ class diffopts(object):
 
     def __init__(self, **opts):
         # (...) -> None
-        opts = pycompat.byteskwargs(opts)
         for k in self.defaults.keys():
             v = opts.get(k)
             if v is None:
@@ -115,7 +114,6 @@ class diffopts(object):
 
     def copy(self, **kwargs):
         opts = dict((k, getattr(self, k)) for k in self.defaults)
-        opts = pycompat.strkwargs(opts)
         opts.update(kwargs)
         return diffopts(**opts)
 

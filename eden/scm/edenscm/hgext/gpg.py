@@ -274,7 +274,6 @@ def sign(ui, repo, *revs, **opts):
 
 def _dosign(ui, repo, *revs, **opts):
     mygpg = newgpg(ui, **opts)
-    opts = pycompat.byteskwargs(opts)
     sigver = "0"
     sigmessage = ""
 
@@ -336,9 +335,7 @@ def _dosign(ui, repo, *revs, **opts):
             ["Added signature for changeset %s" % hgnode.short(n) for n in nodes]
         )
     try:
-        editor = cmdutil.getcommiteditor(
-            editform="gpg.sign", **pycompat.strkwargs(opts)
-        )
+        editor = cmdutil.getcommiteditor(editform="gpg.sign", **opts)
         repo.commit(message, opts["user"], opts["date"], match=msigs, editor=editor)
     except ValueError as inst:
         raise error.Abort(str(inst))

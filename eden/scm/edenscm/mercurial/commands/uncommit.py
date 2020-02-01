@@ -71,7 +71,6 @@ def uncommit(ui, repo, *pats, **opts):
        :hg:`uncommit` can uncommit any draft commit in the graph that does
        not have children.
     """
-    opts = pycompat.byteskwargs(opts)
 
     with repo.wlock(), repo.lock():
 

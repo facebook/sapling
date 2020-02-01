@@ -148,7 +148,6 @@ def getsnapshotctx(ui, repo, args):
 def snapshotshow(ui, repo, *args, **opts):
     """show the snapshot contents, given its revision id
     """
-    opts = pycompat.byteskwargs(opts)
     cctx = getsnapshotctx(ui, repo, args)
     rev = cctx.hex()
     opts["rev"] = [rev]

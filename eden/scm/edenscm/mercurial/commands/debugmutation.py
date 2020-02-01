@@ -20,7 +20,6 @@ from .cmdtable import command
 def debugmutation(ui, repo, *revs, **opts):
     """display the mutation history (or future) of a commit"""
     unfi = repo.unfiltered()
-    opts = pycompat.byteskwargs(opts)
 
     def describe(entry, showsplit=False, showfoldwith=None):
         mutop = entry.op()

@@ -121,7 +121,6 @@ def stripcmd(ui, repo, *revs, **opts):
 
     Return 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
     backup = True
     if opts.get("no_backup"):
         backup = False

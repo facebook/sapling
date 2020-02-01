@@ -344,7 +344,6 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
 
 def _debugobsmarkers(ui, part, indent=0, **opts):
     """display version and markers contained in 'data'"""
-    opts = pycompat.byteskwargs(opts)
     data = part.read()
     indent_string = " " * indent
     try:
@@ -434,7 +433,6 @@ def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
 @command("debugcapabilities", [], _("PATH"), norepo=True)
 def debugcapabilities(ui, path, **opts):
     """lists the capabilities of a remote peer"""
-    opts = pycompat.byteskwargs(opts)
     peer = hg.peer(ui, opts, path)
     caps = peer.capabilities()
     ui.write(("Main capabilities:\n"))
@@ -621,7 +619,6 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 @command("debugdata", cmdutil.debugrevlogopts, _("-c|-m|FILE REV"))
 def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
-    opts = pycompat.byteskwargs(opts)
     if opts.get("changelog") or opts.get("manifest") or opts.get("dir"):
         if rev is not None:
             raise error.CommandError("debugdata", _("invalid arguments"))
@@ -697,7 +694,6 @@ def debugdeltachain(ui, repo, file_=None, **opts):
 
     The sparse read can be enabled with experimental.sparse-read = True
     """
-    opts = pycompat.byteskwargs(opts)
     r = cmdutil.openrevlog(repo, "debugdeltachain", file_, opts)
     index = r.index
     generaldelta = r.version & revlog.FLAG_GENERALDELTA
@@ -924,7 +920,6 @@ def debugstate(ui, repo, **opts):
 )
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
     """runs the changeset discovery protocol in isolation"""
-    opts = pycompat.byteskwargs(opts)
     remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl))
     remote = hg.peer(repo, opts, remoteurl)
     ui.status(_("comparing with %s\n") % util.hidepassword(remoteurl))
@@ -980,7 +975,6 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
 )
 def debugextensions(ui, **opts):
     """show information about active extensions"""
-    opts = pycompat.byteskwargs(opts)
     exts = extensions.extensions(ui)
     hgver = util.version()
     fm = ui.formatter("debugextensions", opts)
@@ -1115,7 +1109,6 @@ def debugformat(ui, repo, **opts):
 
     Use --verbose to get extra information about current config value and
     Mercurial default."""
-    opts = pycompat.byteskwargs(opts)
     maxvariantlength = max(len(fv.name) for fv in upgrade.allformatvariant)
     maxvariantlength = max(len("format-variant"), maxvariantlength)
 
@@ -1209,7 +1202,6 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     Every ID must be a full-length hex node id string. Saves the bundle to the
     given file.
     """
-    opts = pycompat.byteskwargs(opts)
     repo = hg.peer(ui, opts, repopath)
     if not repo.capable("getbundle"):
         raise error.Abort("getbundle() not supported by target repository")
@@ -1285,7 +1277,6 @@ def debugignore(ui, repo, *files, **opts):
 )
 def debugindex(ui, repo, file_=None, **opts):
     """dump the contents of an index file"""
-    opts = pycompat.byteskwargs(opts)
     r = cmdutil.openrevlog(repo, "debugindex", file_, opts)
     format = opts.get("format", 0)
     if format not in (0, 1):
@@ -1369,7 +1360,6 @@ def debugindex(ui, repo, file_=None, **opts):
 @command("debugindexdot", cmdutil.debugrevlogopts, _("-c|-m|FILE"), optionalrepo=True)
 def debugindexdot(ui, repo, file_=None, **opts):
     """dump an index DAG as a graphviz dot file"""
-    opts = pycompat.byteskwargs(opts)
     r = cmdutil.openrevlog(repo, "debugindexdot", file_, opts)
     ui.write(("digraph G {\n"))
     for i in r:
@@ -1387,7 +1377,6 @@ def debuginstall(ui, **opts):
 
     Returns 0 on success.
     """
-    opts = pycompat.byteskwargs(opts)
 
     def writetemp(contents):
         (fd, name) = tempfile.mkstemp(prefix="hg-debuginstall-")
@@ -1616,7 +1605,6 @@ def debugknown(ui, repopath, *ids, **opts):
     Every ID must be a full-length hex node id string. Returns a list of 0s
     and 1s indicating unknown/known.
     """
-    opts = pycompat.byteskwargs(opts)
     repo = hg.peer(ui, opts, repopath)
     if not repo.capable("known"):
         raise error.Abort("known() not supported by target repository")
@@ -1943,8 +1931,6 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
 
     With no arguments, displays the list of obsolescence markers."""
 
-    opts = pycompat.byteskwargs(opts)
-
     def parsenodeid(s):
         try:
             n = bin(s)
@@ -2235,7 +2221,6 @@ def debugpickmergetool(ui, repo, *pats, **opts):
     information, even with --debug. In such case, information above is
     useful to know why a merge tool is chosen.
     """
-    opts = pycompat.byteskwargs(opts)
     overrides = {}
     if opts["tool"]:
         overrides[("ui", "forcemerge")] = opts["tool"]
@@ -2495,7 +2480,6 @@ def debugrebuildfncache(ui, repo):
 def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
 
-    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     m = scmutil.match(ctx, (file1,) + pats, opts)
     for abs in ctx.walk(m):
@@ -2516,7 +2500,6 @@ def debugrename(ui, repo, file1, *pats, **opts):
 )
 def debugrevlog(ui, repo, file_=None, **opts):
     """show data and statistics about a revlog"""
-    opts = pycompat.byteskwargs(opts)
     r = cmdutil.openrevlog(repo, "debugrevlog", file_, opts)
 
     if opts.get("dump"):
@@ -2782,7 +2765,6 @@ def debugrevspec(ui, repo, expr, **opts):
     Use --verify-optimized to compare the optimized result with the unoptimized
     one. Returns 1 if the optimized result differs.
     """
-    opts = pycompat.byteskwargs(opts)
     aliases = ui.configitems("revsetalias")
     stages = [
         ("parsed", lambda tree: tree),
@@ -3066,7 +3048,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
     else:
         displayer = cmdutil.makelogtemplater(ui, repo, tmpl)
         for r in revs:
-            displayer.show(repo[r], **pycompat.strkwargs(props))
+            displayer.show(repo[r], **props)
         displayer.close()
 
 
@@ -3109,7 +3091,6 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
 @command("debugwalk", cmdutil.walkopts, _("[OPTION]... [FILE]..."), inferrepo=True)
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
-    opts = pycompat.byteskwargs(opts)
     m = scmutil.match(repo[None], pats, opts)
     ui.write(("matcher: %r\n" % m))
     items = list(repo[None].walk(m))
@@ -3135,7 +3116,6 @@ def debugwalk(ui, repo, *pats, **opts):
     norepo=True,
 )
 def debugwireargs(ui, repopath, *vals, **opts):
-    opts = pycompat.byteskwargs(opts)
     repo = hg.peer(ui, opts, repopath)
     for opt in cmdutil.remoteopts:
         del opts[opt[1]]
@@ -3143,7 +3123,7 @@ def debugwireargs(ui, repopath, *vals, **opts):
     for k, v in pycompat.iteritems(opts):
         if v:
             args[k] = v
-    args = pycompat.strkwargs(args)
+    args = args
     # run twice to check that we don't mess up the stream for the next command
     res1 = repo.debugwireargs(*vals, **args)
     res2 = repo.debugwireargs(*vals, **args)
@@ -3267,7 +3247,6 @@ def _findtreemanifest(ctx):
 def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
     """check for case collisions against a commit"""
     res = 0
-    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     lowertfs = {}
 

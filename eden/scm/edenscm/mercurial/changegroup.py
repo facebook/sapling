@@ -344,7 +344,7 @@ class cg1unpacker(object):
             # in this function.
             srctype = tr.hookargs.setdefault("source", srctype)
             url = tr.hookargs.setdefault("url", url)
-            repo.hook("prechangegroup", throw=True, **pycompat.strkwargs(tr.hookargs))
+            repo.hook("prechangegroup", throw=True, **(tr.hookargs))
 
             # write changelog data to temp files so concurrent readers
             # will not see an inconsistent view
@@ -422,9 +422,7 @@ class cg1unpacker(object):
                     hookargs = dict(tr.hookargs)
                     hookargs["node"] = hex(cl.node(clstart))
                     hookargs["node_last"] = hex(cl.node(clend - 1))
-                repo.hook(
-                    "pretxnchangegroup", throw=True, **pycompat.strkwargs(hookargs)
-                )
+                repo.hook("pretxnchangegroup", throw=True, **hookargs)
 
             added = [cl.node(r) for r in range(clstart, clend)]
             phaseall = None
@@ -462,7 +460,7 @@ class cg1unpacker(object):
                     if clstart >= len(repo):
                         return
 
-                    repo.hook("changegroup", **pycompat.strkwargs(hookargs))
+                    repo.hook("changegroup", **hookargs)
 
                 tr.addpostclose(
                     "changegroup-runhooks-%020i" % clstart,

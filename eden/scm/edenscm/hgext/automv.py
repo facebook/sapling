@@ -54,7 +54,6 @@ def extsetup(ui):
 
 def mvcheck(orig, ui, repo, *pats, **opts):
     """Hook to check for moves at commit time"""
-    opts = pycompat.byteskwargs(opts)
     renames = None
     disabled = opts.pop("no_automv", False) or opts.pop("no-move-detection", False)
     if not disabled:
@@ -70,7 +69,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
         if renames is not None:
             with repo.lock(), repo.transaction("automv"):
                 scmutil._markchanges(repo, (), (), renames)
-        return orig(ui, repo, *pats, **pycompat.strkwargs(opts))
+        return orig(ui, repo, *pats, **opts)
 
 
 def _interestingfiles(repo, matcher):

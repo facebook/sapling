@@ -331,9 +331,7 @@ class KeepAliveHandler(object):
             if urllibcompat.hasdata(req):
                 data = urllibcompat.getdata(req)
                 h.putrequest(
-                    req.get_method(),
-                    urllibcompat.getselector(req),
-                    **pycompat.strkwargs(skipheaders)
+                    req.get_method(), urllibcompat.getselector(req), **skipheaders
                 )
                 if "content-type" not in headers:
                     h.putheader("Content-type", "application/x-www-form-urlencoded")
@@ -341,9 +339,7 @@ class KeepAliveHandler(object):
                     h.putheader("Content-length", "%d" % len(data))
             else:
                 h.putrequest(
-                    req.get_method(),
-                    urllibcompat.getselector(req),
-                    **pycompat.strkwargs(skipheaders)
+                    req.get_method(), urllibcompat.getselector(req), **skipheaders
                 )
         except socket.error as err:
             raise urlerr.urlerror(err)

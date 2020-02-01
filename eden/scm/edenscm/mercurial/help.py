@@ -786,7 +786,6 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts
     'name' is None, describe the commands available.
     """
 
-    opts = pycompat.byteskwargs(opts)
     dispatch = _helpdispatch(ui, commands, unknowncmd, full, subtopic, **opts)
 
     rst = []
@@ -817,7 +816,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts
     elif name == "commands":
         if not ui.quiet:
             rst = [_("@LongProduct@\n"), "\n"]
-        rst.extend(dispatch.helplist(None, None, **pycompat.strkwargs(opts)))
+        rst.extend(dispatch.helplist(None, None, **opts))
     elif name:
         rst = dispatch.dispatch(name)
     else:

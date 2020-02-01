@@ -89,7 +89,6 @@ class snapshotlist(object):
             tr.addfilegenerator("snapshots", ("snapshotlist",), self._write)
 
     def printsnapshots(self, ui, repo, **opts):
-        opts = pycompat.byteskwargs(opts)
         fm = ui.formatter("snapshots", opts)
         if len(self.snapshots) == 0:
             ui.status(_("no snapshots created\n"))

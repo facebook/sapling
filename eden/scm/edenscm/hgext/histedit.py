@@ -1177,7 +1177,6 @@ def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
 
 
 def _histedit(ui, repo, state, *freeargs, **opts):
-    opts = pycompat.byteskwargs(opts)
     fm = ui.formatter("histedit", opts)
     fm.startitem()
     goal = _getgoal(opts)

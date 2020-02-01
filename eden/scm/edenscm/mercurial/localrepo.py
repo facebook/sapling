@@ -1361,31 +1361,16 @@ class localrepository(object):
                 for name, (old, new) in sorted(tr.changes["bookmarks"].items()):
                     args = tr.hookargs.copy()
                     args.update(bookmarks.preparehookargs(name, old, new))
-                    repo.hook(
-                        "pretxnclose-bookmark",
-                        throw=True,
-                        txnname=desc,
-                        **pycompat.strkwargs(args)
-                    )
+                    repo.hook("pretxnclose-bookmark", throw=True, txnname=desc, **args)
             if hook.hashook(repo.ui, "pretxnclose-phase"):
                 cl = repo.unfiltered().changelog
                 for rev, (old, new) in tr.changes["phases"].items():
                     args = tr.hookargs.copy()
                     node = hex(cl.node(rev))
                     args.update(phases.preparehookargs(node, old, new))
-                    repo.hook(
-                        "pretxnclose-phase",
-                        throw=True,
-                        txnname=desc,
-                        **pycompat.strkwargs(args)
-                    )
+                    repo.hook("pretxnclose-phase", throw=True, txnname=desc, **args)
 
-            repo.hook(
-                "pretxnclose",
-                throw=True,
-                txnname=desc,
-                **pycompat.strkwargs(tr.hookargs)
-            )
+            repo.hook("pretxnclose", throw=True, txnname=desc, **(tr.hookargs))
 
         def releasefn(tr, success):
             repo = reporef()
@@ -1476,10 +1461,7 @@ class localrepository(object):
                         args = tr.hookargs.copy()
                         args.update(bookmarks.preparehookargs(name, old, new))
                         repo.hook(
-                            "txnclose-bookmark",
-                            throw=False,
-                            txnname=desc,
-                            **pycompat.strkwargs(args)
+                            "txnclose-bookmark", throw=False, txnname=desc, **args
                         )
 
                 if hook.hashook(repo.ui, "txnclose-phase"):
@@ -1489,19 +1471,9 @@ class localrepository(object):
                         args = tr.hookargs.copy()
                         node = hex(cl.node(rev))
                         args.update(phases.preparehookargs(node, old, new))
-                        repo.hook(
-                            "txnclose-phase",
-                            throw=False,
-                            txnname=desc,
-                            **pycompat.strkwargs(args)
-                        )
+                        repo.hook("txnclose-phase", throw=False, txnname=desc, **args)
 
-                repo.hook(
-                    "txnclose",
-                    throw=False,
-                    txnname=desc,
-                    **pycompat.strkwargs(hookargs)
-                )
+                repo.hook("txnclose", throw=False, txnname=desc, **hookargs)
 
             reporef()._afterlock(hookfunc)
 

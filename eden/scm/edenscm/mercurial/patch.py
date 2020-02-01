@@ -2452,7 +2452,7 @@ def difffeatureopts(
         )
         buildopts["noprefix"] = get("noprefix", forceplain=False)
 
-    return mdiff.diffopts(**pycompat.strkwargs(buildopts))
+    return mdiff.diffopts(**buildopts)
 
 
 def diff(

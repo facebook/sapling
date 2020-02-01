@@ -36,7 +36,7 @@ from . import (
     util,
 )
 from .i18n import _
-from .node import bin, hex, bbin, bhex, nullid
+from .node import bbin, bhex, bin, hex, nullid
 from .pycompat import decodeutf8, encodeutf8, iteritems, range
 
 
@@ -342,12 +342,12 @@ class wirepeer(repository.legacypeer):
     def stream_out(self):
         if self.capable("stream_option"):
             fullclone = self.ui.configbool("clone", "requestfullclone")
-            args = pycompat.strkwargs({"fullclone": str(fullclone)})
+            args = {"fullclone": str(fullclone)}
             return self._callstream("stream_out_option", **args)
         return self._callstream("stream_out")
 
     def getbundle(self, source, **kwargs):
-        kwargs = pycompat.byteskwargs(kwargs)
+        kwargs = kwargs
         self.requirecap("getbundle", _("look up remote changes"))
         opts = {}
         bundlecaps = kwargs.get("bundlecaps")
@@ -372,7 +372,7 @@ class wirepeer(repository.legacypeer):
             elif keytype != "plain":
                 raise KeyError("unknown getbundle option type %s" % keytype)
             opts[key] = value
-        f = self._callcompressable("getbundle", **pycompat.strkwargs(opts))
+        f = self._callcompressable("getbundle", **opts)
         if any((cap.startswith("HG2") for cap in bundlecaps)):
             return bundle2.getunbundler(self.ui, f)
         else:
@@ -504,7 +504,7 @@ class wirepeer(repository.legacypeer):
         yield unescapearg("".join(work))
 
     def _submitone(self, op, args):
-        return self._call(op, **pycompat.strkwargs(args))
+        return self._call(op, **args)
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
         # don't pass optional arguments left at their default value
@@ -984,7 +984,7 @@ def changegroupsubset(repo, proto, bases, heads):
 def debugwireargs(repo, proto, one, two, others):
     # only accept optional args from the known set
     opts = options("debugwireargs", ["three", "four"], others)
-    return repo.debugwireargs(one, two, **pycompat.strkwargs(opts))
+    return repo.debugwireargs(one, two, **opts)
 
 
 @wireprotocommand("getbundle", "*")
@@ -1027,7 +1027,7 @@ def getbundle(repo, proto, others):
                     hint=_("remove --pull if specified or upgrade Mercurial"),
                 )
 
-        chunks = exchange.getbundlechunks(repo, "serve", **pycompat.strkwargs(opts))
+        chunks = exchange.getbundlechunks(repo, "serve", **opts)
     except error.Abort as exc:
         # cleanly forward Abort error to the client
         if not exchange.bundle2requested(opts.get("bundlecaps")):

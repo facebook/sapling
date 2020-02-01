@@ -1017,7 +1017,6 @@ def rebase(ui, repo, templ=None, **opts):
     if opts.get("noconflict") and not inmemory:
         raise error.Abort("--noconflict requires in-memory merge")
 
-    opts = pycompat.byteskwargs(opts)
     rbsrt = rebaseruntime(repo, ui, templ, inmemory, opts)
 
     if rbsrt.inmemory:

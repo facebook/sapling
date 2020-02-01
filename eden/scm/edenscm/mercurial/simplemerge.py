@@ -437,7 +437,6 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
 
     Returns the number of conflicts.
     """
-    opts = pycompat.byteskwargs(opts)
 
     def readctx(ctx):
         # Merges were always run in the working copy before, which means
@@ -475,9 +474,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         extrakwargs["minimize"] = False
 
     mergedtext = b""
-    for line in m3.merge_lines(
-        name_a=name_a, name_b=name_b, **pycompat.strkwargs(extrakwargs)
-    ):
+    for line in m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs):
         if opts.get("print"):
             ui.fout.write(line)
         else:

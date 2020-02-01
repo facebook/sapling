@@ -108,9 +108,6 @@ if sys.version_info[0] >= 3:
         return sysbytes(doc)
 
     unicode = str
-
-    strkwargs = identity
-    byteskwargs = identity
     shlexsplit = shlex.split
 
     def encodeutf8(s):
@@ -159,9 +156,6 @@ else:
 
     def _getoptbwrapper(orig, args, shortlist, namelist):
         return orig(args, shortlist, namelist)
-
-    strkwargs = identity
-    byteskwargs = identity
 
     oslinesep = os.linesep
     osname = os.name

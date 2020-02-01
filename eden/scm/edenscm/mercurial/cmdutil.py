@@ -302,7 +302,6 @@ def recordfilter(ui, originalhunks, operation=None):
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opts):
     from . import merge as mergemod
 
-    opts = pycompat.byteskwargs(opts)
     if not ui.interactive():
         if cmdsuggest:
             msg = _("running non-interactively, use %s instead") % cmdsuggest
@@ -463,7 +462,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
 
             # Make all of the pathnames absolute.
             newfiles = [repo.wjoin(nf) for nf in newfiles]
-            return commitfunc(ui, repo, *newfiles, **pycompat.strkwargs(opts))
+            return commitfunc(ui, repo, *newfiles, **opts)
         finally:
             # 5. finally restore backed-up files
             try:
@@ -1592,9 +1591,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 if opts.get("exact"):
                     editor = None
                 else:
-                    editor = getcommiteditor(
-                        editform=editform, **pycompat.strkwargs(opts)
-                    )
+                    editor = getcommiteditor(editform=editform, **opts)
                 extra = {}
                 for idfunc in extrapreimport:
                     extrapreimportmap[idfunc](repo, extractdata, extra, opts)
@@ -1909,7 +1906,7 @@ class changeset_printer(object):
             self.ui.write(self.footer)
 
     def show(self, ctx, copies=None, matchfn=None, hunksfilterfn=None, **props):
-        props = pycompat.byteskwargs(props)
+        props = props
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
             self._show(ctx, copies, matchfn, hunksfilterfn, props)
@@ -2240,7 +2237,7 @@ class changeset_templater(changeset_printer):
         props["index"] = index = next(self._counter)
         props["revcache"] = {"copies": copies}
         props["cache"] = self.cache
-        props = pycompat.strkwargs(props)
+        props = props
 
         # write separator, which wouldn't work well with the header part below
         # since there's inherently a conflict between header (across items) and
@@ -3149,11 +3146,7 @@ def displaygraph(
         firstedge = next(edges)
         width = firstedge[2]
         displayer.show(
-            ctx,
-            copies=copies,
-            matchfn=revmatchfn,
-            _graphwidth=width,
-            **pycompat.strkwargs(props)
+            ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
         )
         # In case of graph display we don't preserve the original encoding
         hunk = "".join(ensurestr(s) for s in displayer.hunk.pop(rev))
@@ -3212,11 +3205,7 @@ def rustdisplaygraph(
             revmatchfn = filematcher(ctx.rev())
         width = renderer.width(rev, parents)
         displayer.show(
-            ctx,
-            copies=copies,
-            matchfn=revmatchfn,
-            _graphwidth=width,
-            **pycompat.strkwargs(props)
+            ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
         )
         # In case of graph display we don't preserve the original encoding
         msg = "".join(ensurestr(s) for s in displayer.hunk.pop(rev))
@@ -3487,7 +3476,6 @@ def remove(ui, repo, m, prefix, after, force, warnings=None):
 
 def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
     err = 1
-    opts = pycompat.byteskwargs(opts)
 
     def write(path):
         filename = None
@@ -3690,7 +3678,7 @@ def amend(ui, repo, old, extra, pats, opts):
         message = logmessage(repo, opts)
 
         editform = mergeeditform(old, "commit.amend")
-        editor = getcommiteditor(editform=editform, **pycompat.strkwargs(opts))
+        editor = getcommiteditor(editform=editform, **opts)
 
         if not message:
             editor = getcommiteditor(edit=True, editform=editform)
@@ -3919,7 +3907,6 @@ def postcommitstatus(repo, pats, opts):
 
 
 def revert(ui, repo, ctx, parents, *pats, **opts):
-    opts = pycompat.byteskwargs(opts)
     parent, p2 = parents
     node = ctx.node()
 

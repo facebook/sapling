@@ -206,7 +206,7 @@ def _showlist(name, values, mapping, plural=None, separator=" "):
     expand 'end_foos'.
     """
     templ = mapping["templ"]
-    strmapping = pycompat.strkwargs(mapping)
+    strmapping = mapping
     if not plural:
         plural = name + "s"
     if not values:
@@ -235,7 +235,7 @@ def _showlist(name, values, mapping, plural=None, separator=" "):
                     vmapping[a] = b
             except ValueError:
                 vmapping[name] = v
-        return templ(tag, **pycompat.strkwargs(vmapping))
+        return templ(tag, **vmapping)
 
     lastname = "last_" + name
     if lastname in templ:
@@ -371,7 +371,7 @@ def showbranches(**args):
     changeset was committed. Will be empty if the branch name was
     default. (DEPRECATED)
     """
-    args = pycompat.byteskwargs(args)
+    args = args
     branch = args["ctx"].branch()
     if branch != "default":
         return showlist("branch", [branch], args, plural="branches")
@@ -383,7 +383,7 @@ def showbookmarks(**args):
     """List of strings. Any bookmarks associated with the
     changeset. Also sets 'active', the name of the active bookmark.
     """
-    args = pycompat.byteskwargs(args)
+    args = args
     repo = args["ctx"]._repo
     bookmarks = args["ctx"].bookmarks()
     active = repo._activebookmark
@@ -395,7 +395,7 @@ def showbookmarks(**args):
 @templatekeyword("children")
 def showchildren(**args):
     """List of strings. The children of the changeset."""
-    args = pycompat.byteskwargs(args)
+    args = args
     ctx = args["ctx"]
     childrevs = ["%d:%s" % (cctx, cctx) for cctx in ctx.children()]
     return showlist("children", childrevs, args, element="child")
@@ -448,7 +448,7 @@ def showdiffstat(repo, ctx, templ, **args):
 @templatekeyword("envvars")
 def showenvvars(repo, **args):
     """A dictionary of environment variables. (EXPERIMENTAL)"""
-    args = pycompat.byteskwargs(args)
+    args = args
     env = repo.ui.exportableenviron()
     env = util.sortdict((k, env[k]) for k in sorted(env))
     return showdict("envvar", env, args, plural="envvars")
@@ -458,7 +458,7 @@ def showenvvars(repo, **args):
 def showextras(**args):
     """List of dicts with key, value entries of the 'extras'
     field of this changeset."""
-    args = pycompat.byteskwargs(args)
+    args = args
     extras = args["ctx"].extra()
     extras = util.sortdict((k, extras[k]) for k in sorted(extras))
     makemap = lambda k: {"key": k, "value": extras[k]}
@@ -472,7 +472,7 @@ def showextras(**args):
 @templatekeyword("file_adds")
 def showfileadds(**args):
     """List of strings. Files added by this changeset."""
-    args = pycompat.byteskwargs(args)
+    args = args
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
     return showlist("file_add", getfiles(repo, ctx, revcache)[1], args, element="file")
 
@@ -482,7 +482,7 @@ def showfilecopies(**args):
     """List of strings. Files copied in this changeset with
     their sources.
     """
-    args = pycompat.byteskwargs(args)
+    args = args
     cache, ctx = args["cache"], args["ctx"]
     copies = args["revcache"].get("copies")
     if copies is None:
@@ -515,7 +515,7 @@ def showfilecopiesswitch(**args):
     """List of strings. Like "file_copies" but displayed
     only if the --copied switch is set.
     """
-    args = pycompat.byteskwargs(args)
+    args = args
     copies = args["revcache"].get("copies") or []
     copies = util.sortdict(copies)
     return showdict(
@@ -532,7 +532,7 @@ def showfilecopiesswitch(**args):
 @templatekeyword("file_dels")
 def showfiledels(**args):
     """List of strings. Files removed by this changeset."""
-    args = pycompat.byteskwargs(args)
+    args = args
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
     return showlist("file_del", getfiles(repo, ctx, revcache)[2], args, element="file")
 
@@ -540,7 +540,7 @@ def showfiledels(**args):
 @templatekeyword("file_mods")
 def showfilemods(**args):
     """List of strings. Files modified by this changeset."""
-    args = pycompat.byteskwargs(args)
+    args = args
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
     return showlist("file_mod", getfiles(repo, ctx, revcache)[0], args, element="file")
 
@@ -550,7 +550,7 @@ def showfiles(**args):
     """List of strings. All files modified, added, or removed by this
     changeset.
     """
-    args = pycompat.byteskwargs(args)
+    args = args
     return showlist("file", list(args["ctx"].files()), args)
 
 
@@ -666,7 +666,7 @@ def showobsfate(**args):
         return ""
     succsandmarkers = showsuccsandmarkers(**args)
 
-    args = pycompat.byteskwargs(args)
+    args = args
     ui = args["ui"]
 
     values = []
@@ -679,7 +679,7 @@ def showobsfate(**args):
 
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
-    args = pycompat.byteskwargs(args)
+    args = args
     ctx = args["ctx"]
     repo = ctx.repo()
     ns = repo.names[namespace]
@@ -691,7 +691,7 @@ def shownames(namespace, **args):
 def shownamespaces(**args):
     """Dict of lists. Names attached to this changeset per
     namespace."""
-    args = pycompat.byteskwargs(args)
+    args = args
     ctx = args["ctx"]
     repo = ctx.repo()
 
@@ -773,7 +773,7 @@ def showsuccessorssets(repo, ctx, **args):
     while also diverged into ctx3. (EXPERIMENTAL)"""
     if not ctx.obsolete():
         return ""
-    args = pycompat.byteskwargs(args)
+    args = args
 
     if mutation.enabled(repo):
         ssets = mutation.successorssets(repo, ctx.node(), closest=True)
@@ -914,7 +914,7 @@ def showparents(**args):
     """List of strings. The parents of the changeset in "rev:node"
     format. If the changeset has only one "natural" parent (the predecessor
     revision) nothing is shown."""
-    args = pycompat.byteskwargs(args)
+    args = args
     repo = args["repo"]
     ctx = args["ctx"]
     pctxs = scmutil.meaningfulparents(repo, ctx)
@@ -953,7 +953,7 @@ def showrev(repo, ctx, templ, **args):
 def showrevslist(name, revs, **args):
     """helper to generate a list of revisions in which a mapped template will
     be evaluated"""
-    args = pycompat.byteskwargs(args)
+    args = args
     repo = args["ctx"].repo()
     f = _showlist(name, ["%d" % r for r in revs], args)
     return _hybrid(
@@ -993,7 +993,7 @@ def showinstabilities(**args):
     """List of strings. Evolution instabilities affecting the changeset.
     (EXPERIMENTAL)
     """
-    args = pycompat.byteskwargs(args)
+    args = args
     return showlist(
         "instability", args["ctx"].instabilities(), args, plural="instabilities"
     )
