@@ -45,13 +45,13 @@ if len(sys.argv) > 2:
 env = [(k, v) for k, v in os.environ.items() if k.startswith("HG_") and v]
 env.sort()
 
-out.write(b"%s hook: " % name.encode("utf8"))
+out.write(b"%s hook: " % name.encode("utf-8"))
 if os.name == "nt":
     filter = lambda x: x.replace("\\", "/")
 else:
     filter = lambda x: x
 vars = ["%s=%s" % (k, filter(v)) for k, v in env]
-out.write(" ".join(vars).encode("utf8"))
+out.write(" ".join(vars).encode("utf-8"))
 out.write(b"\n")
 out.close()
 

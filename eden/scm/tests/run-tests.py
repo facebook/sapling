@@ -635,7 +635,7 @@ def parseargs(args, parser):
     if options.with_hg:
         options.with_hg = canonpath(_bytespath(options.with_hg))
         # HGEXECUTABLEPATH is used by util.hgcmd()
-        os.environ["HGEXECUTABLEPATH"] = options.with_hg.decode("utf8")
+        os.environ["HGEXECUTABLEPATH"] = options.with_hg.decode("utf-8")
         if not (
             os.path.isfile(options.with_hg) and os.access(options.with_hg, os.X_OK)
         ):
@@ -1255,7 +1255,7 @@ class Test(unittest.TestCase):
         env = self._getenv()
         self._genrestoreenv(env)
         self._daemonpids.append(env["DAEMON_PIDS"])
-        self._createhgrc(env["HGRCPATH"].rsplit(os.pathsep.encode("utf8"), 1)[-1])
+        self._createhgrc(env["HGRCPATH"].rsplit(os.pathsep.encode("utf-8"), 1)[-1])
 
         vlog("# Test", self.name)
         vlog("# chg in use: %s" % self._usechg)
@@ -1477,7 +1477,7 @@ class Test(unittest.TestCase):
             defineport(port)
         rcpath = os.path.join(self._threadtmp, b".hgrc")
         rcpaths = [p.encode("utf-8") for p in self._extrarcpaths] + [rcpath]
-        env["HGRCPATH"] = os.pathsep.encode("utf8").join(rcpaths)
+        env["HGRCPATH"] = os.pathsep.encode("utf-8").join(rcpaths)
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b"daemon.pids")
         env["HGEDITOR"] = (
             '"' + PYTHON.decode("utf-8") + '"' + ' -c "import sys; sys.exit(0)"'

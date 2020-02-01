@@ -22,7 +22,7 @@ class PhabricatorClientError(Exception):
 class PhabricatorGraphQLClientRequests(object):
     def sendpost(self, request_url, data, timeout, ca_bundle):
         res = requests.post(request_url, data, verify=ca_bundle or True)
-        data = json.loads(res.content.decode("utf8"))
+        data = json.loads(res.content.decode("utf-8"))
         if res.status_code != 200:
             raise PhabricatorClientError(
                 "Phabricator not available returned " + str(res.status), res

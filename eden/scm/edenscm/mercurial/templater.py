@@ -1370,7 +1370,7 @@ def truncatelonglines(context, mapping, args):
         suffix = evalstring(context, mapping, args[2])
         if isinstance(suffix, bytes):
             # Python 2
-            truncatedwidth -= len(suffix.decode("utf8"))
+            truncatedwidth -= len(suffix.decode("utf-8"))
         else:
             # Python 3
             truncatedwidth -= len(suffix)
