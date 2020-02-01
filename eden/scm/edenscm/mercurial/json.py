@@ -39,10 +39,13 @@ def dumps(obj, paranoid=True):
     elif isinstance(obj, str):
         return _sysjson.dumps(obj)
     elif util.safehasattr(obj, "keys"):
-        out = [
-            '"%s": %s' % (encoding.jsonescape(k, paranoid=paranoid), dumps(v, paranoid))
-            for k, v in sorted(pycompat.iteritems(obj))
-        ]
+        out = []
+        for k, v in sorted(pycompat.iteritems(obj)):
+            if isinstance(k, bytes):
+                key = '"%s"' % encoding.jsonescape(k, paranoid=paranoid)
+            else:
+                key = _sysjson.dumps(k)
+            out.append(key + ": %s" % dumps(v, paranoid))
         return "{" + ", ".join(out) + "}"
     elif util.safehasattr(obj, "__iter__"):
         out = [dumps(i, paranoid) for i in obj]

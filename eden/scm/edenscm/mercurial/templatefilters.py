@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import time
+from typing import Any
 
 from . import (
     encoding,
@@ -404,6 +405,7 @@ def stringescape(text):
 
 @templatefilter("stringify")
 def stringify(thing):
+    # type: Any -> str
     """Any type. Turns the value into text by converting values into
     text and concatenating them.
     """

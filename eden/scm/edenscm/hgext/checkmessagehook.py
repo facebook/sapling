@@ -25,7 +25,8 @@ def checkcommitmessage(ui, repo, **kwargs):
     """
     hg_commit_message = repo["tip"].description()
     try:
-        pycompat.ensurestr(hg_commit_message)
+        if isinstance(hg_commit_message, bytes):
+            hg_commit_message.decode("utf8")
     except UnicodeDecodeError:
         ui.warn(_("commit message is not utf-8\n"))
         return True

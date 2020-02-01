@@ -24,7 +24,7 @@ import re
 import shutil
 import tempfile
 import zlib
-from typing import Optional
+from typing import List, Optional, Sequence, Tuple
 
 from . import (
     copies,
@@ -3090,6 +3090,7 @@ def diffstatsum(stats):
 
 
 def diffstatdata(lines):
+    # type: Sequence[bytes] -> List[Tuple[str, int, int, bool]]
     diffre = re.compile(b"^diff .*-r [a-z0-9]+\\s(.*)$")
 
     results = []

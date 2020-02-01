@@ -15,6 +15,7 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import types
+from typing import Any, Iterable
 
 from . import (
     color,
@@ -1508,6 +1509,7 @@ stringify = templatefilters.stringify
 
 
 def _flatten(thing):
+    # type: Any -> Iterable[str]
     """yield a single stream from a possibly nested set of iterators"""
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, str):
@@ -1522,16 +1524,8 @@ def _flatten(thing):
         yield pycompat.bytestr(thing)
     else:
         for i in thing:
-            i = templatekw.unwraphybrid(i)
-            if isinstance(i, bytes):
-                yield i
-            elif i is None:
-                pass
-            elif not util.safehasattr(i, "__iter__"):
-                yield pycompat.bytestr(i)
-            else:
-                for j in _flatten(i):
-                    yield j
+            for j in _flatten(i):
+                yield j
 
 
 def unquotestring(s):

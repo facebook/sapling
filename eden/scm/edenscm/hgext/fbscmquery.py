@@ -8,6 +8,7 @@
 
 import json
 import re
+from typing import Any, List
 
 from edenscm.mercurial import (
     extensions,
@@ -172,6 +173,7 @@ def _getnamespace(_repo):
 
 
 def _phablookup(repo, phabrev):
+    # type: (Any, str) -> List[bytes]
     # Is the given revset a phabricator hg hash (ie: rHGEXTaaacb34aacb34aa)
     cl = repo.changelog
     tonode = cl.node
@@ -202,8 +204,8 @@ def _phablookup(repo, phabrev):
         githash = m.group(1)
         if len(githash) == 40:
             return gittohg(githash)
-        else:
-            return []
+
+    return []
 
 
 def _scmquerylookupglobalrev(orig, repo, rev):

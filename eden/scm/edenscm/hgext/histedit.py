@@ -355,26 +355,27 @@ class histeditstate(object):
                 self._write(f)
 
     def _write(self, fp):
-        fp.write("v1\n")
-        fp.write("%s\n" % node.hex(self.parentctxnode))
-        fp.write("%s\n" % node.hex(self.topmost))
-        fp.write("%s\n" % self.keep)
-        fp.write("%d\n" % len(self.actions))
+        writeutf8(fp, "v1\n")
+        writeutf8(fp, "%s\n" % node.hex(self.parentctxnode))
+        writeutf8(fp, "%s\n" % node.hex(self.topmost))
+        writeutf8(fp, "%s\n" % self.keep)
+        writeutf8(fp, "%d\n" % len(self.actions))
         for action in self.actions:
-            fp.write("%s\n" % action.tostate())
-        fp.write("%d\n" % len(self.replacements))
+            writeutf8(fp, "%s\n" % action.tostate())
+        writeutf8(fp, "%d\n" % len(self.replacements))
         for replacement in self.replacements:
-            fp.write(
+            writeutf8(
+                fp,
                 "%s%s\n"
                 % (
                     node.hex(replacement[0]),
                     "".join(node.hex(r) for r in replacement[1]),
-                )
+                ),
             )
         backupfile = self.backupfile
         if not backupfile:
             backupfile = ""
-        fp.write("%s\n" % backupfile)
+        writeutf8(fp, "%s\n" % backupfile)
 
     def _load(self):
         fp = self.repo.localvfs("histedit-state", "r")
@@ -558,6 +559,10 @@ class histeditaction(object):
             # Nothing changed
             return ctx, []
         return ctx, [(self.node, (ctx.node(),))]
+
+
+def writeutf8(fp, text):
+    fp.write(pycompat.encodeutf8(text))
 
 
 def commitfuncfor(repo, src):

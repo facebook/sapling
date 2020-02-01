@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ configure mutation-norecord
@@ -204,7 +203,7 @@ but highlight the bug)
   $ hg diff -r "10" -r "11" --hidden
 
 'fold' one commit
-  $ hg metaedit "desc(D2)" --fold --user foobar3
+  $ hg metaedit "desc(D2)" --fold --user foobar3 --hidden
   1 changesets folded
   $ hg log -r "tip" --template '{rev}: {author}\n'
   12: foobar3
