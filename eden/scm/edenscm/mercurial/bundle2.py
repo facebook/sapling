@@ -855,21 +855,24 @@ class unbundle20(unpackermixin):
         return params
 
     def _processallparams(self, paramsblock):
-        # type: (bytes) -> Dict[str, str]
+        # type: (bytes) -> Dict[str, Optional[str]]
         """"""
         params = util.sortdict()
         data = pycompat.decodeutf8(paramsblock)
         for param in data.split(" "):
             p = param.split("=", 1)
             p = [urllibcompat.unquote(i) for i in p]
-            if len(p) < 2:
-                p.append(None)
-            self._processparam(*p)
-            params[p[0]] = p[1]
+            assert len(p) >= 1
+            if len(p) == 1:
+                self._processparam(p[0], None)
+                params[p[0]] = None
+            else:
+                self._processparam(p[0], p[1])
+                params[p[0]] = p[1]
         return params
 
     def _processparam(self, name, value):
-        # type: (str, str) -> None
+        # type: (str, Optional[str]) -> None
         """process a parameter, applying its effect if needed
 
         Parameter starting with a lower case letter are advisory and will be

@@ -62,6 +62,12 @@ stringio = util.stringio
 
 # templates of common command options
 
+
+def _typedflags(flags):
+    # type: List[Tuple[str, str, Union[str, None, List[str]], str]] -> List[Tuple[str, str, Union[str, None, List[str]], str]]
+    return flags
+
+
 dryrunopts = [("n", "dry-run", None, _("do not perform actions, just print output"))]
 
 remoteopts = [
@@ -95,19 +101,32 @@ formatteropts = [
     ("T", "template", "", _("display with template (EXPERIMENTAL)"), _("TEMPLATE"))
 ]
 
-templateopts = [
-    ("", "style", "", _("display using template map file (DEPRECATED)"), _("STYLE")),
-    ("T", "template", "", _("display with template"), _("TEMPLATE")),
-]
+templateopts = _typedflags(
+    [
+        (
+            "",
+            "style",
+            "",
+            _("display using template map file (DEPRECATED)"),
+            _("STYLE"),
+        ),
+        ("T", "template", "", _("display with template"), _("TEMPLATE")),
+    ]
+)
 
-logopts = [
-    ("p", "patch", None, _("show patch")),
-    ("g", "git", None, _("use git extended diff format")),
-    ("l", "limit", "", _("limit number of changes displayed"), _("NUM")),
-    ("M", "no-merges", None, _("do not show merges")),
-    ("", "stat", None, _("output diffstat-style summary of changes")),
-    ("G", "graph", None, _("show the revision DAG")),
-] + templateopts
+logopts = (
+    _typedflags(
+        [
+            ("p", "patch", None, _("show patch")),
+            ("g", "git", None, _("use git extended diff format")),
+            ("l", "limit", "", _("limit number of changes displayed"), _("NUM")),
+            ("M", "no-merges", None, _("do not show merges")),
+            ("", "stat", None, _("output diffstat-style summary of changes")),
+            ("G", "graph", None, _("show the revision DAG")),
+        ]
+    )
+    + templateopts
+)
 
 diffopts = [
     ("a", "text", None, _("treat all files as text")),
@@ -116,36 +135,47 @@ diffopts = [
     ("", "nodates", None, _("omit dates from diff headers")),
 ]
 
-diffwsopts = [
-    ("w", "ignore-all-space", None, _("ignore white space when comparing lines")),
-    (
-        "b",
-        "ignore-space-change",
-        None,
-        _("ignore changes in the amount of white space"),
-    ),
-    ("B", "ignore-blank-lines", None, _("ignore changes whose lines are all blank")),
-    ("Z", "ignore-space-at-eol", None, _("ignore changes in whitespace at EOL")),
-]
+diffwsopts = _typedflags(
+    [
+        ("w", "ignore-all-space", None, _("ignore white space when comparing lines")),
+        (
+            "b",
+            "ignore-space-change",
+            None,
+            _("ignore changes in the amount of white space"),
+        ),
+        (
+            "B",
+            "ignore-blank-lines",
+            None,
+            _("ignore changes whose lines are all blank"),
+        ),
+        ("Z", "ignore-space-at-eol", None, _("ignore changes in whitespace at EOL")),
+    ]
+)
 
 diffopts2 = (
-    [
-        ("", "noprefix", None, _("omit a/ and b/ prefixes from filenames")),
-        ("p", "show-function", None, _("show which function each change is in")),
-        ("", "reverse", None, _("produce a diff that undoes the changes")),
-    ]
+    _typedflags(
+        [
+            ("", "noprefix", None, _("omit a/ and b/ prefixes from filenames")),
+            ("p", "show-function", None, _("show which function each change is in")),
+            ("", "reverse", None, _("produce a diff that undoes the changes")),
+        ]
+    )
     + diffwsopts
-    + [
-        ("U", "unified", "", _("number of lines of context to show"), _("NUM")),
-        ("", "stat", None, _("output diffstat-style summary of changes")),
-        ("", "root", "", _("produce diffs relative to subdirectory"), _("DIR")),
-        (
-            "",
-            "only-files-in-revs",
-            None,
-            _("only show changes for files modified in the requested revisions"),
-        ),
-    ]
+    + _typedflags(
+        [
+            ("U", "unified", "", _("number of lines of context to show"), _("NUM")),
+            ("", "stat", None, _("output diffstat-style summary of changes")),
+            ("", "root", "", _("produce diffs relative to subdirectory"), _("DIR")),
+            (
+                "",
+                "only-files-in-revs",
+                None,
+                _("only show changes for files modified in the requested revisions"),
+            ),
+        ]
+    )
 )
 
 mergetoolopts = [("t", "tool", "", _("specify merge tool"))]

@@ -68,6 +68,7 @@ edenscmnative/traceprof.cpp
 # Build output
 build
 debbuild/
+.pytype/
 rpmbuild/
 
 # Rust libraries and extensions
