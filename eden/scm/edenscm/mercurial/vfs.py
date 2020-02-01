@@ -11,6 +11,7 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+import abc
 import contextlib
 import errno
 import os
@@ -19,6 +20,7 @@ import shutil
 import stat
 import tempfile
 import threading
+from typing import IO, BinaryIO, Callable, List, Optional, Tuple
 
 from . import encoding, error, pathutil, pycompat, util
 from .i18n import _
@@ -44,14 +46,32 @@ def _avoidambig(path, oldstat):
         checkandavoid()
 
 
-class abstractvfs(object):
+class abstractvfs(pycompat.ABC):
     """Abstract base class; cannot be instantiated"""
+
+    _backgroundfilecloser = None  # type: Optional[backgroundfilecloser]
 
     def __init__(self, *args, **kwargs):
         """Prevent instantiation; don't call this from subclasses."""
         raise NotImplementedError("attempted instantiating " + str(type(self)))
 
+    @abc.abstractmethod
+    def __call__(
+        self,
+        path,
+        mode="r",
+        text=False,
+        atomictemp=False,
+        notindexed=False,
+        backgroundclose=False,
+        checkambig=False,
+        auditpath=True,
+    ):
+        # type: (str, str, bool, bool, bool, bool, bool, bool) -> BinaryIO
+        raise Exception("must be implemented by subclasses")
+
     def tryread(self, path):
+        # type: str -> bytes
         """gracefully return an empty string for missing files"""
         try:
             return self.read(path)
@@ -61,9 +81,11 @@ class abstractvfs(object):
         return b""
 
     def tryreadutf8(self, path):
+        # type: str -> str
         return decodeutf8(self.tryread(path))
 
     def tryreadlines(self, path, mode="rb"):
+        # type: str -> List[bytes]
         """gracefully return an empty array for missing files"""
         try:
             return self.readlines(path, mode=mode)
@@ -74,6 +96,7 @@ class abstractvfs(object):
 
     @util.propertycache
     def open(self):
+        # type: () -> Callable[[str, str, bool, bool, bool, bool, bool, bool], BinaryIO]
         """Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
@@ -83,32 +106,40 @@ class abstractvfs(object):
         return self.__call__
 
     def read(self, path):
+        # type: (str) -> bytes
         with self(path, "rb") as fp:
             return fp.read()
 
     def readutf8(self, path):
+        # type: (str) -> str
         return decodeutf8(self.read(path))
 
     def readlines(self, path, mode="rb"):
+        # type: (str, str) -> List[bytes]
         with self(path, mode=mode) as fp:
             return fp.readlines()
 
     def write(self, path, data, backgroundclose=False):
+        # type: (str, bytes, bool) -> int
         with self(path, "wb", backgroundclose=backgroundclose) as fp:
             return fp.write(data)
 
     def writeutf8(self, path, data):
-        return self.write(path, encodeutf8(data))
+        # type: (str, str) -> None
+        self.write(path, encodeutf8(data))
 
     def writelines(self, path, data, mode="wb", notindexed=False):
+        # type: (str, List[bytes], str, bool) -> None
         with self(path, mode=mode, notindexed=notindexed) as fp:
             return fp.writelines(data)
 
     def append(self, path, data):
+        # type: (str, bytes) -> int
         with self(path, "ab") as fp:
             return fp.write(data)
 
     def basename(self, path):
+        # type: (str) -> str
         """return base element of a path (as os.path.basename would do)
 
         This exists to allow handling of strange encoding if needed."""
@@ -118,6 +149,7 @@ class abstractvfs(object):
         return os.chmod(self.join(path), mode)
 
     def dirname(self, path):
+        # type: (str) -> str
         """return dirname element of a path (as os.path.dirname would do)
 
         This exists to allow handling of strange encoding if needed."""
@@ -127,6 +159,7 @@ class abstractvfs(object):
         return os.path.exists(self.join(path))
 
     def fstat(self, fp):
+        # type: (IO) -> util.wrapped_stat_result
         return util.fstat(fp)
 
     def isdir(self, path=None):
@@ -142,6 +175,7 @@ class abstractvfs(object):
         return util.isexec(self.join(path))
 
     def isfileorlink(self, path=None):
+        # type: (Optional[str]) -> bool
         """return whether path is a regular file or a symlink
 
         Unlike isfile, this doesn't follow symlinks."""
@@ -160,6 +194,7 @@ class abstractvfs(object):
         return os.path.join(*paths)
 
     def split(self, path):
+        # type: (str) -> Tuple[str, str]
         """split top-most element of a path (as os.path.split would do)
 
         This exists to allow handling of strange encoding if needed."""
@@ -304,7 +339,7 @@ class abstractvfs(object):
             yield
             return
         vfs = getattr(self, "vfs", self)
-        if getattr(vfs, "_backgroundfilecloser", None):
+        if vfs._backgroundfilecloser is not None:
             raise error.Abort(_("can only have 1 active background file closer"))
 
         with backgroundfilecloser(ui, expectedcount=expectedcount) as bfc:
@@ -366,6 +401,7 @@ class vfs(abstractvfs):
         checkambig=False,
         auditpath=True,
     ):
+        # type: (str, str, bool, bool, bool, bool, bool, bool) -> BinaryIO
         """Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
@@ -456,7 +492,7 @@ class vfs(abstractvfs):
             fp = checkambigatclosing(fp)
 
         if backgroundclose and isinstance(
-            threading.currentThread(), threading._MainThread
+            threading.currentThread(), threading._MainThread  # pyre-fixme
         ):
             if not self._backgroundfilecloser:
                 raise error.Abort(
