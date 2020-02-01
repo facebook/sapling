@@ -304,12 +304,12 @@ class sshpeer(wireproto.wirepeer):
         while chunk:
             while b";" in work:
                 one, work = work.split(b";", 1)
-                yield wireproto.unescapearg(one)
+                yield wireproto.unescapebytearg(one)
             toread = min(available, 1024)
             chunk = rsp.read(toread)
             available -= toread
             work += chunk
-        yield wireproto.unescapearg(work)
+        yield wireproto.unescapebytearg(work)
 
     def _callstream(self, cmd, **args):
         args = args

@@ -190,8 +190,15 @@ def escapearg(plain):
         .replace("=", ":e")
     )
 
+def unescapestringarg(escaped):
+    return (
+        escaped.replace(":e", "=")
+        .replace(":s", ";")
+        .replace(":o", ",")
+        .replace(":c", ":")
+    )
 
-def unescapearg(escaped):
+def unescapebytearg(escaped):
     return (
         escaped.replace(b":e", b"=")
         .replace(b":s", b";")
@@ -492,16 +499,16 @@ class wirepeer(repository.legacypeer):
         chunk = rsp.read(1024)
         work = [chunk]
         while chunk:
-            while ";" not in chunk and chunk:
+            while b";" not in chunk and chunk:
                 chunk = rsp.read(1024)
                 work.append(chunk)
             merged = "".join(work)
-            while ";" in merged:
-                one, merged = merged.split(";", 1)
-                yield unescapearg(one)
+            while b";" in merged:
+                one, merged = merged.split(b";", 1)
+                yield unescapebytearg(one)
             chunk = rsp.read(1024)
             work = [merged, chunk]
-        yield unescapearg("".join(work))
+        yield unescapebytearg(b"".join(work))
 
     def _submitone(self, op, args):
         return self._call(op, **args)
@@ -831,7 +838,7 @@ def batch(repo, proto, cmds, others):
         for a in args.split(","):
             if a:
                 n, v = a.split("=")
-                vals[unescapearg(n)] = unescapearg(v)
+                vals[unescapestringarg(n)] = unescapestringarg(v)
         func, spec = commands[op]
         if spec:
             keys = spec.split()
@@ -1056,7 +1063,8 @@ def hello(repo, proto):
 
     capabilities: space separated list of tokens
     """
-    return "capabilities: %s\n" % (capabilities(repo, proto))
+    return b"capabilities: %s\n" % (pycompat.encodeutf8(capabilities(repo,
+        proto)))
 
 
 @wireprotocommand("listkeys", "namespace")
@@ -1131,10 +1139,10 @@ def stream(repo, proto):
     it is serving. Client checks to see if it understands the format.
     """
     if not streamclone.allowservergeneration(repo):
-        return "1\n"
+        return b"1\n"
 
     def getstream(it):
-        yield "0\n"
+        yield b"0\n"
         for chunk in it:
             yield chunk
 
@@ -1144,7 +1152,7 @@ def stream(repo, proto):
         it = streamclone.generatev1wireproto(repo)
         return streamres(gen=getstream(it))
     except error.LockError:
-        return "2\n"
+        return b"2\n"
 
 
 @wireprotocommand("stream_out_option", "*")
