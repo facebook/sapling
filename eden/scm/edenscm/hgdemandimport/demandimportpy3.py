@@ -76,12 +76,12 @@ def _makefinder(path):
     )
 
 
-ignore = []
+ignore = set()
 
 
 def init(ignorelist):
     global ignore
-    ignore = ignorelist
+    ignore = set(ignorelist)
 
 
 def isenabled():

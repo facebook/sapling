@@ -281,12 +281,12 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
         return mod
 
 
-ignore = []
+ignore = set()
 
 
 def init(ignorelist):
     global ignore
-    ignore = ignorelist
+    ignore = set(ignorelist)
 
 
 def isenabled():
