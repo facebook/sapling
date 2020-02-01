@@ -225,7 +225,7 @@ def _unnesttemplatelist(tree):
     """Expand list of templates to node tuple
 
     >>> def f(tree):
-    ...     print(pycompat.sysstr(prettyformat(_unnesttemplatelist(tree))))
+    ...     print(prettyformat(_unnesttemplatelist(tree)))
     >>> f((b'template', []))
     (string '')
     >>> f((b'template', [(b'string', b'foo')]))
@@ -487,13 +487,11 @@ def runfilter(context, mapping, data):
         sym = findsymbolicname(arg)
         if sym:
             msg = _("template filter '%s' is not compatible with keyword '%s'") % (
-                pycompat.sysbytes(filt.__name__),
+                filt.__name__,
                 sym,
             )
         else:
-            msg = _("incompatible use of template filter '%s'") % pycompat.sysbytes(
-                filt.__name__
-            )
+            msg = _("incompatible use of template filter '%s'") % filt.__name__
         raise error.Abort(msg)
 
 

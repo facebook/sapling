@@ -553,9 +553,9 @@ def opener(ui, authinfo=None, useragent=None):
     # do look at this value.
     if not useragent:
         agent = "mercurial/proto-1.0 (Mercurial %s)" % util.version()
-        opener.addheaders = [(r"User-agent", pycompat.sysstr(agent))]
+        opener.addheaders = [(r"User-agent", agent)]
     else:
-        opener.addheaders = [(r"User-agent", pycompat.sysstr(useragent))]
+        opener.addheaders = [(r"User-agent", useragent)]
 
     # This header should only be needed by wire protocol requests. But it has
     # been sent on all requests since forever. We keep sending it for backwards

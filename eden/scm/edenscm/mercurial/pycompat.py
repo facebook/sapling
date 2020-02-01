@@ -89,10 +89,6 @@ if sys.version_info[0] >= 3:
 
     bytechr = chr
     bytestr = str
-    sysbytes = identity
-    sysstr = identity
-    strurl = identity
-    bytesurl = identity
 
     def raisewithtb(exc, tb):
         """Raise exception with the given traceback"""
@@ -104,9 +100,7 @@ if sys.version_info[0] >= 3:
         if isinstance(obj, str):
             return obj
         doc = getattr(obj, u"__doc__", None)
-        if doc is None:
-            return doc
-        return sysbytes(doc)
+        return doc
 
     unicode = str
     shlexsplit = shlex.split
@@ -142,10 +136,6 @@ else:
 
     bytechr = chr
     bytestr = str
-    sysbytes = identity
-    sysstr = identity
-    strurl = identity
-    bytesurl = identity
     range = xrange  # noqa: F821
     unicode = unicode
 

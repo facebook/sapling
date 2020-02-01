@@ -1203,7 +1203,7 @@ def unbundleimpl(repo, proto, heads, replaydata=None, respondlightly=False):
         # Make the file available to other extensions.
         # See pushrebase recording for example
         repo.unbundlefile = tempname
-        fp = util.fdopen(fd, pycompat.sysstr("wb+"))
+        fp = util.fdopen(fd, "wb+")
         r = 0
         try:
             proto.getfile(fp)

@@ -197,7 +197,7 @@ def _posixworker(ui, func, staticargs, args):
                     os._exit(ret & 255)
         pids.add(pid)
     os.close(wfd)
-    fp = util.fdopen(rfd, pycompat.sysstr("rb"), 0)
+    fp = util.fdopen(rfd, "rb", 0)
 
     def cleanup():
         signal.signal(signal.SIGINT, oldhandler)

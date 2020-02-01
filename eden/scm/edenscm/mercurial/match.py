@@ -1153,7 +1153,7 @@ class subdirmatcher(basematcher):
     >>> util.pconvert(m2.rel(b'b.txt'))
     'sub/b.txt'
     >>> def bad(f, msg):
-    ...     print(pycompat.sysstr(b"%s: %s" % (f, msg)))
+    ...     print(b"%s: %s" % (f, msg))
     >>> m1.bad = bad
     >>> m2.bad(b'x.txt', b'No such file')
     sub/x.txt: No such file
@@ -1288,7 +1288,7 @@ def _globre(pat):
 
     >>> from . import pycompat
     >>> def bprint(s):
-    ...     print(pycompat.sysstr(s))
+    ...     print(s)
     >>> bprint(_globre(br'?'))
     .
     >>> bprint(_globre(br'*'))

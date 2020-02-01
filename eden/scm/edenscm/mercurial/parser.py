@@ -244,7 +244,7 @@ def simplifyinfixops(tree, targetnodes):
     >>> from . import pycompat
     >>> def f(tree):
     ...     s = prettyformat(simplifyinfixops(tree, (b'or',)), (b'symbol',))
-    ...     print(pycompat.sysstr(s))
+    ...     print(s)
     >>> f((b'or',
     ...     (b'or',
     ...       (b'symbol', b'1'),
@@ -604,7 +604,7 @@ class basealiasrules(object):
         >>> builddefn = aliasrules._builddefn
         >>> def pprint(tree):
         ...     s = prettyformat(tree, (b'_aliasarg', b'string', b'symbol'))
-        ...     print(pycompat.sysstr(s))
+        ...     print(s)
         >>> args = [b'$1', b'$2', b'foo']
         >>> pprint(builddefn(b'$1 or foo', args))
         (or
@@ -613,7 +613,7 @@ class basealiasrules(object):
         >>> try:
         ...     builddefn(b'$1 or $bar', args)
         ... except error.ParseError as inst:
-        ...     print(pycompat.sysstr(parseerrordetail(inst)))
+        ...     print(parseerrordetail(inst))
         invalid symbol '$bar'
         >>> args = [b'$1', b'$10', b'foo']
         >>> pprint(builddefn(b'$10 or baz', args))

@@ -940,7 +940,7 @@ def tempfilter(s, cmd):
     inname, outname = None, None
     try:
         infd, inname = tempfile.mkstemp(prefix="hg-filter-in-")
-        fp = fdopen(infd, pycompat.sysstr("wb"))
+        fp = fdopen(infd, "wb")
         fp.write(s)
         fp.close()
         outfd, outname = tempfile.mkstemp(prefix="hg-filter-out-")
@@ -1120,7 +1120,7 @@ def hgexecutable():
     """
     if _hgexecutable is None:
         hg = encoding.environ.get("HG")
-        mainmod = sys.modules[pycompat.sysstr("__main__")]
+        mainmod = sys.modules["__main__"]
         if hg:
             _sethgexecutable(hg)
         elif mainfrozen():
@@ -2550,20 +2550,14 @@ def wrap(line, width, initindent="", hangindent=""):
         # adjust for weird terminal size
         width = max(78, maxindent + 1)
     if sys.version_info[0] < 3:
-        line = line.decode(
-            pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
-        )
-        initindent = initindent.decode(
-            pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
-        )
-        hangindent = hangindent.decode(
-            pycompat.sysstr(encoding.encoding), pycompat.sysstr(encoding.encodingmode)
-        )
+        line = line.decode(encoding.encoding, encoding.encodingmode)
+        initindent = initindent.decode(encoding.encoding, encoding.encodingmode)
+        hangindent = hangindent.decode(encoding.encoding, encoding.encodingmode)
     wrapper = MBTextWrapper(
         width=width, initial_indent=initindent, subsequent_indent=hangindent
     )
     if sys.version_info[0] < 3:
-        return wrapper.fill(line).encode(pycompat.sysstr(encoding.encoding))
+        return wrapper.fill(line).encode(encoding.encoding)
     else:
         return wrapper.fill(line)
 
@@ -3983,7 +3977,7 @@ def bundlecompressiontopics():
         if not bt or not bt[0]:
             continue
 
-        doc = pycompat.sysstr("``%s``\n    %s") % (bt[0], engine.bundletype.__doc__)
+        doc = "``%s``\n    %s" % (bt[0], engine.bundletype.__doc__)
 
         value = docobject()
         value.__doc__ = doc

@@ -122,7 +122,7 @@ def _parseasciigraph(text):
     r"""str -> {str : [str]}. convert the ASCII graph to edges
 
     >>> import pprint
-    >>> pprint.pprint({pycompat.sysstr(k): [pycompat.sysstr(vv) for vv in v]
+    >>> pprint.pprint({k: [vv for vv in v]
     ...  for k, v in _parseasciigraph(r'''
     ...        G
     ...        |
@@ -141,7 +141,7 @@ def _parseasciigraph(text):
      'G': ['F'],
      'H': ['A'],
      'I': ['H']}
-    >>> pprint.pprint({pycompat.sysstr(k): [pycompat.sysstr(vv) for vv in v]
+    >>> pprint.pprint({k: [vv for vv in v]
     ...  for k, v in _parseasciigraph(r'''
     ...  o    foo
     ...  |\
@@ -389,7 +389,7 @@ def _walkgraph(edges, extraedges):
 
 def _getcomments(text):
     """
-    >>> [pycompat.sysstr(s) for s in _getcomments(br'''
+    >>> [s for s in _getcomments(br'''
     ...        G
     ...        |
     ...  I D C F   # split: B -> E, F, G

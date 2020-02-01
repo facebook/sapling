@@ -213,7 +213,7 @@ def _collectimport(orig, name, *args, **kwargs):
 
 def _importh(name):
     """import and return the <name> module"""
-    mod = __import__(pycompat.sysstr(name))
+    mod = __import__(name)
     return _resolvenestedmodules(mod, name)
 
 
@@ -624,7 +624,7 @@ def wrapfilecache(cls, propname, wrapper):
 
     These can't be wrapped using the normal wrapfunction.
     """
-    propname = pycompat.sysstr(propname)
+    propname = propname
     assert callable(wrapper)
     for currcls in cls.__mro__:
         if propname in currcls.__dict__:

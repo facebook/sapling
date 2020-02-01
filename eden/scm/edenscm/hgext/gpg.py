@@ -59,11 +59,11 @@ class gpg(object):
         try:
             # create temporary files
             fd, sigfile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".sig")
-            fp = util.fdopen(fd, pycompat.sysstr("wb"))
+            fp = util.fdopen(fd, "wb")
             fp.write(sig)
             fp.close()
             fd, datafile = tempfile.mkstemp(prefix="hg-gpg-", suffix=".txt")
-            fp = util.fdopen(fd, pycompat.sysstr("wb"))
+            fp = util.fdopen(fd, "wb")
             fp.write(data)
             fp.close()
             gpgcmd = "%s --logger-fd 1 --status-fd 1 --verify " '"%s" "%s"' % (

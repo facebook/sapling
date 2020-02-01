@@ -86,13 +86,7 @@ class httpservice(object):
             write = self.ui.write
         write(
             _("listening at http://%s%s/%s (bound to %s:%d)\n")
-            % (
-                pycompat.sysbytes(fqaddr),
-                pycompat.sysbytes(port),
-                prefix,
-                pycompat.sysbytes(bindaddr),
-                self.httpd.port,
-            )
+            % (fqaddr, port, prefix, bindaddr, self.httpd.port)
         )
         self.ui.flush()  # avoid buffering of status message
 

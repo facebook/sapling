@@ -244,7 +244,7 @@ class repoview(object):
     def __repr__(self):
         return r"<%s:%s %r>" % (
             self.__class__.__name__,
-            pycompat.sysstr(self.filtername),
+            self.filtername,
             self.unfiltered(),
         )
 

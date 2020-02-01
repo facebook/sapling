@@ -73,10 +73,10 @@ def replace(text, substs):
         # ASCII characters other than control/alphabet/digit as a part of
         # multi-bytes characters, so direct replacing with such characters
         # on strings in local encoding causes invalid byte sequences.
-        utext = text.decode(pycompat.sysstr(encoding.encoding))
+        utext = text.decode(encoding.encoding)
         for f, t in substs:
             utext = utext.replace(f.decode("ascii"), t.decode("ascii"))
-        return utext.encode(pycompat.sysstr(encoding.encoding))
+        return utext.encode(encoding.encoding)
 
 
 _blockre = re.compile(r"\n(?:\s*\n)+")

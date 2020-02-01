@@ -324,7 +324,7 @@ class uiconfig(object):
             return convert(v)
         except (ValueError, error.ParseError):
             if desc is None:
-                desc = pycompat.sysbytes(convert.__name__)
+                desc = convert.__name__
             raise error.ConfigError(
                 _("%s.%s is not a valid %s ('%s')") % (section, name, desc, v)
             )

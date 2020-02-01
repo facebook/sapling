@@ -89,7 +89,7 @@ class wsgirequest(object):
 
     def respond(self, status, type, filename=None, body=None):
         if not isinstance(type, str):
-            type = pycompat.sysstr(type)
+            type = type
         if self._start_response is not None:
             self.headers.append((r"Content-Type", type))
             if filename:

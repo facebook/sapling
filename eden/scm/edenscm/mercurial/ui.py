@@ -127,13 +127,13 @@ default = %s
 def _maybestrurl(maybebytes):
     if maybebytes is None:
         return None
-    return pycompat.strurl(maybebytes)
+    return maybebytes
 
 
 def _maybebytesurl(maybestr):
     if maybestr is None:
         return None
-    return pycompat.bytesurl(maybestr)
+    return maybestr
 
 
 class httppasswordmgrdbproxy(object):

@@ -66,7 +66,7 @@ archivespecs = util.sortdict(
 def getstyle(req, configfn, templatepath):
     fromreq = req.form.get("style", [None])[0]
     if fromreq is not None:
-        fromreq = pycompat.sysbytes(fromreq)
+        fromreq = fromreq
     styles = (fromreq, configfn("web", "style"), "paper")
     return styles, templater.stylemap(styles, templatepath)
 
@@ -360,7 +360,7 @@ class hgweb(object):
         # protocol bits don't need to create any URLs
         # and the clients always use the old URL structure
 
-        cmd = pycompat.sysbytes(req.form.get(r"cmd", [r""])[0])
+        cmd = req.form.get(r"cmd", [r""])[0]
         if protocol.iscmd(cmd):
             try:
                 if query:

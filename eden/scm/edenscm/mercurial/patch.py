@@ -220,7 +220,7 @@ def extract(ui, fileobj):
 
     data = {}
     fd, tmpname = tempfile.mkstemp(prefix="hg-patch-")
-    tmpfp = util.fdopen(fd, pycompat.sysstr("w"))
+    tmpfp = util.fdopen(fd, "w")
     try:
         msg = email.Parser.Parser().parse(fileobj)
 
@@ -887,7 +887,7 @@ class header(object):
     def binary(self):
         return any(h.startswith(b"index ") for h in self.header)
 
-    def pretty(self,fd):
+    def pretty(self, fd):
         for h in self.header:
             if h.startswith(b"index "):
                 fd.write(b"this modifies a binary file (all or nothing)\n")
@@ -1168,7 +1168,7 @@ the hunk is left unchanged.
                 ncpatchfp = None
                 try:
                     # Write the initial patch
-                    f = util.fdopen(patchfd, pycompat.sysstr("wb"))
+                    f = util.fdopen(patchfd, "w")
                     chunk.header.write(f)
                     chunk.write(f)
                     f.write("\n".join(["# " + i for i in phelp.splitlines()]))
@@ -1597,7 +1597,7 @@ def reversehunks(hunks):
     ...      c.write(fp)
     >>> fp.seek(0) or None
     >>> reversedpatch = fp.read()
-    >>> print(pycompat.sysstr(reversedpatch))
+    >>> print(reversedpatch)
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g
@@ -1655,7 +1655,7 @@ def parsepatch(originalchunks, maxcontext=None):
     ...     header.write(out)
     ...     for hunk in header.hunks:
     ...         hunk.write(out)
-    >>> print(pycompat.sysstr(out.getvalue()))
+    >>> print(out.getvalue())
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g

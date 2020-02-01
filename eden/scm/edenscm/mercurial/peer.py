@@ -105,7 +105,7 @@ def batchable(f):
         if not encresref:
             return encargsorres  # a local result in this case
         self = args[0]
-        cmd = pycompat.bytesurl(f.__name__)  # ensure cmd is ascii bytestr
+        cmd = f.__name__  # ensure cmd is ascii bytestr
         encresref.set(self._submitone(cmd, encargsorres))
         return next(batchable)
 

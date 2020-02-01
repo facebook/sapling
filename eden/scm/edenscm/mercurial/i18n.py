@@ -60,7 +60,7 @@ _ungettext = None
 
 
 def setdatapath(datapath):
-    localedir = os.path.join(datapath, pycompat.sysstr("locale"))
+    localedir = os.path.join(datapath, "locale")
     t = gettextmod.translation("hg", localedir, _languages, fallback=True)
     global _ugettext
     try:
@@ -112,7 +112,7 @@ def gettext(message):
                 # means u.encode(sys.getdefaultencoding()).decode(enc). Since
                 # the Python encoding defaults to 'ascii', this fails if the
                 # translated string use non-ASCII characters.
-                encodingstr = pycompat.sysstr(encoding.encoding)
+                encodingstr = encoding.encoding
                 cache[message] = identity.replace(u.encode(encodingstr, "replace"))
             except LookupError:
                 # An unknown encoding results in a LookupError.
@@ -141,7 +141,7 @@ def ngettext(singular, plural, count):
     if sys.version_info[0] == 3:
         return identity.replace(translated)
     else:
-        encodingstr = pycompat.sysstr(encoding.encoding)
+        encodingstr = encoding.encoding
         return identity.replace(translated.encode(encodingstr, "replace"))
 
 

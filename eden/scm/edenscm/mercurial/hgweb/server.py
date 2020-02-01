@@ -73,7 +73,7 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
 
     def _log_any(self, fp, format, *args):
         fp.write(
-            pycompat.sysbytes(
+            (
                 r"%s - - [%s] %s"
                 % (self.client_address[0], self.log_date_time_string(), format % args)
             )

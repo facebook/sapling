@@ -340,10 +340,7 @@ def _protectio(ui):
     ui.flush()
     newfiles = []
     nullfd = os.open(os.devnull, os.O_RDWR)
-    for f, sysf, mode in [
-        (ui.fin, util.stdin, pycompat.sysstr("rb")),
-        (ui.fout, util.stdout, pycompat.sysstr("wb")),
-    ]:
+    for f, sysf, mode in [(ui.fin, util.stdin, "rb"), (ui.fout, util.stdout, "wb")]:
         if f is sysf:
             newfd = os.dup(f.fileno())
             os.dup2(nullfd, f.fileno())

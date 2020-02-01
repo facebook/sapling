@@ -1380,7 +1380,7 @@ def debuginstall(ui, **opts):
 
     def writetemp(contents):
         (fd, name) = tempfile.mkstemp(prefix="hg-debuginstall-")
-        f = util.fdopen(fd, pycompat.sysstr("wb"))
+        f = util.fdopen(fd, "wb")
         f.write(contents)
         f.close()
         return name
@@ -1394,7 +1394,7 @@ def debuginstall(ui, **opts):
     fm.write("encoding", _("checking encoding (%s)...\n"), encoding.encoding)
     err = None
     try:
-        codecs.lookup(pycompat.sysstr(encoding.encoding))
+        codecs.lookup(encoding.encoding)
     except LookupError as inst:
         err = util.forcebytestr(inst)
         problems += 1

@@ -42,7 +42,7 @@ def decodevaluefromheaders(req, headerprefix):
         v = req.env.get(r"HTTP_%s_%d" % (prefix, i))
         if v is None:
             break
-        chunks.append(pycompat.bytesurl(v))
+        chunks.append(v)
         i += 1
 
     return "".join(chunks)

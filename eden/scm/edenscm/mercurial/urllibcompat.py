@@ -16,24 +16,19 @@ import sys
 from . import pycompat
 
 
-_sysstr = pycompat.sysstr
-
-
 class _pycompatstub(object):
     def __init__(self):
         self._aliases = {}
 
     def _registeraliases(self, origin, items):
         """Add items that will be populated at the first access"""
-        items = list(map(_sysstr, items))
         self._aliases.update(
-            (item.replace(_sysstr("_"), _sysstr("")).lower(), (origin, item))
-            for item in items
+            (item.replace("_", "").lower(), (origin, item)) for item in items
         )
 
     def _registeralias(self, origin, attr, name):
         """Alias ``origin``.``attr`` as ``name``"""
-        self._aliases[_sysstr(name)] = (origin, _sysstr(attr))
+        self._aliases[name] = (origin, attr)
 
     def __getattr__(self, name):
         try:

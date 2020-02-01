@@ -53,10 +53,10 @@ Doctest helper:
 ...     ui.verbose = verbose
 ...     ui.pushbuffer()
 ...     try:
-...         return fn(ui, ui.formatter(pycompat.sysbytes(fn.__name__),
+...         return fn(ui, ui.formatter(fn.__name__,
 ...                   opts))
 ...     finally:
-...         print(pycompat.sysstr(ui.popbuffer()), end='')
+...         print(ui.popbuffer(), end='')
 
 Basic example:
 

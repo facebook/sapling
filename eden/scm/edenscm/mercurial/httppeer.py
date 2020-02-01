@@ -43,7 +43,7 @@ def encodevalueinheaders(value, header, limit):
     """
     # HTTP Headers are ASCII. Python 3 requires them to be unicodes,
     # not bytes. This function always takes bytes in as arguments.
-    fmt = pycompat.strurl(header) + r"-%s"
+    fmt = header + r"-%s"
     # Note: it is *NOT* a bug that the last bit here is a bytestring
     # and not a unicode: we're just getting the encoded length anyway,
     # and using an r-string to make it portable between Python 2 and 3
@@ -309,7 +309,7 @@ class httppeer(wireproto.wirepeer):
         if varyheaders:
             headers[r"Vary"] = r",".join(varyheaders)
 
-        req = self._requestbuilder(pycompat.strurl(cu), data, headers)
+        req = self._requestbuilder(cu, data, headers)
 
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
@@ -445,7 +445,7 @@ class httppeer(wireproto.wirepeer):
         try:
             # dump bundle to disk
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
-            fh = util.fdopen(fd, pycompat.sysstr("wb"))
+            fh = util.fdopen(fd, "wb")
             d = fp.read(4096)
             while d:
                 fh.write(d)

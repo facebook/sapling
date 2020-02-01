@@ -1328,7 +1328,7 @@ class svn_sink(converter_sink, commandline):
             self.setexec = []
 
         fd, messagefile = tempfile.mkstemp(prefix="hg-convert-")
-        fp = util.fdopen(fd, pycompat.sysstr("w"))
+        fp = util.fdopen(fd, "w")
         fp.write(commit.desc)
         fp.close()
         try:

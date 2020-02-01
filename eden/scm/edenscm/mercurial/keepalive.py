@@ -244,9 +244,7 @@ class KeepAliveHandler(object):
         # The string form of BadStatusLine is the status line. Add some context
         # to make the error message slightly more useful.
         except httplib.BadStatusLine as err:
-            raise urlerr.urlerror(
-                _("bad HTTP status line: %s") % pycompat.sysbytes(err.line)
-            )
+            raise urlerr.urlerror(_("bad HTTP status line: %s") % err.line)
         except (socket.error, httplib.HTTPException) as err:
             raise urlerr.urlerror(err)
 

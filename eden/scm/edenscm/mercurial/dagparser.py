@@ -165,7 +165,7 @@ def parsedag(desc):
     Error:
 
         >>> try: list(parsedag(b'+1 bad'))
-        ... except Exception as e: print(pycompat.sysstr(bytes(e)))
+        ... except Exception as e: print(bytes(e))
         invalid character in dag description: bad...
 
     '''
