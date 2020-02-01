@@ -258,7 +258,7 @@ class rebaseruntime(object):
 
         try:
             f = repo.localvfs("rebasestate")
-            for i, l in enumerate(f.read().splitlines()):
+            for i, l in enumerate(pycompat.decodeutf8(f.read()).splitlines()):
                 if i == 0:
                     originalwd = repo[l].rev()
                 elif i == 1:
