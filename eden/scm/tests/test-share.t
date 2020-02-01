@@ -376,8 +376,8 @@ test shared clones using relative paths work
   ../../orig/.hg (no-eol)
   $ grep shared thisdir/*/.hg/requires
   thisdir/abs/.hg/requires:shared
-  thisdir/rel/.hg/requires:shared
   thisdir/rel/.hg/requires:relshared
+  thisdir/rel/.hg/requires:shared
 
 test that relative shared paths aren't relative to $PWD
 

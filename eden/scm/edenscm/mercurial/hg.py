@@ -264,26 +264,21 @@ def share(
         destwvfs.mkdir()
     destvfs.makedir()
 
-    requirements = ""
-    try:
-        requirements = srcrepo.localvfs.read("requires")
-    except IOError as inst:
-        if inst.errno != errno.ENOENT:
-            raise
+    requirements = srcrepo.requirements.copy()
 
     if relative:
         try:
             sharedpath = os.path.relpath(sharedpath, destvfs.base)
-            requirements += "relshared\n"
+            requirements.add("relshared")
         except (IOError, ValueError) as e:
             # ValueError is raised on Windows if the drive letters differ on
             # each path
             raise error.Abort(_("cannot calculate relative path"), hint=str(e))
     else:
-        requirements += "shared\n"
+        requirements.add("shared")
 
-    destvfs.write("requires", requirements)
-    destvfs.write("sharedpath", sharedpath)
+    scmutil.writerequires(destvfs, requirements)
+    destvfs.writeutf8("sharedpath", sharedpath)
 
     r = repository(ui, destwvfs.base)
     postshare(srcrepo, r, bookmarks=bookmarks, defaultpath=defaultpath)
