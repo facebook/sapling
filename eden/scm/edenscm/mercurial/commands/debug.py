@@ -1415,9 +1415,7 @@ def debuginstall(ui, **opts):
         ("%d.%d.%d" % sys.version_info[:3]),
     )
     fm.write(
-        "pythonlib",
-        _("checking Python lib (%s)...\n"),
-        os.path.dirname(pycompat.fsencode(os.__file__)),
+        "pythonlib", _("checking Python lib (%s)...\n"), os.path.dirname(os.__file__)
     )
 
     security = set(sslutil.supportedprotocols)
@@ -1462,7 +1460,7 @@ def debuginstall(ui, **opts):
     fm.write(
         "hgmodules",
         _("checking installed modules (%s)...\n"),
-        os.path.dirname(os.path.dirname(pycompat.fsencode(__file__))),
+        os.path.dirname(os.path.dirname(__file__)),
     )
 
     err = None
