@@ -9,6 +9,8 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
+use blobrepo::BlobRepo;
+use cmdlib::helpers::block_execute;
 use derived_data::BonsaiDerived;
 use futures::Future;
 use futures::{
@@ -165,38 +167,14 @@ where
         .from_err()
 }
 
-#[fbinit::main]
-fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Mononoke Git Importer")
-        .with_advanced_args_hidden()
-        .build()
-        .arg(
-            Arg::with_name(ARG_DERIVE_TREES)
-                .long(ARG_DERIVE_TREES)
-                .required(false)
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name(ARG_HGGIT_COMPATIBILITY)
-                .long(ARG_HGGIT_COMPATIBILITY)
-                .help("Set commit extras for hggit compatibility")
-                .required(false)
-                .takes_value(false),
-        )
-        .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
-
-    let matches = app.get_matches();
-    let mut runtime = args::init_runtime(&matches)?;
-
-    args::init_cachelib(fb, &matches, None);
-    let logger = args::init_logging(fb, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = runtime.block_on_std(args::create_repo(fb, &logger, &matches).compat())?;
+async fn gitimport(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    path: &Path,
+    derive_trees: bool,
+    hggit_compatibility: bool,
+) -> Result<(), Error> {
     let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
-
-    let derive_trees = matches.is_present(ARG_DERIVE_TREES);
-    let hggit_compatibility = matches.is_present(ARG_HGGIT_COMPATIBILITY);
-    let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
     let walk_repo = Repository::open(&path)?;
     let store_repo = Arc::new(Mutex::new(Repository::open(&path)?));
@@ -248,15 +226,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let file_changes = runtime.block_on_std(
-            find_file_changes(
-                ctx.clone(),
-                repo.get_blobstore().boxed(),
-                store_repo.clone(),
-                diff,
-            )
-            .compat(),
-        )?;
+        let file_changes = find_file_changes(
+            ctx.clone(),
+            repo.get_blobstore().boxed(),
+            store_repo.clone(),
+            diff,
+        )
+        .compat()
+        .await?;
 
         let time = commit.time();
 
@@ -289,7 +266,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         println!("Created {:?} => {:?}", commit.id(), bcs_id);
     }
 
-    runtime.block_on_std(save_bonsai_changesets(changesets, ctx.clone(), repo.clone()).compat())?;
+    save_bonsai_changesets(changesets, ctx.clone(), repo.clone())
+        .compat()
+        .await?;
 
     for reference in walk_repo.references()? {
         let reference = reference?;
@@ -304,10 +283,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let commit = walk_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
 
-            let derived_tree = runtime.block_on_std(
+            let derived_tree =
                 TreeHandle::derive(ctx.clone(), repo.clone(), tree_mapping.clone(), *bcs_id)
-                    .compat(),
-            )?;
+                    .compat()
+                    .await?;
 
             let derived_tree_id = Oid::from_bytes(derived_tree.oid().as_ref())?;
 
@@ -324,6 +303,48 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
         println!("{} tree(s) are valid!", import_map.len());
     }
-
     Ok(())
+}
+
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
+    let app = args::MononokeApp::new("Mononoke Git Importer")
+        .with_advanced_args_hidden()
+        .build()
+        .arg(
+            Arg::with_name(ARG_DERIVE_TREES)
+                .long(ARG_DERIVE_TREES)
+                .required(false)
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name(ARG_HGGIT_COMPATIBILITY)
+                .long(ARG_HGGIT_COMPATIBILITY)
+                .help("Set commit extras for hggit compatibility")
+                .required(false)
+                .takes_value(false),
+        )
+        .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
+
+    let matches = app.get_matches();
+    let derive_trees = matches.is_present(ARG_DERIVE_TREES);
+    let hggit_compatibility = matches.is_present(ARG_HGGIT_COMPATIBILITY);
+    let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
+
+    args::init_cachelib(fb, &matches, None);
+    let logger = args::init_logging(fb, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let repo = args::create_repo(fb, &logger, &matches);
+
+    block_execute(
+        async move {
+            let repo = repo.compat().await?;
+            gitimport(ctx, repo, &path, derive_trees, hggit_compatibility).await
+        },
+        fb,
+        "gitimport",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
 }
