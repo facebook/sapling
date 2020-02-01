@@ -215,6 +215,7 @@ class ui(object):
             self.foutbytes = src.foutbytes
             self.ferr = src.ferr
             self.fin = src.fin
+            self.finbytes = src.finbytes
             self.pageractive = src.pageractive
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
@@ -237,6 +238,7 @@ class ui(object):
             self.foutbytes = util.stdoutbytes
             self.ferr = util.stderr
             self.fin = util.stdin
+            self.finbytes = util.stdinbytes
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False

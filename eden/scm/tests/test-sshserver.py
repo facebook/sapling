@@ -40,7 +40,9 @@ class mockrepo(object):
 class mockui(object):
     def __init__(self, inbytes):
         self.fin = io.BytesIO(inbytes)
+        self.finbytes = self.fin
         self.fout = io.BytesIO()
+        self.foutbytes = self.fout
         self.ferr = io.BytesIO()
 
 

@@ -74,6 +74,7 @@ queue = pycompat.queue.Queue
 socketserver = pycompat.socketserver
 stderr = pycompat.stderr
 stdin = pycompat.stdin
+stdinbytes = pycompat.stdinbytes
 stdout = pycompat.stdout
 stdoutbytes = pycompat.stdoutbytes
 stringio = pycompat.stringio

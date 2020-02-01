@@ -81,6 +81,7 @@ if sys.version_info[0] >= 3:
     range = range
 
     stdin = sys.stdin
+    stdinbytes = sys.stdin.buffer
     stdout = sys.stdout
     stdoutbytes = sys.stdout.buffer
     stderr = sys.stderr
@@ -156,6 +157,7 @@ else:
     ossep = os.sep
     osaltsep = os.altsep
     stdin = sys.stdin
+    stdinbytes = sys.stdin
     stdout = sys.stdout
     stdoutbytes = sys.stdout
     stderr = sys.stderr
