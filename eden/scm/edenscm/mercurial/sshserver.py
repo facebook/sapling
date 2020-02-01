@@ -19,7 +19,7 @@ import sys
 
 from . import encoding, error, hook, util, wireproto
 from .i18n import _
-from .pycompat import decodeutf8, range
+from .pycompat import decodeutf8, encodeutf8, range
 
 
 class sshserver(wireproto.abstractserverproto):
@@ -28,7 +28,7 @@ class sshserver(wireproto.abstractserverproto):
         self.repo = repo
         self.lock = None
         self.fin = ui.fin
-        self.fout = ui.fout
+        self.fout = ui.foutbytes
         self.name = "ssh"
 
         hook.redirect(True)
@@ -63,7 +63,7 @@ class sshserver(wireproto.abstractserverproto):
         return self.getargs(name)[0]
 
     def getfile(self, fpout):
-        self.sendresponse("")
+        self.sendresponse(b"")
         count = int(self.fin.readline())
         while count:
             fpout.write(self.fin.read(count))
@@ -73,7 +73,10 @@ class sshserver(wireproto.abstractserverproto):
         pass
 
     def sendresponse(self, v):
-        self.fout.write("%d\n" % len(v))
+        self.sendbytesresponse(encodeutf8(v))
+
+    def sendbytesresponse(self, v):
+        self.fout.write(b"%d\n" % len(v))
         self.fout.write(v)
         self.fout.flush()
 
@@ -90,8 +93,8 @@ class sshserver(wireproto.abstractserverproto):
         self.fout.flush()
 
     def sendpushresponse(self, rsp):
-        self.sendresponse("")
-        self.sendresponse(str(rsp.res))
+        self.sendresponse(b"")
+        self.sendresponse(bytes(rsp.res))
 
     def sendpusherror(self, rsp):
         self.sendresponse(rsp.res)
@@ -99,7 +102,7 @@ class sshserver(wireproto.abstractserverproto):
     def sendooberror(self, rsp):
         self.ui.ferr.write("%s\n-\n" % rsp.message)
         self.ui.ferr.flush()
-        self.fout.write("\n")
+        self.fout.write(b"\n")
         self.fout.flush()
 
     def serve_forever(self):
@@ -112,6 +115,7 @@ class sshserver(wireproto.abstractserverproto):
         sys.exit(0)
 
     handlers = {
+        bytes: sendbytesresponse,
         str: sendresponse,
         wireproto.streamres: sendstream,
         wireproto.pushres: sendpushresponse,
@@ -144,8 +148,8 @@ class sshserver(wireproto.abstractserverproto):
                     if r is not None:
                         self.sendresponse(r)
                 else:
-                    self.sendresponse("")
-        return cmd != ""
+                    self.sendresponse(b"")
+        return cmd != b""
 
     def _client(self):
         client = encoding.environ.get("SSH_CLIENT", "").split(" ", 1)[0]
