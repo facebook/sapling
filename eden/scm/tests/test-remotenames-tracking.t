@@ -131,7 +131,7 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
 
 Test renaming a remote and tracking
 
-  $ hg dbsh -c "with repo.lock(), repo.transaction('tr'): repo.svfs.write('remotenames', '')"
+  $ hg dbsh -c "with repo.lock(), repo.transaction('tr'): repo.svfs.writeutf8('remotenames', '')"
   $ setglobalconfig remotenames.rename.default=remote
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)

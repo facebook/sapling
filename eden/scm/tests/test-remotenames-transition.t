@@ -26,7 +26,7 @@ Set up extension and repos
 
 Test renaming
 
-  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'
+  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'
   $ setglobalconfig remotenames.rename.default=remote
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
@@ -51,7 +51,7 @@ Test hoisting basics
   remote/bm2
 
 Test hoisting name lookup
-  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'
+  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'
   $ hg log -r . -T '{hoistedbookmarks}\n'
   
   $ hg pull
@@ -64,7 +64,7 @@ Test hoisting name lookup
   cb9a9f314b8b -  - bm1 bm2 - remote/bm1 remote/bm2
 
 Test transition bookmark deletion
-  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'
+  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'
   $ hg book stable -r .
   $ echo b > b
   $ hg add b
@@ -84,7 +84,7 @@ Test transition bookmark deletion
      notdeleted                1:d2ae7f538514
 
 Test message
-  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.write("remotenames","")'
+  $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'
   $ readglobalconfig <<EOF
   > [remotenames]
   > transitionmessage = Test transition message
