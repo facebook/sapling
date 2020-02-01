@@ -885,7 +885,7 @@ class header(object):
         self.hunks = []
 
     def binary(self):
-        return any(h.startswith("index ") for h in self.header)
+        return any(h.startswith(b"index ") for h in self.header)
 
     def pretty(self,fd):
         for h in self.header:
