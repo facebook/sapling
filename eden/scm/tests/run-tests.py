@@ -1480,8 +1480,8 @@ class Test(unittest.TestCase):
         env["HGRCPATH"] = os.pathsep.encode("utf8").join(rcpaths)
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b"daemon.pids")
         env["HGEDITOR"] = (
-            '"' + PYTHON.decode("utf8") + '"' + ' -c "import sys; sys.exit(0)"'
-        )
+            '"' + PYTHON.decode("utf-8") + '"' + ' -c "import sys; sys.exit(0)"'
+        ).encode("utf-8")
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"] = "test"
         env["HGENCODING"] = "ascii"
