@@ -19,7 +19,7 @@ import sys
 
 from . import encoding, error, hook, util, wireproto
 from .i18n import _
-from .pycompat import range
+from .pycompat import decodeutf8, range
 
 
 class sshserver(wireproto.abstractserverproto):
@@ -42,20 +42,20 @@ class sshserver(wireproto.abstractserverproto):
         data = {}
         keys = args.split()
         for n in range(len(keys)):
-            argline = self.fin.readline()[:-1]
+            argline = decodeutf8(self.fin.readline()[:-1])
             arg, l = argline.split()
             if arg not in keys:
                 raise error.Abort(_("unexpected parameter %r") % arg)
             if arg == "*":
                 star = {}
                 for k in range(int(l)):
-                    argline = self.fin.readline()[:-1]
+                    argline = decodeutf8(self.fin.readline()[:-1])
                     arg, l = argline.split()
-                    val = self.fin.read(int(l))
+                    val = decodeutf8(self.fin.read(int(l)))
                     star[arg] = val
                 data["*"] = star
             else:
-                val = self.fin.read(int(l))
+                val = decodeutf8(self.fin.read(int(l)))
                 data[arg] = val
         return [data[k] for k in keys]
 

@@ -8,15 +8,12 @@ from edenscm.mercurial import sshserver, wireproto
 from hghave import require
 
 
-require(["py2"])
-
-
 class SSHServerGetArgsTests(unittest.TestCase):
     def testparseknown(self):
         tests = [
-            ("* 0\nnodes 0\n", ["", {}]),
+            (b"* 0\nnodes 0\n", ["", {}]),
             (
-                "* 0\nnodes 40\n1111111111111111111111111111111111111111\n",
+                b"* 0\nnodes 40\n1111111111111111111111111111111111111111\n",
                 ["1111111111111111111111111111111111111111", {}],
             ),
         ]
