@@ -52,6 +52,7 @@ import traceback
 import types
 import warnings
 import zlib
+from typing import BinaryIO, Iterable, List, Optional, Type
 
 import bindings
 
@@ -1707,7 +1708,7 @@ class filestat(object):
         return not self == other
 
 
-class atomictempfile(object):
+class atomictempfile(BinaryIO):
     """writable file object that atomically updates a file
 
     All writes will go to a temporary copy of the original file. Call
@@ -1722,19 +1723,14 @@ class atomictempfile(object):
     """
 
     def __init__(self, name, mode="w+b", createmode=None, checkambig=False):
+        # type: (str, str, Optional[int], bool) -> None
         self.__name = name  # permanent name
         self._tempname = mktempcopy(name, emptyok=("w" in mode), createmode=createmode)
         self._fp = posixfile(self._tempname, mode)
         self._checkambig = checkambig
 
-        # delegated methods
-        self.read = self._fp.read
-        self.write = self._fp.write
-        self.seek = self._fp.seek
-        self.tell = self._fp.tell
-        self.fileno = self._fp.fileno
-
     def close(self):
+        # type: () -> None
         if not self._fp.closed:
             # flush and force write to the disk
             syncfile(self._fp)
@@ -1753,6 +1749,7 @@ class atomictempfile(object):
                 rename(self._tempname, filename)
 
     def discard(self):
+        # type: () -> None
         if not self._fp.closed:
             try:
                 os.unlink(self._tempname)
@@ -1761,17 +1758,96 @@ class atomictempfile(object):
             self._fp.close()
 
     def __del__(self):
+        # type: () -> None
         if safehasattr(self, "_fp"):  # constructor actually did something
             self.discard()
 
     def __enter__(self):
+        # type: () -> atomictempfile
         return self
 
-    def __exit__(self, exctype, excvalue, traceback):
+    def __exit__(
+        self,
+        exctype,  # type: Optional[Type[BaseException]]
+        excvalue,  # type: Optional[BaseException]
+        traceback,  # type: Optional[types.TracebackType]
+    ):
+        # type: (...) -> None
         if exctype is not None:
             self.discard()
         else:
             self.close()
+
+    @property
+    def mode(self):
+        # type: () -> str
+        return self._fp.mode
+
+    @property
+    def name(self):
+        # type: () -> str
+        """Note that this returns the temporary name of the file."""
+        return self._tempname
+
+    def closed(self):
+        # type: () -> bool
+        return self._fp.closed()
+
+    def fileno(self):
+        # type: () -> int
+        return self._fp.fileno()
+
+    def flush(self):
+        # type: () -> None
+        return self._fp.flush()
+
+    def isatty(self):
+        # type: () -> bool
+        return False
+
+    def readable(self):
+        # type: () -> bool
+        return self._fp.readable()
+
+    def read(self, n=-1):
+        # type: (int) -> bytes
+        return self._fp.read(-1)
+
+    def readline(self, limit=-1):
+        # type: (int) -> bytes
+        return self._fp.readline(limit)
+
+    def readlines(self, hint=-1):
+        # type: (int) -> List[bytes]
+        return self._fp.readlines(hint)
+
+    def seek(self, offset, whence=0):
+        # type: (int, int) -> int
+        return self._fp.seek(offset, whence)
+
+    def seekable(self):
+        # type: () -> bool
+        return self._fp.seekable()
+
+    def tell(self):
+        # type: () -> int
+        return self._fp.tell()
+
+    def truncate(self, size=None):
+        # type: (Optional[int]) -> int
+        return self._fp.truncate(size)
+
+    def writable(self):
+        # type: () -> bool
+        return self._fp.writable()
+
+    def write(self, s):
+        # type: (bytes) -> None
+        return self._fp.write(s)
+
+    def writelines(self, lines):
+        # type: (Iterable[bytes]) -> None
+        return self._fp.writelines(lines)
 
 
 def unlinkpath(f, ignoremissing=False):
