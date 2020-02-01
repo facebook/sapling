@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test that the syntax of "unified tests" is properly processed

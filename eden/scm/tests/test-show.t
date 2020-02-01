@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 We assume that log basically works (it has its own tests). This just covers uses

@@ -13,9 +13,6 @@ from hghave import require
 from testutil import argspans
 
 
-require(["py2"])
-
-
 try:
     import parso
 
@@ -29,9 +26,9 @@ def testfunc():
     def foo(x, y):
         filepath, lineno, indent, spans = argspans.argspans()
         assert os.path.basename(filepath) == "test-argspans.py"
-        assert lineno == 38
+        assert lineno == 35
         assert indent == 12
-        assert spans == [((38, 16), (38, 17)), ((38, 19), (38, 24))]
+        assert spans == [((35, 16), (35, 17)), ((35, 19), (35, 24))]
 
     if True:
         if True:
@@ -43,9 +40,9 @@ def testfunc():
 
         def inner2(x, y):
             filepath, lineno, indent, spans = argspans.argspans(nested=2)
-            assert lineno == 52
+            assert lineno == 49
             assert indent == 4
-            assert spans == [((52, 11), (52, 13)), ((52, 15), (52, 20))]
+            assert spans == [((49, 11), (49, 13)), ((49, 15), (49, 20))]
 
         inner1(x, y)
 
@@ -57,7 +54,7 @@ def testoperator():
         def __eq__(self, rhs):
             filepath, lineno, indent, spans = argspans.argspans()
             assert indent == 4
-            assert spans == [((62, 11), (64, 7))]
+            assert spans == [((59, 11), (61, 7))]
 
     A() == """multi
     line

@@ -6,9 +6,6 @@ from edenscm.mercurial import bundlerepo, httppeer, localrepo, sshpeer, ui as ui
 from hghave import require
 
 
-require(["py2"])
-
-
 def checkobject(o):
     """Verify a constructed object conforms to interface rules.
 

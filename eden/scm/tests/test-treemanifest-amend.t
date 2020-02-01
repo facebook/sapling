@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Crash in histpack code path where the amend destination already exists
