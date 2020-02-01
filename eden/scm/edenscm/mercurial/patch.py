@@ -1215,7 +1215,7 @@ the hunk is left unchanged.
     skipfile, skipall = None, None
     pos, total = 1, sum(len(h.hunks) for h in headers)
 
-    class fd:
+    class fd(object):
         @staticmethod
         def write(*args, **opts):
             ui.writebytes(*args, **opts)
