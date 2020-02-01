@@ -125,6 +125,7 @@ class sshserver(wireproto.abstractserverproto):
 
     def serve_one(self):
         cmd = self.fin.readline()[:-1]
+        cmd = decodeutf8(cmd)
         if cmd:
             if util.safehasattr(util, "setprocname"):
                 client = encoding.environ.get("SSH_CLIENT", "").split(" ")[0]
