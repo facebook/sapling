@@ -293,9 +293,10 @@ class getpackclient(object):
         for filename, nodes in pycompat.iteritems(grouped):
             filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
             countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
-            rawnodes = "".join(n for n in nodes)
+            rawnodes = b"".join(n for n in nodes)
+            filename = pycompat.encodeutf8(filename)
 
-            pipeo.write("%s%s%s%s" % (filenamelen, filename, countlen, rawnodes))
+            pipeo.write(b"%s%s%s%s" % (filenamelen, filename, countlen, rawnodes))
             pipeo.flush()
         pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
         pipeo.flush()

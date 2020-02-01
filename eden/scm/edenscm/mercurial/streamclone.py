@@ -363,7 +363,7 @@ def consumev1(repo, fp, filecount, bytecount):
                                 "adding %s (%s)\n" % (name, util.bytecount(size))
                             )
                         # for backwards compat, name was partially encoded
-                        path = decodeutf8(store.decodedir(name))
+                        path = store.decodedir(decodeutf8(name))
                         with repo.svfs(path, "w", backgroundclose=True) as ofp:
                             for chunk in util.filechunkiter(fp, limit=size):
                                 prog.value += len(chunk)
