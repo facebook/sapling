@@ -204,7 +204,7 @@ def fastdiscovery(ui, local, remote):
         return ([nullid], False, [])
 
     # early exit if we know all the specified remote heads already
-    clcontains = cl.__contains__
+    clcontains = cl.nodemap.__contains__
     srvheads = list(n for n in srvheadhashes if clcontains(n))
     if len(srvheads) == len(srvheadhashes):
         ui.debug("all remote heads known locally\n")
