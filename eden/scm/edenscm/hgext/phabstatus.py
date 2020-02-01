@@ -3,9 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import collections
 import os
 import ssl
+import sys
 
 from edenscm.mercurial import (
     cmdutil,
@@ -18,6 +18,12 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
+
+
+if sys.version_info[0] < 3:
+    from collections import Iterator
+else:
+    from collections.abc import Iterator
 
 
 COMMITTEDSTATUS = "Committed"
@@ -245,7 +251,7 @@ def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
 
 
-class PeekaheadRevsetIter(collections.Iterator):
+class PeekaheadRevsetIter(Iterator):
     """
     PeekaheadRevsetIter is a helper class that wraps a revision set iterator,
     and allows the phabstatus code to peek ahead in the list as the logging
