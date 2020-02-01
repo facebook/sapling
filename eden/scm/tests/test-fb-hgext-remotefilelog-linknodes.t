@@ -336,7 +336,7 @@ Setup extension that logs ui.log linkrevfixup output on the stderr
   > def mylog(orig, self, service, *msg, **opts):
   >     if service in ['linkrevfixup']:
   >         kwstr = ", ".join("%s=%s" % (k, v) for k, v in
-  >                           sorted(opts.iteritems()))
+  >                           sorted(opts.items()))
   >         msgstr = msg[0] % msg[1:]
   >         self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
   >     return orig(self, service, *msg, **opts)

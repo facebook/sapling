@@ -1786,7 +1786,7 @@ def barlookup(repo):
     foo = {'foo': repo[0].node()}
     names = lambda r: foo.keys()
     namemap = lambda r, name: foo.get(name)
-    nodemap = lambda r, node: [name for name, n in foo.iteritems()
+    nodemap = lambda r, node: [name for name, n in foo.items()
                                if n == node]
     return namespaces.namespace(
         templatename="bar",

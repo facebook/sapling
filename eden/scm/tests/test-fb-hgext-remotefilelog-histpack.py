@@ -152,7 +152,7 @@ class histpacktestsbase(object):
         store = unionmetadatastore(pack)
 
         # Verify the pack contents
-        for (filename, node), (p1, p2, lastnode) in allentries.iteritems():
+        for (filename, node), (p1, p2, lastnode) in allentries.items():
             ap1, ap2, alinknode, acopyfrom = store.getnodeinfo(filename, node)
             ep1, ep2, elinknode = allentries[(filename, node)]
             self.assertEquals(ap1, ep1)

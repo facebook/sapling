@@ -9,12 +9,12 @@ def uisetup(ui):
 def mylog(orig, self, service, *msg, **opts):
     if service in ['wireproto_requests']:
         kw = []
-        for k, v in sorted(opts.iteritems()):
+        for k, v in sorted(opts.items()):
           if k == 'args':
             v = eval(v)
             for arg in v:
               if isinstance(arg, dict):
-                v = sorted(list(arg.iteritems()))
+                v = sorted(list(arg.items()))
             v = str(v)
           kw.append("%s=%s" % (k, v))
         kwstr = ", ".join(kw)

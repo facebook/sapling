@@ -73,7 +73,7 @@ def buildprobtable(fp, cmd="hg manifest tip"):
     t = sum(pycompat.itervalues(counts)) / 100.0
     fp.write("probtable = (")
     for i, (k, v) in enumerate(
-        sorted(counts.iteritems(), key=lambda x: x[1], reverse=True)
+        sorted(counts.items(), key=lambda x: x[1], reverse=True)
     ):
         if (i % 5) == 0:
             fp.write("\n    ")

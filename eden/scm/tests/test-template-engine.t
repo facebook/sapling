@@ -12,7 +12,7 @@
   > 
   >     def process(self, t, map):
   >         tmpl = self.loader(t)
-  >         for k, v in map.iteritems():
+  >         for k, v in map.items():
   >             if k in ('templ', 'ctx', 'repo', 'revcache', 'cache', 'troubles'):
   >                 continue
   >             if hasattr(v, '__call__'):
