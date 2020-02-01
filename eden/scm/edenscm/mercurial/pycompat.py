@@ -17,6 +17,7 @@ This contains aliases to hide python version-specific details from the core.
 
 from __future__ import absolute_import
 
+import abc
 import errno
 import getopt
 import os
@@ -133,6 +134,8 @@ if sys.version_info[0] >= 3:
             s = s.decode("utf-8")
         return s
 
+    from .pycompat3 import ABC
+
 
 else:
     import cStringIO
@@ -202,6 +205,9 @@ else:
         if isinstance(s, unicode):
             s = s.encode("utf-8")
         return s
+
+    class ABC(object):
+        __metaclass__ = abc.ABCMeta
 
 
 isjython = sysplatform.startswith("java")

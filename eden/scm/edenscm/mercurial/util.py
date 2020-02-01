@@ -601,10 +601,8 @@ class cowsortdict(cow, sortdict):
     """
 
 
-class transactional(object):
+class transactional(pycompat.ABC):
     """Base class for making a transactional type into a context manager."""
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def close(self):

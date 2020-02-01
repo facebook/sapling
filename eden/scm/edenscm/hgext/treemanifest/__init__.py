@@ -2486,13 +2486,10 @@ def _generatepackstream(
     yield wirepack.closepart()
 
 
-class generatingdatastore(object):
+class generatingdatastore(pycompat.ABC):
     """Abstract base class representing stores which generate trees on the
     fly and write them to the shared store. Thereafter, the stores replay the
     lookup operation on the shared store expecting it to succeed."""
-
-    # Make this an abstract class, so it cannot be instantiated on its own.
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, repo):
         self._repo = repo
@@ -2795,9 +2792,7 @@ class cachestoreserializer(object):
         return value
 
 
-class cachestorecommon(object):
-    __metaclass__ = abc.ABCMeta
-
+class cachestorecommon(pycompat.ABC):
     def __init__(self, store, version):
         self.store = store
         self.version = version

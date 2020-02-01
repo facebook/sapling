@@ -10,7 +10,7 @@ import abc
 import collections
 import json
 
-from edenscm.mercurial import dagop, node as nodemod
+from edenscm.mercurial import dagop, node as nodemod, pycompat
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
 from edenscm.mercurial.pycompat import ensurestr
 
@@ -111,9 +111,7 @@ def topological(graph):
     return order
 
 
-class BaseService(object):
-    __metaclass__ = abc.ABCMeta
-
+class BaseService(pycompat.ABC):
     def _makereferences(self, data):
         """Makes a References object from JSON data
 
