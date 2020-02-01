@@ -24,7 +24,7 @@ from . import encoding, identity, pycompat
 if getattr(sys, "frozen", None) is not None:
     module = pycompat.sysexecutable
 else:
-    module = pycompat.fsencode(__file__)
+    module = __file__
 
 try:
     # pyre-fixme[18]: Global name `unicode` is undefined.
@@ -60,7 +60,6 @@ _ungettext = None
 
 
 def setdatapath(datapath):
-    datapath = pycompat.fsdecode(datapath)
     localedir = os.path.join(datapath, pycompat.sysstr("locale"))
     t = gettextmod.translation("hg", localedir, _languages, fallback=True)
     global _ugettext

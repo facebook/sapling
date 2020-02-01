@@ -59,8 +59,6 @@ if sys.version_info[0] >= 3:
     import io
     import struct
 
-    fsencode = identity
-    fsdecode = identity
     oslinesep = os.linesep
     osname = os.name
     ospathsep = os.pathsep
@@ -153,21 +151,6 @@ else:
 
     # this can't be parsed on Python 3
     exec("def raisewithtb(exc, tb):\n" "    raise exc, None, tb\n")
-
-    def fsencode(filename):
-        """
-        Partial backport from os.py in Python 3, which only accepts bytes.
-        In Python 2, our paths should only ever be bytes, a unicode path
-        indicates a bug.
-        """
-        if isinstance(filename, str):
-            return filename
-        else:
-            raise TypeError("expect str, not %s" % type(filename).__name__)
-
-    # In Python 2, fsdecode() has a very chance to receive bytes. So it's
-    # better not to touch Python 2 part as it's already working fine.
-    fsdecode = identity
 
     def getdoc(obj):
         if isinstance(obj, str):

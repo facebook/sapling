@@ -994,7 +994,7 @@ def debugextensions(ui, **opts):
 
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         isinternal = extensions.ismoduleinternal(extmod)
-        extsource = pycompat.fsencode(extmod.__file__)
+        extsource = extmod.__file__
         if isdefault(extname) and opts.get("excludedefault", False):
             continue
 

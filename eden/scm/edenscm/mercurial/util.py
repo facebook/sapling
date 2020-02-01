@@ -1108,7 +1108,7 @@ if mainfrozen() and getattr(sys, "frozen", None) != "macosx_app":
 elif "HGDATAPATH" in os.environ:
     datapath = os.environ["HGDATAPATH"]
 else:
-    datapath = os.path.dirname(pycompat.fsencode(__file__))
+    datapath = os.path.dirname(__file__)
 
 i18n.setdatapath(datapath)
 
@@ -1131,11 +1131,8 @@ def hgexecutable():
                 _sethgexecutable(encoding.environ["EXECUTABLEPATH"])
             else:
                 _sethgexecutable(pycompat.sysexecutable)
-        elif (
-            os.path.basename(pycompat.fsencode(getattr(mainmod, "__file__", "")))
-            == "hg"
-        ):
-            _sethgexecutable(pycompat.fsencode(mainmod.__file__))
+        elif os.path.basename(getattr(mainmod, "__file__", "")) == "hg":
+            _sethgexecutable(mainmod.__file__)
         else:
             exe = findexe("hg") or os.path.basename(sys.argv[0])
             _sethgexecutable(exe)

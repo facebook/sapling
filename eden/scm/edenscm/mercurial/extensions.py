@@ -139,7 +139,6 @@ def loadpath(path, module_name):
     module_name = module_name.replace(".", "_")
     path = util.normpath(util.expandpath(path))
     # TODO: check whether path is "trusted" or not
-    module_name = pycompat.fsdecode(module_name)
     if ":" in path:
         prefix, content = path.split(":", 1)
         if prefix == "python-base64":
@@ -147,7 +146,6 @@ def loadpath(path, module_name):
 
             source = base64.decodestring(content.encode("utf-8"))
             return loadsource(source, module_name)
-    path = pycompat.fsdecode(path)
     if os.path.isdir(path):
         # module/__init__.py style
         d, f = os.path.split(path)
@@ -752,7 +750,7 @@ def _disabledpaths(strip_init=False):
     removes /__init__.py from packages if strip_init is True"""
     from edenscm import hgext
 
-    extpath = os.path.dirname(os.path.abspath(pycompat.fsencode(hgext.__file__)))
+    extpath = os.path.dirname(os.path.abspath(hgext.__file__))
     try:  # might not be a filesystem path
         files = os.listdir(extpath)
     except OSError:
