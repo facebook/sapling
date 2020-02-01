@@ -207,7 +207,7 @@ def _enableselectivepullforremote(repo, remote):
         enabledremotes.add(remote)
         with vfs(_selectivepullenabledfile, "w", atomictemp=True) as f:
             for renabled in enabledremotes:
-                f.write("%s\n" % renabled)
+                f.write(pycompat.encodeutf8("%s\n" % renabled))
 
 
 def _disableselectivepull(repo):
