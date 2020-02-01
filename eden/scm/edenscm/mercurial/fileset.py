@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import re
 
-from . import error, merge, parser, pycompat, registrar, scmutil, util
+from . import error, merge, parser, pycompat, registrar, scmutil, util, winutil
 from .i18n import _
 
 
@@ -358,7 +358,7 @@ def portable(mctx, x):
     """
     # i18n: "portable" is a keyword
     getargs(x, 0, 0, _("portable takes no arguments"))
-    checkwinfilename = util.checkwinfilename
+    checkwinfilename = winutil.checkwinfilename
     return [f for f in mctx.subset if checkwinfilename(f) is None]
 
 

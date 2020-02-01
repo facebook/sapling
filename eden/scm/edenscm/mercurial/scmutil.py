@@ -36,6 +36,7 @@ from . import (
     util,
     vfs,
     visibility,
+    winutil,
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
@@ -324,7 +325,7 @@ def checkportable(ui, f):
     checkfilename(f)
     abort, warn = checkportabilityalert(ui)
     if abort or warn:
-        msg = util.checkwinfilename(f)
+        msg = winutil.checkwinfilename(f)
         if msg:
             msg = "%s: %s" % (msg, util.shellquote(f))
             if abort:

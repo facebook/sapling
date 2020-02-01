@@ -83,9 +83,6 @@ httpserver = urllibcompat.httpserver
 urlerr = urllibcompat.urlerr
 urlreq = urllibcompat.urlreq
 
-# workaround for win32mbcs
-_filenamebytestr = pycompat.bytestr
-
 
 def isatty(fp):
     try:
@@ -1303,89 +1300,14 @@ def copyfiles(src, dst, hardlink=None, num=0, progress=None):
     return hardlink, num
 
 
-_winreservednames = {
-    "con",
-    "prn",
-    "aux",
-    "nul",
-    "com1",
-    "com2",
-    "com3",
-    "com4",
-    "com5",
-    "com6",
-    "com7",
-    "com8",
-    "com9",
-    "lpt1",
-    "lpt2",
-    "lpt3",
-    "lpt4",
-    "lpt5",
-    "lpt6",
-    "lpt7",
-    "lpt8",
-    "lpt9",
-}
-_winreservedchars = ':*?"<>|'
-
-
-def checkwinfilename(path):
-    r"""Check that the base-relative path is a valid filename on Windows.
-    Returns None if the path is ok, or a UI string describing the problem.
-
-    >>> checkwinfilename(b"just/a/normal/path")
-    >>> checkwinfilename(b"foo/bar/con.xml")
-    "filename contains 'con', which is reserved on Windows"
-    >>> checkwinfilename(b"foo/con.xml/bar")
-    "filename contains 'con', which is reserved on Windows"
-    >>> checkwinfilename(b"foo/bar/xml.con")
-    >>> checkwinfilename(b"foo/bar/AUX/bla.txt")
-    "filename contains 'AUX', which is reserved on Windows"
-    >>> checkwinfilename(b"foo/bar/bla:.txt")
-    "filename contains ':', which is reserved on Windows"
-    >>> checkwinfilename(b"foo/bar/b\07la.txt")
-    "filename contains '\\x07', which is invalid on Windows"
-    >>> checkwinfilename(b"foo/bar/bla ")
-    "filename ends with ' ', which is not allowed on Windows"
-    >>> checkwinfilename(b"../bar")
-    >>> checkwinfilename(b"foo\\")
-    "filename ends with '\\', which is invalid on Windows"
-    >>> checkwinfilename(b"foo\\/bar")
-    "directory name ends with '\\', which is invalid on Windows"
-    """
-    if path.endswith("\\"):
-        return _("filename ends with '\\', which is invalid on Windows")
-    if "\\/" in path:
-        return _("directory name ends with '\\', which is invalid on Windows")
-    for n in path.replace("\\", "/").split("/"):
-        if not n:
-            continue
-        for c in _filenamebytestr(n):
-            if c in _winreservedchars:
-                return _("filename contains '%s', which is reserved " "on Windows") % c
-            if ord(c) <= 31:
-                return _(
-                    "filename contains '%s', which is invalid " "on Windows"
-                ) % escapestr(c)
-        base = n.split(".")[0]
-        if base and base.lower() in _winreservednames:
-            return _("filename contains '%s', which is reserved " "on Windows") % base
-        t = n[-1:]
-        if t in ". " and n not in "..":
-            return _("filename ends with '%s', which is not allowed " "on Windows") % t
-
-
 def _reloadenv():
     """Reset some functions that are sensitive to environment variables"""
 
-    global checkosfilename, timer, getuser, istest
+    global timer, getuser, istest
 
     if pycompat.iswindows:
-        checkosfilename = checkwinfilename
         timer = time.clock
     else:
-        checkosfilename = platform.checkosfilename
         timer = time.time
 
     if safehasattr(time, "perf_counter"):
@@ -1412,6 +1334,7 @@ def _reloadenv():
 
 # To keep pyre happy
 timer = time.time
+checkosfilename = platform.checkosfilename
 _reloadenv()
 
 

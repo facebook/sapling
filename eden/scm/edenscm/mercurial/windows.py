@@ -23,7 +23,7 @@ import tempfile
 # pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import osutil
 
-from . import encoding, error, policy, pycompat, win32
+from . import encoding, error, pycompat, win32, winutil
 from .i18n import _
 
 
@@ -50,6 +50,7 @@ spawndetached = win32.spawndetached
 split = os.path.split
 testpid = win32.testpid
 unlink = win32.unlink
+checkosfilename = winutil.checkwinfilename
 
 umask = 0o022
 
