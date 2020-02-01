@@ -251,13 +251,13 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server \
   > --debug --reports $TESTTMP/reports.txt
   creating a peer took: * (glob)
-  single wireproto command took: * (glob)
   running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  single wireproto command took: * (glob)
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -304,13 +304,13 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   > --debug --reports $TESTTMP/reports.txt \
   > --config sendunbundlereplay.respondlightly=off
   creating a peer took: * (glob)
-  single wireproto command took: * (glob)
   running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  single wireproto command took: * (glob)
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
   remote: pushing 1 changeset:
