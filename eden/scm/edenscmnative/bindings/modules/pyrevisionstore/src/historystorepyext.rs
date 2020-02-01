@@ -85,7 +85,9 @@ fn from_node_info(py: Python, key: &Key, info: &NodeInfo) -> PyTuple {
             if info.parents[0].path.is_empty() {
                 Python::None(py)
             } else {
-                PyBytes::new(py, info.parents[0].path.as_byte_slice()).into_object()
+                PyPathBuf::from(info.parents[0].path.clone())
+                    .to_py_object(py)
+                    .into_object()
             }
         } else {
             Python::None(py)
