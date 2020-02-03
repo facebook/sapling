@@ -111,7 +111,8 @@ impl BonsaiDerived for FilenodesOnlyPublic {
             if filenodes.is_empty() {
                 // This commit didn't create any new filenodes, and it's root manifest is the
                 // same as one of the parents (that can happen if this commit is empty).
-                // In that case
+                // In that case we don't need to insert a root filenode - it will be inserted
+                // when parent is derived.
                 Ok(FilenodesOnlyPublic {
                     root_filenode: None,
                 })
@@ -563,7 +564,7 @@ mod tests {
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
 
-        let child_empty = CreateCommitContext::new_root(&ctx, &repo)
+        let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
             .add_file("file", "content")
             .commit()
             .await?;
@@ -578,6 +579,7 @@ mod tests {
             .get(ctx.clone(), vec![parent_empty, child_empty])
             .compat()
             .await?;
+
         assert_eq!(maps.len(), 2);
         Ok(())
     }
