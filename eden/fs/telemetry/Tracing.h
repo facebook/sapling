@@ -9,12 +9,13 @@
 
 #include <cstdint>
 
-#include <folly/CachelinePadded.h>
 #include <folly/ClockGettimeWrappers.h>
 #include <folly/Singleton.h>
 #include <folly/SpinLock.h>
 #include <folly/ThreadLocal.h>
+#include <folly/Utility.h>
 #include <folly/io/async/Request.h>
+#include <folly/lang/Aligned.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/utils/IDGen.h"
@@ -137,7 +138,7 @@ class Tracer {
   friend class ThreadLocalTracePoints;
   struct Tag {};
 
-  folly::CachelinePadded<std::atomic<bool>> enabled_{false};
+  folly::cacheline_aligned<std::atomic<bool>> enabled_{folly::in_place, false};
   folly::ThreadLocal<ThreadLocalTracePoints, Tag, folly::AccessModeStrict>
       tltp_;
   // This is written to only when a thread dies and when
