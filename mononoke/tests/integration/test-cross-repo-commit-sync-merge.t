@@ -78,6 +78,7 @@ run the sync, expected to fail, as parent of the synced commit is not present in
   * syncing 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 (glob)
   * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
   * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
+  * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
   [1]
 
 insert sync mapping entry
