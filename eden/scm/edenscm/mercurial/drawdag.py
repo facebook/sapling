@@ -272,6 +272,7 @@ def _parseasciigraph(text):
 
 class simplefilectx(object):
     def __init__(self, path, data, renamed=None):
+        assert isinstance(data, bytes)
         self._data = data
         self._path = path
         self._renamed = renamed
@@ -299,6 +300,7 @@ class simplecommitctx(context.committablectx):
         added = []
         removed = []
         for path, data in filemap.items():
+            assert isinstance(data, str)
             # check "(renamed from)". mark the source as removed
             m = re.search("\(renamed from (.+)\)\s*\Z", data, re.S)
             if m:
@@ -555,7 +557,7 @@ def drawdag(repo, text, **opts):
             # If it's a merge, take the files and contents from the parents
             for f in pctxs[1].manifest():
                 if f not in pctxs[0].manifest():
-                    added[f] = pctxs[1][f].data()
+                    added[f] = pycompat.decodeutf8(pctxs[1][f].data())
         else:
             # If it's not a merge, add a single file, if defaultfiles is set
             if defaultfiles:
