@@ -197,7 +197,7 @@ pub async fn subcommand_fetch_phase_impl<'a>(
         bail!("unknown hash type: {}", ty);
     };
 
-    let public_phases = phases.get_public(ctx, vec![bcs_id]).compat().await?;
+    let public_phases = phases.get_public(ctx, vec![bcs_id], false).compat().await?;
 
     if public_phases.contains(&bcs_id) {
         println!("public");

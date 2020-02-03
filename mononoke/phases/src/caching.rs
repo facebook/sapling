@@ -58,6 +58,7 @@ impl CachingPhases {
     fn get_cacher(
         &self,
         ctx: &CoreContext,
+        ephemeral_derive: bool,
     ) -> GetOrFillMultipleFromCacheLayers<ChangesetId, Phase> {
         let repo_id = self.phases_store.get_repoid();
         let report_mc_result = |res: McResult<()>| {
@@ -74,11 +75,18 @@ impl CachingPhases {
             cloned!(ctx);
             move |cs_ids: HashSet<ChangesetId>| {
                 phases_store
-                    .get_public(ctx.clone(), cs_ids.into_iter().collect())
+                    .get_public(ctx.clone(), cs_ids.into_iter().collect(), ephemeral_derive)
                     .map(move |public| public.into_iter().map(|key| (key, Phase::Public)).collect())
                     .boxify()
             }
         };
+
+        let determinator = if ephemeral_derive {
+            do_not_cache_determinator
+        } else {
+            phase_caching_determinator
+        };
+
         GetOrFillMultipleFromCacheLayers {
             repo_id,
             get_cache_key: Arc::new(get_cache_key),
@@ -89,7 +97,7 @@ impl CachingPhases {
             serialize: Arc::new(|phase| Bytes::from(phase.to_string())),
             report_mc_result: Arc::new(report_mc_result),
             get_from_db: Arc::new(get_from_db),
-            determinator: phase_caching_determinator,
+            determinator,
         }
     }
 }
@@ -102,13 +110,18 @@ fn phase_caching_determinator(phase: &Phase) -> CacheDisposition {
     }
 }
 
+fn do_not_cache_determinator(_phase: &Phase) -> CacheDisposition {
+    CacheDisposition::Ignore
+}
+
 impl Phases for CachingPhases {
     fn get_public(
         &self,
         ctx: CoreContext,
         cs_ids: Vec<ChangesetId>,
+        ephemeral_derive: bool,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        let cacher = self.get_cacher(&ctx);
+        let cacher = self.get_cacher(&ctx, ephemeral_derive);
         cacher
             .run(cs_ids.into_iter().collect())
             .map(|cs_to_phase| {
@@ -131,7 +144,7 @@ impl Phases for CachingPhases {
         ctx: CoreContext,
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        let cacher = self.get_cacher(&ctx);
+        let cacher = self.get_cacher(&ctx, false);
         self.phases_store
             .add_reachable_as_public(ctx, heads)
             .map(move |marked| {

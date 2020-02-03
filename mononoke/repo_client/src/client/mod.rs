@@ -1018,7 +1018,7 @@ impl HgCommands for RepoClient {
                 cloned!(ctx);
                 move |(bcs_ids, bcs_hg_mapping)| {
                     phases_hint
-                        .get_public(ctx, bcs_ids)
+                        .get_public(ctx, bcs_ids, false)
                         .map(move |public_csids| {
                             public_csids
                                 .into_iter()

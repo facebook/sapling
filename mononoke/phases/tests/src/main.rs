@@ -226,7 +226,8 @@ fn get_phase_hint_test(fb: FacebookInit) {
                 other_public_commit,
                 draft_commit,
                 other_draft_commit
-            ]
+            ],
+            false
         ))
         .unwrap(),
         hashset! {
@@ -299,7 +300,7 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     let phases = repo.get_phases();
     // get phases mapping for all `bcss` in the same order
     let get_phases_map = || {
-        phases.get_public(ctx.clone(), bcss.clone()).map({
+        phases.get_public(ctx.clone(), bcss.clone(), false).map({
             cloned!(bcss);
             move |public| {
                 bcss.iter()

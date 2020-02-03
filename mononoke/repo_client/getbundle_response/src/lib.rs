@@ -266,7 +266,7 @@ fn prepare_phases<'a>(
             cloned!(ctx, phases);
             move |bonsai_node_mapping| {
                 phases
-                    .get_public(ctx, bonsai_node_mapping.keys().cloned().collect())
+                    .get_public(ctx, bonsai_node_mapping.keys().cloned().collect(), false)
                     .map(move |public| (public, bonsai_node_mapping))
             }
         })
@@ -345,7 +345,7 @@ fn calculate_public_roots(
                     cloned!(ctx, phases);
                     move |(parents, visited)| {
                         phases
-                            .get_public(ctx, parents.iter().cloned().collect())
+                            .get_public(ctx, parents.iter().cloned().collect(), false)
                             .map(move |public_phases| (public_phases, parents, visited))
                     }
                 })
