@@ -75,37 +75,147 @@ pub(crate) fn derive_impl<
     derived_mapping: Mapping,
     start_csid: ChangesetId,
 ) -> impl Future<Item = Derived, Error = Error> {
-    // Find all ancestor commits that don't have derived data generated.
-    // Note that they might not be topologically sorted.
+    find_underived(&ctx, &repo, &derived_mapping, &start_csid, None)
+        .map({
+            cloned!(ctx);
+            move |commits_not_derived_to_parents| {
+                let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
+                    .expect("commit graph has cycles!");
+                let sz = topo_sorted_commit_graph.len();
+                if sz > 100 {
+                    warn!(
+                        ctx.logger(),
+                        "derive_impl is called on a graph of size {}", sz
+                    );
+                }
+                stream::iter_ok(
+                    topo_sorted_commit_graph
+                    .into_iter()
+                    // Note - sort_topological returns all nodes including commits which were already
+                    // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
+                    // The '.filter()' below removes ["b"]
+                    .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id)),
+                )
+            }
+        })
+        .flatten_stream()
+        .chunks(100)
+        .fold(0usize, {
+            cloned!(ctx, derived_mapping, repo);
+            move |acc, csids| {
+                let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
+                let chunk_size = csids.len();
+                stream::iter_ok(csids)
+                    .for_each({
+                        cloned!(ctx, mapping, repo);
+                        move |csid| {
+                            derive_may_panic(ctx.clone(), repo.clone(), mapping.clone(), csid)
+                                .timed({
+                                    cloned!(ctx);
+                                    move |stats, _| {
+                                        ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
+                                            "Generating derived data",
+                                            Some(format!("{} {}", Derived::NAME, csid)),
+                                        );
+                                        Ok(())
+                                    }
+                                })
+                        }
+                    })
+                    .and_then({
+                        cloned!(ctx);
+                        move |_| {
+                            mapping.persist(ctx.clone()).traced(
+                                &ctx.trace(),
+                                "derive::update_mapping",
+                                None,
+                            )
+                        }
+                    })
+                    .map(move |_| acc + chunk_size)
+            }
+        })
+        .timed({
+            cloned!(ctx);
+            move |stats, count| {
+                let count = *count.unwrap_or(&0);
+                if stats.completion_time > DERIVE_TRACE_THRESHOLD {
+                    warn!(
+                        ctx.logger(),
+                        "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
+                        count,
+                        Derived::NAME,
+                        start_csid,
+                        stats.completion_time,
+                        ctx.trace().id(),
+                    );
+                    ctx.scuba()
+                        .clone()
+                        .add("trace", ctx.trace().id().to_string())
+                        .add_future_stats(&stats)
+                        .log_with_msg(
+                            "Slow derivation",
+                            Some(format!(
+                                "type={},count={},csid={}",
+                                Derived::NAME,
+                                count,
+                                start_csid.to_string()
+                            )),
+                        );
+                    tokio::spawn(ctx.trace_upload().discard());
+                }
+                Ok(())
+            }
+        })
+        .and_then(move |_| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
+}
+
+pub(crate) fn find_underived<
+    Derived: BonsaiDerived,
+    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derived_mapping: &Mapping,
+    start_csid: &ChangesetId,
+    limit: Option<u64>,
+) -> impl Future<Item = HashMap<ChangesetId, Vec<ChangesetId>>, Error = Error> {
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
-
-    bounded_traversal::bounded_traversal_stream(100, Some(start_csid), {
+    bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
         cloned!(ctx, derived_mapping);
         move |cs_id| {
             DeriveNode::from_bonsai(ctx.clone(), derived_mapping.clone(), cs_id).and_then({
                 cloned!(ctx, changeset_fetcher, visited);
-                move |derive_node| match derive_node {
-                    DeriveNode::Derived(_) => future::ok((None, vec![])).left_future(),
-                    DeriveNode::Bonsai(bcs_id) => changeset_fetcher
-                        .get_parents(ctx.clone(), bcs_id)
-                        .map({
-                            cloned!(visited);
-                            move |parents| {
-                                let parents_to_visit: Vec<_> = {
-                                    let mut visited = visited.lock().unwrap();
-                                    parents
-                                        .iter()
-                                        .cloned()
-                                        .filter(|p| visited.insert(*p))
-                                        .collect()
-                                };
-                                // Topological sort needs parents, so return them here
-                                (Some((bcs_id, parents)), parents_to_visit)
-                            }
-                        })
-                        .right_future(),
+                move |derive_node| {
+                    if let Some(limit) = limit {
+                        let visited = visited.lock().unwrap();
+                        if visited.len() as u64 > limit {
+                            return future::ok((None, vec![])).left_future();
+                        }
+                    }
+                    match derive_node {
+                        DeriveNode::Derived(_) => future::ok((None, vec![])).left_future(),
+                        DeriveNode::Bonsai(bcs_id) => changeset_fetcher
+                            .get_parents(ctx.clone(), bcs_id)
+                            .map({
+                                cloned!(visited);
+                                move |parents| {
+                                    let parents_to_visit: Vec<_> = {
+                                        let mut visited = visited.lock().unwrap();
+                                        parents
+                                            .iter()
+                                            .cloned()
+                                            .filter(|p| visited.insert(*p))
+                                            .collect()
+                                    };
+                                    // Topological sort needs parents, so return them here
+                                    (Some((bcs_id, parents)), parents_to_visit)
+                                }
+                            })
+                            .right_future(),
+                    }
                 }
             })
         }
@@ -113,97 +223,6 @@ pub(crate) fn derive_impl<
     .traced(&ctx.trace(), "derive::find_dependencies", None)
     .filter_map(|x| x)
     .collect_to()
-    .map({
-        cloned!(ctx);
-        move |commits_not_derived_to_parents| {
-            let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
-                .expect("commit graph has cycles!");
-            let sz = topo_sorted_commit_graph.len();
-            if sz > 100 {
-                warn!(
-                    ctx.logger(),
-                    "derive_impl is called on a graph of size {}", sz
-                );
-            }
-            stream::iter_ok(
-                topo_sorted_commit_graph
-                    .into_iter()
-                    // Note - sort_topological returns all nodes including commits which were already
-                    // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
-                    // The '.filter()' below removes ["b"]
-                    .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id)),
-            )
-        }
-    })
-    .flatten_stream()
-    .chunks(100)
-    .fold(0usize, {
-        cloned!(ctx, derived_mapping, repo);
-        move |acc, csids| {
-            let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
-            let chunk_size = csids.len();
-            stream::iter_ok(csids)
-                .for_each({
-                    cloned!(ctx, mapping, repo);
-                    move |csid| {
-                        derive_may_panic(ctx.clone(), repo.clone(), mapping.clone(), csid).timed({
-                            cloned!(ctx);
-                            move |stats, _| {
-                                ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
-                                    "Generating derived data",
-                                    Some(format!("{} {}", Derived::NAME, csid)),
-                                );
-                                Ok(())
-                            }
-                        })
-                    }
-                })
-                .and_then({
-                    cloned!(ctx);
-                    move |_| {
-                        mapping.persist(ctx.clone()).traced(
-                            &ctx.trace(),
-                            "derive::update_mapping",
-                            None,
-                        )
-                    }
-                })
-                .map(move |_| acc + chunk_size)
-        }
-    })
-    .timed({
-        cloned!(ctx);
-        move |stats, count| {
-            let count = *count.unwrap_or(&0);
-            if stats.completion_time > DERIVE_TRACE_THRESHOLD {
-                warn!(
-                    ctx.logger(),
-                    "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
-                    count,
-                    Derived::NAME,
-                    start_csid,
-                    stats.completion_time,
-                    ctx.trace().id(),
-                );
-                ctx.scuba()
-                    .clone()
-                    .add("trace", ctx.trace().id().to_string())
-                    .add_future_stats(&stats)
-                    .log_with_msg(
-                        "Slow derivation",
-                        Some(format!(
-                            "type={},count={},csid={}",
-                            Derived::NAME,
-                            count,
-                            start_csid.to_string()
-                        )),
-                    );
-                tokio::spawn(ctx.trace_upload().discard());
-            }
-            Ok(())
-        }
-    })
-    .and_then(move |_| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
 }
 
 // Panics if any of the parents is not derived yet
@@ -650,6 +669,57 @@ mod test {
                 TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), third_cs_id)
                     .compat()
                     .await?;
+
+                Ok(())
+            }
+                .boxed()
+                .compat(),
+        )
+    }
+
+    #[fbinit::test]
+    fn test_count_underived(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut runtime = Runtime::new()?;
+
+        let repo = linear::getrepo(fb);
+        runtime.block_on(
+            async move {
+                // This is the parent of the root commit
+                // ...
+                //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
+                //  |
+                //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+                let after_root_cs_id =
+                    resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+                let root_cs_id =
+                    resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+
+                let mapping = Arc::new(TestMapping::new());
+                let underived =
+                    TestGenNum::count_underived(&ctx, &repo, &mapping, &after_root_cs_id, 100)
+                        .compat()
+                        .await?;
+                assert_eq!(underived, 2);
+
+                let underived =
+                    TestGenNum::count_underived(&ctx, &repo, &mapping, &root_cs_id, 100)
+                        .compat()
+                        .await?;
+                assert_eq!(underived, 1);
+
+                let underived =
+                    TestGenNum::count_underived(&ctx, &repo, &mapping, &after_root_cs_id, 1)
+                        .compat()
+                        .await?;
+                assert_eq!(underived, 2);
+
+                let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+                let underived =
+                    TestGenNum::count_underived(&ctx, &repo, &mapping, &master_cs_id, 100)
+                        .compat()
+                        .await?;
+                assert_eq!(underived, 11);
 
                 Ok(())
             }

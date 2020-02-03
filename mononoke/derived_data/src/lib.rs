@@ -11,6 +11,7 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -58,6 +59,22 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
         derive_impl::derive_impl::<Self, Mapping>(ctx, repo, mapping, csid).boxify()
+    }
+
+    /// Returns min(number of ancestors of `csid` to be derived, `limit`)
+    fn count_underived<Mapping>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        mapping: &Mapping,
+        csid: &ChangesetId,
+        limit: u64,
+    ) -> BoxFuture<u64, Error>
+    where
+        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
+    {
+        derive_impl::find_underived::<Self, Mapping>(ctx, repo, mapping, csid, Some(limit))
+            .map(|underived| underived.len() as u64)
+            .boxify()
     }
 }
 
