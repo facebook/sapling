@@ -16,6 +16,7 @@ import errno
 import hashlib
 import os
 import stat
+from typing import Optional
 
 import bindings
 
@@ -696,9 +697,10 @@ class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs, metavfs):
             self.fncache.add(path)
         return self.vfs(self.encode(path), mode, *args, **kw)
 
-    def join(self, path):
+    def join(self, path, *insidef):
+        # type: (Optional[str], str) -> str
         if path:
-            return self.vfs.join(self.encode(path))
+            return self.vfs.join(self.encode(os.path.join(path, *insidef)))
         else:
             return self.vfs.join(path)
 

@@ -70,6 +70,11 @@ class abstractvfs(pycompat.ABC):
         # type: (str, str, bool, bool, bool, bool, bool, bool) -> BinaryIO
         raise NotImplementedError("must be implemented by subclasses")
 
+    @abc.abstractmethod
+    def join(self, path, *insidef):
+        # type: (Optional[str], str) -> str
+        raise NotImplementedError("must be implemented by subclasses")
+
     def tryread(self, path):
         # type: str -> bytes
         """gracefully return an empty string for missing files"""
@@ -527,6 +532,7 @@ class vfs(abstractvfs):
             self.write(dst, src)
 
     def join(self, path, *insidef):
+        # type: (Optional[str], str) -> str
         if path:
             return os.path.join(self.base, path, *insidef)
         else:
@@ -560,6 +566,7 @@ class filtervfs(abstractvfs, proxyvfs):
         return self.vfs(self._filter(path), *args, **kwargs)
 
     def join(self, path, *insidef):
+        # type: (Optional[str], str) -> str
         if path:
             return self.vfs.join(self._filter(self.vfs.reljoin(path, *insidef)))
         else:
@@ -581,6 +588,7 @@ class readonlyvfs(abstractvfs, proxyvfs):
         return self.vfs(path, mode, *args, **kw)
 
     def join(self, path, *insidef):
+        # type: (Optional[str], str) -> str
         return self.vfs.join(path, *insidef)
 
 
@@ -751,10 +759,15 @@ _blobvfsre = re.compile(r"\A[a-f0-9]{64}\Z")
 
 
 class blobvfs(vfs):
-    def join(self, path):
+    def join(self, path, *insidef):
+        # type: (Optional[str], str) -> str
         """split the path at first two characters, like: XX/XXXXX..."""
-        if not _blobvfsre.match(path):
-            raise error.ProgrammingError("unexpected blob vfs path: %s" % path)
+        if path is None or not _blobvfsre.match(path):
+            raise error.ProgrammingError("unexpected blob vfs path: %r" % (path,))
+        if insidef:
+            raise error.ProgrammingError(
+                "unexpected blob vfs path: %r, %r" % (path, insidef)
+            )
         return super(blobvfs, self).join(path[0:2], path[2:])
 
     def walk(self, path=None, onerror=None):
