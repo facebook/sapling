@@ -30,8 +30,9 @@ use tokio::net::TcpStream;
 use clap::ArgMatches;
 
 use failure_ext::{err_downcast_ref, SlogKVError};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
-use futures_stats::Timed;
+use futures_ext::StreamExt;
+use futures_preview::compat::Future01CompatExt;
+use futures_stats::TimedFutureExt;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
 use sshrelay::{
@@ -45,7 +46,11 @@ const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 // Wait for up to 1sec to let Scuba flush it's data to the server.
 const SCUBA_TIMEOUT_MS: i64 = 1000;
 
-pub fn cmd(fb: FacebookInit, main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> BoxFuture<(), Error> {
+pub async fn cmd(
+    fb: FacebookInit,
+    main: &ArgMatches<'_>,
+    sub: &ArgMatches<'_>,
+) -> Result<(), Error> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
             let query_string = main.value_of("query-string").unwrap_or("");
@@ -84,11 +89,12 @@ pub fn cmd(fb: FacebookInit, main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> Box
                 mock_username,
                 show_session_output,
             }
-            .run();
+            .run()
+            .await;
         }
-        return future::err(format_err!("Missing repository")).boxify();
+        return Err(format_err!("Missing repository"));
     }
-    return future::err(format_err!("Only stdio server is supported")).boxify();
+    return Err(format_err!("Only stdio server is supported"));
 }
 
 struct StdioRelay<'a> {
@@ -108,7 +114,7 @@ struct StdioRelay<'a> {
 }
 
 impl<'a> StdioRelay<'a> {
-    fn run(self) -> BoxFuture<(), Error> {
+    async fn run(self) -> Result<(), Error> {
         let mut scuba_logger =
             ScubaSampleBuilder::with_opt_table(self.fb, self.scuba_table.map(|v| v.to_owned()));
 
@@ -182,59 +188,39 @@ impl<'a> StdioRelay<'a> {
 
         scuba_logger.log_with_msg("Hgcli proxy - Connected", None);
 
-        self.internal_run(stdio)
-            .timed(move |stats, result| {
-                scuba_logger.add_future_stats(&stats);
-
-                match result {
-                    Ok(_) => scuba_logger.log_with_msg("Hgcli proxy - Success", None),
-                    Err(err) => {
-                        scuba_logger.log_with_msg("Hgcli proxy - Failure", format!("{:#?}", err))
-                    }
-                }
-
-                scuba_logger.flush(SCUBA_TIMEOUT_MS);
-                Ok(())
-            })
-            .then(move |result| match result {
-                Ok(()) => Ok(()),
-                Err(err) => {
-                    error!(client_logger, "Error in hgcli proxy"; SlogKVError(err));
-                    Ok(())
-                }
-            })
-            .boxify()
+        let (stats, result) = self.internal_run(stdio).timed().await;
+        scuba_logger.add_future_stats(&stats);
+        match result {
+            Ok(_) => scuba_logger.log_with_msg("Hgcli proxy - Success", None),
+            Err(err) => {
+                scuba_logger.log_with_msg("Hgcli proxy - Failure", format!("{:#?}", err));
+                error!(client_logger, "Error in hgcli proxy"; SlogKVError(err));
+            }
+        }
+        scuba_logger.flush(SCUBA_TIMEOUT_MS);
+        Ok(())
     }
 
-    fn establish_connection(&self) -> impl Future<Item = SslStream<TcpStream>, Error = Error> {
+    async fn establish_connection(&self) -> Result<SslStream<TcpStream>, Error> {
         let path = self.path.to_owned();
         let ssl_common_name = self.ssl_common_name.to_owned();
 
-        let addr: SocketAddr = try_boxfuture!(path.parse());
-        // Open socket
-        let socket = TcpStream::connect(&addr).map_err(move |err| {
-            format_err!("connecting to Mononoke {} socket '{}' failed", path, err)
-        });
-
         let connector = {
-            let mut connector = try_boxfuture!(SslConnector::builder(SslMethod::tls()));
+            let mut connector = SslConnector::builder(SslMethod::tls())?;
 
             if self.insecure {
                 connector.set_verify(SslVerifyMode::NONE);
             }
 
-            let pkcs12 = try_boxfuture!(build_identity(
-                self.cert.to_owned(),
-                self.private_key.to_owned(),
-            ));
-            try_boxfuture!(connector.set_certificate(&pkcs12.cert));
-            try_boxfuture!(connector.set_private_key(&pkcs12.pkey));
+            let pkcs12 = build_identity(self.cert.to_owned(), self.private_key.to_owned())?;
+            connector.set_certificate(&pkcs12.cert)?;
+            connector.set_private_key(&pkcs12.pkey)?;
 
             // add root certificate
 
-            try_boxfuture!(connector
+            connector
                 .cert_store_mut()
-                .add_cert(try_boxfuture!(read_x509(self.ca_pem)))
+                .add_cert(read_x509(self.ca_pem)?)
                 .or_else(|err| {
                     let mut failed = true;
                     {
@@ -253,20 +239,23 @@ impl<'a> StdioRelay<'a> {
                     } else {
                         Ok(())
                     }
-                }));
+                })?;
 
             connector.build()
         };
 
-        socket
+        let addr: SocketAddr = path.parse()?;
+        TcpStream::connect(&addr)
+            .map_err(|err| format_err!("connecting to Mononoke {} socket '{}' failed", path, err))
             .and_then(move |socket| {
                 let async_connector = connector.connect_async(&ssl_common_name, socket);
                 async_connector.map_err(|err| format_err!("async connect error {}", err))
             })
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn internal_run(self, stdio: Stdio) -> impl Future<Item = (), Error = Error> {
+    async fn internal_run(self, stdio: Stdio) -> Result<(), Error> {
         let Stdio {
             preamble,
             stdin,
@@ -274,62 +263,62 @@ impl<'a> StdioRelay<'a> {
             stderr,
         } = stdio;
 
-        self.establish_connection().and_then(|socket| {
-            // Wrap the socket with the ssh codec
-            let (socket_read, socket_write) = socket.split();
-            let rx = FramedRead::new(socket_read, SshDecoder::new());
-            let tx = FramedWrite::new(socket_write, SshEncoder::new());
+        let socket = self.establish_connection().await?;
 
-            let preamble =
-                stream::once(Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())));
+        // Wrap the socket with the ssh codec
+        let (socket_read, socket_write) = socket.split();
+        let rx = FramedRead::new(socket_read, SshDecoder::new());
+        let tx = FramedWrite::new(socket_write, SshEncoder::new());
 
-            // Start a task to copy from stdin to the socket
-            let stdin_future = preamble
-                .chain(stdin.map(|buf| SshMsg::new(SshStream::Stdin, buf)))
-                .forward(tx)
-                .map_err(Error::from)
-                .map(|_| ());
+        let preamble = stream::once(Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())));
 
-            // A task to copy from the socket, then use streamfork() to split the
-            // input between stdout and stderr.
-            let stdout_future = rx
-                .streamfork(
-                    // a sink each for stdout and stderr, prefixed with With to remove the
-                    // SshMsg framing and expose the raw data
-                    stdout.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
-                    stderr.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
-                    |msg| -> Result<bool> {
-                        // Select a sink based on the stream
-                        match msg.stream() {
-                            SshStream::Stdout => Ok(false),
-                            SshStream::Stderr => Ok(true),
-                            bad => bail!("Bad stream: {:?}", bad),
-                        }
-                    },
-                )
-                .map(|_| ());
+        // Start a task to copy from stdin to the socket
+        let stdin_future = preamble
+            .chain(stdin.map(|buf| SshMsg::new(SshStream::Stdin, buf)))
+            .forward(tx)
+            .map_err(Error::from)
+            .map(|_| ());
 
-            stdout_future
-                .then(|res| {
-                    match res {
-                        Ok(res) => Ok(res),
-                        Err(err) => {
-                            // TODO(stash): T39586884 "Connection reset" can happen in case
-                            // of error on the Mononoke server
-                            let res = err_downcast_ref!(
-                                err,
-                                ioerr: std_io::Error => ioerr.kind() == ::std::io::ErrorKind::ConnectionReset,
-                            );
-                            match res {
-                                Some(true) => Ok(()),
-                                _ => Err(err),
-                            }
+        // A task to copy from the socket, then use streamfork() to split the
+        // input between stdout and stderr.
+        let stdout_future = rx
+            .streamfork(
+                // a sink each for stdout and stderr, prefixed with With to remove the
+                // SshMsg framing and expose the raw data
+                stdout.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
+                stderr.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
+                |msg| -> Result<bool> {
+                    // Select a sink based on the stream
+                    match msg.stream() {
+                        SshStream::Stdout => Ok(false),
+                        SshStream::Stderr => Ok(true),
+                        bad => bail!("Bad stream: {:?}", bad),
+                    }
+                },
+            )
+            .map(|_| ());
+
+        stdout_future
+            .then(|res| {
+                match res {
+                    Ok(res) => Ok(res),
+                    Err(err) => {
+                        // TODO(stash): T39586884 "Connection reset" can happen in case
+                        // of error on the Mononoke server
+                        let res = err_downcast_ref!(
+                            err,
+                            ioerr: std_io::Error => ioerr.kind() == ::std::io::ErrorKind::ConnectionReset,
+                        );
+                        match res {
+                            Some(true) => Ok(()),
+                            _ => Err(err),
                         }
                     }
-                })
-                .select(stdin_future)
-                .map(|_| ())
-                .map_err(|(err, _)| err)
-        })
+                }
+            })
+            .select(stdin_future)
+            .map(|_| ())
+            .map_err(|(err, _)| err)
+            .compat().await
     }
 }

@@ -13,7 +13,6 @@
 use anyhow::Error;
 use clap::{App, Arg, SubCommand};
 use fbinit::FacebookInit;
-use futures_preview::compat::Future01CompatExt;
 
 mod serve;
 
@@ -75,7 +74,7 @@ fn main(fb: FacebookInit) {
         tokio_compat::runtime::Runtime::new()
             .map_err(Error::from)
             .and_then(|mut runtime| {
-                let result = runtime.block_on_std(serve::cmd(fb, &matches, subcmd).compat());
+                let result = runtime.block_on_std(serve::cmd(fb, &matches, subcmd));
                 runtime.shutdown_on_idle();
                 result
             })
