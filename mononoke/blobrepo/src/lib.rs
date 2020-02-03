@@ -23,10 +23,6 @@ pub use changeset_fetcher::ChangesetFetcher;
 pub use crate::repo_commit::{compute_changed_files, UploadEntries};
 pub use utils::DangerousOverride;
 
-pub mod internal {
-    pub use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-}
-
 pub mod errors {
     pub use blobrepo_errors::*;
 }

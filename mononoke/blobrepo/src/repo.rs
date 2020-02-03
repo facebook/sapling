@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use super::utils::{DangerousOverride, IncompleteFilenodeInfo, IncompleteFilenodes};
+use super::utils::DangerousOverride;
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
@@ -46,8 +46,8 @@ use mercurial_types::{
         HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
         UploadHgNodeHash,
     },
-    FileBytes, Globalrev, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifestId,
-    HgNodeHash, HgParents, RepoPath, Type,
+    FileBytes, Globalrev, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
@@ -894,8 +894,7 @@ impl BlobRepo {
         path: &MPath,
         change: &FileChange,
         copy_from: Option<(MPath, HgFileNodeId)>,
-    ) -> impl Future<Item = (HgBlobEntry, Option<IncompleteFilenodeInfo>), Error = Error> + Send
-    {
+    ) -> impl Future<Item = HgBlobEntry, Error = Error> + Send {
         // If we produced a hg change that has copy info, then the Bonsai should have copy info
         // too. However, we could have Bonsai copy info without having copy info in the hg change
         // if we stripped it out to produce a hg changeset for an Octopus merge and the copy info
@@ -915,14 +914,11 @@ impl BlobRepo {
                         if parent_envelope.content_id() == change.content_id()
                             && change.copy_from().is_none()
                         {
-                            Some((
-                                HgBlobEntry::new(
-                                    store,
-                                    path.basename().clone(),
-                                    parent.into_nodehash(),
-                                    Type::File(change.file_type()),
-                                ),
-                                None,
+                            Some(HgBlobEntry::new(
+                                store,
+                                path.basename().clone(),
+                                parent.into_nodehash(),
+                                Type::File(change.file_type()),
                             ))
                         } else {
                             None
@@ -1002,21 +998,9 @@ impl BlobRepo {
                                     path: path.clone(),
                                 };
                                 match upload_entry.upload(ctx, repo.get_blobstore().boxed()) {
-                                    Ok((_, upload_fut)) => upload_fut
-                                        .map(move |(entry, _)| {
-                                            let node_info = IncompleteFilenodeInfo {
-                                                path: RepoPath::FilePath(path),
-                                                filenode: HgFileNodeId::new(
-                                                    entry.get_hash().into_nodehash(),
-                                                ),
-                                                p1,
-                                                p2,
-                                                copyfrom: copy_from
-                                                    .map(|(p, h)| (RepoPath::FilePath(p), h)),
-                                            };
-                                            (entry, Some(node_info))
-                                        })
-                                        .left_future(),
+                                    Ok((_, upload_fut)) => {
+                                        upload_fut.map(move |(entry, _)| entry).left_future()
+                                    }
                                     Err(err) => return future::err(err).right_future(),
                                 }
                             }
@@ -1112,10 +1096,9 @@ impl BlobRepo {
         ctx: CoreContext,
         bcs: BonsaiChangeset,
         parent_manifests: Vec<HgManifestId>,
-    ) -> BoxFuture<(HgManifestId, IncompleteFilenodes), Error> {
+    ) -> BoxFuture<HgManifestId, Error> {
         let repo = self.clone();
         let event_id = EventId::new();
-        let incomplete_filenodes = IncompleteFilenodes::new();
 
         // NOTE: We ignore further parents beyond p1 and p2 for the purposed of tracking copy info
         // or filenode parents. This is because hg supports just 2 parents at most, so we track
@@ -1179,7 +1162,7 @@ impl BlobRepo {
                 event_id,
             )
             .and_then({
-                cloned!(ctx, repo, incomplete_filenodes);
+                cloned!(ctx, repo);
                 move |(p1s, p2s)| {
                     let file_changes: Vec<_> = bcs
                         .file_changes()
@@ -1211,15 +1194,7 @@ impl BlobRepo {
                                         &file_change,
                                         copy_from,
                                     )
-                                    .map({
-                                        cloned!(incomplete_filenodes);
-                                        move |(entry, node_infos)| {
-                                            for node_info in node_infos {
-                                                incomplete_filenodes.add(node_info);
-                                            }
-                                            (path, Some(entry))
-                                        }
-                                    })
+                                    .map(move |entry| (path, Some(entry)))
                                     .right_future()
                                 }
                             }
@@ -1236,12 +1211,11 @@ impl BlobRepo {
             });
 
         let create_manifest = {
-            cloned!(ctx, repo, incomplete_filenodes);
+            cloned!(ctx, repo);
             move |changes| {
                 derive_hg_manifest(
                     ctx.clone(),
                     repo.get_blobstore().boxed(),
-                    incomplete_filenodes,
                     parent_manifests,
                     changes,
                 )
@@ -1256,10 +1230,6 @@ impl BlobRepo {
 
         store_file_changes
             .and_then(create_manifest)
-            .map({
-                cloned!(incomplete_filenodes);
-                move |manifest_id| (manifest_id, incomplete_filenodes)
-            })
             .traced_with_id(
                 &ctx.trace(),
                 "generate_hg_manifest",
@@ -1390,17 +1360,17 @@ impl BlobRepo {
         repo.get_manifest_from_bonsai(ctx.clone(), bcs.clone(), parent_manifests)
             .and_then({
                 cloned!(ctx, repo);
-                move |(manifest_id, incomplete_filenodes)| {
+                move |manifest_id| {
                 compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1, mf_p2)
                     .map(move |files| {
-                        (manifest_id, incomplete_filenodes, files)
+                        (manifest_id, files)
                     })
 
             }})
             // create changeset
             .and_then({
                 cloned!(ctx, repo, bcs);
-                move |(manifest_id, incomplete_filenodes, files)| {
+                move |(manifest_id, files)| {
                     let mut metadata = ChangesetMetadata {
                         user: bcs.author().to_string(),
                         time: *bcs.author_date(),
@@ -1424,10 +1394,6 @@ impl BlobRepo {
                     let cs_id = cs.get_changeset_id();
 
                     cs.save(ctx.clone(), repo.blobstore.clone())
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |_| incomplete_filenodes.upload(ctx, cs_id, &repo)
-                        })
                         .and_then({
                             cloned!(ctx, repo);
                             move |_| repo.bonsai_hg_mapping.add(

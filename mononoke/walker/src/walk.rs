@@ -15,6 +15,8 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkPrefix, Freshness};
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use failure_ext::chain::ChainExt;
 use filestore::{self, Alias, FetchKey};
 use futures::{future, Future as OldFuture, Stream as OldStream};
@@ -238,8 +240,32 @@ fn bonsai_to_hg_mapping_step(
     enable_derive: bool,
 ) -> BoxFuture<StepOutput, Error> {
     let hg_cs_id = if enable_derive {
-        repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
-            .map(|hg_cs_id| Some(hg_cs_id))
+        let filenodes_derive = repo
+            .get_phases()
+            .get_public(ctx.clone(), vec![bcs_id], false /* ephemeral_derive */)
+            .and_then({
+                cloned!(ctx, repo);
+                move |public| {
+                    if public.contains(&bcs_id) {
+                        FilenodesOnlyPublic::derive(
+                            ctx.clone(),
+                            repo.clone(),
+                            FilenodesOnlyPublicMapping::new(repo.clone()),
+                            bcs_id,
+                        )
+                        .map(|_| ())
+                        .left_future()
+                    } else {
+                        future::ok(()).right_future()
+                    }
+                }
+            });
+
+        let hg_cs_derive = repo.get_hg_from_bonsai_changeset(ctx, bcs_id);
+
+        filenodes_derive
+            .join(hg_cs_derive)
+            .map(|((), hg_cs_id)| Some(hg_cs_id))
             .left_future()
     } else {
         repo.get_bonsai_hg_mapping()
