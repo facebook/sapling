@@ -68,7 +68,7 @@ class abstractvfs(pycompat.ABC):
         auditpath=True,
     ):
         # type: (str, str, bool, bool, bool, bool, bool, bool) -> BinaryIO
-        raise Exception("must be implemented by subclasses")
+        raise NotImplementedError("must be implemented by subclasses")
 
     def tryread(self, path):
         # type: str -> bytes

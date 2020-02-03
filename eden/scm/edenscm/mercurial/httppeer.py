@@ -55,7 +55,7 @@ def encodevalueinheaders(value, header, limit):
     n = 0
     for i in range(0, len(value), valuelen):
         n += 1
-        result.append((fmt % str(n), pycompat.strurl(value[i : i + valuelen])))
+        result.append((fmt % str(n), value[i : i + valuelen]))
 
     return result
 
@@ -329,7 +329,7 @@ class httppeer(wireproto.wirepeer):
         _wraphttpresponse(resp)
 
         # record the url we got redirected to
-        resp_url = pycompat.bytesurl(resp.geturl())
+        resp_url = resp.geturl()
         if resp_url.endswith(qs):
             resp_url = resp_url[: -len(qs)]
         if self._url.rstrip("/") != resp_url.rstrip("/"):
@@ -337,9 +337,9 @@ class httppeer(wireproto.wirepeer):
                 self.ui.warn(_("real URL is %s\n") % resp_url)
         self._url = resp_url
         try:
-            proto = pycompat.bytesurl(resp.getheader(r"content-type", r""))
+            proto = resp.getheader(r"content-type", r"")
         except AttributeError:
-            proto = pycompat.bytesurl(resp.headers.get(r"content-type", r""))
+            proto = resp.headers.get(r"content-type", r"")
 
         safeurl = util.hidepassword(self._url)
         if proto.startswith("application/hg-error"):

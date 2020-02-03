@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import os
 
 from edenscm.mercurial import (
+    cmdutil,
     commands,
     error,
     extensions,
@@ -78,29 +79,41 @@ def _matchpaths(repo, rev, pats, opts, aopts=facontext.defaultopts):
 
 
 fastannotatecommandargs = {
-    "options": [
-        ("r", "rev", ".", _("annotate the specified revision"), _("REV")),
-        ("u", "user", None, _("list the author (long with -v)")),
-        ("f", "file", None, _("list the filename")),
-        ("d", "date", None, _("list the date (short with -q)")),
-        ("n", "number", None, _("list the revision number (default)")),
-        ("c", "changeset", None, _("list the changeset")),
-        ("l", "line-number", None, _("show line number at the first " "appearance")),
-        ("e", "deleted", None, _("show deleted lines (slow) (EXPERIMENTAL)")),
-        ("", "no-content", None, _("do not show file content (EXPERIMENTAL)")),
-        ("", "no-follow", None, _("don't follow copies and renames")),
-        (
-            "",
-            "linear",
-            None,
-            _(
-                "enforce linear history, ignore second parent "
-                "of merges (EXPERIMENTAL)"
+    "options": cmdutil._typedflags(
+        [
+            ("r", "rev", ".", _("annotate the specified revision"), _("REV")),
+            ("u", "user", None, _("list the author (long with -v)")),
+            ("f", "file", None, _("list the filename")),
+            ("d", "date", None, _("list the date (short with -q)")),
+            ("n", "number", None, _("list the revision number (default)")),
+            ("c", "changeset", None, _("list the changeset")),
+            (
+                "l",
+                "line-number",
+                None,
+                _("show line number at the first " "appearance"),
             ),
-        ),
-        ("", "long-hash", None, _("show long changeset hash (EXPERIMENTAL)")),
-        ("", "rebuild", None, _("rebuild cache even if it exists " "(EXPERIMENTAL)")),
-    ]
+            ("e", "deleted", None, _("show deleted lines (slow) (EXPERIMENTAL)")),
+            ("", "no-content", None, _("do not show file content (EXPERIMENTAL)")),
+            ("", "no-follow", None, _("don't follow copies and renames")),
+            (
+                "",
+                "linear",
+                None,
+                _(
+                    "enforce linear history, ignore second parent "
+                    "of merges (EXPERIMENTAL)"
+                ),
+            ),
+            ("", "long-hash", None, _("show long changeset hash (EXPERIMENTAL)")),
+            (
+                "",
+                "rebuild",
+                None,
+                _("rebuild cache even if it exists " "(EXPERIMENTAL)"),
+            ),
+        ]
+    )
     + commands.diffwsopts
     + commands.walkopts
     + commands.formatteropts,

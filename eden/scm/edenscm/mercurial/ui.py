@@ -124,18 +124,6 @@ default = %s
 }
 
 
-def _maybestrurl(maybebytes):
-    if maybebytes is None:
-        return None
-    return maybebytes
-
-
-def _maybebytesurl(maybestr):
-    if maybestr is None:
-        return None
-    return maybestr
-
-
 class httppasswordmgrdbproxy(object):
     """Delays loading urllib2 until it's needed."""
 
@@ -148,21 +136,10 @@ class httppasswordmgrdbproxy(object):
         return self._mgr
 
     def add_password(self, realm, uris, user, passwd):
-        if isinstance(uris, tuple):
-            uris = tuple(_maybestrurl(u) for u in uris)
-        else:
-            uris = _maybestrurl(uris)
-        return self._get_mgr().add_password(
-            _maybestrurl(realm), uris, _maybestrurl(user), _maybestrurl(passwd)
-        )
+        return self._get_mgr().add_password(realm, uris, user, passwd)
 
     def find_user_password(self, realm, uri):
-        return tuple(
-            _maybebytesurl(v)
-            for v in self._get_mgr().find_user_password(
-                _maybestrurl(realm), _maybestrurl(uri)
-            )
-        )
+        return tuple(v for v in self._get_mgr().find_user_password(realm, uri))
 
 
 class stdoutkind(Enum):

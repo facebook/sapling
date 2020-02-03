@@ -99,64 +99,66 @@ readonly = registrar.command.readonly
 
 # common command options
 
-globalopts = [
-    (
-        "R",
-        "repository",
-        "",
-        _("repository root directory or name of overlay bundle file"),
-        _("REPO"),
-    ),
-    ("", "cwd", "", _("change working directory"), _("DIR")),
-    (
-        "y",
-        "noninteractive",
-        False,
-        _("do not prompt, automatically pick the first choice for all prompts"),
-    ),
-    ("q", "quiet", False, _("suppress output")),
-    ("v", "verbose", False, _("enable additional output")),
-    (
-        "",
-        "color",
-        "",
-        # i18n: 'always', 'auto', 'never', and 'debug' are keywords
-        # and should not be translated
-        _("when to colorize (boolean, always, auto, never, or debug)"),
-        _("TYPE"),
-    ),
-    (
-        "",
-        "config",
-        [],
-        _("set/override config option (use 'section.name=value')"),
-        _("CONFIG"),
-    ),
-    ("", "configfile", [], _("enables the given config file"), _("FILE")),
-    ("", "debug", False, _("enable debugging output")),
-    ("", "debugger", False, _("start debugger")),
-    ("", "encoding", encoding.encoding, _("set the charset encoding"), _("ENCODE")),
-    (
-        "",
-        "encodingmode",
-        encoding.encodingmode,
-        _("set the charset encoding mode"),
-        _("MODE"),
-    ),
-    ("", "traceback", False, _("always print a traceback on exception")),
-    ("", "time", False, _("time how long the command takes")),
-    ("", "profile", False, _("print command execution profile")),
-    ("", "version", False, _("output version information and exit")),
-    ("h", "help", False, _("display help and exit")),
-    ("", "hidden", False, _("consider hidden changesets")),
-    (
-        "",
-        "pager",
-        "auto",
-        _("when to paginate (boolean, always, auto, or never)"),
-        _("TYPE"),
-    ),
-]
+globalopts = cmdutil._typedflags(
+    [
+        (
+            "R",
+            "repository",
+            "",
+            _("repository root directory or name of overlay bundle file"),
+            _("REPO"),
+        ),
+        ("", "cwd", "", _("change working directory"), _("DIR")),
+        (
+            "y",
+            "noninteractive",
+            False,
+            _("do not prompt, automatically pick the first choice for all prompts"),
+        ),
+        ("q", "quiet", False, _("suppress output")),
+        ("v", "verbose", False, _("enable additional output")),
+        (
+            "",
+            "color",
+            "",
+            # i18n: 'always', 'auto', 'never', and 'debug' are keywords
+            # and should not be translated
+            _("when to colorize (boolean, always, auto, never, or debug)"),
+            _("TYPE"),
+        ),
+        (
+            "",
+            "config",
+            [],
+            _("set/override config option (use 'section.name=value')"),
+            _("CONFIG"),
+        ),
+        ("", "configfile", [], _("enables the given config file"), _("FILE")),
+        ("", "debug", False, _("enable debugging output")),
+        ("", "debugger", False, _("start debugger")),
+        ("", "encoding", encoding.encoding, _("set the charset encoding"), _("ENCODE")),
+        (
+            "",
+            "encodingmode",
+            encoding.encodingmode,
+            _("set the charset encoding mode"),
+            _("MODE"),
+        ),
+        ("", "traceback", False, _("always print a traceback on exception")),
+        ("", "time", False, _("time how long the command takes")),
+        ("", "profile", False, _("print command execution profile")),
+        ("", "version", False, _("output version information and exit")),
+        ("h", "help", False, _("display help and exit")),
+        ("", "hidden", False, _("consider hidden changesets")),
+        (
+            "",
+            "pager",
+            "auto",
+            _("when to paginate (boolean, always, auto, or never)"),
+            _("TYPE"),
+        ),
+    ]
+)
 
 dryrunopts = cmdutil.dryrunopts
 remoteopts = cmdutil.remoteopts

@@ -81,10 +81,24 @@ remoteopts = [
     ),
 ]
 
-walkopts = [
-    ("I", "include", [], _("include names matching the given patterns"), _("PATTERN")),
-    ("X", "exclude", [], _("exclude names matching the given patterns"), _("PATTERN")),
-]
+walkopts = _typedflags(
+    [
+        (
+            "I",
+            "include",
+            [],
+            _("include names matching the given patterns"),
+            _("PATTERN"),
+        ),
+        (
+            "X",
+            "exclude",
+            [],
+            _("exclude names matching the given patterns"),
+            _("PATTERN"),
+        ),
+    ]
+)
 
 commitopts = [
     ("m", "message", "", _("use text as commit message"), _("TEXT")),
@@ -97,9 +111,9 @@ commitopts2 = [
 ]
 
 # hidden for now
-formatteropts = [
-    ("T", "template", "", _("display with template (EXPERIMENTAL)"), _("TEMPLATE"))
-]
+formatteropts = _typedflags(
+    [("T", "template", "", _("display with template (EXPERIMENTAL)"), _("TEMPLATE"))]
+)
 
 templateopts = _typedflags(
     [

@@ -55,22 +55,21 @@ if (
         # ctypes not found or unknown langid
         pass
 
-_ugettext = None
-_ungettext = None
+_ugettext = lambda x: x
+_ungettext = lambda x, y, z: y
 
 
 def setdatapath(datapath):
+    # type: (str) -> None
     localedir = os.path.join(datapath, "locale")
     t = gettextmod.translation("hg", localedir, _languages, fallback=True)
     global _ugettext
-    try:
-        _ugettext = t.ugettext
-    except AttributeError:
-        _ugettext = t.gettext
     global _ungettext
-    try:
+    if sys.version_info[0] < 3:
+        _ugettext = t.ugettext
         _ungettext = t.ungettext
-    except AttributeError:
+    else:
+        _ugettext = t.gettext
         _ungettext = t.ngettext
 
 
@@ -78,6 +77,7 @@ _msgcache = {}  # encoding: {message: translation}
 
 
 def gettext(message):
+    # type: (str) -> str
     """Translate message.
 
     The message is looked up in the catalog to get a Unicode string,
@@ -103,7 +103,7 @@ def gettext(message):
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
         u = u"\n\n".join([p and _ugettext(p) or u"" for p in paragraphs])
-        if sys.version_info[0] == 3:
+        if sys.version_info[0] >= 3:
             cache[message] = identity.replace(u)
         else:
             try:
@@ -121,6 +121,7 @@ def gettext(message):
 
 
 def ngettext(singular, plural, count):
+    # type: (str, str, int) -> str
     """Translate pluralized message.
 
     The message is looked up in the catalog to get a Unicode string, pluralized
@@ -156,6 +157,7 @@ def _getplain():
 
 
 def _(message):
+    # type: (str) -> str
     if _plain:
         return identity.replace(message)
     else:
@@ -163,6 +165,7 @@ def _(message):
 
 
 def _n(singular, plural, count):
+    # type: (str, str, int) -> str
     if _plain:
         return identity.replace(singular if count == 1 else plural)
     else:
