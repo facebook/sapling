@@ -1033,16 +1033,13 @@ def stash(ui, repo, *args, **kwargs):
             cmd.append(args[1])
         if action == "apply":
             cmd["--keep"] = None
-    elif (
-        action == "branch"
-        or action == "show"
-        or action == "clear"
-        or action == "create"
-    ):
+    elif action == "clear":
+        cmd["--cleanup"] = None
+    elif action == "branch" or action == "show" or action == "create":
         ui.status(
             _(
                 "note: Mercurial doesn't have equivalents to the "
-                + "git stash branch, show, clear, or create actions.\n\n"
+                + "git stash branch, show, or create actions.\n\n"
             )
         )
         return
