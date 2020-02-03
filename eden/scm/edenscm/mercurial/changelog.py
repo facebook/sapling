@@ -12,6 +12,8 @@
 
 from __future__ import absolute_import
 
+from typing import IO, Any, Optional, Union
+
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
 from .node import bbin, bin, hex, nullid
@@ -342,6 +344,7 @@ class changelog(revlog.revlog):
         return visibility.visibleheads(opener)
 
     def tip(self):
+        # type: () -> bytes
         """filtered version of revlog.tip"""
         for i in range(len(self) - 1, -2, -1):
             if i not in self.filteredrevs:
@@ -684,6 +687,7 @@ class changelog(revlog.revlog):
         return node
 
     def revision(self, nodeorrev, _df=None, raw=False):
+        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
         # "revision" is the single API that reads `.d` from revlog.
         # Use zstore if possible.
         zstore = self.zstore
@@ -695,7 +699,7 @@ class changelog(revlog.revlog):
             else:
                 node = nodeorrev
             if node == nullid:
-                return ""
+                return b""
             text = zstore[node]
             if text is None:
                 # fallback to revlog

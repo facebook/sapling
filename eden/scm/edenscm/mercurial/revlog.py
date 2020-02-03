@@ -26,6 +26,7 @@ import heapq
 import os
 import struct
 import zlib
+from typing import IO, Any, List, Optional, Tuple, Union
 
 import bindings
 
@@ -128,6 +129,7 @@ _nullhash = hashlib.sha1(nullid)
 
 
 def hash(text, p1, p2):
+    # type: (bytes, bytes, bytes) -> bytes
     """generate a hash from the given text and its parent hashes
 
     This hash combines both the current file contents and its history
@@ -154,6 +156,7 @@ def hash(text, p1, p2):
 
 
 def textwithheader(text, p1, p2):
+    # type: (bytes, bytes, bytes) -> bytes
     """Similar to `hash`, but only return the content before calculating SHA1."""
     assert isinstance(p1, bytes)
     assert isinstance(p2, bytes)
@@ -468,12 +471,14 @@ class revlog(object):
         return util.compengines[self._compengine].revlogcompressor()
 
     def tip(self):
+        # type: () -> bytes
         return self.node(len(self.index) - 2)
 
     def __contains__(self, rev):
         return 0 <= rev < len(self)
 
     def __len__(self):
+        # type: () -> int
         return len(self.index) - 1
 
     def __iter__(self):
@@ -496,6 +501,7 @@ class revlog(object):
         return self._nodecache
 
     def hasnode(self, node):
+        # type: bytes -> bool
         try:
             self.rev(node)
             return True
@@ -515,6 +521,7 @@ class revlog(object):
             self._nodepos = None
 
     def rev(self, node):
+        # type: bytes -> int
         try:
             return self._nodecache[node]
         except TypeError:
@@ -564,6 +571,7 @@ class revlog(object):
         return len(t)
 
     def size(self, rev):
+        # type: (int) -> int
         """length of non-raw text (processed by a "read" flag processor)"""
         # fast path: if no "read" flag processor could change the content,
         # size is rawsize. note: ELLIPSIS is known to not change the content.
@@ -599,6 +607,7 @@ class revlog(object):
             raise
 
     def node(self, rev):
+        # type: int -> bytes
         try:
             return self.index[rev][7]
         except IndexError:
@@ -1061,6 +1070,7 @@ class revlog(object):
         return [self.node(r) for r in heads]
 
     def children(self, node):
+        # type: bytes -> List[bytes]
         """find the children of a given node"""
         c = []
         p = self.rev(node)
@@ -1192,6 +1202,7 @@ class revlog(object):
                 pass
 
     def lookup(self, id):
+        # type: (Union[int, str, bytes]) -> bytes
         """locate a node based on:
             - revision number or str(revision number)
             - nodeid or subset of hex nodeid
@@ -1206,6 +1217,7 @@ class revlog(object):
         raise LookupError(id, self.indexfile, _("no match found"))
 
     def shortest(self, hexnode, minlength=1):
+        # type: (str, int) -> str
         """Find the shortest unambiguous prefix that matches hexnode."""
 
         def isvalid(test):
@@ -1459,6 +1471,7 @@ class revlog(object):
         )
 
     def revision(self, nodeorrev, _df=None, raw=False):
+        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
         """return an uncompressed revision of a given node or revision
         number.
 
@@ -1479,11 +1492,12 @@ class revlog(object):
         rawtext = None
         if node == nullid:
             return b""
-        if self._cache:
-            if self._cache[0] == node:
+        cache = self._cache
+        if cache is not None:
+            if cache[0] == node:
                 # _cache only stores rawtext
                 if raw:
-                    return self._cache[2]
+                    return cache[2]
                 # duplicated, but good for perf
                 if rev is None:
                     rev = self.rev(node)
@@ -1491,11 +1505,11 @@ class revlog(object):
                     flags = self.flags(rev)
                 # no extra flags set, no flag processor runs, text = rawtext
                 if flags == REVIDX_DEFAULT_FLAGS:
-                    return self._cache[2]
+                    return cache[2]
                 # rawtext is reusable. need to run flag processor
-                rawtext = self._cache[2]
+                rawtext = cache[2]
 
-            cachedrev = self._cache[1]
+            cachedrev = cache[1]
 
         # look up what we need to read
         if rawtext is None:
@@ -1503,8 +1517,9 @@ class revlog(object):
                 rev = self.rev(node)
 
             chain, stopped = self._deltachain(rev, stoprev=cachedrev)
-            if stopped:
-                rawtext = self._cache[2]
+            if cache is not None:
+                if stopped:
+                    rawtext = cache[2]
 
             # drop cache to save memory
             self._cache = None
@@ -1529,6 +1544,7 @@ class revlog(object):
         return text
 
     def hash(self, text, p1, p2):
+        # type: (bytes, bytes, bytes) -> bytes
         """Compute a node hash.
 
         Available as a function so that subclasses can replace the hash
@@ -1764,6 +1780,7 @@ class revlog(object):
             ifh.close()
 
     def compress(self, data):
+        # type: (bytes) -> Tuple[bytes, bytes]
         """Generate a possibly-compressed representation of data."""
         if not data:
             return b"", data
@@ -1779,6 +1796,7 @@ class revlog(object):
         return b"u", data
 
     def decompress(self, data):
+        # type: (bytes) -> bytes
         """Decompress a revlog chunk.
 
         The chunk is expected to begin with a header identifying the

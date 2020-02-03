@@ -21,6 +21,7 @@ from __future__ import absolute_import
 import os
 import shutil
 import tempfile
+from typing import IO, Any, Optional, Union
 
 from . import (
     bundle2,
@@ -131,6 +132,7 @@ class bundlerevlog(revlog.revlog):
         )
 
     def revision(self, nodeorrev, _df=None, raw=False):
+        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
         """return an uncompressed revision of a given node or revision
         number.
         """
@@ -142,16 +144,18 @@ class bundlerevlog(revlog.revlog):
             rev = self.rev(node)
 
         if node == nullid:
-            return ""
+            return b""
 
         rawtext = None
         chain = []
         iterrev = rev
+        cache = self._cache
         # reconstruct the revision if it is from a changegroup
         while iterrev > self.repotiprev:
-            if self._cache and self._cache[1] == iterrev:
-                rawtext = self._cache[2]
-                break
+            if cache is not None:
+                if cache[1] == iterrev:
+                    rawtext = cache[2]
+                    break
             chain.append(iterrev)
             iterrev = self.index[iterrev][3]
         if rawtext is None:

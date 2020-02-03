@@ -75,6 +75,7 @@ class filelog(revlog.revlog):
         return False
 
     def size(self, rev):
+        # type: (int) -> int
         """return the size of a given revision"""
 
         # for revisions with renames, we have to go the slow way
