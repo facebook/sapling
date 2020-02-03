@@ -8,9 +8,9 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 session_id = { path = "../server/session_id" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master"}
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master"}
-netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master"}
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.4", features = ["serde"] }
 futures = "0.1" # todo: rename to "futures-old"
