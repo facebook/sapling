@@ -85,7 +85,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                             .and_then({
                                 cloned!(blobrepo, ctx);
                                 move |content_id| {
-                                    blobrepo.rechunk_file_by_content_id(ctx, content_id)
+                                    filestore::rechunk(
+                                        blobrepo.get_blobstore(),
+                                        blobrepo.get_filestore_config(),
+                                        ctx,
+                                        content_id,
+                                    )
                                 }
                             })
                     }

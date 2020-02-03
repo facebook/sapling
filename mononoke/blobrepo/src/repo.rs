@@ -213,19 +213,6 @@ impl BlobRepo {
         fetch_file_content_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
-    pub fn rechunk_file_by_content_id(
-        &self,
-        ctx: CoreContext,
-        id: ContentId,
-    ) -> impl Future<Item = ContentMetadata, Error = Error> {
-        filestore::rechunk(
-            self.blobstore.clone(),
-            self.filestore_config.clone(),
-            ctx,
-            id,
-        )
-    }
-
     pub fn get_file_content_by_content_id(
         &self,
         ctx: CoreContext,
