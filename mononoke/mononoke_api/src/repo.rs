@@ -8,6 +8,7 @@
 
 use std::fmt;
 use std::{
+    str::FromStr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -51,7 +52,9 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
 use crate::repo_write::RepoWriteContext;
-use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
+use crate::specifiers::{
+    ChangesetId, ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, HgChangesetId,
+};
 use crate::tree::{TreeContext, TreeId};
 
 const COMMON_COUNTER_PREFIX: &'static str = "mononoke.api";
@@ -611,6 +614,41 @@ impl RepoContext {
         }
 
         Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
+    }
+
+    /// Resolve a changeset id by its prefix
+    pub async fn resolve_changeset_id_prefix(
+        &self,
+        prefix: ChangesetIdPrefix<'_>,
+    ) -> Result<ChangesetIdPrefixResolution, MononokeError> {
+        const MAX_LIMIT_AMBIGUOUS_IDS: usize = 10;
+        let resolved = match prefix {
+            ChangesetIdPrefix::HgHexPrefix(prefix) => ChangesetIdPrefixResolution::from(
+                self.blob_repo()
+                    .get_bonsai_hg_mapping()
+                    .get_many_hg_by_prefix(
+                        self.ctx.clone(),
+                        self.blob_repo().get_repoid(),
+                        mercurial_types::HgChangesetIdPrefix::from_str(prefix.as_ref())?,
+                        MAX_LIMIT_AMBIGUOUS_IDS,
+                    )
+                    .compat()
+                    .await?,
+            ),
+            ChangesetIdPrefix::BonsaiHexPrefix(prefix) => ChangesetIdPrefixResolution::from(
+                self.blob_repo()
+                    .get_changesets_object()
+                    .get_many_by_prefix(
+                        self.ctx.clone(),
+                        self.blob_repo().get_repoid(),
+                        mononoke_types::ChangesetIdPrefix::from_str(prefix.as_ref())?,
+                        MAX_LIMIT_AMBIGUOUS_IDS,
+                    )
+                    .compat()
+                    .await?,
+            ),
+        };
+        Ok(resolved)
     }
 
     /// Look up a changeset by specifier.

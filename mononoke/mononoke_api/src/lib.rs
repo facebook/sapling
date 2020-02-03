@@ -59,7 +59,9 @@ pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
 pub use crate::path::MononokePath;
 pub use crate::repo::RepoContext;
 pub use crate::repo_write::{CreateChange, CreateCopyInfo, RepoWriteContext};
-pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
+pub use crate::specifiers::{
+    ChangesetId, ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, HgChangesetId,
+};
 pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
 
 // Re-export types that are useful for clients.

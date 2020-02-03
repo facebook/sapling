@@ -21,8 +21,8 @@ use futures_util::future::{FutureExt, TryFutureExt};
 use futures_util::stream::TryStreamExt;
 
 use crate::{
-    ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,
-    Mononoke, MononokePath, TreeEntry, TreeId,
+    ChangesetId, ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, CoreContext,
+    FileId, FileMetadata, FileType, HgChangesetId, Mononoke, MononokePath, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{GitSha1, Sha1, Sha256};
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -662,6 +662,77 @@ fn xrepo_commit_lookup(fb: FacebookInit) -> Result<(), Error> {
                 .await?
                 .expect("changeset exists");
             assert_eq!(cs.id(), hash2);
+
+            Ok(())
+        }
+            .boxed()
+            .compat(),
+    )
+}
+
+#[fbinit::test]
+fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            use ChangesetIdPrefix::*;
+
+            let ctx = CoreContext::test_mock(fb);
+            let mononoke =
+                Mononoke::new_test(ctx.clone(), vec![("test".to_string(), linear::getrepo(fb))])
+                    .await?;
+
+            let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+
+            let hg_cs_id = ChangesetSpecifier::Hg(HgChangesetId::from_str(
+                "607314ef579bd2407752361ba1b0c1729d08b281",
+            )?);
+
+            let bonsai_cs_id = ChangesetSpecifier::Bonsai(ChangesetId::from_str(
+                "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
+            )?);
+
+            // test different lengths
+            let test_cases = vec![
+                (HgHexPrefix("6073"), &hg_cs_id),
+                (HgHexPrefix("607314e"), &hg_cs_id),
+                (HgHexPrefix("607314ef57"), &hg_cs_id),
+                (HgHexPrefix("607314ef579bd2407752361ba"), &hg_cs_id),
+                (
+                    HgHexPrefix("607314ef579bd2407752361ba1b0c1729d08b281"),
+                    &hg_cs_id,
+                ),
+                (BonsaiHexPrefix("7785"), &bonsai_cs_id),
+                (BonsaiHexPrefix("7785606"), &bonsai_cs_id),
+                (BonsaiHexPrefix("7785606eb1f26f"), &bonsai_cs_id),
+                (BonsaiHexPrefix("7785606eb1f26ff5722c831"), &bonsai_cs_id),
+                (
+                    BonsaiHexPrefix(
+                        "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
+                    ),
+                    &bonsai_cs_id,
+                ),
+            ];
+
+            for (prefix, expected) in test_cases {
+                assert_eq!(
+                    repo.resolve_changeset_id_prefix(prefix).await?,
+                    ChangesetIdPrefixResolution::Single(*expected)
+                );
+            }
+
+            // nonexistent changeset
+            assert_eq!(
+                ChangesetIdPrefixResolution::NoMatch,
+                repo.resolve_changeset_id_prefix(HgHexPrefix("607314efffff"))
+                    .await?
+            );
+
+            // invalid hex string
+            assert!(repo
+                .resolve_changeset_id_prefix(HgHexPrefix("607314euuuuu"))
+                .await
+                .is_err());
 
             Ok(())
         }

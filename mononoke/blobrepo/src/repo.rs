@@ -886,6 +886,10 @@ impl BlobRepo {
         &self.phases_factory
     }
 
+    pub fn get_changesets_object(&self) -> Arc<dyn Changesets> {
+        self.changesets.clone()
+    }
+
     fn store_file_change(
         &self,
         ctx: CoreContext,
