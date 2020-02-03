@@ -1112,6 +1112,20 @@ class hgbuildpy(build_py):
                 exts.append(osutilbuild.ffi.distutils_extension())
             self.distribution.ext_modules = exts
 
+    def find_package_modules(self, package, package_dir):
+        # build_py is an old-style class, so we can't use super() here.
+        modules = build_py.find_package_modules(self, package, package_dir)
+        # Exclude edenscm/mercurial/pycompat3.py from Python 2 builds.
+        if package == "edenscm.mercurial":
+            orig_len = len(modules)
+            modules = [
+                (pkg, name, path)
+                for (pkg, name, path) in modules
+                if name != "pycompat3"
+            ]
+            assert len(modules) < orig_len, "error excluding pycompat3"
+        return modules
+
     def run(self):
         basepath = os.path.join(self.build_lib, "edenscm/mercurial")
         self.mkpath(basepath)
