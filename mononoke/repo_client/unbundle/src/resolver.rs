@@ -351,7 +351,7 @@ fn resolve_push(
                 if let Some((cg_push, manifests)) = cg_and_manifests {
                     let changegroup_id = Some(cg_push.part_id);
                     resolver
-                        .upload_changesets(ctx, cg_push, manifests, false)
+                        .upload_changesets(ctx, cg_push, manifests)
                         .map(move |(uploaded_bonsais, _uploaded_hg_changesets)| {
                             // Note: we do not care about `_uploaded_hg_changesets`, as we currently
                             // do not run hooks on pure pushes. This probably has to be changed later.
@@ -510,7 +510,6 @@ fn resolve_pushrebase(
                         ctx,
                         cg_push,
                         manifests,
-                        will_rebase,
                     )
                     .map(move |(upload_map, uploaded_hg_changeset_ids)| (changesets, onto_params, bundle2, upload_map, uploaded_hg_changeset_ids)).right_future()
             }
@@ -1080,12 +1079,10 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-        force_draft: bool,
     ) -> BoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = try_boxfuture!(toposort_changesets(cg_push.changesets));
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
-        let draft = force_draft || cg_push.infinitepush_payload.is_some();
 
         self.ctx
             .scuba()
@@ -1130,7 +1127,6 @@ impl Bundle2Resolver {
                     &filelogs,
                     &manifests,
                     &content_blobs,
-                    draft,
                 )
             }
         });

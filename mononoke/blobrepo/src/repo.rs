@@ -1764,8 +1764,6 @@ pub struct CreateChangeset {
     pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
     pub cs_metadata: ChangesetMetadata,
     pub must_check_case_conflicts: bool,
-    // draft changesets don't have their filenodes stored in the filenodes table
-    pub draft: bool,
 }
 
 impl CreateChangeset {
@@ -1782,12 +1780,7 @@ impl CreateChangeset {
         scuba_logger.add("changeset_uuid", format!("{}", uuid));
         let event_id = EventId::new();
 
-        let entry_processor = UploadEntries::new(
-            repo.blobstore.clone(),
-            repo.repoid.clone(),
-            scuba_logger.clone(),
-            self.draft,
-        );
+        let entry_processor = UploadEntries::new(repo.blobstore.clone(), scuba_logger.clone());
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         let signal_parent_ready = Arc::new(Mutex::new(Some(signal_parent_ready)));
         let expected_nodeid = self.expected_nodeid;
@@ -1820,7 +1813,6 @@ impl CreateChangeset {
                     cloned!(
                         ctx,
                         repo,
-                        repo.filenodes,
                         repo.blobstore,
                         mut scuba_logger,
                         signal_parent_ready
@@ -1942,8 +1934,6 @@ impl CreateChangeset {
                                                     entry_processor
                                                         .finalize(
                                                             ctx,
-                                                            filenodes,
-                                                            cs_id,
                                                             root_mf_id,
                                                             parent_manifest_hashes,
                                                         )

@@ -26,14 +26,13 @@ use tracing::{trace_args, Traced};
 use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
-use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{
-    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent},
+    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgChangesetContent},
     manifest,
     nodehash::{HgFileNodeId, HgManifestId},
     HgChangesetId, HgEntry, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
 };
-use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType, RepositoryId};
+use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType};
 
 use crate::errors::*;
 use crate::BlobRepo;
@@ -134,9 +133,6 @@ struct UploadEntriesState {
     /// or be present in the blobstore before the changeset can complete.
     parents: HashSet<HgNodeKey>,
     blobstore: RepoBlobstore,
-    repoid: RepositoryId,
-    /// Draft entries do not have their filenodes stored in the filenodes table.
-    draft: bool,
 }
 
 #[derive(Clone)]
@@ -146,20 +142,13 @@ pub struct UploadEntries {
 }
 
 impl UploadEntries {
-    pub fn new(
-        blobstore: RepoBlobstore,
-        repoid: RepositoryId,
-        scuba_logger: ScubaSampleBuilder,
-        draft: bool,
-    ) -> Self {
+    pub fn new(blobstore: RepoBlobstore, scuba_logger: ScubaSampleBuilder) -> Self {
         Self {
             scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 uploaded_entries: HashMap::new(),
                 parents: HashSet::new(),
                 blobstore,
-                repoid,
-                draft,
             })),
         }
     }
@@ -282,8 +271,6 @@ impl UploadEntries {
     pub fn finalize(
         self,
         ctx: CoreContext,
-        filenodes: Arc<dyn Filenodes>,
-        cs_id: HgNodeHash,
         mf_id: HgManifestId,
         parent_manifest_ids: Vec<HgManifestId>,
     ) -> BoxFuture<(), Error> {
@@ -367,7 +354,7 @@ impl UploadEntries {
             })
         };
 
-        let upload_filenodes = {
+        {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
 
@@ -388,75 +375,9 @@ impl UploadEntries {
                 .add("manifests_count", uploaded_manifests_cnt)
                 .add("filelogs_count", uploaded_filenodes_cnt)
                 .log_with_msg("Size of changeset", None);
-
-            if inner.draft {
-                future::ok(()).left_future()
-            } else {
-                let filenodeinfos = stream::futures_unordered(uploaded_entries.into_iter().map(
-                    |(path, blobentry)| {
-                        blobentry
-                            .get_envelope(ctx.clone())
-                            .and_then(move |envelope| {
-                                let parents = envelope.get_parents();
-                                let copy_from = compute_copy_from_info(&path, &envelope);
-
-                                copy_from.map(move |copy_from| {
-                                    let (p1, p2) = parents.get_nodes();
-                                    FilenodeInfo {
-                                        path,
-                                        filenode: HgFileNodeId::new(
-                                            blobentry.get_hash().into_nodehash(),
-                                        ),
-                                        p1: p1.map(HgFileNodeId::new),
-                                        p2: p2.map(HgFileNodeId::new),
-                                        copyfrom: copy_from,
-                                        linknode: HgChangesetId::new(cs_id),
-                                    }
-                                })
-                            })
-                    },
-                ))
-                .boxify();
-
-                filenodes
-                    .add_filenodes(ctx, filenodeinfos, inner.repoid)
-                    .timed({
-                        let mut scuba_logger = self.scuba_logger();
-                        move |stats, result| {
-                            if result.is_ok() {
-                                scuba_logger
-                                    .add_future_stats(&stats)
-                                    .log_with_msg("Upload filenodes", None);
-                            }
-                            Ok(())
-                        }
-                    })
-                    .right_future()
-            }
-        };
-
-        parent_checks
-            .join3(required_checks, upload_filenodes)
-            .map(|_| ())
-            .boxify()
-    }
-}
-
-fn compute_copy_from_info(
-    path: &RepoPath,
-    envelope: &Box<dyn HgBlobEnvelope>,
-) -> Result<Option<(RepoPath, HgFileNodeId)>> {
-    match path {
-        &RepoPath::FilePath(_) => {
-            STATS::finalize_compute_copy_from_info.add_value(1);
-            envelope
-                .get_copy_info()
-                .map(|copiedfrom| copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), node)))
         }
-        &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => {
-            // No copy information for directories/repo roots
-            Ok(None)
-        }
+
+        parent_checks.join(required_checks).map(|_| ()).boxify()
     }
 }
 

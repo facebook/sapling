@@ -212,7 +212,6 @@ pub fn create_changeset_no_parents(
         sub_entries: futures_unordered(other_nodes).boxify(),
         cs_metadata,
         must_check_case_conflicts: true,
-        draft: false,
     };
     create_changeset.create(
         CoreContext::test_mock(fb),
@@ -243,7 +242,6 @@ pub fn create_changeset_one_parent(
         sub_entries: futures_unordered(other_nodes).boxify(),
         cs_metadata,
         must_check_case_conflicts: true,
-        draft: false,
     };
     create_changeset.create(
         CoreContext::test_mock(fb),

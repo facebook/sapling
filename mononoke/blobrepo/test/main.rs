@@ -37,7 +37,7 @@ use mercurial_types::{
     manifest, FileType, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifest,
     HgManifestId, HgParents, MPath, MPathElement, RepoPath,
 };
-use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
+use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
     blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
@@ -46,8 +46,6 @@ use rand::SeedableRng;
 use rand_distr::Normal;
 use rand_xorshift::XorShiftRng;
 use scuba_ext::ScubaSampleBuilder;
-use sql_ext::SqlConstructors;
-use sqlfilenodes::SqlFilenodes;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     sync::Arc,
@@ -276,14 +274,6 @@ fn create_two_changesets(fb: FacebookInit, repo: BlobRepo) {
     let commit1_id = Some(commit1.get_changeset_id().into_nodehash());
     let expected_parents = (commit1_id, None);
     assert!(commit2.parents().get_nodes() == expected_parents);
-
-    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, filehash)).unwrap();
-    assert!(
-        linknode == commit1.get_changeset_id(),
-        "Bad linknode {} - should be {}",
-        linknode,
-        commit1.get_changeset_id()
-    );
 }
 
 test_both_repotypes!(
@@ -464,26 +454,13 @@ fn upload_entries_finalize_success(fb: FacebookInit, repo: BlobRepo) {
     let (file_blob, _) = run_future(file_future).unwrap();
     let (root_mf_blob, _) = run_future(root_manifest_future).unwrap();
 
-    let entries = UploadEntries::new(
-        repo.get_blobstore(),
-        repo.get_repoid(),
-        ScubaSampleBuilder::with_discard(),
-        false, /* draft */
-    );
+    let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
 
     run_future(entries.process_root_manifest(ctx.clone(), &root_mf_blob)).unwrap();
 
     run_future(entries.process_one_entry(ctx.clone(), &file_blob, fake_file_path)).unwrap();
 
-    let filenodes = Arc::new(SqlFilenodes::with_sqlite_in_memory().unwrap());
-    run_future(entries.finalize(
-        ctx.clone(),
-        filenodes,
-        ONES_CSID.into_nodehash(),
-        HgManifestId::new(roothash),
-        vec![],
-    ))
-    .unwrap();
+    run_future(entries.finalize(ctx.clone(), HgManifestId::new(roothash), vec![])).unwrap();
 }
 
 test_both_repotypes!(
@@ -493,12 +470,7 @@ test_both_repotypes!(
 );
 
 fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
-    let entries = UploadEntries::new(
-        repo.get_blobstore(),
-        repo.get_repoid(),
-        ScubaSampleBuilder::with_discard(),
-        false, /* draft */
-    );
+    let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
 
     let ctx = CoreContext::test_mock(fb);
 
@@ -513,11 +485,8 @@ fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
 
     run_future(entries.process_root_manifest(ctx.clone(), &root_mf_blob)).unwrap();
 
-    let filenodes = Arc::new(SqlFilenodes::with_sqlite_in_memory().unwrap());
     let res = run_future(entries.finalize(
         ctx.clone(),
-        filenodes,
-        ONES_CSID.into_nodehash(),
         HgManifestId::new(root_mf_blob.get_hash().into_nodehash()),
         vec![],
     ));
@@ -529,156 +498,6 @@ test_both_repotypes!(
     upload_entries_finalize_fail,
     upload_entries_finalize_fail_lazy,
     upload_entries_finalize_fail_eager
-);
-
-fn create_double_linknode(fb: FacebookInit, repo: BlobRepo) {
-    let ctx = CoreContext::test_mock(fb);
-    let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
-    let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
-
-    let (filehash, parent_commit) = {
-        let (filehash, file_future) =
-            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
-        let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
-            ctx.clone(),
-            &repo,
-            format!("file\0{}\n", filehash),
-            &fake_dir_path,
-        );
-        let (_, root_manifest_future) = upload_manifest_no_parents(
-            ctx.clone(),
-            &repo,
-            format!("dir\0{}t\n", dirhash),
-            &RepoPath::root(),
-        );
-
-        (
-            filehash,
-            create_changeset_no_parents(
-                fb,
-                &repo,
-                root_manifest_future.map(Some).boxify(),
-                vec![manifest_dir_future, file_future],
-            ),
-        )
-    };
-
-    let child_commit = {
-        let (filehash, file_future) =
-            upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_file_path, filehash);
-
-        let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
-            ctx.clone(),
-            &repo,
-            format!("file\0{}\n", filehash),
-            &fake_dir_path,
-        );
-
-        let (_, root_manifest_future) = upload_manifest_no_parents(
-            ctx.clone(),
-            &repo,
-            format!("dir\0{}t\n", dirhash),
-            &RepoPath::root(),
-        );
-
-        create_changeset_one_parent(
-            fb,
-            &repo,
-            root_manifest_future.map(Some).boxify(),
-            vec![manifest_dir_future, file_future],
-            parent_commit.clone(),
-        )
-    };
-    let child = run_future(child_commit.get_completed_changeset()).unwrap();
-    let child = &child.1;
-    let parent = run_future(parent_commit.get_completed_changeset()).unwrap();
-    let parent = &parent.1;
-
-    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, filehash)).unwrap();
-    assert!(
-        linknode != child.get_changeset_id(),
-        "Linknode on child commit = should be on parent"
-    );
-    assert!(
-        linknode == parent.get_changeset_id(),
-        "Linknode not on parent commit - ended up on {} instead",
-        linknode
-    );
-}
-
-test_both_repotypes!(
-    create_double_linknode,
-    create_double_linknode_lazy,
-    create_double_linknode_eager
-);
-
-fn check_linknode_creation(fb: FacebookInit, repo: BlobRepo) {
-    let ctx = CoreContext::test_mock(fb);
-    let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
-    let author: String = "author <author@fb.com>".into();
-
-    let files: Vec<_> = (1..100)
-        .into_iter()
-        .map(|id| {
-            let path = RepoPath::file(
-                MPath::new(format!("dir/file{}", id)).expect("String to MPath failed"),
-            )
-            .expect("Can't generate fake RepoPath");
-            let (hash, future) =
-                upload_file_no_parents(ctx.clone(), &repo, format!("blob id {}", id), &path);
-            ((hash, format!("file{}", id)), future)
-        })
-        .collect();
-
-    let (metadata, mut uploads): (Vec<_>, Vec<_>) = files.into_iter().unzip();
-
-    let manifest = metadata
-        .iter()
-        .fold(String::new(), |mut acc, &(hash, ref basename)| {
-            acc.push_str(format!("{}\0{}\n", basename, hash).as_str());
-            acc
-        });
-
-    let (dirhash, manifest_dir_future) =
-        upload_manifest_no_parents(ctx.clone(), &repo, manifest, &fake_dir_path);
-
-    let (roothash, root_manifest_future) = upload_manifest_no_parents(
-        ctx.clone(),
-        &repo,
-        format!("dir\0{}t\n", dirhash),
-        &RepoPath::root(),
-    );
-
-    uploads.push(manifest_dir_future);
-
-    let commit =
-        create_changeset_no_parents(fb, &repo, root_manifest_future.map(Some).boxify(), uploads);
-
-    let cs = run_future(commit.get_completed_changeset()).unwrap();
-    let cs = &cs.1;
-    assert!(cs.manifestid() == HgManifestId::new(roothash));
-    assert!(cs.user() == author.as_bytes());
-    assert!(cs.parents().get_nodes() == (None, None));
-
-    let cs_id = cs.get_changeset_id();
-    // And check all the linknodes got created
-    metadata.into_iter().for_each(|(hash, basename)| {
-        let path = RepoPath::file(format!("dir/{}", basename).as_str())
-            .expect("Can't generate fake RepoPath");
-        let linknode = run_future(repo.get_linknode(ctx.clone(), &path, hash)).unwrap();
-        assert!(
-            linknode == cs_id,
-            "Linknode is {}, should be {}",
-            linknode,
-            cs_id
-        );
-    })
-}
-
-test_both_repotypes!(
-    check_linknode_creation,
-    check_linknode_creation_lazy,
-    check_linknode_creation_eager
 );
 
 #[fbinit::test]

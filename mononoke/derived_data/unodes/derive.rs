@@ -275,9 +275,12 @@ mod tests {
     use blobrepo_factory::new_memblob_empty;
     use blobstore::Storable;
     use bytes::Bytes;
+    use derived_data::BonsaiDerived;
+    use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::Stream;
+    use futures_preview::{compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt};
     use maplit::btreemap;
     use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};
     use mononoke_types::{
@@ -286,13 +289,30 @@ mod tests {
     };
     use std::collections::{HashSet, VecDeque};
     use test_utils::{get_bonsai_changeset, iterate_all_entries};
+    use tests_utils::resolve_cs_id;
     use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
-    fn linear_test(fb: FacebookInit) {
+    fn linear_test(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
+
+        // Derive filenodes because they are going to be used in this test
+        runtime.block_on({
+            cloned!(ctx, repo);
+            async move {
+                let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+                let mapping = FilenodesOnlyPublicMapping::new(repo.clone());
+                FilenodesOnlyPublic::derive(ctx, repo, mapping, master_cs_id)
+                    .compat()
+                    .await?;
+                let res: Result<(), Error> = Ok(());
+                res
+            }
+                .boxed()
+                .compat()
+        })?;
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
             let (bcs_id, bcs) =
@@ -377,6 +397,7 @@ mod tests {
                 ]
             );
         }
+        Ok(())
     }
 
     #[fbinit::test]
