@@ -20,6 +20,7 @@ from bindings import pathmatcher
 
 from . import error, pathutil, pycompat, util
 from .i18n import _
+from .pycompat import decodeutf8
 
 
 allpatternkinds = (
@@ -247,7 +248,7 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
             pat = util.normpath(pat)
         elif kind in ("listfile", "listfile0"):
             try:
-                files = util.readfile(pat)
+                files = decodeutf8(util.readfile(pat))
                 if kind == "listfile0":
                     files = files.split("\0")
                 else:
