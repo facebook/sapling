@@ -19,6 +19,7 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Future.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -244,7 +245,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
   folly::Future<folly::Unit> run() override {
     auto f1 = context_->store->getBlobSha1(scmEntry_.getHash());
     auto f2 = context_->store->getBlobSha1(currentBlobHash_);
-    return folly::collect(f1, f2).thenValue(
+    return collectSafe(f1, f2).thenValue(
         [this](const std::tuple<Hash, Hash>& info) {
           const auto& [info1, info2] = info;
           if (info1 != info2) {

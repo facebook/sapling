@@ -49,6 +49,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/Future.h"
 #include "eden/fs/utils/FutureSubprocess.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -770,7 +771,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
           [this, parent1Hash = oldParents.parent1(), snapshotHash](auto&&) {
             auto fromTreeFuture = objectStore_->getTreeForCommit(parent1Hash);
             auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
-            return folly::collect(fromTreeFuture, toTreeFuture);
+            return collectSafe(fromTreeFuture, toTreeFuture);
           })
       .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>

@@ -1440,6 +1440,8 @@ Future<Unit> TreeInode::rename(
   if (needSrc && needDest) {
     auto srcFuture = getOrLoadChild(name);
     auto destFuture = destParent->getOrLoadChild(destName);
+    // folly::collect is safe here because onLoadFinish has captured strong
+    // references.
     return folly::collect(srcFuture, destFuture).thenValue(onLoadFinished);
   } else if (needSrc) {
     return getOrLoadChild(name).thenValue(onLoadFinished);

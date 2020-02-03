@@ -20,6 +20,7 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/utils/Future.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using folly::Future;
@@ -555,7 +556,7 @@ void processBothPresent(
                                    &wdEntry] {
               auto scmFuture = context->store->getBlobSha1(scmEntry.getHash());
               auto wdFuture = context->store->getBlobSha1(wdEntry.getHash());
-              return folly::collect(scmFuture, wdFuture)
+              return collectSafe(scmFuture, wdFuture)
                   .thenValue([entryPath = entryPath.copy(),
                               context](const std::tuple<Hash, Hash>& info) {
                     const auto& [scmHash, wdHash] = info;
@@ -604,7 +605,7 @@ FOLLY_NODISCARD Future<Unit>
 diffCommits(const DiffContext* context, Hash hash1, Hash hash2) {
   auto future1 = context->store->getTreeForCommit(hash1);
   auto future2 = context->store->getTreeForCommit(hash2);
-  return collect(future1, future2)
+  return collectSafe(future1, future2)
       .thenValue([context](std::tuple<
                            std::shared_ptr<const Tree>,
                            std::shared_ptr<const Tree>>&& tup) {
@@ -657,7 +658,7 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
         isIgnored);
   }
 
-  return folly::collect(scmTreeFuture, wdTreeFuture)
+  return collectSafe(scmTreeFuture, wdTreeFuture)
       .thenValue([context, currentPath = currentPath.copy(), ignore, isIgnored](
                      std::tuple<
                          std::shared_ptr<const Tree>,
