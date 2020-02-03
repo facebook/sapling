@@ -221,9 +221,11 @@ class overlaychangectx(context.changectx):
         return self._hgrepo
 
     def node(self):
+        # type: () -> bytes
         return self._node
 
     def rev(self):
+        # type: () -> int
         return self._rev
 
     def date(self):
@@ -254,9 +256,11 @@ class overlaychangectx(context.changectx):
         return [self._hgrepo[sha] for sha in parents]
 
     def manifestnode(self):
+        # type: () -> bytes
         return bin(self.commit.tree)
 
     def hex(self):
+        # type: () -> str
         return self.commit.id
 
     def tags(self):
@@ -282,6 +286,7 @@ class overlaychangectx(context.changectx):
     __bool__ = __nonzero__
 
     def phase(self):
+        # type: () -> int
         try:
             from edenscm.mercurial import phases
 

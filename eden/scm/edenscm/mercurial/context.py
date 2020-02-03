@@ -71,6 +71,10 @@ class basectx(object):
     memctx: a context that represents changes in-memory and can also
             be committed."""
 
+    _rev = nullrev
+    _node = nullid
+    _repo = None
+
     def __new__(cls, repo, changeid="", *args, **kwargs):
         if isinstance(changeid, basectx):
             return changeid
@@ -189,12 +193,15 @@ class basectx(object):
         )
 
     def rev(self):
+        # type: () -> int
         return self._rev
 
     def node(self):
+        # type: () -> bytes
         return self._node
 
     def hex(self):
+        # type: () -> str
         return hex(self.node())
 
     def manifest(self):
@@ -207,15 +214,22 @@ class basectx(object):
         return self._repo
 
     def phasestr(self):
+        # type: () -> str
         return phases.phasenames[self.phase()]
 
+    def phase(self):
+        # type: () -> int
+        raise NotImplementedError()
+
     def mutable(self):
+        # type: () -> bool
         return self.phase() > phases.public
 
     def getfileset(self, expr):
         return fileset.getfileset(self, expr)
 
     def invisible(self):
+        # type: () -> bool
         repo = self.repo()
         if visibility.enabled(repo):
             return self.rev() in visibility.invisiblerevs(repo)
@@ -223,6 +237,7 @@ class basectx(object):
             return False
 
     def obsolete(self):
+        # type: () -> bool
         """True if the changeset is obsolete"""
         if mutation.enabled(self._repo):
             return mutation.isobsolete(self._repo, self.node())
@@ -671,6 +686,7 @@ class changectx(basectx):
         return self._repo.nodebookmarks(self._node)
 
     def phase(self):
+        # type: () -> int
         return self._repo._phasecache.phase(self._repo, self._rev)
 
     def hidden(self):
@@ -1596,6 +1612,7 @@ class committablectx(basectx):
         return b
 
     def phase(self):
+        # type: () -> int
         phase = phases.draft  # default phase to draft
         for p in self.parents():
             phase = max(phase, p.phase())
@@ -1722,6 +1739,7 @@ class workingctx(committablectx):
         return self._repo.dirstate[key] not in "?r"
 
     def hex(self):
+        # type: () -> str
         return hex(wdirid)
 
     @propertycache
