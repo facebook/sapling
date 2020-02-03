@@ -322,7 +322,7 @@ class histeditstate(object):
     def read(self):
         """Load histedit state from disk and set fields appropriately."""
         try:
-            state = self.repo.localvfs.read("histedit-state")
+            state = pycompat.decodeutf8(self.repo.localvfs.read("histedit-state"))
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -379,7 +379,7 @@ class histeditstate(object):
 
     def _load(self):
         fp = self.repo.localvfs("histedit-state", "r")
-        lines = [l[:-1] for l in fp.readlines()]
+        lines = [pycompat.decodeutf8(l[:-1]) for l in fp.readlines()]
 
         index = 0
         lines[index]  # version number
@@ -1140,7 +1140,7 @@ def _readfile(ui, path):
             return ui.fin.read()
     else:
         with open(path, "rb") as f:
-            return f.read()
+            return pycompat.decodeutf8(f.read())
 
 
 def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):

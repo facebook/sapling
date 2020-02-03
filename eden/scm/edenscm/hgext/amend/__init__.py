@@ -60,6 +60,7 @@ from edenscm.mercurial import (
     hintutil,
     lock as lockmod,
     phases,
+    pycompat,
     registrar,
     scmutil,
 )
@@ -546,9 +547,9 @@ def amendtocommit(ui, repo, commitspec):
         try:
             found = False
             for curcommit in originalcommits:
-                fp.write("pick " + str(curcommit) + "\n")
+                fp.write(b"pick %s\n" % bytes(curcommit))
                 if curcommit == targetcommit:
-                    fp.write("roll " + tempcommithex[:12] + "\n")
+                    fp.write(b"roll %s\n" % pycompat.encodeutf8(tempcommithex[:12]))
                     found = True
             if not found:
                 raise error.Abort(_("revision '%s' cannot be found") % commitspec)
