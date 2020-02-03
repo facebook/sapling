@@ -12,28 +12,32 @@ use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::{BookmarkName, BookmarkPrefix, Freshness};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
 use filestore::{self, Alias, FetchKey};
-use futures::future::{self, Future as OldFuture};
+use futures::{future, Future as OldFuture, Stream as OldStream};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, BoxStream, FutureExt,
     StreamExt,
 };
 use futures_preview::{
-    compat::Stream01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::FutureExt as NewFutureExt,
     stream::{BoxStream as NewBoxStream, StreamExt as NewStreamExt},
 };
 use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
 use mononoke_types::{ChangesetId, ContentId, MPath};
-use phases::{Phase, SqlPhases};
+use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
-use std::iter::Iterator;
-use std::{collections::HashSet, iter::IntoIterator};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::{IntoIterator, Iterator},
+    sync::Arc,
+};
 use thiserror::Error;
 
 // Holds type of edge and target Node that we want to load in next step(s)
@@ -79,36 +83,41 @@ struct StepOutput(NodeData, Vec<OutgoingEdge>);
 
 fn bookmark_step(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: BlobRepo,
     b: BookmarkName,
+    public_heads: Arc<HashMap<BookmarkName, ChangesetId>>,
 ) -> BoxFuture<StepOutput, Error> {
-    repo.get_bonsai_bookmark(ctx, &b)
-        .and_then(move |bcs_opt| match bcs_opt {
-            Some(bcs_id) => {
-                let recurse = vec![
-                    OutgoingEdge::new(
-                        EdgeType::BookmarkToBonsaiChangeset,
-                        Node::BonsaiChangeset(bcs_id),
-                    ),
-                    OutgoingEdge::new(
-                        EdgeType::BookmarkToBonsaiHgMapping,
-                        Node::BonsaiHgMapping(bcs_id),
-                    ),
-                ];
-                Ok(StepOutput(NodeData::Bookmark(bcs_id), recurse))
-            }
-            None => Err(format_err!("Unknown Bookmark {}", b)),
-        })
-        .boxify()
+    match public_heads.get(&b) {
+        Some(csid) => future::ok::<_, Error>(Some(csid.clone())).left_future(),
+        // Just in case we have non-public bookmarks
+        None => repo.get_bonsai_bookmark(ctx, &b).right_future(),
+    }
+    .and_then(move |bcs_opt| match bcs_opt {
+        Some(bcs_id) => {
+            let recurse = vec![
+                OutgoingEdge::new(
+                    EdgeType::BookmarkToBonsaiChangeset,
+                    Node::BonsaiChangeset(bcs_id),
+                ),
+                OutgoingEdge::new(
+                    EdgeType::BookmarkToBonsaiHgMapping,
+                    Node::BonsaiHgMapping(bcs_id),
+                ),
+            ];
+            Ok(StepOutput(NodeData::Bookmark(bcs_id), recurse))
+        }
+        None => Err(format_err!("Unknown Bookmark {}", b)),
+    })
+    .boxify()
 }
 
 fn bonsai_phase_step(
     ctx: CoreContext,
-    phases_store: &SqlPhases,
+    phases_store: Arc<dyn Phases>,
     bcs_id: ChangesetId,
 ) -> BoxFuture<StepOutput, Error> {
     phases_store
-        .get_public_derive(ctx, vec![bcs_id], true)
+        .get_public(ctx, vec![bcs_id], true)
         .map(move |public| public.contains(&bcs_id))
         .map(|is_public| {
             let phase = if is_public { Some(Phase::Public) } else { None };
@@ -493,6 +502,62 @@ where
         walk_roots.clone(),
     );
 
+    // Build lookups
+    let repoid = *(&repo.get_repoid());
+    let public_heads = repo
+        .get_bookmarks_object()
+        .list_publishing_by_prefix(
+            ctx.clone(),
+            &BookmarkPrefix::empty(),
+            repoid,
+            Freshness::MostRecent,
+        )
+        .map(|(book, csid)| (book.name, csid))
+        .collect_to::<HashMap<BookmarkName, ChangesetId>>();
+
+    public_heads
+        .map(move |public_heads| {
+            let public_heads = Arc::new(public_heads);
+
+            walk_exact_impl(
+                ctx,
+                repo,
+                enable_derive,
+                walk_roots,
+                visitor,
+                scheduled_max,
+                error_as_data_node_types,
+                error_as_data_edge_types,
+                scuba,
+                public_heads.clone(),
+                Arc::new(move |_ctx: &CoreContext| {
+                    future::ok(public_heads.iter().map(|(_, csid)| csid).cloned().collect())
+                        .compat()
+                        .boxed()
+                }),
+            )
+        })
+        .flatten_stream()
+        .boxify()
+}
+
+fn walk_exact_impl<V, VOut>(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    enable_derive: bool,
+    walk_roots: Vec<OutgoingEdge>,
+    visitor: V,
+    scheduled_max: usize,
+    error_as_data_node_types: HashSet<NodeType>,
+    error_as_data_edge_types: HashSet<EdgeType>,
+    scuba: ScubaSampleBuilder,
+    public_heads: Arc<HashMap<BookmarkName, ChangesetId>>,
+    heads_fetcher: HeadsFetcher,
+) -> impl OldStream<Item = VOut, Error = Error>
+where
+    V: 'static + Clone + WalkVisitor<VOut> + Send,
+    VOut: 'static + Send,
+{
     bounded_traversal_stream(scheduled_max, walk_roots, {
         // Each step returns the walk result, and next steps
         move |walk_item| {
@@ -505,14 +570,21 @@ where
                     future::err(format_err!("Not expecting Roots to be generated")).boxify()
                 }
                 // Bonsai
-                Node::Bookmark(bookmark_name) => bookmark_step(ctx, &repo, bookmark_name),
+                Node::Bookmark(bookmark_name) => bookmark_step(
+                    ctx.clone(),
+                    repo.clone(),
+                    bookmark_name,
+                    public_heads.clone(),
+                ),
                 Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id),
                 Node::BonsaiHgMapping(bcs_id) => {
                     bonsai_to_hg_mapping_step(ctx, &repo, bcs_id, enable_derive)
                 }
                 Node::BonsaiPhaseMapping(bcs_id) => {
-                    let phases = repo.get_phases();
-                    bonsai_phase_step(ctx, &phases.get_sql_phases(), bcs_id)
+                    let phases_store = repo
+                        .get_phases_factory()
+                        .get_phases(repo.get_changeset_fetcher(), heads_fetcher.clone());
+                    bonsai_phase_step(ctx, phases_store, bcs_id)
                 }
                 // Hg
                 Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid),
@@ -613,7 +685,6 @@ where
             spawn_future(next)
         }
     })
-    .boxify()
 }
 
 pub fn walk_exact<V, VOut>(

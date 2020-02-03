@@ -882,6 +882,10 @@ impl BlobRepo {
         self.bookmarks.clone()
     }
 
+    pub fn get_phases_factory(&self) -> &SqlPhasesFactory {
+        &self.phases_factory
+    }
+
     fn store_file_change(
         &self,
         ctx: CoreContext,
