@@ -136,12 +136,6 @@ pub trait Phases: Send + Sync {
         ephemeral_derive: bool,
     ) -> BoxFuture<HashSet<ChangesetId>, Error>;
 
-    fn is_public(&self, ctx: CoreContext, csid: ChangesetId) -> BoxFuture<bool, Error> {
-        self.get_public(ctx, vec![csid], false)
-            .map(move |public| public.contains(&csid))
-            .boxify()
-    }
-
     fn get_sql_phases(&self) -> &SqlPhases;
 }
 

@@ -6,11 +6,12 @@
  * directory of this source tree.
  */
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future, Future, Stream};
+use futures_ext::{BoxFuture, FutureExt};
 pub use sql_ext::SqlConstructors;
 
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -18,10 +19,11 @@ use fbinit::FacebookInit;
 use fixtures::linear;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use mononoke_types_mocks::changesetid::*;
-use phases::{Phase, SqlPhasesStore};
+use phases::{Phase, Phases, SqlPhasesStore};
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio_compat::runtime::Runtime;
 
 #[fbinit::test]
@@ -99,6 +101,17 @@ fn set_bookmark(
     .unwrap();
 
     assert!(rt.block_on(txn.commit()).unwrap());
+}
+
+fn is_public(
+    phases: &Arc<dyn Phases>,
+    ctx: CoreContext,
+    csid: ChangesetId,
+) -> BoxFuture<bool, Error> {
+    phases
+        .get_public(ctx, vec![csid], false)
+        .map(move |public| public.contains(&csid))
+        .boxify()
 }
 
 #[fbinit::test]
@@ -184,35 +197,35 @@ fn get_phase_hint_test(fb: FacebookInit) {
     let phases = repo.get_phases();
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), public_bookmark_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), public_bookmark_commit))
             .unwrap(),
         true,
         "slow path: get phase for a Public commit which is also a public bookmark"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), public_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), public_commit))
             .unwrap(),
         true,
         "slow path: get phase for a Public commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), other_public_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), other_public_commit))
             .unwrap(),
         true,
         "slow path: get phase for other Public commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), draft_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), draft_commit))
             .unwrap(),
         false,
         "slow path: get phase for a Draft commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), other_draft_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), other_draft_commit))
             .unwrap(),
         false,
         "slow path: get phase for other Draft commit"
@@ -238,14 +251,14 @@ fn get_phase_hint_test(fb: FacebookInit) {
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), public_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), public_commit))
             .expect("Get phase failed"),
         true,
         "sql: make sure that phase was written to the db for public commit"
     );
 
     assert_eq!(
-        rt.block_on(phases.is_public(ctx.clone(), draft_commit))
+        rt.block_on(is_public(&phases, ctx.clone(), draft_commit))
             .expect("Get phase failed"),
         false,
         "sql: make sure that phase was not written to the db for draft commit"
