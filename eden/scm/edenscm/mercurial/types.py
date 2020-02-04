@@ -18,4 +18,3 @@ from .ui import ui
 
 
 UI = ui
-Repo = Any

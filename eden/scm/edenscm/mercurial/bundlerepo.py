@@ -259,6 +259,7 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
 
 class bundlepeer(localrepo.localpeer):
     def canpush(self):
+        # type: () -> bool
         return False
 
 
@@ -458,9 +459,11 @@ class bundlerepository(localrepo.localrepository):
         return self.filestart
 
     def url(self):
+        # type: () -> str
         return self._url
 
     def file(self, f):
+        # type: () -> filelog.filelog
         if not self._cgfilespos:
             self._cgunpacker.seek(self.filestart)
             self._cgfilespos = _getfilestarts(self._cgunpacker)
@@ -473,17 +476,21 @@ class bundlerepository(localrepo.localrepository):
             return filelog.filelog(self.svfs, f)
 
     def close(self):
+        # type: () -> None
         """Close assigned bundle file immediately."""
         self._bundlefile.close()
         if self.tempfile is not None:
             self.localvfs.unlink(self.tempfile)
-        if self._tempparent:
-            shutil.rmtree(self._tempparent, True)
+        path = self._tempparent
+        if path is not None:
+            shutil.rmtree(path, True)
 
     def cancopy(self):
+        # type: () -> bool
         return False
 
     def peer(self):
+        # type: () -> localrepo.localpeer
         return bundlepeer(self)
 
     def getcwd(self):
@@ -491,6 +498,7 @@ class bundlerepository(localrepo.localrepository):
 
     # Check if parents exist in localrepo before setting
     def setparents(self, p1, p2=nullid):
+        # type: (bytes, bytes) -> None
         p1rev = self.changelog.rev(p1)
         p2rev = self.changelog.rev(p2)
         msg = _("setting parent to node %s that only exists in the bundle\n")
