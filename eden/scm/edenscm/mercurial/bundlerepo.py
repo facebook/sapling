@@ -494,6 +494,7 @@ class bundlerepository(localrepo.localrepository):
         return bundlepeer(self)
 
     def getcwd(self):
+        # type: () -> str
         return pycompat.getcwd()  # always outside the repo
 
     # Check if parents exist in localrepo before setting
