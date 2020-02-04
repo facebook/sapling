@@ -27,7 +27,10 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{FutureExt as _, TryFutureExt},
+};
 use manifold::{ObjectMeta, PayloadDesc, StoredObject};
 use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
 use mercurial_revlog::revlog::RevIdx;
@@ -175,7 +178,9 @@ fn update_manifold_key(
     manifold_thrift_new(fb)
         .into_future()
         .and_then(move |client| {
-            thrift::write_chunked(Arc::new(client), context, manifold_key, object)
+            async move { thrift::write_chunked(&client, &context, &manifold_key, &object).await }
+                .boxed()
+                .compat()
         })
 }
 
