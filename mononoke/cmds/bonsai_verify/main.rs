@@ -387,7 +387,7 @@ fn subcommmand_hg_manifest_verify(
                                         bonsai.clone(),
                                         parents,
                                     )
-                                    .map(move |result| {
+                                    .map(move |(result, _)| {
                                         if result != expected {
                                             println!(
                                                 "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",

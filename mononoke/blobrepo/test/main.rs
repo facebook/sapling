@@ -674,7 +674,7 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
         // resolves same content different parents for `branch` file
         {
-            let ms_hash = run_future(repo.get_manifest_from_bonsai(
+            let (ms_hash, _) = run_future(repo.get_manifest_from_bonsai(
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![("base", None)]),
                 vec![ms1, ms2],
@@ -721,7 +721,7 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             let content_expected = &b"some awesome content"[..];
             let fc = run_future(make_file_change(ctx.clone(), content_expected, &repo)).unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
-            let ms_hash =
+            let (ms_hash, _) =
                 run_future(repo.get_manifest_from_bonsai(ctx.clone(), bcs, vec![ms1, ms2]))
                     .expect("adding new file should not produce coflict");
             let entries = run_future(get_entries(ms_hash)).unwrap();

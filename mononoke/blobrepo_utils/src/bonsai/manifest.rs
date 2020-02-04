@@ -9,6 +9,7 @@
 use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use anyhow::{bail, Error};
 use blobrepo::derive_hg_manifest::derive_hg_manifest;
+use blobrepo::internal::IncompleteFilenodes;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -338,8 +339,14 @@ fn apply_diff(
         .into_iter()
         .map(|result| (result.path().clone(), make_entry(&repo, &result)))
         .collect();
-    derive_hg_manifest(ctx, repo.get_blobstore().boxed(), manifestids, changes)
-        .map(|manifest_id| manifest_id.into_nodehash())
+    derive_hg_manifest(
+        ctx,
+        repo.get_blobstore().boxed(),
+        IncompleteFilenodes::new(),
+        manifestids,
+        changes,
+    )
+    .map(|manifest_id| manifest_id.into_nodehash())
 }
 
 // XXX should this be in a more central place?

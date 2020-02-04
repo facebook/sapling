@@ -29,6 +29,7 @@ use mononoke_types::{FileType, MPath, RepoPath};
 use std::{io::Write, sync::Arc};
 
 use crate::errors::ErrorKind;
+use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 struct ParentIndex(usize);
@@ -37,6 +38,7 @@ struct ParentIndex(usize);
 pub fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
+    incomplete_filenodes: IncompleteFilenodes,
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)>,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
@@ -52,14 +54,27 @@ pub fn derive_hg_manifest(
         parents.clone(),
         changes,
         {
-            cloned!(ctx, blobstore);
+            cloned!(ctx, blobstore, incomplete_filenodes);
             move |tree_info, sender| {
-                create_hg_manifest(ctx.clone(), blobstore.clone(), Some(sender), tree_info)
+                create_hg_manifest(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    Some(sender),
+                    incomplete_filenodes.clone(),
+                    tree_info,
+                )
             }
         },
         {
-            cloned!(ctx, blobstore);
-            move |leaf_info, _sender| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
+            cloned!(ctx, blobstore, incomplete_filenodes);
+            move |leaf_info, _sender| {
+                create_hg_file(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    incomplete_filenodes.clone(),
+                    leaf_info,
+                )
+            }
         },
     )
     .and_then(move |tree_id| match tree_id {
@@ -71,7 +86,7 @@ pub fn derive_hg_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            create_hg_manifest(ctx, blobstore, None, tree_info)
+            create_hg_manifest(ctx, blobstore, None, incomplete_filenodes, tree_info)
                 .map(|(_, traced_tree_id)| traced_tree_id.into_untraced())
                 .right_future()
         }
@@ -84,6 +99,7 @@ fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
+    incomplete_filenodes: IncompleteFilenodes,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgManifestId>,
         Traced<ParentIndex, (FileType, HgFileNodeId)>,
@@ -148,7 +164,17 @@ fn create_hg_manifest(
     };
 
     blobstore_fut
-        .map(move |()| ((), Traced::generate(HgManifestId::new(hash))))
+        .map(move |()| {
+            cloned!(incomplete_filenodes);
+            incomplete_filenodes.add(IncompleteFilenodeInfo {
+                path,
+                filenode: HgFileNodeId::new(hash),
+                p1: p1.map(HgFileNodeId::new),
+                p2: p2.map(HgFileNodeId::new),
+                copyfrom: None,
+            });
+            ((), Traced::generate(HgManifestId::new(hash)))
+        })
         .right_future()
 }
 
@@ -157,6 +183,7 @@ fn create_hg_manifest(
 fn create_hg_file(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
+    incomplete_filenodes: IncompleteFilenodes,
     leaf_info: LeafInfo<Traced<ParentIndex, (FileType, HgFileNodeId)>, HgBlobEntry>,
 ) -> impl Future<Item = ((), Traced<ParentIndex, (FileType, HgFileNodeId)>), Error = Error> {
     let LeafInfo {
@@ -181,7 +208,8 @@ fn create_hg_file(
     // hashes include ancestry, this can be necessary if two identical files were created through
     // different paths in history.
     async move {
-        let (file_type, filenode) = resolve_conflict(ctx, blobstore, path, &parents).await?;
+        let (file_type, filenode) =
+            resolve_conflict(ctx, blobstore, incomplete_filenodes, path, &parents).await?;
 
         Ok(((), Traced::generate((file_type, filenode))))
     }
@@ -193,6 +221,7 @@ fn create_hg_file(
 async fn resolve_conflict(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
+    incomplete_filenodes: IncompleteFilenodes,
     path: MPath,
     parents: &[Traced<ParentIndex, (FileType, HgFileNodeId)>],
 ) -> Result<(FileType, HgFileNodeId), Error> {
@@ -232,7 +261,7 @@ async fn resolve_conflict(
         copy_from: None,
     };
 
-    let (entry, _) = UploadHgFileEntry {
+    let (entry, path) = UploadHgFileEntry {
         upload_node_id: UploadHgNodeHash::Generate,
         contents: UploadHgFileContents::ContentUploaded(contents),
         file_type,
@@ -249,6 +278,14 @@ async fn resolve_conflict(
         .get_hash()
         .to_filenode()
         .expect("UploadHgFileEntry returned manifest entry");
+
+    incomplete_filenodes.add(IncompleteFilenodeInfo {
+        path,
+        filenode,
+        p1,
+        p2,
+        copyfrom: None,
+    });
 
     Ok((file_type, filenode))
 }

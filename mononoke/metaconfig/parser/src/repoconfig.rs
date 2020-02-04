@@ -647,7 +647,6 @@ impl RepoConfigs {
                         casefolding_check: raw
                             .casefolding_check
                             .unwrap_or(default.flags.casefolding_check),
-                        not_generated_filenodes_limit: 500,
                     },
                     commit_scribe_category: raw.commit_scribe_category,
                     block_merges: raw.block_merges.unwrap_or(default.block_merges),
@@ -1575,7 +1574,6 @@ mod test {
                         recursion_limit: Some(1024),
                         forbid_p2_root_rebases: false,
                         casefolding_check: false,
-                        not_generated_filenodes_limit: 500,
                     },
                     block_merges: false,
                     emit_obsmarkers: false,
