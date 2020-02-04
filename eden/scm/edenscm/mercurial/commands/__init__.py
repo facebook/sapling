@@ -6376,7 +6376,7 @@ def update(
         if merge:
             # Write down a state so we know how to continue after resolving
             # conflicts.
-            repo.localvfs.write("updatemergestate", "")
+            repo.localvfs.writeutf8("updatemergestate", "")
 
         result = hg.updatetotally(
             ui, repo, rev, brev, clean=clean, updatecheck=updatecheck

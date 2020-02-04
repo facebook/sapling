@@ -1414,11 +1414,12 @@ class filectx(basefilectx):
         return self._filelog.flags(self._filerev)
 
     def data(self):
+        # type: () -> bytes
         try:
             return self._filelog.read(self._filenode)
         except error.CensoredNodeError:
             if self._repo.ui.config("censor", "policy") == "ignore":
-                return ""
+                return b""
             raise error.Abort(
                 _("censored node: %s") % short(self._filenode),
                 hint=_("set censor.policy to ignore errors"),

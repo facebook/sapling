@@ -313,7 +313,7 @@ def _findnexttarget(
         if bookmark:
             if i > 0 and repo[node].bookmarks():
                 break
-        elif i >= n and not top:
+        elif (n is None or i >= n) and not top:
             break
 
         # If the rebase flag is present, rebase any unstable children.
@@ -340,8 +340,8 @@ def _findnexttarget(
             ui.status(_("changeset %s has multiple children, namely:\n") % short(node))
             _showchangesets(ui, repo, nodes=children)
             # if theres only one nonobsolete we're guessing it's the one
-            nonobschildren = filter(lambda c: not repo[c].obsolete(), children)
-            draftchildren = filter(lambda c: repo[c].mutable(), children)
+            nonobschildren = list(filter(lambda c: not repo[c].obsolete(), children))
+            draftchildren = list(filter(lambda c: repo[c].mutable(), children))
             if len(nonobschildren) == 1:
                 node = nonobschildren[0]
                 ui.status(_("choosing the only non-obsolete child: %s\n") % short(node))

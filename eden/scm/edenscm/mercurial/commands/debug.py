@@ -233,7 +233,8 @@ def debugbuilddag(
                             ml = [l.strip() for l in m3.merge_lines()]
                             ml.append("")
                         elif at > 0:
-                            ml = p1[fn].data().split("\n")
+                            datastr = pycompat.decodeutf8(p1[fn].data())
+                            ml = datastr.split("\n")
                         else:
                             ml = initialmergedlines
                         ml[id * linesperrev] += " r%i" % id
@@ -260,7 +261,9 @@ def debugbuilddag(
 
                     def fctxfn(repo, cx, path):
                         if path in filecontent:
-                            return context.memfilectx(repo, cx, path, filecontent[path])
+                            return context.memfilectx(
+                                repo, cx, path, pycompat.encodeutf8(filecontent[path])
+                            )
                         return None
 
                     if len(ps) == 0 or ps[0] < 0:
