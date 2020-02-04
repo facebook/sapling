@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 import functools
 import hashlib
-import json
 import os
 import tempfile
 import time
@@ -27,6 +26,7 @@ from . import (
     error,
     exchange,
     extensions,
+    json,
     peer,
     pushkey as pushkeymod,
     pycompat,
@@ -190,6 +190,7 @@ def escapearg(plain):
         .replace("=", ":e")
     )
 
+
 def unescapestringarg(escaped):
     return (
         escaped.replace(":e", "=")
@@ -197,6 +198,7 @@ def unescapestringarg(escaped):
         .replace(":o", ",")
         .replace(":c", ":")
     )
+
 
 def unescapebytearg(escaped):
     return (
@@ -1063,8 +1065,7 @@ def hello(repo, proto):
 
     capabilities: space separated list of tokens
     """
-    return b"capabilities: %s\n" % (pycompat.encodeutf8(capabilities(repo,
-        proto)))
+    return b"capabilities: %s\n" % (pycompat.encodeutf8(capabilities(repo, proto)))
 
 
 @wireprotocommand("listkeys", "namespace")

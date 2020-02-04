@@ -7,13 +7,13 @@
 
 from __future__ import absolute_import
 
-import json
 import os
 
 from edenscm.mercurial import (
     blobstore,
     error,
     extensions,
+    json,
     pathutil,
     perftrace,
     progress,

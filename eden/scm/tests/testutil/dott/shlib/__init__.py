@@ -307,8 +307,8 @@ def _hg(*args, **kwargs):
     stdin = kwargs.get("stdin") or ""
     encoding.setfromenviron()
     cwdbefore = os.getcwd()
-    fout = pycompat.stringutf8io()
-    fin = pycompat.stringutf8io(stdin)
+    fout = util.stringio()
+    fin = util.stringio(pycompat.encodeutf8(stdin))
     sysargs = ["hg"] + list(args)
     pycompat.sysargv = sysargs
     status = bindings.commands.run(sysargs, fin, fout, fout)
@@ -317,7 +317,7 @@ def _hg(*args, **kwargs):
         # Revert side effect of --cwd
         os.chdir(cwdbefore)
     buf = fout.getvalue().rstrip()
-    return (status, buf)
+    return (status, pycompat.decodeutf8(buf))
 
 
 # utilities in tinit.sh

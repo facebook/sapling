@@ -142,12 +142,6 @@ class httppasswordmgrdbproxy(object):
         return tuple(v for v in self._get_mgr().find_user_password(realm, uri))
 
 
-class stdoutkind(Enum):
-    "used to remember the last output stream we used (we need to flush if we switch)"
-    TEXT = 1
-    BYTES = 2
-
-
 def _catchterm(*args):
     raise error.SignalInterrupt
 
@@ -183,16 +177,13 @@ class ui(object):
         self._colormode = None
         self._terminfoparams = {}
         self._styles = {}
-        self.laststdout = None
 
         if src:
             self._uiconfig = src._uiconfig.copy()
 
             self.fout = src.fout
-            self.foutbytes = src.foutbytes
             self.ferr = src.ferr
             self.fin = src.fin
-            self.finbytes = src.finbytes
             self.pageractive = src.pageractive
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
@@ -212,10 +203,8 @@ class ui(object):
             self._uiconfig = uiconfig.uiconfig()
 
             self.fout = util.stdout
-            self.foutbytes = util.stdoutbytes
             self.ferr = util.stderr
             self.fin = util.stdin
-            self.finbytes = util.stdinbytes
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False
@@ -655,13 +644,8 @@ class ui(object):
         # type: (str) -> None
         with progress.suspend():
             starttime = util.timer()
-            if self.laststdout != stdoutkind.TEXT and not getattr(
-                self.foutbytes, "closed", False
-            ):
-                self.foutbytes.flush()
-            self.laststdout = stdoutkind.TEXT
             try:
-                self.fout.write("".join(msgs))
+                self.fout.write(encodeutf8("".join(msgs)))
             except IOError as err:
                 raise error.StdioError(err)
             finally:
@@ -694,15 +678,8 @@ class ui(object):
     def _writebytes(self, *msgs, **opts):
         with progress.suspend():
             starttime = util.timer()
-            if self.laststdout != stdoutkind.BYTES and not getattr(
-                self.fout, "closed", False
-            ):
-                self.fout.flush()
-            self.laststdout = stdoutkind.BYTES
             try:
-                if not getattr(self.fout, "closed", False):
-                    self.fout.flush()
-                self.foutbytes.write(b"".join(msgs))
+                self.fout.write(b"".join(msgs))
             except IOError as err:
                 raise error.StdioError(err)
             finally:
@@ -730,7 +707,7 @@ class ui(object):
                 self.fout.flush()
             # Write all messages in a single operation as stderr may be
             # unbuffered.
-            self.ferr.write("".join(msgs))
+            self.ferr.write(encodeutf8("".join(msgs)))
             # stderr may be buffered under win32 when redirected to files,
             # including stdout.
             if not getattr(self.ferr, "closed", False):
@@ -1153,7 +1130,7 @@ class ui(object):
             # to interact with tty even if fin is not a tty.
             with self.timeblockedsection("stdio"):
                 if self.configbool("ui", "nontty"):
-                    l = self.fin.readline()
+                    l = decodeutf8(self.fin.readline())
                     if not l:
                         raise EOFError
                     return l.rstrip("\n")

@@ -20,6 +20,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import decodeutf8
 
 from . import editsgenerator
 
@@ -136,7 +137,6 @@ class perftestsuite(object):
         cwd=None,
         env=None,
         stderr=False,
-        utf8decode=True,
         input=None,
         timeout=0,
         returncode=False,
@@ -162,10 +162,8 @@ class perftestsuite(object):
         else:
             out, err = p.communicate()
 
-        if out is not None and utf8decode:
-            out = out.decode("utf-8")
-        if err is not None and utf8decode:
-            err = err.decode("utf-8")
+        out = decodeutf8(out)
+        err = decodeutf8(err)
 
         if p.returncode != 0 and returncode is False:
             self.ui.warn(_("run call failed!\n"))

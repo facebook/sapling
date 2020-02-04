@@ -88,13 +88,12 @@ impl HgPython {
         let call_args = {
             let fin = read_to_py_object(py, &io.input);
             let fout = write_to_py_object(py, &io.output);
-            let foutbytes = fout.clone_ref(py);
             let ferr = match io.error {
                 None => fout.clone_ref(py),
                 Some(ref error) => write_to_py_object(py, error),
             };
             let args: Vec<Str> = args.into_iter().map(Str::from).collect();
-            (args, fin, fout, foutbytes, ferr).to_py_object(py)
+            (args, fin, fout, ferr).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
         Ok(())

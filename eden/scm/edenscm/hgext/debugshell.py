@@ -25,6 +25,7 @@ import edenscmnative
 from edenscm import hgext, mercurial
 from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import decodeutf8
 
 
 cmdtable = {}
@@ -65,7 +66,7 @@ def debugshell(ui, repo, **opts):
         return 0
 
     if not ui.interactive():
-        command = ui.fin.read()
+        command = decodeutf8(ui.fin.read())
         exec(command)
         return 0
 

@@ -75,9 +75,7 @@ queue = pycompat.queue.Queue
 socketserver = pycompat.socketserver
 stderr = pycompat.stderr
 stdin = pycompat.stdin
-stdinbytes = pycompat.stdinbytes
 stdout = pycompat.stdout
-stdoutbytes = pycompat.stdoutbytes
 stringio = pycompat.stringio
 
 httpserver = urllibcompat.httpserver
@@ -96,7 +94,7 @@ def isatty(fp):
 # destined stdout with a pipe destined stdout (e.g. pager), we want line
 # buffering
 if isatty(stdout):
-    stdout = os.fdopen(stdout.fileno(), "w", 1)
+    stdout = os.fdopen(stdout.fileno(), "wb", 1)
 
 if pycompat.iswindows:
     from . import windows as platform

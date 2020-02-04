@@ -74,8 +74,12 @@ def loads(string):
     if sys.version_info[0] < 3:
         # XXX: This should round-trip with "dumps". But it might be non-trivial to
         # do so.
-        return _rapply(
-            lambda s: pycompat.decodeutf8(s.encode("utf-8")), _sysjson.loads(string)
-        )
+        def encode(s):
+            if isinstance(s, type(u"")):
+                return pycompat.decodeutf8(s.encode("utf-8"))
+            else:
+                return s
+
+        return _rapply(encode, _sysjson.loads(string))
     else:
         return _sysjson.loads(string)

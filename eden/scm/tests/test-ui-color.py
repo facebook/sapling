@@ -24,7 +24,7 @@ ui_ = uimod.ui.load()
 ui_.setconfig("ui", "formatted", "True")
 
 # we're not interested in the output, so write that to devnull
-ui_.fout = open(os.devnull, "w")
+ui_.fout = open(os.devnull, "wb")
 
 # call some arbitrary command just so we go through
 # color's wrapped _runcommand twice.

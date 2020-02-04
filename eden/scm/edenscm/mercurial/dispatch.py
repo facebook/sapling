@@ -65,7 +65,6 @@ class request(object):
         repo=None,
         fin=None,
         fout=None,
-        foutbytes=None,
         ferr=None,
         prereposetups=None,
     ):
@@ -76,7 +75,6 @@ class request(object):
         # input/output/error streams
         self.fin = fin
         self.fout = fout
-        self.foutbytes = foutbytes
         self.ferr = ferr
 
         # remember options pre-parsed by _earlyparseopts()
@@ -124,12 +122,12 @@ class request(object):
                 raise exc
 
 
-def run(args=None, fin=None, fout=None, foutbytes=None, ferr=None):
+def run(args=None, fin=None, fout=None, ferr=None):
     "run the command in sys.argv"
     _initstdio()
     if args is None:
         args = pycompat.sysargv
-    req = request(args[1:], fin=fin, fout=fout, foutbytes=foutbytes, ferr=ferr)
+    req = request(args[1:], fin=fin, fout=fout, ferr=ferr)
     err = None
     try:
         status = (dispatch(req) or 0) & 255
@@ -139,12 +137,6 @@ def run(args=None, fin=None, fout=None, foutbytes=None, ferr=None):
     if util.safehasattr(req.ui, "fout"):
         try:
             req.ui.fout.flush()
-        except IOError as e:
-            err = e
-            status = -1
-    if util.safehasattr(req.ui, "foutbytes"):
-        try:
-            req.ui.foutbytes.flush()
         except IOError as e:
             err = e
             status = -1
@@ -404,8 +396,6 @@ def dispatch(req):
             req.ui.fin = req.fin
         if req.fout:
             req.ui.fout = req.fout
-        if req.foutbytes:
-            req.ui.foutbytes = req.foutbytes
         if req.ferr:
             req.ui.ferr = req.ferr
     except error.Abort as inst:

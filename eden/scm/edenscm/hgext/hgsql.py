@@ -70,7 +70,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscm.mercurial.pycompat import queue, range
+from edenscm.mercurial.pycompat import encodeutf8, queue, range
 
 
 wrapcommand = extensions.wrapcommand
@@ -893,7 +893,7 @@ def wraprepo(repo):
             for k, v in sorted(pycompat.iteritems(refs)):
                 if k != "tip":
                     v = hex(v)
-                sha = hashlib.sha1("%s%s%s" % (sha, k, v)).hexdigest()
+                sha = hashlib.sha1(encodeutf8("%s%s%s" % (sha, k, v))).hexdigest()
             return sha
 
         def _sqlsynchash(self):
@@ -917,7 +917,7 @@ def wraprepo(repo):
             ]
             # is it a new repo with empty references?
             if sqlresults == [[]]:
-                return hashlib.sha1("%s%s" % ("tip", -1)).hexdigest()
+                return hashlib.sha1(encodeutf8("%s%s" % ("tip", -1))).hexdigest()
             # sqlresults looks like [[('59237a7416a6a1764ea088f0bc1189ea58d5b592',)]]
             sqlsynchash = sqlresults[0][0][0]
             if len(sqlsynchash) != 40:

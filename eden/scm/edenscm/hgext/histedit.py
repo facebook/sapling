@@ -1137,7 +1137,7 @@ def _getgoal(opts):
 def _readfile(ui, path):
     if path == "-":
         with ui.timeblockedsection("histedit"):
-            return ui.fin.read()
+            return pycompat.decodeutf8(ui.fin.read())
     else:
         with open(path, "rb") as f:
             return pycompat.decodeutf8(f.read())

@@ -948,7 +948,7 @@ def logmessage(repo, opts):
     if not message and logfile:
         try:
             if isstdiofilename(logfile):
-                message = ui.fin.read()
+                message = pycompat.decodeutf8(ui.fin.read())
             else:
                 message = pycompat.decodeutf8(
                     b"\n".join(util.readfile(logfile).splitlines())

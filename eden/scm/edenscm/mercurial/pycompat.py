@@ -69,22 +69,15 @@ if sys.version_info[0] >= 3:
     sysplatform = sys.platform
     sysexecutable = sys.executable
 
-    # Upstream added stringio which conforms to their end goal of using bytes
-    # everywhere. We want to use String in Python 3 and Bytes/str in Python 2,
-    # so we need a different io abstraction here, which I call stringutf8io. We
-    # should probably remove stringio.
     stringio = io.BytesIO
-    stringutf8io = io.StringIO
     maplist = lambda *args: list(map(*args))
     ziplist = lambda *args: list(zip(*args))
     rawinput = input
     range = range
 
-    stdin = sys.stdin
-    stdinbytes = sys.stdin.buffer
-    stdout = sys.stdout
-    stdoutbytes = sys.stdout.buffer
-    stderr = sys.stderr
+    stdin = sys.stdin.buffer
+    stdout = sys.stdout.buffer
+    stderr = sys.stderr.buffer
 
     sysargv = sys.argv
 
@@ -157,9 +150,7 @@ else:
     ossep = os.sep
     osaltsep = os.altsep
     stdin = sys.stdin
-    stdinbytes = sys.stdin
     stdout = sys.stdout
-    stdoutbytes = sys.stdout
     stderr = sys.stderr
     if getattr(sys, "argv", None) is not None:
         sysargv = sys.argv
@@ -168,7 +159,6 @@ else:
     sysexecutable = sys.executable
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
-    stringutf8io = cStringIO.StringIO
     maplist = map
     ziplist = zip
     rawinput = raw_input  # noqa

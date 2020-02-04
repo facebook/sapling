@@ -81,7 +81,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid, nullrev, short
-from ..pycompat import range
+from ..pycompat import decodeutf8, range
 from .cmdtable import command
 
 
@@ -184,7 +184,7 @@ def debugbuilddag(
 
     if text is None:
         ui.status(_("reading DAG from stdin\n"))
-        text = ui.fin.read()
+        text = decodeutf8(ui.fin.read())
 
     cl = repo.changelog
     if len(cl) > 0:
@@ -3153,7 +3153,7 @@ def debugdrawdag(ui, repo, **opts):
     Note that the revset cannot have confusing characters which can be seen as
     the part of the graph edges, like `|/+-\`.
     """
-    text = ui.fin.read()
+    text = decodeutf8(ui.fin.read())
     return drawdag.drawdag(repo, text, **opts)
 
 
