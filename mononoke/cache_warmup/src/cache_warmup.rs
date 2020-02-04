@@ -11,16 +11,19 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use futures_stats::Timed;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use metaconfig_types::CacheWarmupParams;
+use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{debug, info};
+use slog::{debug, info, warn};
 use tracing::{trace_args, Traced};
 
 mod errors {
@@ -42,16 +45,26 @@ mod errors {
 fn blobstore_and_filenodes_warmup(
     ctx: CoreContext,
     repo: BlobRepo,
+    bcs_id: ChangesetId,
     revision: HgChangesetId,
 ) -> impl Future<Item = (), Error = Error> {
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
+
+    let derive_filenodes = FilenodesOnlyPublic::derive(
+        ctx.clone(),
+        repo.clone(),
+        FilenodesOnlyPublicMapping::new(repo.clone()),
+        bcs_id,
+    );
+
     revision
         .load(ctx.clone(), repo.blobstore())
         .from_err()
+        .join(derive_filenodes)
         .map({
             cloned!(ctx, repo);
-            move |cs| {
+            move |(cs, _)| {
                 cs.manifestid()
                     .list_all_entries(ctx.clone(), repo.get_blobstore())
             }
@@ -69,26 +82,35 @@ fn blobstore_and_filenodes_warmup(
                         None => RepoPath::RootPath,
                     };
 
-                    let fut = repo.get_linknode(ctx.clone(), &path, hash);
+                    let fut = repo.get_linknode_opt(ctx.clone(), &path, hash);
                     Some(fut)
                 }
             }
         })
         .buffered(buffer_size)
-        .for_each({
+        .fold(0, {
             cloned!(ctx);
             let mut i = 0;
-            move |_| {
+            move |mut null_linknodes, linknode| {
+                if linknode.is_none() {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::NullLinknode);
+                    null_linknodes += 1;
+                }
                 i += 1;
                 if i % 10000 == 0 {
                     debug!(ctx.logger(), "manifests warmup: fetched {}th entry", i);
                 }
-                Ok(())
+                let res: Result<_, Error> = Ok(null_linknodes);
+                res
             }
         })
         .map({
             cloned!(ctx);
-            move |()| {
+            move |null_linknodes| {
+                if null_linknodes > 0 {
+                    warn!(ctx.logger(), "{} linknodes are missing!", null_linknodes);
+                }
                 debug!(ctx.logger(), "finished manifests warmup");
             }
         })
@@ -137,14 +159,25 @@ fn do_cache_warmup(
 ) -> impl Future<Item = (), Error = Error> {
     let ctx = ctx.clone_and_reset();
 
-    repo.get_bookmark(ctx.clone(), &bookmark)
+    repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
         .and_then({
             cloned!(repo, ctx);
-            move |bookmark_rev| match bookmark_rev {
-                Some(bookmark_rev) => {
+            move |maybe_bcs_id| match maybe_bcs_id {
+                Some(bcs_id) => repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                    .map(move |hg_cs_id| Some((bcs_id, hg_cs_id)))
+                    .left_future(),
+                None => future::ok(None).right_future(),
+            }
+        })
+        .and_then({
+            cloned!(repo, ctx);
+            move |book_bcs_hg_cs_id| match book_bcs_hg_cs_id {
+                Some((bcs_id, bookmark_rev)) => {
                     let blobstore_warmup = spawn_future(blobstore_and_filenodes_warmup(
                         ctx.clone(),
                         repo.clone(),
+                        bcs_id,
                         bookmark_rev,
                     ));
                     let cs_warmup =
