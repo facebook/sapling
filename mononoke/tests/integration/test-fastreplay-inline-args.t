@@ -86,9 +86,20 @@ Check logging structure
   $ live_config="$TESTTMP/live.json"
   $ cat > "$live_config" << EOF
   > {
-  >   "admission_rate": 0,
+  >   "admission_rate": 100,
   >   "max_concurrency": 1
   > }
   > EOF
-  $ quiet fastreplay  --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH"
+  $ quiet fastreplay  --live-config "file:${live_config}" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
   $ grep "Replay Succeeded" "$fastreplay_log" | jq .normal.command
+  "gettreepack"
+  "getbundle"
+  "getpackv1"
+
+# Check that replaying works with arguments
+  $ truncate -s 0 "$fastreplay_log"
+  $ quiet fastreplay --debug --scuba-log-file "$fastreplay_log" -- cat "$WIREPROTO_LOGGING_PATH"
+  $ grep "Replay Succeeded" "$fastreplay_log" | jq .normal.command | sort
+  "getbundle"
+  "getpackv1"
+  "gettreepack"

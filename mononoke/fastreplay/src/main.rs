@@ -39,12 +39,16 @@ use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o, warn, Logger};
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::process::Stdio;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
 };
 use std::time::Duration;
-use tokio::io::{self, AsyncBufReadExt, BufReader};
+use tokio::{
+    io::{self, AsyncBufReadExt, AsyncRead, BufReader},
+    process::Command,
+};
 
 use config::FastReplayConfig;
 use dispatcher::FastReplayDispatcher;
@@ -62,6 +66,7 @@ const ARG_NO_CACHE_WARMUP: &str = "no-cache-warmup";
 const ARG_ALIASES: &str = "alias";
 const ARG_HASH_VALIDATION_PERCENTAGE: &str = "hash-validation-percentage";
 const ARG_LIVE_CONFIG: &str = "live-config";
+const ARG_COMMAND: &str = "command";
 
 const LIVE_CONFIG_POLL_INTERVAL: u64 = 5;
 
@@ -338,14 +343,15 @@ impl ReplayOpts {
     }
 }
 
-async fn fast_replay_from_stdin<'a>(
+async fn fastreplay<R: AsyncRead + Unpin>(
     opts: &ReplayOpts,
+    reader: R,
     logger: &Logger,
     scuba: &ScubaSampleBuilder,
     repos: &Arc<HashMap<String, FastReplayDispatcher>>,
     count: &Arc<AtomicU64>,
 ) -> Result<(), Error> {
-    let mut reader = BufReader::new(io::stdin()).lines();
+    let mut reader = BufReader::new(reader).lines();
 
     loop {
         let load = count.load(Ordering::Relaxed);
@@ -422,7 +428,35 @@ async fn do_main<'a>(
 
     // Start replaying
     let count = Arc::new(AtomicU64::new(0));
-    fast_replay_from_stdin(&opts, &logger, &scuba, &repos, &count).await?;
+
+    match matches.values_of_os(ARG_COMMAND) {
+        Some(mut args) => {
+            let program = args
+                .next()
+                .ok_or_else(|| Error::msg("Command cannot be empty"))?;
+
+            let mut command = Command::new(program);
+
+            command
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::inherit());
+
+            for arg in args {
+                command.arg(arg);
+            }
+
+            let mut child = command.spawn()?;
+            let stdout = child.stdout().take().expect("Stdout was piped()");
+            fastreplay(&opts, stdout, &logger, &scuba, &repos, &count).await?;
+
+            // Wait for child to terminate
+            child.await?;
+        }
+        None => {
+            fastreplay(&opts, io::stdin(), &logger, &scuba, &repos, &count).await?;
+        }
+    }
 
     loop {
         let n = count.load(Ordering::Relaxed);
@@ -477,6 +511,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("Path to read hot-reloadable configuration from")
                 .takes_value(true)
                 .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_COMMAND)
+                .help("Command to run to fetch traffic to replay (defaults to reading from stdin otherwise)")
+                .takes_value(true)
+                .multiple(true)
+                .required(false)
         );
 
     let matches = app.get_matches();
