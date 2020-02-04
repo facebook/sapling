@@ -254,6 +254,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
     con.execute_batch(SqlChangesets::get_up_query())?;
     con.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
     con.execute_batch(SqlBonsaiHgMapping::get_up_query())?;
+    con.execute_batch(SqlPhasesStore::get_up_query())?;
     let con = Connection::with_sqlite(con);
 
     new_memblob_with_connection_with_id(con.clone(), repo_id)
