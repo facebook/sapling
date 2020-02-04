@@ -26,6 +26,7 @@ import stat
 import sys
 import tempfile
 import unicodedata
+from typing import Optional
 
 # pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import osutil
@@ -100,6 +101,7 @@ def _locked(pathname):
 
 
 def _issymlinklockstale(oldinfo, newinfo):
+    # type: (str, str) -> bool
     """Test if the lock is stale (owned by dead process).
 
     Only works for symlink locks. Both oldinfo and newinfo have the form:
@@ -132,6 +134,7 @@ def _issymlinklockstale(oldinfo, newinfo):
 
 
 def makelock(info, pathname):
+    # type: (str, str) -> Optional[int]
     """Try to make a lock at given path. Write info inside it.
 
     Stale non-symlink or symlink locks are removed automatically. Symlink locks
@@ -195,7 +198,6 @@ def makelock(info, pathname):
     #     the flock. So it knows nobody else has the lock. Therefore it can do
     #     the unlink without extra locking.
     dirname = os.path.dirname(pathname)
-    info = encodeutf8(info)
     with _locked(dirname or "."):
         # Check and remove stale lock
         try:
@@ -245,6 +247,7 @@ def makelock(info, pathname):
             fd = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL | O_CLOEXEC)
             os.close(fd)
 
+        infobytes = encodeutf8(info)
         try:
             # Create new lock.
             #
@@ -255,7 +258,7 @@ def makelock(info, pathname):
             try:
                 os.fchmod(fd, 0o664)
                 fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
-                os.write(fd, info)
+                os.write(fd, infobytes)
                 os.rename(tmppath, pathname)
                 return fd
             except Exception:
@@ -269,6 +272,7 @@ def makelock(info, pathname):
 
 
 def readlock(pathname):
+    # type: (str) -> str
     with _locked(os.path.dirname(pathname) or "."):
         try:
             return os.readlink(pathname)
@@ -284,8 +288,10 @@ def readlock(pathname):
 
 
 def releaselock(lockfd, pathname):
+    # type: (Optional[int], str) -> None
     # Explicitly unlock. This avoids issues when a
     # forked process inherits the flock.
+    assert lockfd is not None
     fcntl.flock(lockfd, fcntl.LOCK_UN)
     os.close(lockfd)
     os.unlink(pathname)
@@ -352,6 +358,7 @@ def isexec(f):
 
 
 def setflags(f, l, x):
+    # type: (str, bool, bool) -> None
     st = os.lstat(f)
     s = st.st_mode
     if l:
@@ -491,6 +498,7 @@ def _iseden(dirpath):
 
 
 def _checkexec(path):
+    # type: (str) -> bool
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags
 
@@ -560,9 +568,11 @@ def _checkexec(path):
     except (IOError, OSError):
         # we don't care, the user probably won't be able to commit anyway
         return False
+    return False
 
 
 def _checklink(path):
+    # type: (str) -> bool
     """check whether the given path is on a symlink-capable filesystem"""
     cap = fscap.getfscap(getfstype(path), fscap.SYMLINK)
     if cap is not None:
@@ -593,8 +603,8 @@ def _checklink(path):
                 target = "checklink-target"
                 try:
                     open(os.path.join(cachedir, target), "w").close()
-                except IOError as inst:
-                    if inst[0] == errno.EACCES:
+                except EnvironmentError as inst:
+                    if inst.errno == errno.EACCES:
                         # If we can't write to cachedir, just pretend
                         # that the fs is readonly and by association
                         # that the fs won't support symlinks. This
@@ -614,7 +624,7 @@ def _checklink(path):
                 return True
             except OSError as inst:
                 # link creation might race, try again
-                if inst[0] == errno.EEXIST:
+                if inst.errno == errno.EEXIST:
                     continue
                 raise
             finally:
@@ -624,7 +634,7 @@ def _checklink(path):
             return False
         except OSError as inst:
             # sshfs might report failure while successfully creating the link
-            if inst[0] == errno.EIO and os.path.exists(name):
+            if inst.errno == errno.EIO and os.path.exists(name):
                 unlink(name)
             return False
 
@@ -792,12 +802,14 @@ elif pycompat.sysplatform == "cygwin":
     # tools, so the exec bit tends to be set erroneously.
     # Therefore, disable executable bit access on Cygwin.
     def checkexec(path):
+        # type: (str) -> bool
         return False
 
     # Similarly, Cygwin's symlink emulation is likely to create
     # problems when Mercurial is used from both Cygwin and native
     # Windows, with other native tools, or on shared volumes
     def checklink(path):
+        # type: (str) -> bool
         return False
 
 
@@ -961,6 +973,7 @@ def gethgcmd():
 
 
 def makedir(path, notindexed):
+    # type: (str, bool) -> None
     try:
         os.mkdir(path)
     except OSError as err:

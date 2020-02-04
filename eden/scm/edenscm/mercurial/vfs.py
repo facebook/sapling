@@ -20,7 +20,19 @@ import shutil
 import stat
 import tempfile
 import threading
-from typing import IO, BinaryIO, Callable, List, Optional, Tuple
+import typing
+from typing import (
+    IO,
+    Any,
+    BinaryIO,
+    Callable,
+    ContextManager,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from . import encoding, error, pathutil, pycompat, util
 from .i18n import _
@@ -151,6 +163,7 @@ class abstractvfs(pycompat.ABC):
         return os.path.basename(path)
 
     def chmod(self, path, mode):
+        # type: (str, int) -> None
         return os.chmod(self.join(path), mode)
 
     def dirname(self, path):
@@ -161,6 +174,7 @@ class abstractvfs(pycompat.ABC):
         return os.path.dirname(path)
 
     def exists(self, path=None):
+        # type: (Optional[str]) -> bool
         return os.path.exists(self.join(path))
 
     def fstat(self, fp):
@@ -168,15 +182,19 @@ class abstractvfs(pycompat.ABC):
         return util.fstat(fp)
 
     def isdir(self, path=None):
+        # type: (Optional[str]) -> bool
         return os.path.isdir(self.join(path))
 
     def isfile(self, path=None):
+        # type: (Optional[str]) -> bool
         return os.path.isfile(self.join(path))
 
     def islink(self, path=None):
+        # type: (Optional[str]) -> bool
         return os.path.islink(self.join(path))
 
     def isexec(self, path=None):
+        # type: (Optional[str]) -> bool
         return util.isexec(self.join(path))
 
     def isfileorlink(self, path=None):
@@ -192,6 +210,7 @@ class abstractvfs(pycompat.ABC):
         return stat.S_ISREG(mode) or stat.S_ISLNK(mode)
 
     def reljoin(self, *paths):
+        # type: (str) -> str
         """join various elements of a path together (as os.path.join would do)
 
         The vfs base is not injected so that path stay relative. This exists
@@ -206,27 +225,35 @@ class abstractvfs(pycompat.ABC):
         return os.path.split(path)
 
     def lexists(self, path=None):
+        # type: (Optional[str]) -> bool
         return os.path.lexists(self.join(path))
 
     def lstat(self, path=None):
+        # type: (Optional[str]) -> util.wrapped_stat_result
         return util.lstat(self.join(path))
 
     def listdir(self, path=None):
+        # type: (Optional[str]) -> List[str]
         return os.listdir(self.join(path))
 
     def makedir(self, path=None, notindexed=True):
+        # type: (Optional[str], bool) -> None
         return util.makedir(self.join(path), notindexed)
 
     def makedirs(self, path=None, mode=None):
+        # type: (Optional[str], Optional[int]) -> None
         return util.makedirs(self.join(path), mode)
 
     def makelock(self, info, path):
+        # type: (str, str) -> Optional[int]
         return util.makelock(info, self.join(path))
 
     def mkdir(self, path=None):
+        # type: (Optional[str]) -> None
         return os.mkdir(self.join(path))
 
     def mkstemp(self, suffix="", prefix="tmp", dir=None, text=False):
+        # type: (str, str, Optional[str], bool) -> Tuple[int, str]
         fd, name = tempfile.mkstemp(
             suffix=suffix, prefix=prefix, dir=self.join(dir), text=text
         )
@@ -237,12 +264,15 @@ class abstractvfs(pycompat.ABC):
             return fd, fname
 
     def readdir(self, path=None, stat=None, skip=None):
+        # type: (Optional[str], Optional[bool], Optional[str]) -> List[str]
         return util.listdir(self.join(path), stat, skip)
 
     def readlock(self, path):
+        # type: (Optional[str]) -> str
         return util.readlock(self.join(path))
 
     def rename(self, src, dst, checkambig=False):
+        # type: (str, str, bool) -> None
         """Rename from src to dst
 
         checkambig argument is used with util.filestat, and is useful
@@ -264,14 +294,17 @@ class abstractvfs(pycompat.ABC):
         return util.rename(srcpath, dstpath)
 
     def readlink(self, path):
+        # type: (str) -> str
         return os.readlink(self.join(path))
 
     def removedirs(self, path=None):
+        # type: (Optional[str]) -> None
         """Remove a leaf directory and all empty intermediate ones
         """
         return util.removedirs(self.join(path))
 
     def rmtree(self, path=None, ignore_errors=False, forcibly=False):
+        # type: (Optional[str], bool, bool) -> None
         """Remove a directory tree recursively
 
         If ``forcibly``, this tries to remove READ-ONLY files, too.
@@ -295,25 +328,36 @@ class abstractvfs(pycompat.ABC):
         )
 
     def setflags(self, path, l, x):
+        # type: (str, bool, bool) -> None
         return util.setflags(self.join(path), l, x)
 
     def stat(self, path=None):
+        # type: (Optional[str]) -> util.wrapped_stat_result
         return util.stat(self.join(path))
 
     def unlink(self, path=None):
+        # type: (Optional[str]) -> None
         return util.unlink(self.join(path))
 
     def tryunlink(self, path=None):
+        # type: (Optional[str]) -> None
         """Attempt to remove a file, ignoring missing file errors."""
         util.tryunlink(self.join(path))
 
     def unlinkpath(self, path=None, ignoremissing=False):
+        # type: (Optional[str], bool) -> None
         return util.unlinkpath(self.join(path), ignoremissing=ignoremissing)
 
     def utime(self, path=None, t=None):
+        # type: (Optional[str], Optional[Tuple[float, float]]]) -> None
         return os.utime(self.join(path), t)
 
-    def walk(self, path=None, onerror=None):
+    def walk(
+        self,
+        path=None,  # type: Optional[str]
+        onerror=None,  # type: Optional[Callable[[OSError], None]]
+    ):
+        # type: (...) -> Iterable[Tuple[str, List[str], List[str]]]
         """Yield (dirpath, dirs, files) tuple for each directories under path
 
         ``dirpath`` is relative one from the root of this vfs. This
@@ -331,6 +375,7 @@ class abstractvfs(pycompat.ABC):
 
     @contextlib.contextmanager
     def backgroundclosing(self, ui, expectedcount=-1):
+        # type: (Any, int) -> ContextManager[backgroundfilecloser]
         """Allow files to be closed asynchronously.
 
         When this context manager is active, ``backgroundclose`` can be passed
@@ -340,7 +385,12 @@ class abstractvfs(pycompat.ABC):
         # Sharing backgroundfilecloser between threads is complex and using
         # multiple instances puts us at risk of running out of file descriptors
         # only allow to use backgroundfilecloser when in main thread.
-        if not isinstance(threading.currentThread(), threading._MainThread):
+        if not isinstance(
+            # pyre isn't aware of threading._MainThread
+            # Once we are Python 3 only we should switch to threading.main_thread()
+            threading.currentThread(),
+            threading._MainThread,  # pyre-fixme
+        ):
             yield
             return
         vfs = getattr(self, "vfs", self)
@@ -369,6 +419,7 @@ class vfs(abstractvfs):
     def __init__(
         self, base, audit=True, cacheaudited=False, expandpath=False, realpath=False
     ):
+        # type: (str, bool, bool, bool, bool) -> None
         if expandpath:
             base = util.expandpath(base)
         if realpath:
@@ -384,16 +435,19 @@ class vfs(abstractvfs):
 
     @util.propertycache
     def _cansymlink(self):
+        # type: () -> bool
         return util.checklink(self.base)
 
     @util.propertycache
     def _chmod(self):
+        # type: () -> bool
         return util.checkexec(self.base)
 
     def _fixfilemode(self, name):
+        # type: (str) -> None
         if self.createmode is None or not self._chmod:
             return
-        os.chmod(name, self.createmode & 0o666)
+        os.chmod(name, typing.cast(int, self.createmode) & 0o666)
 
     def __call__(
         self,
@@ -512,6 +566,7 @@ class vfs(abstractvfs):
         return fp
 
     def symlink(self, src, dst):
+        # type: (Union[bytes, str], str) -> None
         self.audit(dst)
         linkname = self.join(dst)
         util.tryunlink(linkname)
@@ -529,7 +584,10 @@ class vfs(abstractvfs):
                     linkname,
                 )
         else:
-            self.write(dst, src)
+            if isinstance(src, str):
+                self.writeutf8(dst, src)
+            else:
+                self.write(dst, src)
 
     def join(self, path, *insidef):
         # type: (Optional[str], str) -> str
@@ -544,6 +602,7 @@ opener = vfs
 
 class proxyvfs(object):
     def __init__(self, vfs):
+        # type: (abstractvfs) -> None
         self.vfs = vfs
 
     @property
@@ -559,6 +618,7 @@ class filtervfs(abstractvfs, proxyvfs):
     """Wrapper vfs for filtering filenames with a function."""
 
     def __init__(self, vfs, filter):
+        # type: (abstractvfs, Callable[[str], str]) -> None
         proxyvfs.__init__(self, vfs)
         self._filter = filter
 
@@ -583,6 +643,7 @@ class readonlyvfs(abstractvfs, proxyvfs):
         proxyvfs.__init__(self, vfs)
 
     def __call__(self, path, mode="r", *args, **kw):
+        # type: (str, str, bool, bool) -> BinaryIO
         if mode not in ("r", "rb"):
             raise error.Abort(_("this vfs is read only"))
         return self.vfs(path, mode, *args, **kw)
@@ -770,7 +831,12 @@ class blobvfs(vfs):
             )
         return super(blobvfs, self).join(path[0:2], path[2:])
 
-    def walk(self, path=None, onerror=None):
+    def walk(
+        self,
+        path=None,  # type: Optional[str]
+        onerror=None,  # type: Optional[Callable[[OSError], None]]
+    ):
+        # type: (...) -> Iterable[Tuple[str, List[str], List[str]]]
         """Yield (dirpath, [], oids) tuple for blobs under path
 
         Oids only exist in the root of this vfs, so dirpath is always ''.

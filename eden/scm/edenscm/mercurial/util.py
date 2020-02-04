@@ -52,7 +52,7 @@ import traceback
 import types
 import warnings
 import zlib
-from typing import BinaryIO, Iterable, List, Optional, Type
+from typing import Any, BinaryIO, Iterable, List, Optional, Type
 
 import bindings
 
@@ -1849,6 +1849,7 @@ class atomictempfile(BinaryIO):
 
 
 def unlinkpath(f, ignoremissing=False):
+    # type: (str, bool) -> None
     """unlink and remove the directory if it is empty"""
     if ignoremissing:
         tryunlink(f)
@@ -1862,6 +1863,7 @@ def unlinkpath(f, ignoremissing=False):
 
 
 def tryunlink(f):
+    # type: (str) -> None
     """Attempt to remove a file, ignoring ENOENT errors."""
     try:
         unlink(f)
@@ -1871,6 +1873,7 @@ def tryunlink(f):
 
 
 def makedirs(name, mode=None, notindexed=False):
+    # type: (str, Optional[int], bool) -> None
     """recursive directory creation with parent mode inheritance
 
     Newly created directories are marked as "not to be indexed by
@@ -4568,16 +4571,19 @@ def _fixup_time(st):
 
 
 def stat(path):
+    # type: (str) -> wrapped_stat_result
     res = os.stat(path)
     return wrapped_stat_result(res)
 
 
 def lstat(path):
+    # type: (str) -> wrapped_stat_result
     res = os.lstat(path)
     return wrapped_stat_result(res)
 
 
 def fstat(fp):
+    # type: (Any) -> wrapped_stat_result
     """stat file object that may not have fileno method."""
     try:
         res = os.fstat(fp)

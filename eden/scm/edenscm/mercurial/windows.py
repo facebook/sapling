@@ -19,6 +19,7 @@ import re
 import stat
 import sys
 import tempfile
+from typing import IO, Optional
 
 # pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import osutil
@@ -132,6 +133,7 @@ class mixedfilemodewrapper(object):
 
 
 def posixfile(name, mode="r", buffering=-1):
+    # type: (str, str, int) -> IO
     """Open a file with even more POSIX-like semantics"""
     try:
         fp = osutil.posixfile(name, mode, buffering)  # may raise WindowsError
@@ -243,6 +245,7 @@ def sshargs(sshcmd, host, user, port):
 
 
 def setflags(f, l, x):
+    # type: (str, bool, bool) -> None
     pass
 
 
@@ -251,10 +254,12 @@ def copymode(src, dst, mode=None):
 
 
 def checkexec(path):
+    # type: (str) -> bool
     return False
 
 
 def checklink(path):
+    # type: (str) -> bool
     return False
 
 
@@ -441,6 +446,7 @@ def groupname(gid=None):
 
 
 def removedirs(name):
+    # type: (str) -> None
     """special version of os.removedirs that does not remove symlinked
     directories or junction points if they actually contain files"""
     if listdir(name):
@@ -460,6 +466,7 @@ def removedirs(name):
 
 
 def rename(src, dst):
+    # type: (str, str) -> None
     """Atomically rename file src to dst, replacing dst if it exists
 
     Note that this is only really atomic for files (not dirs) on the
@@ -607,13 +614,14 @@ def _cleanuptemplockfiles(dirname, basename):
 
 
 def makelock(info, pathname):
+    # type: (str, str) -> Optional[int]
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)
     _cleanuptemplockfiles(dirname, basename)
     fd, tname = tempfile.mkstemp(
         suffix=".tmplock", prefix="%s.%i." % (basename, os.getpid()), dir=dirname
     )
-    os.write(fd, info)
+    os.write(fd, pycompat.encodeutf8(info))
     os.fsync(fd)
     os.close(fd)
     try:
@@ -624,6 +632,7 @@ def makelock(info, pathname):
 
 
 def readlock(pathname):
+    # type: (str) -> str
     try:
         return os.readlink(pathname)
     except OSError as why:
@@ -638,6 +647,7 @@ def readlock(pathname):
 
 
 def releaselock(_lockfd, pathname):
+    # type: (Optional[int], str) -> None
     os.unlink(pathname)
 
 
