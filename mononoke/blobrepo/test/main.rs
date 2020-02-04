@@ -31,8 +31,8 @@ use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_types::{
     blobs::{
-        fetch_file_envelope, BlobManifest, ContentBlobMeta, File, HgBlobChangeset,
-        UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+        BlobManifest, ContentBlobMeta, File, HgBlobChangeset, UploadHgFileContents,
+        UploadHgFileEntry, UploadHgNodeHash,
     },
     manifest, FileType, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifest,
     HgManifestId, HgParents, MPath, MPathElement, RepoPath,
@@ -1454,13 +1454,10 @@ mod octopus_merges {
                 .into_leaf()
                 .ok_or(Error::msg(format!("Not a filenode: {}", path)))?;
 
-            let envelope = fetch_file_envelope(
-                self.ctx.clone(),
-                &self.repo.get_blobstore().boxed(),
-                filenode,
-            )
-            .compat()
-            .await?;
+            let envelope = filenode
+                .load(self.ctx.clone(), self.repo.blobstore())
+                .compat()
+                .await?;
 
             Ok(envelope)
         }

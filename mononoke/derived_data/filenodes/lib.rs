@@ -26,9 +26,8 @@ use futures_util::try_join;
 use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
 use mercurial_types::{
-    blobs::{fetch_file_envelope, File},
-    fetch_manifest_envelope, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestEnvelope,
-    HgManifestId, NULL_HASH,
+    blobs::File, fetch_manifest_envelope, HgChangesetId, HgFileEnvelope, HgFileNodeId,
+    HgManifestEnvelope, HgManifestId, NULL_HASH,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 use std::{collections::HashMap, convert::TryFrom};
@@ -226,12 +225,12 @@ async fn generate_all_filenodes(
             .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
             .left_future()
             .compat(),
-        Entry::Leaf((_, hg_filenode_id)) => {
-            fetch_file_envelope(ctx.clone(), &blobstore, hg_filenode_id)
-                .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
-                .right_future()
-                .compat()
-        }
+        Entry::Leaf((_, hg_filenode_id)) => hg_filenode_id
+            .load(ctx.clone(), &blobstore)
+            .from_err()
+            .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
+            .right_future()
+            .compat(),
     })
     .try_buffer_unordered(100)
     .try_collect()

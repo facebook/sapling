@@ -9,6 +9,7 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
+use blobstore::Loadable;
 use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
@@ -79,8 +80,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .map({
                     cloned!(blobrepo);
                     move |fid| {
-                        blobrepo
-                            .get_file_envelope(ctx.clone(), fid)
+                        fid.load(ctx.clone(), blobrepo.blobstore())
+                            .from_err()
                             .map(|env| env.content_id())
                             .and_then({
                                 cloned!(blobrepo, ctx);

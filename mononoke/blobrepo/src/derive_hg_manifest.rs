@@ -7,7 +7,7 @@
  */
 
 use anyhow::{format_err, Error};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future, sync::mpsc, Future, IntoFuture};
@@ -20,8 +20,8 @@ use futures_util::{
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
 use mercurial_types::{
     blobs::{
-        fetch_file_envelope, ContentBlobMeta, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
-        UploadHgNodeHash, UploadHgTreeEntry,
+        ContentBlobMeta, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+        UploadHgTreeEntry,
     },
     HgEntry, HgEntryId, HgFileNodeId, HgManifestId,
 };
@@ -211,7 +211,7 @@ async fn resolve_conflict(
     // so, we'll load the envelopes.
     let envelopes = parents
         .iter()
-        .map(|p| fetch_file_envelope(ctx.clone(), &blobstore, p.untraced().1).compat());
+        .map(|p| p.untraced().1.load(ctx.clone(), &blobstore).compat());
 
     let envelopes = try_join_all(envelopes).await?;
 

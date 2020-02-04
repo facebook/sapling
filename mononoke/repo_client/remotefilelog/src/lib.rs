@@ -17,6 +17,7 @@ use std::{
 
 use anyhow::{Error, Result};
 use blobrepo::{file_history::get_file_history, BlobRepo};
+use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -281,7 +282,7 @@ fn prepare_blob(
     lfs_threshold: Option<u64>,
     validate_hash: bool,
 ) -> impl Future<Item = RemotefilelogBlob, Error = Error> {
-    repo.get_file_envelope(ctx.clone(), node).map({
+    node.load(ctx.clone(), repo.blobstore()).from_err().map({
         cloned!(repo);
         move |envelope| {
             let file_size = envelope.content_size();

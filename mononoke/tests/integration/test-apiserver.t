@@ -202,7 +202,7 @@ test get blob by hash
   $ diff output - <<< $TEST_CONTENT
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$TREEHASH | extract_json_error
-  732eacf2be3265bd6bc4d2c205434b280f446cbf is not found
+  hgfilenode.sha1.732eacf2be3265bd6bc4d2c205434b280f446cbf is not found
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000 | extract_json_error
@@ -210,7 +210,7 @@ test get blob by hash
   400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000000000000000000000000000000000000001 | extract_json_error
-  0000000000000000000000000000000000000001 is not found
+  hgfilenode.sha1.0000000000000000000000000000000000000001 is not found
   404
 
 test get tree

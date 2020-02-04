@@ -15,7 +15,7 @@ use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::{try_boxfuture, FutureExt};
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use mercurial_types::{
@@ -104,7 +104,9 @@ fn find_file_changes(
             BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
                 let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
                 cloned!(ctx, bonsai_parents, repo, parent_manifests);
-                repo.get_file_envelope(ctx.clone(), file_node_id)
+                file_node_id
+                    .load(ctx.clone(), repo.blobstore())
+                    .from_err()
                     .and_then(move |envelope| {
                         let size = envelope.content_size();
                         let content_id = envelope.content_id();
@@ -130,7 +132,10 @@ fn find_file_changes(
             BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
                 let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
                 cloned!(ctx, repo);
-                repo.get_file_envelope(ctx, file_node_id).and_then(move |envelope| {
+                file_node_id
+                    .load(ctx, repo.blobstore())
+                    .from_err()
+                    .and_then(move |envelope| {
                     let size = envelope.content_size();
                     let content_id = envelope.content_id();
 

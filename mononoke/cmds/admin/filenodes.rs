@@ -11,6 +11,7 @@ use cmdlib::args;
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
@@ -163,8 +164,9 @@ fn handle_filenodes_at_revision(
                             );
 
                             let envelope = if log_envelope {
-                                blobrepo
-                                    .get_file_envelope(ctx.clone(), filenode_id)
+                                filenode_id
+                                    .load(ctx.clone(), blobrepo.blobstore())
+                                    .from_err()
                                     .map(Some)
                                     .left_future()
                             } else {
@@ -235,8 +237,10 @@ pub fn subcommand_filenodes(
                             .get_filenode(ctx.clone(), &path, id)
                             .and_then(move |filenode| {
                                 let envelope = if log_envelope {
-                                    blobrepo
-                                        .get_file_envelope(ctx, filenode.filenode)
+                                    filenode
+                                        .filenode
+                                        .load(ctx, blobrepo.blobstore())
+                                        .from_err()
                                         .map(Some)
                                         .left_future()
                                 } else {

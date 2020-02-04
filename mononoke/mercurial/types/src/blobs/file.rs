@@ -18,8 +18,8 @@ use crate::{
     FileBytes, FileType, HgBlob, HgBlobNode, HgFileEnvelope, HgFileNodeId, HgManifestId,
     HgNodeHash, HgParents, MPath, MPathElement,
 };
-use anyhow::{bail, Error, Result};
-use blobstore::Blobstore;
+use anyhow::{Error, Result};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -60,7 +60,9 @@ pub fn fetch_raw_filenode_bytes(
     node_id: HgFileNodeId,
     validate_hash: bool,
 ) -> BoxFuture<HgBlob, Error> {
-    fetch_file_envelope(ctx.clone(), blobstore, node_id)
+    node_id
+        .load(ctx.clone(), blobstore)
+        .from_err()
         .and_then({
             let blobstore = blobstore.clone();
             move |envelope| {
@@ -117,7 +119,9 @@ pub fn fetch_file_content_from_blobstore(
     blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Stream<Item = FileBytes, Error = Error> {
-    fetch_file_envelope(ctx.clone(), blobstore, node_id)
+    node_id
+        .load(ctx.clone(), blobstore)
+        .from_err()
         .map({
             cloned!(blobstore);
             move |envelope| {
@@ -133,7 +137,10 @@ pub fn fetch_file_size_from_blobstore(
     blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = u64, Error = Error> {
-    fetch_file_envelope(ctx, blobstore, node_id).map({ |envelope| envelope.content_size() })
+    node_id
+        .load(ctx, blobstore)
+        .from_err()
+        .map({ |envelope| envelope.content_size() })
 }
 
 pub fn fetch_file_content_id_from_blobstore(
@@ -141,7 +148,10 @@ pub fn fetch_file_content_id_from_blobstore(
     blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = ContentId, Error = Error> {
-    fetch_file_envelope(ctx, blobstore, node_id).map({ |envelope| envelope.content_id() })
+    node_id
+        .load(ctx, blobstore)
+        .from_err()
+        .map({ |envelope| envelope.content_id() })
 }
 
 pub fn fetch_file_metadata_from_blobstore(
@@ -168,7 +178,7 @@ pub fn fetch_file_parents_from_blobstore(
     blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = HgParents, Error = Error> {
-    fetch_file_envelope(ctx, blobstore, node_id).map(|envelope| {
+    node_id.load(ctx, blobstore).from_err().map(|envelope| {
         let envelope = envelope.into_mut();
         let p1 = envelope.p1.map(|filenode| filenode.into_nodehash());
         let p2 = envelope.p2.map(|filenode| filenode.into_nodehash());
@@ -176,49 +186,27 @@ pub fn fetch_file_parents_from_blobstore(
     })
 }
 
-pub fn fetch_file_envelope(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-) -> impl Future<Item = HgFileEnvelope, Error = Error> {
-    fetch_file_envelope_opt(ctx, blobstore, node_id)
-        .and_then(move |envelope| {
-            let envelope = envelope.ok_or(ErrorKind::HgContentMissing(
-                node_id.into_nodehash(),
-                Type::File(FileType::Regular),
-            ))?;
-            Ok(envelope)
-        })
-        .from_err()
-}
+impl Loadable for HgFileNodeId {
+    type Value = HgFileEnvelope;
 
-pub fn fetch_file_envelope_opt(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-) -> impl Future<Item = Option<HgFileEnvelope>, Error = Error> {
-    let blobstore_key = node_id.blobstore_key();
-    blobstore
-        .get(ctx, blobstore_key.clone())
-        .context("While fetching manifest envelope blob")
-        .map_err(Error::from)
-        .and_then(move |bytes| {
-            let blobstore_bytes = match bytes {
-                Some(bytes) => bytes,
-                None => return Ok(None),
-            };
-            let envelope = HgFileEnvelope::from_blob(blobstore_bytes.into())?;
-            if node_id != envelope.node_id() {
-                bail!(
-                    "Manifest ID mismatch (requested: {}, got: {})",
-                    node_id,
-                    envelope.node_id()
-                );
-            }
-            Ok(Some(envelope))
-        })
-        .context(ErrorKind::FileNodeDeserializeFailed(blobstore_key))
-        .from_err()
+    fn load<B: Blobstore + Clone>(
+        &self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Value, LoadableError> {
+        let blobstore_key = self.blobstore_key();
+        blobstore
+            .get(ctx, blobstore_key.clone())
+            .from_err()
+            .and_then(move |bytes| {
+                let blobstore_bytes = match bytes {
+                    Some(bytes) => bytes,
+                    None => return Err(LoadableError::Missing(blobstore_key)),
+                };
+                Ok(HgFileEnvelope::from_blob(blobstore_bytes.into())?)
+            })
+            .boxify()
+    }
 }
 
 pub fn fetch_file_contents(
@@ -279,7 +267,9 @@ impl HgBlobEntry {
             HgEntryId::Manifest(hash) => fetch_manifest_envelope(ctx, &self.blobstore, hash)
                 .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
                 .left_future(),
-            HgEntryId::File(_, hash) => fetch_file_envelope(ctx, &self.blobstore, hash)
+            HgEntryId::File(_, hash) => hash
+                .load(ctx, &self.blobstore)
+                .from_err()
                 .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
                 .right_future(),
         }
@@ -327,7 +317,9 @@ impl HgEntry for HgBlobEntry {
             })
             .boxify(),
             HgEntryId::File(file_type, filenode_id) => lazy(move || {
-                fetch_file_envelope(ctx.clone(), &blobstore, filenode_id)
+                filenode_id
+                    .load(ctx.clone(), &blobstore)
+                    .from_err()
                     .map(move |envelope| {
                         let envelope = envelope.into_mut();
                         let stream =

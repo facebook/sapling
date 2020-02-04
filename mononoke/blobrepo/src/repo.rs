@@ -40,14 +40,14 @@ use maplit::hashmap;
 use mercurial_types::{
     blobs::{
         fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-        fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
+        fetch_file_content_sha256_from_blobstore, fetch_file_contents,
         fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
         fetch_file_size_from_blobstore, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset,
         HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
         UploadHgNodeHash,
     },
-    FileBytes, Globalrev, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, RepoPath, Type,
+    FileBytes, Globalrev, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
+    RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
@@ -647,14 +647,6 @@ impl BlobRepo {
         })
     }
 
-    pub fn get_file_envelope(
-        &self,
-        ctx: CoreContext,
-        node: HgFileNodeId,
-    ) -> impl Future<Item = HgFileEnvelope, Error = Error> {
-        fetch_file_envelope(ctx, &self.blobstore.boxed(), node)
-    }
-
     pub fn get_filenode_from_envelope(
         &self,
         ctx: CoreContext,
@@ -662,7 +654,7 @@ impl BlobRepo {
         node: HgFileNodeId,
         linknode: HgChangesetId,
     ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-        fetch_file_envelope(ctx, &self.blobstore.boxed(), node)
+        node.load(ctx, &self.blobstore)
             .with_context({
                 cloned!(path);
                 move || format!("While fetching filenode for {} {}", path, node)
@@ -900,7 +892,9 @@ impl BlobRepo {
             (Some(parent), None) | (None, Some(parent)) => {
                 let store = self.get_blobstore().boxed();
                 cloned!(ctx, change, path);
-                fetch_file_envelope(ctx.clone(), &store, parent)
+                parent
+                    .load(ctx.clone(), &store)
+                    .from_err()
                     .map(move |parent_envelope| {
                         if parent_envelope.content_id() == change.content_id()
                             && change.copy_from().is_none()

@@ -337,7 +337,9 @@ fn hg_file_envelope_step(
     hg_file_node_id: HgFileNodeId,
 ) -> BoxFuture<StepOutput, Error>
 where {
-    repo.get_file_envelope(ctx, hg_file_node_id)
+    hg_file_node_id
+        .load(ctx, repo.blobstore())
+        .from_err()
         .map({
             move |envelope| {
                 let file_content_id = envelope.content_id();

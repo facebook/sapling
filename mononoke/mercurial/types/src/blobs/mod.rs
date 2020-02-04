@@ -8,14 +8,6 @@
 
 #![deny(warnings)]
 
-use super::HgFileNodeId;
-use anyhow::Error;
-use blobstore::Blobstore;
-use bytes::Bytes;
-use context::CoreContext;
-use futures::Future;
-use std::sync::Arc;
-
 mod envelope;
 pub use envelope::HgBlobEnvelope;
 
@@ -25,7 +17,7 @@ pub use errors::ErrorKind;
 pub mod file;
 pub use file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
+    fetch_file_content_sha256_from_blobstore, fetch_file_contents,
     fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
     fetch_file_size_from_blobstore, File, HgBlobEntry, LFSContent, META_MARKER, META_SZ,
 };
@@ -48,12 +40,3 @@ pub use upload::{
     ContentBlobInfo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     UploadHgTreeEntry,
 };
-
-/// File metadata content in the same format as Mercurial stores in filelogs
-pub fn fetch_raw_revlog_metadata(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
-    node: HgFileNodeId,
-) -> impl Future<Item = Bytes, Error = Error> {
-    fetch_file_envelope(ctx.clone(), &blobstore, node).map(|envelope| envelope.metadata().clone())
-}
