@@ -16,9 +16,8 @@ pub use errors::ErrorKind;
 
 pub mod file;
 pub use file::{
-    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-    fetch_file_content_sha256_from_blobstore, fetch_file_contents,
-    fetch_file_metadata_from_blobstore, File, HgBlobEntry, LFSContent, META_MARKER, META_SZ,
+    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore, fetch_file_contents,
+    File, HgBlobEntry, LFSContent, META_MARKER, META_SZ,
 };
 
 mod manifest;

@@ -20,6 +20,24 @@ pub enum FetchKey {
     Aliased(Alias),
 }
 
+impl From<ContentId> for FetchKey {
+    fn from(content_id: ContentId) -> Self {
+        FetchKey::Canonical(content_id)
+    }
+}
+
+impl From<Alias> for FetchKey {
+    fn from(alias: Alias) -> Self {
+        FetchKey::Aliased(alias)
+    }
+}
+
+impl From<hash::Sha256> for FetchKey {
+    fn from(hash: hash::Sha256) -> Self {
+        FetchKey::Aliased(Alias::Sha256(hash))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Alias {
     Sha1(hash::Sha1),

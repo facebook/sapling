@@ -113,15 +113,15 @@ Verify that if we fail to upload LFS blobs first, the push fails
   remote:   Error:
   remote:     While resolving Changegroup
   remote:   Root cause:
-  remote:     ContentBlobByAliasMissing(
-  remote:         Sha256(4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974),
+  remote:     Missing(
+  remote:         "alias.sha256.4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974",
   remote:     )
   remote:   Caused by:
   remote:     While uploading File Blobs
   remote:   Caused by:
   remote:     While decoding delta cache for file id ff714056cdbb88eef0578934980d740a05be8384, path f
   remote:   Caused by:
-  remote:     Content blob missing for id: 4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974
+  remote:     Blob is missing: alias.sha256.4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

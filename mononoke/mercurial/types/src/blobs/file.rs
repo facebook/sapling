@@ -31,7 +31,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use itertools::Itertools;
-use mononoke_types::{hash::Sha256, ContentId, ContentMetadata};
+use mononoke_types::{hash::Sha256, ContentId};
 use std::{
     collections::HashMap,
     io::Write,
@@ -141,25 +141,6 @@ pub fn fetch_file_content_id_from_blobstore(
         .load(ctx, blobstore)
         .from_err()
         .map({ |envelope| envelope.content_id() })
-}
-
-pub fn fetch_file_metadata_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    content_id: ContentId,
-) -> impl Future<Item = ContentMetadata, Error = Error> {
-    filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
-        .and_then(move |aliases| aliases.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-        .context("While fetching content metadata")
-        .from_err()
-}
-
-pub fn fetch_file_content_sha256_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    content_id: ContentId,
-) -> impl Future<Item = Sha256, Error = Error> {
-    fetch_file_metadata_from_blobstore(ctx, blobstore, content_id).map(|metadata| metadata.sha256)
 }
 
 impl Loadable for HgFileNodeId {

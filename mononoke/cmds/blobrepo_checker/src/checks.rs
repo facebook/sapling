@@ -183,11 +183,15 @@ fn check_one_file(
         }
     });
 
-    let sha256_check = repo
-        .get_file_sha256(ctx.clone(), file_info.id)
-        .and_then(move |sha256| {
-            repo.get_file_content_id_by_sha256(ctx, sha256)
-                .map(move |id| (sha256, id))
+    let key = filestore::FetchKey::from(file_info.id);
+    let sha256_check = filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
+        .and_then(move |meta| meta.ok_or(ErrorKind::ContentMissing(key).into()))
+        .boxify()  // type is too large
+        .and_then(move |meta| {
+            filestore::FetchKey::from(meta.sha256)
+                .load(ctx, repo.blobstore())
+                .from_err()
+                .map(move |id| (meta.sha256, id))
         })
         .and_then(move |(sha256, new_id)| {
             if new_id != file_info.id {

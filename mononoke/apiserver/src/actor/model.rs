@@ -169,9 +169,15 @@ impl EntryWithSizeAndContentHash {
                 })
                 .left_future(),
             HgEntryId::File(_, nodeid) => repo
-                .clone()
                 .get_file_content_id(ctx.clone(), nodeid)
-                .and_then(move |content_id| repo.get_file_content_metadata(ctx, content_id))
+                .and_then(move |content_id| {
+                    filestore::get_metadata(repo.blobstore(), ctx, &content_id.into()).and_then(
+                        move |metadata| {
+                            metadata.ok_or_else(|| format_err!("Entry {} not found", content_id))
+                        },
+                    )
+                })
+                .boxify()
                 .map(|metadata| (metadata.total_size, metadata.sha1))
                 .map({
                     cloned!(r#type, name);

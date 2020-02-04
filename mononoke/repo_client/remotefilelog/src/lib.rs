@@ -21,6 +21,7 @@ use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use filestore::FetchKey;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use mercurial_types::{
@@ -45,6 +46,8 @@ pub enum ErrorKind {
 
     #[error("Invalid blob kind returned: {kind:?}")]
     InvalidKind { kind: RemotefilelogBlobKind },
+    #[error("Missing content: {0:?}")]
+    MissingContent(FetchKey),
 }
 
 #[derive(Debug)]
@@ -345,8 +348,11 @@ fn prepare_blob(
             } else {
                 // For LFS blobs, we'll create the LFS pointer. Note that there is no hg-style
                 // metadata encoded for LFS blobs (it's in the LFS pointer instead).
+                let key = FetchKey::from(envelope.content_id());
                 let blob_fut = (
-                    repo.get_file_sha256(ctx, envelope.content_id()),
+                    filestore::get_metadata(repo.blobstore(), ctx, &key).and_then(move |meta| {
+                        Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256)
+                    }),
                     File::extract_copied_from(envelope.metadata()).into_future(),
                 )
                     .into_future()

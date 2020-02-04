@@ -12,7 +12,7 @@ use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
 use crate::repo_commit::*;
 use anyhow::{format_err, Context, Error};
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::{Blobstore, Loadable};
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
@@ -27,7 +27,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt};
 use filenodes::{FilenodeInfo, Filenodes};
-use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
+use filestore::{self, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Future, Loop};
 use futures::stream::{self, futures_unordered, FuturesUnordered, Stream};
 use futures::sync::oneshot;
@@ -40,17 +40,16 @@ use maplit::hashmap;
 use mercurial_types::{
     blobs::{
         fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-        fetch_file_content_sha256_from_blobstore, fetch_file_contents,
-        fetch_file_metadata_from_blobstore, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset,
-        HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
+        fetch_file_contents, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry,
+        HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
         UploadHgNodeHash,
     },
     FileBytes, Globalrev, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
     RepoPath, Type,
 };
 use mononoke_types::{
-    hash::Sha256, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
-    FileChange, Generation, MPath, RepositoryId, Timestamp,
+    BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, FileChange,
+    Generation, MPath, RepositoryId, Timestamp,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
@@ -227,52 +226,6 @@ impl BlobRepo {
         key: HgFileNodeId,
     ) -> BoxFuture<ContentId, Error> {
         fetch_file_content_id_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
-    }
-
-    pub fn get_file_content_metadata(
-        &self,
-        ctx: CoreContext,
-        key: ContentId,
-    ) -> BoxFuture<ContentMetadata, Error> {
-        fetch_file_metadata_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
-    }
-
-    pub fn get_file_content_id_by_sha256(
-        &self,
-        ctx: CoreContext,
-        key: Sha256,
-    ) -> BoxFuture<ContentId, Error> {
-        FetchKey::Aliased(Alias::Sha256(key))
-            .load(ctx, &self.blobstore)
-            .or_else(move |err| match err {
-                LoadableError::Error(err) => Err(err),
-                LoadableError::Missing(_) => Err(ErrorKind::ContentBlobByAliasMissing(key).into()),
-            })
-            .boxify()
-    }
-
-    pub fn get_file_sha256(
-        &self,
-        ctx: CoreContext,
-        content_id: ContentId,
-    ) -> BoxFuture<Sha256, Error> {
-        fetch_file_content_sha256_from_blobstore(ctx, &self.blobstore.boxed(), content_id).boxify()
-    }
-
-    pub fn get_file_content_by_alias(
-        &self,
-        ctx: CoreContext,
-        sha256: Sha256,
-    ) -> BoxStream<FileBytes, Error> {
-        filestore::fetch(
-            &self.blobstore,
-            ctx,
-            &FetchKey::Aliased(Alias::Sha256(sha256)),
-        )
-        .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobByAliasMissing(sha256).into()))
-        .flatten_stream()
-        .map(FileBytes)
-        .boxify()
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.

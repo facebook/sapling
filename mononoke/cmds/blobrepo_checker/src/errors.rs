@@ -8,6 +8,7 @@
 
 use crate::checks::FileInformation;
 use anyhow::Error;
+use filestore::FetchKey;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
 use thiserror::Error;
@@ -36,4 +37,6 @@ pub enum ErrorKind {
     ParentsMismatch(HgChangesetId),
     #[error("Requesting HG {0} fetched changeset {1}")]
     HgChangesetIdMismatch(HgChangesetId, HgChangesetId),
+    #[error("Missing content {0:?}")]
+    ContentMissing(FetchKey),
 }

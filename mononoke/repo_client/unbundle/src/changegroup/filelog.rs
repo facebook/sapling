@@ -21,6 +21,8 @@ use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
+use filestore::FetchKey;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{
     blobs::{
@@ -162,7 +164,9 @@ fn generate_lfs_meta_data(
         .into_future()
         .and_then(move |lfs_content| {
             (
-                repo.get_file_content_id_by_sha256(ctx, lfs_content.oid()),
+                FetchKey::from(lfs_content.oid())
+                    .load(ctx, repo.blobstore())
+                    .from_err(),
                 Ok(lfs_content.copy_from()),
                 Ok(lfs_content.size()),
             )

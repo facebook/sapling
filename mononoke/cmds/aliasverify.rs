@@ -26,7 +26,7 @@ use slog::{debug, info, Logger};
 use tokio::prelude::stream::iter_ok;
 
 use blobrepo::BlobRepo;
-use blobstore::Storable;
+use blobstore::{Loadable, Storable};
 use changesets::SqlChangesets;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
@@ -185,8 +185,8 @@ impl AliasVerification {
         content_id: ContentId,
     ) -> impl Future<Item = (), Error = Error> {
         let av = self.clone();
-        self.blobrepo
-            .get_file_content_id_by_sha256(ctx.clone(), alias)
+        FetchKey::from(alias)
+            .load(ctx.clone(), self.blobrepo.blobstore())
             .then(move |result| match result {
                 Ok(content_id_from_blobstore) => av
                     .check_alias_blob(alias, content_id, content_id_from_blobstore)

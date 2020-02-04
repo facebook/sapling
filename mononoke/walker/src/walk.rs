@@ -18,7 +18,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use failure_ext::chain::ChainExt;
-use filestore::{self, Alias, FetchKey};
+use filestore::{self, Alias};
 use futures::{future, Future as OldFuture, Stream as OldStream};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, spawn_future, BoxFuture, BoxStream, FutureExt,
@@ -197,16 +197,11 @@ fn file_content_metadata_step(
     enable_derive: bool,
 ) -> BoxFuture<StepOutput, Error> {
     let loader = if enable_derive {
-        repo.get_file_content_metadata(ctx, id)
-            .map(|d| Some(Some(d)))
+        filestore::get_metadata(repo.blobstore(), ctx, &id.into())
+            .map(Some)
             .left_future()
     } else {
-        filestore::get_metadata_readonly(
-            &repo.get_blobstore().boxed(),
-            ctx,
-            &FetchKey::Canonical(id),
-        )
-        .right_future()
+        filestore::get_metadata_readonly(repo.blobstore(), ctx, &id.into()).right_future()
     };
 
     loader
