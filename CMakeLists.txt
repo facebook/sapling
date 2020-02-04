@@ -75,6 +75,7 @@ add_subdirectory(eden/scm/edenscm/hgext/extlib)
 add_subdirectory(eden/scm/edenscm/mercurial)
 add_subdirectory(eden/scm/lib)
 add_subdirectory(eden/test_support)
+add_subdirectory(eden/scm/exec/eden_apfs_mount_helper)
 
 if(WIN32)
   # On Windows our Python binaries are compiled into executables which depend
