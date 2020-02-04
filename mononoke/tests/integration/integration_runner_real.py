@@ -218,7 +218,7 @@ def _hg_runner(
         env.update(manifest_env)
         env.update(extra_env)
 
-        stdin = None if interactive else subprocess.DEVNULL
+        stdin = None
         stderr: Any = subprocess.DEVNULL if quiet else sys.stderr.buffer
 
         subprocess.check_call(
