@@ -553,7 +553,9 @@ int hgc_runcommand(hgclient_t* hgc, const char* const args[], size_t argsize) {
     abortmsg("unexpected size of exitcode");
   }
   memcpy(&exitcode_n, hgc->ctx.data, sizeof(exitcode_n));
-  return ntohl(exitcode_n);
+  int32_t exitcode = ntohl(exitcode_n);
+  debugmsg("got exitcode %d", exitcode);
+  return exitcode;
 }
 
 /*!

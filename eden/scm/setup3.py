@@ -1752,8 +1752,7 @@ hgmainfeatures = (
             [
                 "python3",
                 "buildinfo" if needbuildinfo else None,
-                # TODO(py3): enable chg
-                # "with_chg" if not iswindows else None,
+                "with_chg" if not iswindows else None,
             ],
         )
     ).strip()

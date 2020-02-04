@@ -55,7 +55,9 @@ class channeledoutput(object):
     """
 
     def __init__(self, out, channel):
-        # type: (BinaryIO, str) -> None
+        # type: (BinaryIO, bytes) -> None
+        assert isinstance(channel, bytes)
+        assert len(channel) == 1
         self.out = out
         self.channel = channel
 
@@ -94,7 +96,7 @@ class channeledinput(object):
     maxchunksize = 4 * 1024
 
     def __init__(self, in_, out, channel):
-        # type: (BinaryIO, BinaryIO, str) -> None
+        # type: (BinaryIO, BinaryIO, bytes) -> None
         self.in_ = in_
         self.out = out
         self.channel = channel
@@ -102,7 +104,7 @@ class channeledinput(object):
     @property
     def name(self):
         # type: () -> str
-        return "<%c-channel>" % self.channel
+        return "<%c-channel>" % pycompat.decodeutf8(self.channel)
 
     def read(self, size=-1):
         # type: (int) -> bytes
@@ -121,7 +123,7 @@ class channeledinput(object):
             return self._read(size, self.channel)
 
     def _read(self, size, channel):
-        # type: (int, str) -> bytes
+        # type: (int, bytes) -> bytes
         if not size:
             return b""
         assert size > 0
@@ -141,17 +143,17 @@ class channeledinput(object):
         # type: (int) -> bytes
         if size < 0:
             size = self.maxchunksize
-            s = self._read(size, "L")
+            s = self._read(size, b"L")
             buf = s
             # keep asking for more until there's either no more or
             # we got a full line
             while s and s[-1] != b"\n":
-                s = self._read(size, "L")
+                s = self._read(size, b"L")
                 buf += s
 
             return buf
         else:
-            return self._read(size, "L")
+            return self._read(size, b"L")
 
     def __iter__(self):
         # type: () -> channeledinput
@@ -186,7 +188,7 @@ class server(object):
             global logfile
             if logpath == "-":
                 # write log on a special 'd' (debug) channel
-                logfile = channeledoutput(fout, "d")
+                logfile = channeledoutput(fout, b"d")
             else:
                 logfile = open(logpath, "a")
 
@@ -200,10 +202,10 @@ class server(object):
             self.ui = ui
             self.repo = self.repoui = None
 
-        self.cerr = channeledoutput(fout, "e")
-        self.cout = channeledoutput(fout, "o")
-        self.cin = channeledinput(fin, fout, "I")
-        self.cresult = channeledoutput(fout, "r")
+        self.cerr = channeledoutput(fout, b"e")
+        self.cout = channeledoutput(fout, b"o")
+        self.cin = channeledinput(fin, fout, b"I")
+        self.cresult = channeledoutput(fout, b"r")
 
         self.client = fin
 
@@ -293,6 +295,7 @@ class server(object):
     def serveone(self):
         # type: () -> bool
         cmd = self.client.readline()[:-1]
+        cmd = pycompat.decodeutf8(cmd)
         if cmd:
             handler = self.capabilities.get(cmd)
             if handler:
@@ -302,7 +305,7 @@ class server(object):
                 # looking at the servers capabilities
                 raise error.Abort(_("unknown command %s") % cmd)
 
-        return cmd != b""
+        return cmd != ""
 
     capabilities = {"runcommand": runcommand, "getencoding": getencoding}
 
@@ -426,7 +429,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
         if sv:
             cerr = sv.cerr
         else:
-            cerr = channeledoutput(fout, "e")
+            cerr = channeledoutput(fout, b"e")
         traceback.print_exc(file=cerr)
         raise
     finally:

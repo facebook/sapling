@@ -107,7 +107,7 @@ class channeledsystem(object):
         self.out = out
 
     def _send_request(self, channel, args):
-        # type: (str, List[str]) -> None
+        # type: (bytes, List[str]) -> None
         data = pycompat.encodeutf8("\0".join(args) + "\0")
         self.out.write(struct.pack(">cI", channel, len(data)))
         self.out.write(data)
@@ -134,7 +134,7 @@ class channeledsystem(object):
         exitcode (int)"""
         args = [util.quotecommand(cmd), os.path.abspath(cwd or ".")]
         args.extend(self._environ_to_args(environ))
-        self._send_request("s", args)
+        self._send_request(b"s", args)
 
         length = self.in_.read(4)
         length, = struct.unpack(">I", length)
@@ -143,8 +143,8 @@ class channeledsystem(object):
         rc, = struct.unpack(">i", self.in_.read(4))
         return rc
 
-    def runpager(self, cmd, environ, redirectstderr, cmdtable):
-        # type: (bytes, Dict[str,str], BinaryIO, Dict[bytes, Callable]) -> None
+    def runpager(self, pagercmd, environ, redirectstderr, cmdtable):
+        # type: (str, Dict[str,str], BinaryIO, Dict[str, Callable]) -> None
         """Requests to run a pager command are sent using the 'p' channel code.
         The request contents are a series of null-terminated strings:
         - the first string is the pager command string, to be run with "sh -c"
@@ -157,12 +157,13 @@ class channeledsystem(object):
         command name is empty.
         """
         redirectsettings = "stderr" if redirectstderr else ""
-        args = [util.quotecommand(cmd), redirectsettings]
+        args = [util.quotecommand(pagercmd), redirectsettings]
         args.extend(self._environ_to_args(environ))
-        self._send_request("p", args)
+        self._send_request(b"p", args)
 
         while True:
-            cmd = self.in_.readline()[:-1]
+            bcmd = self.in_.readline()[:-1]
+            cmd = pycompat.decodeutf8(bcmd)
             if not cmd:
                 break
             if cmd in cmdtable:
@@ -203,7 +204,7 @@ class chgcmdserver(commandserver.server):
         """
         # tell client to sendmsg() with 1-byte payload, which makes it
         # distinctive from "attachio\n" command consumed by client.read()
-        self.clientsock.sendall(struct.pack(">cI", "I", 1))
+        self.clientsock.sendall(struct.pack(">cI", b"I", 1))
         clientfds = util.recvfds(self.clientsock.fileno())
         _log("received fds: %r\n" % clientfds)
 
@@ -279,6 +280,7 @@ class chgcmdserver(commandserver.server):
         path = self._readstr()
         if not path:
             return
+        path = pycompat.decodeutf8(path)
         _log("chdir to %r\n" % path)
         os.chdir(path)
 
@@ -294,6 +296,7 @@ class chgcmdserver(commandserver.server):
         # Environment variables might change, reload env.
         util._reloadenv()
         args = self._readlist()
+        args = [pycompat.decodeutf8(a) for a in args]
         pycompat.sysargv[1:] = args
         origui = uimod.ui
         # Use the class patched by _newchgui so 'system' and 'pager' requests
@@ -345,7 +348,7 @@ class chgcmdserver(commandserver.server):
             """Change process title"""
             name = self._readstr()
             _log("setprocname: %r\n" % name)
-            util.setprocname(name)
+            util.setprocname(pycompat.decodeutf8(name))
 
         # pyre-fixme[16]: `chgcmdserver` has no attribute `setprocname`.
         capabilities["setprocname"] = setprocname
