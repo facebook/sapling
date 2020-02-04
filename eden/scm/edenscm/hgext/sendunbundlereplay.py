@@ -30,12 +30,10 @@ def getstream(fname):
         return util.chunkbuffer([f.read()])
 
 
-@util.timed(annotation="creating a peer took")
 def getremote(ui, path):
     return hg.peer(ui, {}, path)
 
 
-@util.timed(annotation="single wireproto command took")
 def runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook):
     returncode = 0
     try:

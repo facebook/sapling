@@ -7,24 +7,21 @@
 # it to be on a server
 from __future__ import absolute_import
 
-from edenscm.mercurial import error, hg, util
+from edenscm.mercurial import error, hg
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 
 
-@util.timed(annotation="creating a peer took")
 def getremote(ui, path):
     remote = hg.peer(ui, {}, path)
     return remote
 
 
-@util.timed(annotation="running lookup took")
 def runlookup(ui, remote, name):
     return remote.lookup(name)
 
 
-@util.timed(annotation="running listkeys took")
 def runlistkeys(ui, remote):
     return remote.listkeys("bookmarks")
 

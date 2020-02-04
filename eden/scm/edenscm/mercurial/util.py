@@ -3163,62 +3163,6 @@ timecount = unitcountfn(
 _timenesting = [0]
 _tracewrap = bindings.tracing.wrapfunc
 
-
-def timed(topfunc=None, annotation=None):
-    """Report the execution time of a function call to stderr.
-
-    During development, use as a decorator when you need to measure
-    the cost of a function, e.g. as follows:
-
-    @util.timed
-    def foo(a, b, c):
-        pass
-
-    @util.timed(annotation='this might be the bottleneck')
-    def bar(a, b, c):
-        pass
-    """
-
-    def outerwrapper(func):
-        meta = [("cat", "timed")]
-        if annotation:
-            meta.append(("annotation", annotation))
-        func.meta = meta
-        func = _tracewrap(func)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            start = timer()
-            indent = 2
-            _timenesting[0] += indent
-            # Note that we cannot reuse the name `annotation` for the `annt`
-            # below. The reason is that we want `annotation` in the rvalue
-            # to be captured from the environment, and whichever name is
-            # used as lvalue to be a local variable. Because of Python2's
-            # semantics, the decision of whether the name is local of non-local
-            # is made based on whethe lexically first operation on this name
-            # is a write or a read. Here lexically first operation is an
-            # assignment, so whichever name we use as an lvalue, it will
-            # be local for *all* purposes in this function, even if it is
-            # used in the rvalue
-            annt = annotation or func.__name__
-            try:
-                return func(*args, **kwargs)
-            finally:
-                elapsed = timer() - start
-                _timenesting[0] -= indent
-                stderr.write(
-                    "%s%s: %s\n" % (" " * _timenesting[0], annt, timecount(elapsed))
-                )
-
-        return wrapper
-
-    if topfunc is None:
-        return outerwrapper
-    else:
-        return outerwrapper(topfunc)
-
-
 _sizeunits = (
     ("b", 1),
     ("kb", 2 ** 10),

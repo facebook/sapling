@@ -91,7 +91,6 @@ Send unbundlereplay with incorrect expected hash
   > $TESTDIR/bundles/sendunbundle.test.hg $TESTTMP/goodcommitdates master_bookmark d2e526aacb5100b7c1ddb9b711d2e012e6c69cda
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server --debug --reports $TESTTMP/reports.txt
-  creating a peer took: * (glob)
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -107,7 +106,6 @@ Send unbundlereplay with incorrect expected hash
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   [1]
   $ cat $TESTTMP/reports.txt
@@ -118,7 +116,6 @@ Send unbundlereplay with incorrect expected bookmark
   > $TESTDIR/bundles/sendunbundle.test.hg $TESTTMP/goodcommitdates master_bookmark_2 c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server --debug --reports $TESTTMP/reports.txt
-  creating a peer took: * (glob)
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -134,7 +131,6 @@ Send unbundlereplay with incorrect expected bookmark
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   [1]
   $ cat $TESTTMP/reports.txt
@@ -145,7 +141,6 @@ Send unbundlereplay with incorrect commit timestamp
   > $TESTDIR/bundles/sendunbundle.test.hg $TESTTMP/badcommitdates master_bookmark c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server --debug --reports $TESTTMP/reports.txt
-  creating a peer took: * (glob)
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -161,7 +156,6 @@ Send unbundlereplay with incorrect commit timestamp
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   [1]
   $ cat $TESTTMP/reports.txt
@@ -174,7 +168,6 @@ Send Unbundlereplay batch 1 (all good)
   > $TESTDIR/bundles/unbundlereplay/3.e91cd89a81a52269b7767c800db21e62b9cf98db-6398085ceb9d425db206d33688a70d5f442304f0.hg $TESTTMP/goodcommitdates master_bookmark 6398085ceb9d425db206d33688a70d5f442304f0
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --reports $TESTTMP/reports.txt --path ssh://user@dummy/server --debug
-  creating a peer took: * (glob)
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -186,19 +179,16 @@ Send Unbundlereplay batch 1 (all good)
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Everything seems in order
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     c9b2673d3218  2
   remote: [ReplayVerification] Everything seems in order
-  single wireproto command took: * (glob)
   unbundle replay batch item #1 successfully sent
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     e91cd89a81a5  3
   remote: [ReplayVerification] Everything seems in order
-  single wireproto command took: * (glob)
   unbundle replay batch item #2 successfully sent
   $ cat $TESTTMP/reports.txt
   unbundle replay batch item #0 successfully sent
@@ -212,7 +202,6 @@ Send unbundlereplay batch 2 (second has a wrong hash)
   > $TESTDIR/bundles/unbundlereplay/6.6c384628f7c4fe3b7e89ed2ed382be72bf234c40-a976d3914119f1d620636098b7aeee7ae52ecefc.hg $TESTTMP/goodcommitdates master_bookmark a976d3914119f1d620636098b7aeee7ae52ecefc
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server --debug --reports $TESTTMP/reports.txt
-  creating a peer took: * (glob)
   running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -224,7 +213,6 @@ Send unbundlereplay batch 2 (second has a wrong hash)
   remote: pushing 1 changeset:
   remote:     a6074953400c  4
   remote: [ReplayVerification] Everything seems in order
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -234,7 +222,6 @@ Send unbundlereplay batch 2 (second has a wrong hash)
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #1 failed
   [1]
   $ cat $TESTTMP/reports.txt
@@ -250,8 +237,6 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server \
   > --debug --reports $TESTTMP/reports.txt
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
   running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -264,13 +249,11 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   remote:     cba0370ec397  5
   remote: [ReplayVerification] Everything seems in order
   unbundle replay batch item #0 successfully sent
-  single wireproto command took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     6c384628f7c4  6
   remote: [ReplayVerification] Everything seems in order
   unbundle replay batch item #1 successfully sent
-  single wireproto command took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     d5313099c10d  7
@@ -303,14 +286,12 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server \
   > --debug --reports $TESTTMP/reports.txt \
   > --config sendunbundlereplay.respondlightly=off
-  creating a peer took: * (glob)
   running * 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
-  single wireproto command took: * (glob)
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -320,7 +301,6 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #0 successfully sent
-  single wireproto command took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     6c384628f7c4  6
@@ -329,7 +309,6 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #1 successfully sent
-  single wireproto command took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     d5313099c10d  7
@@ -378,7 +357,6 @@ Send Unbundlereplay to delete a bookmark
   abort: can't use `--rebasedhead` and `--deleted`
   [255]
   $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle_delete_bookmark.test.hg --path ssh://user@dummy/server --deleted -b newbook --debug
-  creating a peer took: * (glob)
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
@@ -387,7 +365,6 @@ Send Unbundlereplay to delete a bookmark
   remote: 1
   sending unbundlereplay command
   remote: [ReplayVerification] Everything seems in order
-  single wireproto command took: * (glob)
   $ hg book
      master_bookmark           9:0ee63ce2db78
 
