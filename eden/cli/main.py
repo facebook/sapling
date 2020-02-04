@@ -1001,6 +1001,13 @@ class RemoveCmd(Subcmd):
             except Exception as ex:
                 print(f"error: cannot determine mount point for {path}: {ex}")
                 return 1
+
+            if os.path.realpath(mount_path) != os.path.realpath(path):
+                print(
+                    f"error: {path} is not the root of checkout "
+                    f"{mount_path}, not deleting"
+                )
+                return 1
             mounts.append((mount_path, active))
 
         # Warn the user since this operation permanently destroys data
