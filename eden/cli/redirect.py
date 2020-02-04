@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +33,17 @@ log = logging.getLogger(__name__)
 USER_REDIRECTION_SOURCE = ".eden/client/config.toml:redirections"
 REPO_SOURCE = ".eden-redirections"
 PLEASE_RESTART = "Please run `eden restart` to pick up the new redirections feature set"
+APFS_HELPER = "/usr/local/libexec/eden/eden_apfs_mount_helper"
+
+
+def have_apfs_helper() -> bool:
+    """Determine if the APFS volume helper is installed with appropriate
+    permissions such that we can use it to mount things """
+    try:
+        st = os.lstat(APFS_HELPER)
+        return (st.st_mode & stat.S_ISUID) != 0
+    except FileNotFoundError:
+        return False
 
 
 def is_bind_mount(path: Path) -> bool:
@@ -168,7 +180,30 @@ class Redirection:
         return res
 
     def expand_target_abspath(self, checkout: EdenCheckout) -> Optional[Path]:
-        if self.type in (RedirectionType.SYMLINK, RedirectionType.BIND):
+        if self.type == RedirectionType.BIND:
+            if have_apfs_helper():
+                # Ideally we'd return information about the backing, but
+                # it is a bit awkward to determine this in all contexts;
+                # prior to creating the volume we don't know anything
+                # about where it will reside.
+                # After creating it, we could potentially parse the APFS
+                # volume information and show something like the backing device.
+                # We also have a transitional case where there is a small
+                # population of users on disk image mounts; we actually don't
+                # have enough knowledge in this code to distinguish between
+                # a disk image and an APFS volume (but we can tell whether
+                # either of those is mounted elsewhere in this file, provided
+                # we have a MountTable to inspect).
+                # Given our small user base at the moment, it doesn't seem
+                # super critical to have this tool handle all these cases;
+                # the same information can be extracted by a human running
+                # `mount` and `diskutil list`.
+                # So we just return the mount point path when we believe
+                # that we can use APFS.
+                return checkout.path / self.repo_path
+            else:
+                return make_scratch_dir(checkout, str(self.repo_path))
+        elif self.type == RedirectionType.SYMLINK:
             return make_scratch_dir(checkout, str(self.repo_path))
         elif self.type == RedirectionType.UNKNOWN:
             return None
@@ -182,6 +217,24 @@ class Redirection:
         return Path(os.fsdecode(target)) / "image.dmg.sparseimage"
 
     def _bind_mount_darwin(
+        self, instance: EdenInstance, checkout_path: bytes, target: bytes
+    ):
+        if have_apfs_helper():
+            return self._bind_mount_darwin_apfs(instance, checkout_path, target)
+        else:
+            return self._bind_mount_darwin_dmg(instance, checkout_path, target)
+
+    def _bind_mount_darwin_apfs(
+        self, instance: EdenInstance, checkout_path: bytes, target: bytes
+    ):
+        """Attempt to use an APFS volume for a bind redirection.
+        The heavy lifting is part of the APFS_HELPER utility found
+        in `eden/scm/exec/eden_apfs_mount_helper/`"""
+        mount_path = Path(os.fsdecode(checkout_path)) / self.repo_path
+        os.makedirs(mount_path, exist_ok=True)
+        run_cmd_quietly([APFS_HELPER, "mount", mount_path])
+
+    def _bind_mount_darwin_dmg(
         self, instance: EdenInstance, checkout_path: bytes, target: bytes
     ):
         # Since we don't have bind mounts, we set up a disk image file
@@ -223,7 +276,8 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout):
         mount_path = checkout.path / self.repo_path
-        run_cmd_quietly(["hdiutil", "detach", str(mount_path)])
+        # This will unmount/detach both disk images and apfs volumes
+        run_cmd_quietly(["diskutil", "unmount", "force", str(mount_path)])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: bytes, target: bytes
@@ -472,6 +526,8 @@ def compact_redirection_sparse_images(instance: EdenInstance) -> None:
     if sys.platform != "darwin":
         return
 
+    # This section will be able to be deleted after all users are switched
+    # to APFS volumes
     mount_table = mtab.new()
     for checkout in instance.get_checkouts():
         for redir in get_effective_redirections(checkout, mount_table).values():
@@ -479,6 +535,8 @@ def compact_redirection_sparse_images(instance: EdenInstance) -> None:
                 target = redir.expand_target_abspath(checkout)
                 assert target is not None
                 dmg_file = redir._dmg_file_name(bytes(target))
+                if not os.path.exists(dmg_file):
+                    continue
                 print(f"\nCompacting {redir.expand_repo_path(checkout)}: {dmg_file}")
                 size_before = file_size(dmg_file)
 
