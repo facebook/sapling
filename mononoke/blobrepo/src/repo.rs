@@ -41,9 +41,9 @@ use mercurial_types::{
     blobs::{
         fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
         fetch_file_content_sha256_from_blobstore, fetch_file_contents,
-        fetch_file_metadata_from_blobstore, fetch_file_size_from_blobstore, ChangesetMetadata,
-        ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent,
-        UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+        fetch_file_metadata_from_blobstore, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset,
+        HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
+        UploadHgNodeHash,
     },
     FileBytes, Globalrev, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
     RepoPath, Type,
@@ -219,10 +219,6 @@ impl BlobRepo {
     ) -> BoxStream<FileBytes, Error> {
         STATS::get_file_content.add_value(1);
         fetch_file_contents(ctx, &self.blobstore.boxed(), id).boxify()
-    }
-
-    pub fn get_file_size(&self, ctx: CoreContext, key: HgFileNodeId) -> BoxFuture<u64, Error> {
-        fetch_file_size_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
     pub fn get_file_content_id(

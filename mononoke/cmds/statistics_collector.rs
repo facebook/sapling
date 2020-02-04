@@ -173,9 +173,11 @@ pub fn get_statistics_from_entry(
     entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
 ) -> impl Future<Item = RepoStatistics, Error = Error> {
     match entry {
-        Entry::Leaf((file_type, filenode_id)) => repo
-            .get_file_size(ctx.clone(), filenode_id)
-            .and_then(move |size| {
+        Entry::Leaf((file_type, filenode_id)) => filenode_id
+            .load(ctx.clone(), repo.blobstore())
+            .from_err()
+            .and_then(move |envelope| {
+                let size = envelope.content_size();
                 if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
                     number_of_lines(repo.get_file_content(ctx.clone(), filenode_id))
                         .join(future::ok(size))

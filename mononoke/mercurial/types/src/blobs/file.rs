@@ -132,17 +132,6 @@ pub fn fetch_file_content_from_blobstore(
         .flatten_stream()
 }
 
-pub fn fetch_file_size_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-) -> impl Future<Item = u64, Error = Error> {
-    node_id
-        .load(ctx, blobstore)
-        .from_err()
-        .map({ |envelope| envelope.content_size() })
-}
-
 pub fn fetch_file_content_id_from_blobstore(
     ctx: CoreContext,
     blobstore: &Arc<dyn Blobstore>,

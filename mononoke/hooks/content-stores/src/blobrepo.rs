@@ -65,7 +65,10 @@ impl FileContentStore for BlobRepoFileContentStore {
     }
 
     fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
-        self.repo.get_file_size(ctx, id)
+        id.load(ctx, self.repo.blobstore())
+            .from_err()
+            .map(|envelope| envelope.content_size())
+            .boxify()
     }
 }
 

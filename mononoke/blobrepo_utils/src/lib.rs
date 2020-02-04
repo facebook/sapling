@@ -20,6 +20,7 @@ pub use crate::errors::ErrorKind;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use context::CoreContext;
 use futures::{future::ok, Future};
 use futures_ext::FutureExt;
@@ -39,19 +40,18 @@ pub fn convert_diff_result_into_file_change_for_diamond_merge(
     match diff_result {
         BonsaiDiffFileChange::Changed(path, ty, node_id)
         | BonsaiDiffFileChange::ChangedReusedId(path, ty, node_id) => {
-            let content_id_fut = repo.get_file_content_id(ctx.clone(), node_id);
-            let file_size_fut = repo.get_file_size(ctx.clone(), node_id);
-
-            content_id_fut
-                .join(file_size_fut)
-                .map(move |(content_id, file_size)| {
+            node_id
+                .load(ctx, repo.blobstore())
+                .from_err()
+                .map(move |envelope| {
                     // Note that we intentionally do not set copy-from info,
                     // even if a file has been copied from somewhere.
                     // BonsaiChangeset requires that copy_from cs id points to one of
                     // the parents of the commit, so if we just fetch the latest copy
                     // info for a file change, then it might point to one of the
                     // ancestors of `onto`, but not necessarily to the onto.
-                    let file_change = FileChange::new(content_id, ty, file_size, None);
+                    let file_change =
+                        FileChange::new(envelope.content_id(), ty, envelope.content_size(), None);
                     (path, Some(file_change))
                 })
                 .left_future()
