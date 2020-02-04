@@ -440,6 +440,7 @@ class abstractbackend(object):
         raise NotImplementedError
 
     def setfile(self, fname, data, mode, copysource):
+        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
         """Write data to target file fname and set its mode. mode is a
         (islink, isexec) tuple. If data is None, the file content should
         be left unchanged. If the file is modified after being copied,
@@ -487,6 +488,7 @@ class fsbackend(abstractbackend):
             return None, None
 
     def setfile(self, fname, data, mode, copysource):
+        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
         islink, isexec = mode
         if data is None:
             self.opener.setflags(fname, islink, isexec)
@@ -529,6 +531,7 @@ class workingbackend(fsbackend):
             raise PatchError(_("cannot patch %s: file is not tracked") % fname)
 
     def setfile(self, fname, data, mode, copysource):
+        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
         self._checkknown(fname)
         super(workingbackend, self).setfile(fname, data, mode, copysource)
         if copysource is not None:
@@ -572,16 +575,19 @@ class filestore(object):
         self.data = {}
 
     def setfile(self, fname, data, mode, copied=None):
+        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
         if self.maxsize < 0 or (len(data) + self.size) <= self.maxsize:
             self.data[fname] = (data, mode, copied)
             self.size += len(data)
         else:
-            if self.opener is None:
+            opener = self.opener
+            if opener is None:
                 root = tempfile.mkdtemp(prefix="hg-patch-")
-                self.opener = vfsmod.vfs(root)
+                opener = vfsmod.vfs(root)
+                self.opener = opener
             # Avoid filename issues with these simple names
             fn = str(self.created)
-            self.opener.write(fn, data)
+            opener.write(fn, data)
             self.created += 1
             self.files[fname] = (fn, mode, copied)
 
@@ -621,6 +627,7 @@ class repobackend(abstractbackend):
         return fctx.data(), ("l" in flags, "x" in flags)
 
     def setfile(self, fname, data, mode, copysource):
+        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
         if copysource:
             self._checkknown(copysource)
         if data is None:

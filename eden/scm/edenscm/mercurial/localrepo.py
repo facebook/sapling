@@ -1278,6 +1278,7 @@ class localrepository(object):
         return self._filter(self._encodefilterpats, filename, data)
 
     def wwrite(self, filename, data, flags, backgroundclose=False):
+        # type: (str, bytes, str, bool) -> int
         """write ``data`` into ``filename`` in the working directory
 
         This returns length of written (maybe decoded) data.
