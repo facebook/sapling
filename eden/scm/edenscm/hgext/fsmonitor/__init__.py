@@ -856,7 +856,13 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if match is None:
             match = util.always
 
-        startclock = self._watchmanclient.getcurrentclock()
+        try:
+            startclock = self._watchmanclient.getcurrentclock()
+        except Exception as ex:
+            if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+                raise fsmonitorfallback("exception while getting watchman clock")
+            else:
+                raise ex
 
         self.dirstate._map.preload()
         lookups = []
