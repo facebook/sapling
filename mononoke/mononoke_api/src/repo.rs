@@ -27,7 +27,7 @@ use blame::derive_blame;
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future::{self, try_join3, try_join_all, TryFutureExt};
+use futures_preview::future::{self, try_join, try_join_all, TryFutureExt};
 use futures_preview::StreamExt as NewStreamExt;
 use identity::Identity;
 use mercurial_types::Globalrev;
@@ -175,25 +175,22 @@ impl Repo {
         )
         .compat();
 
-        let warm_bookmarks_cache = async {
-            Ok(Arc::new(
-                WarmBookmarksCache::new(
-                    ctx.clone(),
-                    blob_repo.clone(),
-                    vec![
-                        Box::new(&warm_hg_changeset),
-                        Box::new(&derive_unodes),
-                        Box::new(&derive_fsnodes),
-                        Box::new(&derive_blame),
-                    ],
-                )
-                .compat()
-                .await?,
-            ))
-        };
+        let warm_bookmarks_cache = Arc::new(
+            WarmBookmarksCache::new(
+                ctx.clone(),
+                blob_repo.clone(),
+                vec![
+                    Box::new(&warm_hg_changeset),
+                    Box::new(&derive_unodes),
+                    Box::new(&derive_fsnodes),
+                    Box::new(&derive_blame),
+                ],
+            )
+            .compat()
+            .await?,
+        );
 
-        let (acl_checker, skiplist_index, warm_bookmarks_cache) =
-            try_join3(acl_checker, skiplist_index, warm_bookmarks_cache).await?;
+        let (acl_checker, skiplist_index) = try_join(acl_checker, skiplist_index).await?;
 
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
