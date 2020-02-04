@@ -12,6 +12,7 @@ from edenscm.mercurial import (
     dirstate,
     extensions,
     policy,
+    pycompat,
     registrar,
     treedirstate,
     treestate,
@@ -31,7 +32,7 @@ def pack_dirstate(fakenow, orig, dmap, copymap, pl, now):
     # execute what original parsers.pack_dirstate should do actually
     # for consistency
     actualnow = int(now)
-    for f, e in dmap.items():
+    for f, e in pycompat.iteritems(dmap):
         if e[0] == "n" and e[3] == actualnow:
             e = parsers.dirstatetuple(e[0], e[1], e[2], -1)
             dmap[f] = e

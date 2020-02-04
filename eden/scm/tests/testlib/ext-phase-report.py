@@ -2,10 +2,12 @@
 
 from __future__ import absolute_import
 
+from edenscm.mercurial import pycompat
+
 
 def reposetup(ui, repo):
     def reportphasemove(tr):
-        for rev, move in sorted(tr.changes["phases"].items()):
+        for rev, move in sorted(pycompat.iteritems(tr.changes["phases"])):
             if move[0] is None:
                 ui.write(("test-debug-phase: new rev %d:  x -> %d\n" % (rev, move[1])))
             else:

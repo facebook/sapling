@@ -16,7 +16,7 @@ import silenttestrunner
 from bindings import revisionstore
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.datapack import datapackstore
-from edenscm.mercurial import error
+from edenscm.mercurial import error, pycompat
 from edenscm.mercurial.node import nullid
 from hghave import require
 
@@ -159,7 +159,7 @@ class datapacktestsbase(object):
         pack = self.createPack(revisions)
 
         # Verify the pack contents
-        for (filename, node, lastnode), content in sorted(blobs.items()):
+        for (filename, node, lastnode), content in sorted(pycompat.iteritems(blobs)):
             chain = pack.getdeltachain(filename, node)
             for entry in chain:
                 expectedcontent = blobs[(entry[0], entry[1], entry[3])]
@@ -252,7 +252,7 @@ class datapacktestsbase(object):
 
         pack = self.createPack(revisions)
 
-        for (filename, node), content in blobs.items():
+        for (filename, node), content in pycompat.iteritems(blobs):
             actualcontent = pack.getdeltachain(filename, node)[0][4]
             self.assertEquals(actualcontent, content)
 

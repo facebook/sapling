@@ -11,6 +11,7 @@ import os
 from edenscm.mercurial import encoding, error, localrepo, match, progress, scmutil, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid, nullrev
+from edenscm.mercurial.pycompat import iteritems
 
 from ..extutil import runshellcommand
 from . import constants, fileserverclient, remotefilectx, remotefilelog, shallowutil
@@ -166,7 +167,7 @@ def wraprepo(repo):
             mfl = self.manifestlog
             if base is not None:
                 mfdict = mfl[self[base].manifestnode()].read()
-                skip = set(mfdict.iteritems())
+                skip = set(iteritems(mfdict))
             else:
                 skip = set()
 
@@ -195,7 +196,7 @@ def wraprepo(repo):
                     else:
                         mfdict = mfctx.read()
 
-                    diff = mfdict.iteritems()
+                    diff = iteritems(mfdict)
                     if pats:
                         diff = (pf for pf in diff if m(pf[0]))
                     if matcher:

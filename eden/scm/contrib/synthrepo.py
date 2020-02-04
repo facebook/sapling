@@ -64,6 +64,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, nullrev, short
+from edenscm.mercurial.pycompat import iteritems
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -231,7 +232,7 @@ def analyze(ui, repo, *revs, **opts):
                     linesinfilesadded[roundto(added, 5)] += 1
                 elif mar == "r":
                     fileremoves += 1
-                for length, count in lineadd.iteritems():
+                for length, count in iteritems(lineadd):
                     linelengths[length] += count
             fileschanged[filechanges] += 1
             filesadded[fileadds] += 1
@@ -240,14 +241,14 @@ def analyze(ui, repo, *revs, **opts):
 
     invchildren = zerodict()
 
-    for rev, count in children.iteritems():
+    for rev, count in iteritems(children):
         invchildren[count] += 1
 
     if output != "-":
         ui.status(_("writing output to %s\n") % output)
 
     def pronk(d):
-        return sorted(d.iteritems(), key=lambda x: x[1], reverse=True)
+        return sorted(iteritems(d), key=lambda x: x[1], reverse=True)
 
     json.dump(
         {
@@ -552,6 +553,6 @@ def renamedirs(dirs, words):
         return renamed
 
     result = []
-    for dirpath, count in dirs.iteritems():
+    for dirpath, count in iteritems(dirs):
         result.append([rename(dirpath.lstrip(os.sep)), count])
     return result

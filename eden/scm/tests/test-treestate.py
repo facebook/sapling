@@ -9,6 +9,7 @@ import unittest
 
 import silenttestrunner
 from bindings import treestate
+from edenscm.mercurial import pycompat
 from hghave import require
 
 
@@ -137,7 +138,7 @@ class testtreestate(unittest.TestCase):
         def walk(setbits, unsetbits):
             return sorted(
                 k
-                for k, v in expected.items()
+                for k, v in pycompat.iteritems(expected)
                 if ((v[0] & unsetbits) == 0 and (v[0] & setbits) == setbits)
             )
 

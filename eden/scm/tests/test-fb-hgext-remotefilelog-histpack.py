@@ -13,7 +13,7 @@ import unittest
 import silenttestrunner
 from bindings import revisionstore
 from edenscm.hgext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.mercurial import error, ui as uimod, util
+from edenscm.mercurial import error, pycompat, ui as uimod, util
 from edenscm.mercurial.node import nullid
 from hghave import require
 
@@ -152,7 +152,7 @@ class histpacktestsbase(object):
         store = unionmetadatastore(pack)
 
         # Verify the pack contents
-        for (filename, node), (p1, p2, lastnode) in allentries.items():
+        for (filename, node), (p1, p2, lastnode) in pycompat.iteritems(allentries):
             ap1, ap2, alinknode, acopyfrom = store.getnodeinfo(filename, node)
             ep1, ep2, elinknode = allentries[(filename, node)]
             self.assertEquals(ap1, ep1)
