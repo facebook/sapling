@@ -22,6 +22,7 @@ use super::HgEnvelopeBlob;
 use crate::errors::*;
 use crate::nodehash::{HgFileNodeId, HgNodeHash};
 use crate::thrift;
+use crate::HgParents;
 
 /// A mutable representation of a Mercurial file node.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -108,6 +109,14 @@ impl HgFileEnvelope {
     #[inline]
     pub fn parents(&self) -> (Option<HgFileNodeId>, Option<HgFileNodeId>) {
         (self.inner.p1, self.inner.p2)
+    }
+
+    #[inline]
+    pub fn hg_parents(&self) -> HgParents {
+        HgParents::new(
+            self.inner.p1.map(|p| p.into_nodehash()),
+            self.inner.p2.map(|p| p.into_nodehash()),
+        )
     }
 
     /// The content ID -- this can be used to retrieve the contents.

@@ -41,10 +41,9 @@ use mercurial_types::{
     blobs::{
         fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
         fetch_file_content_sha256_from_blobstore, fetch_file_contents,
-        fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
-        fetch_file_size_from_blobstore, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset,
-        HgBlobEntry, HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
-        UploadHgNodeHash,
+        fetch_file_metadata_from_blobstore, fetch_file_size_from_blobstore, ChangesetMetadata,
+        ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent,
+        UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     },
     FileBytes, Globalrev, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
     RepoPath, Type,
@@ -254,14 +253,6 @@ impl BlobRepo {
                 LoadableError::Missing(_) => Err(ErrorKind::ContentBlobByAliasMissing(key).into()),
             })
             .boxify()
-    }
-
-    pub fn get_file_parents(
-        &self,
-        ctx: CoreContext,
-        key: HgFileNodeId,
-    ) -> impl Future<Item = HgParents, Error = Error> {
-        fetch_file_parents_from_blobstore(ctx, &self.blobstore.boxed(), key)
     }
 
     pub fn get_file_sha256(

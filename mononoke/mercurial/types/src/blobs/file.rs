@@ -173,19 +173,6 @@ pub fn fetch_file_content_sha256_from_blobstore(
     fetch_file_metadata_from_blobstore(ctx, blobstore, content_id).map(|metadata| metadata.sha256)
 }
 
-pub fn fetch_file_parents_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-) -> impl Future<Item = HgParents, Error = Error> {
-    node_id.load(ctx, blobstore).from_err().map(|envelope| {
-        let envelope = envelope.into_mut();
-        let p1 = envelope.p1.map(|filenode| filenode.into_nodehash());
-        let p2 = envelope.p2.map(|filenode| filenode.into_nodehash());
-        HgParents::new(p1, p2)
-    })
-}
-
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
 

@@ -931,7 +931,10 @@ impl MononokeRepo {
         let mut fetches = Vec::new();
         for key in keys {
             let filenode = HgFileNodeId::new(key.hgid.clone().into());
-            let get_parents = self.repo.get_file_parents(ctx.clone(), filenode);
+            let get_parents = filenode
+                .load(ctx.clone(), self.repo.blobstore())
+                .from_err()
+                .map(|envelope| envelope.hg_parents());
 
             let get_content =
                 create_getpack_v1_blob(ctx.clone(), self.repo.clone(), filenode.clone(), false)
