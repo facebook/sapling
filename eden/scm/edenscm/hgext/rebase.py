@@ -1969,10 +1969,9 @@ def buildstate(repo, destmap, collapse):
     # rebaseset. This means "source is ancestor of destination" for the second
     # (and following) batches of revisions are not checked here. We rely on
     # "defineparents" to do that check.
-    roots = list(repo.set("roots(%ld)", sortedsrc[0]))
+    roots = list(repo.set("sort(roots(%ld))", sortedsrc[0]))
     if not roots:
         raise error.Abort(_("no matching revisions"))
-    roots.sort()
     state = dict.fromkeys(rebaseset, revtodo)
     emptyrebase = len(sortedsrc) == 1
     for root in roots:
