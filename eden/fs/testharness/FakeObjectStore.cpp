@@ -44,7 +44,8 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
 }
 
 Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
-    const Hash& id) const {
+    const Hash& id,
+    ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
@@ -55,7 +56,8 @@ Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
 }
 
 Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
-    const Hash& id) const {
+    const Hash& id,
+    ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
@@ -66,7 +68,8 @@ Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
 }
 
 Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
-    const Hash& commitID) const {
+    const Hash& commitID,
+    ObjectFetchContext&) const {
   ++accessCounts_[commitID];
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
@@ -78,12 +81,14 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
 
 folly::Future<std::shared_ptr<const Tree>> FakeObjectStore::getTreeForManifest(
     const Hash& commitID,
-    const Hash& /* manifestID */) const {
+    const Hash& /* manifestID */,
+    ObjectFetchContext&) const {
   return getTreeForCommit(commitID);
 }
 
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
-    const std::vector<Hash>&) const {
+    const std::vector<Hash>&,
+    ObjectFetchContext&) const {
   return folly::unit;
 }
 

@@ -106,7 +106,7 @@ class CheckoutAction::LoadingRefcount {
 };
 
 Future<InvalidationRequired> CheckoutAction::run(
-    CheckoutContext* /* ctx */,
+    CheckoutContext* ctx,
     ObjectStore* store) {
   // Immediately create one LoadingRefcount, to ensure that our
   // numLoadsPending_ refcount does not drop to 0 until after we have started
@@ -120,7 +120,7 @@ Future<InvalidationRequired> CheckoutAction::run(
     // Load the Blob or Tree for the old TreeEntry.
     if (oldScmEntry_.has_value()) {
       if (oldScmEntry_.value().isTree()) {
-        store->getTree(oldScmEntry_.value().getHash())
+        store->getTree(oldScmEntry_.value().getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
@@ -130,7 +130,7 @@ Future<InvalidationRequired> CheckoutAction::run(
                   rc->error("error getting old tree", ew);
                 });
       } else {
-        store->getBlob(oldScmEntry_.value().getHash())
+        store->getBlob(oldScmEntry_.value().getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Blob> oldBlob) {
               rc->setOldBlob(std::move(oldBlob));
@@ -146,7 +146,7 @@ Future<InvalidationRequired> CheckoutAction::run(
     if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.isTree()) {
-        store->getTree(newEntry.getHash())
+        store->getTree(newEntry.getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Tree> newTree) {
               rc->setNewTree(std::move(newTree));
@@ -156,7 +156,7 @@ Future<InvalidationRequired> CheckoutAction::run(
                   rc->error("error getting new tree", ew);
                 });
       } else {
-        store->getBlob(newEntry.getHash())
+        store->getBlob(newEntry.getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Blob> newBlob) {
               rc->setNewBlob(std::move(newBlob));
@@ -342,7 +342,9 @@ Future<bool> CheckoutAction::hasConflict() {
     }
 
     // Check that the file contents are the same as the old source control entry
-    return fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getType())
+    return fileInode
+        ->isSameAs(
+            *oldBlob_, oldScmEntry_.value().getType(), ctx_->getFetchContext())
         .thenValue([this](bool isSame) {
           if (isSame) {
             // no conflict

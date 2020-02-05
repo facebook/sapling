@@ -239,7 +239,10 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
                if (startLoad) {
                  // The inode is not already being loaded.  We have to start
                  // loading it now.
-                 auto loadFuture = startLoadingInodeNoThrow(entry, name);
+                 // TODO: pass a fetch context down through getOrLoadChild to
+                 // track this load.
+                 auto loadFuture = startLoadingInodeNoThrow(
+                     entry, name, ObjectFetchContext::getNullContext());
                  if (loadFuture.isReady() && loadFuture.hasValue()) {
                    // If we finished loading the inode immediately, just call
                    // InodeMap::inodeLoadComplete() now, since we still have the
@@ -433,7 +436,10 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
       return;
     }
 
-    future = startLoadingInodeNoThrow(entry, name);
+    // loadChildInode is called by InodeMap during FUSE_LOOKUP processing. Pass
+    // a null fetch context because we don't need to record statistics.
+    future = startLoadingInodeNoThrow(
+        entry, name, ObjectFetchContext::getNullContext());
   }
   registerInodeLoadComplete(future, name, number);
 }
@@ -497,7 +503,8 @@ void TreeInode::inodeLoadComplete(
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     const DirEntry& entry,
-    PathComponentPiece name) noexcept {
+    PathComponentPiece name,
+    ObjectFetchContext& fetchContext) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
   // afterwards.
@@ -506,7 +513,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
   // and always return a Future object.  Therefore we simply wrap
   // startLoadingInode() and convert any thrown exceptions into Future.
   try {
-    return startLoadingInode(entry, name);
+    return startLoadingInode(entry, name, fetchContext);
   } catch (const std::exception& ex) {
     // It's possible that makeFuture() itself could throw, but this only
     // happens on out of memory, in which case the whole process is pretty much
@@ -561,7 +568,8 @@ std::optional<std::vector<std::string>> findEntryDifferences(
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const DirEntry& entry,
-    PathComponentPiece name) {
+    PathComponentPiece name,
+    ObjectFetchContext& fetchContext) {
   XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
              << getLogPath() << " / \"" << name << "\"";
   DCHECK(entry.getInode() == nullptr);
@@ -583,7 +591,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
 
   if (!entry.isMaterialized()) {
     return getStore()
-        ->getTree(entry.getHash())
+        ->getTree(entry.getHash(), fetchContext)
         .thenValue(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
@@ -1773,7 +1781,7 @@ ObjectStore* TreeInode::getStore() const {
 }
 
 Future<Unit> TreeInode::diff(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
@@ -1857,7 +1865,11 @@ Future<Unit> TreeInode::diff(
     inode = gitignoreEntry->getInodePtr();
     if (!inode) {
       gitignoreInodeFuture = loadChildLocked(
-          contents->entries, kIgnoreFilename, *gitignoreEntry, pendingLoads);
+          contents->entries,
+          kIgnoreFilename,
+          *gitignoreEntry,
+          pendingLoads,
+          context->getFetchContext());
     }
   }
 
@@ -1896,13 +1908,13 @@ Future<Unit> TreeInode::diff(
 
 Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     InodePtr gitignoreInode,
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   return getMount()
-      ->loadFileContents(gitignoreInode)
+      ->loadFileContents(context->getFetchContext(), gitignoreInode)
       .thenError([](const folly::exception_wrapper& ex) {
         XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
         return std::string{};
@@ -1925,7 +1937,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
 
 Future<Unit> TreeInode::computeDiff(
     folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     shared_ptr<const Tree> tree,
     std::unique_ptr<GitIgnoreStack> ignore,
@@ -1988,7 +2000,11 @@ Future<Unit> TreeInode::computeDiff(
                     entryIgnored));
           } else if (inodeEntry->isMaterialized()) {
             auto inodeFuture = self->loadChildLocked(
-                contents->entries, name, *inodeEntry, pendingLoads);
+                contents->entries,
+                name,
+                *inodeEntry,
+                pendingLoads,
+                context->getFetchContext());
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
                     context,
@@ -2073,7 +2089,11 @@ Future<Unit> TreeInode::computeDiff(
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
         auto inodeFuture = self->loadChildLocked(
-            contents->entries, scmEntry.getName(), *inodeEntry, pendingLoads);
+            contents->entries,
+            scmEntry.getName(),
+            *inodeEntry,
+            pendingLoads,
+            context->getFetchContext());
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2548,7 +2568,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // This child is potentially modified (or has saved state that must be
     // updated), but is not currently loaded. Start loading it and create a
     // CheckoutAction to process it once it is loaded.
-    auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
+    auto inodeFuture = loadChildLocked(
+        contents, name, entry, pendingLoads, ctx->getFetchContext());
     return make_unique<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   } else {
@@ -2567,7 +2588,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // If this is a directory we unfortunately have to load it and recurse into
     // it just so we can accurately report the list of files with conflicts.
     if (entry.isDirectory()) {
-      auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
+      auto inodeFuture = loadChildLocked(
+          contents, name, entry, pendingLoads, ctx->getFetchContext());
       return make_unique<CheckoutAction>(
           ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
     }
@@ -2950,7 +2972,8 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     DirContents& /* contents */,
     PathComponentPiece name,
     DirEntry& entry,
-    std::vector<IncompleteInodeLoad>& pendingLoads) {
+    std::vector<IncompleteInodeLoad>& pendingLoads,
+    ObjectFetchContext& fetchContext) {
   DCHECK(!entry.getInode());
 
   folly::Promise<InodePtr> promise;
@@ -2959,7 +2982,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   bool startLoad = getInodeMap()->shouldLoadChild(
       this, name, childNumber, std::move(promise));
   if (startLoad) {
-    auto loadFuture = startLoadingInodeNoThrow(entry, name);
+    auto loadFuture = startLoadingInodeNoThrow(entry, name, fetchContext);
     pendingLoads.emplace_back(
         this, std::move(loadFuture), name, entry.getInodeNumber());
   }
@@ -3320,7 +3343,11 @@ void TreeInode::prefetch() {
             inodeFutures.emplace_back(
                 lease.getTreeInode()
                     ->loadChildLocked(
-                        contents->entries, name, entry, pendingLoads)
+                        contents->entries,
+                        name,
+                        entry,
+                        pendingLoads,
+                        ObjectFetchContext::getNullContext())
                     .thenValue([](InodePtr inode) { return inode->getattr(); })
                     .unit());
           }

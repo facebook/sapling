@@ -29,6 +29,7 @@ namespace eden {
 class Blob;
 class BufVec;
 class Hash;
+class ObjectFetchContext;
 class ObjectStore;
 class OverlayFileAccess;
 
@@ -152,7 +153,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<std::vector<std::string>> listxattr() override;
 
-  folly::Future<Hash> getSha1();
+  folly::Future<Hash> getSha1(ObjectFetchContext& fetchContext);
 
   /**
    * Check to see if the file has the same contents as the specified blob
@@ -161,8 +162,14 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * This is more efficient than manually comparing the contents, as it may be
    * able to perform a simple hash check if the file is not materialized.
    */
-  folly::Future<bool> isSameAs(const Blob& blob, TreeEntryType entryType);
-  folly::Future<bool> isSameAs(const Hash& blobID, TreeEntryType entryType);
+  folly::Future<bool> isSameAs(
+      const Blob& blob,
+      TreeEntryType entryType,
+      ObjectFetchContext& fetchContext);
+  folly::Future<bool> isSameAs(
+      const Hash& blobID,
+      TreeEntryType entryType,
+      ObjectFetchContext& fetchContext);
 
   /**
    * Get the file mode_t value.
@@ -204,6 +211,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Note that this API generally should only be used for fairly small files.
    */
   FOLLY_NODISCARD folly::Future<std::string> readAll(
+      ObjectFetchContext& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
   /**
@@ -246,6 +254,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   ReturnType runWhileDataLoaded(
       LockedState state,
       BlobCache::Interest interest,
+      ObjectFetchContext& fetchContext,
       std::shared_ptr<const Blob> blob,
       Fn&& fn);
 
@@ -289,7 +298,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   FOLLY_NODISCARD folly::Future<std::shared_ptr<const Blob>> startLoadingData(
       LockedState state,
-      BlobCache::Interest interest);
+      BlobCache::Interest interest,
+      ObjectFetchContext& fetchContext);
 
   /**
    * Materialize the file as an empty file in the overlay.

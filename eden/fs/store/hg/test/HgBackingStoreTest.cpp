@@ -65,14 +65,20 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
 TEST_F(
     HgBackingStoreTest,
     getTreeForCommit_reimports_tree_if_it_was_deleted_after_import) {
-  auto tree1 = objectStore->getTreeForCommit(commit1).get(0ms);
+  auto tree1 =
+      objectStore
+          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+          .get(0ms);
   EXPECT_TRUE(tree1);
   ASSERT_THAT(
       tree1->getEntryNames(),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
   localStore->clearKeySpace(KeySpace::TreeFamily);
-  auto tree2 = objectStore->getTreeForCommit(commit1).get(0ms);
+  auto tree2 =
+      objectStore
+          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+          .get(0ms);
   EXPECT_TRUE(tree2);
   ASSERT_THAT(
       tree1->getEntryNames(),
@@ -80,7 +86,13 @@ TEST_F(
 }
 
 TEST_F(HgBackingStoreTest, getTreeForManifest) {
-  auto tree1 = objectStore->getTreeForCommit(commit1).get(0ms);
-  auto tree2 = objectStore->getTreeForManifest(commit1, manifest1).get(0ms);
+  auto tree1 =
+      objectStore
+          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  auto tree2 = objectStore
+                   ->getTreeForManifest(
+                       commit1, manifest1, ObjectFetchContext::getNullContext())
+                   .get(0ms);
   EXPECT_EQ(tree1->getHash(), tree2->getHash());
 }

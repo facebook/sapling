@@ -24,6 +24,7 @@ class EdenMount;
 class GitIgnoreStack;
 class DiffCallback;
 class InodeMap;
+class ObjectFetchContext;
 class ObjectStore;
 class Overlay;
 class RenameLock;
@@ -188,7 +189,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     remains valid until this Future completes.
    */
   folly::Future<folly::Unit> diff(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePathPiece currentPath,
       std::shared_ptr<const Tree> tree,
       const GitIgnoreStack* parentIgnore,
@@ -389,11 +390,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       const DirEntry& entry,
-      PathComponentPiece name) noexcept;
+      PathComponentPiece name,
+      ObjectFetchContext& context) noexcept;
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
       const DirEntry& entry,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      ObjectFetchContext& context);
 
   /**
    * Materialize this directory in the overlay.
@@ -538,7 +541,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       DirContents& dir,
       PathComponentPiece name,
       DirEntry& entry,
-      std::vector<IncompleteInodeLoad>& pendingLoads);
+      std::vector<IncompleteInodeLoad>& pendingLoads,
+      ObjectFetchContext& fetchContext);
 
   /**
    * Load the .gitignore file for this directory, then call computeDiff() once
@@ -546,7 +550,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> loadGitIgnoreThenDiff(
       InodePtr gitignoreInode,
-      const DiffContext* context,
+      DiffContext* context,
       RelativePathPiece currentPath,
       std::shared_ptr<const Tree> tree,
       const GitIgnoreStack* parentIgnore,
@@ -562,7 +566,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> computeDiff(
       folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
-      const DiffContext* context,
+      DiffContext* context,
       RelativePathPiece currentPath,
       std::shared_ptr<const Tree> tree,
       std::unique_ptr<GitIgnoreStack> ignore,

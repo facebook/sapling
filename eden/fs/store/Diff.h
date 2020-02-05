@@ -50,7 +50,7 @@ diffCommitsForStatus(const ObjectStore* store, Hash hash1, Hash hash2);
  * DiffContext.
  */
 folly::Future<folly::Unit> diffTrees(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     Hash scmHash,
     Hash wdHash,
@@ -72,7 +72,7 @@ folly::Future<folly::Unit> diffTrees(
  * DiffContext.
  */
 folly::Future<folly::Unit> diffAddedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     Hash wdHash,
     const GitIgnoreStack* ignore,
@@ -93,7 +93,7 @@ folly::Future<folly::Unit> diffAddedTree(
  * DiffContext.
  */
 folly::Future<folly::Unit> diffRemovedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     Hash scmHash);
 } // namespace eden

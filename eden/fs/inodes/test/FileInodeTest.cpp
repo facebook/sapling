@@ -405,7 +405,7 @@ TEST(FileInode, truncatingDuringLoad) {
   auto backingStore = mount_.getBackingStore();
   auto storedBlob = backingStore->getStoredBlob(*inode->getBlobHash());
 
-  auto readAllFuture = inode->readAll();
+  auto readAllFuture = inode->readAll(ObjectFetchContext::getNullContext());
   EXPECT_EQ(false, readAllFuture.isReady());
 
   {

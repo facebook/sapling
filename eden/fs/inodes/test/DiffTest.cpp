@@ -80,10 +80,11 @@ class DiffTest {
       folly::StringPiece systemWideIgnoreFileContents = "",
       folly::StringPiece userIgnoreFileContents = "") {
     ScmStatusDiffCallback callback;
-    auto loadFileContentsFromPath = [this](RelativePathPiece path) {
-      return mount_.getEdenMount()->EdenMount::loadFileContentsFromPath(
-          path, CacheHint::LikelyNeededAgain);
-    };
+    DiffContext::LoadFileFunction loadFileContentsFromPath =
+        [this](ObjectFetchContext& fetchContext, RelativePathPiece path) {
+          return mount_.getEdenMount()->EdenMount::loadFileContentsFromPath(
+              fetchContext, path, CacheHint::LikelyNeededAgain);
+        };
     DiffContext diffContext{
         &callback,
         listIgnored,

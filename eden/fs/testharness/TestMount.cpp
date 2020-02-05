@@ -419,7 +419,10 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {
-  return getFileInode(path)->readAll(CacheHint::LikelyNeededAgain).get();
+  return getFileInode(path)
+      ->readAll(
+          ObjectFetchContext::getNullContext(), CacheHint::LikelyNeededAgain)
+      .get();
 }
 
 bool TestMount::hasFileAt(folly::StringPiece path) {
@@ -541,7 +544,9 @@ std::shared_ptr<const Tree> TestMount::getRootTree() const {
 
 std::string TestMount::loadFileContentsFromPath(std::string path) {
   return edenMount_
-      ->loadFileContentsFromPath(RelativePathPiece{folly::StringPiece{path}})
+      ->loadFileContentsFromPath(
+          ObjectFetchContext::getNullContext(),
+          RelativePathPiece{folly::StringPiece{path}})
       .get(std::chrono::milliseconds(1));
 };
 

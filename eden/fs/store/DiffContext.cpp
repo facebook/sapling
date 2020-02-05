@@ -11,6 +11,7 @@
 
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
+#include "eden/fs/store/IObjectStore.h"
 
 using apache::thrift::ResponseChannelRequest;
 
@@ -22,8 +23,7 @@ DiffContext::DiffContext(
     bool listIgnored,
     const ObjectStore* os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-    std::function<folly::Future<std::string>(RelativePathPiece)>
-        loadFileContentsFromPath,
+    LoadFileFunction loadFileContentsFromPath,
     ResponseChannelRequest* request)
     : callback{cb},
       store{os},
@@ -46,8 +46,7 @@ const GitIgnoreStack* DiffContext::getToplevelIgnore() const {
   return topLevelIgnores_->getStack();
 }
 
-const std::function<folly::Future<std::string>(RelativePathPiece)>&
-DiffContext::getLoadFileContentsFromPath() const {
+DiffContext::LoadFileFunction DiffContext::getLoadFileContentsFromPath() const {
   return loadFileContentsFromPath_;
 }
 

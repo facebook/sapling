@@ -472,7 +472,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
       return makeFuture<Hash>(
           InodeError(EINVAL, fileInode, "file is a symlink"));
     }
-    return fileInode->getSha1();
+    return fileInode->getSha1(ObjectFetchContext::getNullContext());
   });
 #else
   NOT_IMPLEMENTED();
@@ -811,6 +811,9 @@ void EdenServiceHandler::glob(
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
+  // TODO: Track and report object fetches required for this glob.
+  auto& context = ObjectFetchContext::getNullContext();
+
   try {
     // Compile the list of globs into a tree
     GlobNode globRoot(/*includeDotfiles=*/true);
@@ -822,6 +825,7 @@ void EdenServiceHandler::glob(
     auto matches = globRoot
                        .evaluate(
                            edenMount->getObjectStore(),
+                           context,
                            RelativePathPiece(),
                            rootInode,
                            /*fileBlobsToPrefetch=*/nullptr)
@@ -848,6 +852,9 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
   auto edenMount = server_->getMount(params->mountPoint);
   auto rootInode = edenMount->getRootInode();
 
+  // TODO: Track and report object fetches required for this glob.
+  auto& context = ObjectFetchContext::getNullContext();
+
   // Compile the list of globs into a tree
   auto globRoot = std::make_shared<GlobNode>(params->includeDotfiles);
   try {
@@ -867,6 +874,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
       globRoot
           ->evaluate(
               edenMount->getObjectStore(),
+              context,
               RelativePathPiece(),
               rootInode,
               fileBlobsToPrefetch)
@@ -892,6 +900,10 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               }
             }
             if (fileBlobsToPrefetch) {
+              // TODO: It would be worth tracking and logging glob fetches,
+              // since they're often used by watchman.
+              auto& context = ObjectFetchContext::getNullContext();
+
               std::vector<folly::Future<folly::Unit>> futures;
 
               auto store = edenMount->getObjectStore();
@@ -900,13 +912,13 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
 
               for (auto& hash : *blobs) {
                 if (batch.size() >= 20480) {
-                  futures.emplace_back(store->prefetchBlobs(batch));
+                  futures.emplace_back(store->prefetchBlobs(batch, context));
                   batch.clear();
                 }
                 batch.emplace_back(hash);
               }
               if (!batch.empty()) {
-                futures.emplace_back(store->prefetchBlobs(batch));
+                futures.emplace_back(store->prefetchBlobs(batch, context));
               }
 
               return folly::collect(futures).thenValue(
@@ -962,7 +974,10 @@ std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
   for (auto piece : parentDirectory.components()) {
     auto entry = tree->getEntryPtr(piece);
     if (entry != nullptr && entry->isTree()) {
-      tree = objectStore->getTree(entry->getHash()).get();
+      tree =
+          objectStore
+              ->getTree(entry->getHash(), ObjectFetchContext::getNullContext())
+              .get();
     } else {
       return std::nullopt;
     }
@@ -1081,7 +1096,7 @@ void EdenServiceHandler::debugGetScmTree(
     auto localStore = store->getLocalStore();
     tree = localStore->getTree(id).get();
   } else {
-    tree = store->getTree(id).get();
+    tree = store->getTree(id, ObjectFetchContext::getNullContext()).get();
   }
 
   if (!tree) {
@@ -1117,7 +1132,7 @@ void EdenServiceHandler::debugGetScmBlob(
     auto localStore = store->getLocalStore();
     blob = localStore->getBlob(id).get();
   } else {
-    blob = store->getBlob(id).get();
+    blob = store->getBlob(id, ObjectFetchContext::getNullContext()).get();
   }
 
   if (!blob) {
@@ -1147,8 +1162,10 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     auto localStore = store->getLocalStore();
     metadata = localStore->getBlobMetadata(id).get();
   } else {
-    auto sha1 = store->getBlobSha1(id).get();
-    auto size = store->getBlobSize(id).get();
+    auto sha1 =
+        store->getBlobSha1(id, ObjectFetchContext::getNullContext()).get();
+    auto size =
+        store->getBlobSize(id, ObjectFetchContext::getNullContext()).get();
     metadata.emplace(sha1, size);
   }
 

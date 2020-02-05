@@ -17,6 +17,7 @@ namespace eden {
 class Blob;
 class Hash;
 class IObjectStore;
+class ObjectFetchContext;
 
 /**
  * File access in Eden is stateless - we do not receive notifications from the
@@ -56,6 +57,7 @@ class BlobAccess {
    */
   folly::Future<BlobCache::GetResult> getBlob(
       const Hash& hash,
+      ObjectFetchContext& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);
 
  private:

@@ -259,7 +259,9 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
     return TreeInodePtr::makeNew(
         this, std::move(*rootOverlayDir), std::nullopt);
   }
-  return objectStore_->getTreeForCommit(parentCommits.parent1())
+  return objectStore_
+      ->getTreeForCommit(
+          parentCommits.parent1(), ObjectFetchContext::getNullContext())
       .thenValue([this](std::shared_ptr<const Tree> tree) {
         return TreeInodePtr::makeNew(this, std::move(tree));
       });
@@ -635,7 +637,8 @@ TreeInodePtr EdenMount::getRootInode() const {
 
 folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
   auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
-  return objectStore_->getTreeForCommit(commitHash);
+  return objectStore_->getTreeForCommit(
+      commitHash, ObjectFetchContext::getNullContext());
 }
 
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
@@ -647,14 +650,17 @@ Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
 }
 
 folly::Future<std::string> EdenMount::loadFileContentsFromPath(
+    ObjectFetchContext& fetchContext,
     RelativePathPiece path,
     CacheHint cacheHint) const {
-  return getInode(path).thenValue([this, cacheHint](InodePtr fileInodePtr) {
-    return loadFileContents(fileInodePtr, cacheHint);
-  });
+  return getInode(path).thenValue(
+      [this, &fetchContext, cacheHint](InodePtr fileInodePtr) {
+        return loadFileContents(fetchContext, fileInodePtr, cacheHint);
+      });
 }
 
 folly::Future<std::string> EdenMount::loadFileContents(
+    ObjectFetchContext& fetchContext,
     InodePtr fileInodePtr,
     CacheHint cacheHint) const {
   const auto fileInode = fileInodePtr.asFileOrNull();
@@ -665,17 +671,18 @@ folly::Future<std::string> EdenMount::loadFileContents(
   }
 
   if (dtype_t::Symlink == fileInodePtr->getType()) {
+    // TODO: pass fetchContext into resolveSymlink to track loads it issues.
     return resolveSymlink(fileInodePtr, cacheHint)
         .thenValue(
-            [this, cacheHint](
+            [this, &fetchContext, cacheHint](
                 InodePtr pResolved) mutable -> folly::Future<std::string> {
               // Note: infinite recursion is not a concern because
               // resolveSymlink() can not return a symlink
-              return loadFileContents(pResolved, cacheHint);
+              return loadFileContents(fetchContext, pResolved, cacheHint);
             });
   }
 
-  return fileInode->readAll(cacheHint);
+  return fileInode->readAll(fetchContext, cacheHint);
 }
 
 folly::Future<InodePtr> EdenMount::resolveSymlink(
@@ -767,12 +774,14 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().stringPiece())
       .via(serverState_->getThreadPool().get())
-      .thenValue(
-          [this, parent1Hash = oldParents.parent1(), snapshotHash](auto&&) {
-            auto fromTreeFuture = objectStore_->getTreeForCommit(parent1Hash);
-            auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
-            return collectSafe(fromTreeFuture, toTreeFuture);
-          })
+      .thenValue([this, ctx, parent1Hash = oldParents.parent1(), snapshotHash](
+                     auto&&) {
+        auto fromTreeFuture =
+            objectStore_->getTreeForCommit(parent1Hash, ctx->getFetchContext());
+        auto toTreeFuture = objectStore_->getTreeForCommit(
+            snapshotHash, ctx->getFetchContext());
+        return collectSafe(fromTreeFuture, toTreeFuture);
+      })
       .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                          treeResults) {
@@ -789,7 +798,12 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
         auto& fromTree = std::get<0>(treeResults);
         return journalDiffCallback->performDiff(this, getRootInode(), fromTree)
-            .thenValue([treeResults](Unit) { return treeResults; });
+            .thenValue([ctx, journalDiffCallback, treeResults](Unit) {
+              // TODO: Merge results from JournalDiffCallback into ctx
+              (void)ctx;
+              (void)journalDiffCallback;
+              return treeResults;
+            });
       })
       .thenValue([this, ctx, checkoutTimes, stopWatch](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
@@ -905,9 +919,11 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
   // We hold a reference to the root inode to ensure that
   // the EdenMount cannot be destroyed while the DiffContext
   // is still using it.
-  auto loadContents = [this,
-                       rootInode = getRootInode()](RelativePathPiece path) {
-    return loadFileContentsFromPath(path, CacheHint::LikelyNeededAgain);
+  auto loadContents = [this, rootInode = getRootInode()](
+                          ObjectFetchContext& fetchContext,
+                          RelativePathPiece path) {
+    return loadFileContentsFromPath(
+        fetchContext, path, CacheHint::LikelyNeededAgain);
   };
   return make_unique<DiffContext>(
       callback,
@@ -918,9 +934,9 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       request);
 }
 
-Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {
+Future<Unit> EdenMount::diff(DiffContext* ctxPtr, Hash commitHash) const {
   auto rootInode = getRootInode();
-  return objectStore_->getTreeForCommit(commitHash)
+  return objectStore_->getTreeForCommit(commitHash, ctxPtr->getFetchContext())
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](
                      std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(
@@ -969,7 +985,7 @@ Future<Unit> EdenMount::diff(
 
   // Create a DiffContext object for this diff operation.
   auto context = createDiffContext(callback, listIgnored, request);
-  const DiffContext* ctxPtr = context.get();
+  DiffContext* ctxPtr = context.get();
 
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
   // exists until the diff completes.

@@ -57,12 +57,17 @@ ObjectStore::ObjectStore(
 
 ObjectStore::~ObjectStore() {}
 
-Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
+Future<shared_ptr<const Tree>> ObjectStore::getTree(
+    const Hash& id,
+    ObjectFetchContext& fetchContext) const {
   // Check in the LocalStore first
   return localStore_->getTree(id).thenValue(
-      [self = shared_from_this(), id](shared_ptr<const Tree> tree) {
+      [self = shared_from_this(), id, &fetchContext](
+          shared_ptr<const Tree> tree) {
         if (tree) {
           XLOG(DBG4) << "tree " << id << " found in local store";
+          fetchContext.didFetch(
+              ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
           return makeFuture(std::move(tree));
         }
 
@@ -80,7 +85,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
         self->recordBackingStoreImport();
         return self->backingStore_->getTree(id)
             .via(self->executor_)
-            .thenValue([id, localStore = self->localStore_](
+            .thenValue([id, &fetchContext, localStore = self->localStore_](
                            unique_ptr<const Tree> loadedTree) {
               if (!loadedTree) {
                 // TODO: Perhaps we should do some short-term negative caching?
@@ -91,13 +96,18 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
 
               localStore->putTree(loadedTree.get());
               XLOG(DBG3) << "tree " << id << " retrieved from backing store";
+              fetchContext.didFetch(
+                  ObjectFetchContext::Tree,
+                  id,
+                  ObjectFetchContext::FromBackingStore);
               return shared_ptr<const Tree>(std::move(loadedTree));
             });
       });
 }
 
 Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
-    const Hash& commitID) const {
+    const Hash& commitID,
+    ObjectFetchContext&) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
   recordBackingStoreImport();
@@ -115,7 +125,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
 
 Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
     const Hash& commitID,
-    const Hash& manifestID) const {
+    const Hash& manifestID,
+    ObjectFetchContext&) const {
   XLOG(DBG3) << "getTreeForManifest(" << commitID << ", " << manifestID << ")";
 
   recordBackingStoreImport();
@@ -137,7 +148,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
-    const std::vector<Hash>& ids) const {
+    const std::vector<Hash>& ids,
+    ObjectFetchContext&) const {
   // In theory we could/should ask the localStore_ to filter the list
   // of ids down to just the set that we need to load, but there is no
   // bulk key existence check in rocksdb, so we would need to cause it
@@ -152,10 +164,12 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
   return backingStore_->prefetchBlobs(ids);
 }
 
-Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
+Future<shared_ptr<const Blob>> ObjectStore::getBlob(
+    const Hash& id,
+    ObjectFetchContext& fetchContext) const {
   auto self = shared_from_this();
 
-  return localStore_->getBlob(id).thenValue([id, self](
+  return localStore_->getBlob(id).thenValue([id, &fetchContext, self](
                                                 shared_ptr<const Blob> blob) {
     if (blob) {
       // Not computing the BlobMetadata here because if the blob was found
@@ -165,6 +179,8 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
       // instead.)
       XLOG(DBG4) << "blob " << id << " found in local store";
       self->updateBlobStats(true, false);
+      fetchContext.didFetch(
+          ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
       return makeFuture(shared_ptr<const Blob>(std::move(blob)));
     }
 
@@ -172,10 +188,15 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
     self->recordBackingStoreImport();
     return self->backingStore_->getBlob(id)
         .via(self->executor_)
-        .thenValue([self, id](unique_ptr<const Blob> loadedBlob) {
+        .thenValue([self, &fetchContext, id](
+                       unique_ptr<const Blob> loadedBlob) {
           if (loadedBlob) {
             XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
             self->updateBlobStats(false, true);
+            fetchContext.didFetch(
+                ObjectFetchContext::Blob,
+                id,
+                ObjectFetchContext::FromBackingStore);
             auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
             self->metadataCache_.wlock()->set(id, metadata);
             return shared_ptr<const Blob>(std::move(loadedBlob));
@@ -196,13 +217,19 @@ void ObjectStore::updateBlobStats(bool local, bool backing) const {
   stats.getBlobFromBackingStore.addValue(backing);
 }
 
-Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
+Future<BlobMetadata> ObjectStore::getBlobMetadata(
+    const Hash& id,
+    ObjectFetchContext& context) const {
   // Check in-memory cache
   {
     auto metadataCache = metadataCache_.wlock();
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
       updateBlobMetadataStats(true, false, false);
+      context.didFetch(
+          ObjectFetchContext::BlobMetadata,
+          id,
+          ObjectFetchContext::FromMemoryCache);
       return cacheIter->second;
     }
   }
@@ -211,10 +238,14 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
 
   // Check local store
   return localStore_->getBlobMetadata(id).thenValue(
-      [self, id](std::optional<BlobMetadata>&& metadata) {
+      [self, id, &context](std::optional<BlobMetadata>&& metadata) {
         if (metadata) {
           self->updateBlobMetadataStats(false, true, false);
           self->metadataCache_.wlock()->set(id, *metadata);
+          context.didFetch(
+              ObjectFetchContext::BlobMetadata,
+              id,
+              ObjectFetchContext::FromDiskCache);
           return makeFuture(*metadata);
         }
 
@@ -229,11 +260,20 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         self->recordBackingStoreImport();
         return self->backingStore_->getBlob(id)
             .via(self->executor_)
-            .thenValue([self, id](std::unique_ptr<Blob> blob) {
+            .thenValue([self, id, &context](std::unique_ptr<Blob> blob) {
               if (blob) {
                 self->updateBlobMetadataStats(false, false, true);
                 auto metadata = self->localStore_->putBlob(id, blob.get());
                 self->metadataCache_.wlock()->set(id, metadata);
+                // I could see an argument for recording this fetch with type
+                // Blob instead of BlobMetadata, but it's probably more useful
+                // in context to know how many metadata fetches occurred. Also,
+                // since backing stores don't directly support fetching
+                // metadata, it should be clear.
+                context.didFetch(
+                    ObjectFetchContext::BlobMetadata,
+                    id,
+                    ObjectFetchContext::FromBackingStore);
                 return makeFuture(metadata);
               }
 
@@ -252,14 +292,18 @@ void ObjectStore::updateBlobMetadataStats(bool memory, bool local, bool backing)
   stats.getBlobMetadataFromBackingStore.addValue(backing);
 }
 
-Future<Hash> ObjectStore::getBlobSha1(const Hash& id) const {
-  return getBlobMetadata(id).thenValue(
-      [](const BlobMetadata& metadata) { return metadata.sha1; });
+Future<Hash> ObjectStore::getBlobSha1(
+    const Hash& id,
+    ObjectFetchContext& context) const {
+  return getBlobMetadata(id, context)
+      .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }
 
-Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
-  return getBlobMetadata(id).thenValue(
-      [](const BlobMetadata& metadata) { return metadata.size; });
+Future<uint64_t> ObjectStore::getBlobSize(
+    const Hash& id,
+    ObjectFetchContext& context) const {
+  return getBlobMetadata(id, context)
+      .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
 }
 
 void ObjectStore::recordBackingStoreImport() const {

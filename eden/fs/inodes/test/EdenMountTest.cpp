@@ -154,7 +154,9 @@ TEST(EdenMount, loadFileContents) {
   };
 
   const auto loadFileContents = [edenMount](const InodePtr& pInode) {
-    return edenMount->loadFileContents(pInode).get(1s);
+    return edenMount
+        ->loadFileContents(ObjectFetchContext::getNullContext(), pInode)
+        .get(1s);
   };
 
   const InodePtr filePtr{getInode(".gitignore")};
@@ -188,7 +190,9 @@ TEST(EdenMount, loadFileContentsInvalidInodePtr) {
   };
 
   const auto loadFileContents = [edenMount](const InodePtr& pInode) {
-    return edenMount->loadFileContents(pInode).get(1s);
+    return edenMount
+        ->loadFileContents(ObjectFetchContext::getNullContext(), pInode)
+        .get(1s);
   };
 
   const InodePtr pDir{getInode("src")};

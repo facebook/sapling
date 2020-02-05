@@ -79,7 +79,8 @@ class DiffTest : public ::testing::Test {
       bool listIgnored = true) {
     auto callback = std::make_unique<ScmStatusDiffCallback>();
     auto callbackPtr = callback.get();
-    auto mockedLoadFile = [gitIgnoreContents](RelativePathPiece /**/) {
+    auto mockedLoadFile = [gitIgnoreContents](
+                              ObjectFetchContext&, RelativePathPiece /**/) {
       return folly::makeFuture(gitIgnoreContents);
     };
     auto topLevelIgnores = std::make_unique<TopLevelIgnores>(

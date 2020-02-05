@@ -10,6 +10,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -28,6 +29,7 @@ namespace eden {
 
 class DiffCallback;
 class GitIgnoreStack;
+class ObjectFetchContext;
 class ObjectStore;
 class UserInfo;
 class TopLevelIgnores;
@@ -44,13 +46,15 @@ class EdenMount;
  */
 class DiffContext {
  public:
+  using LoadFileFunction = std::function<
+      folly::Future<std::string>(ObjectFetchContext&, RelativePathPiece)>;
+
   DiffContext(
       DiffCallback* cb,
       bool listIgnored,
       const ObjectStore* os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-      std::function<folly::Future<std::string>(RelativePathPiece)>
-          loadFileContentsFromPath,
+      LoadFileFunction loadFileContentsFromPath,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
   DiffContext(DiffCallback* cb, const ObjectStore* os);
 
@@ -72,14 +76,16 @@ class DiffContext {
 
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
-  const std::function<folly::Future<std::string>(RelativePathPiece)>&
-  getLoadFileContentsFromPath() const;
+  LoadFileFunction getLoadFileContentsFromPath() const;
+  ObjectFetchContext& getFetchContext() {
+    return fetchContext_;
+  }
 
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
-  const std::function<folly::Future<std::string>(RelativePathPiece)>
-      loadFileContentsFromPath_;
+  const LoadFileFunction loadFileContentsFromPath_;
   apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
+  ObjectFetchContext fetchContext_;
 };
 } // namespace eden
 } // namespace facebook

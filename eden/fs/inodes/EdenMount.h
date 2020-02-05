@@ -387,8 +387,11 @@ class EdenMount {
    * Resolves symlinks and loads file contents from the Inode at the given path.
    * This loads the entire file contents into memory, so this can be expensive
    * for large files.
+   *
+   * The fetchContext object must remain valid until the future is completed.
    */
   folly::Future<std::string> loadFileContentsFromPath(
+      ObjectFetchContext& fetchContext,
       RelativePathPiece path,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
 
@@ -396,10 +399,13 @@ class EdenMount {
    * Resolves symlinks and loads file contents. This loads the entire file
    * contents into memory, so this can be expensive for large files.
    *
+   * The fetchContext object must remain valid until the future is completed.
+   *
    * TODO: add maxSize parameter to cause the command to fail if the file is
    * over a certain size.
    */
   folly::Future<std::string> loadFileContents(
+      ObjectFetchContext& fetchContext,
       InodePtr fileInodePtr,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
 
@@ -466,7 +472,7 @@ class EdenMount {
    * exists at least until the returned Future completes.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> diff(
-      const DiffContext* ctxPtr,
+      DiffContext* ctxPtr,
       Hash commitHash) const;
 
   /**

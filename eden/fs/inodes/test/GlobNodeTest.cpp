@@ -40,7 +40,11 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
   return globRoot.evaluate(
-      objectStore, RelativePathPiece(), rootInode, prefetchHashes);
+      objectStore,
+      ObjectFetchContext::getNullContext(),
+      RelativePathPiece(),
+      rootInode,
+      prefetchHashes);
 }
 } // namespace
 

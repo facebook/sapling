@@ -159,6 +159,7 @@ template <typename ReturnType, typename Fn>
 ReturnType FileInode::runWhileDataLoaded(
     LockedState state,
     BlobCache::Interest interest,
+    ObjectFetchContext& fetchContext,
     std::shared_ptr<const Blob> blob,
     Fn&& fn) {
   auto future = Future<std::shared_ptr<const Blob>>::makeEmpty();
@@ -174,7 +175,7 @@ ReturnType FileInode::runWhileDataLoaded(
           return std::forward<Fn>(fn)(std::move(state), std::move(blob));
         });
       } else {
-        future = startLoadingData(std::move(state), interest);
+        future = startLoadingData(std::move(state), interest, fetchContext);
       }
       break;
     case State::BLOB_LOADING:
@@ -188,8 +189,10 @@ ReturnType FileInode::runWhileDataLoaded(
   }
 
   return std::move(future).thenValue(
-      [self = inodePtrFromThis(), fn = std::forward<Fn>(fn), interest](
-          std::shared_ptr<const Blob> blob) mutable {
+      [self = inodePtrFromThis(),
+       fn = std::forward<Fn>(fn),
+       interest,
+       &fetchContext](std::shared_ptr<const Blob> blob) mutable {
         // Simply call runWhileDataLoaded() again when we we finish loading the
         // blob data.  The state should be BLOB_NOT_LOADING or
         // MATERIALIZED_IN_OVERLAY this time around.
@@ -201,6 +204,7 @@ ReturnType FileInode::runWhileDataLoaded(
         return self->runWhileDataLoaded<ReturnType>(
             std::move(stateLock),
             interest,
+            fetchContext,
             std::move(blob),
             std::forward<Fn>(fn));
       });
@@ -250,7 +254,9 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       // it in memory - the blob will immediately be written into the overlay
       // and then dropped.
       future = startLoadingData(
-          std::move(state), BlobCache::Interest::UnlikelyNeededAgain);
+          std::move(state),
+          BlobCache::Interest::UnlikelyNeededAgain,
+          ObjectFetchContext::getNullContext());
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
@@ -477,7 +483,7 @@ folly::Future<std::string> FileInode::readlink(CacheHint cacheHint) {
   }
 
   // The symlink contents are simply the file contents!
-  return readAll(cacheHint);
+  return readAll(ObjectFetchContext::getNullContext(), cacheHint);
 }
 
 std::optional<bool> FileInode::isSameAsFast(
@@ -505,27 +511,30 @@ std::optional<bool> FileInode::isSameAsFast(
 
 folly::Future<bool> FileInode::isSameAs(
     const Blob& blob,
-    TreeEntryType entryType) {
+    TreeEntryType entryType,
+    ObjectFetchContext& fetchContext) {
   auto result = isSameAsFast(blob.getHash(), entryType);
   if (result.has_value()) {
     return result.value();
   }
 
   auto blobSha1 = Hash::sha1(blob.getContents());
-  return getSha1().thenValue(
-      [blobSha1](const Hash& sha1) { return sha1 == blobSha1; });
+  return getSha1(fetchContext).thenValue([blobSha1](const Hash& sha1) {
+    return sha1 == blobSha1;
+  });
 }
 
 folly::Future<bool> FileInode::isSameAs(
     const Hash& blobID,
-    TreeEntryType entryType) {
+    TreeEntryType entryType,
+    ObjectFetchContext& fetchContext) {
   auto result = isSameAsFast(blobID, entryType);
   if (result.has_value()) {
     return makeFuture(result.value());
   }
 
-  auto f1 = getSha1();
-  auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID);
+  auto f1 = getSha1(fetchContext);
+  auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
   return folly::collect(f1, f2).thenValue([](std::tuple<Hash, Hash>&& result) {
     return std::get<0>(result) == std::get<1>(result);
   });
@@ -572,17 +581,19 @@ Future<string> FileInode::getxattr(StringPiece name) {
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSha1().thenValue([](Hash hash) { return hash.toString(); });
+  return getSha1(ObjectFetchContext::getNullContext()).thenValue([](Hash hash) {
+    return hash.toString();
+  });
 }
 
-Future<Hash> FileInode::getSha1() {
+Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   auto state = LockedState{this};
 
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore()->getBlobSha1(state->hash.value());
+      return getObjectStore()->getBlobSha1(state->hash.value(), fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
       return getOverlayFileAccess(state)->getSha1(*this);
   }
@@ -610,7 +621,7 @@ folly::Future<struct stat> FileInode::stat() {
       // a win after restarting Eden - size can be loaded from the local cache
       // more cheaply than deserializing an entire blob.
       return getObjectStore()
-          ->getBlobSize(*state->hash)
+          ->getBlobSize(*state->hash, ObjectFetchContext::getNullContext())
           .thenValue([st](const uint64_t size) mutable {
             st.st_size = size;
             updateBlockCount(st);
@@ -642,7 +653,9 @@ void FileInode::fsync(bool datasync) {
   }
 }
 
-Future<string> FileInode::readAll(CacheHint cacheHint) {
+Future<string> FileInode::readAll(
+    ObjectFetchContext& fetchContext,
+    CacheHint cacheHint) {
   auto interest = BlobCache::Interest::LikelyNeededAgain;
   switch (cacheHint) {
     case CacheHint::NotNeededAgain:
@@ -660,6 +673,7 @@ Future<string> FileInode::readAll(CacheHint cacheHint) {
   return runWhileDataLoaded<Future<string>>(
       LockedState{this},
       interest,
+      fetchContext,
       nullptr,
       [self = inodePtrFromThis()](
           LockedState&& state, std::shared_ptr<const Blob> blob) -> string {
@@ -693,6 +707,8 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
   return runWhileDataLoaded<Future<BufVec>>(
       LockedState{this},
       BlobCache::Interest::WantHandle,
+      // This function is only called by FUSE.
+      ObjectFetchContext::getNullContext(),
       nullptr,
       [size, off, self = inodePtrFromThis()](
           LockedState&& state, std::shared_ptr<const Blob> blob) -> BufVec {
@@ -793,14 +809,15 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 
 Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
     LockedState state,
-    BlobCache::Interest interest) {
+    BlobCache::Interest interest,
+    ObjectFetchContext& fetchContext) {
   DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
   // Start the blob load first in case this throws an exception.
   // Ideally the state transition is no-except in tandem with the
   // Future's .then call.
-  auto getBlobFuture =
-      getMount()->getBlobAccess()->getBlob(state->hash.value(), interest);
+  auto getBlobFuture = getMount()->getBlobAccess()->getBlob(
+      state->hash.value(), fetchContext, interest);
 
   // Everything from here through blobFuture.then should be noexcept.
   state->blobLoadingPromise.emplace();
@@ -876,7 +893,8 @@ void FileInode::materializeNow(
   // value in the overlay for this file.
   // Since this uses state->hash we perform this before calling
   // state.setMaterialized().
-  auto blobSha1Future = getObjectStore()->getBlobSha1(state->hash.value());
+  auto blobSha1Future = getObjectStore()->getBlobSha1(
+      state->hash.value(), ObjectFetchContext::getNullContext());
   std::optional<Hash> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = blobSha1Future.value();

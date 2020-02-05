@@ -39,7 +39,7 @@ class DiffCallback;
  */
 class DeferredDiffEntry {
  public:
-  explicit DeferredDiffEntry(const DiffContext* context, RelativePath&& path)
+  explicit DeferredDiffEntry(DiffContext* context, RelativePath&& path)
       : context_{context}, path_{std::move(path)} {}
   virtual ~DeferredDiffEntry() {}
 
@@ -50,7 +50,7 @@ class DeferredDiffEntry {
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> run() = 0;
 
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       InodePtr inode,
       const GitIgnoreStack* ignore,
@@ -65,19 +65,19 @@ class DeferredDiffEntry {
    * now.
    */
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntryFromInodeFuture(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       folly::Future<InodePtr>&& inodeFuture,
       const GitIgnoreStack* ignore,
       bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createRemovedEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       InodePtr inode,
@@ -85,7 +85,7 @@ class DeferredDiffEntry {
       bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntryFromInodeFuture(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       folly::Future<InodePtr>&& inodeFuture,
@@ -93,13 +93,13 @@ class DeferredDiffEntry {
       bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       Hash currentBlobHash);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedScmEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       Hash scmHash,
       Hash wdHash,
@@ -107,19 +107,17 @@ class DeferredDiffEntry {
       bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createAddedScmEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       Hash wdHash,
       const GitIgnoreStack* ignore,
       bool isIgnored);
 
-  static std::unique_ptr<DeferredDiffEntry> createRemovedScmEntry(
-      const DiffContext* context,
-      RelativePath path,
-      Hash scmHash);
+  static std::unique_ptr<DeferredDiffEntry>
+  createRemovedScmEntry(DiffContext* context, RelativePath path, Hash scmHash);
 
  protected:
-  const DiffContext* const context_;
+  DiffContext* const context_;
   RelativePath const path_;
 };
 } // namespace eden

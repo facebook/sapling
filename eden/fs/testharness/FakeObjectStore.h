@@ -32,16 +32,26 @@ class FakeObjectStore : public IObjectStore {
   void setTreeForCommit(const Hash& commitID, Tree&& tree);
 
   folly::Future<std::shared_ptr<const Tree>> getTree(
-      const Hash& id) const override;
+      const Hash& id,
+      ObjectFetchContext& context =
+          ObjectFetchContext::getNullContext()) const override;
   folly::Future<std::shared_ptr<const Blob>> getBlob(
-      const Hash& id) const override;
+      const Hash& id,
+      ObjectFetchContext& context =
+          ObjectFetchContext::getNullContext()) const override;
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
-      const Hash& commitID) const override;
+      const Hash& commitID,
+      ObjectFetchContext& context =
+          ObjectFetchContext::getNullContext()) const override;
   folly::Future<std::shared_ptr<const Tree>> getTreeForManifest(
       const Hash& commitID,
-      const Hash& manifestID) const override;
+      const Hash& manifestID,
+      ObjectFetchContext& context =
+          ObjectFetchContext::getNullContext()) const override;
   folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids) const override;
+      const std::vector<Hash>& ids,
+      ObjectFetchContext& context =
+          ObjectFetchContext::getNullContext()) const override;
 
   size_t getAccessCount(const Hash& hash) const;
 

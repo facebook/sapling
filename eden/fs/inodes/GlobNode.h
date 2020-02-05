@@ -72,6 +72,7 @@ class GlobNode {
   // inodes assigned.
   folly::Future<std::vector<GlobResult>> evaluate(
       const ObjectStore* store,
+      ObjectFetchContext& context,
       RelativePathPiece rootPath,
       TreeInodePtr root,
       PrefetchList fileBlobsToPrefetch);
@@ -79,6 +80,7 @@ class GlobNode {
   // This is the Tree version of the method above
   folly::Future<std::vector<GlobResult>> evaluate(
       const ObjectStore* store,
+      ObjectFetchContext& context,
       RelativePathPiece rootPath,
       const std::shared_ptr<const Tree>& tree,
       PrefetchList fileBlobsToPrefetch);
@@ -117,6 +119,7 @@ class GlobNode {
   template <typename ROOT>
   folly::Future<std::vector<GlobResult>> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
+      ObjectFetchContext& context,
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch);
@@ -124,6 +127,7 @@ class GlobNode {
   template <typename ROOT>
   folly::Future<std::vector<GlobResult>> evaluateImpl(
       const ObjectStore* store,
+      ObjectFetchContext& context,
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch);

@@ -13,6 +13,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/LoggingFetchContext.h"
 
 using namespace folly::literals;
 using namespace std::chrono_literals;
@@ -61,7 +62,6 @@ class NullLocalStore final : public LocalStore {
     return std::make_unique<NullWriteBatch>();
   }
 };
-} // namespace
 
 struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
@@ -79,6 +79,14 @@ struct BlobAccessTest : ::testing::Test {
     backingStore->putBlob(hash5, "55555"_sp)->setReady();
     backingStore->putBlob(hash6, "666666"_sp)->setReady();
   }
+
+  std::shared_ptr<const Blob> getBlobBlocking(const Hash& hash) {
+    return blobAccess.getBlob(hash, ObjectFetchContext::getNullContext())
+        .get(0ms)
+        .blob;
+  }
+
+  LoggingFetchContext context;
   std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> backingStore;
   std::shared_ptr<ObjectStore> objectStore;
@@ -86,9 +94,11 @@ struct BlobAccessTest : ::testing::Test {
   BlobAccess blobAccess;
 };
 
+} // namespace
+
 TEST_F(BlobAccessTest, remembers_blobs) {
-  auto blob1 = blobAccess.getBlob(hash4).get(0ms).blob;
-  auto blob2 = blobAccess.getBlob(hash4).get(0ms).blob;
+  auto blob1 = getBlobBlocking(hash4);
+  auto blob2 = getBlobBlocking(hash4);
 
   EXPECT_EQ(blob1, blob2);
   EXPECT_EQ(4, blob1->getSize());
@@ -96,9 +106,9 @@ TEST_F(BlobAccessTest, remembers_blobs) {
 }
 
 TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
-  auto blob1 = blobAccess.getBlob(hash6).get(0ms).blob;
-  auto blob2 = blobAccess.getBlob(hash5).get(0ms).blob;
-  auto blob3 = blobAccess.getBlob(hash6).get(0ms).blob;
+  auto blob1 = getBlobBlocking(hash6);
+  auto blob2 = getBlobBlocking(hash5);
+  auto blob3 = getBlobBlocking(hash6);
 
   EXPECT_EQ(6, blob1->getSize());
   EXPECT_EQ(5, blob2->getSize());
@@ -109,25 +119,25 @@ TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
 }
 
 TEST_F(BlobAccessTest, drops_oldest_blobs) {
-  blobAccess.getBlob(hash3).get(0ms);
-  blobAccess.getBlob(hash4).get(0ms);
+  getBlobBlocking(hash3);
+  getBlobBlocking(hash4);
 
   // Evicts hash3
-  blobAccess.getBlob(hash5).get(0ms);
+  getBlobBlocking(hash5);
   EXPECT_EQ(1, backingStore->getAccessCount(hash3));
   EXPECT_EQ(1, backingStore->getAccessCount(hash4));
   EXPECT_EQ(1, backingStore->getAccessCount(hash5));
 
   // Evicts hash4 but not hash5
-  blobAccess.getBlob(hash3).get(0ms);
-  blobAccess.getBlob(hash5).get(0ms);
+  getBlobBlocking(hash3);
+  getBlobBlocking(hash5);
   EXPECT_EQ(2, backingStore->getAccessCount(hash3));
   EXPECT_EQ(1, backingStore->getAccessCount(hash4));
   EXPECT_EQ(1, backingStore->getAccessCount(hash5));
 
   // Evicts hash3
-  blobAccess.getBlob(hash4).get(0ms);
-  blobAccess.getBlob(hash5).get(0ms);
+  getBlobBlocking(hash4);
+  getBlobBlocking(hash5);
   EXPECT_EQ(2, backingStore->getAccessCount(hash3));
   EXPECT_EQ(2, backingStore->getAccessCount(hash4));
   EXPECT_EQ(1, backingStore->getAccessCount(hash5));

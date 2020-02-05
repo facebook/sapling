@@ -62,19 +62,19 @@ struct DiffState {
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
 
 Future<Unit> diffAddedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece entryPath,
     const Tree& wdTree,
     const GitIgnoreStack* ignore,
     bool isIgnored);
 
 Future<Unit> diffRemovedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece entryPath,
     const Tree& scmTree);
 
 void processAddedSide(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& wdEntry,
@@ -82,13 +82,13 @@ void processAddedSide(
     bool isIgnored);
 
 void processRemovedSide(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& scmEntry);
 
 void processBothPresent(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& scmEntry,
@@ -96,9 +96,7 @@ void processBothPresent(
     const GitIgnoreStack* ignore,
     bool isIgnored);
 
-Future<Unit> waitOnResults(
-    const DiffContext* context,
-    ChildFutures&& childFutures);
+Future<Unit> waitOnResults(DiffContext* context, ChildFutures&& childFutures);
 
 /**
  * Diff two trees.
@@ -109,7 +107,7 @@ Future<Unit> waitOnResults(
  * The differences will be recorded using a callback provided by the caller.
  */
 FOLLY_NODISCARD Future<Unit> computeTreeDiff(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& scmTree,
     const Tree& wdTree,
@@ -179,7 +177,7 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
 
 FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
     const TreeEntry& gitIgnoreEntry,
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& scmTree,
     const Tree& wdTree,
@@ -188,7 +186,8 @@ FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
   // TODO: load file contents directly from context->store if gitIgnoreEntry is
   // a regular file
   auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
-  return loadFileContentsFromPath(currentPath + gitIgnoreEntry.getName())
+  return loadFileContentsFromPath(
+             context->getFetchContext(), currentPath + gitIgnoreEntry.getName())
       .thenError([entryPath = currentPath + gitIgnoreEntry.getName()](
                      const folly::exception_wrapper& ex) {
         // TODO: add an API to DiffCallback to report user errors like this
@@ -215,7 +214,7 @@ FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
 }
 
 FOLLY_NODISCARD Future<Unit> diffTrees(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& scmTree,
     const Tree& wdTree,
@@ -268,7 +267,7 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
 }
 
 FOLLY_NODISCARD Future<Unit> processAddedChildren(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& wdTree,
     std::unique_ptr<GitIgnoreStack> ignore,
@@ -292,13 +291,14 @@ FOLLY_NODISCARD Future<Unit> processAddedChildren(
 
 FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenProcessAddedChildren(
     const TreeEntry& gitIgnoreEntry,
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& wdTree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
-  return loadFileContentsFromPath(currentPath + gitIgnoreEntry.getName())
+  return loadFileContentsFromPath(
+             context->getFetchContext(), currentPath + gitIgnoreEntry.getName())
       .thenError([entryPath = currentPath + gitIgnoreEntry.getName()](
                      const folly::exception_wrapper& ex) {
         XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
@@ -323,7 +323,7 @@ FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenProcessAddedChildren(
  * Process a Tree that is present only on one side of the diff.
  */
 FOLLY_NODISCARD Future<Unit> diffAddedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& wdTree,
     const GitIgnoreStack* parentIgnore,
@@ -376,7 +376,7 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
  * Process a Tree that is present only on one side of the diff.
  */
 FOLLY_NODISCARD Future<Unit> diffRemovedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     const Tree& scmTree) {
   if (context->isCancelled()) {
@@ -399,7 +399,7 @@ FOLLY_NODISCARD Future<Unit> diffRemovedTree(
  * childFutures.
  */
 void processRemovedSide(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& scmEntry) {
@@ -420,7 +420,7 @@ void processRemovedSide(
  * childFutures.
  */
 void processAddedSide(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& wdEntry,
@@ -462,7 +462,7 @@ void processAddedSide(
  * Process TreeEntry objects that exist on both sides of the diff.
  */
 void processBothPresent(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& scmEntry,
@@ -554,8 +554,10 @@ void processBothPresent(
                                    entryPath = currentPath + scmEntry.getName(),
                                    &scmEntry,
                                    &wdEntry] {
-              auto scmFuture = context->store->getBlobSha1(scmEntry.getHash());
-              auto wdFuture = context->store->getBlobSha1(wdEntry.getHash());
+              auto scmFuture = context->store->getBlobSha1(
+                  scmEntry.getHash(), context->getFetchContext());
+              auto wdFuture = context->store->getBlobSha1(
+                  wdEntry.getHash(), context->getFetchContext());
               return collectSafe(scmFuture, wdFuture)
                   .thenValue([entryPath = entryPath.copy(),
                               context](const std::tuple<Hash, Hash>& info) {
@@ -572,7 +574,7 @@ void processBothPresent(
 }
 
 FOLLY_NODISCARD Future<Unit> waitOnResults(
-    const DiffContext* context,
+    DiffContext* context,
     ChildFutures&& childFutures) {
   DCHECK_EQ(childFutures.paths.size(), childFutures.futures.size());
   if (childFutures.futures.empty()) {
@@ -602,9 +604,11 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
  * will be extracted and returned to the caller.
  */
 FOLLY_NODISCARD Future<Unit>
-diffCommits(const DiffContext* context, Hash hash1, Hash hash2) {
-  auto future1 = context->store->getTreeForCommit(hash1);
-  auto future2 = context->store->getTreeForCommit(hash2);
+diffCommits(DiffContext* context, Hash hash1, Hash hash2) {
+  auto future1 =
+      context->store->getTreeForCommit(hash1, context->getFetchContext());
+  auto future2 =
+      context->store->getTreeForCommit(hash2, context->getFetchContext());
   return collectSafe(future1, future2)
       .thenValue([context](std::tuple<
                            std::shared_ptr<const Tree>,
@@ -638,14 +642,16 @@ diffCommitsForStatus(const ObjectStore* store, Hash hash1, Hash hash2) {
 }
 
 FOLLY_NODISCARD Future<Unit> diffTrees(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     Hash scmHash,
     Hash wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto scmTreeFuture = context->store->getTree(scmHash);
-  auto wdTreeFuture = context->store->getTree(wdHash);
+  auto scmTreeFuture =
+      context->store->getTree(scmHash, context->getFetchContext());
+  auto wdTreeFuture =
+      context->store->getTree(wdHash, context->getFetchContext());
   // Optimization for the case when both tree objects are immediately ready.
   // We can avoid copying the input path in this case.
   if (scmTreeFuture.isReady() && wdTreeFuture.isReady()) {
@@ -670,12 +676,12 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
 }
 
 FOLLY_NODISCARD Future<Unit> diffAddedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     Hash wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto wdFuture = context->store->getTree(wdHash);
+  auto wdFuture = context->store->getTree(wdHash, context->getFetchContext());
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.
   if (wdFuture.isReady()) {
@@ -691,10 +697,10 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
 }
 
 FOLLY_NODISCARD Future<Unit> diffRemovedTree(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePathPiece currentPath,
     Hash scmHash) {
-  auto scmFuture = context->store->getTree(scmHash);
+  auto scmFuture = context->store->getTree(scmHash, context->getFetchContext());
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.
   if (scmFuture.isReady()) {

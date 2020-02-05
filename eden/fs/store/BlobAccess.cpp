@@ -23,14 +23,16 @@ BlobAccess::~BlobAccess() {}
 
 folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
     const Hash& hash,
+    ObjectFetchContext& context,
     BlobCache::Interest interest) {
   auto result = blobCache_->get(hash, interest);
   if (result.blob) {
     return std::move(result);
   }
 
-  return objectStore_->getBlob(hash).thenValue(
-      [blobCache = blobCache_, interest](std::shared_ptr<const Blob> blob) {
+  return objectStore_->getBlob(hash, context)
+      .thenValue([blobCache = blobCache_,
+                  interest](std::shared_ptr<const Blob> blob) {
         auto interestHandle = blobCache->insert(blob, interest);
         return BlobCache::GetResult{std::move(blob), std::move(interestHandle)};
       });

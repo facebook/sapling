@@ -37,7 +37,7 @@ namespace {
 class UntrackedDiffEntry : public DeferredDiffEntry {
  public:
   UntrackedDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       InodePtr inode,
       const GitIgnoreStack* ignore,
@@ -57,7 +57,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
           std::is_same<folly::Future<InodePtr>, InodeFuture>::value,
           void>>
   UntrackedDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       InodeFuture&& inodeFuture,
       const GitIgnoreStack* ignore,
@@ -99,7 +99,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
 class ModifiedDiffEntry : public DeferredDiffEntry {
  public:
   ModifiedDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       InodePtr inode,
@@ -112,7 +112,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         inode_{std::move(inode)} {}
 
   ModifiedDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       folly::Future<InodePtr>&& inodeFuture,
@@ -190,7 +190,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     }
 
     // Possibly modified directory.  Load the Tree in question.
-    return context_->store->getTree(scmEntry_.getHash())
+    return context_->store
+        ->getTree(scmEntry_.getHash(), context_->getFetchContext())
         .thenValue([this, treeInode = std::move(treeInode)](
                        shared_ptr<const Tree>&& tree) {
           return treeInode->diff(
@@ -214,7 +215,11 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       return treeInode->diff(context_, getPath(), nullptr, ignore_, isIgnored_);
     }
 
-    return fileInode->isSameAs(scmEntry_.getHash(), scmEntry_.getType())
+    return fileInode
+        ->isSameAs(
+            scmEntry_.getHash(),
+            scmEntry_.getType(),
+            context_->getFetchContext())
         .thenValue([this](bool isSame) {
           if (!isSame) {
             XLOG(DBG5) << "modified file: " << getPath();
@@ -234,7 +239,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
 class ModifiedBlobDiffEntry : public DeferredDiffEntry {
  public:
   ModifiedBlobDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       Hash currentBlobHash)
@@ -243,8 +248,10 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         currentBlobHash_{currentBlobHash} {}
 
   folly::Future<folly::Unit> run() override {
-    auto f1 = context_->store->getBlobSha1(scmEntry_.getHash());
-    auto f2 = context_->store->getBlobSha1(currentBlobHash_);
+    auto f1 = context_->store->getBlobSha1(
+        scmEntry_.getHash(), context_->getFetchContext());
+    auto f2 = context_->store->getBlobSha1(
+        currentBlobHash_, context_->getFetchContext());
     return collectSafe(f1, f2).thenValue(
         [this](const std::tuple<Hash, Hash>& info) {
           const auto& [info1, info2] = info;
@@ -263,7 +270,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
 class ModifiedScmDiffEntry : public DeferredDiffEntry {
  public:
   ModifiedScmDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       Hash scmHash,
       Hash wdHash,
@@ -290,7 +297,7 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
 class AddedScmDiffEntry : public DeferredDiffEntry {
  public:
   AddedScmDiffEntry(
-      const DiffContext* context,
+      DiffContext* context,
       RelativePath path,
       Hash wdHash,
       const GitIgnoreStack* ignore,
@@ -312,10 +319,7 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
 
 class RemovedScmDiffEntry : public DeferredDiffEntry {
  public:
-  RemovedScmDiffEntry(
-      const DiffContext* context,
-      RelativePath path,
-      Hash scmHash)
+  RemovedScmDiffEntry(DiffContext* context, RelativePath path, Hash scmHash)
       : DeferredDiffEntry{context, std::move(path)}, scmHash_{scmHash} {}
 
   folly::Future<folly::Unit> run() override {
@@ -329,7 +333,7 @@ class RemovedScmDiffEntry : public DeferredDiffEntry {
 } // unnamed namespace
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     InodePtr inode,
     const GitIgnoreStack* ignore,
@@ -340,7 +344,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
 
 unique_ptr<DeferredDiffEntry>
 DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     Future<InodePtr>&& inodeFuture,
     const GitIgnoreStack* ignore,
@@ -350,7 +354,7 @@ DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     const TreeEntry& scmEntry,
     InodePtr inode,
@@ -362,7 +366,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
 
 unique_ptr<DeferredDiffEntry>
 DeferredDiffEntry::createModifiedEntryFromInodeFuture(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     const TreeEntry& scmEntry,
     folly::Future<InodePtr>&& inodeFuture,
@@ -378,7 +382,7 @@ DeferredDiffEntry::createModifiedEntryFromInodeFuture(
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     const TreeEntry& scmEntry,
     Hash currentBlobHash) {
@@ -387,7 +391,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     Hash scmHash,
     Hash wdHash,
@@ -398,7 +402,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     Hash wdHash,
     const GitIgnoreStack* ignore,
@@ -408,7 +412,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedScmEntry(
-    const DiffContext* context,
+    DiffContext* context,
     RelativePath path,
     Hash scmHash) {
   return make_unique<RemovedScmDiffEntry>(context, std::move(path), scmHash);

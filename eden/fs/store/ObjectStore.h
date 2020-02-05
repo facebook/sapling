@@ -53,7 +53,8 @@ class ObjectStore : public IObjectStore,
    * exist, or possibly other exceptions on error.
    */
   folly::Future<std::shared_ptr<const Tree>> getTree(
-      const Hash& id) const override;
+      const Hash& id,
+      ObjectFetchContext& context) const override;
 
   /**
    * Get a commit's root Tree.
@@ -63,14 +64,17 @@ class ObjectStore : public IObjectStore,
    * does not exist, or possibly other exceptions on error.
    */
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
-      const Hash& commitID) const override;
+      const Hash& commitID,
+      ObjectFetchContext& context) const override;
 
   folly::Future<std::shared_ptr<const Tree>> getTreeForManifest(
       const Hash& commitID,
-      const Hash& manifestID) const override;
+      const Hash& manifestID,
+      ObjectFetchContext& context) const override;
 
   folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids) const override;
+      const std::vector<Hash>& ids,
+      ObjectFetchContext& context) const override;
 
   /**
    * Get a Blob by ID.
@@ -80,17 +84,21 @@ class ObjectStore : public IObjectStore,
    * exist, or possibly other exceptions on error.
    */
   folly::Future<std::shared_ptr<const Blob>> getBlob(
-      const Hash& id) const override;
+      const Hash& id,
+      ObjectFetchContext& context) const override;
 
   /**
    * Returns the size of the contents of the blob with the given ID.
    */
-  folly::Future<uint64_t> getBlobSize(const Hash& id) const;
+  folly::Future<uint64_t> getBlobSize(
+      const Hash& id,
+      ObjectFetchContext& context) const;
 
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
-  folly::Future<Hash> getBlobSha1(const Hash& id) const;
+  folly::Future<Hash> getBlobSha1(const Hash& id, ObjectFetchContext& context)
+      const;
 
   /**
    * Get the LocalStore used by this ObjectStore
@@ -124,7 +132,9 @@ class ObjectStore : public IObjectStore,
    * ready.  It may result in a std::domain_error if the specified blob does
    * not exist, or possibly other exceptions on error.
    */
-  folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const;
+  folly::Future<BlobMetadata> getBlobMetadata(
+      const Hash& id,
+      ObjectFetchContext& context) const;
 
   static constexpr size_t kCacheSize = 1000000;
 
