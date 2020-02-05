@@ -47,12 +47,14 @@ pub(crate) struct McHist {
 mod dummy {
     use super::*;
 
+    use configparser::config::ConfigSet;
+
     /// Dummy memcache client for when Mercurial is compiled outside of fbcode.
     #[derive(Clone)]
     pub struct MemcacheStore;
 
     impl MemcacheStore {
-        pub fn new() -> Result<Self> {
+        pub fn new(_config: &ConfigSet) -> Result<Self> {
             Ok(MemcacheStore {})
         }
 

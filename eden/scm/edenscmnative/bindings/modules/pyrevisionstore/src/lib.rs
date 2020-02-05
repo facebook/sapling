@@ -26,9 +26,9 @@ use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
     DataStore, Delta, HistoryPack, HistoryPackStore, HistoryPackVersion, HistoryStore,
-    IndexedLogDataStore, IndexedLogHistoryStore, IndexedlogRepair, LocalStore, Metadata,
-    MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableDeltaStore, MutableHistoryPack,
-    MutableHistoryStore, RemoteDataStore, RemoteHistoryStore, RemoteStore,
+    IndexedLogDataStore, IndexedLogHistoryStore, IndexedlogRepair, LocalStore, MemcacheStore,
+    Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableDeltaStore,
+    MutableHistoryPack, MutableHistoryStore, RemoteDataStore, RemoteHistoryStore, RemoteStore,
 };
 use types::{Key, NodeInfo};
 
@@ -66,6 +66,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<pyremotestore>(py)?;
     m.add_class::<contentstore>(py)?;
     m.add_class::<metadatastore>(py)?;
+    m.add_class::<memcachestore>(py)?;
     m.add(
         py,
         "repackdatapacks",
@@ -815,7 +816,7 @@ impl pyremotestore {
 py_class!(class contentstore |py| {
     data store: ContentStore;
 
-    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore) -> PyResult<contentstore> {
+    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<contentstore> {
         let remotestore = remote.into_inner(py);
         let config = config.get_cfg(py);
 
@@ -825,6 +826,12 @@ py_class!(class contentstore |py| {
             builder.local_path(path.as_path())
         } else {
             builder.no_local_store()
+        };
+
+        builder = if let Some(memcache) = memcache {
+            builder.memcachestore(memcache.into_inner(py))
+        } else {
+            builder
         };
 
         let contentstore = builder.build().map_pyerr(py)?;
@@ -875,7 +882,7 @@ py_class!(class contentstore |py| {
 py_class!(class metadatastore |py| {
     data store: MetadataStore;
 
-    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
+    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<metadatastore> {
         let remotestore = remote.into_inner(py);
         let config = config.get_cfg(py);
 
@@ -885,6 +892,12 @@ py_class!(class metadatastore |py| {
             builder.local_path(path.as_path())
         } else {
             builder.no_local_store()
+        };
+
+        builder = if let Some(memcache) = memcache {
+            builder.memcachestore(memcache.into_inner(py))
+        } else {
+            builder
         };
 
         let metadatastore = builder.build().map_pyerr(py)?;
@@ -914,3 +927,19 @@ py_class!(class metadatastore |py| {
         store.prefetch_py(py, keys)
     }
 });
+
+py_class!(class memcachestore |py| {
+    data memcache: MemcacheStore;
+
+    def __new__(_cls, config: config) -> PyResult<memcachestore> {
+        let config = config.get_cfg(py);
+        let memcache = MemcacheStore::new(&config).map_pyerr(py)?;
+        memcachestore::create_instance(py, memcache)
+    }
+});
+
+impl memcachestore {
+    fn into_inner(&self, py: Python) -> MemcacheStore {
+        self.memcache(py).clone()
+    }
+}
