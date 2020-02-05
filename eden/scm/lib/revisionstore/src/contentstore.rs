@@ -620,5 +620,41 @@ mod tests {
             assert_eq!(memcache_data, None);
             Ok(())
         }
+
+        #[fbinit::test]
+        fn test_memcache_no_wait() -> Result<()> {
+            let _mock = Arc::clone(&*MOCK);
+
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let mut config = make_config(&cachedir);
+            config.set(
+                "remotefilelog",
+                "waitformemcache",
+                Some("false"),
+                &Default::default(),
+            );
+
+            let k = key("a", "1");
+            let data = Bytes::from(&[1, 2, 3, 4][..]);
+
+            let mut map = HashMap::new();
+            map.insert(k.clone(), data.clone());
+            let mut remotestore = FakeRemoteStore::new();
+            remotestore.data(map);
+
+            let memcache = MemcacheStore::new(&config)?;
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Box::new(remotestore))
+                .memcachestore(memcache.clone())
+                .build()?;
+            let data_get = store.get(&k)?;
+            assert_eq!(data_get.unwrap(), data);
+
+            // Ideally, we should check that we didn't wait for memcache, but that's timing
+            // related and thus a bit hard to test.
+            Ok(())
+        }
     }
 }
