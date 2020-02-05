@@ -20,7 +20,7 @@ use futures_preview::{
     compat::Future01CompatExt,
     future::{lazy, select, FutureExt, TryFutureExt},
 };
-use gotham::{bind_server, state::State};
+use gotham::bind_server;
 use openssl::ssl::SslAcceptor;
 use slog::{error, Logger};
 use tokio::{net::TcpListener, prelude::*};
@@ -32,6 +32,10 @@ use cmdlib::{
     monitoring::{start_fb303_server, AliveService},
 };
 use secure_utils::SslConfig;
+
+mod handler;
+
+use crate::handler::build_handler;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
@@ -105,10 +109,6 @@ fn build_tls_acceptor(
     Ok(builder.build())
 }
 
-fn health_check(state: State) -> (State, &'static str) {
-    (state, "I_AM_ALIVE")
-}
-
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp::new("EdenAPI Server")
@@ -157,6 +157,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = args::init_logging(fb, &matches);
     let addr = get_server_addr(&matches)?;
 
+    let handler = build_handler();
+
     let listener = TcpListener::bind(&addr)?;
     let acceptor = get_tls_config(&matches)
         .map(|(config, ticket_seeds)| build_tls_acceptor(config, ticket_seeds, &logger))
@@ -164,15 +166,11 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let scheme = if acceptor.is_some() { "https" } else { "http" };
     let server = match acceptor {
-        Some(acceptor) => bind_server(
-            listener,
-            || Ok(health_check),
-            move |socket| acceptor.accept_async(socket).map_err(|_| ()),
-        )
+        Some(acceptor) => bind_server(listener, handler, move |socket| {
+            acceptor.accept_async(socket).map_err(|_| ())
+        })
         .left_future(),
-        None => {
-            bind_server(listener, || Ok(health_check), |socket| future::ok(socket)).right_future()
-        }
+        None => bind_server(listener, handler, |socket| future::ok(socket)).right_future(),
     };
 
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
