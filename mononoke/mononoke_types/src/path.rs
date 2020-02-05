@@ -473,7 +473,7 @@ impl MPath {
     pub fn iter_opt(path: Option<&Self>) -> Iter<MPathElement> {
         match path {
             Some(path) => path.into_iter(),
-            None => [].into_iter(),
+            None => [].iter(),
         }
     }
 

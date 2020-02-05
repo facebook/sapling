@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-#![feature(option_flattening)]
 #![deny(warnings)]
 
 use std::collections::{BTreeMap, HashMap};

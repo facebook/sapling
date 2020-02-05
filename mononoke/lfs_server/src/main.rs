@@ -7,7 +7,7 @@
  */
 
 #![recursion_limit = "256"]
-#![feature(option_flattening, never_type)]
+#![feature(never_type)]
 #![deny(warnings)]
 
 use aclchecker::Identity;
