@@ -1,8 +1,11 @@
 import os
 import unittest
 
-from edenscm.hgext.convert.repo import gitutil, repo
+from edenscm.hgext.convert.repo import conversionrevision, gitutil, repo
 from hghave import require
+
+
+require(["py2"])
 
 
 def draft(test_func):
@@ -190,6 +193,117 @@ had a great fall
             out["B/"],
             ["Humpty Dumpty", "sat on the wall", "Humpty Dumpty", "had a great fall"],
         )
+
+
+class conversionrevisiontest(unittest.TestCase):
+    """Tests implementation of the conversionrevision class"""
+
+    def test_init(self):
+        # type: () -> None
+        _ = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        self.assertTrue(True)
+
+    def test_variant(self):
+        # type: () -> None
+        rev = conversionrevision(
+            conversionrevision.VARIANT_ROOTED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        self.assertEqual(rev.variant, conversionrevision.VARIANT_ROOTED)
+
+    def test_sourcehash(self):
+        # type: () -> None
+        rev = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        self.assertEqual(rev.sourcehash, "1234567890123456789012345678901234567890")
+
+    def test_sourceproject(self):
+        # type: () -> None
+        rev = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        self.assertEqual(rev.sourceproject, "aosp/bzip2")
+
+    def test_destpath(self):
+        # type: () -> None
+        rev = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        self.assertEqual(rev.destpath, "external/bzip2")
+
+    def test_parse(self):
+        # type: () -> None
+        revstring = "R1234567890123456789012345678901234567890foo/bar/baz:external/baz"
+        rev = conversionrevision.parse(revstring)
+        self.assertEqual(rev.variant, conversionrevision.VARIANT_ROOTED)
+        self.assertEqual(rev.sourcehash, "1234567890123456789012345678901234567890")
+        self.assertEqual(rev.sourceproject, "foo/bar/baz")
+        self.assertEqual(rev.destpath, "external/baz")
+
+    def test_str(self):
+        # type: () -> None
+        rev = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        revstring = "U1234567890123456789012345678901234567890aosp/bzip2:external/bzip2"
+        self.assertEqual(str(rev), revstring)
+
+    def test_equals(self):
+        # type: () -> None
+        rev1 = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        rev2 = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        rev3 = conversionrevision(
+            conversionrevision.VARIANT_ROOTED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+
+        self.assertTrue(rev1 == rev2)
+        self.assertFalse(rev1 == rev3)
+        self.assertFalse(rev1 == conversionrevision.NONE)
+
+    def test_hash(self):
+        # type: () -> None
+        rev = conversionrevision(
+            conversionrevision.VARIANT_UNIFIED,
+            "1234567890123456789012345678901234567890",
+            "aosp/bzip2",
+            "external/bzip2",
+        )
+        out = hash(rev)
+        self.assertIsNotNone(out)
+        self.assertIsInstance(hash(rev), int)
 
 
 if __name__ == "__main__":

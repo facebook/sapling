@@ -1091,3 +1091,50 @@ class repo_source(common.converter_source):
         return value: a tuple of the type of revision and the commit hash
         """
         return variantrev[0:1], variantrev[1:]
+
+
+class conversionrevision(
+    collections.namedtuple(
+        "conversionrevision", ["variant", "sourcehash", "sourceproject", "destpath"]
+    )
+):
+    """Represents a unique mapping of a single commit from source to
+    destination. Immutable"""
+
+    VARIANT_NONE = "N"  # Don't use: Used only for representing the "none" rev
+    VARIANT_ROOTED = "R"  # Used for commits migrated to root directory
+    VARIANT_DIRRED = "D"  # Used for commits migrated to manifest directory
+    VARIANT_UNIFIED = "U"  # Used for commits merged into a single destination history
+
+    NONE = None
+
+    @classmethod
+    def _classinit(cls):
+        # type: () -> None
+        """Initialize class members"""
+        cls.NONE = conversionrevision(
+            conversionrevision.VARIANT_NONE, nodemod.nullhex, "", ""
+        )
+
+    @classmethod
+    def parse(cls, revstring):
+        # type: (str) -> conversionrevision
+        """Parses the string representation of a conversionrevision into an object"""
+        variant = revstring[0:1]
+        sourcehash = revstring[1:41]
+        separatorindex = revstring.index(":")
+        sourceproject = revstring[41:separatorindex]
+        destpath = revstring[separatorindex + 1 :]
+        return conversionrevision(variant, sourcehash, sourceproject, destpath)
+
+    def __str__(self):
+        # type: () -> str
+        return "%s%s%s:%s" % (
+            self.variant,
+            self.sourcehash,
+            self.sourceproject,
+            self.destpath,
+        )
+
+
+conversionrevision._classinit()
