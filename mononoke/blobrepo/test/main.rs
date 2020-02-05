@@ -1513,8 +1513,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1567,8 +1567,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1605,8 +1605,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1643,8 +1643,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1675,8 +1675,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1738,8 +1738,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1814,8 +1814,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1856,8 +1856,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1894,8 +1894,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1940,8 +1940,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1972,8 +1972,8 @@ mod octopus_merges {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 }

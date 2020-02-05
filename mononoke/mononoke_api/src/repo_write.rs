@@ -187,13 +187,11 @@ async fn verify_deleted_files_existed_in_a_parent(
         Ok(parent_ctx
             .paths(files.iter().cloned())
             .await?
-            .try_filter_map(|changeset_path| {
-                async move {
-                    if changeset_path.is_file().await? {
-                        Ok(Some(changeset_path.path().clone()))
-                    } else {
-                        Ok(None)
-                    }
+            .try_filter_map(|changeset_path| async move {
+                if changeset_path.is_file().await? {
+                    Ok(Some(changeset_path.path().clone()))
+                } else {
+                    Ok(None)
                 }
             }))
     }
@@ -256,19 +254,17 @@ async fn verify_prefix_files_deleted(
     parent_ctx
         .paths(prefix_paths.into_iter())
         .await?
-        .try_for_each(|prefix_path| {
-            async move {
-                if prefix_path.is_file().await?
-                    && path_changes.get(prefix_path.path().as_mpath())
-                        != Some(&CreateChangeType::Delete)
-                {
-                    Err(MononokeError::InvalidRequest(format!(
-                        "Creating files inside '{}' requires deleting the file at that path",
-                        prefix_path.path()
-                    )))
-                } else {
-                    Ok(())
-                }
+        .try_for_each(|prefix_path| async move {
+            if prefix_path.is_file().await?
+                && path_changes.get(prefix_path.path().as_mpath())
+                    != Some(&CreateChangeType::Delete)
+            {
+                Err(MononokeError::InvalidRequest(format!(
+                    "Creating files inside '{}' requires deleting the file at that path",
+                    prefix_path.path()
+                )))
+            } else {
+                Ok(())
             }
         })
         .await
@@ -321,19 +317,17 @@ impl RepoWriteContext {
         // Obtain contexts for each of the parents (which should exist).
         let parent_ctxs: Vec<_> = parents
             .iter()
-            .map(|parent_id| {
-                async move {
-                    let parent_ctx = self
-                        .changeset(ChangesetSpecifier::Bonsai(parent_id.clone()))
-                        .await?
-                        .ok_or_else(|| {
-                            MononokeError::InvalidRequest(format!(
-                                "Parent {} does not exist",
-                                parent_id
-                            ))
-                        })?;
-                    Ok::<_, MononokeError>(parent_ctx)
-                }
+            .map(|parent_id| async move {
+                let parent_ctx = self
+                    .changeset(ChangesetSpecifier::Bonsai(parent_id.clone()))
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "Parent {} does not exist",
+                            parent_id
+                        ))
+                    })?;
+                Ok::<_, MononokeError>(parent_ctx)
             })
             .collect::<FuturesOrdered<_>>()
             .try_collect()

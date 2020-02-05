@@ -286,9 +286,9 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
 
             Ok(row.map(|r| r.0))
         }
-            .boxed()
-            .compat()
-            .boxify()
+        .boxed()
+        .compat()
+        .boxify()
     }
 }
 

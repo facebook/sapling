@@ -149,5 +149,4 @@ mod test {
         let res = apply(text, &deltas[..]);
         assert_eq!(&res[..], b"aaaa\ncccc\n");
     }
-
 }

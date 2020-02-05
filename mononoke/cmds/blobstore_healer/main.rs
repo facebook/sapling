@@ -640,5 +640,4 @@ mod tests {
         // then lag is 4, but the last batch is not full, so we wait 4 more seconds
         ensure_small_db_replication_lag_test(fb, simulated_decreasing_lag(8, 2), false, 18);
     }
-
 }

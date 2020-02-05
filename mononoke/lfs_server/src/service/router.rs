@@ -38,9 +38,9 @@ fn batch_handler(mut state: State) -> Box<HandlerFuture> {
         let res = batch::batch(&mut state).await;
         build_response(res, state)
     }
-        .boxed()
-        .compat()
-        .boxify()
+    .boxed()
+    .compat()
+    .boxify()
 }
 
 fn download_handler(mut state: State) -> Box<HandlerFuture> {
@@ -48,9 +48,9 @@ fn download_handler(mut state: State) -> Box<HandlerFuture> {
         let res = download::download(&mut state).await;
         build_response(res, state)
     }
-        .boxed()
-        .compat()
-        .boxify()
+    .boxed()
+    .compat()
+    .boxify()
 }
 
 fn download_sha256_handler(mut state: State) -> Box<HandlerFuture> {
@@ -58,9 +58,9 @@ fn download_sha256_handler(mut state: State) -> Box<HandlerFuture> {
         let res = download::download_sha256(&mut state).await;
         build_response(res, state)
     }
-        .boxed()
-        .compat()
-        .boxify()
+    .boxed()
+    .compat()
+    .boxify()
 }
 
 fn upload_handler(mut state: State) -> Box<HandlerFuture> {
@@ -68,9 +68,9 @@ fn upload_handler(mut state: State) -> Box<HandlerFuture> {
         let res = upload::upload(&mut state).await;
         build_response(res, state)
     }
-        .boxed()
-        .compat()
-        .boxify()
+    .boxed()
+    .compat()
+    .boxify()
 }
 
 fn health_handler(state: State) -> (State, &'static str) {

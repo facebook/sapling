@@ -98,15 +98,13 @@ impl SourceControlServiceImpl {
             .iter()
             .flat_map(|(base_path, other_path, _)| vec![base_path, other_path])
             .filter_map(|x| x.as_ref());
-        let total_input_size: u64 = future::try_join_all(flat_paths.map(|path| {
-            async move {
-                let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
-                    Ok(file.metadata().await?.total_size)
-                } else {
-                    Ok(0)
-                };
-                r
-            }
+        let total_input_size: u64 = future::try_join_all(flat_paths.map(|path| async move {
+            let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
+                Ok(file.metadata().await?.total_size)
+            } else {
+                Ok(0)
+            };
+            r
         }))
         .await?
         .into_iter()
@@ -116,21 +114,19 @@ impl SourceControlServiceImpl {
             Err(errors::diff_input_too_big(total_input_size))?;
         }
 
-        let path_diffs =
-            future::try_join_all(paths.into_iter().map(|(base_path, other_path, copy_info)| {
-                async move {
-                    let diff =
-                        unified_diff(&other_path, &base_path, copy_info, context_lines).await?;
-                    let r: Result<_, errors::ServiceError> =
-                        Ok(thrift::CommitFileDiffsResponseElement {
-                            base_path: base_path.map(|p| p.path().to_string()),
-                            other_path: other_path.map(|p| p.path().to_string()),
-                            diff: diff.into_response(),
-                        });
-                    r
-                }
-            }))
-            .await?;
+        let path_diffs = future::try_join_all(paths.into_iter().map(
+            |(base_path, other_path, copy_info)| async move {
+                let diff = unified_diff(&other_path, &base_path, copy_info, context_lines).await?;
+                let r: Result<_, errors::ServiceError> =
+                    Ok(thrift::CommitFileDiffsResponseElement {
+                        base_path: base_path.map(|p| p.path().to_string()),
+                        other_path: other_path.map(|p| p.path().to_string()),
+                        diff: diff.into_response(),
+                    });
+                r
+            },
+        ))
+        .await?;
         Ok(thrift::CommitFileDiffsResponse { path_diffs })
     }
 

@@ -624,5 +624,4 @@ mod tests {
 
         assert_eq!(&res[..], b"axxxzzz");
     }
-
 }

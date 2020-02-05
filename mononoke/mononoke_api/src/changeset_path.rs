@@ -111,7 +111,7 @@ impl ChangesetPathContext {
                     Ok(Some(Entry::Tree(root_fsnode_id.fsnode_id().clone())))
                 }
             }
-                .boxed()
+            .boxed()
         };
         let fsnode_id = fsnode_id.shared();
         let unode_id = {
@@ -299,25 +299,23 @@ impl ChangesetPathContext {
             .map_err(|error| MononokeError::from(Error::from(error)))
             .compat()
             .skip(skip)
-            .map(move |changeset_id| {
-                async move {
-                    let changeset_id = changeset_id?;
-                    let changeset = ChangesetContext::new(self.repo().clone(), changeset_id);
-                    let date = changeset.author_date().await?;
+            .map(move |changeset_id| async move {
+                let changeset_id = changeset_id?;
+                let changeset = ChangesetContext::new(self.repo().clone(), changeset_id);
+                let date = changeset.author_date().await?;
 
-                    if let Some(after) = after_timestamp {
-                        if after > date.timestamp() {
-                            return Ok(None);
-                        }
+                if let Some(after) = after_timestamp {
+                    if after > date.timestamp() {
+                        return Ok(None);
                     }
-                    if let Some(before) = before_timestamp {
-                        if before < date.timestamp() {
-                            return Ok(None);
-                        }
-                    }
-
-                    Ok(Some(changeset))
                 }
+                if let Some(before) = before_timestamp {
+                    if before < date.timestamp() {
+                        return Ok(None);
+                    }
+                }
+
+                Ok(Some(changeset))
             })
             .buffered(100)
             .try_filter_map(|x| ready(Ok(x))))

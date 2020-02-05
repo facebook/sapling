@@ -271,5 +271,4 @@ mod test {
 
         assert_eq!(get_cg_version(h, "version").is_err(), true);
     }
-
 }

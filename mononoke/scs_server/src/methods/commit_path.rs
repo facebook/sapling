@@ -217,12 +217,10 @@ impl SourceControlServiceImpl {
         if params.format == thrift::HistoryFormat::COMMIT_INFO {
             let history_resp = history
                 .map_err(errors::ServiceError::from)
-                .map(|cs_ctx| {
-                    async {
-                        match cs_ctx {
-                            Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
-                            Err(er) => Err(er),
-                        }
+                .map(|cs_ctx| async {
+                    match cs_ctx {
+                        Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
+                        Err(er) => Err(er),
                     }
                 })
                 .buffered(100)

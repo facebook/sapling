@@ -133,14 +133,12 @@ impl<'a> CreateCommitContext<'a> {
             let ctx = &self.ctx;
             let repo = &self.repo;
             let parents = &parents;
-            move |(path, create_file_context)| {
-                async move {
-                    let file_change = create_file_context
-                        .into_file_change(&ctx, &repo, &parents)
-                        .await?;
+            move |(path, create_file_context)| async move {
+                let file_change = create_file_context
+                    .into_file_change(&ctx, &repo, &parents)
+                    .await?;
 
-                    Result::<_, Error>::Ok((path, file_change))
-                }
+                Result::<_, Error>::Ok((path, file_change))
             }
         }))
         .await?;

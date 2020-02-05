@@ -143,8 +143,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -164,8 +164,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -185,8 +185,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 }

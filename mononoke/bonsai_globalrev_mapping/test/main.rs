@@ -184,7 +184,7 @@ async fn test_add_globalrevs() -> Result<(), Error> {
         txn.commit().compat().await?;
         Result::<_, AddGlobalrevsErrorKind>::Ok(())
     }
-        .await;
+    .await;
     assert_matches!(res, Err(AddGlobalrevsErrorKind::Conflict));
 
     assert_eq!(

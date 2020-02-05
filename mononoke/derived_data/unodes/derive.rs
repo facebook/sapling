@@ -310,8 +310,8 @@ mod tests {
                 let res: Result<(), Error> = Ok(());
                 res
             }
-                .boxed()
-                .compat()
+            .boxed()
+            .compat()
         })?;
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";

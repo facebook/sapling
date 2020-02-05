@@ -864,8 +864,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -889,8 +889,8 @@ mod tests {
                 assert_eq!(child, descendant);
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 }

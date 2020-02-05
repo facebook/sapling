@@ -323,8 +323,8 @@ impl ChangesetContext {
         }
         // set of paths from other that were copied in (not moved)
         let copied_paths: HashSet<_> =
-            try_join_all(copy_path_map.iter().map(move |(from_path, _)| {
-                async move { self.path((*from_path).clone())?.file_type().await }
+            try_join_all(copy_path_map.iter().map(move |(from_path, _)| async move {
+                self.path((*from_path).clone())?.file_type().await
             }))
             .await?
             .into_iter()
@@ -436,12 +436,10 @@ impl ChangesetContext {
                 prefixes,
             )
             .compat()
-            .try_filter_map(|(path, entry)| {
-                async move {
-                    match (path, entry) {
-                        (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
-                        _ => Ok(None),
-                    }
+            .try_filter_map(|(path, entry)| async move {
+                match (path, entry) {
+                    (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
+                    _ => Ok(None),
                 }
             });
         let mpaths = match basenames {

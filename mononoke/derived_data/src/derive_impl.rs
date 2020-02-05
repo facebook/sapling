@@ -672,8 +672,8 @@ mod test {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -723,8 +723,8 @@ mod test {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 

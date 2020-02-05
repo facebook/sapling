@@ -213,9 +213,9 @@ fn create_hg_file(
 
         Ok(((), Traced::generate((file_type, filenode))))
     }
-        .boxed()
-        .compat()
-        .right_future()
+    .boxed()
+    .compat()
+    .right_future()
 }
 
 async fn resolve_conflict(

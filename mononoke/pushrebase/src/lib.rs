@@ -689,16 +689,14 @@ async fn fetch_bonsai_range(
     .compat();
 
     let nodes = stream
-        .map(|res| {
-            async move {
-                match res {
-                    Ok(bcs_id) => {
-                        repo.get_bonsai_changeset(ctx.clone(), bcs_id)
-                            .compat()
-                            .await
-                    }
-                    Err(e) => Err(e),
+        .map(|res| async move {
+            match res {
+                Ok(bcs_id) => {
+                    repo.get_bonsai_changeset(ctx.clone(), bcs_id)
+                        .compat()
+                        .await
                 }
+                Err(e) => Err(e),
             }
         })
         .buffered(100)
@@ -723,19 +721,17 @@ async fn find_changed_files(
     .compat();
 
     let id_to_bcs = stream
-        .map(|res| {
-            async move {
-                match res {
-                    Ok(bcs_id) => {
-                        let bcs = repo
-                            .get_bonsai_changeset(ctx.clone(), bcs_id)
-                            .compat()
-                            .await?;
+        .map(|res| async move {
+            match res {
+                Ok(bcs_id) => {
+                    let bcs = repo
+                        .get_bonsai_changeset(ctx.clone(), bcs_id)
+                        .compat()
+                        .await?;
 
-                        Ok((bcs_id, bcs))
-                    }
-                    Err(e) => Err(e),
+                    Ok((bcs_id, bcs))
                 }
+                Err(e) => Err(e),
             }
         })
         .buffered(100)
@@ -1209,9 +1205,9 @@ async fn try_move_bookmark(
             }
             Ok(sql_txn)
         }
-            .boxed()
-            .compat()
-            .boxify()
+        .boxed()
+        .compat()
+        .boxify()
     };
 
     let success = txn
@@ -1249,11 +1245,9 @@ async fn create_bookmark_update_reason(
     let bundle_replay_data = BundleReplayData::new(*bundle2_id);
 
     let timestamps = rebased_changesets.iter().map({
-        |(id_old, (_, timestamp))| {
-            async move {
-                let hg_cs_id = cs_id_convertor(*id_old).compat().await?;
-                Result::<_, Error>::Ok((hg_cs_id, *timestamp))
-            }
+        |(id_old, (_, timestamp))| async move {
+            let hg_cs_id = cs_id_convertor(*id_old).compat().await?;
+            Result::<_, Error>::Ok((hg_cs_id, *timestamp))
         }
     });
 
@@ -1463,8 +1457,8 @@ mod tests {
                 .await?;
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1624,8 +1618,8 @@ mod tests {
                 );
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1686,8 +1680,8 @@ mod tests {
                 .await?;
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1749,8 +1743,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1887,8 +1881,8 @@ mod tests {
                 );
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -1966,8 +1960,8 @@ mod tests {
                 }
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2025,8 +2019,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2079,8 +2073,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2171,8 +2165,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2245,8 +2239,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2311,8 +2305,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2446,8 +2440,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2536,7 +2530,7 @@ mod tests {
                             )
                             .await
                         }
-                            .boxed()
+                        .boxed()
                     });
 
                     futs.push(fut);
@@ -2562,8 +2556,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2606,8 +2600,8 @@ mod tests {
                 .await?;
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2656,7 +2650,7 @@ mod tests {
                             )
                             .await
                         }
-                            .boxed()
+                        .boxed()
                     });
 
                     futs.push(fut);
@@ -2678,8 +2672,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2733,8 +2727,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2806,8 +2800,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2874,8 +2868,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -2961,8 +2955,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -3033,8 +3027,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -3138,8 +3132,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -3234,8 +3228,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 
@@ -3347,8 +3341,8 @@ mod tests {
 
                 Ok(())
             }
-                .boxed()
-                .compat(),
+            .boxed()
+            .compat(),
         )
     }
 

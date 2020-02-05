@@ -84,8 +84,8 @@ fn create_commit(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -194,7 +194,7 @@ fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }

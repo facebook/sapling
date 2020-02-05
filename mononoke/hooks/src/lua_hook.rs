@@ -1809,5 +1809,4 @@ end"#;
         assert!(checker.do_wait_updated(10000));
         Arc::new(Some(checker))
     }
-
 }

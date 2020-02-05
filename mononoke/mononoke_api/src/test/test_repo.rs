@@ -53,8 +53,8 @@ fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -87,8 +87,8 @@ fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -120,8 +120,8 @@ fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -158,8 +158,8 @@ fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -225,8 +225,8 @@ fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
             }
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -319,8 +319,8 @@ fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -364,8 +364,8 @@ fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -496,8 +496,8 @@ fn tree_list(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -573,8 +573,8 @@ fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -608,8 +608,8 @@ fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -665,8 +665,8 @@ fn xrepo_commit_lookup(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }
 
@@ -736,7 +736,7 @@ fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
 
             Ok(())
         }
-            .boxed()
-            .compat(),
+        .boxed()
+        .compat(),
     )
 }

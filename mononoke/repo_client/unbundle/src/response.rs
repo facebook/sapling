@@ -167,8 +167,8 @@ impl UnbundleResponse {
                     create_getbundle_response(ctx, repo, common, heads, lca_hint, PhasesPart::Yes)
                         .await
                 }
-                    .boxed()
-                    .compat()
+                .boxed()
+                .compat()
             })
             .and_then(move |mut cg_part_builder| {
                 cg_part_builder.extend(bookmark_reply_part.into_iter());

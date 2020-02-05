@@ -728,5 +728,4 @@ mod test {
         assert!(mover_2(&prefix_only).is_err());
         assert_eq!(mover_1(&prefix_only).unwrap(), None);
     }
-
 }

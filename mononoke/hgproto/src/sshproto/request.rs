@@ -1250,8 +1250,7 @@ mod test_parse {
 
     #[test]
     fn test_parse_between() {
-        let inp =
-            "between\n\
+        let inp = "between\n\
              pairs 163\n\
              1111111111111111111111111111111111111111-2222222222222222222222222222222222222222 \
              3333333333333333333333333333333333333333-4444444444444444444444444444444444444444";
@@ -1318,8 +1317,7 @@ mod test_parse {
         );
 
         // with arguments
-        let inp =
-            "getbundle\n\
+        let inp = "getbundle\n\
              * 6\n\
              heads 40\n\
              1111111111111111111111111111111111111111\
@@ -1423,8 +1421,7 @@ mod test_parse {
             })),
         );
 
-        let inp =
-            "gettreepack\n\
+        let inp = "gettreepack\n\
              * 5\n\
              depth 1\n\
              1\
@@ -1559,5 +1556,4 @@ mod test_parse {
             }),
         );
     }
-
 }

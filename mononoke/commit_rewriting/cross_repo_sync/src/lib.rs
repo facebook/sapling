@@ -1557,5 +1557,4 @@ mod tests {
             btreemap! { "a" => None, "a/b" => Some(()) },
         );
     }
-
 }

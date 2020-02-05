@@ -173,11 +173,9 @@ async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
 ) -> Result<HashMap<RequestObject, ObjectAction>, Error> {
-    let futs = objects.iter().map(|object| {
-        async move {
-            let content_id = resolve_internal_object(ctx, object.oid).await?;
-            Result::<_, Error>::Ok((content_id, object.oid))
-        }
+    let futs = objects.iter().map(|object| async move {
+        let content_id = resolve_internal_object(ctx, object.oid).await?;
+        Result::<_, Error>::Ok((content_id, object.oid))
     });
 
     let content_ids = try_join_all(futs).await?;

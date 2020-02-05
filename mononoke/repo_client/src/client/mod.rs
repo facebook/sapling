@@ -414,28 +414,28 @@ impl RepoClient {
             )
             .await
         }
-            .boxed()
-            .compat()
-            .and_then(move |mut getbundle_response| {
-                bundle2_parts.append(&mut getbundle_response);
+        .boxed()
+        .compat()
+        .and_then(move |mut getbundle_response| {
+            bundle2_parts.append(&mut getbundle_response);
 
-                // listkeys bookmarks part is added separately.
+            // listkeys bookmarks part is added separately.
 
-                // TODO: generalize this to other listkey types
-                // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
-                if listkeys.contains(&b"bookmarks".to_vec()) {
-                    let items = pull_default_bookmarks
-                        .map(|bookmarks| stream::iter_ok(bookmarks))
-                        .flatten_stream();
-                    bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
-                }
-                // TODO(stash): handle includepattern= and excludepattern=
+            // TODO: generalize this to other listkey types
+            // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
+            if listkeys.contains(&b"bookmarks".to_vec()) {
+                let items = pull_default_bookmarks
+                    .map(|bookmarks| stream::iter_ok(bookmarks))
+                    .flatten_stream();
+                bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
+            }
+            // TODO(stash): handle includepattern= and excludepattern=
 
-                let compression = None;
-                Ok(create_bundle_stream(bundle2_parts, compression).boxify())
-            })
-            .flatten_stream()
-            .boxify()
+            let compression = None;
+            Ok(create_bundle_stream(bundle2_parts, compression).boxify())
+        })
+        .flatten_stream()
+        .boxify()
     }
 
     fn gettreepack_untimed(
@@ -486,10 +486,9 @@ impl RepoClient {
         WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
         Content:
             Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
-        GetpackHandler:
-            Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
-                + Send
-                + 'static,
+        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
+            + Send
+            + 'static,
     {
         let (ctx, command_logger) = self.start_command(name);
 

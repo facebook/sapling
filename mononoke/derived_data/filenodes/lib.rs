@@ -141,9 +141,9 @@ impl BonsaiDerived for FilenodesOnlyPublic {
                 }
             }
         }
-            .boxed()
-            .compat()
-            .boxify()
+        .boxed()
+        .compat()
+        .boxify()
     }
 }
 
@@ -312,20 +312,17 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
                 .map({
                     let repo = &repo;
                     let ctx = &ctx;
-                    move |cs_id| {
-                        async move {
-                            let maybe_root_filenode =
-                                fetch_root_filenode(&ctx, cs_id, &repo).await?;
+                    move |cs_id| async move {
+                        let maybe_root_filenode = fetch_root_filenode(&ctx, cs_id, &repo).await?;
 
-                            Ok(maybe_root_filenode.map(move |filenode| {
-                                (
-                                    cs_id,
-                                    FilenodesOnlyPublic {
-                                        root_filenode: Some(filenode),
-                                    },
-                                )
-                            }))
-                        }
+                        Ok(maybe_root_filenode.map(move |filenode| {
+                            (
+                                cs_id,
+                                FilenodesOnlyPublic {
+                                    root_filenode: Some(filenode),
+                                },
+                            )
+                        }))
                     }
                 })
                 .buffer_unordered(100)
@@ -333,9 +330,9 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
                 .try_collect()
                 .await
         }
-            .boxed()
-            .compat()
-            .boxify()
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     fn put(&self, ctx: CoreContext, _csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {

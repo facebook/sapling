@@ -74,7 +74,7 @@ pub fn subcommand_derived_data(
                 let repo = repo.compat().await?;
                 check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks).await
             }
-                .boxed()
+            .boxed()
         }
         _ => async move { Err(SubcommandError::InvalidArgs) }.boxed(),
     }

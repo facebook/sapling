@@ -409,8 +409,8 @@ fn normal_pushrebase(
                 )
                 .await
             }
-                .boxed()
-                .compat()
+            .boxed()
+            .compat()
         }
     })
     .map_err(|err| match err {
