@@ -6,7 +6,7 @@ from edenscm.mercurial import commands, localrepo, ui as uimod
 
 u = uimod.ui.load()
 
-print("% creating repo")
+u.write("% creating repo\n")
 repo = localrepo.localrepository(u, ".", create=True)
 
 f = open("test.py", "w")
@@ -15,13 +15,13 @@ try:
 finally:
     f.close
 
-print("% add and commit")
+u.write("% add and commit\n")
 commands.add(u, repo, "test.py")
 commands.commit(u, repo, message="*")
 commands.status(u, repo, clean=True)
 
 
-print("% change")
+u.write("% change\n")
 f = open("test.py", "w")
 try:
     f.write("bar\n")
