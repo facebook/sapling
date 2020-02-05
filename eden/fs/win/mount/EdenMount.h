@@ -88,6 +88,8 @@ enum class CounterName {
  */
 class EdenMount {
  public:
+  using State = MountState;
+
   /**
    * Create a shared_ptr to an EdenMount.
    *
@@ -186,6 +188,17 @@ class EdenMount {
    */
   folly::Future<folly::Unit> diff(const DiffContext* ctxPtr, Hash commitHash)
       const;
+
+  /**
+   * Get the current state of this mount.
+   *
+   * Note that the state may be changed by another thread immediately after this
+   * method is called, so this method should primarily only be used for
+   * debugging & diagnostics.
+   */
+  State getState() const {
+    return state_.load(std::memory_order_acquire);
+  }
 
   /**
    * Compute differences between the current commit and the working directory
@@ -311,49 +324,6 @@ class EdenMount {
   friend class RenameLock;
   friend class SharedRenameLock;
   class JournalDiffCallback;
-
-  /**
-   * The current running state of the EdenMount.
-   *
-   * For now this primarily tracks the status of the shutdown process.
-   * In the future we may want to add other states to also track the status of
-   * the actual mount point in the kernel.  (e.g., a "STARTING" state before
-   * RUNNING for when the kernel mount point has not been fully set up yet, and
-   * an "UNMOUNTING" state if we have requested the kernel to unmount the mount
-   * point and that has not completed yet.  UNMOUNTING would occur between
-   * RUNNING and SHUT_DOWN.)  One possible downside of tracking
-   * STARTING/UNMOUNTING is that not every EdenMount object actually has a FUSE
-   * mount.  During unit tests we create EdenMount objects without ever
-   * actually mounting them in the kernel.
-   */
-  enum class State : uint32_t {
-    /**
-     * Freshly created.
-     */
-    UNINITIALIZED,
-
-    /*
-     *Either not started or stopped.
-     */
-    NOT_RUNNING,
-
-    /**
-     * The EdenMount is running normally.
-     */
-    RUNNING,
-
-    /**
-     * EdenMount::shutdown() has been called, but it is not complete yet.
-     */
-    SHUTTING_DOWN,
-
-    /*
-     * Destroy has been called for this mount
-     */
-
-    DESTROYING
-
-  };
 
   /**
    * Recursive method used for resolveSymlink() implementation

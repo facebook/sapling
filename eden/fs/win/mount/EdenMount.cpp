@@ -7,8 +7,11 @@
 
 #include "eden/fs/win/mount/EdenMount.h"
 
+#include <folly/futures/SharedPromise.h>
+#include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/async/ResponseChannel.h>
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/inodes/EdenMountError.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -22,8 +25,6 @@
 #include "eden/fs/win/mount/CurrentState.h"
 #include "eden/fs/win/mount/GenerateStatus.h"
 #include "eden/fs/win/mount/RepoConfig.h"
-
-#include <folly/logging/xlog.h>
 
 namespace facebook {
 namespace eden {
@@ -108,7 +109,8 @@ folly::Future<folly::Unit> EdenMount::diff(
     if (parentInfo->parents.parent1() != commitHash) {
       return folly::makeFuture<folly::Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
-          "error computing status: requested parent commit is out-of-date: requested ",
+          "error computing status: requested parent commit is "
+          "out-of-date: requested ",
           commitHash,
           ", but current parent commit is ",
           parentInfo->parents.parent1(),
@@ -151,30 +153,62 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
 }
 
 void EdenMount::start() {
-  fsChannel_->start();
-  createRepoConfig(
-      getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
-  if (!getCurrentState()) {
-    currentState_ = std::make_unique<CurrentState>(
-        kCurrentStateDataPath,
-        multibyteToWideString(getMountId(getPath().c_str())));
+  DCHECK(state_ != State::RUNNING);
+  if (state_ == State::DESTROYING) {
+    throw EdenMountError("Can't start the mount - It's getting unmounted");
   }
+
+  auto previousState =
+      state_.exchange(State::RUNNING, std::memory_order_acq_rel);
+  if (previousState != State::RUNNING) {
+    fsChannel_->start();
+    createRepoConfig(
+        getPath(),
+        serverState_->getSocketPath(),
+        config_->getClientDirectory());
+    if (!getCurrentState()) {
+      currentState_ = std::make_unique<CurrentState>(
+          kCurrentStateDataPath,
+          multibyteToWideString(getMountId(getPath().c_str())));
+    }
+  }
+  XLOGF(
+      INFO,
+      "Started EdenMount (0x{:x}) previousState: {}",
+      reinterpret_cast<uintptr_t>(this),
+      static_cast<uint32_t>(previousState));
 }
 
 void EdenMount::stop() {
-  fsChannel_->stop();
+  if (state_ == State::DESTROYING) {
+    throw EdenMountError("Can't start the mount - It's getting unmounted");
+  }
+
+  auto previousState =
+      state_.exchange(State::SHUT_DOWN, std::memory_order_acq_rel);
+  if (previousState == State::RUNNING) {
+    fsChannel_->stop();
+    XLOGF(
+        INFO,
+        "Stopped EdenMount (0x{:x}) previousState: {}",
+        reinterpret_cast<uintptr_t>(this),
+        static_cast<uint32_t>(previousState));
+  }
 }
 
 void EdenMount::destroy() {
-  XLOGF(
-      INFO, "Destroying EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
+  // stop() to make sure we have stopped the mount. Stop() is a noop if the
+  // previous state was not running.
+  stop();
+  auto previousState =
+      state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
+  DCHECK(previousState == State::SHUT_DOWN);
 
-  auto oldState = state_.exchange(State::DESTROYING);
-  switch (oldState) {
-    case State::RUNNING:
-      stop();
-      break;
-  }
+  XLOGF(
+      INFO,
+      "Destroyed EdenMount (0x{:x}) previousState: {}",
+      reinterpret_cast<uintptr_t>(this),
+      static_cast<uint32_t>(previousState));
   delete this;
 }
 
