@@ -712,5 +712,4 @@ Rebuilt Root log with 3 Root IDs."#
         }
         file.write_all(data).unwrap();
     }
-
 }

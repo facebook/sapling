@@ -528,17 +528,25 @@ mod tests {
             "aliasname echo -n a b"
         );
 
-        assert_eq!(expand(
-            r#"cat /etc/mercurial/hgrc /etc/mercurial/hgrc.d/*.rc ~/.hgrc "`hg root`/.hg/hgrc" 2>/dev/null"#, vec![]),
-            r#"cat /etc/mercurial/hgrc /etc/mercurial/hgrc.d/*.rc ~/.hgrc "`hg root`/.hg/hgrc" 2>/dev/null"#);
-        assert_eq!(expand(
-            r#"for x in `hg log -r 'only(descendants(.) and bookmark(), master)' --template "{node}\n"`;
+        assert_eq!(
+            expand(
+                r#"cat /etc/mercurial/hgrc /etc/mercurial/hgrc.d/*.rc ~/.hgrc "`hg root`/.hg/hgrc" 2>/dev/null"#,
+                vec![]
+            ),
+            r#"cat /etc/mercurial/hgrc /etc/mercurial/hgrc.d/*.rc ~/.hgrc "`hg root`/.hg/hgrc" 2>/dev/null"#
+        );
+        assert_eq!(
+            expand(
+                r#"for x in `hg log -r 'only(descendants(.) and bookmark(), master)' --template "{node}\n"`;
             do echo "Changing to $(hg log -r $x -T '{rev} {desc|firstline}')" && hg up $x && $@;
             if [ "$?" != "0" ]; then break; fi;
-            done"#, vec!["echo", "1"]),
+            done"#,
+                vec!["echo", "1"]
+            ),
             r#"for x in `hg log -r 'only(descendants(.) and bookmark(), master)' --template "{node}\n"`;
             do echo "Changing to $(hg log -r $x -T '{rev} {desc|firstline}')" && hg up $x && echo 1;
             if [ "$?" != "0" ]; then break; fi;
-            done"#);
+            done"#
+        );
     }
 }

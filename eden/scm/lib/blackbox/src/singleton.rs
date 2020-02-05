@@ -93,5 +93,4 @@ mod tests {
         let blackbox = singleton.deref_mut();
         assert_eq!(all_entries(blackbox).len(), 3);
     }
-
 }

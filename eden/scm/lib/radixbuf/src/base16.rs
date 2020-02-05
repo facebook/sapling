@@ -130,5 +130,4 @@ mod tests {
         assert_eq!(v.capacity(), v.len());
         assert_eq!(v, vec![6, 5, 4]);
     }
-
 }

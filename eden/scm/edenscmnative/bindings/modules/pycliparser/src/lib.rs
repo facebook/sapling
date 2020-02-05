@@ -23,7 +23,6 @@ mod exceptions {
     py_exception!(cliparser, OptionRequiresArgument);
     py_exception!(cliparser, OptionArgumentInvalid);
     py_exception!(cliparser, OptionAmbiguous);
-
 }
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
