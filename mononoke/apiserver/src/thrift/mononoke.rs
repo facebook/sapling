@@ -141,7 +141,7 @@ impl MononokeAPIServiceImpl {
 fn log_response_size(mut scuba: ScubaSampleBuilder, size: usize) {
     scuba.add("response_size", size);
     scuba.add("log_tag", "Thrift request finished");
-    scuba.log()
+    scuba.log();
 }
 
 #[async_trait]
