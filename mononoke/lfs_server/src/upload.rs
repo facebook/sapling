@@ -176,17 +176,17 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     let internal_upload = async {
         STATS::internal_uploads.add_value(1);
 
-        let res = ctx
-            .repo
-            .upload_file(
-                ctx.ctx.clone(),
-                &StoreRequest::with_sha256(size, oid),
-                internal_recv.compat(),
-            )
-            .chain_err(ErrorKind::FilestoreWriteFailure)
-            .map_err(Error::from)
-            .compat()
-            .await;
+        let res = filestore::store(
+            ctx.repo.get_blobstore(),
+            ctx.repo.filestore_config(),
+            ctx.ctx.clone(),
+            &StoreRequest::with_sha256(size, oid),
+            internal_recv.compat(),
+        )
+        .chain_err(ErrorKind::FilestoreWriteFailure)
+        .map_err(Error::from)
+        .compat()
+        .await;
 
         if !res.is_err() {
             STATS::internal_success.add_value(1);

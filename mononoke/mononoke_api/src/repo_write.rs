@@ -103,11 +103,15 @@ impl CreateChange {
     ) -> Result<Option<FileChange>, MononokeError> {
         match self {
             CreateChange::NewContent(bytes, file_type, copy_info) => {
-                let req = StoreRequest::new(bytes.len() as u64);
-                let meta = repo
-                    .upload_file(ctx, &req, old_stream::once(Ok(bytes)))
-                    .compat()
-                    .await?;
+                let meta = filestore::store(
+                    repo.get_blobstore(),
+                    repo.filestore_config(),
+                    ctx,
+                    &StoreRequest::new(bytes.len() as u64),
+                    old_stream::once(Ok(bytes)),
+                )
+                .compat()
+                .await?;
                 let copy_info = match copy_info {
                     Some(copy_info) => Some(copy_info.resolve(parents).await?),
                     None => None,

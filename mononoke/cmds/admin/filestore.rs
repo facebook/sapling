@@ -109,14 +109,16 @@ pub fn execute_command(
                 // If the size doesn't fit into a u64, we aren't going to be able to process
                 // it anyway.
                 let len: u64 = metadata.len().try_into().unwrap();
-
                 let data = codec::FramedRead::new(file_buf, codec::BytesCodec::new())
                     .map(|bytes_mut| bytes_mut.freeze())
                     .from_err();
-
-                let req = StoreRequest::new(len);
-
-                blobrepo.upload_file(ctx, &req, data)
+                filestore::store(
+                    blobrepo.get_blobstore(),
+                    blobrepo.filestore_config(),
+                    ctx,
+                    &StoreRequest::new(len),
+                    data,
+                )
             })
             .map({
                 cloned!(logger);

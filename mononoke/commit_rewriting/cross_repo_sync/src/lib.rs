@@ -1384,7 +1384,7 @@ pub async fn upload_commits(
 
     let source_blobstore = source_repo.get_blobstore();
     let target_blobstore = target_repo.get_blobstore();
-    let target_filestore_config = target_repo.get_filestore_config();
+    let target_filestore_config = target_repo.filestore_config();
     let uploader: FuturesUnordered<_> = files_to_sync
         .into_iter()
         .map({

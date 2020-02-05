@@ -77,7 +77,13 @@ fn do_lfs_upload(
                 lfs_stream(&lfs_helper, &lfs)
                     .into_future()
                     .and_then(move |(child, stream)| {
-                        let upload_fut = blobrepo.upload_file(ctx.clone(), &req, stream);
+                        let upload_fut = filestore::store(
+                            blobrepo.get_blobstore(),
+                            blobrepo.filestore_config(),
+                            ctx.clone(),
+                            &req,
+                            stream,
+                        );
 
                         // NOTE: We ignore the child exit code here. Since the Filestore validates the object
                         // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed

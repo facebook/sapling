@@ -38,9 +38,15 @@ pub fn store_files(
         match content {
             Some(content) => {
                 let size = content.len() as u64;
-                let req = StoreRequest::new(size);
-                let data = stream::once(Ok(Bytes::from(content)));
-                let metadata = repo.upload_file(ctx.clone(), &req, data).wait().unwrap();
+                let metadata = filestore::store(
+                    repo.get_blobstore(),
+                    repo.filestore_config(),
+                    ctx.clone(),
+                    &StoreRequest::new(size),
+                    stream::once(Ok(Bytes::from(content))),
+                )
+                .wait()
+                .unwrap();
                 let file_change =
                     FileChange::new(metadata.content_id, FileType::Regular, size, None);
                 res.insert(path, Some(file_change));

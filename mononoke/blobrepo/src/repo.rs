@@ -19,7 +19,6 @@ use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason,
     Bookmarks, Freshness,
 };
-use bytes::Bytes;
 use cacheblob::{LeaseOps, MemWritesBlobstore};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
@@ -27,7 +26,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt};
 use filenodes::{FilenodeInfo, Filenodes};
-use filestore::{self, FilestoreConfig, StoreRequest};
+use filestore::FilestoreConfig;
 use futures::future::{self, loop_fn, ok, Future, Loop};
 use futures::stream::{self, futures_unordered, FuturesUnordered, Stream};
 use futures::sync::oneshot;
@@ -46,8 +45,8 @@ use mercurial_types::{
     Type,
 };
 use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, ChangesetId, ContentMetadata, FileChange, Generation, MPath,
-    RepositoryId, Timestamp,
+    BlobstoreValue, BonsaiChangeset, ChangesetId, FileChange, Generation, MPath, RepositoryId,
+    Timestamp,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
@@ -704,21 +703,6 @@ impl BlobRepo {
         (self.changeset_fetcher_factory)()
     }
 
-    pub fn upload_file(
-        &self,
-        ctx: CoreContext,
-        req: &StoreRequest,
-        data: impl Stream<Item = Bytes, Error = Error>,
-    ) -> impl Future<Item = ContentMetadata, Error = Error> {
-        filestore::store(
-            self.blobstore.clone(),
-            &self.filestore_config,
-            ctx,
-            req,
-            data,
-        )
-    }
-
     pub fn blobstore(&self) -> &RepoBlobstore {
         &self.blobstore
     }
@@ -727,8 +711,8 @@ impl BlobRepo {
         self.blobstore.clone()
     }
 
-    pub fn get_filestore_config(&self) -> FilestoreConfig {
-        self.filestore_config.clone()
+    pub fn filestore_config(&self) -> &FilestoreConfig {
+        &self.filestore_config
     }
 
     pub fn get_repoid(&self) -> RepositoryId {
