@@ -1,4 +1,4 @@
-#chg-compatible
+#require py2
 
 #chg-compatible
 

@@ -3,6 +3,10 @@ from __future__ import absolute_import, print_function
 import os
 
 from edenscm.mercurial import dispatch
+from hghave import require
+
+
+require(["py2"])
 
 
 def testdispatch(cmd):
