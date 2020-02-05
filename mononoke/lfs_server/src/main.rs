@@ -26,6 +26,7 @@ use futures_preview::{
 // TODO: When we get rid of old futures, this can come from `futures` (can't while new futures is called `futures_preview`)
 use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_pre_state};
+use gotham_ext::handler::MononokeHttpHandler;
 use slog::{error, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -44,7 +45,6 @@ use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 
 use crate::acl::LfsAclChecker;
-use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
     ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
@@ -59,7 +59,6 @@ mod batch;
 mod config;
 mod download;
 mod errors;
-mod handler;
 mod lfs_server_context;
 mod middleware;
 mod service;
@@ -338,7 +337,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let router = build_router(fb, ctx);
 
-    let root = MononokeLfsHandler::builder()
+    let root = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(RequestContextMiddleware::new(

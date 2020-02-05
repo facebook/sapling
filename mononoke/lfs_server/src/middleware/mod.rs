@@ -6,10 +6,6 @@
  * directory of this source tree.
  */
 
-use gotham::state::State;
-use hyper::{Body, Response};
-use std::panic::RefUnwindSafe;
-
 mod client_identity;
 mod load;
 mod log;
@@ -20,6 +16,8 @@ mod server_identity;
 mod timer;
 mod tls_session_data;
 
+pub use gotham_ext::middleware::Middleware;
+
 pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use self::load::{LoadMiddleware, RequestLoad};
 pub use self::log::LogMiddleware;
@@ -29,15 +27,3 @@ pub use self::scuba::{ScubaKey, ScubaMiddleware, ScubaMiddlewareState};
 pub use self::server_identity::ServerIdentityMiddleware;
 pub use self::timer::TimerMiddleware;
 pub use self::tls_session_data::TlsSessionDataMiddleware;
-
-pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {
-    fn inbound(&self, _state: &mut State) {
-        // Implement inbound to perform pre-request actions, such as putting something in the
-        // state.
-    }
-
-    fn outbound(&self, _state: &mut State, _response: &mut Response<Body>) {
-        // Implement outbound to perform post-request actions, such as logging the response status
-        // code.
-    }
-}
