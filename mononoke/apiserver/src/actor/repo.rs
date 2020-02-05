@@ -409,9 +409,15 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::get_blob_content.add_value(1);
         let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
-
-        self.repo
-            .get_file_content(ctx, HgFileNodeId::new(blobhash))
+        let repo = self.repo.clone();
+        HgFileNodeId::new(blobhash)
+            .load(ctx.clone(), repo.blobstore())
+            .from_err()
+            .map(move |envelope| {
+                filestore::fetch_stream(repo.blobstore(), ctx, envelope.content_id())
+            })
+            .flatten_stream()
+            .map(mercurial_types::FileBytes)
             .into_filestream()
             .map(MononokeRepoResponse::GetBlobContent)
             .from_err()

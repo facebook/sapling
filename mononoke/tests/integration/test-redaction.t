@@ -240,8 +240,6 @@ As of the time of writing, updating blacklisted files throws an error - artifact
   remote:   Caused by:
   remote:     While looking for base HgNodeHash(Sha1(149da44f2a4e14f488b7bd4157945a9837408c00)) to apply on delta HgNodeHash(Sha1(51fbfc693e1534e3e7be909e2966777573efc917))
   remote:   Caused by:
-  remote:     While fetching content blob
-  remote:   Caused by:
   remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
   remote:      Task/Sev: my_task
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

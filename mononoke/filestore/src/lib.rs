@@ -288,6 +288,21 @@ pub fn fetch<B: Blobstore + Clone>(
     fetch_with_size(blobstore, ctx, key).map(|res| res.map(|(stream, _len)| stream))
 }
 
+/// Fetch content associated with the key as a stream
+///
+/// Moslty behaves as the `fetch`, except it is pushing missing content error into stream if
+/// data associated with the key was not found.
+pub fn fetch_stream<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: impl Into<FetchKey>,
+) -> impl Stream<Item = Bytes, Error = Error> {
+    let key: FetchKey = key.into();
+    fetch(blobstore, ctx, &key)
+        .and_then(move |stream| stream.ok_or_else(|| errors::ErrorKind::MissingContent(key).into()))
+        .flatten_stream()
+}
+
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
 pub fn fetch_range<B: Blobstore + Clone>(
     blobstore: &B,

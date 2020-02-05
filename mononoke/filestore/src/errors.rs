@@ -9,7 +9,7 @@
 use std::fmt::Debug;
 use thiserror::Error;
 
-use crate::expected_size::ExpectedSize;
+use crate::{expected_size::ExpectedSize, FetchKey};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     ContentId,
@@ -37,4 +37,7 @@ pub enum ErrorKind {
 
     #[error("Invalid GitSha1: {0:?}")]
     InvalidGitSha1(InvalidHash<GitSha1>),
+
+    #[error("Missing content: {0:?}")]
+    MissingContent(FetchKey),
 }

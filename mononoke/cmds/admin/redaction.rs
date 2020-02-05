@@ -79,8 +79,10 @@ fn find_files_with_given_content_id_blobstore_keys(
             let blobstore_key_futs = filenodes.into_iter().map({
                 cloned!(ctx, repo);
                 move |(full_path, filenode_id)| {
-                    repo.get_file_content_id(ctx.clone(), filenode_id)
-                        .map(|content_id| (content_id.blobstore_key(), full_path))
+                    filenode_id
+                        .load(ctx.clone(), repo.blobstore())
+                        .from_err()
+                        .map(|env| (env.content_id().blobstore_key(), full_path))
                 }
             });
             join_all(blobstore_key_futs)
@@ -226,7 +228,12 @@ fn content_ids_for_paths(
             move |hg_node_ids| {
                 let content_ids = hg_node_ids.into_iter().map({
                     cloned!(blobrepo);
-                    move |hg_node_id| blobrepo.get_file_content_id(ctx.clone(), hg_node_id)
+                    move |hg_node_id| {
+                        hg_node_id
+                            .load(ctx.clone(), blobrepo.blobstore())
+                            .from_err()
+                            .map(|env| env.content_id())
+                    }
                 });
 
                 join_all(content_ids)

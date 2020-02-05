@@ -21,7 +21,6 @@ use crate::{
 use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
-use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{FutureFailureErrorExt, StreamFailureErrorExt};
 use filestore::{self, FetchKey};
@@ -114,35 +113,6 @@ pub fn fetch_raw_filenode_bytes(
         .boxify()
 }
 
-pub fn fetch_file_content_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-) -> impl Stream<Item = FileBytes, Error = Error> {
-    node_id
-        .load(ctx.clone(), blobstore)
-        .from_err()
-        .map({
-            cloned!(blobstore);
-            move |envelope| {
-                let content_id = envelope.content_id();
-                fetch_file_contents(ctx, &blobstore, content_id.clone())
-            }
-        })
-        .flatten_stream()
-}
-
-pub fn fetch_file_content_id_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-) -> impl Future<Item = ContentId, Error = Error> {
-    node_id
-        .load(ctx, blobstore)
-        .from_err()
-        .map({ |envelope| envelope.content_id() })
-}
-
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
 
@@ -166,7 +136,7 @@ impl Loadable for HgFileNodeId {
     }
 }
 
-pub fn fetch_file_contents(
+fn fetch_file_contents(
     ctx: CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     content_id: ContentId,

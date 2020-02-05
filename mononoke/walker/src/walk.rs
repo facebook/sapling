@@ -28,7 +28,9 @@ use futures_preview::{
     stream::{BoxStream as NewBoxStream, StreamExt as NewStreamExt},
 };
 use itertools::{Either, Itertools};
-use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath};
+use mercurial_types::{
+    FileBytes, HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath,
+};
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -178,8 +180,9 @@ fn file_content_step(
     repo: &BlobRepo,
     id: ContentId,
 ) -> BoxFuture<StepOutput, Error> {
-    let s_old = repo.get_file_content_by_content_id(ctx, id);
-    let s = futures_preview::compat::Compat01As03::new(s_old);
+    let s = filestore::fetch_stream(repo.blobstore(), ctx, id)
+        .map(FileBytes)
+        .compat();
     // We don't force file loading here, content may not be needed
     future::ok(StepOutput(
         NodeData::FileContent(FileContentData::ContentStream(Box::pin(s))),

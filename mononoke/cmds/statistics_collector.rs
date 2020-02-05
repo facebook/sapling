@@ -22,8 +22,7 @@ use futures::future::{loop_fn, Loop};
 use futures::future::{Future, IntoFuture};
 use futures::stream;
 use futures::stream::Stream;
-use futures_ext::FutureExt;
-use futures_ext::{BoxFuture, BoxStream};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_preview::compat::Future01CompatExt;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
@@ -178,8 +177,13 @@ pub fn get_statistics_from_entry(
             .from_err()
             .and_then(move |envelope| {
                 let size = envelope.content_size();
+                let content_id = envelope.content_id();
                 if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
-                    number_of_lines(repo.get_file_content(ctx.clone(), filenode_id))
+                    let content =
+                        filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
+                            .map(FileBytes)
+                            .boxify();
+                    number_of_lines(content)
                         .join(future::ok(size))
                         .left_future()
                 } else {

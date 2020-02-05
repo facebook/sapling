@@ -39,17 +39,15 @@ use manifest::{Entry, Manifest, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{
     blobs::{
-        fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-        fetch_file_contents, ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry,
-        HgBlobEnvelope, HgChangesetContent, UploadHgFileContents, UploadHgFileEntry,
-        UploadHgNodeHash,
+        ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope,
+        HgChangesetContent, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     },
-    FileBytes, Globalrev, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, RepoPath, Type,
+    Globalrev, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, RepoPath,
+    Type,
 };
 use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, FileChange,
-    Generation, MPath, RepositoryId, Timestamp,
+    BlobstoreValue, BonsaiChangeset, ChangesetId, ContentMetadata, FileChange, Generation, MPath,
+    RepositoryId, Timestamp,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
@@ -71,7 +69,6 @@ define_stats! {
     get_bonsai_changeset: timeseries(Rate, Sum),
     get_bonsai_heads_maybe_stale: timeseries(Rate, Sum),
     get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
-    get_file_content: timeseries(Rate, Sum),
     get_raw_hg_content: timeseries(Rate, Sum),
     get_changesets: timeseries(Rate, Sum),
     get_heads_maybe_stale: timeseries(Rate, Sum),
@@ -200,32 +197,6 @@ impl BlobRepo {
             filestore_config,
             phases_factory,
         )
-    }
-
-    pub fn get_file_content(
-        &self,
-        ctx: CoreContext,
-        key: HgFileNodeId,
-    ) -> BoxStream<FileBytes, Error> {
-        STATS::get_file_content.add_value(1);
-        fetch_file_content_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
-    }
-
-    pub fn get_file_content_by_content_id(
-        &self,
-        ctx: CoreContext,
-        id: ContentId,
-    ) -> BoxStream<FileBytes, Error> {
-        STATS::get_file_content.add_value(1);
-        fetch_file_contents(ctx, &self.blobstore.boxed(), id).boxify()
-    }
-
-    pub fn get_file_content_id(
-        &self,
-        ctx: CoreContext,
-        key: HgFileNodeId,
-    ) -> BoxFuture<ContentId, Error> {
-        fetch_file_content_id_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.

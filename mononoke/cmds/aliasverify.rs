@@ -31,6 +31,7 @@ use changesets::SqlChangesets;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use filestore::{self, Alias, AliasBlob, FetchKey};
+use mercurial_types::FileBytes;
 use mononoke_types::{
     hash::{self, Sha256},
     ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId,
@@ -207,7 +208,8 @@ impl AliasVerification {
         let repo = self.blobrepo.clone();
         let av = self.clone();
 
-        repo.get_file_content_by_content_id(ctx.clone(), content_id)
+        filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
+            .map(FileBytes)
             .concat2()
             .map(|content| get_sha256(&content.into_bytes()))
             .and_then(move |alias| av.process_alias(ctx, alias, content_id))

@@ -3368,12 +3368,18 @@ mod tests {
         for (path, entry) in entries {
             match entry {
                 Entry::Leaf((_, filenode_id)) => {
-                    let content = repo
-                        .get_file_content(ctx.clone(), filenode_id)
+                    let store = repo.blobstore();
+                    let content_id = filenode_id
+                        .load(ctx.clone(), store)
+                        .compat()
+                        .await?
+                        .content_id();
+                    let content = filestore::fetch_stream(store, ctx.clone(), content_id)
                         .compat()
                         .try_concat()
                         .await?;
-                    let s = String::from_utf8_lossy(content.as_bytes()).into_owned();
+
+                    let s = String::from_utf8_lossy(content.as_ref()).into_owned();
                     actual.insert(format!("{}", path.unwrap()), s);
                 }
                 Entry::Tree(_) => {}

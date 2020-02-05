@@ -57,10 +57,13 @@ impl FileContentStore for BlobRepoFileContentStore {
         ctx: CoreContext,
         id: HgFileNodeId,
     ) -> BoxFuture<Option<FileBytes>, Error> {
-        self.repo
-            .get_file_content(ctx, id)
+        let store = self.repo.get_blobstore();
+        id.load(ctx.clone(), &store)
+            .from_err()
+            .map(move |envelope| filestore::fetch_stream(&store, ctx, envelope.content_id()))
+            .flatten_stream()
             .concat2()
-            .map(Some)
+            .map(|content| Some(FileBytes(content)))
             .boxify()
     }
 

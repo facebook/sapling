@@ -301,9 +301,10 @@ fn prepare_blob(
             // (based on their signature).
 
             if inline_file {
-                let content_fut = repo
-                    .get_file_content_by_content_id(ctx, envelope.content_id())
-                    .concat2();
+                let content_fut =
+                    filestore::fetch_stream(repo.blobstore(), ctx, envelope.content_id())
+                        .map(FileBytes)
+                        .concat2();
 
                 let blob_fut = if validate_hash {
                     content_fut

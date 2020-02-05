@@ -11,11 +11,11 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, Future};
+use futures::{future, Future, Stream};
 use futures_ext::{FutureExt, StreamExt};
 use manifest::{Entry, ManifestOps};
-use mercurial_types::manifest::Content;
 use mercurial_types::HgChangesetId;
+use mercurial_types::{manifest::Content, FileBytes};
 use mononoke_types::MPath;
 use thiserror::Error;
 
@@ -58,7 +58,20 @@ pub fn get_content_by_path(
                 .map(|manifest| Content::Tree(Box::new(manifest)))
                 .left_future(),
             Entry::Leaf((file_type, filenode_id)) => {
-                let stream = repo.get_file_content(ctx, filenode_id).boxify();
+                let stream = filenode_id
+                    .load(ctx.clone(), repo.blobstore())
+                    .from_err()
+                    .map(move |envelope| {
+                        filestore::fetch_stream(
+                            repo.blobstore(),
+                            ctx.clone(),
+                            envelope.content_id(),
+                        )
+                    })
+                    .flatten_stream()
+                    .map(FileBytes)
+                    .boxify();
+
                 let content = Content::new_file(file_type, stream);
                 future::ok(content).right_future()
             }

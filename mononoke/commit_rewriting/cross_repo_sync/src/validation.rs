@@ -302,8 +302,12 @@ pub async fn compare_contents(
                     left_filenode_id,
                     right_filenode_id,
                 );
-                let f1 = large_repo.get_file_content_id(ctx.clone(), left_filenode_id);
-                let f2 = small_repo.get_file_content_id(ctx.clone(), right_filenode_id);
+                let f1 = left_filenode_id
+                    .load(ctx.clone(), large_repo.blobstore())
+                    .map(|e| e.content_id());
+                let f2 = right_filenode_id
+                    .load(ctx.clone(), small_repo.blobstore())
+                    .map(|e| e.content_id());
 
                 f1.join(f2).map(move |(c1, c2)| (path, c1, c2))
             }

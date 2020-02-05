@@ -15,10 +15,7 @@ mod errors;
 pub use errors::ErrorKind;
 
 pub mod file;
-pub use file::{
-    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore, fetch_file_contents,
-    File, HgBlobEntry, LFSContent, META_MARKER, META_SZ,
-};
+pub use file::{File, HgBlobEntry, LFSContent, META_MARKER, META_SZ};
 
 mod manifest;
 pub use self::manifest::{

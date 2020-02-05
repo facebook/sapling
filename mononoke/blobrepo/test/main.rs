@@ -59,6 +59,12 @@ use utils::{
     upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent,
 };
 
+fn get_content(ctx: CoreContext, repo: &BlobRepo, id: HgFileNodeId) -> Result<bytes::Bytes, Error> {
+    let content_id = run_future(id.load(ctx.clone(), repo.blobstore()))?.content_id();
+    let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id).concat2();
+    run_future(content)
+}
+
 fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let expected_hash = HgFileNodeId::new(string_to_nodehash(
@@ -67,7 +73,7 @@ fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
-    assert!(run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).is_err());
+    assert!(get_content(ctx.clone(), &repo, expected_hash).is_err());
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
@@ -91,8 +97,8 @@ fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
 
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).unwrap();
-    assert!(bytes.into_bytes().as_ref() == &b"blob"[..]);
+    let bytes = get_content(ctx, &repo, expected_hash).unwrap();
+    assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -111,7 +117,7 @@ fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
     let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
 
     // The blob does not exist...
-    let _ = run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).unwrap_err();
+    let _ = get_content(ctx.clone(), &repo, expected_hash).unwrap_err();
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_path, p1);
@@ -136,8 +142,8 @@ fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
     assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
 
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).unwrap();
-    assert!(bytes.into_bytes().as_ref() == &b"blob"[..]);
+    let bytes = get_content(ctx.clone(), &repo, expected_hash).unwrap();
+    assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -193,8 +199,8 @@ fn create_one_changeset(fb: FacebookInit, repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = run_future(repo.get_file_content(ctx.clone(), filehash).concat2()).unwrap();
-    assert!(bytes.into_bytes().as_ref() == &b"blob"[..]);
+    let bytes = get_content(ctx.clone(), &repo, filehash).unwrap();
+    assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
 test_both_repotypes!(

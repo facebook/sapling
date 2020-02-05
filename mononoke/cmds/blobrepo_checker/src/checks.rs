@@ -14,7 +14,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
 use futures_ext::{spawn_future, FutureExt};
-use mercurial_types::HgChangesetId;
+use mercurial_types::{FileBytes, HgChangesetId};
 use mononoke_types::{
     blob::BlobstoreValue, ChangesetId, ContentId, FileChange, FileContents, MPath,
 };
@@ -160,9 +160,10 @@ fn check_one_file(
 ) -> impl Future<Item = (), Error = Error> {
     // Fetch file.
     // TODO (T47717165): stream!
-    let bytes = repo
-        .get_file_content_by_content_id(ctx.clone(), file_info.id)
-        .concat2();
+    let bytes = filestore::fetch_stream(repo.blobstore(), ctx.clone(), file_info.id)
+        .map(FileBytes)
+        .concat2()
+        .boxify(); // type is too large
 
     let file_checks = bytes.and_then({
         cloned!(file_info);
