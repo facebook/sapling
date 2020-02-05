@@ -635,7 +635,7 @@ def parseargs(args, parser):
     if options.with_hg:
         options.with_hg = canonpath(_bytespath(options.with_hg))
         # HGEXECUTABLEPATH is used by util.hgcmd()
-        os.environ["HGEXECUTABLEPATH"] = options.with_hg.decode("utf-8")
+        os.environ["HGEXECUTABLEPATH"] = _strpath(options.with_hg)
         if not (
             os.path.isfile(options.with_hg) and os.access(options.with_hg, os.X_OK)
         ):
