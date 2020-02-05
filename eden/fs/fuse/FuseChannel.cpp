@@ -912,6 +912,10 @@ void FuseChannel::readInitPacket() {
   struct {
     fuse_in_header header;
     fuse_init_in init;
+    // Starting in kernel 5.4 in
+    // https://github.com/torvalds/linux/commit/1fb027d7596464d3fad3ed59f70f43807ef926c6
+    // we have to request at least 8KB even for the init request
+    char padding_[FUSE_MIN_READ_BUFFER];
   } init;
 
   // Loop until we receive the INIT packet, or until we are stopped.
@@ -958,7 +962,7 @@ void FuseChannel::readInitPacket() {
     // We currently don't error out for now if we receive more data: maybe this
     // could happen for future kernel versions that speak a newer FUSE protocol
     // with extra fields in fuse_init_in?
-    if (static_cast<size_t>(res) < sizeof(init)) {
+    if (static_cast<size_t>(res) < sizeof(init) - sizeof(init.padding_)) {
       throw std::runtime_error(folly::to<string>(
           "received partial FUSE_INIT packet on mount \"",
           mountPath_,
