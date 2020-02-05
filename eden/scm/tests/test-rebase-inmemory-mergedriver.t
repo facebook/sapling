@@ -61,7 +61,7 @@ Next, off of BASE, make an API change to the driver.
   > VERSION = "NEW"
   > 
   > def someFunction(repo, new_required_arg):
-  >     print("new_required_arg = %s" % new_required_arg)
+  >     repo.ui.write("new_required_arg = %s\n" % new_required_arg)
   >     pass
   > EOF
   $ $TESTDIR/seq.py 1 11 > FILE
