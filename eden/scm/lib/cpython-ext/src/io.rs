@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use crate::error::ResultPyErrExt;
+use crate::none::PyNone;
 use cpython::*;
+use std::cell::RefCell;
 use std::io;
 
-/// Return a wrapped PyObject that implements Rust Read / Write traits.
+/// Wrap a PyObject into a Rust object that implements Rust Read / Write traits.
 pub fn wrap_pyio(pyio: PyObject) -> WrappedIO {
     WrappedIO(pyio)
 }
@@ -75,4 +78,26 @@ fn convert_ioerr(mut pyerr: PyErr) -> io::Error {
         };
         io::Error::new(io::ErrorKind::Other, msg)
     }
+}
+
+py_class!(pub class PyRustWrite |py| {
+    data io: RefCell<Box<dyn io::Write + Send>>;
+
+    def write(&self, bytes: PyBytes) -> PyResult<usize> {
+        let mut io = self.io(py).borrow_mut();
+        let bytes = bytes.data(py);
+        io.write_all(bytes).map_pyerr(py)?;
+        Ok(bytes.len())
+    }
+
+    def flush(&self) -> PyResult<PyNone> {
+        let mut io = self.io(py).borrow_mut();
+        io.flush().map_pyerr(py)?;
+        Ok(PyNone)
+    }
+});
+
+/// Wrap a Rust Write trait object into a Python object.
+pub fn wrap_rust_write(py: Python, w: impl io::Write + Send + 'static) -> PyResult<PyRustWrite> {
+    PyRustWrite::create_instance(py, RefCell::new(Box::new(w)))
 }
