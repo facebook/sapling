@@ -85,7 +85,7 @@ impl ChangesetHandle {
             })
             .and_then({
                 cloned!(ctx, repo);
-                move |bonsai_id| repo.get_bonsai_changeset(ctx, bonsai_id)
+                move |csid| csid.load(ctx, repo.blobstore()).from_err()
             });
 
         let (trigger, can_be_parent) = oneshot::channel();

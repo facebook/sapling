@@ -98,8 +98,9 @@ impl AliasVerification {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        self.blobrepo
-            .get_bonsai_changeset(ctx, bcs_id)
+        bcs_id
+            .load(ctx, self.blobrepo.blobstore())
+            .from_err()
             .map(|bcs| {
                 let file_changes: Vec<_> = bcs
                     .file_changes()

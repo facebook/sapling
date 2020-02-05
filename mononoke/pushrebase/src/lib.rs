@@ -328,7 +328,10 @@ async fn backfill_filenodes<'a>(
             let hg_cs_id_fut = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                 .compat();
-            let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id).compat();
+            let bcs_fut = bcs_id
+                .load(ctx.clone(), repo.blobstore())
+                .from_err()
+                .compat();
             let (hg_cs_id, bcs) = try_join(hg_cs_id_fut, bcs_fut).await?;
 
             let parents = bcs.parents().map(|p| id_to_manifestid(&ctx, &repo, p));
@@ -691,11 +694,7 @@ async fn fetch_bonsai_range(
     let nodes = stream
         .map(|res| async move {
             match res {
-                Ok(bcs_id) => {
-                    repo.get_bonsai_changeset(ctx.clone(), bcs_id)
-                        .compat()
-                        .await
-                }
+                Ok(bcs_id) => Ok(bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?),
                 Err(e) => Err(e),
             }
         })
@@ -724,11 +723,7 @@ async fn find_changed_files(
         .map(|res| async move {
             match res {
                 Ok(bcs_id) => {
-                    let bcs = repo
-                        .get_bonsai_changeset(ctx.clone(), bcs_id)
-                        .compat()
-                        .await?;
-
+                    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
                     Ok((bcs_id, bcs))
                 }
                 Err(e) => Err(e),
@@ -1302,8 +1297,8 @@ mod tests {
                         hg_cs_id,
                     )))?;
 
-                let bcs = repo
-                    .get_bonsai_changeset(ctx.clone(), bcs_id)
+                let bcs = bcs_id
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await
                     .context("While intitial bonsai changesets fetching")?;
@@ -1556,10 +1551,7 @@ mod tests {
                 let (bookmarks, mutable_counters) = init_bookmarks_mutable_counters().await?;
                 let repo = repo.dangerous_override(|_| bookmarks);
 
-                let bcs = repo
-                    .get_bonsai_changeset(ctx.clone(), bcs_id)
-                    .compat()
-                    .await?;
+                let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
                 let repoid = repo.get_repoid();
                 let mut book = master_bookmark();
@@ -2224,13 +2216,15 @@ mod tests {
                 let bcs_rewrite_date =
                     do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
 
-                let bcs = repo.get_bonsai_changeset(ctx.clone(), bcs).compat().await?;
-                let bcs_keep_date = repo
-                    .get_bonsai_changeset(ctx.clone(), bcs_keep_date.head)
+                let bcs = bcs.load(ctx.clone(), repo.blobstore()).compat().await?;
+                let bcs_keep_date = bcs_keep_date
+                    .head
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await?;
-                let bcs_rewrite_date = repo
-                    .get_bonsai_changeset(ctx.clone(), bcs_rewrite_date.head)
+                let bcs_rewrite_date = bcs_rewrite_date
+                    .head
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await?;
 
@@ -2365,10 +2359,7 @@ mod tests {
                     .compat()
                     .await?
                     .ok_or(Error::msg("Root missing"))?;
-                let root_bcs = repo
-                    .get_bonsai_changeset(ctx.clone(), root)
-                    .compat()
-                    .await?;
+                let root_bcs = root.load(ctx.clone(), repo.blobstore()).compat().await?;
                 let file_1 = root_bcs
                     .file_changes()
                     .find(|(path, _)| path == &&path_1)
@@ -2406,8 +2397,9 @@ mod tests {
 
                 let result =
                     do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
-                let result_bcs = repo
-                    .get_bonsai_changeset(ctx.clone(), result.head)
+                let result_bcs = result
+                    .head
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await?;
                 let file_1_result = result_bcs
@@ -2788,8 +2780,9 @@ mod tests {
                 )
                 .await?;
 
-                let bcs_rewrite_date = repo
-                    .get_bonsai_changeset(ctx.clone(), bcs_rewrite_date.head)
+                let bcs_rewrite_date = bcs_rewrite_date
+                    .head
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await?;
 

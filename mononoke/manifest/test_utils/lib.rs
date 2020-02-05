@@ -31,7 +31,7 @@ pub fn get_bonsai_changeset(
         .unwrap()
         .unwrap();
     let bcs = runtime
-        .block_on(repo.get_bonsai_changeset(ctx.clone(), bcs_id))
+        .block_on(bcs_id.load(ctx.clone(), repo.blobstore()))
         .unwrap();
     (bcs_id, bcs)
 }

@@ -134,7 +134,9 @@ fn bonsai_changeset_step(
     bcs_id: ChangesetId,
 ) -> BoxFuture<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
-    repo.get_bonsai_changeset(ctx, bcs_id)
+    bcs_id
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
         .map(move |bcs| {
             // Parents deliberately first to resolve dependent reads as early as possible
             let mut recurse: Vec<OutgoingEdge> = bcs

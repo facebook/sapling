@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use blobstore::LoadableError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -62,5 +63,11 @@ impl From<Error> for MononokeError {
 impl From<Infallible> for MononokeError {
     fn from(_i: Infallible) -> Self {
         unreachable!()
+    }
+}
+
+impl From<LoadableError> for MononokeError {
+    fn from(e: LoadableError) -> Self {
+        MononokeError::InternalError(InternalError(Arc::new(e.into())))
     }
 }

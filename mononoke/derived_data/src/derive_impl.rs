@@ -9,6 +9,7 @@
 use crate::{BonsaiDerived, BonsaiDerivedMapping};
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -243,7 +244,7 @@ where
         bcs_id.to_hex()
     );
     let event_id = EventId::new();
-    let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id.clone());
+    let bcs_fut = bcs_id.load(ctx.clone(), repo.blobstore()).from_err();
 
     let lease = repo.get_derived_data_lease_ops();
     let lease_key = Arc::new(format!(

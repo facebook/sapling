@@ -32,7 +32,7 @@ fn check_bonsai_cs(
     hg_cs_queue: mpsc::Sender<HgChangesetId>,
     file_queue: mpsc::Sender<FileInformation>,
 ) -> impl Future<Item = (), Error = Error> {
-    let changeset = repo.get_bonsai_changeset(ctx.clone(), cs_id);
+    let changeset = cs_id.load(ctx.clone(), repo.blobstore()).from_err();
     let repo_parents = repo
         .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
         .and_then(move |parents| {

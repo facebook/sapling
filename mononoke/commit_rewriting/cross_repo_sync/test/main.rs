@@ -22,7 +22,7 @@ use std::sync::Arc;
 use anyhow::{bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
-use blobstore::Storable;
+use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use cross_repo_sync_test_utils::rebase_root_on_master;
@@ -139,9 +139,8 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let bookmark_name = BookmarkName::new("master").unwrap();
-    let source_bcs = config
-        .get_source_repo()
-        .get_bonsai_changeset(ctx.clone(), source_bcs_id)
+    let source_bcs = source_bcs_id
+        .load(ctx.clone(), config.get_source_repo().blobstore())
         .wait()
         .unwrap();
     config
@@ -579,8 +578,9 @@ fn sync_copyinfo(fb: FacebookInit) {
     );
 
     // Fetch commit from linear by its new ID, and confirm that it has the correct copyinfo
-    let linear_bcs = linear
-        .get_bonsai_changeset(ctx.clone(), linear_copyinfo_bcs_id.unwrap())
+    let linear_bcs = linear_copyinfo_bcs_id
+        .unwrap()
+        .load(ctx.clone(), linear.blobstore())
         .wait()
         .unwrap();
 
@@ -780,8 +780,8 @@ fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             .expect("Unexpectedly failed to rewrite 2")
             .expect("Unexpectedly rewritten into nothingness");
 
-    let megarepo_implicit_delete_bcs = megarepo
-        .get_bonsai_changeset(ctx.clone(), megarepo_implicit_delete_bcs_id)
+    let megarepo_implicit_delete_bcs = megarepo_implicit_delete_bcs_id
+        .load(ctx.clone(), megarepo.blobstore())
         .wait()
         .unwrap();
     let file_changes: BTreeMap<MPath, _> = megarepo_implicit_delete_bcs

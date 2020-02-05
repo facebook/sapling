@@ -16,6 +16,7 @@ use std::{
 use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -407,8 +408,8 @@ impl Repo {
                 // between current timestamp and bookmark value from cache.
                 let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
 
-                let compare_timestamp = repo
-                    .get_bonsai_changeset(ctx.clone(), compare_bcs_id)
+                let compare_timestamp = compare_bcs_id
+                    .load(ctx.clone(), repo.blobstore())
                     .compat()
                     .await?
                     .author_date()

@@ -8,6 +8,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bonsai_globalrev_mapping::{
     bulk_import_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
 };
@@ -54,7 +55,7 @@ pub fn upload<P: AsRef<Path>>(
             stream::iter_ok(changesets)
                 .map({
                     cloned!(ctx, repo);
-                    move |bcs_entry| repo.get_bonsai_changeset(ctx.clone(), bcs_entry.cs_id)
+                    move |entry| entry.cs_id.load(ctx.clone(), repo.blobstore()).from_err()
                 })
                 .buffered(chunk_size)
                 .chunks(chunk_size)

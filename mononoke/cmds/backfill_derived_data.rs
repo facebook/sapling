@@ -496,7 +496,7 @@ async fn warmup(
             stream::iter_ok(chunk.clone())
                 .map({
                     cloned!(ctx, repo);
-                    move |cs_id| repo.get_bonsai_changeset(ctx.clone(), cs_id)
+                    move |cs_id| cs_id.load(ctx.clone(), repo.blobstore())
                 })
                 .buffer_unordered(100)
                 .for_each(|_| Ok(()))
@@ -550,10 +550,7 @@ async fn unode_warmup(
     for cs_id in chunk {
         cloned!(ctx, repo, unode_mapping);
         let f = async move {
-            let bcs = repo
-                .get_bonsai_changeset(ctx.clone(), *cs_id)
-                .compat()
-                .await?;
+            let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
             let root_mf_id = RootUnodeManifestId::derive(
                 ctx.clone(),

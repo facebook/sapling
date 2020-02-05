@@ -322,7 +322,7 @@ fn check_bonsai_creation(fb: FacebookInit, repo: BlobRepo) {
     let bonsai_cs_id =
         run_future(repo.get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())).unwrap();
     assert!(bonsai_cs_id.is_some());
-    let bonsai = run_future(repo.get_bonsai_changeset(ctx.clone(), bonsai_cs_id.unwrap())).unwrap();
+    let bonsai = run_future(bonsai_cs_id.unwrap().load(ctx.clone(), repo.blobstore())).unwrap();
     assert_eq!(
         bonsai
             .file_changes()
@@ -400,7 +400,7 @@ fn check_bonsai_creation_with_rename(fb: FacebookInit, repo: BlobRepo) {
 
     let bonsai_cs_id =
         run_future(repo.get_bonsai_from_hg(ctx.clone(), child_cs.get_changeset_id())).unwrap();
-    let bonsai = run_future(repo.get_bonsai_changeset(ctx.clone(), bonsai_cs_id.unwrap())).unwrap();
+    let bonsai = run_future(bonsai_cs_id.unwrap().load(ctx.clone(), repo.blobstore())).unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
     let file = MPath::new("file").unwrap();
     assert!(!fc[&file].is_some());

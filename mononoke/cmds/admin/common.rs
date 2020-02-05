@@ -34,7 +34,7 @@ pub fn fetch_bonsai_changeset(
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
     helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string()).and_then({
         cloned!(ctx, repo);
-        move |bcs_id| repo.get_bonsai_changeset(ctx, bcs_id)
+        move |csid| csid.load(ctx, repo.blobstore()).from_err()
     })
 }
 

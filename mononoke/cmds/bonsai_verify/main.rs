@@ -343,7 +343,7 @@ fn subcommmand_hg_manifest_verify(
                     cloned!(ctx, repo, bad, total, total_millis);
                     move |csid| {
                         (
-                            repo.get_bonsai_changeset(ctx.clone(), csid),
+                            csid.load(ctx.clone(), repo.blobstore()).from_err(),
                             repo.get_hg_from_bonsai_changeset(ctx.clone(), csid)
                                 .and_then({
                                     cloned!(ctx, repo);

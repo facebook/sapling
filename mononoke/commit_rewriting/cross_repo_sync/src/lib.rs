@@ -664,8 +664,8 @@ where
         // Take most of below function sync_commit into here and delete. Leave pushrebase in next fn
         let (source_repo, _, _) = self.get_source_target_mover();
 
-        let cs = source_repo
-            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+        let cs = source_cs_id
+            .load(ctx.clone(), source_repo.blobstore())
             .compat()
             .await?;
         let parents: Vec<_> = cs.parents().collect();
@@ -695,8 +695,8 @@ where
         source_cs_id: ChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo, _) = self.get_source_target_mover();
-        let source_cs = source_repo
-            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+        let source_cs = source_cs_id
+            .load(ctx.clone(), source_repo.blobstore())
             .compat()
             .await?;
 
@@ -853,8 +853,8 @@ where
         source_cs_id: ChangesetId,
     ) -> Result<(), Error> {
         let (source_repo, target_repo, _) = self.get_source_target_mover();
-        let cs = source_repo
-            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+        let cs = source_cs_id
+            .load(ctx.clone(), source_repo.blobstore())
             .compat()
             .await?;
 

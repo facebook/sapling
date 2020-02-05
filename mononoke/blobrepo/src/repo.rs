@@ -66,7 +66,6 @@ use uuid::Uuid;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    get_bonsai_changeset: timeseries(Rate, Sum),
     get_bonsai_heads_maybe_stale: timeseries(Rate, Sum),
     get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
     get_raw_hg_content: timeseries(Rate, Sum),
@@ -685,15 +684,6 @@ impl BlobRepo {
             Hg(_) => fetched_from_mapping,
         }
         // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
-    }
-
-    pub fn get_bonsai_changeset(
-        &self,
-        ctx: CoreContext,
-        bonsai_cs_id: ChangesetId,
-    ) -> BoxFuture<BonsaiChangeset, Error> {
-        STATS::get_bonsai_changeset.add_value(1);
-        bonsai_cs_id.load(ctx, &self.blobstore).from_err().boxify()
     }
 
     // TODO(stash): rename to get_generation_number

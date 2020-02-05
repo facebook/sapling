@@ -12,11 +12,13 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
+use blobstore::Loadable;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
+use futures::Future as OldFuture;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::stream::Stream;
 use futures_util::future::{self, try_join, try_join_all, FutureExt, Shared};
@@ -62,17 +64,12 @@ impl ChangesetContext {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
     pub(crate) fn new(repo: RepoContext, id: ChangesetId) -> Self {
-        let bonsai_changeset = {
-            cloned!(repo);
-            async move {
-                repo.blob_repo()
-                    .get_bonsai_changeset(repo.ctx().clone(), id)
-                    .compat()
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let bonsai_changeset = bonsai_changeset.boxed().shared();
+        let bonsai_changeset = id
+            .load(repo.ctx().clone(), repo.blob_repo().blobstore())
+            .from_err()
+            .compat()
+            .boxed()
+            .shared();
         let root_fsnode_id = {
             cloned!(repo);
             async move {

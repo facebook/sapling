@@ -8,27 +8,26 @@
 
 #![deny(warnings)]
 
-use futures::Future;
-
 use anyhow::{format_err, Error};
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use futures_preview::compat::Future01CompatExt;
-use mononoke_types::{ChangesetId, DateTime, MPath};
-use std::{collections::HashMap, sync::Arc};
-use synced_commit_mapping::{
-    SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
-};
-
 use cross_repo_sync::{
     rewrite_commit_compat, update_mapping, upload_commits_compat, CommitSyncRepos, CommitSyncer,
     Syncers,
 };
+use futures::Future;
+use futures_preview::compat::Future01CompatExt;
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, DateTime, MPath};
 use sql::rusqlite::Connection as SqliteConnection;
 use sql_ext::SqlConstructors;
+use std::{collections::HashMap, sync::Arc};
+use synced_commit_mapping::{
+    SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
+};
 use tests_utils::{bookmark, CreateCommitContext};
 
 // Helper function that takes a root commit from source repo and rebases it on master bookmark
@@ -42,9 +41,8 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let bookmark_name = BookmarkName::new("master").unwrap();
-    let source_bcs = commit_syncer
-        .get_source_repo()
-        .get_bonsai_changeset(ctx.clone(), source_bcs_id)
+    let source_bcs = source_bcs_id
+        .load(ctx.clone(), commit_syncer.get_source_repo().blobstore())
         .wait()
         .unwrap();
     if !source_bcs.parents().collect::<Vec<_>>().is_empty() {

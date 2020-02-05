@@ -24,6 +24,7 @@ use crate::{
 use anyhow::{format_err, Error};
 use backsyncer::backsync_all_latest;
 use backsyncer::TargetRepoDbs;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
@@ -703,8 +704,8 @@ impl PushRedirector {
                 .map(move |(small_bcs_id, target_repo_bcs_id)| {
                     cloned!(ctx, target_repo);
                     async move {
-                        let target_bcs = target_repo
-                            .get_bonsai_changeset(ctx, target_repo_bcs_id)
+                        let target_bcs = target_repo_bcs_id
+                            .load(ctx, target_repo.blobstore())
                             .compat()
                             .await?;
 
