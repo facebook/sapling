@@ -12,8 +12,10 @@ use mpatch::mpatch::get_full_text;
 
 use types::Key;
 
-use crate::datastore::{DataStore, Delta, Metadata};
-use crate::unionstore::UnionStore;
+use crate::{
+    datastore::{DataStore, Delta, Metadata, RemoteDataStore},
+    unionstore::UnionStore,
+};
 
 pub type UnionDataStore<T> = UnionStore<T>;
 
@@ -90,6 +92,22 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
         }
 
         Ok(None)
+    }
+}
+
+impl<T: RemoteDataStore> RemoteDataStore for UnionDataStore<T> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+        let initial_keys = Ok(keys.to_vec());
+        self.into_iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => {
+                    store.prefetch(&missing_keys)?;
+                    store.get_missing(&missing_keys)
+                }
+                Err(e) => Err(e),
+            })?;
+
+        Ok(())
     }
 }
 

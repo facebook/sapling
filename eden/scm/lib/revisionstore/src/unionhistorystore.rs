@@ -10,8 +10,10 @@ use anyhow::Result;
 
 use types::{Key, NodeInfo};
 
-use crate::historystore::HistoryStore;
-use crate::unionstore::UnionStore;
+use crate::{
+    historystore::{HistoryStore, RemoteHistoryStore},
+    unionstore::UnionStore,
+};
 
 pub type UnionHistoryStore<T> = UnionStore<T>;
 
@@ -25,6 +27,22 @@ impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
         }
 
         Ok(None)
+    }
+}
+
+impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHistoryStore<T> {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+        let initial_keys = Ok(keys.to_vec());
+        self.into_iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => {
+                    store.prefetch(&missing_keys)?;
+                    store.get_missing(&missing_keys)
+                }
+                Err(e) => Err(e),
+            })?;
+
+        Ok(())
     }
 }
 

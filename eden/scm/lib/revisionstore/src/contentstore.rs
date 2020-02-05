@@ -19,6 +19,8 @@ use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
     indexedlogdatastore::IndexedLogDataStore,
     localstore::LocalStore,
+    memcache::MemcacheStore,
+    multiplexstore::MultiplexDeltaStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
     remotestore::RemoteStore,
     uniondatastore::UnionDataStore,
@@ -131,6 +133,7 @@ pub struct ContentStoreBuilder<'a> {
     config: &'a ConfigSet,
     remotestore: Option<Box<dyn RemoteStore>>,
     suffix: Option<&'a Path>,
+    memcachestore: Option<MemcacheStore>,
 }
 
 impl<'a> ContentStoreBuilder<'a> {
@@ -140,6 +143,7 @@ impl<'a> ContentStoreBuilder<'a> {
             no_local_store: false,
             config,
             remotestore: None,
+            memcachestore: None,
             suffix: None,
         }
     }
@@ -161,6 +165,11 @@ impl<'a> ContentStoreBuilder<'a> {
 
     pub fn remotestore(mut self, remotestore: Box<dyn RemoteStore>) -> Self {
         self.remotestore = Some(remotestore);
+        self
+    }
+
+    pub fn memcachestore(mut self, memcachestore: MemcacheStore) -> Self {
+        self.memcachestore = Some(memcachestore);
         self
     }
 
@@ -212,9 +221,45 @@ impl<'a> ContentStoreBuilder<'a> {
 
         let remote_store: Option<Arc<dyn RemoteDataStore>> =
             if let Some(remotestore) = self.remotestore {
-                let store = remotestore.datastore(shared_pack_store.clone());
-                datastore.add(Box::new(store.clone()));
-                Some(store)
+                let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
+                    // Combine the memcache store with the other stores. The intent is that all
+                    // remote requests will first go to the memcache store, and only reach the
+                    // slower remote store after that.
+                    //
+                    // If data isn't found in the memcache store, once fetched from the remote
+                    // store it will be written to the local cache, and will populate the memcache
+                    // store, so other clients and future requests won't need to go to a network
+                    // store.
+                    let memcachedatastore = memcachestore.datastore(shared_pack_store.clone());
+
+                    let mut multiplexstore = MultiplexDeltaStore::new();
+                    multiplexstore.add_store(Box::new(memcachestore));
+                    multiplexstore.add_store(shared_pack_store.clone());
+
+                    (
+                        Some(memcachedatastore),
+                        Box::new(multiplexstore) as Box<dyn MutableDeltaStore>,
+                    )
+                } else {
+                    (
+                        None,
+                        shared_pack_store.clone() as Box<dyn MutableDeltaStore>,
+                    )
+                };
+
+                let store = remotestore.datastore(shared_store);
+
+                let remotestores = if let Some(cache) = cache {
+                    let mut remotestores = UnionDataStore::new();
+                    remotestores.add(cache.clone());
+                    remotestores.add(store.clone());
+                    Arc::new(remotestores)
+                } else {
+                    store
+                };
+
+                datastore.add(Box::new(remotestores.clone()));
+                Some(remotestores)
             } else {
                 None
             };
@@ -258,6 +303,13 @@ mod tests {
             "remotefilelog",
             "cachepath",
             Some(dir.as_ref().to_str().unwrap()),
+            &Default::default(),
+        );
+
+        config.set(
+            "remotefilelog",
+            "cachekey",
+            Some("cca:hg:rust_unittest"),
             &Default::default(),
         );
 
@@ -491,5 +543,82 @@ mod tests {
         let config = make_config(&cachedir);
         assert!(ContentStoreBuilder::new(&config).build().is_err());
         Ok(())
+    }
+
+    #[cfg(fbcode_build)]
+    mod fbcode_tests {
+        use super::*;
+
+        use memcache::MockMemcache;
+
+        use lazy_static::lazy_static;
+
+        lazy_static! {
+            static ref MOCK: Arc<MockMemcache> = Arc::new(MockMemcache::new());
+        }
+
+        #[fbinit::test]
+        fn test_memcache_get() -> Result<()> {
+            let _mock = Arc::clone(&*MOCK);
+
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_config(&cachedir);
+
+            let k = key("a", "1");
+            let data = Bytes::from(&[1, 2, 3, 4][..]);
+
+            let mut map = HashMap::new();
+            map.insert(k.clone(), data.clone());
+            let mut remotestore = FakeRemoteStore::new();
+            remotestore.data(map);
+
+            let memcache = MemcacheStore::new(&config)?;
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Box::new(remotestore))
+                .memcachestore(memcache.clone())
+                .build()?;
+            let data_get = store.get(&k)?;
+            assert_eq!(data_get.unwrap(), data);
+
+            let memcache_data = memcache.get(&k)?;
+            assert_eq!(memcache_data.unwrap(), data);
+            Ok(())
+        }
+
+        #[fbinit::test]
+        fn test_memcache_get_large() -> Result<()> {
+            let _mock = Arc::clone(&*MOCK);
+
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_config(&cachedir);
+
+            let k = key("a", "1");
+
+            let data = (0..10 * 1024 * 1024)
+                .map(|_| rand::random::<u8>())
+                .collect::<Bytes>();
+            assert_eq!(data.len(), 10 * 1024 * 1024);
+
+            let mut map = HashMap::new();
+            map.insert(k.clone(), data.clone());
+            let mut remotestore = FakeRemoteStore::new();
+            remotestore.data(map);
+
+            let memcache = MemcacheStore::new(&config)?;
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Box::new(remotestore))
+                .memcachestore(memcache.clone())
+                .build()?;
+            let data_get = store.get(&k)?;
+            assert_eq!(data_get.unwrap(), data);
+
+            let memcache_data = memcache.get(&k)?;
+            assert_eq!(memcache_data, None);
+            Ok(())
+        }
     }
 }

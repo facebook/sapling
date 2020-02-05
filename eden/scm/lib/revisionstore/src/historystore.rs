@@ -56,3 +56,9 @@ impl<T: MutableHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> Mutabl
         T::flush(self)
     }
 }
+
+impl<T: RemoteHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteHistoryStore for U {
+    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+        T::prefetch(self, keys)
+    }
+}

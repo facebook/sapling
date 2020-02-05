@@ -19,11 +19,15 @@ pub enum Error {
     ConfigNotSet(String),
 }
 
-fn get_repo_name(config: &ConfigSet) -> Result<String> {
+pub fn get_str_config(config: &ConfigSet, section: &str, name: &str) -> Result<String> {
     let name = config
-        .get("remotefilelog", "reponame")
-        .ok_or_else(|| Error::ConfigNotSet("remotefilelog.reponame".into()))?;
+        .get(section, name)
+        .ok_or_else(|| Error::ConfigNotSet(format!("{}.{}", section, name).into()))?;
     Ok(String::from_utf8(name.to_vec())?)
+}
+
+fn get_repo_name(config: &ConfigSet) -> Result<String> {
+    get_str_config(config, "remotefilelog", "reponame")
 }
 
 fn get_cache_path(config: &ConfigSet) -> Result<PathBuf> {

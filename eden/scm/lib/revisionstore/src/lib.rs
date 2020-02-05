@@ -11,9 +11,12 @@
 mod contentstore;
 mod dataindex;
 mod edenapi;
+#[cfg(fbcode_build)]
+mod facebook;
 mod fanouttable;
 mod historyindex;
 mod indexedloghistorystore;
+mod memcache;
 mod metadatastore;
 mod remotestore;
 mod sliceext;
@@ -47,6 +50,7 @@ pub use crate::historystore::{HistoryStore, MutableHistoryStore, RemoteHistorySt
 pub use crate::indexedlogdatastore::IndexedLogDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHistoryStore;
 pub use crate::localstore::LocalStore;
+pub use crate::memcache::MemcacheStore;
 pub use crate::metadatastore::{MetadataStore, MetadataStoreBuilder};
 pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
