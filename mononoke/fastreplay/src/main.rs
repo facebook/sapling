@@ -449,7 +449,7 @@ async fn do_main<'a>(
             }
 
             let mut child = command.spawn()?;
-            let stdout = child.stdout().take().expect("Stdout was piped()");
+            let stdout = child.stdout.take().expect("Stdout was piped()");
             fastreplay(&opts, stdout, &logger, &scuba, &repos, &count).await?;
 
             // Wait for child to terminate
