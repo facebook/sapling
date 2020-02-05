@@ -107,19 +107,20 @@ async fn dispatch(
         .await
         .context("While parsing request")?;
 
+    scuba.add("reponame", reponame);
+    let client = dispatcher.client(scuba.clone());
+
     let stream = match parsed_req {
-        Request::Gettreepack(args) => dispatcher.client().gettreepack(args.0).compat(),
-        Request::Getbundle(args) => dispatcher.client().getbundle(args.0).compat(),
-        Request::GetpackV1(args) => dispatcher
-            .client()
+        Request::Gettreepack(args) => client.gettreepack(args.0).compat(),
+        Request::Getbundle(args) => client.getbundle(args.0).compat(),
+        Request::GetpackV1(args) => client
             .getpackv1(Box::new(
                 stream::iter(args.entries.into_iter().map(Ok).collect::<Vec<_>>())
                     .boxed()
                     .compat(),
             ))
             .compat(),
-        Request::GetpackV2(args) => dispatcher
-            .client()
+        Request::GetpackV2(args) => client
             .getpackv2(Box::new(
                 stream::iter(args.entries.into_iter().map(Ok).collect::<Vec<_>>())
                     .boxed()
@@ -127,8 +128,6 @@ async fn dispatch(
             ))
             .compat(),
     };
-
-    scuba.add("reponame", reponame);
 
     scuba.add("command", req.normal.command.as_ref());
     if let Some(args) = req.normal.args.as_ref() {
@@ -230,6 +229,8 @@ async fn bootstrap_repositories<'a>(
         let logger = logger.new(o!("repo" => name.clone()));
 
         let bootstrap_ctx = {
+            let mut scuba = scuba.clone();
+            scuba.add("reponame", name.clone());
             let session = SessionContainer::new_with_defaults(fb);
             session.new_context(logger.clone(), scuba.clone())
         };
@@ -288,7 +289,6 @@ async fn bootstrap_repositories<'a>(
             let dispatcher = FastReplayDispatcher::new(
                 fb,
                 logger.clone(),
-                scuba.clone(),
                 repo,
                 remote_args_blobstore,
                 hash_validation_percentage,
@@ -358,7 +358,7 @@ async fn fastreplay<R: AsyncRead + Unpin>(
 
         let config = opts.config.get();
 
-        if load > config.max_concurrency() {
+        if load > config.max_concurrency()?.get() {
             warn!(
                 &logger,
                 "Waiting for some requests to complete (load: {})...", load
@@ -381,7 +381,9 @@ async fn fastreplay<R: AsyncRead + Unpin>(
                 count.fetch_add(1, Ordering::Relaxed);
 
                 // NOTE: We clone values here because we need a 'static future to spawn.
-                cloned!(logger, scuba, repos, opts.aliases, count);
+                cloned!(logger, mut scuba, repos, opts.aliases, count);
+
+                scuba.sampled(config.scuba_sampling_target()?);
 
                 let task = async move {
                     defer!({

@@ -18,7 +18,6 @@ use std::sync::Arc;
 
 pub struct FastReplayDispatcher {
     fb: FacebookInit,
-    scuba: ScubaSampleBuilder,
     logger: Logger,
     repo: MononokeRepo,
     wireproto_logging: Arc<WireprotoLogging>,
@@ -30,7 +29,6 @@ impl FastReplayDispatcher {
     pub fn new(
         fb: FacebookInit,
         logger: Logger,
-        scuba: ScubaSampleBuilder,
         repo: MononokeRepo,
         remote_args_blobstore: Option<Arc<dyn Blobstore>>,
         hash_validation_percentage: usize,
@@ -41,7 +39,6 @@ impl FastReplayDispatcher {
         Ok(Self {
             fb,
             logger,
-            scuba,
             repo,
             wireproto_logging: Arc::new(noop_wireproto),
             remote_args_blobstore,
@@ -49,8 +46,8 @@ impl FastReplayDispatcher {
         })
     }
 
-    pub fn client(&self) -> RepoClient {
-        let logging = LoggingContainer::new(self.logger.clone(), self.scuba.clone());
+    pub fn client(&self, scuba: ScubaSampleBuilder) -> RepoClient {
+        let logging = LoggingContainer::new(self.logger.clone(), scuba);
         let session = SessionContainer::new_with_defaults(self.fb);
 
         RepoClient::new(
@@ -69,7 +66,7 @@ impl FastReplayDispatcher {
 
     pub async fn load_remote_args(&self, key: String) -> Result<String, Error> {
         let session = SessionContainer::new_with_defaults(self.fb);
-        let ctx = session.new_context(self.logger.clone(), self.scuba.clone());
+        let ctx = session.new_context(self.logger.clone(), ScubaSampleBuilder::with_discard());
 
         let blobstore = self
             .remote_args_blobstore

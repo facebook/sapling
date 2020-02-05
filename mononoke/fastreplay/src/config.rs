@@ -6,8 +6,10 @@
  * directory of this source tree.
  */
 
+use anyhow::{Context, Error};
 use serde::Deserialize;
-use std::convert::TryInto;
+use std::convert::TryFrom;
+use std::num::NonZeroU64;
 
 use fastreplay_structs::FastReplayConfig as RawFastReplayConfig;
 
@@ -26,6 +28,7 @@ impl Default for FastReplayConfig {
             inner: RawFastReplayConfig {
                 admission_rate: 100,
                 max_concurrency: 50,
+                scuba_sampling_target: 1,
             },
         }
     }
@@ -36,9 +39,28 @@ impl FastReplayConfig {
         self.inner.admission_rate
     }
 
-    pub fn max_concurrency(&self) -> u64 {
-        // NOTE: The config comes as an i64. it should be > 0 since we validate that, but let's be
+    pub fn max_concurrency(&self) -> Result<NonZeroU64, Error> {
+        // NOTE: The config comes as an i64. It should be > 0 since we validate that, but let's be
         // safe if not.
-        self.inner.max_concurrency.try_into().unwrap_or(50)
+        NonZeroU64::new(u64::try_from(self.inner.max_concurrency)?)
+            .ok_or_else(|| Error::msg("invalid scuba_sampling_target"))
+            .with_context(|| {
+                format!(
+                    "While converting {:?} to max_concurrency",
+                    self.inner.max_concurrency
+                )
+            })
+    }
+
+    pub fn scuba_sampling_target(&self) -> Result<NonZeroU64, Error> {
+        // NOTE: The config comes as an i64. Same as above.
+        NonZeroU64::new(u64::try_from(self.inner.scuba_sampling_target)?)
+            .ok_or_else(|| Error::msg("invalid scuba_sampling_target"))
+            .with_context(|| {
+                format!(
+                    "While converting {:?} to scuba_sampling_target",
+                    self.inner.scuba_sampling_target
+                )
+            })
     }
 }

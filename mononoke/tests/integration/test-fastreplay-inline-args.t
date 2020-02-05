@@ -52,6 +52,7 @@ Check logging structure
       "recorded_duration_us": *, (glob)
       "replay_delay_s": * (glob)
       "replay_response_size": *, (glob)
+      "sample_rate": 1,
       "time": * (glob)
     },
     "normal": {
@@ -73,7 +74,8 @@ Check logging structure
   $ cat > "$live_config" << EOF
   > {
   >   "admission_rate": 0,
-  >   "max_concurrency": 10
+  >   "max_concurrency": 10,
+  >   "scuba_sampling_target": 1
   > }
   > EOF
   $ fastreplay  --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep "not admitted"
@@ -87,7 +89,8 @@ Check logging structure
   $ cat > "$live_config" << EOF
   > {
   >   "admission_rate": 100,
-  >   "max_concurrency": 1
+  >   "max_concurrency": 1,
+  >   "scuba_sampling_target": 1
   > }
   > EOF
   $ quiet fastreplay  --live-config "file:${live_config}" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
