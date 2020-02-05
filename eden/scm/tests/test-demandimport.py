@@ -119,7 +119,6 @@ print(
     util.safehasattr(contextlibimp, "unknownattr"),
 )
 
-demandimport.disable()
 os.environ["HGDEMANDIMPORT"] = "disable"
 # this enable call should not actually enable demandimport!
 demandimport.enable()

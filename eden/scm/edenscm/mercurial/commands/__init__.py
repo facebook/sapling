@@ -71,7 +71,7 @@ from ..pycompat import range
 from . import cmdtable
 
 
-with hgdemandimport.disabled():
+with hgdemandimport.deactivated():
     # Importing these modules have side effect on the command table.
     from . import (  # noqa: F401
         blackbox,

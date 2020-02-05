@@ -85,7 +85,6 @@ demandimport.init(ignore)
 
 # Re-export.
 isenabled = demandimport.isenabled
-disable = demandimport.disable
 deactivated = demandimport.deactivated
 
 
@@ -96,15 +95,3 @@ def enable():
         and os.environ.get("HGDEMANDIMPORT") != "disable"
     ):
         demandimport.enable()
-
-
-@contextlib.contextmanager
-def disabled():
-    if isenabled():
-        disable()
-        try:
-            yield
-        finally:
-            enable()
-    else:
-        yield

@@ -56,24 +56,61 @@ class _lazyloaderex(importlib.util.LazyLoader):
             super().exec_module(module)
 
 
-# This is 3.6+ because with Python 3.5 it isn't possible to lazily load
-# extensions. See the discussion in https://python.org/sf/26186 for more.
-# pyre-fixme[6]: Expected `Loader` for 1st param but got `Type[ExtensionFileLoader]`.
-_extensions_loader = _lazyloaderex.factory(importlib.machinery.ExtensionFileLoader)
-# pyre-fixme[6]: Expected `Loader` for 1st param but got `Type[SourcelessFileLoader]`.
-_bytecode_loader = _lazyloaderex.factory(importlib.machinery.SourcelessFileLoader)
-# pyre-fixme[6]: Expected `Loader` for 1st param but got `Type[SourceFileLoader]`.
-_source_loader = _lazyloaderex.factory(importlib.machinery.SourceFileLoader)
+class LazyFinder(object):
+    """A wrapper around a ``MetaPathFinder`` that makes loaders lazy.
 
+    ``sys.meta_path`` finders have their ``find_spec()`` called to locate a
+    module. This returns a ``ModuleSpec`` if found or ``None``. The
+    ``ModuleSpec`` has a ``loader`` attribute, which is called to actually
+    load a module.
 
-def _makefinder(path):
-    return importlib.machinery.FileFinder(
-        path,
-        # This is the order in which loaders are passed in in core Python.
-        (_extensions_loader, importlib.machinery.EXTENSION_SUFFIXES),
-        (_source_loader, importlib.machinery.SOURCE_SUFFIXES),
-        (_bytecode_loader, importlib.machinery.BYTECODE_SUFFIXES),
-    )
+    Our class wraps an existing finder and overloads its ``find_spec()`` to
+    replace the ``loader`` with our lazy loader proxy.
+
+    We have to use __getattribute__ to proxy the instance because some meta
+    path finders don't support monkeypatching.
+    """
+
+    __slots__ = ("_finder",)
+
+    def __init__(self, finder):
+        object.__setattr__(self, "_finder", finder)
+
+    def __repr__(self):
+        return "<LazyFinder for %r>" % object.__getattribute__(self, "_finder")
+
+    # __bool__ is canonical Python 3. But check-code insists on __nonzero__ being
+    # defined via `def`.
+    def __nonzero__(self):
+        return bool(object.__getattribute__(self, "_finder"))
+
+    __bool__ = __nonzero__
+
+    def __getattribute__(self, name):
+        if name in ("_finder", "find_spec"):
+            return object.__getattribute__(self, name)
+
+        return getattr(object.__getattribute__(self, "_finder"), name)
+
+    def __delattr__(self, name):
+        return delattr(object.__getattribute__(self, "_finder"))
+
+    def __setattr__(self, name, value):
+        return setattr(object.__getattribute__(self, "_finder"), name, value)
+
+    def find_spec(self, *args, **kwargs):
+        finder = object.__getattribute__(self, "_finder")
+        spec = finder.find_spec(*args, **kwargs)
+
+        # Lazy loader requires exec_module().
+        if (
+            spec is not None
+            and spec.loader is not None
+            and getattr(spec.loader, "exec_module", None) is not None
+        ):
+            spec.loader = _lazyloaderex(spec.loader)
+
+        return spec
 
 
 ignore = set()
@@ -85,19 +122,19 @@ def init(ignorelist):
 
 
 def isenabled():
-    return _makefinder in sys.path_hooks and not _deactivated
-
-
-def disable():
-    try:
-        while True:
-            sys.path_hooks.remove(_makefinder)
-    except ValueError:
-        pass
+    return not _deactivated and any(
+        isinstance(finder, LazyFinder) for finder in sys.meta_path
+    )
 
 
 def enable():
-    sys.path_hooks.insert(0, _makefinder)
+    new_finders = []
+    for finder in sys.meta_path:
+        new_finders.append(
+            LazyFinder(finder) if not isinstance(finder, LazyFinder) else finder
+        )
+
+    sys.meta_path[:] = new_finders
 
 
 @contextlib.contextmanager

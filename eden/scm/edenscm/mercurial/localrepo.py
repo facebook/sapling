@@ -996,7 +996,7 @@ class localrepository(object):
         # obscure and false import errors at runtime.
         from edenscm import hgdemandimport
 
-        with hgdemandimport.disabled():
+        with hgdemandimport.deactivated():
             from . import eden_dirstate as dirstate_reimplementation
 
         return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
