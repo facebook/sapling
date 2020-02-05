@@ -1015,7 +1015,7 @@ class buildembedded(Command):
     def _zip_pyc_files(self, zipname):
         """Modify a zip archive to include edenscm .pyc files"""
         sourcedir = pjoin(scriptdir, "edenscm")
-        with PyZipFile3(zipname, "a") as z:
+        with zipfile.PyZipFile(zipname, "a") as z:
             # Write .py files for better traceback.
             for root, _dirs, files in os.walk(sourcedir):
                 for basename in files:
@@ -1025,7 +1025,7 @@ class buildembedded(Command):
                         inzippath = sourcepath[len(scriptdir) + 1 :]
                         z.write(sourcepath, inzippath)
             # Compile and write .pyc files.
-            z.writepy(sourcedir, filterfunc=lambda f: not f.endswith("pycompat3.py"))
+            z.writepy(sourcedir)
 
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
@@ -1092,90 +1092,6 @@ class buildembedded(Command):
         self._copy_other(embdir)
 
 
-class PyZipFile3(zipfile.PyZipFile):
-    # Copied from python3 so we have the filterfunc functionality
-    def writepy(self, pathname, basename="", filterfunc=None):
-        """Add all files from "pathname" to the ZIP archive.
-
-        If pathname is a package directory, search the directory and
-        all package subdirectories recursively for all *.py and enter
-        the modules into the archive.  If pathname is a plain
-        directory, listdir *.py and enter all modules.  Else, pathname
-        must be a Python *.py file and the module will be put into the
-        archive.  Added modules are always module.pyc.
-        This method will compile the module.py into module.pyc if
-        necessary.
-        If filterfunc(pathname) is given, it is called with every argument.
-        When it is False, the file or directory is skipped.
-        """
-        if filterfunc and not filterfunc(pathname):
-            if self.debug:
-                label = 'path' if os.path.isdir(pathname) else 'file'
-                print('%s %r skipped by filterfunc' % (label, pathname))
-            return
-        dir, name = os.path.split(pathname)
-        if os.path.isdir(pathname):
-            initname = os.path.join(pathname, "__init__.py")
-            if os.path.isfile(initname):
-                # This is a package directory, add it
-                if basename:
-                    basename = "%s/%s" % (basename, name)
-                else:
-                    basename = name
-                if self.debug:
-                    print("Adding package in", pathname, "as", basename)
-                fname, arcname = self._get_codename(initname[0:-3], basename)
-                if self.debug:
-                    print("Adding", arcname)
-                self.write(fname, arcname)
-                dirlist = os.listdir(pathname)
-                dirlist.remove("__init__.py")
-                # Add all *.py files and package subdirectories
-                for filename in dirlist:
-                    path = os.path.join(pathname, filename)
-                    root, ext = os.path.splitext(filename)
-                    if os.path.isdir(path):
-                        if os.path.isfile(os.path.join(path, "__init__.py")):
-                            # This is a package directory, add it
-                            self.writepy(path, basename,
-                                         filterfunc=filterfunc)  # Recursive call
-                    elif ext == ".py":
-                        if filterfunc and not filterfunc(path):
-                            if self.debug:
-                                print('file %r skipped by filterfunc' % path)
-                            continue
-                        fname, arcname = self._get_codename(path[0:-3],
-                                                            basename)
-                        if self.debug:
-                            print("Adding", arcname)
-                        self.write(fname, arcname)
-            else:
-                # This is NOT a package directory, add its files at top level
-                if self.debug:
-                    print("Adding files from directory", pathname)
-                for filename in os.listdir(pathname):
-                    path = os.path.join(pathname, filename)
-                    root, ext = os.path.splitext(filename)
-                    if ext == ".py":
-                        if filterfunc and not filterfunc(path):
-                            if self.debug:
-                                print('file %r skipped by filterfunc' % path)
-                            continue
-                        fname, arcname = self._get_codename(path[0:-3],
-                                                            basename)
-                        if self.debug:
-                            print("Adding", arcname)
-                        self.write(fname, arcname)
-        else:
-            if pathname[-3:] != ".py":
-                raise RuntimeError(
-                    'Files added with writepy() must end with ".py"')
-            fname, arcname = self._get_codename(pathname[0:-3], basename)
-            if self.debug:
-                print("Adding file", arcname)
-            self.write(fname, arcname)
-
-
 class hgbuildpy(build_py):
     def finalize_options(self):
         build_py.finalize_options(self)
@@ -1195,20 +1111,6 @@ class hgbuildpy(build_py):
 
                 exts.append(osutilbuild.ffi.distutils_extension())
             self.distribution.ext_modules = exts
-
-    def find_package_modules(self, package, package_dir):
-        # build_py is an old-style class, so we can't use super() here.
-        modules = build_py.find_package_modules(self, package, package_dir)
-        # Exclude edenscm/mercurial/pycompat3.py from Python 2 builds.
-        if package == "edenscm.mercurial":
-            orig_len = len(modules)
-            modules = [
-                (pkg, name, path)
-                for (pkg, name, path) in modules
-                if name != "pycompat3"
-            ]
-            assert len(modules) < orig_len, "error excluding pycompat3"
-        return modules
 
     def run(self):
         basepath = os.path.join(self.build_lib, "edenscm/mercurial")

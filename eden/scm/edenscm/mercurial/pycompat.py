@@ -122,7 +122,7 @@ if sys.version_info[0] >= 3:
             s = s.decode("utf-8")
         return s
 
-    from .pycompat3 import ABC
+    ABC = abc.ABC
 
 
 else:
