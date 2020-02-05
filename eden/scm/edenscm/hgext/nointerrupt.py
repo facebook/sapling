@@ -34,9 +34,9 @@ import sys
 from edenscm.mercurial import cmdutil, commands, dispatch, extensions
 
 
-def sigintprintwarninghandlerfactory(oldsiginthandler, msg):
+def sigintprintwarninghandlerfactory(oldsiginthandler, ui, msg):
     def sigint(*args):
-        sys.stderr.write(msg)
+        ui.warn(msg)
         signal.signal(signal.SIGINT, oldsiginthandler)
 
     return sigint
@@ -70,7 +70,8 @@ def nointerruptcmd(orig, ui, options, cmd, cmdfunc):
                 "==========================\n",
             )
             signal.signal(
-                signal.SIGINT, sigintprintwarninghandlerfactory(oldsiginthandler, msg)
+                signal.SIGINT,
+                sigintprintwarninghandlerfactory(oldsiginthandler, ui, msg),
             )
         except AttributeError:
             pass
