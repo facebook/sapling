@@ -45,7 +45,7 @@ pub fn describecall_py(py: Python, desc: PyObject, body: PyObject) -> PyResult<P
     body.call(py, NoArgs, None)
 }
 
-pub fn renderstack_py(_py: Python) -> PyResult<Vec<(String)>> {
+pub fn renderstack_py(_py: Python) -> PyResult<Vec<String>> {
     Ok(render_stack())
 }
 
