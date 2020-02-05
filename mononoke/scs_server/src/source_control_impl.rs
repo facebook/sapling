@@ -87,6 +87,19 @@ impl SourceControlServiceImpl {
         let session_id = generate_session_id();
         scuba.add("session_uuid", session_id.to_string());
 
+        const CLIENT_HEADERS: &[&str] = &[
+            "client_id",
+            "client_type",
+            "client_correlator",
+            "proxy_client_id",
+        ];
+        for &header in CLIENT_HEADERS.iter() {
+            let value = req_ctxt.header(header).map_err(errors::internal_error)?;
+            if let Some(value) = value {
+                scuba.add(header, value);
+            }
+        }
+
         let identities = req_ctxt.identities().map_err(errors::internal_error)?;
         scuba.add(
             "identities",
