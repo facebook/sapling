@@ -1,6 +1,5 @@
 #require py2
   $ enable remotenames
-  $ FILTERPWD="sed s%`pwd`/%%g"
   > mkcommit()
   > {
   >    echo $1 > $1
@@ -24,7 +23,7 @@ Continue testing
 
   $ mkcommit c
   $ cd ..
-  $ hg clone alpha beta | $FILTERPWD
+  $ hg clone alpha beta
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd beta
@@ -40,15 +39,15 @@ Continue testing
   > alpha = ../alpha
   > beta = ../beta
   > EOF
-  $ hg pull | $FILTERPWD
-  pulling from alpha
+  $ hg pull
+  pulling from $TESTTMP/alpha
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  $ hg pull beta | $FILTERPWD
-  pulling from beta
+  $ hg pull beta
+  pulling from $TESTTMP/beta
   searching for changes
   adding changesets
   adding manifests
