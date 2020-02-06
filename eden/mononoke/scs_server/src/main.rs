@@ -21,7 +21,7 @@ use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures_ext::FutureExt as Futures01Ext;
-use futures_preview::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures_preview::{compat::Future01CompatExt, FutureExt};
 use metaconfig_parser::RepoConfigs;
 use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
@@ -95,21 +95,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     scuba_builder.add_common_server_data();
 
-    let mononoke = Arc::new(
-        runtime.block_on(
-            Mononoke::new(
-                fb,
-                logger.clone(),
-                repo_configs,
-                args::parse_mysql_options(&matches),
-                caching,
-                args::parse_readonly_storage(&matches),
-                args::parse_blobstore_options(&matches),
-            )
-            .boxed()
-            .compat(),
-        )?,
-    );
+    let mononoke = Arc::new(runtime.block_on_std(Mononoke::new(
+        fb,
+        logger.clone(),
+        repo_configs,
+        args::parse_mysql_options(&matches),
+        caching,
+        args::parse_readonly_storage(&matches),
+        args::parse_blobstore_options(&matches),
+    ))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
