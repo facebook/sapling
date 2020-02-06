@@ -49,5 +49,41 @@ void StatsFetchContext::merge(const StatsFetchContext& other) {
   }
 }
 
+uint64_t StatsFetchContext::countFetchesOfTypeAndOrigin(
+    ObjectType type,
+    Origin origin) const {
+  XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
+      << "type is out of range: " << type;
+  XCHECK(origin < ObjectFetchContext::kOriginEnumMax)
+      << "origin is out of range: " << type;
+  return counts_[type][origin].load(std::memory_order_acquire);
+}
+
+FetchStatistics StatsFetchContext::computeStatistics() const {
+  auto computePercent = [&](uint64_t n, uint64_t d) -> unsigned short {
+    DCHECK_LE(n, d) << n << " > " << d;
+    if (d == 0) {
+      return 0;
+    }
+    return (1000 * n / d + 5) / 10;
+  };
+
+  auto computeAccessStats = [&](ObjectFetchContext::ObjectType type) {
+    uint64_t fromMemory = counts_[type][ObjectFetchContext::FromMemoryCache];
+    uint64_t fromDisk = counts_[type][ObjectFetchContext::FromDiskCache];
+    uint64_t fromBackingStore =
+        counts_[type][ObjectFetchContext::FromBackingStore];
+    uint64_t total = fromMemory + fromDisk + fromBackingStore;
+    return FetchStatistics::Access{
+        total, computePercent(fromMemory + fromDisk, total)};
+  };
+
+  auto result = FetchStatistics{};
+  result.tree = computeAccessStats(ObjectFetchContext::Tree);
+  result.blob = computeAccessStats(ObjectFetchContext::Blob);
+  result.metadata = computeAccessStats(ObjectFetchContext::BlobMetadata);
+  return result;
+}
+
 } // namespace eden
 } // namespace facebook

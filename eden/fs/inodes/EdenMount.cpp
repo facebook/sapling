@@ -878,7 +878,19 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
             return result;
           })
-      .thenTry([this, stopWatch](Try<CheckoutResult>&& result) {
+      .thenTry([this, ctx, stopWatch, oldParents, snapshotHash](
+                   Try<CheckoutResult>&& result) {
+        auto fetchStats = ctx->getFetchContext().computeStatistics();
+        XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
+                   << this->getPath() << " from " << oldParents << " to "
+                   << snapshotHash << " accessed "
+                   << fetchStats.tree.accessCount << " trees ("
+                   << fetchStats.tree.cacheHitRate << "% chr), "
+                   << fetchStats.blob.accessCount << " blobs ("
+                   << fetchStats.blob.cacheHitRate << "% chr), and "
+                   << fetchStats.metadata.accessCount << " metadata ("
+                   << fetchStats.metadata.cacheHitRate << "% chr).";
+
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
         this->serverState_->getStructuredLogger()->logEvent(
