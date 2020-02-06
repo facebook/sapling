@@ -17,7 +17,7 @@ function verify_wc() {
      crossrepo verify-wc "$large_repo_commit"
 }
 
-function init_large_small_repo() {
+function create_large_small_repo() {
   REPOTYPE="blob_files"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=1 REPONAME=small-mon setup_common_config "$REPOTYPE"
@@ -81,13 +81,17 @@ EOF
   export SMALL_MASTER_BONSAI
   SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
 
+  echo "Adding synced mapping entry"
+  add_synced_commit_mapping_entry "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" \
+   "$REPOIDLARGE" "$LARGE_MASTER_BONSAI"
+}
+
+function init_large_small_repo() {
+  create_large_small_repo
   echo "Starting Mononoke server"
   mononoke "$@"
   wait_for_mononoke
 
-  echo "Adding synced mapping entry"
-  add_synced_commit_mapping_entry "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" \
-   "$REPOIDLARGE" "$LARGE_MASTER_BONSAI"
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL, 'backsync_from_$REPOIDLARGE', 2)";
 }
 

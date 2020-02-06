@@ -17,6 +17,7 @@ use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
+use blobstore_factory::make_sql_factory;
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -36,7 +37,7 @@ use futures_preview::StreamExt as NewStreamExt;
 use identity::Identity;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
-    CommitSyncConfig, CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
+    CommitSyncConfig, CommonConfig, RepoConfig, SourceControlServiceMonitoring,
     SourceControlServiceParams,
 };
 use mononoke_types::{
@@ -47,8 +48,10 @@ use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 use sql_ext::MysqlOptions;
+#[cfg(test)]
+use sql_ext::SqlConstructors;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
-use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
+use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use unodes::{derive_unodes, RootUnodeManifestMapping};
 use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
 
@@ -100,18 +103,19 @@ pub async fn open_synced_commit_mapping(
     config: RepoConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-) -> Result<SqlSyncedCommitMapping, Error> {
-    let name = SqlSyncedCommitMapping::LABEL;
-    match config.storage_config.dbconfig {
-        MetadataDBConfig::LocalDB { path } => {
-            SqlSyncedCommitMapping::with_sqlite_path(path.join(name), readonly_storage.0)
-        }
-        MetadataDBConfig::Mysql { db_address, .. } => {
-            SqlSyncedCommitMapping::with_xdb(fb, db_address, mysql_options, readonly_storage.0)
-                .compat()
-                .await
-        }
-    }
+    logger: &Logger,
+) -> Result<Arc<SqlSyncedCommitMapping>, Error> {
+    let sql_factory = make_sql_factory(
+        fb,
+        config.storage_config.dbconfig,
+        mysql_options,
+        readonly_storage,
+        logger.clone(),
+    )
+    .compat()
+    .await?;
+
+    sql_factory.open::<SqlSyncedCommitMapping>().compat().await
 }
 
 impl Repo {
@@ -130,9 +134,14 @@ impl Repo {
 
         let repoid = config.repoid;
 
-        let synced_commit_mapping = Arc::new(
-            open_synced_commit_mapping(fb, config.clone(), mysql_options, readonly_storage).await?,
-        );
+        let synced_commit_mapping = open_synced_commit_mapping(
+            fb,
+            config.clone(),
+            mysql_options,
+            readonly_storage,
+            &logger,
+        )
+        .await?;
         let service_config = config.source_control_service.clone();
         let monitoring_config = config.source_control_service_monitoring.clone();
 

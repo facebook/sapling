@@ -21,8 +21,8 @@
   $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo --local-configerator-path="$TESTTMP/configerator"
   Setting up hg server repos
   Blobimporting them
-  Starting Mononoke server
   Adding synced mapping entry
+  Starting Mononoke server
 
 -- enable verification hook in small-hg-srv
   $ cd "$TESTTMP/small-hg-srv"

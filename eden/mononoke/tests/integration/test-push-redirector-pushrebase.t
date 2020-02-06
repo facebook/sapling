@@ -22,8 +22,8 @@
   $ init_large_small_repo --local-configerator-path="$TESTTMP/configerator"
   Setting up hg server repos
   Blobimporting them
-  Starting Mononoke server
   Adding synced mapping entry
+  Starting Mononoke server
 
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"

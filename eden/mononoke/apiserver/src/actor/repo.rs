@@ -136,62 +136,68 @@ impl MononokeRepo {
         let commit_sync_config = config.commit_sync_config.clone();
 
         // This is hacky, for the benefit of the new Mononoke object type
-        open_synced_commit_mapping(fb, config.clone(), mysql_options, readonly_storage)
-            .boxed()
-            .compat()
-            .join(open_blobrepo(
-                fb,
-                config.storage_config.clone(),
-                repoid,
-                mysql_options,
-                with_cachelib,
-                config.bookmarks_cache_ttl,
-                config.redaction,
-                common_config.scuba_censored_table,
-                config.filestore,
-                readonly_storage,
-                blobstore_options,
-                logger.clone(),
-            ))
-            .map(move |(synced_commit_mapping, repo)| {
-                let warm_bookmarks_cache = WarmBookmarksCache::new(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
-                );
+        {
+            cloned!(config, logger);
+            async move {
+                open_synced_commit_mapping(fb, config, mysql_options, readonly_storage, &logger)
+                    .await
+            }
+        }
+        .boxed()
+        .compat()
+        .join(open_blobrepo(
+            fb,
+            config.storage_config.clone(),
+            repoid,
+            mysql_options,
+            with_cachelib,
+            config.bookmarks_cache_ttl,
+            config.redaction,
+            common_config.scuba_censored_table,
+            config.filestore,
+            readonly_storage,
+            blobstore_options,
+            logger.clone(),
+        ))
+        .map(move |(synced_commit_mapping, repo)| {
+            let warm_bookmarks_cache = WarmBookmarksCache::new(
+                ctx.clone(),
+                repo.clone(),
+                vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
+            );
 
-                let skiplist_index = {
-                    if !with_skiplist {
-                        ok(Arc::new(SkiplistIndex::new())).right_future()
-                    } else {
-                        fetch_skiplist_index(
-                            ctx.clone(),
-                            skiplist_index_blobstore_key,
-                            repo.get_blobstore().boxed(),
-                        )
-                        .left_future()
+            let skiplist_index = {
+                if !with_skiplist {
+                    ok(Arc::new(SkiplistIndex::new())).right_future()
+                } else {
+                    fetch_skiplist_index(
+                        ctx.clone(),
+                        skiplist_index_blobstore_key,
+                        repo.get_blobstore().boxed(),
+                    )
+                    .left_future()
+                }
+            };
+
+            skiplist_index.join(warm_bookmarks_cache).map(
+                move |(skiplist_index, warm_bookmarks_cache)| {
+                    let unodes_derived_mapping =
+                        Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+                    Self {
+                        repo,
+                        logger,
+                        skiplist_index,
+                        cache,
+                        unodes_derived_mapping,
+                        warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
+                        synced_commit_mapping,
+                        monitoring_config,
+                        commit_sync_config,
                     }
-                };
-
-                skiplist_index.join(warm_bookmarks_cache).map(
-                    move |(skiplist_index, warm_bookmarks_cache)| {
-                        let unodes_derived_mapping =
-                            Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-                        Self {
-                            repo,
-                            logger,
-                            skiplist_index,
-                            cache,
-                            unodes_derived_mapping,
-                            warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-                            synced_commit_mapping: Arc::new(synced_commit_mapping),
-                            monitoring_config,
-                            commit_sync_config,
-                        }
-                    },
-                )
-            })
-            .flatten()
+                },
+            )
+        })
+        .flatten()
     }
 
     fn get_hgchangesetid_from_revision(
