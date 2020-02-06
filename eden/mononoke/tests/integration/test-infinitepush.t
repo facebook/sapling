@@ -153,6 +153,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     Unknown bookmark: scratch/123. Use --create to create one.
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
   $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123" --create
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -180,6 +181,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     Non fastforward bookmark move from * to * (try --force?) (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
   $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123" --force
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -602,6 +604,23 @@ More sophisticated test for phases
 
   $ hgmn cloud restorebackup
   abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
+  [255]
+
+  $ hgmn pull -r b  # test ambiguous prefix
+  pulling from ssh://user@dummy/repo
+  abort: ambiguous identifier
+  suggestions are:
+  
+  changeset: bf677f20a49dc5ac94946f3d91ad181f8a6fdbab
+  author: test
+  date: Thu, 01 Jan 1970 00:00:00 +0000
+  summary: zzz
+  
+  changeset: b9f080ea95005f3513a22aa15f1f74d7371ce5d4
+  author: test
+  date: Thu, 01 Jan 1970 00:00:00 +0000
+  summary: zzzzz
+  !
   [255]
 
   $ hgmn pull -r 5e59ac0f4dd0 -r bf677f20a49d -r 7d67c7248d48 -r b9f080ea9500 -q

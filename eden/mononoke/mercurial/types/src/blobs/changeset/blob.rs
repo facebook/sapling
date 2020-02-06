@@ -19,6 +19,7 @@ use failure_ext::FutureFailureErrorExt;
 use futures::future::{Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
+use std::fmt::{self, Display};
 use std::{collections::BTreeMap, io::Write};
 
 const STEP_PARENTS_METADATA_KEY: &str = "stepparents";
@@ -310,5 +311,26 @@ impl Loadable for HgChangesetId {
                 value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
             })
             .boxify()
+    }
+}
+
+impl Display for HgBlobChangeset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let comments = self.comments();
+        let title_end = comments
+            .iter()
+            .enumerate()
+            .find(|(_, &c)| c == b'\n')
+            .map(|(i, _)| i)
+            .unwrap_or(comments.len());
+
+        write!(
+            f,
+            "changeset: {}\nauthor: {}\ndate: {}\nsummary: {}\n",
+            self.changesetid,
+            String::from_utf8_lossy(&self.user()),
+            self.time().as_chrono().to_rfc2822(),
+            String::from_utf8_lossy(&self.comments()[0..title_end])
+        )
     }
 }

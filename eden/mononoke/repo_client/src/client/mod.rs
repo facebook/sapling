@@ -921,63 +921,129 @@ impl HgCommands for RepoClient {
             buf.freeze()
         }
 
-        fn check_bookmark_exists(
+        // Generate positive response including HgChangesetId as hex.
+        fn generate_changeset_resp_buf(csid: HgChangesetId) -> HgCommandRes<Bytes> {
+            Ok(generate_resp_buf(true, csid.to_hex().as_bytes()))
+                .into_future()
+                .boxify()
+        }
+
+        // Generate error response with the message including suggestions (commits info).
+        // Suggestions are ordered by commit time (most recent first).
+        fn generate_suggestions_resp_buf(
             ctx: CoreContext,
             repo: BlobRepo,
-            bookmark: BookmarkName,
+            suggestion_cids: Vec<HgChangesetId>,
         ) -> HgCommandRes<Bytes> {
-            repo.get_bookmark(ctx, &bookmark)
-                .map(move |csid| match csid {
-                    Some(csid) => generate_resp_buf(true, csid.to_hex().as_bytes()),
-                    None => generate_resp_buf(false, format!("{} not found", bookmark).as_bytes()),
+            let futs = suggestion_cids
+                .into_iter()
+                .map(|hg_csid| {
+                    hg_csid
+                        .load(ctx.clone(), repo.blobstore())
+                        .from_err()
+                        .map(move |cs| (cs.to_string().into_bytes(), cs.time().clone()))
+                })
+                .collect::<Vec<_>>();
+
+            future::join_all(futs)
+                .map(|mut info_plus_date| {
+                    info_plus_date.sort_by_key(|&(_, time)| time);
+                    let mut infos = info_plus_date
+                        .into_iter()
+                        .map(|(info, _)| info)
+                        .collect::<Vec<_>>();
+                    infos.push(b"ambiguous identifier\nsuggestions are:\n".to_vec());
+                    infos.reverse();
+                    generate_resp_buf(false, &infos.join(&[b'\n'][..]))
                 })
                 .boxify()
         }
 
-        // If the string is a valid full changeset hash, parse it.
-        // If the string is a valid prefix of changeset hash, resolve it to a changeset.
-        // TODO(liubovd): support ambiguity and suggestions
+        // Controls how many suggestions to fetch in case of ambiguous outcome of prefix lookup.
+        const MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH: usize = 10;
+
+        // Resolves changeset or set of suggestions from the key (full hex hash or a prefix) if exist.
+        // Note: `get_many_hg_by_prefix` works for the full hex hashes well but
+        //       `changeset_exists` has better caching and is preferable for the full length hex hashes.
         let node_fut = match HgChangesetId::from_str(&key) {
-            Ok(node) => ok(Some(node)).boxify(),
+            Ok(csid) => repo
+                .changeset_exists(ctx.clone(), csid)
+                .map(move |exists| {
+                    if exists {
+                        HgChangesetIdsResolvedFromPrefix::Single(csid)
+                    } else {
+                        HgChangesetIdsResolvedFromPrefix::NoMatch
+                    }
+                })
+                .boxify(),
             Err(_) => match HgChangesetIdPrefix::from_str(&key) {
                 Ok(cs_prefix) => repo
                     .get_bonsai_hg_mapping()
-                    .get_many_hg_by_prefix(ctx.clone(), repo.get_repoid(), cs_prefix, 1)
-                    .map(move |resolved_cids| match resolved_cids {
-                        HgChangesetIdsResolvedFromPrefix::Single(cs) => Some(cs),
-                        _ => None,
-                    })
+                    .get_many_hg_by_prefix(
+                        ctx.clone(),
+                        repo.get_repoid(),
+                        cs_prefix,
+                        MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH,
+                    )
                     .boxify(),
-                Err(_) => ok(None).boxify(),
+                Err(_) => ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify(),
             },
         };
 
-        let bookmark = BookmarkName::new(&key).ok();
+        // The lookup order:
+        // If there is an exact commit match, return that even if the key is the prefix of the hash.
+        // If there is a bookmark match, return that.
+        // If there are suggestions, show them. This happens in case of ambiguous outcome of prefix lookup.
+        // Otherwise, show an error.
 
+        let bookmark = BookmarkName::new(&key).ok();
         let lookup_fut = node_fut
-            .and_then(move |node| match (node, bookmark) {
-                (Some(node), Some(bookmark)) => {
-                    let csid = node;
-                    repo.changeset_exists(ctx.clone(), csid)
-                        .and_then({
-                            cloned!(ctx);
-                            move |exists| {
-                                if exists {
-                                    Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
-                                        .into_future()
-                                        .boxify()
-                                } else {
-                                    check_bookmark_exists(ctx, repo, bookmark)
-                                }
+            .and_then(move |resolved_cids| {
+                use HgChangesetIdsResolvedFromPrefix::*;
+
+                // Describing the priority relative to bookmark presence for the key.
+                enum LookupOutcome {
+                    HighPriority(HgCommandRes<Bytes>),
+                    LowPriority(HgCommandRes<Bytes>),
+                };
+
+                let outcome = match resolved_cids {
+                    Single(csid) => LookupOutcome::HighPriority(generate_changeset_resp_buf(csid)),
+                    Multiple(suggestion_cids) => LookupOutcome::LowPriority(
+                        generate_suggestions_resp_buf(ctx.clone(), repo.clone(), suggestion_cids),
+                    ),
+                    TooMany(_) => LookupOutcome::LowPriority(
+                        Ok(generate_resp_buf(
+                            false,
+                            format!("ambiguous identifier '{}'", key).as_bytes(),
+                        ))
+                        .into_future()
+                        .boxify(),
+                    ),
+                    NoMatch => LookupOutcome::LowPriority(
+                        Ok(generate_resp_buf(
+                            false,
+                            format!("{} not found", key).as_bytes(),
+                        ))
+                        .into_future()
+                        .boxify(),
+                    ),
+                };
+
+                match (outcome, bookmark) {
+                    (LookupOutcome::HighPriority(res), _) => res,
+                    (LookupOutcome::LowPriority(res), Some(bookmark)) => repo
+                        .get_bookmark(ctx.clone(), &bookmark)
+                        .and_then(move |maybe_csid| {
+                            if let Some(csid) = maybe_csid {
+                                generate_changeset_resp_buf(csid)
+                            } else {
+                                res
                             }
                         })
-                        .boxify()
+                        .boxify(),
+                    (LookupOutcome::LowPriority(res), None) => res,
                 }
-                (None, Some(bookmark)) => check_bookmark_exists(ctx.clone(), repo, bookmark),
-                // Failed to parse as a hash or bookmark.
-                _ => Ok(generate_resp_buf(false, "invalid input".as_bytes()))
-                    .into_future()
-                    .boxify(),
             })
             .boxify();
 

@@ -1315,7 +1315,7 @@ impl BlobRepo {
             })
             .traced(
                 &ctx.trace(),
-                "generate_hg_chengeset",
+                "generate_hg_changeset",
                 trace_args! {"changeset" => bcs_id.to_hex().to_string()},
             )
             .timed(move |stats, _| {
