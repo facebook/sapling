@@ -75,7 +75,7 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
         counts_[type][ObjectFetchContext::FromBackingStore];
     uint64_t total = fromMemory + fromDisk + fromBackingStore;
     return FetchStatistics::Access{
-        total, computePercent(fromMemory + fromDisk, total)};
+        total, fromBackingStore, computePercent(fromMemory + fromDisk, total)};
   };
 
   auto result = FetchStatistics{};

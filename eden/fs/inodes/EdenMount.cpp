@@ -878,7 +878,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
             return result;
           })
-      .thenTry([this, ctx, stopWatch, oldParents, snapshotHash](
+      .thenTry([this, ctx, stopWatch, oldParents, snapshotHash, checkoutMode](
                    Try<CheckoutResult>&& result) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
         XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
@@ -893,8 +893,26 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
-        this->serverState_->getStructuredLogger()->logEvent(
-            FinishedCheckout{checkoutTimeInSeconds.count(), result.hasValue()});
+        auto event = FinishedCheckout{};
+        switch (checkoutMode) {
+          case CheckoutMode::DRY_RUN:
+            event.mode = "dry_run";
+            break;
+          case CheckoutMode::NORMAL:
+            event.mode = "normal";
+            break;
+          case CheckoutMode::FORCE:
+            event.mode = "force";
+            break;
+        }
+        event.duration = checkoutTimeInSeconds.count();
+        event.success = result.hasValue();
+        event.fetchedTrees = fetchStats.tree.fetchCount;
+        event.fetchedBlobs = fetchStats.blob.fetchCount;
+        // Don't log metadata fetches, because our backends don't yet support
+        // fetching metadata directly. We expect tree fetches to eventually
+        // return metadata for their entries.
+        this->serverState_->getStructuredLogger()->logEvent(event);
         return std::move(result);
       });
 }

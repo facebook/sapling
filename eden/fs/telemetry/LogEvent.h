@@ -80,12 +80,18 @@ struct DaemonStart {
 struct FinishedCheckout {
   static constexpr const char* type = "checkout";
 
+  std::string mode;
   double duration = 0.0;
   bool success = false;
+  int64_t fetchedTrees = 0;
+  int64_t fetchedBlobs = 0;
 
   void populate(DynamicEvent& event) const {
+    event.addString("mode", mode);
     event.addDouble("duration", duration);
     event.addBool("success", success);
+    event.addInt("fetched_trees", fetchedTrees);
+    event.addInt("fetched_blobs", fetchedBlobs);
   }
 };
 

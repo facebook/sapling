@@ -15,7 +15,16 @@ namespace eden {
 
 struct FetchStatistics {
   struct Access {
+    /**
+     * Total number of object accesses, including cache hits.
+     */
     uint64_t accessCount = 0;
+
+    /**
+     * Number of object fetches from the backing store.
+     */
+    uint64_t fetchCount = 0;
+
     /**
      * In range [0, 100]. unsigned char is big enough, but prints as a
      * character.
