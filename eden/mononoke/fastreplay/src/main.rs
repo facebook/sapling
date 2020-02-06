@@ -29,8 +29,9 @@ use futures_stats::TimedFutureExt;
 use hgproto::HgCommands;
 use hooks::HookManager;
 use hooks_content_stores::{InMemoryChangesetStore, InMemoryFileContentStore};
-use metaconfig_types::HookManagerParams;
+use metaconfig_types::{BlobConfig, HookManagerParams};
 use mononoke_types::Timestamp;
+use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};
 use repo_client::MononokeRepoBuilder;
 use scopeguard::defer;
@@ -39,6 +40,7 @@ use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o, warn, Logger};
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::num::NonZeroU64;
 use std::process::Stdio;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -67,6 +69,7 @@ const ARG_ALIASES: &str = "alias";
 const ARG_HASH_VALIDATION_PERCENTAGE: &str = "hash-validation-percentage";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_COMMAND: &str = "command";
+const ARG_MULTIPLEXEDBLOB_SAMPLING: &str = "multiplexblob-sampling";
 
 const LIVE_CONFIG_POLL_INTERVAL: u64 = 5;
 
@@ -217,6 +220,14 @@ async fn bootstrap_repositories<'a>(
         })
         .transpose()?
         .unwrap_or(0);
+    let multiplexblob_sampling_rate = matches
+        .value_of(ARG_MULTIPLEXEDBLOB_SAMPLING)
+        .map(|n| -> Result<NonZeroU64, Error> {
+            let n = n.parse()?;
+            Ok(n)
+        })
+        .transpose()?
+        .unwrap_or(nonzero!(1000u64));
 
     let noop_hook_manager = Arc::new(build_noop_hook_manager(fb));
 
@@ -252,6 +263,15 @@ async fn bootstrap_repositories<'a>(
                 .map(|(storage, _)| {
                     make_blobstore_no_sql(fb, &storage.blobstore, readonly_storage).compat()
                 });
+
+            // Set the Multiplexed blob sampling rate, if used.
+            match config.storage_config.blobstore {
+                BlobConfig::Multiplexed {
+                    ref mut scuba_sample_rate,
+                    ..
+                } => *scuba_sample_rate = multiplexblob_sampling_rate,
+                _ => {}
+            };
 
             let repo = MononokeRepoBuilder::prepare(
                 bootstrap_ctx.clone(),
@@ -513,6 +533,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("Path to read hot-reloadable configuration from")
                 .takes_value(true)
                 .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_MULTIPLEXEDBLOB_SAMPLING)
+            .long(ARG_MULTIPLEXEDBLOB_SAMPLING)
+            .takes_value(true)
+            .required(false)
         )
         .arg(
             Arg::with_name(ARG_COMMAND)
