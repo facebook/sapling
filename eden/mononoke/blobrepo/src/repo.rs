@@ -613,7 +613,10 @@ impl BlobRepo {
     }
 
     // Returns only the mapping for valid changests that are known to the server.
-    // Result may not contain all the ids from the input.
+    // For Bonsai -> Hg conversion, missing Hg changesets will be derived (so all Bonsais will be
+    // in the output).
+    // For Hg -> Bonsai conversion, missing Bonsais will not be returned, since they cannot be
+    // derived from Hg Changesets.
     pub fn get_hg_bonsai_mapping(
         &self,
         ctx: CoreContext,
