@@ -13,7 +13,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -102,7 +102,7 @@ class CheckoutContext {
   /**
    * Return the fetch context associated with this checkout context.
    */
-  ObjectFetchContext& getFetchContext() {
+  StatsFetchContext& getFetchContext() {
     return fetchContext_;
   }
 
@@ -111,7 +111,7 @@ class CheckoutContext {
   EdenMount* const mount_;
   folly::Synchronized<EdenMount::ParentInfo>::LockedPtr parentsLock_;
   RenameLock renameLock_;
-  ObjectFetchContext fetchContext_;
+  StatsFetchContext fetchContext_;
 
   // The checkout processing may occur across many threads,
   // if some data load operations complete asynchronously on other threads.

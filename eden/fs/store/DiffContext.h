@@ -10,7 +10,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -77,7 +77,7 @@ class DiffContext {
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
   LoadFileFunction getLoadFileContentsFromPath() const;
-  ObjectFetchContext& getFetchContext() {
+  StatsFetchContext& getFetchContext() {
     return fetchContext_;
   }
 
@@ -85,7 +85,7 @@ class DiffContext {
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
   const LoadFileFunction loadFileContentsFromPath_;
   apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
-  ObjectFetchContext fetchContext_;
+  StatsFetchContext fetchContext_;
 };
 } // namespace eden
 } // namespace facebook

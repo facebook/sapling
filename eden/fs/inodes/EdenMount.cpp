@@ -113,7 +113,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
                   << folly::exceptionStr(ew);
   }
 
-  FOLLY_NODISCARD Future<folly::Unit> performDiff(
+  FOLLY_NODISCARD Future<StatsFetchContext> performDiff(
       EdenMount* mount,
       TreeInodePtr rootInode,
       std::shared_ptr<const Tree> rootTree) {
@@ -127,7 +127,8 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
             std::move(rootTree),
             rawContext->getToplevelIgnore(),
             false)
-        .ensure([diffContext = std::move(diffContext), rootInode]() {});
+        .thenValue([diffContext = std::move(diffContext), rootInode](
+                       folly::Unit) { return diffContext->getFetchContext(); });
   }
 
   /** moves the Unclean Path information out of this diff callback instance,
@@ -798,10 +799,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
         auto& fromTree = std::get<0>(treeResults);
         return journalDiffCallback->performDiff(this, getRootInode(), fromTree)
-            .thenValue([ctx, journalDiffCallback, treeResults](Unit) {
-              // TODO: Merge results from JournalDiffCallback into ctx
-              (void)ctx;
-              (void)journalDiffCallback;
+            .thenValue([ctx, journalDiffCallback, treeResults](
+                           const StatsFetchContext& diffFetchContext) {
+              ctx->getFetchContext().merge(diffFetchContext);
               return treeResults;
             });
       })

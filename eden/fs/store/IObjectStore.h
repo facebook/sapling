@@ -35,7 +35,7 @@ class ObjectFetchContext {
    *
    * Suitable for use as an index into an array of size kObjectTypeEnumMax
    */
-  enum ObjectType {
+  enum ObjectType : unsigned {
     Blob,
     BlobMetadata,
     Tree,
@@ -47,7 +47,7 @@ class ObjectFetchContext {
    *
    * Suitable for use as an index into an array of size kOriginEnumMax.
    */
-  enum Origin {
+  enum Origin : unsigned {
     FromMemoryCache,
     FromDiskCache,
     FromBackingStore,
