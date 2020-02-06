@@ -28,6 +28,7 @@ use context::CoreContext;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 
 use fixtures::{linear, many_files_dirs};
+use futures_preview::{FutureExt, TryFutureExt};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
@@ -143,10 +144,14 @@ where
         .load(ctx.clone(), config.get_source_repo().blobstore())
         .wait()
         .unwrap();
-    config
-        .clone()
-        .sync_commit_pushrebase_compat(ctx.clone(), source_bcs, bookmark_name)
-        .wait()
+    async move {
+        config
+            .sync_commit_pushrebase(ctx.clone(), source_bcs, bookmark_name)
+            .await
+    }
+    .boxed()
+    .compat()
+    .wait()
 }
 
 fn get_bcs_id<M>(

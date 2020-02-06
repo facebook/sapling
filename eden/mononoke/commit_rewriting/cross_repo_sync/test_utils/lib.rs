@@ -13,13 +13,13 @@ use ascii::AsciiString;
 use anyhow::{format_err, Error};
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
-    rewrite_commit_compat, update_mapping, upload_commits_compat, CommitSyncRepos, CommitSyncer,
-    Syncers,
+    rewrite_commit, update_mapping, upload_commits, CommitSyncRepos, CommitSyncer, Syncers,
 };
 use futures::Future;
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
@@ -65,24 +65,41 @@ where
 
     let bookmark_val = maybe_bookmark_val.ok_or(format_err!("master not found"))?;
     let source_bcs_mut = source_bcs.into_mut();
-    let maybe_rewritten = rewrite_commit_compat(
-        ctx.clone(),
-        source_bcs_mut,
-        HashMap::new(),
-        commit_syncer.get_mover().clone(),
-        source_repo.clone(),
-    )
+    let maybe_rewritten = {
+        cloned!(ctx);
+        async move {
+            let map = HashMap::new();
+            rewrite_commit(
+                ctx,
+                source_bcs_mut,
+                &map,
+                commit_syncer.get_mover().clone(),
+                source_repo.clone(),
+            )
+            .await
+        }
+    }
+    .boxed()
+    .compat()
     .wait()?;
     let mut target_bcs_mut = maybe_rewritten.unwrap();
     target_bcs_mut.parents = vec![bookmark_val];
 
     let target_bcs = target_bcs_mut.freeze()?;
-    upload_commits_compat(
-        ctx.clone(),
-        vec![target_bcs.clone()],
-        commit_syncer.get_source_repo().clone(),
-        commit_syncer.get_target_repo().clone(),
-    )
+    {
+        cloned!(ctx, target_bcs);
+        async move {
+            upload_commits(
+                ctx,
+                vec![target_bcs],
+                commit_syncer.get_source_repo().clone(),
+                commit_syncer.get_target_repo().clone(),
+            )
+            .await
+        }
+    }
+    .boxed()
+    .compat()
     .wait()?;
 
     let mut txn = target_repo.update_bookmark_transaction(ctx.clone());

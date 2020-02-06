@@ -272,18 +272,6 @@ pub async fn rewrite_commit(
     Ok(Some(cs))
 }
 
-pub fn rewrite_commit_compat(
-    ctx: CoreContext,
-    cs: BonsaiChangesetMut,
-    remapped_parents: HashMap<ChangesetId, ChangesetId>,
-    mover: Mover,
-    source_repo: BlobRepo,
-) -> impl Future<Item = Option<BonsaiChangesetMut>, Error = Error> {
-    async move { rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await }
-        .boxed()
-        .compat()
-}
-
 async fn remap_changeset_id<'a, M: SyncedCommitMapping>(
     ctx: CoreContext,
     cs: ChangesetId,
@@ -575,16 +563,6 @@ where
         self.repos.get_bookmark_renamer()(bookmark)
     }
 
-    pub fn get_commit_sync_outcome_compat(
-        self,
-        ctx: CoreContext,
-        source_cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<CommitSyncOutcome>, Error = Error> {
-        async move { self.get_commit_sync_outcome(ctx, source_cs_id).await }
-            .boxed()
-            .compat()
-    }
-
     pub async fn get_commit_sync_outcome(
         &self,
         ctx: CoreContext,
@@ -634,16 +612,6 @@ where
                 }
             }
         }
-    }
-
-    pub fn sync_commit_compat(
-        self,
-        ctx: CoreContext,
-        source_cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
-        async move { self.sync_commit(ctx, source_cs_id).await }
-            .boxed()
-            .compat()
     }
 
     /// Create a changeset, equivalent to `source_cs_id` in the target repo
@@ -729,17 +697,6 @@ where
                 Ok(Some(frozen_cs_id))
             }
         }
-    }
-
-    pub fn sync_commit_pushrebase_compat(
-        self,
-        ctx: CoreContext,
-        source_cs: BonsaiChangeset,
-        bookmark: BookmarkName,
-    ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
-        async move { self.sync_commit_pushrebase(ctx, source_cs, bookmark).await }
-            .boxed()
-            .compat()
     }
 
     pub async fn sync_commit_pushrebase(
@@ -828,16 +785,6 @@ where
                 Ok(Some(pushrebased_changeset))
             }
         }
-    }
-
-    pub fn preserve_commit_compat(
-        self,
-        ctx: CoreContext,
-        source_cs_id: ChangesetId,
-    ) -> impl Future<Item = (), Error = Error> {
-        async move { self.preserve_commit(ctx, source_cs_id).await }
-            .boxed()
-            .compat()
     }
 
     /// The difference between `sync_commit()` and `preserve_commit()` is that `preserve_commit()`
@@ -1348,17 +1295,6 @@ impl CommitSyncRepos {
             } => reverse_bookmark_renamer,
         }
     }
-}
-
-pub fn upload_commits_compat(
-    ctx: CoreContext,
-    rewritten_list: Vec<BonsaiChangeset>,
-    source_repo: BlobRepo,
-    target_repo: BlobRepo,
-) -> impl Future<Item = (), Error = Error> {
-    upload_commits(ctx, rewritten_list, source_repo, target_repo)
-        .boxed()
-        .compat()
 }
 
 pub async fn upload_commits(
