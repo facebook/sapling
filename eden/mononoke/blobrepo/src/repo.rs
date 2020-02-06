@@ -1982,17 +1982,39 @@ fn to_hg_bookmark_stream<T>(
 where
     T: Stream<Item = (Bookmark, ChangesetId), Error = Error>,
 {
-    // TODO: (torozco) T44876554 If this hits the database for all (or most of) the bookmarks,
-    // it'll be fairly inefficient.
     stream
+        .chunks(100)
         .map({
             cloned!(repo, ctx);
-            move |(bookmark, cs_id)| {
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .map(move |cs_id| (bookmark, cs_id))
+            move |chunk| {
+                let cs_ids = chunk.iter().map(|(_, cs_id)| *cs_id).collect::<Vec<_>>();
+
+                repo.get_hg_bonsai_mapping(ctx.clone(), cs_ids)
+                    .map(move |mapping| {
+                        let mapping = mapping
+                            .into_iter()
+                            .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
+                            .collect::<HashMap<_, _>>();
+
+                        let res = chunk
+                            .into_iter()
+                            .map(|(bookmark, cs_id)| {
+                                let hg_cs_id = mapping.get(&cs_id).ok_or_else(|| {
+                                    anyhow::format_err!(
+                                        "cs_id was missing from mapping: {:?}",
+                                        cs_id
+                                    )
+                                })?;
+                                Ok((bookmark, *hg_cs_id))
+                            })
+                            .collect::<Vec<_>>();
+
+                        stream::iter_result(res)
+                    })
+                    .flatten_stream()
             }
         })
-        .buffer_unordered(100)
+        .flatten()
 }
 
 impl DangerousOverride<Arc<dyn LeaseOps>> for BlobRepo {
