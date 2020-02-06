@@ -32,7 +32,7 @@ use futures_preview::{
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
-use metaconfig_types::{CommitSyncConfig, CommitSyncDirection, PushrebaseFlags, RepoConfig};
+use metaconfig_types::{CommitSyncConfig, CommitSyncDirection, PushrebaseFlags};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -341,7 +341,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
 }
 
 pub async fn find_toposorted_unsynced_ancestors<M>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
     start_cs_id: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error>
@@ -434,13 +434,8 @@ impl CommitSyncRepos {
     pub fn new(
         source_repo: BlobRepo,
         target_repo: BlobRepo,
-        repo_config: &RepoConfig,
+        commit_sync_config: &CommitSyncConfig,
     ) -> Result<Self, Error> {
-        let commit_sync_config = repo_config
-            .commit_sync_config
-            .as_ref()
-            .ok_or_else(|| format_err!("missing CommitSyncMapping config"))?;
-
         let small_repo_id = if commit_sync_config.large_repo_id == source_repo.get_repoid()
             && commit_sync_config
                 .small_repos

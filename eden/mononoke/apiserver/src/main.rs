@@ -590,6 +590,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             repo.warm_bookmarks_cache.clone(),
             repo.synced_commit_mapping.clone(),
             repo.monitoring_config.clone(),
+            repo.commit_sync_config.clone(),
         )
     }));
     let new_mononoke = Arc::new(new_mononoke);

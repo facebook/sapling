@@ -25,6 +25,9 @@ use fsnodes::{derive_fsnodes, RootFsnodeMapping};
 
 use aclchecker::AclChecker;
 use blame::derive_blame;
+use cross_repo_sync::{
+    find_toposorted_unsynced_ancestors, CommitSyncOutcome, CommitSyncRepos, CommitSyncer,
+};
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
@@ -33,7 +36,7 @@ use futures_preview::StreamExt as NewStreamExt;
 use identity::Identity;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
-    CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
+    CommitSyncConfig, CommonConfig, MetadataDBConfig, RepoConfig, SourceControlServiceMonitoring,
     SourceControlServiceParams,
 };
 use mononoke_types::{
@@ -77,6 +80,7 @@ pub(crate) struct Repo {
     // Needed to report stats
     pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
     pub(crate) acl_checker: Option<Arc<AclChecker>>,
+    pub(crate) commit_sync_config: Option<CommitSyncConfig>,
 }
 
 #[derive(Clone)]
@@ -208,6 +212,7 @@ impl Repo {
             service_config,
             monitoring_config,
             acl_checker,
+            commit_sync_config: config.commit_sync_config,
         })
     }
 
@@ -221,6 +226,7 @@ impl Repo {
         warm_bookmarks_cache: Arc<WarmBookmarksCache>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
         monitoring_config: Option<SourceControlServiceMonitoring>,
+        commit_sync_config: Option<CommitSyncConfig>,
     ) -> Self {
         Self {
             name,
@@ -235,17 +241,50 @@ impl Repo {
             },
             monitoring_config,
             acl_checker: None,
+            commit_sync_config,
         }
     }
 
     #[cfg(test)]
     /// Construct a Repo from a test BlobRepo
     pub(crate) async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {
+        Self::new_test_common(
+            ctx,
+            blob_repo,
+            None,
+            Arc::new(SqlSyncedCommitMapping::with_sqlite_in_memory()?),
+        )
+        .await
+    }
+
+    #[cfg(test)]
+    /// Construct a Repo from a test BlobRepo and commit_sync_config
+    pub(crate) async fn new_test_xrepo(
+        ctx: CoreContext,
+        blob_repo: BlobRepo,
+        commit_sync_config: CommitSyncConfig,
+        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    ) -> Result<Self, Error> {
+        Self::new_test_common(
+            ctx,
+            blob_repo,
+            Some(commit_sync_config),
+            synced_commit_mapping,
+        )
+        .await
+    }
+
+    #[cfg(test)]
+    /// Construct a Repo from a test BlobRepo and commit_sync_config
+    async fn new_test_common(
+        ctx: CoreContext,
+        blob_repo: BlobRepo,
+        commit_sync_config: Option<CommitSyncConfig>,
+        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    ) -> Result<Self, Error> {
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
         let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
-        let synced_commit_mapping =
-            Arc::new(SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap());
         let warm_bookmarks_cache = Arc::new(
             WarmBookmarksCache::new(
                 ctx.clone(),
@@ -272,6 +311,7 @@ impl Repo {
             },
             monitoring_config: None,
             acl_checker: None,
+            commit_sync_config,
         })
     }
 
@@ -786,33 +826,100 @@ impl RepoContext {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
     }
 
-    /// Get the equivalent changeset from another repo, if synced
+    /// Get the equivalent changeset from another repo - it will sync it if needed
     pub async fn xrepo_commit_lookup(
         &self,
         other: &Self,
         specifier: ChangesetSpecifier,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let changeset = self.resolve_specifier(specifier).await?;
-
-        let remapped_changeset_id = match changeset {
-            Some(changeset) => {
-                self.synced_commit_mapping()
-                    .get(
-                        self.ctx().clone(),
-                        self.blob_repo().get_repoid(),
-                        changeset,
-                        other.blob_repo().get_repoid(),
-                    )
-                    .compat()
-                    .await?
+        let commit_sync_repos = match &self.repo.commit_sync_config {
+            Some(commit_sync_config) => CommitSyncRepos::new(
+                self.blob_repo().clone(),
+                other.blob_repo().clone(),
+                &commit_sync_config,
+            )?,
+            None => {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "Commits from {} are not configured to be remapped to another repo",
+                    self.repo.name
+                )));
             }
-            None => None,
         };
-        let changeset = changeset.map(|changeset| remapped_changeset_id.unwrap_or(changeset));
-        match changeset {
-            Some(changeset) => other.changeset(ChangesetSpecifier::Bonsai(changeset)).await,
-            None => Ok(None),
+        let changeset =
+            self.resolve_specifier(specifier)
+                .await?
+                .ok_or(MononokeError::InvalidRequest(format!(
+                    "unknown commit specifier {}",
+                    specifier
+                )))?;
+
+        let commit_syncer =
+            CommitSyncer::new(self.synced_commit_mapping().clone(), commit_sync_repos);
+
+        let ctx = &self.ctx;
+        let unsynced_ancestors =
+            find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, changeset).await?;
+
+        let source_repo_is_small =
+            commit_syncer.get_small_repo().get_repoid() == self.blob_repo().get_repoid();
+
+        // Draft commits can be synced in both directions i.e. small-to-large and
+        // large-to-small. However public commits can only be synced in large-to-small direction.
+        // The reason is the following:
+        //
+        // We can have two states for a pair of a small and large repos - either small repo
+        // is the source of truth and new commits from small repo are tailed to the large repo,
+        // or large repo is the source of truth and new commits from large repo are backsynced
+        // to a small repo.
+        // If small repo is the source of truth, then public commits must be synced only by a single
+        // sync job, and doing sync here might corrupt large repo.
+        // If large repo is the source of truth, then small repo can't have public commits
+        // that are not synced to the large repo already.
+        //
+        // So regardless of which repo is the source of truth, syncing public commits between
+        // small and large repo shouldn't be possible. Sync in the other direction (large -> small)
+        // should always be possible.
+        if source_repo_is_small {
+            let public_unsynced_ancestors = self
+                .blob_repo()
+                .get_phases()
+                .get_public(
+                    ctx.clone(),
+                    unsynced_ancestors.clone(),
+                    false, /* ephemeral_derive */
+                )
+                .compat()
+                .await?;
+            if !public_unsynced_ancestors.is_empty() {
+                return Err(MononokeError::InternalError(
+                    format_err!(
+                        "unexpected sync lookup attempt - trying to sync \
+                     a public commit from small repo to a large repo. Syncing public commits is \
+                     only supported from a large repo to a small repo"
+                    )
+                    .into(),
+                ));
+            }
         }
+
+        for ancestor in unsynced_ancestors {
+            commit_syncer.sync_commit(ctx.clone(), ancestor).await?;
+        }
+
+        let commit_sync_outcome = commit_syncer
+            .get_commit_sync_outcome(ctx.clone(), changeset)
+            .await?
+            .ok_or(MononokeError::InternalError(
+                format_err!("was not able to remap a commit {}", changeset).into(),
+            ))?;
+
+        use CommitSyncOutcome::*;
+        let maybe_cs_id = match commit_sync_outcome {
+            NotSyncCandidate => None,
+            RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(cs_id),
+            Preserved => Some(changeset),
+        };
+        Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 
     /// Get a write context to make changes to this repository.

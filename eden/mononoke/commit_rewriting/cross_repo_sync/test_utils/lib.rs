@@ -8,6 +8,8 @@
 
 #![deny(warnings)]
 
+use ascii::AsciiString;
+
 use anyhow::{format_err, Error};
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -20,6 +22,10 @@ use futures::Future;
 use futures_preview::compat::Future01CompatExt;
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
+use metaconfig_types::{
+    CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
+    SmallRepoCommitSyncConfig,
+};
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, DateTime, MPath};
 use sql::rusqlite::Connection as SqliteConnection;
@@ -103,7 +109,7 @@ where
 
 pub async fn init_small_large_repo(
     ctx: &CoreContext,
-) -> Result<Syncers<SqlSyncedCommitMapping>, Error> {
+) -> Result<(Syncers<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
     let sqlite_con = SqliteConnection::open_in_memory()?;
     sqlite_con.execute_batch(SqlSyncedCommitMapping::get_up_query())?;
     let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
@@ -216,10 +222,30 @@ pub async fn init_small_large_repo(
             .get_commit_sync_outcome(ctx.clone(), small_master_bcs_id)
             .await?
     );
-    Ok(Syncers {
-        small_to_large: small_to_large_commit_syncer,
-        large_to_small: large_to_small_commit_syncer,
-    })
+
+    let small_repo_sync_config = SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(
+            "prefix",
+        )?),
+        map: hashmap! {},
+        bookmark_prefix: AsciiString::new(),
+        direction: CommitSyncDirection::SmallToLarge,
+    };
+    let commit_sync_config = CommitSyncConfig {
+        large_repo_id: megarepo.get_repoid(),
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            smallrepo.get_repoid() => small_repo_sync_config,
+        },
+    };
+
+    Ok((
+        Syncers {
+            small_to_large: small_to_large_commit_syncer,
+            large_to_small: large_to_small_commit_syncer,
+        },
+        commit_sync_config,
+    ))
 }
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {

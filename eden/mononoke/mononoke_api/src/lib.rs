@@ -28,7 +28,7 @@ use unodes::RootUnodeManifestMapping;
 use warm_bookmarks_cache::WarmBookmarksCache;
 
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::SourceControlServiceMonitoring;
+use metaconfig_types::{CommitSyncConfig, SourceControlServiceMonitoring};
 
 use crate::repo::Repo;
 
@@ -141,6 +141,43 @@ impl Mononoke {
         Ok(Self { repos })
     }
 
+    #[cfg(test)]
+    async fn new_test_xrepo(
+        ctx: CoreContext,
+        repos: impl IntoIterator<
+            Item = (
+                String,
+                BlobRepo,
+                CommitSyncConfig,
+                Arc<dyn SyncedCommitMapping>,
+            ),
+        >,
+    ) -> Result<Self, Error> {
+        use futures_util::stream::{FuturesOrdered, TryStreamExt};
+        let repos = repos
+            .into_iter()
+            .map(
+                move |(name, repo, commit_sync_config, synced_commit_maping)| {
+                    cloned!(ctx);
+                    async move {
+                        Repo::new_test_xrepo(
+                            ctx.clone(),
+                            repo,
+                            commit_sync_config,
+                            synced_commit_maping,
+                        )
+                        .await
+                        .map(move |repo| (name, Arc::new(repo)))
+                    }
+                },
+            )
+            .collect::<FuturesOrdered<_>>()
+            .try_collect()
+            .await?;
+
+        Ok(Self { repos })
+    }
+
     /// Temporary function to create directly from parts.
     pub fn new_from_parts(
         repos: impl IntoIterator<
@@ -152,6 +189,7 @@ impl Mononoke {
                 Arc<WarmBookmarksCache>,
                 Arc<dyn SyncedCommitMapping>,
                 Option<SourceControlServiceMonitoring>,
+                Option<CommitSyncConfig>,
             ),
         >,
     ) -> Self {
@@ -167,6 +205,7 @@ impl Mononoke {
                         warm_bookmarks_cache,
                         synced_commit_mapping,
                         monitoring_config,
+                        commit_sync_config,
                     )| {
                         let fsnodes_derived_mapping =
                             Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
@@ -181,6 +220,7 @@ impl Mononoke {
                                 warm_bookmarks_cache,
                                 synced_commit_mapping,
                                 monitoring_config,
+                                commit_sync_config,
                             )),
                         )
                     },

@@ -10,7 +10,7 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use clap::ArgMatches;
@@ -104,6 +104,11 @@ async fn create_commit_syncer<'a>(
     .compat()
     .await?;
 
-    let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &source_config)?;
+    let commit_sync_config = source_config
+        .commit_sync_config
+        .as_ref()
+        .ok_or_else(|| format_err!("missing CommitSyncMapping config"))?;
+
+    let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &commit_sync_config)?;
     Ok(CommitSyncer::new(mapping, commit_sync_repos))
 }

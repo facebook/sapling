@@ -9,13 +9,15 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Error;
+use blobstore::Loadable;
 use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
-use futures::stream::Stream;
+use futures::{stream::Stream, Future};
 use futures_preview::compat::Future01CompatExt;
 use futures_util::future::{FutureExt, TryFutureExt};
 use futures_util::stream::TryStreamExt;
@@ -24,8 +26,14 @@ use crate::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, CoreContext,
     FileId, FileMetadata, FileType, HgChangesetId, Mononoke, MononokePath, TreeEntry, TreeId,
 };
-use mononoke_types::hash::{GitSha1, Sha1, Sha256};
-use synced_commit_mapping::SyncedCommitMappingEntry;
+use cross_repo_sync_test_utils::init_small_large_repo;
+use mononoke_types::{
+    hash::{GitSha1, Sha1, Sha256},
+    MPath,
+};
+use slog::info;
+use synced_commit_mapping::SyncedCommitMapping;
+use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
 #[fbinit::test]
 fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
@@ -614,60 +622,201 @@ fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn xrepo_commit_lookup(fb: FacebookInit) -> Result<(), Error> {
+fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
             let ctx = CoreContext::test_mock(fb);
-            let mononoke = Mononoke::new_test(
-                ctx.clone(),
-                vec![
-                    ("test".to_string(), linear::getrepo(fb)),
-                    ("test2".to_string(), many_files_dirs::getrepo(fb)),
-                ],
-            )
-            .await?;
-            let repo1 = mononoke.repo(ctx.clone(), "test")?.expect("repo exists");
-            let repo2 = mononoke.repo(ctx.clone(), "test2")?.expect("repo exists");
+            let mononoke = init_x_repo(&ctx).await?;
 
-            let hash1 = ChangesetId::from_str(
-                "2cb6d2d3052bfbdd6a95a61f2816d81130033b5f5a99e8d8fc24d9238d85bb48",
-            )?;
+            let smallrepo = mononoke
+                .repo(ctx.clone(), "smallrepo")?
+                .expect("repo exists");
+            let largerepo = mononoke
+                .repo(ctx.clone(), "largerepo")?
+                .expect("repo exists");
 
+            let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
+
+            info!(
+                ctx.logger(),
+                "remapping {} from small to large", small_master_cs_id
+            );
             // Confirm that a cross-repo lookup for an unsynced commit just fails
-            let cs = repo1
-                .xrepo_commit_lookup(&repo2, ChangesetSpecifier::Bonsai(hash1))
-                .await?;
-            assert!(cs.is_none());
-
-            // Now insert a remapping to a commit that exists, and see that work
-            let hash2 = ChangesetId::from_str(
-                "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e",
-            )?;
-            let entry = SyncedCommitMappingEntry::new(
-                repo1.blob_repo().get_repoid(),
-                hash1,
-                repo2.blob_repo().get_repoid(),
-                hash2,
-            );
-            assert!(
-                repo1
-                    .synced_commit_mapping()
-                    .add(ctx.clone(), entry)
-                    .compat()
-                    .await?
-            );
-            let cs = repo1
-                .xrepo_commit_lookup(&repo2, ChangesetSpecifier::Bonsai(hash1))
+            let cs = smallrepo
+                .xrepo_commit_lookup(&largerepo, ChangesetSpecifier::Bonsai(small_master_cs_id))
                 .await?
-                .expect("changeset exists");
-            assert_eq!(cs.id(), hash2);
+                .expect("changeset should exist");
+            let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+            assert_eq!(cs.id(), large_master_cs_id);
+
+            info!(
+                ctx.logger(),
+                "remapping {} from large to small", large_master_cs_id
+            );
+            let cs = largerepo
+                .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(large_master_cs_id))
+                .await?
+                .expect("changeset should exist");
+            assert_eq!(cs.id(), small_master_cs_id);
+            Ok(())
+        }
+        .boxed()
+        .compat(),
+    )
+}
+
+#[fbinit::test]
+fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            let ctx = CoreContext::test_mock(fb);
+            let mononoke = init_x_repo(&ctx).await?;
+
+            let smallrepo = mononoke
+                .repo(ctx.clone(), "smallrepo")?
+                .expect("repo exists");
+            let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
+            let largerepo = mononoke
+                .repo(ctx.clone(), "largerepo")?
+                .expect("repo exists");
+            let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+
+            let new_large_draft =
+                CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+                    .add_file("prefix/remapped", "content1")
+                    .add_file("not_remapped", "content2")
+                    .commit()
+                    .await?;
+
+            let cs = largerepo
+                .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(new_large_draft))
+                .await?;
+            assert!(cs.is_some());
+            let bcs = cs
+                .unwrap()
+                .id()
+                .load(ctx.clone(), smallrepo.blob_repo().blobstore())
+                .map_err(Error::from)
+                .compat()
+                .await?;
+            let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
+            assert_eq!(file_changes, vec![MPath::new("remapped")?]);
+
+            // Now in another direction
+            let new_small_draft =
+                CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
+                    .add_file("remapped2", "content2")
+                    .commit()
+                    .await?;
+            let cs = smallrepo
+                .xrepo_commit_lookup(&largerepo, ChangesetSpecifier::Bonsai(new_small_draft))
+                .await?;
+            assert!(cs.is_some());
+            let bcs = cs
+                .unwrap()
+                .id()
+                .load(ctx.clone(), largerepo.blob_repo().blobstore())
+                .map_err(Error::from)
+                .compat()
+                .await?;
+            let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
+            assert_eq!(file_changes, vec![MPath::new("prefix/remapped2")?]);
 
             Ok(())
         }
         .boxed()
         .compat(),
     )
+}
+
+#[fbinit::test]
+fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            let ctx = CoreContext::test_mock(fb);
+            let mononoke = init_x_repo(&ctx).await?;
+
+            let smallrepo = mononoke
+                .repo(ctx.clone(), "smallrepo")?
+                .expect("repo exists");
+            let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
+            let largerepo = mononoke
+                .repo(ctx.clone(), "largerepo")?
+                .expect("repo exists");
+            let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+
+            let new_large_public =
+                CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+                    .add_file("prefix/remapped", "content1")
+                    .add_file("not_remapped", "content2")
+                    .commit()
+                    .await?;
+
+            bookmark(&ctx, largerepo.blob_repo(), "publicbook")
+                .set_to(new_large_public)
+                .await?;
+
+            let cs = largerepo
+                .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(new_large_public))
+                .await?;
+            assert!(cs.is_some());
+            let bcs = cs
+                .unwrap()
+                .id()
+                .load(ctx.clone(), smallrepo.blob_repo().blobstore())
+                .map_err(Error::from)
+                .compat()
+                .await?;
+            let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
+            assert_eq!(file_changes, vec![MPath::new("remapped")?]);
+
+            // Now in another direction - it should fail
+            let new_small_public =
+                CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
+                    .add_file("remapped2", "content2")
+                    .commit()
+                    .await?;
+            bookmark(&ctx, smallrepo.blob_repo(), "newsmallpublicbook")
+                .set_to(new_small_public)
+                .await?;
+            let res = smallrepo
+                .xrepo_commit_lookup(&largerepo, ChangesetSpecifier::Bonsai(new_small_public))
+                .await;
+            assert!(res.is_err());
+
+            Ok(())
+        }
+        .boxed()
+        .compat(),
+    )
+}
+
+async fn init_x_repo(ctx: &CoreContext) -> Result<Mononoke, Error> {
+    let (syncers, commit_sync_config) = init_small_large_repo(&ctx).await?;
+
+    let small_to_large = syncers.small_to_large;
+    let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(small_to_large.get_mapping().clone());
+    Mononoke::new_test_xrepo(
+        ctx.clone(),
+        vec![
+            (
+                "smallrepo".to_string(),
+                small_to_large.get_small_repo().clone(),
+                commit_sync_config.clone(),
+                mapping.clone(),
+            ),
+            (
+                "largerepo".to_string(),
+                small_to_large.get_large_repo().clone(),
+                commit_sync_config.clone(),
+                mapping.clone(),
+            ),
+        ],
+    )
+    .await
 }
 
 #[fbinit::test]

@@ -47,7 +47,9 @@ use mercurial_types::{
     manifest::Content,
     HgChangesetId, HgEntry, HgFileNodeId, HgManifest, HgManifestId, HgParents,
 };
-use metaconfig_types::{CommonConfig, RepoConfig, SourceControlServiceMonitoring};
+use metaconfig_types::{
+    CommitSyncConfig, CommonConfig, RepoConfig, SourceControlServiceMonitoring,
+};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::prelude::*;
 use types::{
@@ -109,6 +111,7 @@ pub struct MononokeRepo {
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     // Needed to report stats
     pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
+    pub(crate) commit_sync_config: Option<CommitSyncConfig>,
 }
 
 impl MononokeRepo {
@@ -130,6 +133,7 @@ impl MononokeRepo {
 
         let repoid = config.repoid;
         let monitoring_config = config.source_control_service_monitoring.clone();
+        let commit_sync_config = config.commit_sync_config.clone();
 
         // This is hacky, for the benefit of the new Mononoke object type
         open_synced_commit_mapping(fb, config.clone(), mysql_options, readonly_storage)
@@ -182,6 +186,7 @@ impl MononokeRepo {
                             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
                             synced_commit_mapping: Arc::new(synced_commit_mapping),
                             monitoring_config,
+                            commit_sync_config,
                         }
                     },
                 )
