@@ -950,6 +950,7 @@ mod test {
         BlobConfig, BlobstoreId, FilestoreParams, MetadataDBConfig, ShardedFilenodesParams,
         SourceControlServiceMonitoring,
     };
+    use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use std::fs::{create_dir_all, write};
     use std::num::NonZeroUsize;
@@ -1459,6 +1460,7 @@ mod test {
 
         let multiplex = BlobConfig::Multiplexed {
             scuba_table: Some("blobstore_scuba_table".to_string()),
+            scuba_sample_rate: nonzero!(100u64),
             blobstores: vec![
                 (
                     BlobstoreId::new(0),
@@ -1887,6 +1889,7 @@ mod test {
                 storage_config: StorageConfig {
                     blobstore: BlobConfig::Multiplexed {
                         scuba_table: None,
+                        scuba_sample_rate: nonzero!(100u64),
                         blobstores: vec![
                             (BlobstoreId::new(1), BlobConfig::Files {
                                 path: "/tmp/foo".into()

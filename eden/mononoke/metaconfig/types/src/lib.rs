@@ -17,6 +17,7 @@ use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
     fmt, mem,
+    num::NonZeroU64,
     num::NonZeroUsize,
     path::PathBuf,
     str,
@@ -28,6 +29,7 @@ use std::{
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use mononoke_types::{MPath, RepositoryId};
+use nonzero_ext::nonzero;
 use regex::Regex;
 use repos::{
     RawBlobstoreConfig, RawDbConfig, RawFilestoreParams, RawShardedFilenodesParams,
@@ -625,6 +627,8 @@ pub enum BlobConfig {
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, BlobConfig)>,
+        /// 1 in scuba_sample_rate samples will be logged.
+        scuba_sample_rate: NonZeroU64,
     },
     /// Multiplex across multiple blobstores scrubbing for errors
     Scrub {
@@ -634,6 +638,8 @@ pub enum BlobConfig {
         blobstores: Vec<(BlobstoreId, BlobConfig)>,
         /// Whether to attempt repair
         scrub_action: ScrubAction,
+        /// 1 in scuba_sample_rate samples will be logged.
+        scuba_sample_rate: NonZeroU64,
     },
     /// Store in a manifold bucket, but every object will have an expiration
     ManifoldWithTtl {
@@ -670,6 +676,7 @@ impl BlobConfig {
 
         if let Multiplexed {
             scuba_table,
+            scuba_sample_rate,
             blobstores,
         } = self
         {
@@ -680,6 +687,7 @@ impl BlobConfig {
             }
             *self = Scrub {
                 scuba_table,
+                scuba_sample_rate: *scuba_sample_rate,
                 blobstores,
                 scrub_action,
             };
@@ -720,6 +728,15 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
             },
             RawBlobstoreConfig::multiplexed(def) => BlobConfig::Multiplexed {
                 scuba_table: def.scuba_table.clone(),
+                scuba_sample_rate: def
+                    .scuba_sample_rate
+                    .map(|rate| {
+                        NonZeroU64::new(rate.try_into()?).ok_or(anyhow!(
+                            "scuba_sample_rate must be an integer larger than zero"
+                        ))
+                    })
+                    .transpose()?
+                    .unwrap_or(nonzero!(100_u64)),
                 blobstores: def
                     .components
                     .iter()

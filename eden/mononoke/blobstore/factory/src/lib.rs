@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::num::NonZeroU64;
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{format_err, Error};
@@ -396,12 +397,14 @@ fn make_blobstore_impl(
         .boxify(),
         Multiplexed {
             scuba_table,
+            scuba_sample_rate,
             blobstores,
         } => {
             has_components = true;
             make_blobstore_multiplexed(
                 fb,
                 scuba_table,
+                *scuba_sample_rate,
                 blobstores,
                 sql_factory,
                 mysql_options,
@@ -412,6 +415,7 @@ fn make_blobstore_impl(
         }
         Scrub {
             scuba_table,
+            scuba_sample_rate,
             blobstores,
             scrub_action,
         } => {
@@ -419,6 +423,7 @@ fn make_blobstore_impl(
             make_blobstore_multiplexed(
                 fb,
                 scuba_table,
+                *scuba_sample_rate,
                 blobstores,
                 sql_factory,
                 mysql_options,
@@ -493,6 +498,7 @@ fn make_blobstore_impl(
 pub fn make_blobstore_multiplexed(
     fb: FacebookInit,
     scuba_table: &Option<String>,
+    scuba_sample_rate: NonZeroU64,
     inner_config: &[(BlobstoreId, BlobConfig)],
     sql_factory: Option<&SqlFactory>,
     mysql_options: MysqlOptions,
@@ -558,6 +564,7 @@ pub fn make_blobstore_multiplexed(
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                                 ScubaSampleBuilder::new(fb, table)
                             }),
+                            scuba_sample_rate,
                             scrub_handler,
                             scrub_action,
                         ))
@@ -568,6 +575,7 @@ pub fn make_blobstore_multiplexed(
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                                 ScubaSampleBuilder::new(fb, table)
                             }),
+                            scuba_sample_rate,
                         )) as Arc<dyn Blobstore>,
                     }
                 })

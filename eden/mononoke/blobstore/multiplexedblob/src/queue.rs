@@ -18,6 +18,7 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba::ScubaSampleBuilder;
 use std::fmt;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -31,6 +32,7 @@ impl MultiplexedBlobstore {
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
+        scuba_sample_rate: NonZeroU64,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
             queue: queue.clone(),
@@ -40,6 +42,7 @@ impl MultiplexedBlobstore {
                 blobstores,
                 put_handler,
                 scuba,
+                scuba_sample_rate,
             )),
             queue,
         }

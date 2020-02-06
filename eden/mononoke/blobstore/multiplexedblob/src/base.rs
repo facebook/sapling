@@ -16,10 +16,10 @@ use futures_stats::Timed;
 use itertools::{Either, Itertools};
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
-use rand::{thread_rng, Rng};
 use scuba::ScubaSampleBuilder;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::num::NonZeroU64;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -37,34 +37,6 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 type BlobstoresWithEntry = HashSet<BlobstoreId>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
-
-#[derive(Copy, Clone)]
-enum Sampling {
-    Log(i32),
-    DoNotLog,
-}
-
-impl Sampling {
-    fn is_logged(&self) -> bool {
-        match self {
-            Self::Log(_) => true,
-            Self::DoNotLog => false,
-        }
-    }
-
-    fn roll() -> Self {
-        const SAMPLE_RATE: i32 = 100;
-        const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / (SAMPLE_RATE as f32));
-
-        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-
-        if should_log {
-            Self::Log(SAMPLE_RATE)
-        } else {
-            Self::DoNotLog
-        }
-    }
-}
 
 #[derive(Error, Debug, Clone)]
 pub enum ErrorKind {
@@ -98,6 +70,7 @@ pub struct MultiplexedBlobstoreBase {
     blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba: ScubaSampleBuilder,
+    scuba_sample_rate: NonZeroU64,
 }
 
 impl MultiplexedBlobstoreBase {
@@ -105,6 +78,7 @@ impl MultiplexedBlobstoreBase {
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         mut scuba: ScubaSampleBuilder,
+        scuba_sample_rate: NonZeroU64,
     ) -> Self {
         scuba.add_common_server_data();
 
@@ -112,79 +86,8 @@ impl MultiplexedBlobstoreBase {
             blobstores: blobstores.into(),
             handler,
             scuba,
+            scuba_sample_rate,
         }
-    }
-
-    fn get_from_all(
-        &self,
-        ctx: &CoreContext,
-        key: &String,
-        operation: &'static str,
-        sampling: Sampling,
-    ) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreBytes>), (BlobstoreId, Error)>> {
-        let scuba = match sampling {
-            Sampling::Log(sample_rate) => {
-                let mut scuba = self.scuba.clone();
-                scuba.add("sample_rate", sample_rate);
-                Some(scuba)
-            }
-            Sampling::DoNotLog => None,
-        };
-
-        self.blobstores
-            .iter()
-            .map(|&(blobstore_id, ref blobstore)| {
-                blobstore
-                    .get(ctx.clone(), key.clone())
-                    .map({
-                        cloned!(blobstore_id);
-                        move |val| (blobstore_id, val)
-                    })
-                    .timeout(REQUEST_TIMEOUT)
-                    .map_err({
-                        cloned!(blobstore_id);
-                        move |error| (blobstore_id, remap_timeout_error(error))
-                    })
-                    .timed({
-                        cloned!(key, scuba);
-                        let session = ctx.session_id().clone();
-                        move |stats, result| {
-                            let mut scuba = match scuba {
-                                Some(scuba) => scuba,
-                                None => {
-                                    return future::ok(());
-                                }
-                            };
-
-                            scuba
-                                .add("key", key.clone())
-                                .add("operation", operation)
-                                .add("blobstore_id", blobstore_id)
-                                .add(
-                                    "completion_time",
-                                    stats.completion_time.as_micros_unchecked(),
-                                );
-
-                            // log session id only for slow requests
-                            if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                                scuba.add("session", session.to_string());
-                            }
-
-                            match result {
-                                Ok((_, Some(data))) => {
-                                    scuba.add("size", data.len());
-                                }
-                                Err((_, error)) => {
-                                    scuba.add("error", error.to_string());
-                                }
-                                Ok((_, None)) => {}
-                            }
-                            scuba.log();
-                            future::ok(())
-                        }
-                    })
-            })
-            .collect()
     }
 
     pub fn scrub_get(
@@ -192,8 +95,10 @@ impl MultiplexedBlobstoreBase {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, ErrorKind> {
-        let requests = self
-            .get_from_all(&ctx, &key, "scrub_get", Sampling::roll())
+        let mut scuba = self.scuba.clone();
+        scuba.sampled(self.scuba_sample_rate);
+
+        let requests = multiplexed_get(&ctx, self.blobstores.as_ref(), &key, "scrub_get", scuba)
             .into_iter()
             .map(|f| f.then(|r| Ok(r)));
 
@@ -302,9 +207,12 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
-        let sampling = Sampling::roll();
+        let mut scuba = self.scuba.clone();
+        scuba.sampled(self.scuba_sample_rate);
 
-        let requests = self.get_from_all(&ctx, &key, "get", sampling);
+        let is_logged = scuba.sampling().is_logged();
+
+        let requests = multiplexed_get(&ctx, self.blobstores.as_ref(), &key, "get", scuba);
         let state = (
             requests,                             // pending requests
             HashMap::<BlobstoreId, Error>::new(), // previous errors
@@ -315,7 +223,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                 move |result| {
                     let requests = match result {
                         Ok(((_, value @ Some(_)), _, requests)) => {
-                            if sampling.is_logged() {
+                            if is_logged {
                                 // Allow the other requests to complete so that we can record some
                                 // metrics for the blobstore.
                                 let requests_fut = future::join_all(
@@ -455,6 +363,64 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
             .entries(self.blobstores.iter().map(|(ref k, ref v)| (k, v)))
             .finish()
     }
+}
+
+fn multiplexed_get(
+    ctx: &CoreContext,
+    blobstores: &[(BlobstoreId, Arc<dyn Blobstore>)],
+    key: &String,
+    operation: &'static str,
+    scuba: ScubaSampleBuilder,
+) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreBytes>), (BlobstoreId, Error)>> {
+    blobstores
+        .iter()
+        .map(|&(blobstore_id, ref blobstore)| {
+            blobstore
+                .get(ctx.clone(), key.clone())
+                .map({
+                    cloned!(blobstore_id);
+                    move |val| (blobstore_id, val)
+                })
+                .timeout(REQUEST_TIMEOUT)
+                .map_err({
+                    cloned!(blobstore_id);
+                    move |error| (blobstore_id, remap_timeout_error(error))
+                })
+                .timed({
+                    cloned!(key, mut scuba);
+                    let session = ctx.session_id().clone();
+                    move |stats, result| {
+                        scuba
+                            .add("key", key.clone())
+                            .add("operation", operation)
+                            .add("blobstore_id", blobstore_id)
+                            .add(
+                                "completion_time",
+                                stats.completion_time.as_micros_unchecked(),
+                            );
+
+                        // log session id only for slow requests
+                        if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                            scuba.add("session", session.to_string());
+                        }
+
+                        match result {
+                            Ok((_, Some(data))) => {
+                                scuba.add("size", data.len());
+                            }
+                            Err((_, error)) => {
+                                // Always log errors
+                                scuba.unsampled();
+                                scuba.add("error", error.to_string());
+                            }
+                            Ok((_, None)) => {}
+                        }
+                        scuba.log();
+                        future::ok(())
+                    }
+                })
+        })
+        .collect()
 }
 
 fn multiplexed_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(

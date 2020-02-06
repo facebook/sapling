@@ -26,6 +26,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
 use metaconfig_types::{BlobstoreId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
+use nonzero_ext::nonzero;
 use scuba::ScubaSampleBuilder;
 
 pub struct Tickable<T> {
@@ -154,6 +155,7 @@ fn base(fb: FacebookInit) {
             ],
             log.clone(),
             ScubaSampleBuilder::with_discard(),
+            nonzero!(1u64),
         );
         let ctx = CoreContext::test_mock(fb);
 
@@ -283,6 +285,7 @@ fn multiplexed(fb: FacebookInit) {
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             ScubaSampleBuilder::with_discard(),
+            nonzero!(1u64),
         );
 
         // non-existing key when one blobstore failing
@@ -354,6 +357,7 @@ fn scrubbed(fb: FacebookInit) {
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             ScubaSampleBuilder::with_discard(),
+            nonzero!(1u64),
             scrub_handler.clone(),
             ScrubAction::ReportOnly,
         );
@@ -422,6 +426,7 @@ fn scrubbed(fb: FacebookInit) {
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             ScubaSampleBuilder::with_discard(),
+            nonzero!(1u64),
             scrub_handler,
             ScrubAction::Repair,
         );
@@ -510,6 +515,7 @@ fn queue_waits(fb: FacebookInit) {
             ],
             log.clone(),
             ScubaSampleBuilder::with_discard(),
+            nonzero!(1u64),
         );
         let ctx = CoreContext::test_mock(fb);
 
