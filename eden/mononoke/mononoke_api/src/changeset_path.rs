@@ -261,9 +261,9 @@ impl ChangesetPathContext {
 
         fetch_blame(ctx, repo, csid, mpath.clone())
             .map_err(|error| match error {
-                BlameError::NoSuchPath(_) | BlameError::IsDirectory(_) => {
-                    MononokeError::InvalidRequest(error.to_string())
-                }
+                BlameError::NoSuchPath(_)
+                | BlameError::IsDirectory(_)
+                | BlameError::Rejected(_) => MononokeError::InvalidRequest(error.to_string()),
                 _ => MononokeError::from(Error::from(error)),
             })
             .compat()
