@@ -7,10 +7,16 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
-import json
 import subprocess
 
-from edenscm.mercurial import error, lock as lockmod, node as nodemod, pycompat, util
+from edenscm.mercurial import (
+    error,
+    json,
+    lock as lockmod,
+    node as nodemod,
+    pycompat,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 
@@ -32,7 +38,7 @@ progressfilename = "commitcloudsyncprogress"
 
 
 def progress(repo, step, **kwargs):
-    with repo.sharedvfs.open(progressfilename, "w", atomictemp=True) as f:
+    with repo.sharedvfs.open(progressfilename, "wb", atomictemp=True) as f:
         data = {"step": str(step), "data": kwargs}
         f.write(pycompat.encodeutf8(json.dumps(data)))
 
@@ -61,7 +67,7 @@ def progresscomplete(repo):
 
 def _getprogressstep(repo):
     try:
-        data = json.load(repo.sharedvfs.open(progressfilename))
+        data = json.loads(repo.sharedvfs.open(progressfilename).read())
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise
