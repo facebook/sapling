@@ -887,6 +887,7 @@ struct Rows {
     rows: Vec<Row>,
     column_alignments: Vec<Alignment>,
     column_min_widths: Vec<usize>,
+    column_max_widths: Vec<usize>,
 }
 
 enum Alignment {
@@ -906,12 +907,18 @@ impl fmt::Display for Rows {
                     .max()
                     .unwrap_or(0)
                     .max(self.column_min_widths.get(i).cloned().unwrap_or(0))
+                    .min(
+                        self.column_max_widths
+                            .get(i)
+                            .cloned()
+                            .unwrap_or(usize::max_value()),
+                    )
             })
             .collect();
         for row in self.rows.iter() {
             for (i, cell) in row.columns.iter().enumerate() {
                 let width = column_widths[i];
-                let pad = " ".repeat(width - cell.len());
+                let pad = " ".repeat(width.max(cell.len()) - cell.len());
                 let mut content = match self.column_alignments.get(i).unwrap_or(&Alignment::Left) {
                     Alignment::Left => cell.clone() + &pad,
                     Alignment::Right => pad + cell,
@@ -1386,11 +1393,13 @@ impl TracingData {
         ];
 
         let column_min_widths = vec![4, 4, 20, 0];
+        let column_max_widths = vec![20, 20, 80, 80];
 
         Rows {
             rows: context.rows,
             column_alignments,
             column_min_widths,
+            column_max_widths,
         }
     }
 }
@@ -1698,6 +1707,36 @@ Start Dur.ms | Name               Source
    22    ...   \ foo              a.py line 10
    24    ...    | foo             a.py line 10
    26    ...    | foo             a.py line 10
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_column_widths() {
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(
+            &meta(&str::repeat("very long text ", 10), "a.py", "10"),
+            None,
+        );
+        let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+
+        assert_eq!(
+            data.ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name                                                                           Source
+    2    +14 | very long text very long text very long text very long text very long text very long text very long text very long text very long text very long text  a.py line 10
+    4     +6  \ bar                                                                           a.py line 20
+    6     +2   | bar                                                                          a.py line 20
+   12     +2  \ bar                                                                           a.py line 20
 
 "#
         );
