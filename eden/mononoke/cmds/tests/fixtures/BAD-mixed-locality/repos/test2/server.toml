@@ -1,0 +1,8 @@
+repoid = 456
+storage_config = "simple"
+
+[storage.simple.db.remote]
+db_address = "somedb"
+
+[storage.simple.blobstore.blob_files]
+path = "/tmp/blobstore"

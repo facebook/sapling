@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
+
+// This file should only contain functions that accept a String and returns an internal type
+
+use std::{convert::TryFrom, str::FromStr};
+
+use mercurial_types::{HgChangesetId, HgNodeHash};
+use mononoke_types::MPath;
+
+use crate::errors::ErrorKind;
+
+pub fn get_mpath(path: String) -> Result<MPath, ErrorKind> {
+    MPath::try_from(&*path).map_err(|e| ErrorKind::InvalidInput(path, Some(e)))
+}
+
+pub fn get_changeset_id(changesetid: String) -> Result<HgChangesetId, ErrorKind> {
+    HgChangesetId::from_str(&changesetid).map_err(|e| ErrorKind::InvalidInput(changesetid, Some(e)))
+}
+
+pub fn get_nodehash(hash: &str) -> Result<HgNodeHash, ErrorKind> {
+    HgNodeHash::from_str(hash).map_err(|e| ErrorKind::InvalidInput(hash.to_string(), Some(e)))
+}

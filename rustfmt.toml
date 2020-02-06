@@ -1,0 +1,10 @@
+# Get help on options with `rustfmt --help=config`
+# Please keep these in alphabetical order.
+# Prefer to keep builtin and custom derives separate
+edition = "2018"
+merge_derives = false
+reorder_imports = true
+reorder_modules = true
+tab_spaces = 4
+use_field_init_shorthand = true
+use_try_shorthand = true
