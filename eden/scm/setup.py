@@ -178,7 +178,7 @@ from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
-from distutils_rust import RustBinary, RustVendoredCrates, BuildRustExt, InstallRustExt
+from distutils_rust import RustBinary, BuildRustExt, InstallRustExt
 import distutils
 
 havefb = os.path.exists("fb")
@@ -1895,12 +1895,6 @@ def build_libraries(self, libraries):
 
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
-rustvendoredcrates = []
-if havefb:
-    rustvendoredcrates.append(
-        RustVendoredCrates("tp2-crates-io", dest="build/tp2-crates-io")
-    )
-
 hgmainfeatures = (
     " ".join(
         filter(
@@ -1965,7 +1959,6 @@ setup(
     packages=packages,
     ext_modules=extmodules,
     libraries=libraries,
-    rust_vendored_crates=rustvendoredcrates,
     rust_ext_binaries=rustextbinaries,
     package_data=packagedata,
     cmdclass=cmdclass,

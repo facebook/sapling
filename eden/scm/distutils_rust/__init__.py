@@ -123,24 +123,6 @@ class RustBinary(object):
             return self.final_name
 
 
-class RustVendoredCrates(object):
-    """Data for Rust vendored crates stored in LFS.
-
-    'name' is the name of the vendoring set, and is also the LFS name (with
-    ".tar.gz" appended) to download.
-
-    'dest' is the directory into which the archive should be extracted.
-    """
-
-    def __init__(self, name, dest=None):
-        self.name = name
-        self.dest = dest or os.getcwd()
-
-    @property
-    def filename(self):
-        return "%s.tar.gz" % self.name
-
-
 class BuildRustExt(distutils.core.Command):
 
     description = "build Rust extensions (compile/link to build directory)"
@@ -188,10 +170,6 @@ class BuildRustExt(distutils.core.Command):
     def run(self):
         # write cargo config
         self.write_cargo_config()
-
-        # Download vendored crates
-        for ven in self.distribution.rust_vendored_crates:
-            self.download_vendored_crates(ven)
 
         # Build Rust extensions
         for target in self.distribution.rust_ext_modules:
@@ -252,15 +230,15 @@ rustflags = ["-C", "link-args=-fuse-ld=gold"]
             if key in paths:
                 config += '{} = "{}"\n'.format(key, paths[key])
 
-        if self.distribution.rust_vendored_crates:
+        vendored_path = self.rust_vendored_crate_path()
+        if vendored_path:
             config += """
 [source.crates-io]
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
 """
-            for rust_vendor_crate in self.distribution.rust_vendored_crates:
-                config += 'directory = "{}/vendor"\n'.format(rust_vendor_crate.dest)
+            config += 'directory = "{}/vendor"\n'.format(vendored_path)
 
         if os.name == "nt":
             config = config.replace("\\", "\\\\")
@@ -401,11 +379,11 @@ replace-with = "vendored-sources"
         self.build_target(target)
 
     try:
-        from distutils_rust.fb import download_vendored_crates, rust_binary_paths
+        from distutils_rust.fb import rust_binary_paths, rust_vendored_crate_path
     except ImportError:
 
-        def download_vendored_crates(self, ven):
-            distutils.log.info("skipping downloading vendored crates")
+        def rust_vendored_crate_path(self):
+            return None
 
         def rust_binary_paths(self):
             return {"cargo": "cargo"}
@@ -422,7 +400,6 @@ class InstallRustExt(distutils.command.install_scripts.install_scripts):
 
 distutils.dist.Distribution.rust_ext_modules = ()
 distutils.dist.Distribution.rust_ext_binaries = ()
-distutils.dist.Distribution.rust_vendored_crates = ()
 distutils.command.build.build.sub_commands.append(
     (
         "build_rust_ext",
