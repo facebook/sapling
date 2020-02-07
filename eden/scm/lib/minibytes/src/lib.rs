@@ -19,6 +19,7 @@
 mod bytes;
 mod impls;
 mod owners;
+mod serde;
 
 #[cfg(test)]
 mod tests;

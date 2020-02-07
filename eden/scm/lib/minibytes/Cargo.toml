@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 memmap = "0.7"
+serde = "1"
 
 [dev-dependencies]
 quickcheck = "0.9"
