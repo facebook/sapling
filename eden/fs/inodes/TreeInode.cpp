@@ -1780,6 +1780,19 @@ ObjectStore* TreeInode::getStore() const {
   return getMount()->getObjectStore();
 }
 
+/*
+On each level of the level order traversal, we search for a gitignore file, and
+if it exists, we load it. This gitignore file is owned by a `std::<unique_ptr>`
+on each level, and the file contents are stored within a `GitIgnoreStack`. Lower
+levels of the tree are passed raw pointers to their parent's `GitIgnoreStack`,
+and store this pointer after loading the file contents of that level. In other
+words, a `GitIgnoreStack` contains a `GitIgnoreStack*` to the parent's
+`GitIgnoreStack`, and the current level's gitignore file contents (if a
+gitignore file exists). We are allowed to pass raw pointers derived from the
+`std::<unique_ptr>` because the raw pointers are passed only to the childrens'
+recursive calls and we are sure that the children calls will finish before we
+return from the parent call.
+*/
 Future<Unit> TreeInode::diff(
     DiffContext* context,
     RelativePathPiece currentPath,
@@ -1935,6 +1948,31 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
       });
 }
 
+/*
+This algorithm starts at the root `TreeInode` of the working directory and the
+root source control commit `Tree`, traversing the trees in a level order
+traversal. Per level of the tree, we loop over the children entries and
+recursively process each entry as either added, removed, modified, ignored, or
+hidden. We can also recognize that there has been no change and skip over that
+child. We process children by constructing and collecting `DeferredDiffEntry`
+objects using the children `TreeInode` objects and manually `run()`ning these.
+If we are processing a file, we record this
+added/removed/modified/ignored/hidden state in a callback, and extract this
+collected information after the original `diff()` call has been completed.
+
+In the case in which the working directory entry is not materialized, but it has
+possibly been modified (for example, if a unmaterialized directory was moved, or
+if we're calling diff with a source control commit that is far away from the
+working directory parent), we can make an optimization. Since unmaterialized
+inode entries still hold their commit hash, we can directly compare the working
+directory entry's corresponding source control entry with the queried source
+control commit's entry instead of materializing the inode entry to continue
+through the working directory vs source control commit logic. We do this by
+entering a different code path that acts similarly to the previously described
+algorithm, but runs purely recursively instead of using `DeferredDiffEntries`
+due to the fact that we do not need to worry about recursive lock holding since
+the only time a lock is held in this path is when we load gitignore files.
+*/
 Future<Unit> TreeInode::computeDiff(
     folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
     DiffContext* context,
@@ -1970,6 +2008,13 @@ Future<Unit> TreeInode::computeDiff(
     // Even though diffing conceptually seems like a read-only operation, we
     // need a write lock since we may have to load child inodes, affecting
     // their entry state.
+    //
+    // This lock is held while we are processing the child
+    // entries of the tree. The lock is released once we have constructed all of
+    // the needed `DeferredDiffEntry` objects, and then these are manually ran,
+    // which themselves call `diff()` with their internal `TreeInode`. This is
+    // done so we are not recursively holding the `contents` lock, which could
+    // lead to deadlock.
     auto contents = std::move(contentsLock);
 
     auto processUntracked = [&](PathComponentPiece name, DirEntry* inodeEntry) {

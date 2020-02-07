@@ -942,6 +942,16 @@ folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   return fuseChannel->flushInvalidations();
 }
 
+/*
+During a diff, we have the possiblility of entering a non-mount aware code path.
+Inside the non-mount aware code path, gitignore files still need to be honored.
+In order to load a gitignore entry, a function pointer to
+`EdenMount::loadFileContentsFromPath()` is passed through the `DiffContext` in
+order to allow access the mount without creating a circular dependency. This
+function starts at the root of the tree, and will follow the path and resolve
+symlinks and will load inodes as needed in order to load the contents of the
+file.
+*/
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
     bool listIgnored,
