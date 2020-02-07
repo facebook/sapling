@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import os
 import time
 
 from . import extensions, pycompat, sshpeer, util
@@ -15,11 +16,18 @@ from . import extensions, pycompat, sshpeer, util
 class connectionpool(object):
     def __init__(self, repo):
         self._repo = repo
+        self._poolpid = os.getpid()
         self._pool = dict()
 
     def get(self, path, opts=None):
         # Prevent circular dependency
         from . import hg
+
+        # If the process forks we need to use new connections.
+        pid = os.getpid()
+        if pid != self._poolpid:
+            self.close()
+            self._poolpid = pid
 
         if opts is None:
             opts = {}
