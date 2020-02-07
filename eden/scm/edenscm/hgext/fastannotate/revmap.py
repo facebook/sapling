@@ -213,12 +213,12 @@ class revmap(object):
     @staticmethod
     def _readcstr(f):
         """read a C-language-like '\0'-terminated string"""
-        buf = ""
+        buf = b""
         while True:
             ch = f.read(1)
             if not ch:  # unexpected eof
                 raise error.CorruptedFileError()
-            if ch == "\0":
+            if ch == b"\0":
                 break
             buf += ch
         return buf

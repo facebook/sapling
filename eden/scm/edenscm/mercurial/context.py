@@ -1137,9 +1137,9 @@ class basefilectx(object):
         """
 
         def lines(text):
-            if text.endswith("\n"):
-                return text.count("\n")
-            return text.count("\n") + int(bool(text))
+            if text.endswith(b"\n"):
+                return text.count(b"\n")
+            return text.count(b"\n") + int(bool(text))
 
         if linenumber:
 

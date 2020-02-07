@@ -213,6 +213,12 @@ class baseformatter(object):
         assert len(fieldkeys) == len(fielddata)
         self._item.update(zip(fieldkeys, fielddata))
 
+    def writebytes(self, fields, deftext, *fielddata, **opts):
+        """do default text output while assigning data to item"""
+        fieldkeys = fields.split()
+        assert len(fieldkeys) == len(fielddata)
+        self._item.update(zip(fieldkeys, fielddata))
+
     def condwrite(self, cond, fields, deftext, *fielddata, **opts):
         """do conditional write (primarily for plain formatter)"""
         fieldkeys = fields.split()
@@ -221,6 +227,9 @@ class baseformatter(object):
 
     def plain(self, text, **opts):
         """show raw text for non-templated mode"""
+
+    def plainbytes(self, text, **opts):
+        """show raw bytes for non-templated mode"""
 
     def isplain(self):
         """check for plain formatter usage"""
@@ -292,8 +301,10 @@ class plainformatter(baseformatter):
             self.hexfunc = short
         if ui is out:
             self._write = ui.write
+            self._writebytes = ui.writebytes
         else:
             self._write = lambda s, **opts: out.write(s)
+            self._writebytes = lambda s, **opts: out.writebytes(s)
 
     def startitem(self):
         pass
@@ -304,6 +315,9 @@ class plainformatter(baseformatter):
     def write(self, fields, deftext, *fielddata, **opts):
         self._write(deftext % fielddata, **opts)
 
+    def writebytes(self, fields, deftext, *fielddata, **opts):
+        self._writebytes(deftext % fielddata, **opts)
+
     def condwrite(self, cond, fields, deftext, *fielddata, **opts):
         """do conditional write"""
         if cond:
@@ -311,6 +325,9 @@ class plainformatter(baseformatter):
 
     def plain(self, text, **opts):
         self._write(text, **opts)
+
+    def plainbytes(self, text, **opts):
+        self._writebytes(text, **opts)
 
     def isplain(self):
         return True

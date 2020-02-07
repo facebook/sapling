@@ -128,6 +128,8 @@ class unioncontentstore(object):
 
         A partial chain is a chain that may not be terminated in a full-text.
         """
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         for store in self.stores:
             try:
                 return store.getdeltachain(name, node)
@@ -171,23 +173,33 @@ class remotecontentstore(object):
         self._shared = shared
 
     def _prefetch(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         self._fileservice.prefetch(
             [(name, hex(node))], force=True, fetchdata=True, fetchhistory=False
         )
 
     def get(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         self._prefetch(name, node)
         return self._shared.get(name, node)
 
     def getdelta(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         self._prefetch(name, node)
         return self._shared.getdelta(name, node)
 
     def getdeltachain(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         self._prefetch(name, node)
         return self._shared.getdeltachain(name, node)
 
     def getmeta(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         self._prefetch(name, node)
         return self._shared.getmeta(name, node)
 
@@ -208,17 +220,25 @@ class manifestrevlogstore(object):
         self._repackstartlinkrev = 0
 
     def get(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         return self._revlog(name).revision(node, raw=True)
 
     def getdelta(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         revision = self.get(name, node)
         return revision, name, nullid, self.getmeta(name, node)
 
     def getdeltachain(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
 
     def getmeta(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         rl = self._revlog(name)
         rev = rl.rev(node)
         return {
@@ -227,6 +247,8 @@ class manifestrevlogstore(object):
         }
 
     def getnodeinfo(self, name, node):
+        assert isinstance(name, str)
+        assert isinstance(node, bytes)
         cl = self.repo.changelog
         rl = self._revlog(name)
         parents = rl.parents(node)
@@ -237,6 +259,7 @@ class manifestrevlogstore(object):
         raise RuntimeError("cannot add to a revlog store")
 
     def _revlog(self, name):
+        assert isinstance(name, str)
         rl = self._revlogs.get(name)
         if rl is None:
             indexfile = None
@@ -251,6 +274,8 @@ class manifestrevlogstore(object):
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
+            assert isinstance(name, str)
+            assert isinstance(node, bytes)
             mfrevlog = self._revlog(name)
             if node not in mfrevlog.nodemap:
                 missing.append((name, node))
