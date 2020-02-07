@@ -168,10 +168,10 @@ pub async fn init_small_large_repo(
         .await?;
 
     small_to_large_commit_syncer
-        .preserve_commit(ctx.clone(), first_bcs_id)
+        .unsafe_preserve_commit(ctx.clone(), first_bcs_id)
         .await?;
     small_to_large_commit_syncer
-        .preserve_commit(ctx.clone(), second_bcs_id)
+        .unsafe_preserve_commit(ctx.clone(), second_bcs_id)
         .await?;
     bookmark(&ctx, &smallrepo, "premove")
         .set_to(second_bcs_id)

@@ -614,17 +614,81 @@ where
         }
     }
 
+    // This is the function that safely syncs a commit and all of its unsynced ancestors from a
+    // source repo to target repo. If commit is already synced then it just does a lookup.
+    // But safety comes with flexibility cost - not all of the syncs are allowed. For example,
+    // syncing a *public* commit from a small repo to a large repo is not allowed:
+    // 1) If small repo is the source of truth, then there should be only a single job that
+    //    does this sync. Since this function can be used from many places and we have no
+    //    way of ensuring only a single job does the sync, this sync is forbidden completely.
+    // 2) If large repo is a source of truth, then there should never be a case with public
+    //    commit in a small repo not having an equivalent in the large repo.
+    pub async fn sync_commit(
+        &self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let unsynced_ancestors =
+            find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
+
+        let source_repo = self.repos.get_source_repo();
+
+        let small_repo = self.get_small_repo();
+        let source_repo_is_small = source_repo.get_repoid() == small_repo.get_repoid();
+
+        if source_repo_is_small {
+            let public_unsynced_ancestors = source_repo
+                .get_phases()
+                .get_public(
+                    ctx.clone(),
+                    unsynced_ancestors.clone(),
+                    false, /* ephemeral_derive */
+                )
+                .compat()
+                .await?;
+            if !public_unsynced_ancestors.is_empty() {
+                return Err(format_err!(
+                    "unexpected sync lookup attempt - trying to sync \
+                     a public commit from small repo to a large repo. Syncing public commits is \
+                     only supported from a large repo to a small repo"
+                ));
+            }
+        }
+
+        for ancestor in unsynced_ancestors {
+            self.unsafe_sync_commit(ctx.clone(), ancestor).await?;
+        }
+
+        let commit_sync_outcome = self
+            .get_commit_sync_outcome(ctx.clone(), source_cs_id)
+            .await?
+            .ok_or(format_err!(
+                "was not able to remap a commit {}",
+                source_cs_id
+            ))?;
+        use CommitSyncOutcome::*;
+        let res = match commit_sync_outcome {
+            NotSyncCandidate => None,
+            RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(cs_id),
+            Preserved => Some(source_cs_id),
+        };
+        Ok(res)
+    }
+
     /// Create a changeset, equivalent to `source_cs_id` in the target repo
     /// The difference between this function and `rewrite_commit` is that
     /// `rewrite_commit` does not know anything about the repo and only produces
     /// a `BonsaiChangesetMut` object, which later may or may not be uploaded
     /// into the repository.
-    pub async fn sync_commit(
+    /// This function is prefixed with unsafe because it requires that ancestors commits are
+    /// already synced and because syncing commit public commits from a small repo to a large repo
+    /// using this function might lead to repo corruption.
+    pub async fn unsafe_sync_commit(
         &self,
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
-        // Take most of below function sync_commit into here and delete. Leave pushrebase in next fn
+        // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
         let (source_repo, _, _) = self.get_source_target_mover();
 
         let cs = source_cs_id
@@ -699,7 +763,10 @@ where
         }
     }
 
-    pub async fn sync_commit_pushrebase(
+    /// This function is prefixed with unsafe because it requires that ancestors commits are
+    /// already synced and because there should be exactly one sync job that uses this function
+    /// for a (small repo -> large repo) pair.
+    pub async fn unsafe_sync_commit_pushrebase(
         &self,
         ctx: CoreContext,
         source_cs: BonsaiChangeset,
@@ -787,9 +854,10 @@ where
         }
     }
 
-    /// The difference between `sync_commit()` and `preserve_commit()` is that `preserve_commit()`
+    /// The difference between `unsafe_sync_commit()` and `unsafe_preserve_commit()` is that `unsafe_preserve_commit()`
     /// doesn't do any commit rewriting, and it requires all it's parents to be preserved.
-    pub async fn preserve_commit(
+    /// It's prefixed with "unsafe_" because it doesn't apply any path rewriting.
+    pub async fn unsafe_preserve_commit(
         &self,
         ctx: CoreContext,
         source_cs_id: ChangesetId,
@@ -1002,7 +1070,8 @@ where
             // All parents being `Preserved` means that merge happens
             // purely in the pre-big-merge area of the repo, so it can
             // just be safely preserved.
-            self.preserve_commit(ctx.clone(), source_cs_id).await?;
+            self.unsafe_preserve_commit(ctx.clone(), source_cs_id)
+                .await?;
             return Ok(Some(source_cs_id));
         }
 

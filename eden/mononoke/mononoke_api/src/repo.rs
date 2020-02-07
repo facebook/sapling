@@ -26,9 +26,7 @@ use fsnodes::{derive_fsnodes, RootFsnodeMapping};
 
 use aclchecker::AclChecker;
 use blame::derive_blame;
-use cross_repo_sync::{
-    find_toposorted_unsynced_ancestors, CommitSyncOutcome, CommitSyncRepos, CommitSyncer,
-};
+use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
@@ -865,69 +863,7 @@ impl RepoContext {
         let commit_syncer =
             CommitSyncer::new(self.synced_commit_mapping().clone(), commit_sync_repos);
 
-        let ctx = &self.ctx;
-        let unsynced_ancestors =
-            find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, changeset).await?;
-
-        let source_repo_is_small =
-            commit_syncer.get_small_repo().get_repoid() == self.blob_repo().get_repoid();
-
-        // Draft commits can be synced in both directions i.e. small-to-large and
-        // large-to-small. However public commits can only be synced in large-to-small direction.
-        // The reason is the following:
-        //
-        // We can have two states for a pair of a small and large repos - either small repo
-        // is the source of truth and new commits from small repo are tailed to the large repo,
-        // or large repo is the source of truth and new commits from large repo are backsynced
-        // to a small repo.
-        // If small repo is the source of truth, then public commits must be synced only by a single
-        // sync job, and doing sync here might corrupt large repo.
-        // If large repo is the source of truth, then small repo can't have public commits
-        // that are not synced to the large repo already.
-        //
-        // So regardless of which repo is the source of truth, syncing public commits between
-        // small and large repo shouldn't be possible. Sync in the other direction (large -> small)
-        // should always be possible.
-        if source_repo_is_small {
-            let public_unsynced_ancestors = self
-                .blob_repo()
-                .get_phases()
-                .get_public(
-                    ctx.clone(),
-                    unsynced_ancestors.clone(),
-                    false, /* ephemeral_derive */
-                )
-                .compat()
-                .await?;
-            if !public_unsynced_ancestors.is_empty() {
-                return Err(MononokeError::InternalError(
-                    format_err!(
-                        "unexpected sync lookup attempt - trying to sync \
-                     a public commit from small repo to a large repo. Syncing public commits is \
-                     only supported from a large repo to a small repo"
-                    )
-                    .into(),
-                ));
-            }
-        }
-
-        for ancestor in unsynced_ancestors {
-            commit_syncer.sync_commit(ctx.clone(), ancestor).await?;
-        }
-
-        let commit_sync_outcome = commit_syncer
-            .get_commit_sync_outcome(ctx.clone(), changeset)
-            .await?
-            .ok_or(MononokeError::InternalError(
-                format_err!("was not able to remap a commit {}", changeset).into(),
-            ))?;
-
-        use CommitSyncOutcome::*;
-        let maybe_cs_id = match commit_sync_outcome {
-            NotSyncCandidate => None,
-            RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(cs_id),
-            Preserved => Some(changeset),
-        };
+        let maybe_cs_id = commit_syncer.sync_commit(&self.ctx, changeset).await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 

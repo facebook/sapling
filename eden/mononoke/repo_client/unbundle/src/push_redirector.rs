@@ -689,7 +689,7 @@ impl PushRedirector {
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
                 .small_to_large_commit_syncer
-                .sync_commit(ctx.clone(), *bcs_id)
+                .unsafe_sync_commit(ctx.clone(), *bcs_id)
                 .await?
                 .ok_or(format_err!(
                     "{} was rewritten into nothingness during uploaded changesets sync",

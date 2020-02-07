@@ -146,7 +146,7 @@ where
         .unwrap();
     async move {
         config
-            .sync_commit_pushrebase(ctx.clone(), source_bcs, bookmark_name)
+            .unsafe_sync_commit_pushrebase(ctx.clone(), source_bcs, bookmark_name)
             .await
     }
     .boxed()
