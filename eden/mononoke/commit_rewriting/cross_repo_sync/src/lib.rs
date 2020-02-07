@@ -419,6 +419,12 @@ pub enum CommitSyncRepos {
 }
 
 impl CommitSyncRepos {
+    /// Create a new instance of `CommitSyncRepos`
+    /// The direction is determined by the `source_repo` and `target_repo`
+    /// arguments, while `SmallToLarge` vs `LargeToSmall` - by the
+    /// `CommitSyncConfig` field of the `source_or_target_repo_config` argument.
+    /// The name `source_or_target_repo_config` is meant to signify that it
+    /// makes no difference which one to pass.
     pub fn new(
         source_repo: BlobRepo,
         target_repo: BlobRepo,

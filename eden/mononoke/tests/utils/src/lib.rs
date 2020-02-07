@@ -74,6 +74,16 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
+    pub fn add_files<P: Into<String>, C: AsRef<str>, I: IntoIterator<Item = (P, C)>>(
+        mut self,
+        path_contents: I,
+    ) -> Self {
+        for (path, content) in path_contents {
+            self = self.add_file(path, content);
+        }
+        self
+    }
+
     pub fn delete_file(mut self, path: impl Into<String>) -> Self {
         self.files.insert(path.into(), CreateFileContext::Deleted);
         self
