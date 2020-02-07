@@ -1695,7 +1695,19 @@ class PythonTest(Test):
         return processed
 
     def _run(self, env):
-        cmd = b'%s debugpython -- "%s"' % (self._hgcommand, self.path)
+        debugargs = b""
+        if self._options.debug:
+            try:
+                import ipdb
+            except ImportError:
+                print(
+                    "WARNING: ipdb is not available, not running %s under debug mode"
+                    % (self.path,)
+                )
+                pass
+            else:
+                debugargs = b" -m ipdb "
+        cmd = b'%s debugpython -- %s "%s"' % (self._hgcommand, debugargs, self.path)
         if self._options.interactive and self._isdotttest():
             # --fix is picked up by testutil.autofix, which will autofix the test.
             cmd += " --fix"
