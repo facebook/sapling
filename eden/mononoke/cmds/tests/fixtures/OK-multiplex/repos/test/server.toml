@@ -5,6 +5,7 @@ storage_config = "multiplex"
 db_address="xdb.mononoke_production"
 
 [storage.multiplex.blobstore.multiplexed]
+multiplex_id = 1
 components = [
   { blobstore_id = 1, blobstore = { manifold = { manifold_bucket = "mononoke_prod" } } },
   { blobstore_id = 2, blobstore = { manifold = { manifold_bucket = "mononoke_prod_replica" } } },

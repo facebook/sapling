@@ -16,7 +16,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use metaconfig_types::{BlobstoreId, ScrubAction};
+use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
 use scuba::ScubaSampleBuilder;
 use slog::{info, warn};
@@ -76,6 +76,7 @@ pub struct ScrubBlobstore {
 
 impl ScrubBlobstore {
     pub fn new(
+        multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
@@ -84,6 +85,7 @@ impl ScrubBlobstore {
         scrub_action: ScrubAction,
     ) -> Self {
         let inner = MultiplexedBlobstore::new(
+            multiplex_id,
             blobstores.clone(),
             queue.clone(),
             scuba.clone(),

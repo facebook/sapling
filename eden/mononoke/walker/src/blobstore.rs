@@ -175,6 +175,7 @@ pub async fn open_blobstore(
             (
                 Some(scrub_handler),
                 BlobConfig::Scrub {
+                    multiplex_id,
                     scuba_table,
                     scuba_sample_rate,
                     blobstores,
@@ -192,6 +193,7 @@ pub async fn open_blobstore(
 
                 make_blobstore_multiplexed(
                     fb,
+                    multiplex_id,
                     &scuba_table,
                     scuba_sample_rate,
                     &blobstores,
@@ -205,12 +207,14 @@ pub async fn open_blobstore(
             (
                 None,
                 BlobConfig::Multiplexed {
+                    multiplex_id,
                     scuba_table,
                     scuba_sample_rate,
                     blobstores,
                 },
             ) => make_blobstore_multiplexed(
                 fb,
+                multiplex_id,
                 &scuba_table,
                 scuba_sample_rate,
                 &blobstores,

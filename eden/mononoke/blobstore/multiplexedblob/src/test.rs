@@ -24,7 +24,7 @@ use futures::sync::oneshot;
 use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
-use metaconfig_types::{BlobstoreId, ScrubAction};
+use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
 use nonzero_ext::nonzero;
 use scuba::ScubaSampleBuilder;
@@ -149,6 +149,7 @@ fn base(fb: FacebookInit) {
         let bs1 = Arc::new(Tickable::new());
         let log = Arc::new(LogHandler::new());
         let bs = MultiplexedBlobstoreBase::new(
+            MultiplexId::new(1),
             vec![
                 (BlobstoreId::new(0), bs0.clone()),
                 (BlobstoreId::new(1), bs1.clone()),
@@ -282,6 +283,7 @@ fn multiplexed(fb: FacebookInit) {
         let bid1 = BlobstoreId::new(1);
         let bs1 = Arc::new(Tickable::new());
         let bs = MultiplexedBlobstore::new(
+            MultiplexId::new(1),
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             ScubaSampleBuilder::with_discard(),
@@ -354,6 +356,7 @@ fn scrubbed(fb: FacebookInit) {
         let bid1 = BlobstoreId::new(1);
         let bs1 = Arc::new(Tickable::new());
         let bs = ScrubBlobstore::new(
+            MultiplexId::new(1),
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             ScubaSampleBuilder::with_discard(),
@@ -423,6 +426,7 @@ fn scrubbed(fb: FacebookInit) {
         let bid1 = BlobstoreId::new(1);
         let bs1 = Arc::new(Tickable::new());
         let bs = ScrubBlobstore::new(
+            MultiplexId::new(1),
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             ScubaSampleBuilder::with_discard(),
@@ -508,6 +512,7 @@ fn queue_waits(fb: FacebookInit) {
         let bs2 = Arc::new(Tickable::new());
         let log = Arc::new(Tickable::new());
         let bs = MultiplexedBlobstoreBase::new(
+            MultiplexId::new(1),
             vec![
                 (BlobstoreId::new(0), bs0.clone()),
                 (BlobstoreId::new(1), bs1.clone()),

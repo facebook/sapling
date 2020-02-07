@@ -14,7 +14,7 @@ use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
 use itertools::{Either, Itertools};
-use metaconfig_types::BlobstoreId;
+use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::BlobstoreBytes;
 use scuba::ScubaSampleBuilder;
 use std::collections::{HashMap, HashSet};
@@ -67,6 +67,7 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 }
 
 pub struct MultiplexedBlobstoreBase {
+    multiplex_id: MultiplexId,
     blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba: ScubaSampleBuilder,
@@ -75,6 +76,7 @@ pub struct MultiplexedBlobstoreBase {
 
 impl MultiplexedBlobstoreBase {
     pub fn new(
+        multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         mut scuba: ScubaSampleBuilder,
@@ -83,6 +85,7 @@ impl MultiplexedBlobstoreBase {
         scuba.add_common_server_data();
 
         Self {
+            multiplex_id,
             blobstores: blobstores.into(),
             handler,
             scuba,
@@ -358,7 +361,11 @@ impl Blobstore for MultiplexedBlobstoreBase {
 
 impl fmt::Debug for MultiplexedBlobstoreBase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MultiplexedBlobstoreBase")?;
+        write!(
+            f,
+            "MultiplexedBlobstoreBase: multiplex_id: {}",
+            &self.multiplex_id
+        )?;
         f.debug_map()
             .entries(self.blobstores.iter().map(|(ref k, ref v)| (k, v)))
             .finish()

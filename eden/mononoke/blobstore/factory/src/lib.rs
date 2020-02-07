@@ -27,7 +27,8 @@ use fileblob::Fileblob;
 use itertools::Either;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{
-    self, BlobConfig, BlobstoreId, MetadataDBConfig, ScrubAction, ShardedFilenodesParams,
+    self, BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, ScrubAction,
+    ShardedFilenodesParams,
 };
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use prefixblob::PrefixBlobstore;
@@ -396,6 +397,7 @@ fn make_blobstore_impl(
         .into_future()
         .boxify(),
         Multiplexed {
+            multiplex_id,
             scuba_table,
             scuba_sample_rate,
             blobstores,
@@ -403,6 +405,7 @@ fn make_blobstore_impl(
             has_components = true;
             make_blobstore_multiplexed(
                 fb,
+                *multiplex_id,
                 scuba_table,
                 *scuba_sample_rate,
                 blobstores,
@@ -414,6 +417,7 @@ fn make_blobstore_impl(
             )
         }
         Scrub {
+            multiplex_id,
             scuba_table,
             scuba_sample_rate,
             blobstores,
@@ -422,6 +426,7 @@ fn make_blobstore_impl(
             has_components = true;
             make_blobstore_multiplexed(
                 fb,
+                *multiplex_id,
                 scuba_table,
                 *scuba_sample_rate,
                 blobstores,
@@ -497,6 +502,7 @@ fn make_blobstore_impl(
 
 pub fn make_blobstore_multiplexed(
     fb: FacebookInit,
+    multiplex_id: MultiplexId,
     scuba_table: &Option<String>,
     scuba_sample_rate: NonZeroU64,
     inner_config: &[(BlobstoreId, BlobConfig)],
@@ -559,6 +565,7 @@ pub fn make_blobstore_multiplexed(
                 future::join_all(components).map({
                     move |components| match scrub_args {
                         Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
+                            multiplex_id,
                             components,
                             queue,
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
@@ -570,6 +577,7 @@ pub fn make_blobstore_multiplexed(
                         ))
                             as Arc<dyn Blobstore>,
                         None => Arc::new(MultiplexedBlobstore::new(
+                            multiplex_id,
                             components,
                             queue,
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {

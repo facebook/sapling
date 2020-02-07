@@ -509,6 +509,45 @@ impl From<BlobstoreId> for ScubaValue {
     }
 }
 
+/// Id used to identify storage configuration for a multiplexed blobstore.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct MultiplexId(i32);
+
+impl MultiplexId {
+    /// Construct a MultiplexId from an i32.
+    pub fn new(id: i32) -> Self {
+        Self(id)
+    }
+}
+
+impl fmt::Display for MultiplexId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<MultiplexId> for Value {
+    fn from(id: MultiplexId) -> Self {
+        Value::Int(id.0.into())
+    }
+}
+
+impl ConvIr<MultiplexId> for MultiplexId {
+    fn new(v: Value) -> Result<Self, FromValueError> {
+        Ok(MultiplexId(from_value_opt(v)?))
+    }
+    fn commit(self) -> Self {
+        self
+    }
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for MultiplexId {
+    type Intermediate = MultiplexId;
+}
+
 /// Define storage needed for repo.
 /// Storage consists of a blobstore and some kind of SQL DB for metadata. The configurations
 /// can be broadly classified as "local" and "remote". "Local" is primarily for testing, and is
@@ -623,6 +662,8 @@ pub enum BlobConfig {
     },
     /// Multiplex across multiple blobstores for redundancy
     Multiplexed {
+        /// A unique ID that identifies this multiplex configuration
+        multiplex_id: MultiplexId,
         /// A scuba table I guess
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
@@ -632,6 +673,8 @@ pub enum BlobConfig {
     },
     /// Multiplex across multiple blobstores scrubbing for errors
     Scrub {
+        /// A unique ID that identifies this multiplex configuration
+        multiplex_id: MultiplexId,
         /// A scuba table I guess
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
@@ -675,6 +718,7 @@ impl BlobConfig {
         use BlobConfig::{Multiplexed, Scrub};
 
         if let Multiplexed {
+            multiplex_id,
             scuba_table,
             scuba_sample_rate,
             blobstores,
@@ -686,6 +730,7 @@ impl BlobConfig {
                 store.set_scrubbed(scrub_action);
             }
             *self = Scrub {
+                multiplex_id: *multiplex_id,
                 scuba_table,
                 scuba_sample_rate: *scuba_sample_rate,
                 blobstores,
@@ -727,6 +772,10 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
                 ))?,
             },
             RawBlobstoreConfig::multiplexed(def) => BlobConfig::Multiplexed {
+                multiplex_id: def
+                    .multiplex_id
+                    .map(|id| MultiplexId::new(id))
+                    .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
                 scuba_table: def.scuba_table.clone(),
                 scuba_sample_rate: def
                     .scuba_sample_rate

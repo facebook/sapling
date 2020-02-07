@@ -489,6 +489,7 @@ function setup_mononoke_storage_config {
 $(db_config "$blobstorename")
 
 [$blobstorename.blobstore.multiplexed]
+multiplex_id = 1
 components = [
 CONFIG
     local i

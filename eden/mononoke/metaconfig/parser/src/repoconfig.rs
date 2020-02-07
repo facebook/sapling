@@ -947,8 +947,8 @@ mod test {
     use super::*;
     use maplit::{btreemap, hashmap};
     use metaconfig_types::{
-        BlobConfig, BlobstoreId, FilestoreParams, MetadataDBConfig, ShardedFilenodesParams,
-        SourceControlServiceMonitoring,
+        BlobConfig, BlobstoreId, FilestoreParams, MetadataDBConfig, MultiplexId,
+        ShardedFilenodesParams, SourceControlServiceMonitoring,
     };
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
@@ -1353,6 +1353,7 @@ mod test {
             sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
 
             [storage.main.blobstore.multiplexed]
+            multiplex_id = 1
             scuba_table = "blobstore_scuba_table"
             components = [
                 { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
@@ -1459,6 +1460,7 @@ mod test {
             RepoConfigs::read_configs(fb, tmp_dir.path()).expect("failed to read configs");
 
         let multiplex = BlobConfig::Multiplexed {
+            multiplex_id: MultiplexId::new(1),
             scuba_table: Some("blobstore_scuba_table".to_string()),
             scuba_sample_rate: nonzero!(100u64),
             blobstores: vec![
@@ -1855,6 +1857,7 @@ mod test {
         sharded_filenodes = { shard_map="some-shards", shard_num=123 }
 
         [multiplex_store.blobstore.multiplexed]
+        multiplex_id = 1
         components = [
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
@@ -1888,6 +1891,7 @@ mod test {
                 enabled: true,
                 storage_config: StorageConfig {
                     blobstore: BlobConfig::Multiplexed {
+                        multiplex_id: MultiplexId::new(1),
                         scuba_table: None,
                         scuba_sample_rate: nonzero!(100u64),
                         blobstores: vec![
