@@ -83,6 +83,10 @@ class LookupError(RevlogError, KeyError):
             from .node import short
 
             name = short(name)
+        elif isinstance(name, bytes) and len(name) >= 20:
+            from .node import short
+
+            name = short(name)
         RevlogError.__init__(self, "%s@%s: %s" % (index, name, message))
 
     def __bytes__(self):

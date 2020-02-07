@@ -1210,9 +1210,11 @@ class revlog(object):
         n = self._match(id)
         if n is not None:
             return n
-        n = self._partialmatch(id)
-        if n:
-            return n
+        # only call _partialmatch if id might be a hex prefix:
+        if isinstance(id, str):
+            n = self._partialmatch(id)
+            if n:
+                return n
 
         raise LookupError(id, self.indexfile, _("no match found"))
 
