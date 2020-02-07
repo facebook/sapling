@@ -30,9 +30,12 @@ Examples::
 """
 from __future__ import absolute_import
 
+import os
 import signal
+import socket
 import subprocess
 import sys
+import time
 import traceback
 
 from edenscm.mercurial import dispatch, encoding, extensions
@@ -59,6 +62,8 @@ def _handlecommandexception(orig, ui):
         type=exctypename,
         traceback=trace,
     )
+
+    _uploadtraceback(ui, trace)
 
     script = ui.config("errorredirect", "script")
     if not script:
@@ -92,6 +97,18 @@ def _handlecommandexception(orig, ui):
             return _printtrace(ui, warning)
 
     return True  # do not re-raise
+
+
+def _uploadtraceback(ui, trace):
+    key = "flat/errortrace-%(host)s-%(pid)s-%(time)s" % {
+        "host": socket.gethostname(),
+        "pid": os.getpid(),
+        "time": time.time(),
+    }
+    # TODO: Move this into a background task that renders from
+    # blackbox instead.
+    ui.log("errortrace", "Trace:\n%s\n", trace, key=key, payload=trace)
+    ui.log("errortracekey", "Trace key:%s\n", key, errortracekey=key)
 
 
 def uisetup(ui):
