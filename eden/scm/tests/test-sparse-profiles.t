@@ -254,18 +254,46 @@ warning message can be suppressed by setting missingwarning = false in
   index.html
   readme.txt
   $ hg up tip | grep warning
+  Failed to fetch backend.sparse at commit 42b23bc43905750fa358f6c4ea430f0146ecff08 (draft)
+  (stack:
+    42b23bc43905 delete profiles
+    55265ba20ce1 edit profile
+    767840444c1d edit profile other
+    2c42c0dc17a9 initial)
+  (internal error: ManifestLookupError('backend.sparse@42b23bc43905: not found in manifest',))
+  Failed to fetch backend.sparse at commit 42b23bc43905750fa358f6c4ea430f0146ecff08 (draft)
+  (stack:
+    42b23bc43905 delete profiles
+    55265ba20ce1 edit profile
+    767840444c1d edit profile other
+    2c42c0dc17a9 initial)
+  (internal error: ManifestLookupError('backend.sparse@42b23bc43905: not found in manifest',))
   [1]
   $ ls
   data.py
   index.html
   readme.txt
   $ hg sparse disableprofile backend.sparse | grep warning
+  Failed to fetch backend.sparse at commit 42b23bc43905750fa358f6c4ea430f0146ecff08 (draft)
+  (stack:
+    42b23bc43905 delete profiles
+    55265ba20ce1 edit profile
+    767840444c1d edit profile other
+    2c42c0dc17a9 initial)
+  (internal error: ManifestLookupError('backend.sparse@42b23bc43905: not found in manifest',))
   [1]
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
   > missingwarning = true
   > EOF
   $ hg sparse enableprofile backend.sparse
+  Failed to fetch backend.sparse at commit 42b23bc43905750fa358f6c4ea430f0146ecff08 (draft)
+  (stack:
+    42b23bc43905 delete profiles
+    55265ba20ce1 edit profile
+    767840444c1d edit profile other
+    2c42c0dc17a9 initial)
+  (internal error: ManifestLookupError('backend.sparse@42b23bc43905: not found in manifest',))
   warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
 
   $ cd ..
@@ -579,10 +607,45 @@ The .hg/sparse file could list non-existing profiles, these should be ignored
 when listing:
 
   $ hg sparse enableprofile nonesuch
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
   the profile 'nonesuch' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
   $ hg sparse list
   Available Profiles:
   
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
    ~ profiles/bar/eggs    Profile including the profiles directory
@@ -591,6 +654,16 @@ when listing:
      profiles/foo/errors
    * profiles/foo/spam    Profile that only includes another
   $ hg sparse disableprofile nonesuch
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
+  Failed to fetch nonesuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('nonesuch@07b307002dae: not found in manifest',))
 
 Can switch between profiles
 
@@ -716,6 +789,16 @@ We can look at invididual profiles:
     profiles
 
   $ hg sparse explain profiles/bar/eggs profiles/bar/ham profiles/nonsuch --verbose
+  Failed to fetch profiles/nonsuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('profiles/nonsuch@07b307002dae: not found in manifest',))
+  Failed to fetch profiles/nonsuch at commit 07b307002dae98240fe64a42df9598263f69d925 (draft)
+  (stack:
+    07b307002dae Broken profile added
+    935161cf6ae0 created profiles and some data)
+  (internal error: ManifestLookupError('profiles/nonsuch@07b307002dae: not found in manifest',))
   The profile profiles/nonsuch was not found
   profiles/bar/eggs
   
