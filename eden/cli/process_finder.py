@@ -123,6 +123,7 @@ class LinuxProcessFinder(ProcessFinder):
             if info.eden_dir not in info_by_eden_dir:
                 # pyre-fixme[6]: Expected `Path` for 1st param but got `Optional[Path]`.
                 info_by_eden_dir[info.eden_dir] = []
+            # pyre-fixme[6]: Expected `Path` for 1st param but got `Optional[Path]`.
             info_by_eden_dir[info.eden_dir].append(info)
 
         log.debug(f"List of processes per eden_dir output: {info_by_eden_dir}")
