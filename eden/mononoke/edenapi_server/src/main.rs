@@ -12,7 +12,6 @@ use std::net::SocketAddr;
 
 use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches};
-use fbinit::FacebookInit;
 use futures::future;
 use futures_ext::FutureExt as OldFutureExt;
 use futures_preview::{
@@ -22,7 +21,7 @@ use futures_preview::{
 };
 use gotham::bind_server;
 use openssl::ssl::SslAcceptor;
-use slog::{error, Logger};
+use slog::{error, info, Logger};
 use tokio::{net::TcpListener, prelude::*};
 use tokio_openssl::SslAcceptorExt;
 
@@ -31,11 +30,16 @@ use cmdlib::{
     helpers::serve_forever,
     monitoring::{start_fb303_server, AliveService},
 };
+use fbinit::FacebookInit;
+use gotham_ext::handler::MononokeHttpHandler;
+use mononoke_api::Mononoke;
 use secure_utils::SslConfig;
 
-mod handler;
+mod context;
+mod router;
 
-use crate::handler::build_handler;
+use crate::context::EdenApiContext;
+use crate::router::build_router;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
@@ -50,7 +54,7 @@ const DEFAULT_HOST: &str = "::";
 const DEFAULT_PORT: &str = "8000";
 
 /// Get the IP address and port the server should listen on.
-fn get_server_addr(matches: &ArgMatches) -> Result<SocketAddr> {
+fn parse_server_addr(matches: &ArgMatches) -> Result<SocketAddr> {
     let host = matches
         .value_of(ARG_LISTEN_HOST)
         .unwrap_or(DEFAULT_HOST)
@@ -65,7 +69,7 @@ fn get_server_addr(matches: &ArgMatches) -> Result<SocketAddr> {
 }
 
 /// Read the command line arguments related to TLS credentials.
-fn get_tls_config(matches: &ArgMatches) -> Option<(SslConfig, String)> {
+fn parse_tls_options(matches: &ArgMatches) -> Option<(SslConfig, String)> {
     let cert = matches.value_of(ARG_TLS_CERTIFICATE);
     let key = matches.value_of(ARG_TLS_PRIVATE_KEY);
     let ca = matches.value_of(ARG_TLS_CA);
@@ -115,6 +119,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_advanced_args_hidden()
         .with_fb303_args()
         .with_all_repos()
+        .with_shutdown_timeout_args()
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
@@ -151,19 +156,48 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .takes_value(true),
         );
 
-    let app = args::add_shutdown_timeout_args(app);
-
     let matches = app.get_matches();
+
+    let repo_configs = args::read_configs(fb, &matches)?;
+    let mysql_options = args::parse_mysql_options(&matches);
+    let readonly_storage = args::parse_readonly_storage(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches);
+
+    let caching = args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
-    let addr = get_server_addr(&matches)?;
+    let mut runtime = args::init_runtime(&matches)?;
 
-    let handler = build_handler();
+    // Initialize the Mononoke API.
+    let mononoke = runtime.block_on(
+        Mononoke::new(
+            fb,
+            logger.clone(),
+            repo_configs,
+            mysql_options,
+            caching,
+            readonly_storage,
+            blobstore_options,
+        )
+        .boxed()
+        .compat(),
+    )?;
 
+    // Set up the router and handler for serving HTTP requests, along with custom middleware.
+    // The middleware added here does not implement Gotham's usual Middleware trait; instead,
+    // it uses the custom Middleware API defined in the gotham_ext crate. Native Gotham
+    // middleware is set up during router setup in build_router.
+    let ctx = EdenApiContext::new(mononoke);
+    let router = build_router(ctx);
+    let handler = MononokeHttpHandler::builder().build(router);
+
+    // Set up socket and TLS acceptor that this server will listen on.
+    let addr = parse_server_addr(&matches)?;
     let listener = TcpListener::bind(&addr)?;
-    let acceptor = get_tls_config(&matches)
+    let acceptor = parse_tls_options(&matches)
         .map(|(config, ticket_seeds)| build_tls_acceptor(config, ticket_seeds, &logger))
         .transpose()?;
 
+    // Bind to the socket and set up the Future for the server's main loop.
     let scheme = if acceptor.is_some() { "https" } else { "http" };
     let server = match acceptor {
         Some(acceptor) => bind_server(listener, handler, move |socket| {
@@ -173,11 +207,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         None => bind_server(listener, handler, |socket| future::ok(socket)).right_future(),
     };
 
+    // Spawn a basic FB303 Thrift server for stats reporting.
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
-    let runtime = args::init_runtime(&matches)?;
-
-    slog::info!(logger, "Listening for requests at {}://{}", scheme, addr);
+    // Start up the HTTP server on the Tokio runtime.
+    info!(logger, "Listening for requests at {}://{}", scheme, addr);
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     serve_forever(
         runtime,
@@ -201,5 +235,8 @@ fn main(fb: FacebookInit) -> Result<()> {
             // gets from Hyper, tell them to gracefully shutdown, then wait for them to complete
         }),
         args::get_shutdown_timeout(&matches)?,
-    )
+    )?;
+
+    info!(logger, "Exiting...");
+    Ok(())
 }
