@@ -9,6 +9,10 @@
 #![deny(warnings)]
 
 use std::net::SocketAddr;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches};
@@ -182,11 +186,17 @@ fn main(fb: FacebookInit) -> Result<()> {
         .compat(),
     )?;
 
+    // Global flag that the main loop will set to True when the server
+    // has been signalled to gracefully shut down.
+    let will_exit = Arc::new(AtomicBool::new(false));
+
+    // Set up context to hold the server's global state.
+    let ctx = EdenApiContext::new(mononoke, will_exit.clone());
+
     // Set up the router and handler for serving HTTP requests, along with custom middleware.
     // The middleware added here does not implement Gotham's usual Middleware trait; instead,
     // it uses the custom Middleware API defined in the gotham_ext crate. Native Gotham
     // middleware is set up during router setup in build_router.
-    let ctx = EdenApiContext::new(mononoke);
     let router = build_router(ctx);
     let handler = MononokeHttpHandler::builder().build(router);
 
@@ -224,7 +234,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         )
         .map(|_| ()),
         &logger,
-        || {},
+        move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
         lazy(move |_| {
             let _ = shutdown_tx.send(());

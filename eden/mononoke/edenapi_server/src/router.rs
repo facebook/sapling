@@ -15,7 +15,7 @@ use gotham::{
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
-    state::State,
+    state::{FromState, State},
 };
 
 use crate::context::EdenApiContext;
@@ -30,5 +30,9 @@ pub fn build_router(ctx: EdenApiContext) -> Router {
 }
 
 fn health_handler(state: State) -> (State, &'static str) {
-    (state, "I_AM_ALIVE")
+    if EdenApiContext::borrow_from(&state).will_exit() {
+        (state, "EXITING")
+    } else {
+        (state, "I_AM_ALIVE")
+    }
 }

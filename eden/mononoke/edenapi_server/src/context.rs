@@ -8,7 +8,10 @@
 
 #![deny(warnings)]
 
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
 use mononoke_api::Mononoke;
 
@@ -22,14 +25,20 @@ use gotham_derive::StateData;
 #[derive(Clone, StateData)]
 pub struct EdenApiContext {
     inner: Arc<Mutex<EdenApiContextInner>>,
+    will_exit: Arc<AtomicBool>,
 }
 
 impl EdenApiContext {
-    pub fn new(mononoke: Mononoke) -> Self {
+    pub fn new(mononoke: Mononoke, will_exit: Arc<AtomicBool>) -> Self {
         let inner = EdenApiContextInner::new(mononoke);
         Self {
             inner: Arc::new(Mutex::new(inner)),
+            will_exit,
         }
+    }
+
+    pub fn will_exit(&self) -> bool {
+        self.will_exit.load(Ordering::Relaxed)
     }
 }
 
