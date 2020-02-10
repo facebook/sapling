@@ -295,15 +295,21 @@ fn mount_scratch_space_on(mount_point: &str) -> Result<()> {
 
     // Make sure that we own the mounted directory; the default is mounted
     // with root:wheel ownership, and that isn't desirable
-    let mount_point_cstr = std::ffi::CString::new(mount_point)
-        .context("creating a C string from the mount point path")?;
-    let rc = unsafe { libc::chown(mount_point_cstr.as_ptr(), metadata.uid(), metadata.gid()) };
-    if rc != 0 {
-        let err = std::io::Error::last_os_error();
-        bail!("failed to chown the mount point back to the owner: {}", err);
-    }
+    chown(mount_point, metadata.uid(), metadata.gid())?;
 
     Ok(())
+}
+
+fn chown(path: &str, uid: u32, gid: u32) -> Result<()> {
+    let cstr = std::ffi::CString::new(path)
+        .with_context(|| format!("creating a C string from path `{}`", path))?;
+    let rc = unsafe { libc::chown(cstr.as_ptr(), uid, gid) };
+    if rc != 0 {
+        let err = std::io::Error::last_os_error();
+        Err(err).with_context(|| format!("failed to chown {} to uid={}, gid={}", path, uid, gid))
+    } else {
+        Ok(())
+    }
 }
 
 /// Encode a mount point as a volume name.
