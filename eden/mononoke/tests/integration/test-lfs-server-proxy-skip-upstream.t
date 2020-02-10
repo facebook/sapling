@@ -13,12 +13,13 @@
 # Start a "server" that never responds as the upstream
   $ upstream_port="$(get_free_socket)"
   $ upstream="http://127.0.0.1:${upstream_port}/"
-  $ nc --sh-exec "sleep 4" --keep-open --listen 127.0.0.1 "$upstream_port" &
+  $ nc --sh-exec "sleep 1" --keep-open --listen 127.0.0.1 "$upstream_port" &
   $ nc_pid="$!"
 
 # Start a LFS server
+  $ scuba_proxy="$TESTTMP/scuba.json"
   $ log_proxy="$TESTTMP/lfs_proxy.log"
-  $ lfs_proxy="$(lfs_server --upstream "$upstream" --log "$log_proxy")/lfs_repo"
+  $ lfs_proxy="$(lfs_server --upstream "$upstream" --log "$log_proxy" --scuba-log-file "$scuba_proxy")/lfs_repo"
 
 # Import a blob
   $ LFS_HELPER="$(realpath "${TESTTMP}/lfs")"
@@ -49,21 +50,31 @@
   OUT < POST /lfs_repo/objects/batch 200 OK
   IN  > GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d -
   OUT < GET /lfs_repo/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d 200 OK
+
+  $ wait_for_json_record_count "$scuba_proxy" 2
+  $ jq -S .normal.batch_order < "$scuba_proxy"
+  "internal"
+  null
+
   $ truncate -s 0 "$log_proxy"
+  $ truncate -s 0 "$scuba_proxy"
 
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
-  $ time hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
+
+  $ hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
   abort: LFS HTTP error: HTTP Error 502: Bad Gateway (action=download)!
-  
-  real*0m4.* (glob)
-  user* (glob)
-  sys* (glob)
   [255]
 
   $ cat "$log_proxy"
   IN  > POST /lfs_repo/objects/batch -
   OUT < POST /lfs_repo/objects/batch 502 Bad Gateway
+
+  $ wait_for_json_record_count "$scuba_proxy" 1
+  $ jq -S .normal.batch_order < "$scuba_proxy"
+  "both"
+
   $ truncate -s 0 "$log_proxy"
+  $ truncate -s 0 "$scuba_proxy"
 
 # Kill nc, otherwise we don't exit properly :/
   $ kill -KILL "$nc_pid"
