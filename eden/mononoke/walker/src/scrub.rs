@@ -18,7 +18,8 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures_preview::{
     future::{self, BoxFuture, FutureExt},
-    stream::{Stream, StreamExt, TryStreamExt},
+    stream::{Stream, TryStreamExt},
+    TryFutureExt,
 };
 use slog::Logger;
 
@@ -31,28 +32,24 @@ pub fn loading_stream<InStream, SS>(
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
 {
-    s.then(async move |r| match r {
-        Err(e) => future::err(e),
-        Ok((n, nd, ss)) => match nd {
-            Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
-                if !limit_data_fetch =>
-            {
-                let res = file_bytes_stream
-                    .try_fold(0, async move |acc, file_bytes| Ok(acc + file_bytes.size()))
-                    .await;
-                match res {
-                    Err(e) => future::err(e),
-                    Ok(bytes) => future::ok((
+    s.map_ok(move |(n, nd, ss)| match nd {
+        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
+            if !limit_data_fetch =>
+        {
+            file_bytes_stream
+                .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
+                .map_ok(|bytes| {
+                    (
                         n,
                         Some(NodeData::FileContent(FileContentData::Consumed(bytes))),
                         ss,
-                    )),
-                }
-            }
-            _ => future::ok((n, nd, ss)),
-        },
+                    )
+                })
+                .left_future()
+        }
+        _ => future::ok((n, nd, ss)).right_future(),
     })
-    .buffer_unordered(scheduled_max)
+    .try_buffer_unordered(scheduled_max)
 }
 
 // Starts from the graph, (as opposed to walking from blobstore enumeration)
