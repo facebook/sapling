@@ -2629,7 +2629,7 @@ mod tests {
                         .compat()
                         .await?;
 
-                    let fut = tokio::task::spawn({
+                    let fut = {
                         cloned!(ctx, repo, book, hg_cs);
                         async move {
                             do_pushrebase(
@@ -2643,12 +2643,12 @@ mod tests {
                             .await
                         }
                         .boxed()
-                    });
+                    };
 
                     futs.push(fut);
                 }
 
-                let res = try_join_all(futs).await?;
+                let res = try_join_all(futs.into_iter().map(tokio::task::spawn)).await?;
                 let mut has_retry_num_bigger_1 = false;
                 for r in res {
                     if r?.retry_num > 1 {
