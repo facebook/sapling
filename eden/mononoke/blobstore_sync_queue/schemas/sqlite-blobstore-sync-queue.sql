@@ -11,5 +11,6 @@ CREATE TABLE `blobstore_sync_queue` (
   `blobstore_key` varchar NOT NULL,
   `blobstore_id` INTEGER NOT NULL,
   `add_timestamp` BIGINT NOT NULL,
-  `multiplex_id` INTEGER NOT NULL
+  `multiplex_id` INTEGER NOT NULL,
+  `original_timestamp` BIGINT NOT NULL DEFAULT 0
 );
