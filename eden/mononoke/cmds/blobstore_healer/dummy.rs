@@ -15,6 +15,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
+use metaconfig_types::MultiplexId;
 use mononoke_types::{BlobstoreBytes, DateTime};
 use slog::{info, Logger};
 
@@ -80,10 +81,12 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         &self,
         ctx: CoreContext,
         key_like: Option<String>,
+        multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        self.inner.iter(ctx, key_like, older_than, limit)
+        self.inner
+            .iter(ctx, key_like, multiplex_id, older_than, limit)
     }
 
     fn del(

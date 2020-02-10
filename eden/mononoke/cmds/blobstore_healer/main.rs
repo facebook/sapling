@@ -123,11 +123,16 @@ fn maybe_schedule_healer_for_storage(
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
 ) -> Result<BoxFuture<(), Error>> {
-    let blobstore_configs = match &storage_config {
+    let (blobstore_configs, multiplex_id) = match &storage_config {
         StorageConfig {
-            blobstore: BlobConfig::Multiplexed { blobstores, .. },
+            blobstore:
+                BlobConfig::Multiplexed {
+                    blobstores,
+                    multiplex_id,
+                    ..
+                },
             ..
-        } => blobstores.clone(),
+        } => (blobstores.clone(), multiplex_id.clone()),
         s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
 
@@ -240,14 +245,21 @@ fn maybe_schedule_healer_for_storage(
             HashMap<_, Arc<dyn Blobstore + 'static>>,
             Arc<dyn BlobstoreSyncQueue>,
         )| {
-            let repo_healer = Healer::new(
+            let multiplex_healer = Healer::new(
                 blobstore_sync_queue_limit,
                 sync_queue,
                 Arc::new(blobstores),
+                multiplex_id,
                 source_blobstore_key,
                 drain_only,
             );
-            schedule_healing(ctx, repo_healer, regional_conns, iter_limit, heal_min_age)
+            schedule_healing(
+                ctx,
+                multiplex_healer,
+                regional_conns,
+                iter_limit,
+                heal_min_age,
+            )
         },
     );
 
@@ -257,7 +269,7 @@ fn maybe_schedule_healer_for_storage(
 // Pass None as iter_limit for never ending run
 fn schedule_healing(
     ctx: CoreContext,
-    repo_healer: Healer,
+    multiplex_healer: Healer,
     regional_conns: Vec<(String, Connection)>,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
@@ -275,7 +287,7 @@ fn schedule_healing(
         let max_replication_lag_fn = max_replication_lag(regional_conns.clone());
         let now = DateTime::now().into_chrono();
         let healing_deadline = DateTime::new(now - heal_min_age);
-        repo_healer
+        multiplex_healer
             .heal(ctx.clone(), healing_deadline)
             .and_then({
                 let logger = ctx.logger().clone();

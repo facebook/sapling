@@ -62,6 +62,7 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
         &self,
         ctx: CoreContext,
         blobstore_id: BlobstoreId,
+        multiplex_id: MultiplexId,
         key: String,
     ) -> BoxFuture<(), Error>;
 }
@@ -292,15 +293,21 @@ impl Blobstore for MultiplexedBlobstoreBase {
             })
             .collect();
 
-        multiplexed_put(ctx.clone(), self.handler.clone(), key, puts)
-            .timed(move |stats, _| {
-                ctx.perf_counters().set_max_counter(
-                    PerfCounterType::BlobPutsMaxLatency,
-                    stats.completion_time.as_millis_unchecked() as i64,
-                );
-                Ok(())
-            })
-            .boxify()
+        multiplexed_put(
+            ctx.clone(),
+            self.handler.clone(),
+            key,
+            self.multiplex_id,
+            puts,
+        )
+        .timed(move |stats, _| {
+            ctx.perf_counters().set_max_counter(
+                PerfCounterType::BlobPutsMaxLatency,
+                stats.completion_time.as_millis_unchecked() as i64,
+            );
+            Ok(())
+        })
+        .boxify()
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
@@ -434,10 +441,11 @@ fn multiplexed_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static
     ctx: CoreContext,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     key: String,
+    multiplex_id: MultiplexId,
     puts: Vec<F>,
 ) -> impl Future<Item = (), Error = Error> {
     future::select_ok(puts).and_then(move |(blobstore_id, other_puts)| {
-        finish_put(ctx, handler, key, blobstore_id, other_puts)
+        finish_put(ctx, handler, key, blobstore_id, multiplex_id, other_puts)
     })
 }
 
@@ -446,6 +454,7 @@ fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     key: String,
     blobstore_id: BlobstoreId,
+    multiplex_id: MultiplexId,
     other_puts: Vec<F>,
 ) -> BoxFuture<(), Error> {
     // Ocne we finished a put in one blobstore, we want to return once this blob is in a position
@@ -455,10 +464,10 @@ fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
     // As soon as either of those things happen, we can report the put as successful.
     use futures::future::Either;
 
-    let queue_write = handler.on_put(ctx.clone(), blobstore_id, key.clone());
+    let queue_write = handler.on_put(ctx.clone(), blobstore_id, multiplex_id, key.clone());
 
     let rest_put = if other_puts.len() > 0 {
-        multiplexed_put(ctx, handler, key, other_puts).left_future()
+        multiplexed_put(ctx, handler, key, multiplex_id, other_puts).left_future()
     } else {
         // We have no remaining puts to perform, which means we've successfully written to all
         // blobstores.

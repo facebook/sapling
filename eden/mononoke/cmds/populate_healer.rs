@@ -23,7 +23,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobs
 use cmdlib::args;
 use context::CoreContext;
 use manifoldblob::{ManifoldRange, ThriftManifoldBlob};
-use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, StorageConfig};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use sql_ext::{MysqlOptions, SqlConstructors};
 
@@ -51,6 +51,7 @@ struct Config {
     repo_id: RepositoryId,
     src_blobstore_id: BlobstoreId,
     dst_blobstore_id: BlobstoreId,
+    multiplex_id: MultiplexId,
     start_key: Option<String>,
     end_key: Option<String>,
     ctx: CoreContext,
@@ -201,11 +202,16 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         bail!("`source-blobstore-id` and `destination-blobstore-id` can not be equal");
     }
 
-    let (blobstores, db_address) = match storage_config {
+    let (blobstores, multiplex_id, db_address) = match storage_config {
         StorageConfig {
             dbconfig: MetadataDBConfig::Mysql { db_address, .. },
-            blobstore: BlobConfig::Multiplexed { blobstores, .. },
-        } => (blobstores, db_address),
+            blobstore:
+                BlobConfig::Multiplexed {
+                    blobstores,
+                    multiplex_id,
+                    ..
+                },
+        } => (blobstores, multiplex_id, db_address),
         storage => return Err(format_err!("unsupported storage: {:?}", storage)),
     };
     let manifold_args = blobstores
@@ -238,6 +244,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         manifold_args,
         src_blobstore_id,
         dst_blobstore_id,
+        multiplex_id,
         start_key: matches.value_of("start-key").map(String::from),
         end_key: matches.value_of("end-key").map(String::from),
         state_key: matches.value_of("resume-state-key").map(String::from),
@@ -349,12 +356,18 @@ fn populate_healer_queue(
                 let range = entries[0].range.clone();
                 let state = state.with_current_many(range, entries.len());
                 let src_blobstore_id = config.src_blobstore_id;
+                let multiplex_id = config.multiplex_id;
 
                 let enqueue = if config.dry_run {
                     future::ok(()).left_future()
                 } else {
                     let iterator_box = Box::new(entries.into_iter().map(move |entry| {
-                        BlobstoreSyncQueueEntry::new(entry.key, src_blobstore_id, DateTime::now())
+                        BlobstoreSyncQueueEntry::new(
+                            entry.key,
+                            src_blobstore_id,
+                            multiplex_id,
+                            DateTime::now(),
+                        )
                     }));
                     queue
                         .add_many(config.ctx.clone(), iterator_box)

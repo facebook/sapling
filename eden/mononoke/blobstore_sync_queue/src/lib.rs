@@ -14,7 +14,7 @@ use context::CoreContext;
 use futures::sync::{mpsc, oneshot};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
-use metaconfig_types::BlobstoreId;
+use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{DateTime, Timestamp};
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
@@ -33,15 +33,22 @@ define_stats! {
 pub struct BlobstoreSyncQueueEntry {
     pub blobstore_key: String,
     pub blobstore_id: BlobstoreId,
+    pub multiplex_id: MultiplexId,
     pub timestamp: DateTime,
     pub id: Option<u64>,
 }
 
 impl BlobstoreSyncQueueEntry {
-    pub fn new(blobstore_key: String, blobstore_id: BlobstoreId, timestamp: DateTime) -> Self {
+    pub fn new(
+        blobstore_key: String,
+        blobstore_id: BlobstoreId,
+        multiplex_id: MultiplexId,
+        timestamp: DateTime,
+    ) -> Self {
         Self {
             blobstore_key,
             blobstore_id,
+            multiplex_id,
             timestamp,
             id: None,
         }
@@ -71,6 +78,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
         &self,
         ctx: CoreContext,
         key_like: Option<String>,
+        multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
@@ -93,10 +101,11 @@ impl BlobstoreSyncQueue for Arc<dyn BlobstoreSyncQueue> {
         &self,
         ctx: CoreContext,
         key_like: Option<String>,
+        multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        (**self).iter(ctx, key_like, older_than, limit)
+        (**self).iter(ctx, key_like, multiplex_id, older_than, limit)
     }
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error> {
@@ -122,11 +131,12 @@ queries! {
     write InsertEntry(values: (
         blobstore_key: String,
         blobstore_id: BlobstoreId,
+        multiplex_id: MultiplexId,
         timestamp: Timestamp,
     )) {
         insert_or_ignore,
         "{insert_or_ignore}
-         INTO blobstore_sync_queue (blobstore_key, blobstore_id, add_timestamp)
+         INTO blobstore_sync_queue (blobstore_key, blobstore_id, multiplex_id, add_timestamp)
          VALUES {values}"
     }
 
@@ -135,49 +145,52 @@ queries! {
         "DELETE FROM blobstore_sync_queue WHERE id in {ids}"
     }
 
-    read GetRangeOfEntries(older_than: Timestamp, limit: usize) -> (
+    read GetRangeOfEntries(multiplex_id: MultiplexId, older_than: Timestamp, limit: usize) -> (
         String,
         BlobstoreId,
+        MultiplexId,
         Timestamp,
         u64,
     ) {
-        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, add_timestamp, id
+        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, multiplex_id, add_timestamp, id
          FROM blobstore_sync_queue
          JOIN (
                SELECT DISTINCT blobstore_key
                FROM blobstore_sync_queue
-               WHERE add_timestamp <= {older_than}
+               WHERE add_timestamp <= {older_than} AND multiplex_id = {multiplex_id}
                LIMIT {limit}
          ) b
-         ON blobstore_sync_queue.blobstore_key = b.blobstore_key
+         ON blobstore_sync_queue.blobstore_key = b.blobstore_key AND multiplex_id = {multiplex_id}
          "
     }
 
-    read GetRangeOfEntriesLike(blobstore_key_like: String, older_than: Timestamp, limit: usize) -> (
+    read GetRangeOfEntriesLike(blobstore_key_like: String, multiplex_id: MultiplexId, older_than: Timestamp, limit: usize) -> (
         String,
         BlobstoreId,
+        MultiplexId,
         Timestamp,
         u64,
     ) {
-        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, add_timestamp, id
+        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, multiplex_id, add_timestamp, id
          FROM blobstore_sync_queue
          JOIN (
                SELECT DISTINCT blobstore_key
                FROM blobstore_sync_queue
-               WHERE blobstore_key LIKE {blobstore_key_like} AND add_timestamp <= {older_than}
+               WHERE blobstore_key LIKE {blobstore_key_like} AND add_timestamp <= {older_than} AND multiplex_id = {multiplex_id}
                LIMIT {limit}
          ) b
-         ON blobstore_sync_queue.blobstore_key = b.blobstore_key
+         ON blobstore_sync_queue.blobstore_key = b.blobstore_key AND multiplex_id = {multiplex_id}
          "
     }
 
     read GetByKey(key: String) -> (
         String,
         BlobstoreId,
+        MultiplexId,
         Timestamp,
         u64,
     ) {
-        "SELECT blobstore_key, blobstore_id, add_timestamp, id
+        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, id
          FROM blobstore_sync_queue
          WHERE blobstore_key = {key}"
     }
@@ -263,16 +276,17 @@ fn insert_entries(
                 blobstore_key,
                 blobstore_id,
                 timestamp,
+                multiplex_id,
                 ..
             } = entry;
             let t: Timestamp = timestamp.into();
-            (blobstore_key, blobstore_id, t)
+            (blobstore_key, blobstore_id, multiplex_id, t)
         })
         .collect();
 
     let entries_ref: Vec<_> = entries
         .iter()
-        .map(|(b, c, d)| (b, c, d)) // &(a, b, ...) into (&a, &b, ...)
+        .map(|(b, c, d, e)| (b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
     InsertEntry::query(&write_connection, entries_ref.as_ref())
@@ -328,6 +342,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         &self,
         _ctx: CoreContext,
         key_like: Option<String>,
+        multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
@@ -336,25 +351,32 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             Some(sql_like) => GetRangeOfEntriesLike::query(
                 &self.read_master_connection,
                 &sql_like,
+                &multiplex_id,
                 &older_than.into(),
                 &limit,
             )
             .left_future(),
-            None => {
-                GetRangeOfEntries::query(&self.read_master_connection, &older_than.into(), &limit)
-                    .right_future()
-            }
+            None => GetRangeOfEntries::query(
+                &self.read_master_connection,
+                &multiplex_id,
+                &older_than.into(),
+                &limit,
+            )
+            .right_future(),
         };
 
         query
             .map(|rows| {
                 rows.into_iter()
                     .map(
-                        |(blobstore_key, blobstore_id, timestamp, id)| BlobstoreSyncQueueEntry {
-                            blobstore_key,
-                            blobstore_id,
-                            timestamp: timestamp.into(),
-                            id: Some(id),
+                        |(blobstore_key, blobstore_id, multiplex_id, timestamp, id)| {
+                            BlobstoreSyncQueueEntry {
+                                blobstore_key,
+                                blobstore_id,
+                                multiplex_id,
+                                timestamp: timestamp.into(),
+                                id: Some(id),
+                            }
                         },
                     )
                     .collect()
@@ -395,11 +417,14 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             .map(|rows| {
                 rows.into_iter()
                     .map(
-                        |(blobstore_key, blobstore_id, timestamp, id)| BlobstoreSyncQueueEntry {
-                            blobstore_key,
-                            blobstore_id,
-                            timestamp: timestamp.into(),
-                            id: Some(id),
+                        |(blobstore_key, blobstore_id, multiplex_id, timestamp, id)| {
+                            BlobstoreSyncQueueEntry {
+                                blobstore_key,
+                                blobstore_id,
+                                multiplex_id,
+                                timestamp: timestamp.into(),
+                                id: Some(id),
+                            }
                         },
                     )
                     .collect()

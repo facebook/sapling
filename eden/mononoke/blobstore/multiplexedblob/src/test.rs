@@ -98,6 +98,7 @@ impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
         &self,
         _ctx: CoreContext,
         blobstore_id: BlobstoreId,
+        _multiplex_id: MultiplexId,
         key: String,
     ) -> BoxFuture<(), Error> {
         let storage = self.storage.clone();
@@ -131,6 +132,7 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
         &self,
         _ctx: CoreContext,
         blobstore_id: BlobstoreId,
+        _multiplex_id: MultiplexId,
         key: String,
     ) -> BoxFuture<(), Error> {
         self.log.with(move |log| log.push((blobstore_id, key)));

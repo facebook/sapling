@@ -15,7 +15,7 @@ use failure_ext::chain::ChainExt;
 use futures::{self, future::join_all, prelude::*};
 use futures_ext::FutureExt;
 use itertools::{Either, Itertools};
-use metaconfig_types::BlobstoreId;
+use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{info, warn};
@@ -28,6 +28,7 @@ pub struct Healer {
     blobstore_sync_queue_limit: usize,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
+    multiplex_id: MultiplexId,
     blobstore_key_like: Option<String>,
     drain_only: bool,
 }
@@ -37,6 +38,7 @@ impl Healer {
         blobstore_sync_queue_limit: usize,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
+        multiplex_id: MultiplexId,
         blobstore_key_like: Option<String>,
         drain_only: bool,
     ) -> Self {
@@ -44,6 +46,7 @@ impl Healer {
             blobstore_sync_queue_limit,
             sync_queue,
             blobstores,
+            multiplex_id,
             blobstore_key_like,
             drain_only,
         }
@@ -64,10 +67,13 @@ impl Healer {
 
         let max_batch_size = self.blobstore_sync_queue_limit;
         let drain_only = self.drain_only;
+        let multiplex_id = self.multiplex_id;
+
         sync_queue
             .iter(
                 ctx.clone(),
                 self.blobstore_key_like.clone(),
+                multiplex_id,
                 healing_deadline.clone(),
                 blobstore_sync_queue_limit,
             )
@@ -110,6 +116,7 @@ impl Healer {
                                 blobstores,
                                 healing_deadline,
                                 key,
+                                multiplex_id,
                                 &entries,
                             );
                             heal_opt.map(|fut| {
@@ -194,6 +201,7 @@ fn heal_blob(
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     healing_deadline: DateTime,
     key: String,
+    multiplex_id: MultiplexId,
     entries: &[BlobstoreSyncQueueEntry],
 ) -> Option<impl Future<Item = HealStats, Error = Error>> {
     // This is needed as we load by key, and a given key may have entries both before and after
@@ -240,7 +248,8 @@ fn heal_blob(
             if unknown_seen_blobstores.is_empty() {
                 futures::future::ok(()).left_future()
             } else {
-                requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores).right_future()
+                requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores, multiplex_id)
+                    .right_future()
             }
             .map(move |()| HealStats {
                 queue_del: num_entries,
@@ -327,7 +336,7 @@ fn heal_blob(
                     unhealed_stores,
                     key,
                 );
-                requeue_partial_heal(ctx, sync_queue, key, healed_stores)
+                requeue_partial_heal(ctx, sync_queue, key, healed_stores, multiplex_id)
                     .map(|()| heal_stats)
                     .left_future()
             } else {
@@ -437,6 +446,7 @@ fn requeue_partial_heal(
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstore_key: String,
     source_blobstores: impl IntoIterator<Item = BlobstoreId>,
+    multiplex_id: MultiplexId,
 ) -> impl Future<Item = (), Error = Error> {
     let timestamp = DateTime::now();
     let new_entries: Vec<_> = source_blobstores
@@ -446,6 +456,7 @@ fn requeue_partial_heal(
             BlobstoreSyncQueueEntry {
                 blobstore_key,
                 blobstore_id,
+                multiplex_id,
                 timestamp,
                 id: None,
             }
@@ -523,13 +534,13 @@ mod tests {
     }
 
     trait BlobstoreSyncQueueExt {
-        fn len(&self, ctx: CoreContext) -> BoxFuture<usize, Error>;
+        fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture<usize, Error>;
     }
 
     impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueueExt for Q {
-        fn len(&self, ctx: CoreContext) -> BoxFuture<usize, Error> {
+        fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture<usize, Error> {
             let zero_date = DateTime::now();
-            self.iter(ctx.clone(), None, zero_date, 100)
+            self.iter(ctx.clone(), None, multiplex_id, zero_date, 100)
                 .and_then(|entries| {
                     if entries.len() >= 100 {
                         Err(format_err!("too many entries"))
@@ -600,9 +611,11 @@ mod tests {
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -611,6 +624,7 @@ mod tests {
             stores.clone(),
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
@@ -621,7 +635,7 @@ mod tests {
         );
         assert_eq!(
             0,
-            sync_queue.len(ctx).compat().await?,
+            sync_queue.len(ctx, mp).compat().await?,
             "Should be nothing on queue as deletion step won't run"
         );
         assert_eq!(
@@ -658,9 +672,11 @@ mod tests {
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -669,6 +685,7 @@ mod tests {
             stores.clone(),
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
@@ -683,7 +700,7 @@ mod tests {
         );
         assert_eq!(
             0,
-            sync_queue.len(ctx).compat().await?,
+            sync_queue.len(ctx, mp).compat().await?,
             "expecting 0 entries to write to queue for reheal as we just healed the last one"
         );
         Ok(())
@@ -726,10 +743,12 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2019-07-01T11:59:59.00Z")?;
         // too recent,  its after the healing deadline
         let t1 = DateTime::from_rfc3339("2019-07-01T12:00:35.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t1),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t1),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -738,12 +757,13 @@ mod tests {
             stores,
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
         assert!(r.is_ok());
         assert_eq!(None, r.unwrap(), "expecting that no entries processed");
-        assert_eq!(0, sync_queue.len(ctx).compat().await?);
+        assert_eq!(0, sync_queue.len(ctx, mp).compat().await?);
         assert_eq!(0, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(0, underlying_stores.get(&bids[1]).unwrap().len());
         assert_eq!(0, underlying_stores.get(&bids[2]).unwrap().len());
@@ -764,10 +784,12 @@ mod tests {
         put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -776,12 +798,13 @@ mod tests {
             stores,
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
-        assert_eq!(0, sync_queue.len(ctx).compat().await?);
+        assert_eq!(0, sync_queue.len(ctx, mp).compat().await?);
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[2]).unwrap().len());
@@ -801,9 +824,12 @@ mod tests {
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![BlobstoreSyncQueueEntry::new(
             "specialk".to_string(),
             bids_from_different_config[4],
+            mp,
             t0,
         )];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -813,6 +839,7 @@ mod tests {
             stores,
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
@@ -820,7 +847,7 @@ mod tests {
         assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(
             1,
-            sync_queue.len(ctx).compat().await?,
+            sync_queue.len(ctx, mp).compat().await?,
             "expecting 1 new entries on queue"
         );
         assert_eq!(
@@ -844,9 +871,16 @@ mod tests {
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids_from_different_config[4], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new(
+                "specialk".to_string(),
+                bids_from_different_config[4],
+                mp,
+                t0,
+            ),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -855,12 +889,13 @@ mod tests {
             stores,
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
         assert!(r.is_ok());
         assert_matches!(r?, Some(_), "expecting to delete entries");
-        assert_eq!(3, sync_queue.len(ctx).compat().await?, "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
+        assert_eq!(3, sync_queue.len(ctx, mp).compat().await?, "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
         assert_eq!(
             1,
             underlying_stores.get(&bids[1]).unwrap().len(),
@@ -911,9 +946,11 @@ mod tests {
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -922,6 +959,7 @@ mod tests {
             stores.clone(),
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
@@ -940,7 +978,7 @@ mod tests {
         );
         assert_eq!(
             0,
-            sync_queue.len(ctx).compat().await?,
+            sync_queue.len(ctx, mp).compat().await?,
             "expecting 0 entries to write to queue for reheal as all heal puts succeeded"
         );
         Ok(())
@@ -964,9 +1002,11 @@ mod tests {
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
         ];
         underlying_stores.get(&bids[2]).unwrap().fail_puts();
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -976,6 +1016,7 @@ mod tests {
             stores.clone(),
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
@@ -999,7 +1040,7 @@ mod tests {
         );
         assert_eq!(
             2,
-            sync_queue.len(ctx).compat().await?,
+            sync_queue.len(ctx, mp).compat().await?,
             "expecting 2 known good entries to write to queue for reheal as there was a put failure"
         );
         Ok(())
@@ -1021,9 +1062,11 @@ mod tests {
         put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
         ];
         underlying_stores.get(&bids[1]).unwrap().fail_puts();
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -1033,6 +1076,7 @@ mod tests {
             stores.clone(),
             healing_deadline,
             "specialk".to_string(),
+            mp,
             &entries,
         );
         let r = fut.compat().await;
@@ -1056,7 +1100,7 @@ mod tests {
         );
         assert_eq!(
             2,
-            sync_queue.len(ctx).compat().await?,
+            sync_queue.len(ctx, mp).compat().await?,
             "expecting 2 known good entries to write to queue for reheal as there was a put failure"
         );
         Ok(())
@@ -1077,12 +1121,14 @@ mod tests {
         underlying_stores.get(&bids[1]).unwrap().fail_puts();
 
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
 
         // Insert one entry in the queue for the blobstore that inserted successfully
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let entries = vec![BlobstoreSyncQueueEntry::new(
             "specialk".to_string(),
             bids[0],
+            mp,
             t0,
         )];
         sync_queue
@@ -1090,14 +1136,14 @@ mod tests {
             .compat()
             .await?;
 
-        let healer = Healer::new(1000, sync_queue.clone(), stores, None, false);
+        let healer = Healer::new(1000, sync_queue.clone(), stores, mp, None, false);
 
         healer.heal(ctx.clone(), DateTime::now()).compat().await?;
 
         // Insert to the second blobstore failed, there should be an entry in the queue
         assert_eq!(
             1,
-            sync_queue.len(ctx.clone()).compat().await?,
+            sync_queue.len(ctx.clone(), mp).compat().await?,
             "expecting an entry that should be rehealed"
         );
 
@@ -1105,11 +1151,10 @@ mod tests {
         // should have an entry.
         underlying_stores.get(&bids[1]).unwrap().unfail_puts();
 
-        println!("second heal");
         healer.heal(ctx.clone(), DateTime::now()).compat().await?;
         assert_eq!(
             0,
-            sync_queue.len(ctx.clone()).compat().await?,
+            sync_queue.len(ctx.clone(), mp).compat().await?,
             "expecting everything to be healed"
         );
         assert_eq!(
@@ -1128,5 +1173,45 @@ mod tests {
     fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new()?;
         runtime.block_on_std(test_healer_heal_with_failing_blobstore(fb))
+    }
+
+    async fn test_healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (bids, underlying_stores, stores) = make_empty_stores(2);
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+        let old_mp = MultiplexId::new(-1);
+
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+
+        let entries = vec![
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk_mp".to_string(), bids[1], old_mp, t0),
+        ];
+
+        let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
+        sync_queue
+            .add_many(ctx.clone(), Box::new(entries.into_iter()))
+            .compat()
+            .await?;
+
+        // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
+        // blobstore at the end of the test.
+        let healer = Healer::new(1000, sync_queue.clone(), stores, mp, None, false);
+        healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+
+        assert_eq!(0, sync_queue.len(ctx.clone(), mp).compat().await?);
+        assert_eq!(1, sync_queue.len(ctx.clone(), old_mp).compat().await?);
+
+        assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
+        assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio_compat::runtime::Runtime::new()?;
+        runtime.block_on_std(test_healer_heal_with_default_multiplex_id(fb))
     }
 }

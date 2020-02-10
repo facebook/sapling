@@ -68,12 +68,13 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         &self,
         ctx: CoreContext,
         blobstore_id: BlobstoreId,
+        multiplex_id: MultiplexId,
         key: String,
     ) -> BoxFuture<(), Error> {
         self.queue
             .add(
                 ctx,
-                BlobstoreSyncQueueEntry::new(key, blobstore_id, DateTime::now()),
+                BlobstoreSyncQueueEntry::new(key, blobstore_id, multiplex_id, DateTime::now()),
             )
             .map(|_| ())
             .boxify()
