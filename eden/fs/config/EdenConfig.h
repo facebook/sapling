@@ -339,6 +339,24 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint64_t> maxTreePrefetches{"store:max-tree-prefetches",
                                             5,
                                             this};
+  /**
+   * A command to run to warn the user of a generic problem encountered
+   * while trying to process a request.
+   * The command is executed by the shell.
+   * If blank, no command will be run.
+   */
+  ConfigSetting<std::string> genericErrorNotificationCommand{
+      "notifications:generic-connectivity-notification-cmd",
+      "",
+      this};
+
+  /**
+   * Don't show a notification more often than once in the specified interval
+   */
+  ConfigSetting<std::chrono::nanoseconds> notificationInterval{
+      "notifications:interval",
+      std::chrono::minutes(1),
+      this};
 };
 } // namespace eden
 } // namespace facebook

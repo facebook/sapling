@@ -7,9 +7,11 @@
 
 #include "eden/fs/fuse/RequestData.h"
 
+#include <folly/Subprocess.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
@@ -117,24 +119,39 @@ void RequestData::replyNone() {
   stealReq();
 }
 
-void RequestData::systemErrorHandler(const std::system_error& err) {
+void RequestData::systemErrorHandler(
+    const std::system_error& err,
+    Notifications* FOLLY_NULLABLE notifications) {
   int errnum = EIO;
   if (isErrnoError(err)) {
     errnum = err.code().value();
   }
   XLOG(DBG5) << folly::exceptionStr(err);
   RequestData::get().replyError(errnum);
+  if (notifications) {
+    notifications->showGenericErrorNotification(err);
+  }
 }
 
-void RequestData::genericErrorHandler(const std::exception& err) {
+void RequestData::genericErrorHandler(
+    const std::exception& err,
+    Notifications* FOLLY_NULLABLE notifications) {
   XLOG(DBG5) << folly::exceptionStr(err);
   RequestData::get().replyError(EIO);
+  if (notifications) {
+    notifications->showGenericErrorNotification(err);
+  }
 }
 
-void RequestData::timeoutErrorHandler(const folly::FutureTimeout& err) {
+void RequestData::timeoutErrorHandler(
+    const folly::FutureTimeout& err,
+    Notifications* FOLLY_NULLABLE notifications) {
   XLOG_EVERY_MS(WARN, 1000)
       << "FUSE request timed out: " << folly::exceptionStr(err);
   RequestData::get().replyError(ETIMEDOUT);
+  if (notifications) {
+    notifications->showGenericErrorNotification(err);
+  }
 }
 
 } // namespace eden

@@ -91,17 +91,37 @@ class RequestData : public folly::RequestData {
    * These clauses result in reporting a fuse request error back to the
    * kernel. */
   template <typename T>
-  folly::Future<folly::Unit> catchErrors(folly::Future<T>&& fut) {
+  folly::Future<folly::Unit> catchErrors(
+      folly::Future<T>&& fut,
+      Notifications* FOLLY_NULLABLE notifications) {
     return std::move(fut)
-        .thenError(folly::tag_t<folly::FutureTimeout>{}, timeoutErrorHandler)
-        .thenError(folly::tag_t<std::system_error>{}, systemErrorHandler)
-        .thenError(folly::tag_t<std::exception>{}, genericErrorHandler)
+        .thenError(
+            folly::tag_t<folly::FutureTimeout>{},
+            [notifications](auto&& err) {
+              timeoutErrorHandler(err, notifications);
+            })
+        .thenError(
+            folly::tag_t<std::system_error>{},
+            [notifications](auto&& err) {
+              systemErrorHandler(err, notifications);
+            })
+        .thenError(
+            folly::tag_t<std::exception>{},
+            [notifications](auto&& err) {
+              genericErrorHandler(err, notifications);
+            })
         .ensure([] { RequestData::get().finishRequest(); });
   }
 
-  static void systemErrorHandler(const std::system_error& err);
-  static void genericErrorHandler(const std::exception& err);
-  static void timeoutErrorHandler(const folly::FutureTimeout& err);
+  static void systemErrorHandler(
+      const std::system_error& err,
+      Notifications* FOLLY_NULLABLE notifications);
+  static void genericErrorHandler(
+      const std::exception& err,
+      Notifications* FOLLY_NULLABLE notifications);
+  static void timeoutErrorHandler(
+      const folly::FutureTimeout& err,
+      Notifications* FOLLY_NULLABLE notifications);
 
   template <typename T>
   void sendReply(const T& payload) {

@@ -16,6 +16,7 @@ target_link_libraries(
   eden_fuse
   PUBLIC
     eden_fuse_privhelper
+    eden_notifications
     Folly::folly
 )
 

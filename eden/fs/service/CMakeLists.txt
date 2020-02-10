@@ -74,6 +74,7 @@ target_link_libraries(
     eden_config
     eden_inodes
     eden_model
+    eden_notifications
     eden_store
     eden_telemetry
     ${EDEN_STORE_IMPLEMENTATIONS}

@@ -38,6 +38,7 @@ namespace facebook {
 namespace eden {
 
 class Dispatcher;
+class Notifications;
 
 class FuseChannel {
  public:
@@ -100,7 +101,8 @@ class FuseChannel {
       size_t numThreads,
       Dispatcher* const dispatcher,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      folly::Duration requestTimeout = std::chrono::seconds(60));
+      folly::Duration requestTimeout = std::chrono::seconds(60),
+      Notifications* FOLLY_NULLABLE notifications = nullptr);
 
   /**
    * Destroy the FuseChannel.
@@ -290,6 +292,10 @@ class FuseChannel {
 
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
+  }
+
+  Notifications* FOLLY_NULLABLE getNotifications() const {
+    return notifications_;
   }
 
  private:
@@ -531,6 +537,7 @@ class FuseChannel {
   Dispatcher* const dispatcher_{nullptr};
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
+  Notifications* notifications_{nullptr};
 
   /*
    * connInfo_ is modified during the initialization process,

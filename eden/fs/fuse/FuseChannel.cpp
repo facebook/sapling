@@ -440,12 +440,14 @@ FuseChannel::FuseChannel(
     size_t numThreads,
     Dispatcher* const dispatcher,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    folly::Duration requestTimeout)
+    folly::Duration requestTimeout,
+    Notifications* notifications)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(dispatcher),
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
+      notifications_(notifications),
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processNameCache)) {
   CHECK_GE(numThreads_, 1);
@@ -1268,13 +1270,14 @@ void FuseChannel::processSession() {
           const auto& entry = handlerIter->second;
 
           request
-              .catchErrors(folly::makeFutureWith([&] {
-                             request.startRequest(
-                                 dispatcher_->getStats(), entry.histogram);
-                             return (this->*entry.handler)(
-                                 &request.getReq(), arg);
-                           })
-                               .within(requestTimeout_))
+              .catchErrors(
+                  folly::makeFutureWith([&] {
+                    request.startRequest(
+                        dispatcher_->getStats(), entry.histogram);
+                    return (this->*entry.handler)(&request.getReq(), arg);
+                  })
+                      .within(requestTimeout_),
+                  notifications_)
               .ensure([this, requestId] {
                 auto state = state_.wlock();
 

@@ -1226,7 +1226,8 @@ void EdenMount::createFuseChannel(folly::File fuseDevice) {
       std::chrono::duration_cast<folly::Duration>(
           serverState_->getReloadableConfig()
               .getEdenConfig()
-              ->fuseRequestTimeout.getValue())));
+              ->fuseRequestTimeout.getValue()),
+      serverState_->getNotifications()));
 }
 
 void EdenMount::fuseInitSuccessful(

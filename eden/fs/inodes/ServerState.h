@@ -19,6 +19,7 @@
 #endif
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
+#include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -145,6 +146,10 @@ class ServerState {
     return *faultInjector_;
   }
 
+  Notifications* getNotifications() {
+    return &notifications_;
+  }
+
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
@@ -161,6 +166,7 @@ class ServerState {
       userIgnoreFileMonitor_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       systemIgnoreFileMonitor_;
+  Notifications notifications_;
 };
 } // namespace eden
 } // namespace facebook

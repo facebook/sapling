@@ -71,6 +71,7 @@ class StartupLogger;
 #ifndef _WIN32
 class TakeoverServer;
 #endif
+class Notifications;
 
 /*
  * EdenServer contains logic for running the Eden main loop.

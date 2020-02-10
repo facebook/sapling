@@ -56,7 +56,8 @@ ServerState::ServerState(
           kUserIgnoreMinPollSeconds}},
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->systemIgnoreFile.getValue(),
-          kSystemIgnoreMinPollSeconds}} {
+          kSystemIgnoreMinPollSeconds}},
+      notifications_(config_) {
   // It would be nice if we eventually built a more generic mechanism for
   // defining faults to be configured on start up.  (e.g., loading this from the
   // EdenConfig).
