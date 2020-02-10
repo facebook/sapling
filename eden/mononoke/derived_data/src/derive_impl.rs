@@ -37,6 +37,8 @@ define_stats! {
     prefix = "mononoke.derived_data";
     derived_data_latency:
         dynamic_timeseries("{}.deriving.latency_ms", (derived_data_type: &'static str); Average),
+    derived_data_disabled:
+        dynamic_timeseries("{}.{}.derived_data_disabled", (repo_id: i32, derived_data_type: &'static str); Count),
 }
 
 const DERIVE_TRACE_THRESHOLD: Duration = Duration::from_secs(3);
@@ -171,6 +173,16 @@ pub(crate) fn derive_impl<
         .and_then(move |_| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
 }
 
+fn log_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) {
+    if !repo
+        .get_derived_data_config()
+        .derived_data_types
+        .contains(Derived::NAME)
+    {
+        STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
+    }
+}
+
 pub(crate) fn find_underived<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
@@ -181,6 +193,7 @@ pub(crate) fn find_underived<
     start_csid: &ChangesetId,
     limit: Option<u64>,
 ) -> impl Future<Item = HashMap<ChangesetId, Vec<ChangesetId>>, Error = Error> {
+    log_if_disabled::<Derived>(repo);
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));

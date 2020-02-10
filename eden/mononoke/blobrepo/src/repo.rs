@@ -763,6 +763,10 @@ impl BlobRepo {
         self.changesets.clone()
     }
 
+    pub fn get_derived_data_config(&self) -> &DerivedDataConfig {
+        &self.derived_data_config
+    }
+
     fn store_file_change(
         &self,
         ctx: CoreContext,
