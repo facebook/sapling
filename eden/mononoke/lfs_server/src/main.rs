@@ -285,6 +285,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     readonly_storage,
                     blobstore_options,
                     logger.clone(),
+                    config.derived_data_config.clone(),
                 )
                 .compat();
 

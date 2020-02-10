@@ -1042,6 +1042,7 @@ fn open_repo_internal_with_repo_id<'a>(
         readonly_storage,
         blobstore_options,
         logger,
+        config.derived_data_config,
     )
     .boxify()
 }

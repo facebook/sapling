@@ -101,6 +101,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         readonly_storage,
         cmdlib::args::parse_blobstore_options(&matches),
         logger.clone(),
+        config.derived_data_config.clone(),
     );
 
     let rc = RequestContext {

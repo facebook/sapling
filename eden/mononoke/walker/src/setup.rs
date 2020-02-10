@@ -700,6 +700,7 @@ pub fn setup_common(
         common_config.scuba_censored_table,
         config.filestore,
         readonly_storage,
+        config.derived_data_config,
     )
     .compat()
     .boxed();

@@ -156,6 +156,7 @@ impl Repo {
             readonly_storage,
             blobstore_options,
             logger.clone(),
+            config.derived_data_config,
         )
         .compat()
         .await?;

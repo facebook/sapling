@@ -44,6 +44,7 @@ use mercurial_types::{
     Globalrev, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, RepoPath,
     Type,
 };
+use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, FileChange, Generation, MPath, RepositoryId,
     Timestamp,
@@ -114,6 +115,7 @@ pub struct BlobRepo {
     derived_data_lease: Arc<dyn LeaseOps>,
     filestore_config: FilestoreConfig,
     phases_factory: SqlPhasesFactory,
+    derived_data_config: DerivedDataConfig,
 }
 
 impl BlobRepo {
@@ -127,6 +129,7 @@ impl BlobRepo {
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
+        derived_data_config: DerivedDataConfig,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
@@ -152,6 +155,7 @@ impl BlobRepo {
             derived_data_lease,
             filestore_config,
             phases_factory,
+            derived_data_config,
         }
     }
 
@@ -176,6 +180,7 @@ impl BlobRepo {
             derived_data_lease,
             filestore_config,
             phases_factory,
+            derived_data_config,
             ..
         } = self;
 
@@ -194,6 +199,7 @@ impl BlobRepo {
             derived_data_lease,
             filestore_config,
             phases_factory,
+            derived_data_config,
         )
     }
 
@@ -1970,6 +1976,7 @@ impl Clone for BlobRepo {
             derived_data_lease: self.derived_data_lease.clone(),
             filestore_config: self.filestore_config.clone(),
             phases_factory: self.phases_factory.clone(),
+            derived_data_config: self.derived_data_config.clone(),
         }
     }
 }

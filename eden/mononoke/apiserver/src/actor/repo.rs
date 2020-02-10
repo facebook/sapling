@@ -158,6 +158,7 @@ impl MononokeRepo {
             readonly_storage,
             blobstore_options,
             logger.clone(),
+            config.derived_data_config,
         ))
         .map(move |(synced_commit_mapping, repo)| {
             let warm_bookmarks_cache = WarmBookmarksCache::new(

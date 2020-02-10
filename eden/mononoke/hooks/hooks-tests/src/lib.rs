@@ -31,9 +31,9 @@ use maplit::{btreemap, hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
-    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams,
-    HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig, RepoReadOnly,
-    SourceControlServiceParams, StorageConfig,
+    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig,
+    HookConfig, HookParams, HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig,
+    RepoReadOnly, SourceControlServiceParams, StorageConfig,
 };
 use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
@@ -1316,6 +1316,7 @@ fn default_repo_config() -> RepoConfig {
         hipster_acl: None,
         source_control_service: SourceControlServiceParams::default(),
         source_control_service_monitoring: None,
+        derived_data_config: DerivedDataConfig::default(),
     }
 }
 

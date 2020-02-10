@@ -30,11 +30,11 @@ use itertools::Itertools;
 use maplit::hashmap;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
-    CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, HookBypass,
-    HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams,
-    LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
-    SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig, WhitelistEntry,
-    WireprotoLoggingConfig,
+    CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
+    HookBypass, HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace,
+    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, Redaction,
+    RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig,
+    WhitelistEntry, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -768,6 +768,16 @@ impl RepoConfigs {
             }
         };
 
+        let derived_data_config = this
+            .derived_data_config
+            .map(|raw_derived_data_config| DerivedDataConfig {
+                scuba_table: raw_derived_data_config.scuba_table,
+                derived_data_types: raw_derived_data_config
+                    .derived_data_types
+                    .unwrap_or(BTreeSet::new()),
+            })
+            .unwrap_or(DerivedDataConfig::default());
+
         Ok(RepoConfig {
             enabled,
             storage_config,
@@ -798,6 +808,7 @@ impl RepoConfigs {
             hipster_acl: this.hipster_acl,
             source_control_service,
             source_control_service_monitoring,
+            derived_data_config,
         })
     }
 
@@ -945,7 +956,7 @@ impl RepoConfigs {
 #[cfg(test)]
 mod test {
     use super::*;
-    use maplit::{btreemap, hashmap};
+    use maplit::{btreemap, btreeset, hashmap};
     use metaconfig_types::{
         BlobConfig, BlobstoreId, FilestoreParams, MetadataDBConfig, MultiplexId,
         ShardedFilenodesParams, SourceControlServiceMonitoring,
@@ -1348,6 +1359,9 @@ mod test {
             [hook_manager_params]
             disable_acl_checker=false
 
+            [derived_data_config]
+            derived_data_types=["fsnodes"]
+
             [storage.main.db.remote]
             db_address="db_address"
             sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
@@ -1623,6 +1637,10 @@ mod test {
                         BookmarkName::new("master2").unwrap(),
                     ],
                 }),
+                derived_data_config: DerivedDataConfig {
+                    derived_data_types: btreeset![String::from("fsnodes")],
+                    scuba_table: None,
+                },
             },
         );
 
@@ -1665,6 +1683,7 @@ mod test {
                 hipster_acl: None,
                 source_control_service: SourceControlServiceParams::default(),
                 source_control_service_monitoring: None,
+                derived_data_config: DerivedDataConfig::default(),
             },
         );
         assert_eq!(

@@ -7,6 +7,7 @@
  */
 
 use anyhow::{Error, Result};
+use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
@@ -19,14 +20,20 @@ use cacheblob::{
 };
 use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
+use deleted_files_manifest::RootDeletedManifestId;
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use failure_ext::chain::ChainExt;
+use fastlog::RootFastlog;
 use fbinit::FacebookInit;
 use filenodes::CachingFilenodes;
 use filestore::FilestoreConfig;
+use fsnodes::RootFsnodeId;
 use futures::{future::IntoFuture, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use maplit::btreeset;
 use memblob::EagerMemblob;
-use metaconfig_types::{self, FilestoreParams, Redaction, StorageConfig};
+use metaconfig_types::{self, DerivedDataConfig, FilestoreParams, Redaction, StorageConfig};
 use mononoke_types::RepositoryId;
 use phases::{SqlPhasesFactory, SqlPhasesStore};
 use readonlyblob::ReadOnlyBlobstore;
@@ -38,6 +45,7 @@ use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::MysqlOptions;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
+use unodes::RootUnodeManifestId;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 
@@ -71,6 +79,7 @@ pub fn open_blobrepo(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     logger: Logger,
+    derived_data_config: DerivedDataConfig,
 ) -> BoxFuture<BlobRepo, Error> {
     let sql_fut = make_sql_factory(
         fb,
@@ -106,6 +115,7 @@ pub fn open_blobrepo(
         scuba_censored_table,
         filestore_params,
         readonly_storage,
+        derived_data_config,
     )
     .boxify()
 }
@@ -121,6 +131,7 @@ pub fn open_blobrepo_given_datasources(
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
+    derived_data_config: DerivedDataConfig,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     datasources.and_then(move |(unredacted_blobstore, sql_factory)| {
         let redacted_blobs = match redaction {
@@ -183,6 +194,7 @@ pub fn open_blobrepo_given_datasources(
                     repoid,
                     filestore_config,
                     bookmarks_cache_ttl,
+                    derived_data_config,
                 )
             }
             Caching::Enabled => new_production(
@@ -195,6 +207,7 @@ pub fn open_blobrepo_given_datasources(
                 bookmarks_cache_ttl,
                 filestore_config,
                 readonly_storage,
+                derived_data_config,
             ),
         }
     })
@@ -242,7 +255,22 @@ pub fn new_memblob_empty_with_id(
         Arc::new(InProcessLease::new()),
         FilestoreConfig::default(),
         phases_factory,
+        init_all_derived_data(),
     ))
+}
+
+pub fn init_all_derived_data() -> DerivedDataConfig {
+    DerivedDataConfig {
+        scuba_table: None,
+        derived_data_types: btreeset! {
+            RootUnodeManifestId::NAME.to_string(),
+            RootFastlog::NAME.to_string(),
+            RootFsnodeId::NAME.to_string(),
+            BlameRoot::NAME.to_string(),
+            RootDeletedManifestId::NAME.to_string(),
+            FilenodesOnlyPublic::NAME.to_string(),
+        },
+    }
 }
 
 // Creates all db tables except for filenodes on the same sqlite connection
@@ -309,6 +337,7 @@ pub fn new_memblob_with_connection_with_id(
             Arc::new(InProcessLease::new()),
             FilestoreConfig::default(),
             phases_factory,
+            init_all_derived_data(),
         ),
         con,
     ))
@@ -323,6 +352,7 @@ fn new_development(
     repoid: RepositoryId,
     filestore_config: FilestoreConfig,
     bookmarks_cache_ttl: Option<Duration>,
+    derived_data_config: DerivedDataConfig,
 ) -> BoxFuture<BlobRepo, Error> {
     let bookmarks = sql_factory
         .open::<SqlBookmarks>()
@@ -394,6 +424,7 @@ fn new_development(
                     Arc::new(InProcessLease::new()),
                     filestore_config,
                     phases_factory,
+                    derived_data_config,
                 )
             }
         })
@@ -412,6 +443,7 @@ fn new_production(
     bookmarks_cache_ttl: Option<Duration>,
     filestore_config: FilestoreConfig,
     readonly_storage: ReadOnlyStorage,
+    derived_data_config: DerivedDataConfig,
 ) -> BoxFuture<BlobRepo, Error> {
     fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
         let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
@@ -516,6 +548,7 @@ fn new_production(
                     Arc::new(derive_data_lease),
                     filestore_config,
                     phases_factory,
+                    derived_data_config,
                 )
             },
         )

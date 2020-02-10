@@ -10,6 +10,7 @@
 //! to all underlying stores, but which all the caching enabled.
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
+use blobrepo_factory::init_all_derived_data;
 use blobstore::Blobstore;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{
@@ -146,6 +147,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         Arc::new(DummyLease {}),
         FilestoreConfig::default(),
         phases_factory,
+        init_all_derived_data(),
     ))
 }
 

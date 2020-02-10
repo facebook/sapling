@@ -14,7 +14,7 @@
 
 use anyhow::{anyhow, Error, Result};
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     convert::{TryFrom, TryInto},
     fmt, mem,
     num::NonZeroU64,
@@ -130,6 +130,17 @@ pub struct RepoConfig {
     pub source_control_service: SourceControlServiceParams,
     /// Configuration for Source Control Service monitoring
     pub source_control_service_monitoring: Option<SourceControlServiceMonitoring>,
+    /// Derived data config for this repo
+    pub derived_data_config: DerivedDataConfig,
+}
+
+/// Config for derived data
+#[derive(Eq, Clone, Default, Debug, PartialEq)]
+pub struct DerivedDataConfig {
+    /// Name of scuba table where all derivation will be logged to
+    pub scuba_table: Option<String>,
+    /// Types of derived data that can be derived for this repo
+    pub derived_data_types: BTreeSet<String>,
 }
 
 impl RepoConfig {
