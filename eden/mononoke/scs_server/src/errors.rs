@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::backtrace::BacktraceStatus;
 use std::error::Error as StdError;
 
 use mononoke_api::MononokeError;
@@ -40,10 +41,26 @@ impl From<MononokeError> for ServiceError {
                 kind: thrift::RequestErrorKind::PERMISSION_DENIED,
                 reason: error.to_string(),
             }),
-            MononokeError::InternalError(error) => Self::Internal(thrift::InternalError {
-                reason: error.to_string(),
-                backtrace: error.backtrace().map(ToString::to_string),
-            }),
+            MononokeError::InternalError(error) => {
+                let reason = error.to_string();
+                let backtrace = error
+                    .backtrace()
+                    .and_then(|backtrace| match backtrace.status() {
+                        BacktraceStatus::Captured => Some(backtrace.to_string()),
+                        _ => None,
+                    });
+                let mut source_chain = Vec::new();
+                let mut error: &dyn StdError = &error;
+                while let Some(source) = error.source() {
+                    source_chain.push(source.to_string());
+                    error = source;
+                }
+                Self::Internal(thrift::InternalError {
+                    reason,
+                    backtrace,
+                    source_chain,
+                })
+            }
         }
     }
 }
@@ -91,6 +108,7 @@ pub(crate) fn internal_error(error: impl ToString) -> thrift::InternalError {
     thrift::InternalError {
         reason: error.to_string(),
         backtrace: None,
+        source_chain: Vec::new(),
     }
 }
 

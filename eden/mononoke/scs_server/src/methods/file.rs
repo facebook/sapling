@@ -70,8 +70,7 @@ impl SourceControlServiceImpl {
                         Ok(())
                     })
                     .compat()
-                    .await
-                    .map_err(errors::internal_error)?;
+                    .await?;
                 Ok(thrift::FileChunk {
                     offset: params.offset,
                     file_size: metadata.total_size as i64,
