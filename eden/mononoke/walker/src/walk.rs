@@ -19,7 +19,7 @@ use failure_ext::chain::ChainExt;
 use filestore::{self, Alias};
 use futures::{Future as Future01, Stream as Stream01};
 use futures_ext::{
-    bounded_traversal::bounded_traversal_stream, spawn_future, BoxStream as BoxStream01,
+    bounded_traversal::bounded_traversal_stream, BoxStream as BoxStream01,
     FutureExt as Future01Ext, StreamExt as Stream01Ext,
 };
 use futures_preview::{
@@ -530,8 +530,8 @@ where
                         visitor
                     );
                     // Each step returns the walk result, and next steps
-                    let next = async move {
-                        walk_one(
+                    async move {
+                        let next = walk_one(
                             ctx,
                             walk_item,
                             repo,
@@ -547,13 +547,14 @@ where
                                 )
                                 .boxed()
                             }),
-                        )
-                        .await
+                        );
+
+                        let handle = tokio::task::spawn(next);
+                        handle.await?
                     }
                     .boxed()
                     .compat()
-                    .boxify();
-                    spawn_future(next)
+                    .boxify()
                 }
             })
         })
