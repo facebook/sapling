@@ -1804,16 +1804,6 @@ class workingctx(committablectx):
                     ui.warn(_("%s does not exist!\n") % uipath(f))
                     rejected.append(f)
                     continue
-                if st.st_size > 10000000:
-                    ui.warn(
-                        _(
-                            "%s: up to %d MB of RAM may be required "
-                            "to manage this file\n"
-                            "(use 'hg revert %s' to cancel the "
-                            "pending addition)\n"
-                        )
-                        % (f, 3 * st.st_size // 1000000, uipath(f))
-                    )
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     ui.warn(
                         _(
