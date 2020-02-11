@@ -319,6 +319,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoResolveBookmarkParams,
         ) -> Result<thrift::RepoResolveBookmarkResponse, service::RepoResolveBookmarkExn>;
 
+        async fn repo_resolve_commit_prefix(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoResolveCommitPrefixParams,
+        ) -> Result<thrift::RepoResolveCommitPrefixResponse, service::RepoResolveCommitPrefixExn>;
+
         async fn repo_list_bookmarks(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoListBookmarksParams,

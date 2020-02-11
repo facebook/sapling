@@ -15,8 +15,10 @@ use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::stream::FuturesOrdered;
 use futures_util::TryStreamExt;
+use maplit::btreemap;
 use mononoke_api::{
-    ChangesetSpecifier, CreateChange, CreateCopyInfo, FileId, FileType, MononokePath,
+    ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, CreateChange,
+    CreateCopyInfo, FileId, FileType, MononokePath,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
@@ -49,6 +51,75 @@ impl SourceControlServiceImpl {
             None => Ok(thrift::RepoResolveBookmarkResponse {
                 exists: false,
                 ids: None,
+            }),
+        }
+    }
+
+    /// Resolve a prefix and its identity scheme to a changeset.
+    ///
+    /// Returns the IDs of the changeset in the requested identity schemes.
+    /// Suggestions for ambiguous prefixes are not provided for now.
+    pub(crate) async fn repo_resolve_commit_prefix(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoResolveCommitPrefixParams,
+    ) -> Result<thrift::RepoResolveCommitPrefixResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo)?;
+
+        use ChangesetIdPrefix::*;
+        use ChangesetIdPrefixResolution::*;
+        type Response = thrift::RepoResolveCommitPrefixResponse;
+        type ResponseType = thrift::RepoResolveCommitPrefixResponseType;
+
+        let prefix = match params.prefix_scheme {
+            thrift::CommitIdentityScheme::HG => Ok(HgHexPrefix(&params.prefix)),
+            thrift::CommitIdentityScheme::BONSAI => Ok(BonsaiHexPrefix(&params.prefix)),
+            _ => Err(errors::invalid_request(
+                "the scheme type is currently unsupported for this request",
+            )),
+        }?;
+        let same_request_response_schemes = params.identity_schemes.len() == 1
+            && params.identity_schemes.contains(&params.prefix_scheme);
+
+        // If the response requires exactly the same identity scheme as in the request,
+        // the general case works but we don't need to pay extra overhead to resolve
+        // ChangesetSpecifier to a changeset.
+
+        match repo.resolve_changeset_id_prefix(prefix).await? {
+            Single(ChangesetSpecifier::Bonsai(cs_id)) if same_request_response_schemes => {
+                Ok(Response {
+                    ids: Some(btreemap! {
+                        params.prefix_scheme => thrift::CommitId::bonsai(cs_id.as_ref().into())
+                    }),
+                    resolved_type: ResponseType::RESOLVED,
+                })
+            }
+            Single(ChangesetSpecifier::Hg(cs_id)) if same_request_response_schemes => {
+                Ok(Response {
+                    ids: Some(btreemap! {
+                        params.prefix_scheme => thrift::CommitId::hg(cs_id.as_ref().into())
+                    }),
+                    resolved_type: ResponseType::RESOLVED,
+                })
+            }
+            Single(cs_id) => match &repo.changeset(cs_id).await? {
+                None => Err(errors::internal_error(
+                    "unexpected failure to resolve an existing commit",
+                )
+                .into()),
+                Some(cs) => Ok(Response {
+                    ids: Some(map_commit_identity(&cs, &params.identity_schemes).await?),
+                    resolved_type: ResponseType::RESOLVED,
+                }),
+            },
+            NoMatch => Ok(Response {
+                resolved_type: ResponseType::NOT_FOUND,
+                ..Default::default()
+            }),
+            _ => Ok(Response {
+                resolved_type: ResponseType::AMBIGUOUS,
+                ..Default::default()
             }),
         }
     }
