@@ -254,3 +254,62 @@ TEST(StringConvTest, testEdenToWinPathNTPathCStr) {
 
   EXPECT_EQ(edenToWinPath(edenPath.c_str()), winPath);
 }
+
+TEST(StringConvTest, testWideToFbSting) {
+  std::wstring winPath = L"mixed/winPath/PATH1/path/File.txt";
+  folly::fbstring edenPath = "mixed/winPath/PATH1/path/File.txt";
+  EXPECT_EQ(wideTofbString(winPath), edenPath);
+}
+
+TEST(StringConvTest, testWideToFbStingCstr) {
+  std::wstring winPath = L"mixed/winPath/PATH1/path/File.txt";
+  folly::fbstring edenPath = "mixed/winPath/PATH1/path/File.txt";
+  EXPECT_EQ(wideTofbString(winPath.c_str()), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenPathComponent) {
+  std::wstring winPath = L"FileName.txt";
+  PathComponent edenPath{"FileName.txt"_pc};
+  EXPECT_EQ(wideCharToEdenPathComponent(winPath), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenPathComponentCstr) {
+  std::wstring winPath = L"FileName.txt";
+  PathComponent edenPath{"FileName.txt"_pc};
+  EXPECT_EQ(wideCharToEdenPathComponent(winPath.c_str()), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenPathComponentPiece) {
+  std::wstring winPath = L"FileName.txt";
+  PathComponentPiece edenPath = "FileName.txt"_pc;
+  EXPECT_EQ(wideCharToEdenPathComponent(winPath).piece(), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenPathComponentPieceCstr) {
+  std::wstring winPath = L"FileName.txt";
+  PathComponentPiece edenPath = "FileName.txt"_pc;
+  EXPECT_EQ(wideCharToEdenPathComponent(winPath.c_str()).piece(), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenRelativePath) {
+  std::wstring winPath = L"mixed\\winPath/PATH1\\path/File.txt";
+  RelativePath edenPath{"mixed/winPath/PATH1/path/File.txt"_relpath};
+  EXPECT_EQ(wideCharToEdenRelativePath(winPath), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenRelativePathCstr) {
+  std::wstring winPath = L"mixed\\winPath/PATH1\\path/File.txt";
+  RelativePath edenPath{"mixed/winPath/PATH1/path/File.txt"_relpath};
+  EXPECT_EQ(wideCharToEdenRelativePath(winPath.c_str()), edenPath);
+}
+TEST(StringConvTest, testWideCharToEdenRelativePathPiece) {
+  std::wstring winPath = L"mixed/winPath\\PATH1/path\\File.txt";
+  auto edenPath = "mixed/winPath/PATH1/path/File.txt"_relpath;
+  EXPECT_EQ(wideCharToEdenRelativePath(winPath).piece(), edenPath);
+}
+
+TEST(StringConvTest, testWideCharToEdenRelativePathPieceCstr) {
+  std::wstring winPath = L"mixed/winPath\\PATH1/path\\File.txt";
+  auto edenPath = "mixed/winPath/PATH1/path/File.txt"_relpath;
+  EXPECT_EQ(wideCharToEdenRelativePath(winPath.c_str()).piece(), edenPath);
+}

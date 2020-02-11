@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/utils/WinError.h"
 #include "folly/Range.h"
 #include "folly/String.h"
@@ -80,15 +81,13 @@ struct IsStdPath : std::false_type {};
 template <>
 struct IsStdPath<std::filesystem::path> : std::true_type {};
 
-/**
- * wideToMultibyteString can take a wide char container like wstring,
- * wstring_view and return a multibyte string as std::string.
- */
-template <class T>
-typename std::enable_if<IsSomeWideString<T>::value, std::string>::type
-wideToMultibyteString(T const& wideCharPiece) {
+template <class WideStringType, class MultiByteStringType>
+typename std::enable_if<
+    IsSomeWideString<WideStringType>::value,
+    MultiByteStringType>::type
+wideToMultibyteStringImpl(WideStringType const& wideCharPiece) {
   if (wideCharPiece.empty()) {
-    return std::string{};
+    return MultiByteStringType{};
   }
 
   // To avoid extra copy or using max size buffers we should get the size first
@@ -97,7 +96,7 @@ wideToMultibyteString(T const& wideCharPiece) {
       CP_UTF8, 0, wideCharPiece.data(), wideCharPiece.size(), nullptr, 0, 0, 0);
 
   if (size > 0) {
-    std::string multiByteString(size, 0);
+    MultiByteStringType multiByteString(size, 0);
     size = WideCharToMultiByte(
         CP_UTF8,
         0,
@@ -113,6 +112,21 @@ wideToMultibyteString(T const& wideCharPiece) {
   }
   throw makeWin32ErrorExplicit(
       GetLastError(), "Failed to convert wide char to char");
+}
+/**
+ * wideToMultibyteString can take a wide char container like wstring,
+ * wstring_view and return a multibyte string as std::string.
+ */
+template <class T>
+typename std::enable_if<IsSomeWideString<T>::value, std::string>::type
+wideToMultibyteString(T const& wideCharPiece) {
+  return wideToMultibyteStringImpl<T, std::string>(wideCharPiece);
+}
+
+template <class T>
+typename std::enable_if<IsSomeWideString<T>::value, folly::fbstring>::type
+wideTofbString(T const& wideCharPiece) {
+  return wideToMultibyteStringImpl<T, folly::fbstring>(wideCharPiece);
 }
 
 /**
@@ -160,6 +174,19 @@ static std::string wideToMultibyteString(
     return std::string{};
   }
   return wideToMultibyteString(std::wstring_view(wideCString));
+}
+
+static folly::fbstring wideTofbString(
+    const wchar_t* FOLLY_NULLABLE wideCString) {
+  //
+  // Return empty string if wideCString is nullptr or an empty string. Empty
+  // string is a common scenario. All the FS operations for the root have
+  // relative path as empty string.
+  //
+  if (!wideCString) {
+    return std::string{};
+  }
+  return wideTofbString(std::wstring_view(wideCString));
 }
 
 static std::wstring multibyteToWideString(
@@ -235,6 +262,42 @@ edenToWinName(T const& name) {
   //
   assert(name.find('/') == std::string::npos);
   return multibyteToWideString(name);
+}
+
+template <class T>
+typename std::enable_if<IsSomeWideString<T>::value, PathComponent>::type
+wideCharToEdenPathComponent(T const& wideCharString) {
+  return (PathComponent{std::move(wideTofbString(wideCharString))});
+}
+
+static PathComponent wideCharToEdenPathComponent(
+    const wchar_t* FOLLY_NULLABLE wideCharString) {
+  std::wstring_view str{wideCharString};
+  return wideCharToEdenPathComponent(str);
+}
+
+template <class T>
+typename std::enable_if<IsSomeWideString<T>::value, RelativePath>::type
+wideCharToEdenRelativePath(T const& wideCharString) {
+  return (RelativePath{winToEdenPath(wideCharString)});
+}
+
+static RelativePath wideCharToEdenRelativePath(
+    const wchar_t* FOLLY_NULLABLE wideCharString) {
+  std::wstring_view str{wideCharString};
+  return wideCharToEdenRelativePath(str);
+}
+
+template <class T>
+typename std::enable_if<IsSomeWideString<T>::value, AbsolutePath>::type
+wideCharToEdenAbsolutePath(T const& wideCharString) {
+  return (AbsolutePath{winToEdenPath(wideCharString)});
+}
+
+static AbsolutePath wideCharToEdenAbsolutePath(
+    const wchar_t* FOLLY_NULLABLE wideCharString) {
+  std::wstring_view str{wideCharString};
+  return (wideCharToEdenAbsolutePath(str));
 }
 
 } // namespace eden
