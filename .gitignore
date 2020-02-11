@@ -7,3 +7,7 @@
 /external
 # cmake
 /_build
+
+# Rust libraries and extensions
+Cargo.lock
+target/

@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "server/session_id",
+    "sshrelay",
+]
