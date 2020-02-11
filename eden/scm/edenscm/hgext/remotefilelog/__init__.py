@@ -20,8 +20,6 @@ Configs:
 
     ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
 
-    ``remotefilelog.bgprefetchrevs`` specifies revisions to fetch on commit and
-
     update, and on other commands that use them. Different from pullprefetch.
 
     ``remotefilelog.gcrepack`` does garbage collection during repack when True
@@ -447,10 +445,6 @@ def debugdatashallow(orig, *args, **kwds):
 def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
         return
-
-    # put here intentionally bc doesnt work in uisetup
-    ui.setconfig("hooks", "update.prefetch", wcpprefetch)
-    ui.setconfig("hooks", "commit.prefetch", wcpprefetch)
 
     isserverenabled = ui.configbool("remotefilelog", "server")
     isshallowclient = shallowrepo.requirement in repo.requirements
@@ -1000,30 +994,6 @@ def readytofetch(repo):
     return ready
 
 
-def wcpprefetch(ui, repo, **kwargs):
-    """Prefetches in background revisions specified by bgprefetchrevs revset.
-    Does background repack if backgroundrepack flag is set in config.
-    """
-    shallow = shallowrepo.requirement in repo.requirements
-    bgprefetchrevs = ui.config("remotefilelog", "bgprefetchrevs", None)
-    isready = readytofetch(repo)
-
-    if not (shallow and bgprefetchrevs and isready):
-        return
-
-    bgrepack = repo.ui.configbool("remotefilelog", "backgroundrepack", False)
-    # update a revset with a date limit
-    bgprefetchrevs = revdatelimit(ui, bgprefetchrevs)
-
-    def anon():
-        if util.safehasattr(repo, "ranprefetch") and repo.ranprefetch:
-            return
-        repo.ranprefetch = True
-        repo.backgroundprefetch(bgprefetchrevs, repack=bgrepack)
-
-    repo._afterlock(anon)
-
-
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
 
@@ -1031,19 +1001,14 @@ def pull(orig, ui, repo, *pats, **opts):
         # prefetch if it's configured
         prefetchrevset = ui.config("remotefilelog", "pullprefetch", None)
         bgrepack = repo.ui.configbool("remotefilelog", "backgroundrepack", False)
-        bgprefetch = repo.ui.configbool("remotefilelog", "backgroundprefetch", False)
 
         if prefetchrevset:
             ui.status(_("prefetching file contents\n"))
             revs = scmutil.revrange(repo, [prefetchrevset])
             base = repo["."].rev()
-            if bgprefetch:
-                basestr = None if base == nullrev else str(base)
-                repo.backgroundprefetch(prefetchrevset, base=basestr, repack=bgrepack)
-            else:
-                repo.prefetch(revs, base=base)
-                if bgrepack:
-                    repackmod.domaintenancerepack(repo)
+            repo.prefetch(revs, base=base)
+            if bgrepack:
+                repackmod.domaintenancerepack(repo)
         elif bgrepack:
             repackmod.domaintenancerepack(repo)
 
@@ -1225,9 +1190,6 @@ def resolveprefetchopts(ui, opts):
         prefetchrevset = ui.config("remotefilelog", "pullprefetch", None)
         if prefetchrevset:
             revset.append("(%s)" % prefetchrevset)
-        bgprefetchrevs = ui.config("remotefilelog", "bgprefetchrevs", None)
-        if bgprefetchrevs:
-            revset.append("(%s)" % bgprefetchrevs)
         revset = "+".join(revset)
 
         # update a revset with a date limit
@@ -1256,7 +1218,7 @@ def prefetch(ui, repo, *pats, **opts):
 
     Prefetchs file revisions for the specified revs and stores them in the
     local remotefilelog cache.  If no rev is specified, the default rev is
-    used which is the union of dot, draft, pullprefetch and bgprefetchrev.
+    used which is the union of dot, draft, and pullprefetch.
     File names or patterns can be used to limit which files are downloaded.
 
     Return 0 on success.
