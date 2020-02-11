@@ -49,7 +49,7 @@ import weakref
 from edenscm.mercurial import extensions, registrar, ui as uimod, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
-from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.pycompat import encodeutf8, range
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -206,7 +206,7 @@ def wrapui(ui):
                     line = fmt % args
                     if not line.endswith("\n"):
                         line += "\n"
-                    fp.write(line.encode("utf-8"))
+                    fp.write(encodeutf8(line))
             except (IOError, OSError) as err:
                 self.debug("warning: cannot write to blackbox.log: %s\n" % err.strerror)
                 # do not restore _bbinlog intentionally to avoid failed
