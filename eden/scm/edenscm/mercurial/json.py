@@ -65,6 +65,12 @@ def _rapply(f, xs):
     return f(xs)
 
 
+def load(fp):
+    if sys.version_info[0] < 3:
+        return loads(fp.read())
+    else:
+        return _sysjson.load(fp)
+
 def loads(string):
     """Like stdlib json.loads, but results are bytes instead of unicode
 
