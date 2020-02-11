@@ -1428,7 +1428,7 @@ class filectx(basefilectx):
             # Provide more context about what's being fetched.
             message = ""
             try:
-                message = "Failed to fetch %s at commit %s (%s)\n" % (
+                message = "failed to fetch %s at commit %s (%s)\n" % (
                     self.path(),
                     hex(self.node()),
                     self.phasestr(),
@@ -1443,8 +1443,7 @@ class filectx(basefilectx):
                 message += "(stack:\n%s)\n" % ("\n".join(stack))
             except Exception as innerex:
                 message += "(failed to obtain more error context: %s)\n" % innerex
-            message += "(internal error: %r)\n" % (ex,)
-            self.repo().ui.write_err(message)
+            ex.args = tuple([message + ex.args[0]] + list(ex.args[1:]))
             raise
 
     def size(self):
