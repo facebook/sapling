@@ -349,7 +349,6 @@ Test extension help:
        memcommit     make commits without a working copy
        morestatus    make status give a bit more context
        myparent
-       nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
        ownercheck    prevent operations on repos not owned by the current user
        patchrmdir    (no help text available)
        perfsuite     (no help text available)

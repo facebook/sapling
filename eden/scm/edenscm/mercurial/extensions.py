@@ -52,6 +52,7 @@ _ignoreextensions = {
     "interhg",
     "morecolors",
     "mq",
+    "nointerrupt",
     "perftweaks",
     "purge",
     "obsshelve",

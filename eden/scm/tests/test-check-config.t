@@ -85,7 +85,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: infinitepush.bgssh (str)
   undocumented: infinitepush.bundle-stream (bool)
   undocumented: morestatus.show (bool)
-  undocumented: nointerrupt.interactiveonly (bool) [True]
   undocumented: perftweaks.disablecasecheck (bool)
   undocumented: phabricator.arcrc_host (str)
   undocumented: phabricator.graphql_app_id (str)
