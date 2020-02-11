@@ -30,10 +30,10 @@ try:
         "//watchman:watchman", pathutils.BuildRuleTypes.CXX_BINARY
     )
     mononoke_server = pathutils.get_build_rule_output_path(
-        "//scm/mononoke:mononoke", pathutils.BuildRuleTypes.RUST_BINARY
+        "//eden/mononoke:mononoke", pathutils.BuildRuleTypes.RUST_BINARY
     )
     mononoke_hgcli = pathutils.get_build_rule_output_path(
-        "//scm/mononoke/hgcli:hgcli", pathutils.BuildRuleTypes.RUST_BINARY
+        "//eden/mononoke/hgcli:hgcli", pathutils.BuildRuleTypes.RUST_BINARY
     )
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target

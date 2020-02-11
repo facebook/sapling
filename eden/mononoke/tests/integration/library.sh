@@ -2,8 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License found in the LICENSE file in the root
-# directory of this source tree.
+# GNU General Public License version 2.
 
 # Library routines and initial setup for Mononoke-related tests.
 
@@ -1103,7 +1102,7 @@ EOF
 
 # Does all the setup necessary for hook tests
 function hook_test_setup() {
-  # shellcheck source=fbcode/scm/mononoke/tests/integration/library.sh
+  # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
   . "${TEST_FIXTURES}/library.sh"
 
   setup_mononoke_config

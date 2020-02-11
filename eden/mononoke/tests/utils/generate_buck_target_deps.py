@@ -2,8 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License found in the LICENSE file in the root
-# directory of this source tree.
+# GNU General Public License version 2.
 
 import argparse
 import subprocess
@@ -17,7 +16,7 @@ def list_srcs(target_to_update):
 
 
 def find_known_buck_targets():
-    common_rust_folders = ["//scm/mononoke/...", "//common/rust/..."]
+    common_rust_folders = ["//eden/mononoke/...", "//common/rust/..."]
     deps = ["deps('{}')".format(folder) for folder in common_rust_folders]
     deps = " + ".join(deps)
     output = subprocess.check_output(

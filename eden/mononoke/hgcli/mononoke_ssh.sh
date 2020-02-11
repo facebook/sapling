@@ -2,8 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License found in the LICENSE file in the root
-# directory of this source tree.
+# GNU General Public License version 2.
 
 # This is a script that should be used instead of default ui.ssh when performing
 # pull/push/clone on Mononoke deployed in tupperware.
@@ -38,7 +37,7 @@ usage() {
   echo ' |/__\|/__\|/__\|/__\|/__\|'
   echo 'For cloning from mononoke tupperware deployment use:'
   echo 'hg clone '\\
-  echo '  --config ui.ssh="~/fbcode/scm/mononoke/hgcli/mononoke_ssh.sh" '\\
+  echo '  --config ui.ssh="~/fbcode/eden/mononoke/hgcli/mononoke_ssh.sh" '\\
   echo '  --config ui.remotecmd="/packages/mononoke.hgcli/hgcli" '\\
   echo '  "ssh://mononoke//home/mononoke/<REPONAME>"'
   echo ''
@@ -54,7 +53,7 @@ usage() {
   echo 'default = ssh://mononoke//home/mononoke/mononoke-config'
   echo ''
   echo '[ui]'
-  echo 'ssh = ~/fbcode/scm/mononoke/hgcli/mononoke_ssh.sh'
+  echo 'ssh = ~/fbcode/eden/mononoke/hgcli/mononoke_ssh.sh'
   echo 'remotecmd = /packages/mononoke.hgcli/hgcli'
   echo '" >> <REPOPATH>/.hg/hgrc'
 }

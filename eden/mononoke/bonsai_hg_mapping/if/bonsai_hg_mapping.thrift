@@ -2,12 +2,11 @@
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This software may be used and distributed according to the terms of the
- * GNU General Public License found in the LICENSE file in the root
- * directory of this source tree.
+ * GNU General Public License version 2.
  */
 
-include "scm/mononoke/mercurial/types/if/mercurial_thrift.thrift"
-include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
+include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries

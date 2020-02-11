@@ -2,15 +2,14 @@
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This software may be used and distributed according to the terms of the
- * GNU General Public License found in the LICENSE file in the root
- * directory of this source tree.
+ * GNU General Public License version 2.
  */
 
 include "common/fb303/if/fb303.thrift"
 
-namespace cpp2 scm.mononoke.apiserver.thrift
-namespace py scm.mononoke.apiserver.thrift.apiserver
-namespace py3 scm.mononoke.apiserver.thrift
+namespace cpp2 eden.mononoke.apiserver.thrift
+namespace py eden.mononoke.apiserver.thrift.apiserver
+namespace py3 eden.mononoke.apiserver.thrift
 
 typedef binary (cpp2.type = "std::unique_ptr<folly::IOBuf>") IOBufPointer
 

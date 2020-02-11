@@ -4,7 +4,7 @@
 _repocount=0
 
 if [ -n "$USE_MONONOKE" ] ; then
-  . "$TESTDIR/../../../scm/mononoke/tests/integration/library.sh"
+  . "$TESTDIR/../../mononoke/tests/integration/library.sh"
 fi
 
 # Create a new repo

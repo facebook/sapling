@@ -8,7 +8,7 @@
 #pragma once
 #include "eden/fs/store/BackingStore.h"
 
-namespace scm::mononoke::apiserver::thrift {
+namespace eden::mononoke::apiserver::thrift {
 class MononokeAPIServiceAsyncClient;
 }
 
@@ -23,7 +23,7 @@ class MononokeThriftBackingStore : public BackingStore {
 
   MononokeThriftBackingStore(
       std::unique_ptr<
-          scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient>
+          ::eden::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient>
           testClient,
       std::string repo,
       folly::Executor* executor);
@@ -48,7 +48,7 @@ class MononokeThriftBackingStore : public BackingStore {
   template <typename Func>
   std::invoke_result_t<
       Func,
-      scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient*>
+      ::eden::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient*>
   withClient(Func&& func);
 
   std::string serviceName_;
@@ -56,7 +56,7 @@ class MononokeThriftBackingStore : public BackingStore {
   folly::Executor* executor_;
 
   std::unique_ptr<
-      scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient>
+      ::eden::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient>
       testClient_;
 };
 } // namespace eden

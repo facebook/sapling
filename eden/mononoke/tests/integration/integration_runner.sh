@@ -2,13 +2,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License found in the LICENSE file in the root
-# directory of this source tree.
+# GNU General Public License version 2.
 
 # This script is provided as a compatibility shim for those who want to run
 # individual tests, using Buck:
 #
-#   buck run scm/mononoke/tests/integration:integration_runner -- TEST
+#   buck run eden/mononoke/tests/integration:integration_runner -- TEST
 
 function protip() {
   local real_runner real_manifest

@@ -2,11 +2,10 @@
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This software may be used and distributed according to the terms of the
- * GNU General Public License found in the LICENSE file in the root
- * directory of this source tree.
+ * GNU General Public License version 2.
  */
 
-include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
 struct SkiplistEntry {
   1: RepoId repo_id,

@@ -7,26 +7,26 @@
 
 #include "eden/fs/store/mononoke/MononokeThriftBackingStore.h"
 
+#include <eden/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
+#include <eden/mononoke/apiserver/gen-cpp2/apiserver_types.h>
 #include <folly/logging/xlog.h>
-#include <scm/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
-#include <scm/mononoke/apiserver/gen-cpp2/apiserver_types.h>
 #include <servicerouter/client/cpp2/ServiceRouter.h>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 
-using scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient;
-using scm::mononoke::apiserver::thrift::MononokeBlob;
-using scm::mononoke::apiserver::thrift::MononokeChangeset;
-using scm::mononoke::apiserver::thrift::MononokeDirectory;
-using scm::mononoke::apiserver::thrift::MononokeFileType;
-using scm::mononoke::apiserver::thrift::MononokeGetBlobParams;
-using scm::mononoke::apiserver::thrift::MononokeGetChangesetParams;
-using scm::mononoke::apiserver::thrift::MononokeGetTreeParams;
-using scm::mononoke::apiserver::thrift::MononokeNodeHash;
-using scm::mononoke::apiserver::thrift::MononokeRevision;
-using scm::mononoke::apiserver::thrift::MononokeTreeHash;
+using eden::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient;
+using eden::mononoke::apiserver::thrift::MononokeBlob;
+using eden::mononoke::apiserver::thrift::MononokeChangeset;
+using eden::mononoke::apiserver::thrift::MononokeDirectory;
+using eden::mononoke::apiserver::thrift::MononokeFileType;
+using eden::mononoke::apiserver::thrift::MononokeGetBlobParams;
+using eden::mononoke::apiserver::thrift::MononokeGetChangesetParams;
+using eden::mononoke::apiserver::thrift::MononokeGetTreeParams;
+using eden::mononoke::apiserver::thrift::MononokeNodeHash;
+using eden::mononoke::apiserver::thrift::MononokeRevision;
+using eden::mononoke::apiserver::thrift::MononokeTreeHash;
 
 namespace facebook {
 namespace eden {

@@ -2,8 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License found in the LICENSE file in the root
-# directory of this source tree.
+# GNU General Public License version 2.
 
 """Runner for Mononoke/Mercurial integration tests."""
 
@@ -22,8 +21,8 @@ import click
 from common.db.tests import DbDef
 from configerator.client import ConfigeratorClient
 from configerator.structs.mysql.table_schema.ttypes import DatabaseSchemas, TableSchema
+from eden.mononoke.tests.integration.lib_buck import find_buck_out
 from libfb.py.log import set_simple_logging
-from mononoke.tests.integration.lib_buck import find_buck_out
 
 
 ManifestEnv = Dict[str, str]
@@ -159,7 +158,7 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv):
 
     fbsource = subprocess.check_output(["hg", "root"], encoding="utf-8").strip()
     fbcode = os.path.join(fbsource, "fbcode")
-    tests = os.path.join(fbcode, "scm/mononoke/tests/integration")
+    tests = os.path.join(fbcode, "eden/mononoke/tests/integration")
 
     manifest_env.update(
         {

@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
+#include <eden/mononoke/apiserver/gen-cpp2/MononokeAPIService.h>
+#include <eden/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
 #include <folly/chrono/Conv.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <scm/mononoke/apiserver/gen-cpp2/MononokeAPIService.h>
-#include <scm/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
 #include <thrift/lib/cpp2/util/ScopedServerInterfaceThread.h>
 
 #include "eden/fs/model/Blob.h"
@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 using facebook::eden::Hash;
 using facebook::eden::MononokeThriftBackingStore;
 
-using namespace scm::mononoke::apiserver::thrift;
+using namespace eden::mononoke::apiserver::thrift;
 
 constexpr folly::Duration kTimeout =
     std::chrono::duration_cast<folly::Duration>(60s);

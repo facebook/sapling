@@ -2,8 +2,7 @@
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This software may be used and distributed according to the terms of the
- * GNU General Public License found in the LICENSE file in the root
- * directory of this source tree.
+ * GNU General Public License version 2.
  */
 
 // NOTE: This FileStream wrapper is a bit of a hack while we have an API server that builds on top
