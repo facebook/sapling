@@ -141,7 +141,11 @@ def _sync(
         ui.status(
             _("this version has been already synchronized\n"), component="commitcloud"
         )
-        return 0
+        # It's possible that we have two cloud syncs for the same repo - one for edenfs backing repo
+        # another is for edenfs checkout. If edenfs backing repo sync runs first then it will sync
+        # all the commits and bookmarks but it won't move working copy of the checkout.
+        # The line below makes sure that working copy is updated.
+        return _maybeupdateworkingcopy(repo, startnode)
 
     backupsnapshots = False
     try:
