@@ -7,11 +7,12 @@
  */
 
 use super::bounded_traversal_stream;
-use anyhow::Result;
+use anyhow::Error;
 use futures::{
-    future,
-    sync::oneshot::{channel, Sender},
-    Future, Stream,
+    channel::oneshot::{channel, Canceled, Sender},
+    future::{self, FutureExt, TryFutureExt},
+    stream::TryStreamExt,
+    Future,
 };
 use lock_ext::LockExt;
 use pretty_assertions::assert_eq;
@@ -106,18 +107,18 @@ impl Tick {
         }
     }
 
-    fn sleep(&self, delay: usize) -> impl Future<Item = usize, Error = ()> {
+    fn sleep(&self, delay: usize) -> impl Future<Output = Result<usize, Canceled>> {
         let this = self.clone();
-        future::lazy(move || {
-            let (send, recv) = channel();
+        let (send, recv) = channel();
+        future::lazy(move |_cx| {
             this.inner.with(move |inner| {
                 inner.events.push(TickEvent {
                     time: inner.current_time + delay,
                     sender: send,
                 });
             });
-            recv.map_err(|_| ())
         })
+        .then(|_| recv.map(|v| v))
     }
 }
 
@@ -158,29 +159,30 @@ impl<V: Ord + Clone> PartialEq for StateLog<V> {
 }
 
 #[test]
-fn test_tick() -> Result<()> {
-    use futures::stream::{FuturesUnordered, Stream};
+fn test_tick() -> Result<(), Error> {
+    use futures::stream::FuturesUnordered;
 
     let log = Arc::new(Mutex::new(Vec::new()));
     let mut reference = Vec::new();
     let tick = Tick::new();
-    let mut runtime = Runtime::new()?;
+    let runtime = Runtime::new()?;
 
-    let mut futs: FuturesUnordered<Box<dyn Future<Item = (), Error = ()> + Sync + Send>> =
-        FuturesUnordered::new();
-    futs.push(Box::new(tick.sleep(3).map({
+    let futs: FuturesUnordered<
+        Box<dyn Future<Output = Result<(), Canceled>> + Sync + Send + Unpin>,
+    > = FuturesUnordered::new();
+    futs.push(Box::new(tick.sleep(3).map_ok({
         let log = log.clone();
         move |t| log.with(|l| l.push((3, t)))
     })));
-    futs.push(Box::new(tick.sleep(1).map({
+    futs.push(Box::new(tick.sleep(1).map_ok({
         let log = log.clone();
         move |t| log.with(|l| l.push((1, t)))
     })));
-    futs.push(Box::new(tick.sleep(2).map({
+    futs.push(Box::new(tick.sleep(2).map_ok({
         let log = log.clone();
         move |t| log.with(|l| l.push((2, t)))
     })));
-    runtime.spawn(futs.for_each(|_| Ok(())));
+    runtime.spawn(futs.try_for_each(|f| future::ok(f)));
     thread::sleep(Duration::from_millis(50));
 
     let tick = move || {
@@ -204,7 +206,7 @@ fn test_tick() -> Result<()> {
 }
 
 #[test]
-fn test_bounded_traversal_stream() -> Result<()> {
+fn test_bounded_traversal_stream() -> Result<(), Error> {
     // tree
     //      0
     //     / \
@@ -222,22 +224,22 @@ fn test_bounded_traversal_stream() -> Result<()> {
     let tick = Tick::new();
     let log: StateLog<BTreeSet<usize>> = StateLog::new();
     let reference: StateLog<BTreeSet<usize>> = StateLog::new();
-    let mut rt = Runtime::new()?;
+    let rt = Runtime::new()?;
 
     let traverse = bounded_traversal_stream(2, Some(tree), {
         let tick = tick.clone();
         let log = log.clone();
         move |Tree { id, children }| {
             let log = log.clone();
-            tick.sleep(1).map(move |now| {
+            tick.sleep(1).map_ok(move |now| {
                 log.unfold(id, now);
                 (id, children)
             })
         }
     });
-    rt.spawn(traverse.collect().map({
+    rt.spawn(traverse.try_collect().map_ok({
         let log = log.clone();
-        move |items| log.done(Some(BTreeSet::from_iter(items)))
+        move |items: Vec<usize>| log.done(Some(BTreeSet::from_iter(items)))
     }));
 
     let tick = move || {

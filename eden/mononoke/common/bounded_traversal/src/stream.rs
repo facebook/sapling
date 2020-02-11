@@ -7,11 +7,14 @@
  */
 
 use futures::{
+    ready,
     stream::{self, FuturesUnordered},
-    try_ready, Async, IntoFuture, Stream,
+    task::Poll,
+    Future, Stream,
 };
 use std::collections::VecDeque;
 use std::iter::FromIterator;
+use std::pin::Pin;
 
 /// `bounded_traversal_stream` traverses implicit asynchronous tree specified by `init`
 /// and `unfold` arguments. All `unfold` operations are executed in parallel if they
@@ -23,42 +26,45 @@ use std::iter::FromIterator;
 /// ## `init: InsInit`
 /// Is the root(s) of the implicit tree to be traversed
 ///
-/// ## `unfold: FnMut(In) -> impl IntoFuture<Item = (Out, impl IntoIterator<Item = In>)>`
+/// ## `unfold: FnMut(In) -> impl Future<Output = Result<(Out, impl IntoIterator<Item = In>), UErr>>`
 /// Asynchronous function which given input value produces list of its children and output
 /// value.
 ///
-/// ## return value `impl Stream<Item = Out>`
+/// ## return value `impl Stream<Item = Result<Out, UErr>>`
 /// Stream of all `Out` values
 ///
-pub fn bounded_traversal_stream<In, InsInit, Ins, Out, Unfold, UFut>(
+pub fn bounded_traversal_stream<In, InsInit, Ins, Out, Unfold, UFut, UErr>(
     scheduled_max: usize,
     init: InsInit,
     mut unfold: Unfold,
-) -> impl Stream<Item = Out, Error = UFut::Error>
+) -> impl Stream<Item = Result<Out, UErr>>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: IntoFuture<Item = (Out, Ins)>,
+    // TODO UFut could be IntoFuture once https://github.com/rust-lang/rust/pull/65244 is visible
+    UFut: Future<Output = Result<(Out, Ins), UErr>>,
     InsInit: IntoIterator<Item = In>,
     Ins: IntoIterator<Item = In>,
 {
     let mut unscheduled = VecDeque::from_iter(init);
-    let mut scheduled = FuturesUnordered::new();
-    stream::poll_fn(move || loop {
+    let mut scheduled = Pin::new(Box::new(FuturesUnordered::new()));
+    stream::poll_fn(move |cx| loop {
+        let scheduled = scheduled.as_mut();
         if scheduled.is_empty() && unscheduled.is_empty() {
-            return Ok(Async::Ready(None));
+            return Poll::Ready(None);
         }
 
         for item in
             unscheduled.drain(..std::cmp::min(unscheduled.len(), scheduled_max - scheduled.len()))
         {
-            scheduled.push(unfold(item).into_future())
+            scheduled.push(unfold(item))
         }
 
-        if let Some((out, children)) = try_ready!(scheduled.poll()) {
+        let poll = scheduled.poll_next(cx);
+        if let Some((out, children)) = ready!(poll).transpose()? {
             for child in children {
                 unscheduled.push_front(child);
             }
-            return Ok(Async::Ready(Some(out)));
+            return Poll::Ready(Some(Ok(out)));
         }
     })
 }
