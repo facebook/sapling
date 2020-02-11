@@ -54,6 +54,19 @@ def identity(a):
     return a
 
 
+# Copied from util.py to avoid pycompat depending on Mercurial modules
+if "TESTTMP" in os.environ or "testutil" in sys.modules:
+
+    def istest():
+        return True
+
+
+else:
+
+    def istest():
+        return False
+
+
 if sys.version_info[0] >= 3:
     import builtins
     import functools
@@ -165,12 +178,15 @@ else:
 
     def encodeutf8(s):
         # type: (bytes) -> bytes
-        assert isinstance(s, bytes)
+        if istest():
+            assert isinstance(s, bytes)
+
         return s
 
     def decodeutf8(s, errors="strict"):
         # type: (bytes, str) -> bytes
-        assert isinstance(s, bytes)
+        if istest():
+            assert isinstance(s, bytes)
         return s
 
     def iteritems(s):
