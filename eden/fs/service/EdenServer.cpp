@@ -747,6 +747,7 @@ void EdenServer::performCleanup() {
     }
     state->state = RunState::SHUTTING_DOWN;
   }
+  folly::stop_watch<> shutdown;
   auto shutdownFuture = takeover
       ? performTakeoverShutdown(std::move(thriftSocket))
       : performNormalShutdown();
@@ -759,7 +760,17 @@ void EdenServer::performCleanup() {
   while (!shutdownFuture.isReady()) {
     mainEventBase_->loopOnce();
   }
-  std::move(shutdownFuture).get();
+  std::move(shutdownFuture)
+      .thenTry([shutdown,
+                takeover,
+                structuredLogger = serverState_->getStructuredLogger()](
+                   folly::Try<Unit>&& result) {
+        auto shutdownTimeInSeconds =
+            std::chrono::duration<double>{shutdown.elapsed()}.count();
+        structuredLogger->logEvent(DaemonStop{
+            shutdownTimeInSeconds, takeover, !result.hasException()});
+      })
+      .get();
 
   // Explicitly close the LocalStore
   // Since we have a shared_ptr to it, other parts of the code can theoretically
