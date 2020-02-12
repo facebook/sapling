@@ -13,11 +13,11 @@ use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::Future;
-use futures::stream;
-use futures::stream::Stream;
-use futures_ext::FutureExt;
-use futures_preview::compat::Future01CompatExt;
+use futures_preview::{
+    compat::Future01CompatExt,
+    stream::{self, TryStreamExt},
+};
+
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use std::str::FromStr;
 
@@ -55,7 +55,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let blobrepo = args::open_repo(fb, &logger, &matches);
 
     let jobs: usize = matches
         .value_of("jobs")
@@ -73,35 +72,31 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .collect();
 
-    let rechunk = blobrepo
-        .and_then(move |blobrepo| {
-            stream::iter_result(filenode_ids)
-                .map({
-                    cloned!(blobrepo);
-                    move |fid| {
-                        fid.load(ctx.clone(), blobrepo.blobstore())
-                            .from_err()
-                            .map(|env| env.content_id())
-                            .and_then({
-                                cloned!(blobrepo, ctx);
-                                move |content_id| {
-                                    filestore::rechunk(
-                                        blobrepo.get_blobstore(),
-                                        blobrepo.filestore_config().clone(),
-                                        ctx,
-                                        content_id,
-                                    )
-                                }
-                            })
-                    }
-                })
-                .buffered(jobs)
-                .for_each(|_| Ok(()))
-        })
-        .boxify();
+    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let rechunk = async move {
+        let blobrepo = blobrepo.compat().await?;
+        stream::iter(filenode_ids)
+            .try_for_each_concurrent(jobs, |fid| {
+                cloned!(blobrepo, ctx);
+                async move {
+                    let env = fid.load(ctx.clone(), blobrepo.blobstore()).compat().await?;
+                    let content_id = env.content_id();
+                    filestore::rechunk(
+                        blobrepo.get_blobstore(),
+                        blobrepo.filestore_config().clone(),
+                        ctx,
+                        content_id,
+                    )
+                    .compat()
+                    .await
+                    .map(|_| ())
+                }
+            })
+            .await
+    };
 
     block_execute(
-        rechunk.compat(),
+        rechunk,
         fb,
         "rechunker",
         &logger,
