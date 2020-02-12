@@ -552,6 +552,12 @@ lookup using bonsai needed resolving to identify commit
   globalrev=9999999999
   hg=ee87eb8cfeb218e7352a94689b241ea973b80402
 
+lookup using bonsai prefix needed resolving to identify commit
+  $ scsc lookup --repo repo -i 006c988c4a9f60080a6bc2 -S bonsai,hg,globalrev
+  bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
+  globalrev=9999999999
+  hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+
 lookup using globalrev needed resolving to identify commit
   $ scsc lookup --repo repo -i 9999999999 -S bonsai,hg,globalrev
   bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
@@ -563,6 +569,18 @@ lookup using hg needed resolving to identify commit
   bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
   globalrev=9999999999
   hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+
+lookup using hg prefix needed resolving to identify commit
+  $ scsc lookup --repo repo -i ee87eb8 -S bonsai,hg,globalrev
+  bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
+  globalrev=9999999999
+  hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+
+lookup using hg prefix needed resolving to identify commit (ambiguous case)
+  $ scsc lookup --repo repo -i e -S bonsai,hg,globalrev
+  note: several hg commits with the prefix 'e' exist
+  error: commit not found: e
+  [1]
 
 cat a file
   $ scsc cat --repo repo -B BOOKMARK_B -p a
