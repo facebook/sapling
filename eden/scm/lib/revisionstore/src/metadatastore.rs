@@ -572,6 +572,14 @@ mod tests {
             let nodeinfo_get = store.get_node_info(&k)?;
             assert_eq!(nodeinfo_get, Some(nodeinfo.clone()));
 
+            loop {
+                let memcache_nodeinfo = memcache.get_node_info(&k)?;
+                if let Some(memcache_nodeinfo) = memcache_nodeinfo {
+                    assert_eq!(memcache_nodeinfo, nodeinfo);
+                    break;
+                }
+            }
+
             let memcache_nodeinfo = memcache.get_node_info(&k)?;
             assert_eq!(memcache_nodeinfo, Some(nodeinfo));
             Ok(())

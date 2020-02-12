@@ -78,9 +78,7 @@ mod dummy {
             Ok(None)
         }
 
-        pub(super) fn add_hist(&self, _key: &Key, _info: &NodeInfo) -> Result<()> {
-            Ok(())
-        }
+        pub(super) fn add_hist(&self, _key: &Key, _info: &NodeInfo) {}
     }
 }
 
@@ -136,7 +134,8 @@ impl HistoryStore for MemcacheStore {
 
 impl MutableHistoryStore for MemcacheStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
-        self.add_hist(key, info)
+        self.add_hist(key, info);
+        Ok(())
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {

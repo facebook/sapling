@@ -582,8 +582,13 @@ mod tests {
             let data_get = store.get(&k)?;
             assert_eq!(data_get.unwrap(), data);
 
-            let memcache_data = memcache.get(&k)?;
-            assert_eq!(memcache_data.unwrap(), data);
+            loop {
+                let memcache_data = memcache.get(&k)?;
+                if let Some(memcache_data) = memcache_data {
+                    assert_eq!(memcache_data, data);
+                    break;
+                }
+            }
             Ok(())
         }
 
