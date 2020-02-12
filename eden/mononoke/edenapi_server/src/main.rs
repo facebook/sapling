@@ -42,7 +42,7 @@ use secure_utils::SslConfig;
 mod context;
 mod router;
 
-use crate::context::EdenApiContext;
+use crate::context::EdenApiServerContext;
 use crate::router::build_router;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -191,7 +191,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let will_exit = Arc::new(AtomicBool::new(false));
 
     // Set up context to hold the server's global state.
-    let ctx = EdenApiContext::new(mononoke, will_exit.clone());
+    let ctx = EdenApiServerContext::new(mononoke, will_exit.clone());
 
     // Set up the router and handler for serving HTTP requests, along with custom middleware.
     // The middleware added here does not implement Gotham's usual Middleware trait; instead,

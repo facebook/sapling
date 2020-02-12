@@ -22,14 +22,14 @@ use gotham_derive::StateData;
 /// this type is designed to be cheaply clonable, with all cloned sharing
 /// the same underlying data.
 #[derive(Clone, StateData)]
-pub struct EdenApiContext {
-    inner: Arc<Mutex<EdenApiContextInner>>,
+pub struct EdenApiServerContext {
+    inner: Arc<Mutex<EdenApiServerContextInner>>,
     will_exit: Arc<AtomicBool>,
 }
 
-impl EdenApiContext {
+impl EdenApiServerContext {
     pub fn new(mononoke: Mononoke, will_exit: Arc<AtomicBool>) -> Self {
-        let inner = EdenApiContextInner::new(mononoke);
+        let inner = EdenApiServerContextInner::new(mononoke);
         Self {
             inner: Arc::new(Mutex::new(inner)),
             will_exit,
@@ -44,12 +44,12 @@ impl EdenApiContext {
 /// Underlying global state for an EdenApiContext. Any data that needs to
 /// be broadly available throughout the server's request handlers should
 /// be placed here.
-struct EdenApiContextInner {
+struct EdenApiServerContextInner {
     #[allow(unused)]
     mononoke: Mononoke,
 }
 
-impl EdenApiContextInner {
+impl EdenApiServerContextInner {
     fn new(mononoke: Mononoke) -> Self {
         Self { mononoke }
     }

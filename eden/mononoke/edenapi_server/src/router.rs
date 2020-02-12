@@ -18,9 +18,9 @@ use gotham::{
     state::{FromState, State},
 };
 
-use crate::context::EdenApiContext;
+use crate::context::EdenApiServerContext;
 
-pub fn build_router(ctx: EdenApiContext) -> Router {
+pub fn build_router(ctx: EdenApiServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();
     let (chain, pipelines) = single_pipeline(pipeline);
 
@@ -30,7 +30,7 @@ pub fn build_router(ctx: EdenApiContext) -> Router {
 }
 
 fn health_handler(state: State) -> (State, &'static str) {
-    if EdenApiContext::borrow_from(&state).will_exit() {
+    if EdenApiServerContext::borrow_from(&state).will_exit() {
         (state, "EXITING")
     } else {
         (state, "I_AM_ALIVE")
