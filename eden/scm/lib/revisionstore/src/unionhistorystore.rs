@@ -36,8 +36,12 @@ impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHistoryStore<T> {
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
                 Ok(missing_keys) => {
-                    store.prefetch(&missing_keys)?;
-                    store.get_missing(&missing_keys)
+                    if !missing_keys.is_empty() {
+                        store.prefetch(&missing_keys)?;
+                        store.get_missing(&missing_keys)
+                    } else {
+                        Ok(vec![])
+                    }
                 }
                 Err(e) => Err(e),
             })?;
