@@ -7,6 +7,7 @@
 
 use anyhow::{Context, Error};
 use serde::Deserialize;
+use std::collections::BTreeSet;
 use std::convert::TryFrom;
 use std::num::NonZeroU64;
 
@@ -28,6 +29,7 @@ impl Default for FastReplayConfig {
                 admission_rate: 100,
                 max_concurrency: 50,
                 scuba_sampling_target: 1,
+                skipped_repos: BTreeSet::default(),
             },
         }
     }
@@ -61,5 +63,9 @@ impl FastReplayConfig {
                     self.inner.scuba_sampling_target
                 )
             })
+    }
+
+    pub fn skipped_repos(&self) -> &BTreeSet<String> {
+        &self.inner.skipped_repos
     }
 }

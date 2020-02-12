@@ -38,7 +38,7 @@ use scuba_ext::ScubaSampleBuilder;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o, warn, Logger};
 use stats::prelude::*;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::num::NonZeroU64;
 use std::process::Stdio;
 use std::sync::{
@@ -60,6 +60,7 @@ define_stats! {
     received: timeseries(Rate, Sum),
     admitted: timeseries(Rate, Sum),
     processed: timeseries(Rate, Sum),
+    skipped: timeseries(Rate, Sum),
 }
 
 const ARG_NO_SKIPLIST: &str = "no-skiplist";
@@ -87,12 +88,18 @@ fn should_admit(config: &FastReplayConfig) -> bool {
     roll <= admission_rate
 }
 
+enum DispatchOutcome {
+    Processed,
+    Skipped,
+}
+
 async fn dispatch(
     dispatchers: &HashMap<String, FastReplayDispatcher>,
     aliases: &HashMap<String, String>,
+    skipped_repos: &BTreeSet<String>,
     req: &str,
     mut scuba: ScubaSampleBuilder,
-) -> Result<(), Error> {
+) -> Result<DispatchOutcome, Error> {
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
     let reponame = aliases
@@ -100,6 +107,10 @@ async fn dispatch(
         .map(|a| a.as_ref())
         .unwrap_or(req.normal.reponame.as_ref())
         .to_string();
+
+    if skipped_repos.contains(&reponame) {
+        return Ok(DispatchOutcome::Skipped);
+    }
 
     let dispatcher = dispatchers
         .get(&reponame)
@@ -169,7 +180,7 @@ async fn dispatch(
         }
     }
 
-    Ok(())
+    Ok(DispatchOutcome::Processed)
 }
 
 fn build_noop_hook_manager(fb: FacebookInit) -> HookManager {
@@ -400,7 +411,7 @@ async fn fastreplay<R: AsyncRead + Unpin>(
                 count.fetch_add(1, Ordering::Relaxed);
 
                 // NOTE: We clone values here because we need a 'static future to spawn.
-                cloned!(logger, mut scuba, repos, opts.aliases, count);
+                cloned!(logger, mut scuba, repos, opts.aliases, count, config);
 
                 scuba.sampled(config.scuba_sampling_target()?);
 
@@ -409,9 +420,12 @@ async fn fastreplay<R: AsyncRead + Unpin>(
                         count.fetch_sub(1, Ordering::Relaxed);
                     });
 
-                    match dispatch(&repos, &aliases, &req, scuba).await {
-                        Ok(()) => {
+                    match dispatch(&repos, &aliases, config.skipped_repos(), &req, scuba).await {
+                        Ok(DispatchOutcome::Processed) => {
                             STATS::processed.add_value(1);
+                        }
+                        Ok(DispatchOutcome::Skipped) => {
+                            STATS::skipped.add_value(1);
                         }
                         Err(err) => {
                             warn!(&logger, "Dispatch failed: {:#?}", err);
