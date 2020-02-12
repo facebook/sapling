@@ -12,7 +12,9 @@ use configparser::hg::ConfigSetHgExt;
 use edenapi::{EdenApi, EdenApiCurlClient};
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
-use revisionstore::{ContentStore, ContentStoreBuilder, DataStore, EdenApiRemoteStore, LocalStore};
+use revisionstore::{
+    ContentStore, ContentStoreBuilder, DataStore, EdenApiRemoteStore, LocalStore, MemcacheStore,
+};
 use std::path::Path;
 use std::sync::Arc;
 use types::{Key, Node, RepoPath};
@@ -30,8 +32,13 @@ impl BackingStore {
         config.load_user();
         config.load_hgrc(hg.join("hgrc"), "repository");
 
+        let memcachestore = MemcacheStore::new(&config)?;
+
         let store_path = hg.join("store");
-        let blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
+        let blobstore = ContentStoreBuilder::new(&config)
+            .local_path(&store_path)
+            .memcachestore(memcachestore);
+        // XXX: Add the memcachestore for the treestore.
         let treestore = ContentStoreBuilder::new(&config)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
