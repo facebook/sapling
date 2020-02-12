@@ -470,6 +470,7 @@ class remotefileslog(filelog.fileslog):
 
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
+        self._memcachestore = None
         self._ruststore = repo.ui.configbool("remotefilelog", "useruststore", False)
         if self._ruststore:
             self.makeruststore(repo)
@@ -488,6 +489,13 @@ class remotefileslog(filelog.fileslog):
             )
             self.makeunionstores()
 
+    def memcachestore(self, repo):
+        if self._memcachestore is None:
+            if repo.ui.config("remotefilelog", "cachekey") is not None:
+                self._memcachestore = revisionstore.memcachestore(repo.ui._rcfg)
+
+        return self._memcachestore
+
     def makesharedonlyruststore(self, repo):
         """Build non-local stores.
 
@@ -501,10 +509,7 @@ class remotefileslog(filelog.fileslog):
         sharedonlyremotestore = revisionstore.pyremotestore(
             fileserverclient.getpackclient(repo)
         )
-        if repo.ui.config("remotefilelog", "cachekey") is not None:
-            memcachestore = revisionstore.memcachestore(repo.ui._rcfg)
-        else:
-            memcachestore = None
+        memcachestore = self.memcachestore(repo)
 
         sharedonlycontentstore = revisionstore.contentstore(
             None, repo.ui._rcfg, sharedonlyremotestore, memcachestore
@@ -518,10 +523,7 @@ class remotefileslog(filelog.fileslog):
     def makeruststore(self, repo):
         remotestore = revisionstore.pyremotestore(fileserverclient.getpackclient(repo))
 
-        if repo.ui.config("remotefilelog", "cachekey") is not None:
-            memcachestore = revisionstore.memcachestore(repo.ui._rcfg)
-        else:
-            memcachestore = None
+        memcachestore = self.memcachestore(repo)
 
         self.contentstore = revisionstore.contentstore(
             repo.svfs.vfs.base, repo.ui._rcfg, remotestore, memcachestore
@@ -573,6 +575,7 @@ class remotefileslog(filelog.fileslog):
         if self._ruststore:
             self.contentstore = None
             self.metadatastore = None
+            self._memcachestore = None
         else:
             self._mutablelocalpacks.abort()
             self.commitsharedpacks()
