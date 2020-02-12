@@ -23,6 +23,7 @@ use futures_preview::{
     future::{lazy, select, FutureExt, TryFutureExt},
 };
 use gotham::bind_server;
+use hyper::header::HeaderValue;
 use openssl::ssl::SslAcceptor;
 use slog::{error, info, Logger};
 use tokio::{net::TcpListener, prelude::*};
@@ -34,7 +35,7 @@ use cmdlib::{
     monitoring::{start_fb303_server, AliveService},
 };
 use fbinit::FacebookInit;
-use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::{handler::MononokeHttpHandler, middleware::ServerIdentityMiddleware};
 use mononoke_api::Mononoke;
 use secure_utils::SslConfig;
 
@@ -197,7 +198,11 @@ fn main(fb: FacebookInit) -> Result<()> {
     // it uses the custom Middleware API defined in the gotham_ext crate. Native Gotham
     // middleware is set up during router setup in build_router.
     let router = build_router(ctx);
-    let handler = MononokeHttpHandler::builder().build(router);
+    let handler = MononokeHttpHandler::builder()
+        .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
+            "edenapi_server",
+        )))
+        .build(router);
 
     // Set up socket and TLS acceptor that this server will listen on.
     let addr = parse_server_addr(&matches)?;
