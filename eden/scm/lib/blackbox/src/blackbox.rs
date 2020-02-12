@@ -362,7 +362,7 @@ impl Blackbox {
                 'next_session_id: for session_id in candidate_session_ids {
                     if let Ok(iter) = self
                         .log
-                        .lookup(INDEX_SESSION_ID, &u64_to_slice(session_id.0)[..])
+                        .lookup(INDEX_SESSION_ID, u64_to_slice(session_id.0).to_vec())
                     {
                         for bytes in iter {
                             if let Ok(bytes) = bytes {
@@ -415,7 +415,7 @@ impl Blackbox {
         for session_id in session_ids {
             if let Ok(iter) = self
                 .log
-                .lookup(INDEX_SESSION_ID, &u64_to_slice(session_id.0)[..])
+                .lookup(INDEX_SESSION_ID, u64_to_slice(session_id.0).to_vec())
             {
                 for bytes in iter {
                     if let Ok(bytes) = bytes {

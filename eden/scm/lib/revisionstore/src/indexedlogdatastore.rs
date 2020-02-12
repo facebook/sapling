@@ -100,7 +100,7 @@ impl Entry {
 
     /// Read an entry from the IndexedLog and deserialize it.
     pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
-        let mut log_entry = log.lookup(0, key.hgid.as_ref())?;
+        let mut log_entry = log.lookup(0, key.hgid.as_ref().to_vec())?;
         let buf = match log_entry.nth(0) {
             None => return Ok(None),
             Some(buf) => buf?,

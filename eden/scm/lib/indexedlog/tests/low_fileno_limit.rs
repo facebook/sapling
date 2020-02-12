@@ -112,7 +112,7 @@ mod unix_tests {
         let log = open_opts.open(dir.path()).unwrap();
         for entry in log.iter().map(|d| d.unwrap()) {
             for index_id in 0..index_len {
-                for index_value in log.lookup(index_id, entry).unwrap() {
+                for index_value in log.lookup(index_id, entry.to_vec()).unwrap() {
                     assert_eq!(index_value.unwrap(), entry);
                 }
             }

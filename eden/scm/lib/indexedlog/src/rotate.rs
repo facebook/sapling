@@ -12,7 +12,7 @@ use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
-use bytes::Bytes;
+use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fs;
@@ -813,7 +813,7 @@ mod tests {
     // lookup via index 0
     fn lookup<'a>(rotate: &'a RotateLog, key: &[u8]) -> Vec<&'a [u8]> {
         rotate
-            .lookup(0, key)
+            .lookup(0, key.to_vec())
             .unwrap()
             .collect::<crate::Result<Vec<&[u8]>>>()
             .unwrap()
@@ -1412,7 +1412,8 @@ Reset latest to 2
                             // Verify that the indexes match the entries.
                             for entry in log.iter().map(|d| d.unwrap()) {
                                 for index_id in 0..index_len {
-                                    for index_value in log.lookup(index_id, entry).unwrap() {
+                                    for index_value in log.lookup(index_id, entry.to_vec()).unwrap()
+                                    {
                                         assert_eq!(index_value.unwrap(), entry);
                                     }
                                 }
