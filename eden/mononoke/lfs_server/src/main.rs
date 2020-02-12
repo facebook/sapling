@@ -26,6 +26,7 @@ use futures_preview::{
 use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_pre_state};
 use gotham_ext::handler::MononokeHttpHandler;
+use hyper::header::HeaderValue;
 use slog::{error, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -347,7 +348,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ))
         .add(LoadMiddleware::new())
         .add(log_middleware)
-        .add(ServerIdentityMiddleware::new())
+        .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
+            "mononoke-lfs",
+        )))
         .add(ScubaMiddleware::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())

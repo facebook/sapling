@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::env;
+
 use anyhow::Error;
 use gotham::helpers::http::header::X_REQUEST_ID;
 use gotham::state::{request_id, State};
 use hyper::header::HeaderValue;
 use hyper::{Body, Response};
-use std::collections::HashMap;
-use std::env;
 
 use super::Middleware;
 
@@ -20,10 +21,10 @@ pub struct ServerIdentityMiddleware {
 }
 
 impl ServerIdentityMiddleware {
-    pub fn new() -> Self {
+    pub fn new(server_name: HeaderValue) -> Self {
         let mut headers = HashMap::new();
 
-        headers.insert("Server", HeaderValue::from_static("mononoke-lfs"));
+        headers.insert("Server", server_name);
 
         // NOTE: We ignore errors here — those will happen if environment variables are missing,
         // which is fine.

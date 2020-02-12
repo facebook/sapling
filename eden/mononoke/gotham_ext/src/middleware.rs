@@ -5,9 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::panic::RefUnwindSafe;
+
 use gotham::state::State;
 use hyper::{Body, Response};
-use std::panic::RefUnwindSafe;
+
+pub mod server_identity;
+
+pub use server_identity::ServerIdentityMiddleware;
 
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {
     fn inbound(&self, _state: &mut State) {
