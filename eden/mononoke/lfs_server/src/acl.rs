@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use if_ as acl_constants;
+use infrasec_authorization as acl_constants;
 
 use aclchecker::{AclChecker, Identity};
 use anyhow::{bail, Error};

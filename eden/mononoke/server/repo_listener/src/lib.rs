@@ -10,7 +10,7 @@
 #![allow(deprecated)]
 #![feature(never_type)]
 
-use if_ as acl;
+use infrasec_authorization as acl;
 
 mod connection_acceptor;
 mod errors;
