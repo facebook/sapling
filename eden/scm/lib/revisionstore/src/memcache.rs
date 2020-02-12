@@ -7,11 +7,12 @@
 
 //! Adapters around Memcache to be transparently used as DataStore or HistoryStore.
 
-use std::{path::PathBuf, sync::Arc};
+use std::{mem::size_of, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
+use tracing::info_span;
 
 use types::{Key, NodeInfo};
 
@@ -196,6 +197,17 @@ impl LocalStore for MemcacheDataStore {
 
 impl RemoteDataStore for MemcacheDataStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
+        let span = info_span!(
+            "MemcacheDataStore::prefetch",
+            key_count = keys.len(),
+            hit_count = &0,
+            size = &0
+        );
+        let _guard = span.enter();
+
+        let mut hits = 0;
+        let mut size = 0;
+
         for mcdata in self.memcache.get_data_iter(keys) {
             if let Ok(mcdata) = mcdata {
                 let metadata = mcdata.metadata;
@@ -205,9 +217,15 @@ impl RemoteDataStore for MemcacheDataStore {
                     key: mcdata.key,
                 };
 
+                hits += 1;
+                size += delta.data.len() + size_of::<Key>();
+
                 self.store.add(&delta, &metadata)?;
             }
         }
+
+        span.record("hits", &hits);
+        span.record("size", &size);
 
         Ok(())
     }
@@ -238,11 +256,28 @@ impl LocalStore for MemcacheHistoryStore {
 
 impl RemoteHistoryStore for MemcacheHistoryStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
+        let span = info_span!(
+            "MemcacheHistoryStore::prefetch",
+            key_count = keys.len(),
+            hit_count = &0,
+            size = &0
+        );
+        let _guard = span.enter();
+
+        let mut hits = 0;
+        let mut size = 0;
+
         for mchist in self.memcache.get_hist_iter(keys) {
             if let Ok(mchist) = mchist {
                 self.store.add(&mchist.key, &mchist.nodeinfo)?;
+
+                hits += 1;
+                size += size_of::<McHist>();
             }
         }
+
+        span.record("hit_count", &hits);
+        span.record("size", &size);
 
         Ok(())
     }

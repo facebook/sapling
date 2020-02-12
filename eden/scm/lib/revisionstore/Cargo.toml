@@ -24,6 +24,7 @@ serde = "1.0.84"
 serde_derive = "1.0.84"
 tempfile = "3.0.4"
 thiserror = "1.0.5"
+tracing = "0.1"
 types = { path = "../types" }
 util = { path = "../util" }
 
