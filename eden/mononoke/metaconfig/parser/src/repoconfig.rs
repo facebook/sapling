@@ -45,6 +45,7 @@ use repos::{
 
 const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
 const CONFIGERATOR_PREFIX: &'static str = "configerator://";
+const RELATIVE_PATH_PREFIX: &'static str = "./";
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
@@ -405,10 +406,19 @@ impl RepoConfigs {
                         return Err(ErrorKind::MissingPath().into());
                     }
                 };
-                let relative_prefix = "./";
-                let is_relative = path.starts_with(relative_prefix);
-                let path_adjusted = if is_relative {
-                    let s: String = path.chars().skip(relative_prefix.len()).collect();
+                let path_adjusted = if config_root_path.starts_with(CONFIGERATOR_PREFIX)
+                    || config_root_path.is_file()
+                {
+                    // When we load main config from configerator or json configuration, we
+                    // expect to find our configuration relative to the main folder where
+                    // the Mononoke binary is executed from.
+                    std::env::current_exe()?
+                        .parent()
+                        .expect("expected to get base dir of mononoke executable")
+                        .to_path_buf()
+                        .join(path)
+                } else if path.starts_with(RELATIVE_PATH_PREFIX) {
+                    let s: String = path.chars().skip(RELATIVE_PATH_PREFIX.len()).collect();
                     config_root_path.join("repos").join(&reponame).join(s)
                 } else {
                     config_root_path.join(path)
