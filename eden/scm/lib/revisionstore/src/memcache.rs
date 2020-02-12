@@ -47,6 +47,8 @@ pub(crate) struct McHist {
 mod dummy {
     use super::*;
 
+    use std::iter::empty;
+
     use configparser::config::ConfigSet;
 
     /// Dummy memcache client for when Mercurial is compiled outside of fbcode.
@@ -58,11 +60,19 @@ mod dummy {
             Ok(MemcacheStore {})
         }
 
+        pub(super) fn get_data_iter(&self, _key: &[Key]) -> impl Iterator<Item = Result<McData>> {
+            empty()
+        }
+
         pub(super) fn get_data(&self, _key: &Key) -> Result<Option<McData>> {
             Ok(None)
         }
 
         pub(super) fn add_data(&self, _delta: &Delta, _metadata: &Metadata) {}
+
+        pub(super) fn get_hist_iter(&self, _key: &[Key]) -> impl Iterator<Item = Result<McHist>> {
+            empty()
+        }
 
         pub(super) fn get_hist(&self, _key: &Key) -> Result<Option<McHist>> {
             Ok(None)
@@ -187,8 +197,8 @@ impl LocalStore for MemcacheDataStore {
 
 impl RemoteDataStore for MemcacheDataStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
-        for k in keys {
-            if let Some(mcdata) = self.memcache.get_data(k)? {
+        for mcdata in self.memcache.get_data_iter(keys) {
+            if let Ok(mcdata) = mcdata {
                 let metadata = mcdata.metadata;
                 let delta = Delta {
                     data: mcdata.data,
@@ -197,7 +207,7 @@ impl RemoteDataStore for MemcacheDataStore {
                 };
 
                 self.store.add(&delta, &metadata)?;
-            };
+            }
         }
 
         Ok(())
@@ -229,9 +239,9 @@ impl LocalStore for MemcacheHistoryStore {
 
 impl RemoteHistoryStore for MemcacheHistoryStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
-        for k in keys {
-            if let Some(nodeinfo) = self.get_node_info(k)? {
-                self.store.add(k, &nodeinfo)?;
+        for mchist in self.memcache.get_hist_iter(keys) {
+            if let Ok(mchist) = mchist {
+                self.store.add(&mchist.key, &mchist.nodeinfo)?;
             }
         }
 
