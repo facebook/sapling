@@ -343,7 +343,7 @@ def setconfig(*args):
 
 
 def setmodernconfig():
-    enable("remotenames", "amend")
+    enable("remotenames", "amend", "journal", "blackbox")
     setconfig(
         "experimental.narrow-heads=true",
         "visibility.enabled=true",
