@@ -57,6 +57,7 @@ define_perf_counters! {
         CachelibHits,
         CachelibMisses,
         GetbundleNumCommits,
+        GetbundleNumDrafts,
         GetfilesMaxFileSize,
         GetfilesMaxLatency,
         GetfilesNumFiles,

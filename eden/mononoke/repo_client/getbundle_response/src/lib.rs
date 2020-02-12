@@ -30,6 +30,7 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use slog::debug;
 use std::{
     collections::{HashMap, HashSet},
     iter::FromIterator,
@@ -53,6 +54,7 @@ pub async fn create_getbundle_response(
     return_phases: PhasesPart,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
+    debug!(ctx.logger(), "Return phases is: {:?}", return_phases);
 
     let heads_len = heads.len();
     let common: HashSet<_> = common.into_iter().collect();
@@ -66,6 +68,7 @@ pub async fn create_getbundle_response(
         let phases = prepare_phases(&ctx, &blobrepo, filtered_heads, &blobrepo.get_phases())
             .compat()
             .await?;
+        report_draft_commits(&ctx, phases.iter());
         derive_filenodes_for_public_heads(&ctx, &blobrepo, &common, &phases).await
     };
 
@@ -84,6 +87,7 @@ pub async fn create_getbundle_response(
         let phases = prepare_phases(&ctx, &blobrepo, heads.iter(), &blobrepo.get_phases())
             .compat()
             .await?;
+
         parts.push(parts::phases_part(
             ctx.clone(),
             old_stream::iter_ok(phases),
@@ -91,6 +95,22 @@ pub async fn create_getbundle_response(
     }
 
     Ok(parts)
+}
+
+fn report_draft_commits<'a, I: IntoIterator<Item = &'a (HgChangesetId, HgPhase)>>(
+    ctx: &CoreContext,
+    commit_phases: I,
+) {
+    let num_drafts = commit_phases
+        .into_iter()
+        .filter(|(_, ref phase)| phase == &HgPhase::Draft)
+        .count();
+    debug!(
+        ctx.logger(),
+        "Getbundle returning {} draft commits", num_drafts
+    );
+    ctx.perf_counters()
+        .add_to_counter(PerfCounterType::GetbundleNumDrafts, num_drafts as i64);
 }
 
 async fn derive_filenodes_for_public_heads(
