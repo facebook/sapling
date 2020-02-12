@@ -49,6 +49,11 @@ impl From<RootDeletedManifestId> for BlobstoreBytes {
 
 impl BonsaiDerived for RootDeletedManifestId {
     const NAME: &'static str = "deleted_manifest";
+    type Mapping = RootDeletedManifestMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        RootDeletedManifestMapping::new(repo.blobstore().clone())
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,

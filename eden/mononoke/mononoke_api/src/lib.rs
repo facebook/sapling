@@ -16,14 +16,12 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cloned::cloned;
 use fbinit::FacebookInit;
-use fsnodes::RootFsnodeMapping;
 use futures_preview::future;
 use futures_preview::future::try_join_all;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
 use sql_ext::MysqlOptions;
 use synced_commit_mapping::SyncedCommitMapping;
-use unodes::RootUnodeManifestMapping;
 use warm_bookmarks_cache::WarmBookmarksCache;
 
 use metaconfig_parser::RepoConfigs;
@@ -184,7 +182,6 @@ impl Mononoke {
                 String,
                 BlobRepo,
                 Arc<SkiplistIndex>,
-                Arc<RootUnodeManifestMapping>,
                 Arc<WarmBookmarksCache>,
                 Arc<dyn SyncedCommitMapping>,
                 Option<SourceControlServiceMonitoring>,
@@ -200,22 +197,17 @@ impl Mononoke {
                         name,
                         blob_repo,
                         skiplist_index,
-                        unodes_derived_mapping,
                         warm_bookmarks_cache,
                         synced_commit_mapping,
                         monitoring_config,
                         commit_sync_config,
                     )| {
-                        let fsnodes_derived_mapping =
-                            Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
                         (
                             name.clone(),
                             Arc::new(Repo::new_from_parts(
                                 name,
                                 blob_repo,
                                 skiplist_index,
-                                fsnodes_derived_mapping,
-                                unodes_derived_mapping,
                                 warm_bookmarks_cache,
                                 synced_commit_mapping,
                                 monitoring_config,

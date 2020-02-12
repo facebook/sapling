@@ -16,7 +16,7 @@ use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::ManifestOps;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use thiserror::Error;
 
 mod derive;
@@ -31,8 +31,7 @@ pub enum ErrorKind {
 }
 
 pub fn derive_unodes(ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId) -> BoxFuture<(), Error> {
-    let unodes_derived_mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
-    RootUnodeManifestId::derive(ctx, repo, unodes_derived_mapping, cs_id)
+    RootUnodeManifestId::derive(ctx, repo, cs_id)
         .map(|_| ())
         .boxify()
 }
@@ -57,29 +56,27 @@ pub fn find_unode_renames(
     }
 
     let blobstore = repo.get_blobstore();
-    let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(blobstore.clone()));
     let unodes = references.into_iter().map(move |(csid, mut paths)| {
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unodes_mapping.clone(), csid)
-            .and_then({
-                cloned!(ctx, blobstore);
-                move |mf_root| {
-                    let from_paths: Vec<_> = paths.keys().cloned().collect();
-                    mf_root
-                        .manifest_unode_id()
-                        .clone()
-                        .find_entries(ctx, blobstore, from_paths)
-                        .filter_map(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
-                        .collect()
-                        .map(move |unodes| {
-                            unodes
-                                .into_iter()
-                                .filter_map(|(from_path, unode_id)| {
-                                    Some((paths.remove(&from_path)?, unode_id))
-                                })
-                                .collect::<HashMap<_, _>>()
-                        })
-                }
-            })
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid).and_then({
+            cloned!(ctx, blobstore);
+            move |mf_root| {
+                let from_paths: Vec<_> = paths.keys().cloned().collect();
+                mf_root
+                    .manifest_unode_id()
+                    .clone()
+                    .find_entries(ctx, blobstore, from_paths)
+                    .filter_map(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
+                    .collect()
+                    .map(move |unodes| {
+                        unodes
+                            .into_iter()
+                            .filter_map(|(from_path, unode_id)| {
+                                Some((paths.remove(&from_path)?, unode_id))
+                            })
+                            .collect::<HashMap<_, _>>()
+                    })
+            }
+        })
     });
 
     future::join_all(unodes).map(|unodes| unodes.into_iter().flatten().collect())

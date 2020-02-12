@@ -27,8 +27,7 @@ pub fn derive_deleted_manifest(
     repo: BlobRepo,
     cs_id: ChangesetId,
 ) -> BoxFuture<(), Error> {
-    let deleted_manifest_derived_mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
-    RootDeletedManifestId::derive(ctx, repo, deleted_manifest_derived_mapping, cs_id)
+    RootDeletedManifestId::derive(ctx, repo, cs_id)
         .map(|_| ())
         .boxify()
 }

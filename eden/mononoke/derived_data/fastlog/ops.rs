@@ -23,10 +23,10 @@ use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use std::sync::Arc;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
-use crate::mapping::{FastlogParent, RootFastlog, RootFastlogMapping};
+use crate::mapping::{FastlogParent, RootFastlog};
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
 ///
@@ -67,7 +67,6 @@ pub fn list_file_history(
     path: Option<MPath>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> impl Stream<Item = ChangesetId, Error = Error> {
-    let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
     unode_entry
         .load(ctx.clone(), &repo.get_blobstore())
         .map_err(Error::from)
@@ -91,7 +90,7 @@ pub fn list_file_history(
                 }),
                 // unfold
                 {
-                    cloned!(ctx, path, repo, unode_mapping);
+                    cloned!(ctx, path, repo);
                     move |TraversalState {
                               history_graph,
                               queue,
@@ -104,7 +103,6 @@ pub fn list_file_history(
                             queue,
                             visited,
                             history_graph,
-                            unode_mapping.clone(),
                         )
                     }
                 },
@@ -147,7 +145,6 @@ fn do_history_unfold(
     mut visited: HashSet<ChangesetId>,
     // commit graph: changesets -> parents
     mut history_graph: HashMap<ChangesetId, Option<Vec<ChangesetId>>>,
-    unode_mapping: Arc<RootUnodeManifestMapping>,
 ) -> impl Future<Item = (Vec<ChangesetId>, Option<TraversalState>), Error = Error> {
     let mut unknown_parents = vec![];
     let mut yield_changesets = vec![];
@@ -170,45 +167,40 @@ fn do_history_unfold(
         }
     }
 
-    prefetch_unodes_for_changesets(
-        ctx.clone(),
-        repo.clone(),
-        path.clone(),
-        unknown_parents,
-        unode_mapping.clone(),
-    )
-    .map(move |unode_batches| {
-        for unode_batch in unode_batches.into_iter() {
-            process_unode_batch(unode_batch, &mut history_graph);
-        }
+    prefetch_unodes_for_changesets(ctx.clone(), repo.clone(), path.clone(), unknown_parents).map(
+        move |unode_batches| {
+            for unode_batch in unode_batches.into_iter() {
+                process_unode_batch(unode_batch, &mut history_graph);
+            }
 
-        match (yield_changesets.is_empty(), current_stage) {
-            (false, Some(stage)) => {
-                for cs_id in yield_changesets.iter() {
-                    if let Some(Some(parents)) = history_graph.get(&cs_id) {
-                        // parents are fetched, ready to process
-                        for p in parents.into_iter() {
-                            if visited.insert(*p) {
-                                queue.push_back((*p, stage + 1));
+            match (yield_changesets.is_empty(), current_stage) {
+                (false, Some(stage)) => {
+                    for cs_id in yield_changesets.iter() {
+                        if let Some(Some(parents)) = history_graph.get(&cs_id) {
+                            // parents are fetched, ready to process
+                            for p in parents.into_iter() {
+                                if visited.insert(*p) {
+                                    queue.push_back((*p, stage + 1));
+                                }
                             }
                         }
                     }
                 }
+                _ => {
+                    return (vec![], None);
+                }
             }
-            _ => {
-                return (vec![], None);
-            }
-        }
 
-        (
-            yield_changesets,
-            Some(TraversalState {
-                history_graph,
-                queue,
-                visited,
-            }),
-        )
-    })
+            (
+                yield_changesets,
+                Some(TraversalState {
+                    history_graph,
+                    queue,
+                    visited,
+                }),
+            )
+        },
+    )
 }
 
 /// prefetches unode batches for each given changeset id
@@ -217,7 +209,6 @@ fn prefetch_unodes_for_changesets(
     repo: BlobRepo,
     path: Option<MPath>,
     changeset_ids: Vec<ChangesetId>,
-    unode_mapping: Arc<RootUnodeManifestMapping>,
 ) -> impl Future<Item = Vec<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
     if changeset_ids.is_empty() {
         return future::ok(vec![]).left_future();
@@ -225,15 +216,7 @@ fn prefetch_unodes_for_changesets(
 
     let prefetch_futs = changeset_ids.into_iter().map({
         cloned!(ctx, repo);
-        move |cs_id| {
-            prefetch_history_by_changeset(
-                ctx.clone(),
-                repo.clone(),
-                cs_id,
-                path.clone(),
-                unode_mapping.clone(),
-            )
-        }
+        move |cs_id| prefetch_history_by_changeset(ctx.clone(), repo.clone(), cs_id, path.clone())
     });
 
     FuturesUnordered::from_iter(prefetch_futs)
@@ -286,83 +269,68 @@ fn prefetch_history_by_changeset(
     repo: BlobRepo,
     changeset_id: ChangesetId,
     path: Option<MPath>,
-    unode_mapping: Arc<RootUnodeManifestMapping>,
 ) -> BoxFuture<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
     cloned!(ctx, repo);
     let blobstore = repo.get_blobstore();
-    RootUnodeManifestId::derive(
-        ctx.clone(),
-        repo.clone(),
-        unode_mapping.clone(),
-        changeset_id.clone(),
-    )
-    .and_then({
-        cloned!(blobstore, ctx, path);
-        move |root_unode_mf_id| {
-            root_unode_mf_id
-                .manifest_unode_id()
-                .find_entry(ctx, blobstore, path)
-        }
-    })
-    .and_then({
-        cloned!(path);
-        move |entry_opt| {
-            entry_opt.ok_or_else(|| {
-                format_err!(
-                    "Unode entry is not found {:?} {:?}",
-                    changeset_id.clone(),
-                    path,
-                )
-            })
-        }
-    })
-    .and_then({
-        cloned!(ctx, repo, path);
-        move |entry| {
-            // optimistically try to fetch history for a unode
-            prefetch_history(ctx.clone(), repo.clone(), entry).and_then({
-                move |maybe_history| match maybe_history {
-                    Some(history) => future::ok(history).left_future(),
-                    // if there is no history, let's try to derive batched fastlog data
-                    // and fetch history again
-                    None => {
-                        let fastlog_derived_mapping =
-                            Arc::new(RootFastlogMapping::new(Arc::new(repo.get_blobstore())));
-                        RootFastlog::derive(
-                            ctx.clone(),
-                            repo.clone(),
-                            fastlog_derived_mapping,
-                            changeset_id,
-                        )
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |_| {
-                                prefetch_history(ctx.clone(), repo.clone(), entry).and_then(
-                                    move |history_opt| {
-                                        history_opt.ok_or_else(|| {
-                                            format_err!(
-                                                "Fastlog data is not found {:?} {:?}",
-                                                changeset_id,
-                                                path
-                                            )
-                                        })
-                                    },
-                                )
-                            }
-                        })
-                        .right_future()
+    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), changeset_id.clone())
+        .and_then({
+            cloned!(blobstore, ctx, path);
+            move |root_unode_mf_id| {
+                root_unode_mf_id
+                    .manifest_unode_id()
+                    .find_entry(ctx, blobstore, path)
+            }
+        })
+        .and_then({
+            cloned!(path);
+            move |entry_opt| {
+                entry_opt.ok_or_else(|| {
+                    format_err!(
+                        "Unode entry is not found {:?} {:?}",
+                        changeset_id.clone(),
+                        path,
+                    )
+                })
+            }
+        })
+        .and_then({
+            cloned!(ctx, repo, path);
+            move |entry| {
+                // optimistically try to fetch history for a unode
+                prefetch_history(ctx.clone(), repo.clone(), entry).and_then({
+                    move |maybe_history| match maybe_history {
+                        Some(history) => future::ok(history).left_future(),
+                        // if there is no history, let's try to derive batched fastlog data
+                        // and fetch history again
+                        None => RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id)
+                            .and_then({
+                                cloned!(ctx, repo);
+                                move |_| {
+                                    prefetch_history(ctx.clone(), repo.clone(), entry).and_then(
+                                        move |history_opt| {
+                                            history_opt.ok_or_else(|| {
+                                                format_err!(
+                                                    "Fastlog data is not found {:?} {:?}",
+                                                    changeset_id,
+                                                    path
+                                                )
+                                            })
+                                        },
+                                    )
+                                }
+                            })
+                            .right_future(),
                     }
-                }
-            })
-        }
-    })
-    .boxify()
+                })
+            }
+        })
+        .boxify()
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::{RootFastlog, RootFastlogMapping};
+    use crate::mapping::RootFastlog;
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use context::CoreContext;
@@ -649,12 +617,10 @@ mod test {
         bcs_id: ChangesetId,
         path: Option<MPath>,
     ) -> Entry<ManifestUnodeId, FileUnodeId> {
-        let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
         let root_unode = rt
             .block_on(RootUnodeManifestId::derive(
                 ctx.clone(),
                 repo.clone(),
-                unode_mapping.clone(),
                 bcs_id.clone(),
             ))
             .unwrap();
@@ -668,10 +634,7 @@ mod test {
     }
 
     fn derive_fastlog(ctx: CoreContext, repo: BlobRepo, rt: &mut Runtime, bcs_id: ChangesetId) {
-        let blobstore = Arc::new(repo.get_blobstore());
-        let mapping = RootFastlogMapping::new(blobstore.clone());
-        rt.block_on(RootFastlog::derive(ctx, repo, mapping, bcs_id))
-            .unwrap();
+        rt.block_on(RootFastlog::derive(ctx, repo, bcs_id)).unwrap();
     }
 
     fn path(path_str: &str) -> Option<MPath> {

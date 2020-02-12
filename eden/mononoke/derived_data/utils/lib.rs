@@ -13,7 +13,9 @@ use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
+use derived_data::{
+    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping,
+};
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
@@ -91,7 +93,7 @@ where
         repo: BlobRepo,
         csid: ChangesetId,
     ) -> BoxFuture<String, Error> {
-        <M::Value as BonsaiDerived>::derive(ctx.clone(), repo, self.mapping.clone(), csid)
+        <M::Value as BonsaiDerived>::derive(ctx.clone(), repo, csid)
             .map(|result| format!("{:?}", result))
             .boxify()
     }
@@ -125,8 +127,7 @@ where
                 move |csid| {
                     // create new context so each derivation would have its own trace
                     let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-
-                    <M::Value as BonsaiDerived>::derive(
+                    derive_impl::<M::Value, _>(
                         ctx.clone(),
                         repo.clone(),
                         in_memory_mapping.clone(),

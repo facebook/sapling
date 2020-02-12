@@ -23,6 +23,11 @@ pub struct MappedHgChangesetId(HgChangesetId);
 
 impl BonsaiDerived for MappedHgChangesetId {
     const NAME: &'static str = "hgchangesets";
+    type Mapping = HgChangesetIdMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        HgChangesetIdMapping::new(repo)
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,

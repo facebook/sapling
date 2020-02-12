@@ -12,7 +12,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
-use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
+use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use futures_stats::Timed;
@@ -50,12 +50,7 @@ fn blobstore_and_filenodes_warmup(
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
 
-    let derive_filenodes = FilenodesOnlyPublic::derive(
-        ctx.clone(),
-        repo.clone(),
-        FilenodesOnlyPublicMapping::new(repo.clone()),
-        bcs_id,
-    );
+    let derive_filenodes = FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id);
 
     revision
         .load(ctx.clone(), repo.blobstore())

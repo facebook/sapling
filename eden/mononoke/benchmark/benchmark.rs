@@ -18,7 +18,7 @@ use cmdlib::args;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use fsnodes::{RootFsnodeId, RootFsnodeMapping};
+use fsnodes::RootFsnodeId;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_preview::compat::Future01CompatExt;
@@ -28,7 +28,7 @@ use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use std::sync::Arc;
 use tokio_compat::runtime::Runtime;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 const HG_CHANGESET_TYPE: &'static str = "hg-changeset";
 const ARG_SEED: &'static str = "seed";
@@ -83,18 +83,16 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
             Ok(Arc::new(derive_hg_changeset))
         }
         Some(RootUnodeManifestId::NAME) => {
-            let mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
             let derive_unodes = move |csid| {
-                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping.clone(), csid)
+                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
                     .map(|root| root.manifest_unode_id().to_string())
                     .boxify()
             };
             Ok(Arc::new(derive_unodes))
         }
         Some(RootFsnodeId::NAME) => {
-            let mapping = RootFsnodeMapping::new(repo.get_blobstore());
             let derive_fsnodes = move |csid| {
-                RootFsnodeId::derive(ctx.clone(), repo.clone(), mapping.clone(), csid)
+                RootFsnodeId::derive(ctx.clone(), repo.clone(), csid)
                     .map(|root| root.fsnode_id().to_string())
                     .boxify()
             };

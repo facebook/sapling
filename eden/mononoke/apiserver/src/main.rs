@@ -585,7 +585,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             name.clone(),
             repo.repo.clone(),
             repo.skiplist_index.clone(),
-            repo.unodes_derived_mapping.clone(),
             repo.warm_bookmarks_cache.clone(),
             repo.synced_commit_mapping.clone(),
             repo.monitoring_config.clone(),

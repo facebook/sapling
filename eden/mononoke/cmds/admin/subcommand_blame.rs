@@ -29,7 +29,7 @@ use mononoke_types::{
 };
 use slog::Logger;
 use std::{collections::HashMap, sync::Arc};
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 const COMMAND_DERIVE: &'static str = "derive";
 const COMMAND_COMPUTE: &'static str = "compute";
@@ -136,8 +136,7 @@ fn find_leaf(
     path: MPath,
 ) -> impl Future<Item = FileUnodeId, Error = Error> {
     let blobstore = repo.get_blobstore();
-    let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(blobstore.clone()));
-    RootUnodeManifestId::derive(ctx.clone(), repo, unodes_mapping, csid)
+    RootUnodeManifestId::derive(ctx.clone(), repo, csid)
         .and_then({
             cloned!(blobstore, path);
             move |mf_root| {

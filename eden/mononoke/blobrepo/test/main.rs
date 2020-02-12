@@ -21,7 +21,7 @@ use blobstore::{Loadable, Storable};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
+use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
@@ -2035,8 +2035,7 @@ mod octopus_merges {
                     .await?;
                 assert!(maybe_linknode.is_none());
 
-                let mapping = FilenodesOnlyPublicMapping::new(helper.repo.clone());
-                FilenodesOnlyPublic::derive(helper.ctx.clone(), helper.repo.clone(), mapping, c3)
+                FilenodesOnlyPublic::derive(helper.ctx.clone(), helper.repo.clone(), c3)
                     .compat()
                     .await?;
                 let maybe_linknode = helper

@@ -56,7 +56,7 @@ use std::{
     },
     time::Duration,
 };
-use unodes::{find_unode_renames, RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::{find_unode_renames, RootUnodeManifestId};
 
 define_stats_struct! {
     DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
@@ -544,22 +544,16 @@ async fn unode_warmup(
     repo: BlobRepo,
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
-    let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
     let futs = FuturesUnordered::new();
     for cs_id in chunk {
-        cloned!(ctx, repo, unode_mapping);
+        cloned!(ctx, repo);
         let f = async move {
             let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
-            let root_mf_id = RootUnodeManifestId::derive(
-                ctx.clone(),
-                repo.clone(),
-                unode_mapping.clone(),
-                bcs.get_changeset_id(),
-            );
+            let root_mf_id =
+                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs.get_changeset_id());
 
-            let parent_unodes =
-                fetch_parent_root_unodes(ctx.clone(), repo.clone(), bcs, unode_mapping.clone());
+            let parent_unodes = fetch_parent_root_unodes(ctx.clone(), repo.clone(), bcs);
             let (root_mf_id, parent_unodes) =
                 try_join!(root_mf_id.compat(), parent_unodes.compat())?;
             let unode_mf_id = root_mf_id.manifest_unode_id().clone();
@@ -757,25 +751,14 @@ fn prefetch_content(
     csid.load(ctx.clone(), repo.blobstore())
         .from_err()
         .and_then(move |bonsai| {
-            let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-            let root_manifest = RootUnodeManifestId::derive(
-                ctx.clone(),
-                repo.clone(),
-                unodes_mapping.clone(),
-                csid,
-            )
-            .map(|mf| mf.manifest_unode_id().clone());
+            let root_manifest = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+                .map(|mf| mf.manifest_unode_id().clone());
 
             let parents_manifest = bonsai.parents().collect::<Vec<_>>().into_iter().map({
                 cloned!(ctx, repo);
                 move |csid| {
-                    RootUnodeManifestId::derive(
-                        ctx.clone(),
-                        repo.clone(),
-                        unodes_mapping.clone(),
-                        csid,
-                    )
-                    .map(|mf| mf.manifest_unode_id().clone())
+                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+                        .map(|mf| mf.manifest_unode_id().clone())
                 }
             });
 

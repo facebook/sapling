@@ -27,9 +27,8 @@ use mononoke_types::{
     blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected},
     ChangesetId, MPath,
 };
-use std::sync::Arc;
 use thiserror::Error;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 #[derive(Debug, Error)]
 pub enum BlameError {
@@ -69,20 +68,16 @@ pub fn fetch_blame(
             cloned!(ctx, repo);
             move |result| match result {
                 Ok((blame_id, blame)) => future::ok((blame_id, blame)).left_future(),
-                Err(blame_id) => {
-                    let blame_mapping =
-                        Arc::new(BlameRootMapping::new(repo.get_blobstore().boxed()));
-                    BlameRoot::derive(ctx.clone(), repo.clone(), blame_mapping, csid)
-                        .and_then(move |_| {
-                            blame_id
-                                .load(ctx.clone(), repo.blobstore())
-                                .from_err()
-                                .and_then(|blame_maybe_rejected| blame_maybe_rejected.into_blame())
-                                .map(move |blame| (blame_id, blame))
-                        })
-                        .from_err()
-                        .right_future()
-                }
+                Err(blame_id) => BlameRoot::derive(ctx.clone(), repo.clone(), csid)
+                    .and_then(move |_| {
+                        blame_id
+                            .load(ctx.clone(), repo.blobstore())
+                            .from_err()
+                            .and_then(|blame_maybe_rejected| blame_maybe_rejected.into_blame())
+                            .map(move |blame| (blame_id, blame))
+                    })
+                    .from_err()
+                    .right_future(),
             }
         })
         .and_then(move |(blame_id, blame)| {
@@ -100,8 +95,7 @@ fn fetch_blame_if_derived(
     path: MPath,
 ) -> impl Future<Item = Result<(BlameId, Blame), BlameId>, Error = BlameError> {
     let blobstore = repo.get_blobstore();
-    let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(blobstore.clone()));
-    RootUnodeManifestId::derive(ctx.clone(), repo, unodes_mapping, csid)
+    RootUnodeManifestId::derive(ctx.clone(), repo, csid)
         .and_then({
             cloned!(ctx, blobstore, path);
             move |mf_root| {
@@ -138,8 +132,5 @@ fn fetch_blame_if_derived(
 }
 
 pub fn derive_blame(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error> {
-    let blame_mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
-    BlameRoot::derive(ctx, repo, blame_mapping, csid)
-        .map(|_| ())
-        .boxify()
+    BlameRoot::derive(ctx, repo, csid).map(|_| ()).boxify()
 }

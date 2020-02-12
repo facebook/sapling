@@ -20,7 +20,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fastlog::{prefetch_history, FastlogParent, RootFastlog, RootFastlogMapping};
+use fastlog::{prefetch_history, FastlogParent, RootFastlog};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, err, join_all, ok},
@@ -38,7 +38,7 @@ use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
 use sql_ext::MysqlOptions;
 use time_ext::DurationExt;
-use unodes::{derive_unodes, RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::{derive_unodes, RootUnodeManifestId};
 
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEntry},
@@ -101,7 +101,6 @@ pub struct MononokeRepo {
     logger: Logger,
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
     cache: Option<CacheManager>,
-    pub(crate) unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
     // Cached public bookmarks that are used by apiserver. They can be outdated but not by much
     // (normally just a few seconds).
     // These bookmarks are updated when derived data is generated for them.
@@ -180,20 +179,15 @@ impl MononokeRepo {
             };
 
             skiplist_index.join(warm_bookmarks_cache).map(
-                move |(skiplist_index, warm_bookmarks_cache)| {
-                    let unodes_derived_mapping =
-                        Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-                    Self {
-                        repo,
-                        logger,
-                        skiplist_index,
-                        cache,
-                        unodes_derived_mapping,
-                        warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-                        synced_commit_mapping,
-                        monitoring_config,
-                        commit_sync_config,
-                    }
+                move |(skiplist_index, warm_bookmarks_cache)| Self {
+                    repo,
+                    logger,
+                    skiplist_index,
+                    cache,
+                    warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
+                    synced_commit_mapping,
+                    monitoring_config,
+                    commit_sync_config,
                 },
             )
         })
@@ -270,10 +264,10 @@ impl MononokeRepo {
         bcs_id: ChangesetId,
         path: Option<MPath>,
     ) -> BoxFuture<ManifestEntry<ManifestUnodeId, FileUnodeId>, ErrorKind> {
-        cloned!(ctx, self.repo, self.unodes_derived_mapping);
+        cloned!(ctx, self.repo);
 
         let blobstore = repo.get_blobstore();
-        RootUnodeManifestId::derive(ctx.clone(), repo, unodes_derived_mapping, bcs_id)
+        RootUnodeManifestId::derive(ctx.clone(), repo, bcs_id)
             .map_err(ErrorKind::InternalError)
             .and_then({
                 cloned!(blobstore, ctx, path);
@@ -495,31 +489,23 @@ impl MononokeRepo {
                                 // if there is no history, let's try to derive batched fastlog data
                                 // and fetch history again
                                 None => {
-                                    let fastlog_derived_mapping = Arc::new(
-                                        RootFastlogMapping::new(Arc::new(repo.get_blobstore())),
-                                    );
-                                    RootFastlog::derive(
-                                        ctx.clone(),
-                                        repo.clone(),
-                                        fastlog_derived_mapping,
-                                        changeset_id,
-                                    )
-                                    .map_err(ErrorKind::InternalError)
-                                    .and_then({
-                                        cloned!(ctx, repo);
-                                        move |_| {
-                                            prefetch_history(ctx.clone(), repo.clone(), entry)
-                                                .map_err(Error::from)
-                                                .from_err()
-                                        }
-                                    })
-                                    .and_then(move |maybe_history| {
-                                        maybe_history.ok_or(ErrorKind::NotFound(
-                                            format!("{:?} {:?}", changeset_id, path),
-                                            None,
-                                        ))
-                                    })
-                                    .right_future()
+                                    RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id)
+                                        .map_err(ErrorKind::InternalError)
+                                        .and_then({
+                                            cloned!(ctx, repo);
+                                            move |_| {
+                                                prefetch_history(ctx.clone(), repo.clone(), entry)
+                                                    .map_err(Error::from)
+                                                    .from_err()
+                                            }
+                                        })
+                                        .and_then(move |maybe_history| {
+                                            maybe_history.ok_or(ErrorKind::NotFound(
+                                                format!("{:?} {:?}", changeset_id, path),
+                                                None,
+                                            ))
+                                        })
+                                        .right_future()
                                 }
                             }
                         })

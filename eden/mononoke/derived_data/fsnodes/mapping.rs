@@ -52,6 +52,11 @@ impl From<RootFsnodeId> for BlobstoreBytes {
 
 impl BonsaiDerived for RootFsnodeId {
     const NAME: &'static str = "fsnodes";
+    type Mapping = RootFsnodeMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        RootFsnodeMapping::new(repo.blobstore().clone())
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,
@@ -152,7 +157,6 @@ mod test {
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
-    use std::sync::Arc;
     use test_utils::iterate_all_entries;
     use tokio_compat::runtime::Runtime;
 
@@ -172,9 +176,8 @@ mod test {
         repo: BlobRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
-        cache: Arc<RootFsnodeMapping>,
     ) -> impl Future<Item = (), Error = Error> {
-        let fsnode_entries = RootFsnodeId::derive(ctx.clone(), repo.clone(), cache, bcs_id)
+        let fsnode_entries = RootFsnodeId::derive(ctx.clone(), repo.clone(), bcs_id)
             .map(|root_fsnode| root_fsnode.fsnode_id().clone())
             .and_then({
                 cloned!(ctx, repo);
@@ -230,12 +233,11 @@ mod test {
     fn verify_repo(fb: FacebookInit, repo: BlobRepo, runtime: &mut Runtime) {
         let ctx = CoreContext::test_mock(fb);
 
-        let cache = Arc::new(RootFsnodeMapping::new(repo.get_blobstore()));
         runtime
             .block_on(
                 all_commits(ctx.clone(), repo.clone())
                     .and_then(move |(bcs_id, hg_cs_id)| {
-                        verify_fsnode(ctx.clone(), repo.clone(), bcs_id, hg_cs_id, cache.clone())
+                        verify_fsnode(ctx.clone(), repo.clone(), bcs_id, hg_cs_id)
                     })
                     .collect(),
             )

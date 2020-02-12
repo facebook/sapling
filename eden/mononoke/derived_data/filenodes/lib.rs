@@ -96,6 +96,11 @@ pub struct FilenodesOnlyPublic {
 
 impl BonsaiDerived for FilenodesOnlyPublic {
     const NAME: &'static str = "filenodes";
+    type Mapping = FilenodesOnlyPublicMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        FilenodesOnlyPublicMapping::new(repo.clone())
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,
@@ -564,13 +569,12 @@ mod tests {
             .commit()
             .await?;
 
-        let mapping = FilenodesOnlyPublicMapping::new(repo.clone());
-        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), mapping.clone(), child_empty)
+        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), child_empty)
             .compat()
             .await?;
 
         // Make sure they are in the mapping
-        let maps = mapping
+        let maps = FilenodesOnlyPublic::mapping(&ctx, &repo)
             .get(ctx.clone(), vec![parent_empty, child_empty])
             .compat()
             .await?;
@@ -594,8 +598,8 @@ mod tests {
             .commit()
             .await?;
 
-        let mapping = FilenodesOnlyPublicMapping::new(repo.clone());
-        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), mapping.clone(), child_empty)
+        let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
+        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), child_empty)
             .compat()
             .await?;
 

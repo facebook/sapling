@@ -21,7 +21,7 @@ use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
-use fsnodes::{derive_fsnodes, RootFsnodeMapping};
+use fsnodes::derive_fsnodes;
 
 use aclchecker::AclChecker;
 use blame::derive_blame;
@@ -49,7 +49,7 @@ use sql_ext::MysqlOptions;
 use sql_ext::SqlConstructors;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use unodes::{derive_unodes, RootUnodeManifestMapping};
+use unodes::derive_unodes;
 use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
 
 use crate::changeset::ChangesetContext;
@@ -71,8 +71,6 @@ pub(crate) struct Repo {
     pub(crate) name: String,
     pub(crate) blob_repo: BlobRepo,
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
-    pub(crate) fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
-    pub(crate) unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
     pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
@@ -204,16 +202,10 @@ impl Repo {
 
         let (acl_checker, skiplist_index) = try_join(acl_checker, skiplist_index).await?;
 
-        let unodes_derived_mapping =
-            Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
-        let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
-
         Ok(Self {
             name,
             blob_repo,
             skiplist_index,
-            unodes_derived_mapping,
-            fsnodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
             service_config,
@@ -228,8 +220,6 @@ impl Repo {
         name: String,
         blob_repo: BlobRepo,
         skiplist_index: Arc<SkiplistIndex>,
-        fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
-        unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
         warm_bookmarks_cache: Arc<WarmBookmarksCache>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
         monitoring_config: Option<SourceControlServiceMonitoring>,
@@ -239,8 +229,6 @@ impl Repo {
             name,
             blob_repo,
             skiplist_index,
-            fsnodes_derived_mapping,
-            unodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
             service_config: SourceControlServiceParams {
@@ -289,9 +277,6 @@ impl Repo {
         commit_sync_config: Option<CommitSyncConfig>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
-        let unodes_derived_mapping =
-            Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
-        let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
         let warm_bookmarks_cache = Arc::new(
             WarmBookmarksCache::new(
                 ctx.clone(),
@@ -309,8 +294,6 @@ impl Repo {
             name: String::from("test"),
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
-            unodes_derived_mapping,
-            fsnodes_derived_mapping,
             warm_bookmarks_cache,
             synced_commit_mapping,
             service_config: SourceControlServiceParams {
@@ -583,16 +566,6 @@ impl RepoContext {
     /// The skiplist index for the referenced repository.
     pub(crate) fn skiplist_index(&self) -> &SkiplistIndex {
         &self.repo.skiplist_index
-    }
-
-    /// The fsnodes mapping for the referenced repository.
-    pub(crate) fn fsnodes_derived_mapping(&self) -> &Arc<RootFsnodeMapping> {
-        &self.repo.fsnodes_derived_mapping
-    }
-
-    /// The unodes mapping for the referenced repository.
-    pub(crate) fn unodes_derived_mapping(&self) -> &Arc<RootUnodeManifestMapping> {
-        &self.repo.unodes_derived_mapping
     }
 
     /// The commit sync mapping for the referenced repository

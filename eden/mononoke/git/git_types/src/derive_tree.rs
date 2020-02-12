@@ -77,6 +77,11 @@ impl BonsaiDerivedMapping for TreeMapping {
 
 impl BonsaiDerived for TreeHandle {
     const NAME: &'static str = "git_trees";
+    type Mapping = TreeMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        TreeMapping::new(repo.blobstore().boxed())
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,
@@ -188,7 +193,6 @@ mod test {
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = fixture(fb);
-        let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
 
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &("master".try_into()?))
@@ -196,7 +200,7 @@ mod test {
             .await?
             .ok_or(format_err!("no master"))?;
 
-        let tree = TreeHandle::derive(ctx.clone(), repo.clone(), tree_mapping, bcs_id)
+        let tree = TreeHandle::derive(ctx.clone(), repo.clone(), bcs_id)
             .compat()
             .await?;
 

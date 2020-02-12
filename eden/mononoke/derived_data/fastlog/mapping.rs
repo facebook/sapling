@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::{create_new_batch, save_fastlog_batch_by_unode_id};
 
@@ -48,6 +48,11 @@ pub struct RootFastlog(ChangesetId);
 
 impl BonsaiDerived for RootFastlog {
     const NAME: &'static str = "fastlog";
+    type Mapping = RootFastlogMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        RootFastlogMapping::new(repo.blobstore().boxed())
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,
@@ -55,19 +60,9 @@ impl BonsaiDerived for RootFastlog {
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
-        // TODO(stash): we shouldn't create a RootUnodeManifestMapping mapping here -
-        // ideally we should create it once when Mononoke is initialized.
-        // But for now this is a limitation of derived data trait - it requires explicit
-        // passing of RootUnodeManifestMapping
-        let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
         let bcs_id = bonsai.get_changeset_id();
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unode_mapping.clone(), bcs_id)
-            .join(fetch_parent_root_unodes(
-                ctx.clone(),
-                repo.clone(),
-                bonsai,
-                unode_mapping,
-            ))
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+            .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
             .and_then(move |(root_unode_mf_id, parents)| {
                 let blobstore = repo.get_blobstore().boxed();
                 let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
@@ -112,11 +107,10 @@ pub fn fetch_parent_root_unodes(
     ctx: CoreContext,
     repo: BlobRepo,
     bonsai: BonsaiChangeset,
-    unode_mapping: Arc<RootUnodeManifestMapping>,
 ) -> impl Future<Item = Vec<ManifestUnodeId>, Error = Error> {
     let parents: Vec<_> = bonsai.parents().collect();
     future::join_all(parents.into_iter().map(move |p| {
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unode_mapping.clone(), p)
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p)
             .map(|root_unode_mf_id| root_unode_mf_id.manifest_unode_id().clone())
     }))
 }
@@ -476,27 +470,16 @@ mod tests {
             rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
                 .unwrap();
 
-            let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
             let mut parent_unodes = vec![];
 
             for p in parents {
-                let parent_unode = RootUnodeManifestId::derive(
-                    ctx.clone(),
-                    repo.clone(),
-                    unode_mapping.clone(),
-                    p,
-                );
+                let parent_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p);
                 let parent_unode = rt.block_on(parent_unode)?;
                 let parent_unode = parent_unode.manifest_unode_id().clone();
                 parent_unodes.push(parent_unode);
             }
 
-            let merge_unode = RootUnodeManifestId::derive(
-                ctx.clone(),
-                repo.clone(),
-                unode_mapping.clone(),
-                merge_bcs_id,
-            );
+            let merge_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), merge_bcs_id);
             let merge_unode = rt.block_on(merge_unode)?;
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
@@ -738,11 +721,7 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = rt.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
         let bcs_id = bcs_id.unwrap();
-
-        let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-
-        let root_unode =
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unode_mapping.clone(), bcs_id);
+        let root_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id);
         let root_unode = rt.block_on(root_unode)?;
         Ok(root_unode.manifest_unode_id().clone())
     }
@@ -753,19 +732,10 @@ mod tests {
         bcs_id: ChangesetId,
         repo: BlobRepo,
     ) -> ManifestUnodeId {
-        let blobstore = Arc::new(repo.get_blobstore());
-        let mapping = RootFastlogMapping::new(blobstore.clone());
-        rt.block_on(RootFastlog::derive(
-            ctx.clone(),
-            repo.clone(),
-            mapping,
-            bcs_id,
-        ))
-        .unwrap();
+        rt.block_on(RootFastlog::derive(ctx.clone(), repo.clone(), bcs_id))
+            .unwrap();
 
-        let unode_mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
-        let root_unode =
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), Arc::new(unode_mapping), bcs_id);
+        let root_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id);
         let root_unode = rt.block_on(root_unode).unwrap();
         root_unode.manifest_unode_id().clone()
     }

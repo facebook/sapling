@@ -7,7 +7,7 @@
 
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct SessionId(String);
 
 impl SessionId {

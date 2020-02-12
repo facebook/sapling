@@ -15,7 +15,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
 use derived_data::BonsaiDerived;
-use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
+use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{future, stream as old_stream, Future, Stream as OldStream};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_preview::{
@@ -130,13 +130,7 @@ async fn derive_filenodes_for_public_heads(
         hg_to_bonsai_stream(&ctx, &blobrepo, to_derive_filenodes).await?;
     stream::iter(to_derive_filenodes_bonsai)
         .map(move |bcs_id| {
-            FilenodesOnlyPublic::derive(
-                ctx.clone(),
-                blobrepo.clone(),
-                FilenodesOnlyPublicMapping::new(blobrepo.clone()),
-                bcs_id,
-            )
-            .compat()
+            FilenodesOnlyPublic::derive(ctx.clone(), blobrepo.clone(), bcs_id).compat()
         })
         .buffered(100)
         .try_for_each(|_derive| async { Ok(()) })

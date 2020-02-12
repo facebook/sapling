@@ -21,7 +21,7 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, FileUnodeId, MPath,
 };
 use std::{collections::HashMap, iter::FromIterator, sync::Arc};
-use unodes::{find_unode_renames, RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::{find_unode_renames, RootUnodeManifestId};
 
 pub const BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 
@@ -30,6 +30,11 @@ pub struct BlameRoot(ChangesetId);
 
 impl BonsaiDerived for BlameRoot {
     const NAME: &'static str = "blame";
+    type Mapping = BlameRootMapping;
+
+    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
+        BlameRootMapping::new(repo.blobstore().boxed())
+    }
 
     fn derive_from_parents(
         ctx: CoreContext,
@@ -38,11 +43,8 @@ impl BonsaiDerived for BlameRoot {
         _parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
         let csid = bonsai.get_changeset_id();
-        let unodes_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-
-        let root_manifest =
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unodes_mapping.clone(), csid)
-                .map(|mf| mf.manifest_unode_id().clone());
+        let root_manifest = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+            .map(|mf| mf.manifest_unode_id().clone());
         let parents_manifest = bonsai
             .parents()
             .collect::<Vec<_>>() // iterator should be owned
@@ -50,7 +52,7 @@ impl BonsaiDerived for BlameRoot {
             .map({
                 cloned!(ctx, repo);
                 move |csid| {
-                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unodes_mapping.clone(), csid)
+                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
                         .map(|mf| mf.manifest_unode_id().clone())
                 }
             });

@@ -19,7 +19,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-mod derive_impl;
+pub mod derive_impl;
 
 /// Trait for the data that can be derived from bonsai changeset.
 /// Examples of that are hg changeset id, unodes root manifest id, git changeset ids etc
@@ -29,6 +29,11 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// Should be unique string (among derived data types), which is used to identify or
     /// name data (for example lease keys) assoicated with particular derived data type.
     const NAME: &'static str;
+
+    type Mapping: BonsaiDerivedMapping<Value = Self>;
+
+    /// Get mapping associated with this derived data type.
+    fn mapping(ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping;
 
     /// Defines how to derive new representation for bonsai having derivations
     /// for parents and having a current bonsai object.
@@ -48,30 +53,20 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// This function is the entrypoint for changeset derivation, it converts
     /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
-    fn derive<Mapping>(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        mapping: Mapping,
-        csid: ChangesetId,
-    ) -> BoxFuture<Self, Error>
-    where
-        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
-        derive_impl::derive_impl::<Self, Mapping>(ctx, repo, mapping, csid).boxify()
+    fn derive(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<Self, Error> {
+        let mapping = Self::mapping(&ctx, &repo);
+        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid).boxify()
     }
 
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
-    fn count_underived<Mapping>(
+    fn count_underived(
         ctx: &CoreContext,
         repo: &BlobRepo,
-        mapping: &Mapping,
         csid: &ChangesetId,
         limit: u64,
-    ) -> BoxFuture<u64, Error>
-    where
-        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
-        derive_impl::find_underived::<Self, Mapping>(ctx, repo, mapping, csid, Some(limit))
+    ) -> BoxFuture<u64, Error> {
+        let mapping = Self::mapping(&ctx, &repo);
+        derive_impl::find_underived::<Self, Self::Mapping>(ctx, repo, &mapping, csid, Some(limit))
             .map(|underived| underived.len() as u64)
             .boxify()
     }
@@ -80,7 +75,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
 /// After derived data was generated then it will be stored in BonsaiDerivedMapping, which is
 /// normally a persistent store. This is used to avoid regenerating the same derived data over
 /// and over again.
-pub trait BonsaiDerivedMapping: Send + Sync {
+pub trait BonsaiDerivedMapping: Send + Sync + Clone {
     type Value: BonsaiDerived;
 
     /// Fetches mapping from bonsai changeset ids to generated value

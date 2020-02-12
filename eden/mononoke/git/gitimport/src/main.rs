@@ -32,7 +32,7 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FilestoreConfig, StoreRequest};
-use git_types::{mode, TreeHandle, TreeMapping};
+use git_types::{mode, TreeHandle};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, Manifest, StoreLoadable};
 use mononoke_types::{
     hash::GitSha1, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
@@ -173,8 +173,6 @@ async fn gitimport(
     derive_trees: bool,
     hggit_compatibility: bool,
 ) -> Result<(), Error> {
-    let tree_mapping = TreeMapping::new(repo.get_blobstore().boxed());
-
     let walk_repo = Repository::open(&path)?;
     let store_repo = Arc::new(Mutex::new(Repository::open(&path)?));
 
@@ -282,10 +280,9 @@ async fn gitimport(
             let commit = walk_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
 
-            let derived_tree =
-                TreeHandle::derive(ctx.clone(), repo.clone(), tree_mapping.clone(), *bcs_id)
-                    .compat()
-                    .await?;
+            let derived_tree = TreeHandle::derive(ctx.clone(), repo.clone(), *bcs_id)
+                .compat()
+                .await?;
 
             let derived_tree_id = Oid::from_bytes(derived_tree.oid().as_ref())?;
 

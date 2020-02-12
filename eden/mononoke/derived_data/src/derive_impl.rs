@@ -68,7 +68,7 @@ const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 /// C <- no mapping
 ///
 /// is possible and valid (but only if the data for commit C is derived).
-pub(crate) fn derive_impl<
+pub fn derive_impl<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 >(
@@ -503,6 +503,7 @@ mod test {
     use blobrepo::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
+    use context::SessionId;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
@@ -511,6 +512,7 @@ mod test {
     use futures_ext::BoxFuture;
     use futures_preview::compat::Future01CompatExt;
     use futures_util::future::{FutureExt as NewFutureExt, TryFutureExt};
+    use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
     use mercurial_types::HgChangesetId;
@@ -525,11 +527,21 @@ mod test {
     use tests_utils::resolve_cs_id;
     use tokio_compat::runtime::Runtime;
 
+    lazy_static! {
+        static ref MAPPINGS: Mutex<HashMap<SessionId, TestMapping>> = Mutex::new(HashMap::new());
+    }
+
     #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Debug)]
     struct TestGenNum(u64, ChangesetId, Vec<ChangesetId>);
 
     impl BonsaiDerived for TestGenNum {
         const NAME: &'static str = "test_gen_num";
+        type Mapping = TestMapping;
+
+        fn mapping(ctx: &CoreContext, _repo: &BlobRepo) -> Self::Mapping {
+            let session = ctx.session_id().clone();
+            MAPPINGS.with(|m| m.entry(session).or_insert_with(TestMapping::new).clone())
+        }
 
         fn derive_from_parents(
             _ctx: CoreContext,
@@ -548,7 +560,7 @@ mod test {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct TestMapping {
         mapping: Arc<Mutex<HashMap<ChangesetId, TestGenNum>>>,
     }
@@ -561,8 +573,7 @@ mod test {
         }
 
         fn remove(&self, cs_id: &ChangesetId) {
-            let mut mapping = self.mapping.lock().unwrap();
-            mapping.remove(cs_id);
+            self.mapping.with(|m| m.remove(cs_id));
         }
     }
 
@@ -614,14 +625,9 @@ mod test {
             )
             .unwrap();
 
-        let mapping = Arc::new(TestMapping::new());
+        let mapping = TestGenNum::mapping(&ctx, &repo);
         let actual = runtime
-            .block_on(TestGenNum::derive(
-                ctx.clone(),
-                repo.clone(),
-                mapping.clone(),
-                bcs_id,
-            ))
+            .block_on(TestGenNum::derive(ctx.clone(), repo.clone(), bcs_id))
             .unwrap();
         assert_eq!(expected.value(), actual.0);
 
@@ -665,21 +671,20 @@ mod test {
                 let root_cs_id =
                     resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-                let mapping = Arc::new(TestMapping::new());
-                TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), after_root_cs_id)
+                TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
                     .compat()
                     .await?;
 
                 // Delete root entry, and derive descendant of after_root changeset, make sure
                 // it doesn't fail
-                mapping.remove(&root_cs_id);
-                TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), after_root_cs_id)
+                TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
+                TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
                     .compat()
                     .await?;
 
                 let third_cs_id =
                     resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
-                TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), third_cs_id)
+                TestGenNum::derive(ctx.clone(), repo.clone(), third_cs_id)
                     .compat()
                     .await?;
 
@@ -708,30 +713,25 @@ mod test {
                 let root_cs_id =
                     resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-                let mapping = Arc::new(TestMapping::new());
-                let underived =
-                    TestGenNum::count_underived(&ctx, &repo, &mapping, &after_root_cs_id, 100)
-                        .compat()
-                        .await?;
+                let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100)
+                    .compat()
+                    .await?;
                 assert_eq!(underived, 2);
 
-                let underived =
-                    TestGenNum::count_underived(&ctx, &repo, &mapping, &root_cs_id, 100)
-                        .compat()
-                        .await?;
+                let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100)
+                    .compat()
+                    .await?;
                 assert_eq!(underived, 1);
 
-                let underived =
-                    TestGenNum::count_underived(&ctx, &repo, &mapping, &after_root_cs_id, 1)
-                        .compat()
-                        .await?;
+                let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1)
+                    .compat()
+                    .await?;
                 assert_eq!(underived, 2);
 
                 let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-                let underived =
-                    TestGenNum::count_underived(&ctx, &repo, &mapping, &master_cs_id, 100)
-                        .compat()
-                        .await?;
+                let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100)
+                    .compat()
+                    .await?;
                 assert_eq!(underived, 11);
 
                 Ok(())
@@ -782,9 +782,9 @@ mod test {
     #[fbinit::test]
     fn test_leases(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut runtime = Runtime::new()?;
-        let mapping = Arc::new(TestMapping::new());
         let repo = linear::getrepo(fb);
+        let mapping = TestGenNum::mapping(&ctx, &repo);
+        let mut runtime = Runtime::new()?;
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime
@@ -810,15 +810,13 @@ mod test {
         );
 
         let output = Arc::new(Mutex::new(Vec::new()));
-        runtime.spawn(
-            TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), csid).then({
-                cloned!(output);
-                move |result| {
-                    output.with(move |output| output.push(result));
-                    Ok::<_, ()>(())
-                }
-            }),
-        );
+        runtime.spawn(TestGenNum::derive(ctx.clone(), repo.clone(), csid).then({
+            cloned!(output);
+            move |result| {
+                output.with(move |output| output.push(result));
+                Ok::<_, ()>(())
+            }
+        }));
 
         // schedule derivation
         runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
@@ -849,12 +847,7 @@ mod test {
         );
         // should succed as lease should not be request
         assert_eq!(
-            runtime.block_on(TestGenNum::derive(
-                ctx.clone(),
-                repo.clone(),
-                mapping.clone(),
-                csid
-            ))?,
+            runtime.block_on(TestGenNum::derive(ctx.clone(), repo.clone(), csid))?,
             result
         );
         runtime
@@ -884,10 +877,10 @@ mod test {
     #[fbinit::test]
     fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut runtime = Runtime::new()?;
-        let mapping = Arc::new(TestMapping::new());
         let repo =
             linear::getrepo(fb).dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
+        let mapping = TestGenNum::mapping(&ctx, &repo);
+        let mut runtime = Runtime::new()?;
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime
@@ -909,12 +902,7 @@ mod test {
         );
 
         // should succeed even though lease always fails
-        let result = runtime.block_on(TestGenNum::derive(
-            ctx.clone(),
-            repo.clone(),
-            mapping.clone(),
-            csid,
-        ))?;
+        let result = runtime.block_on(TestGenNum::derive(ctx.clone(), repo.clone(), csid))?;
         assert_eq!(
             runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
             hashmap! { csid => result },

@@ -72,30 +72,20 @@ impl ChangesetContext {
         let root_fsnode_id = {
             cloned!(repo);
             async move {
-                RootFsnodeId::derive(
-                    repo.ctx().clone(),
-                    repo.blob_repo().clone(),
-                    repo.fsnodes_derived_mapping().clone(),
-                    id,
-                )
-                .compat()
-                .await
-                .map_err(MononokeError::from)
+                RootFsnodeId::derive(repo.ctx().clone(), repo.blob_repo().clone(), id)
+                    .compat()
+                    .await
+                    .map_err(MononokeError::from)
             }
         };
         let root_fsnode_id = root_fsnode_id.boxed().shared();
         let root_unode_manifest_id = {
             cloned!(repo);
             async move {
-                RootUnodeManifestId::derive(
-                    repo.ctx().clone(),
-                    repo.blob_repo().clone(),
-                    repo.unodes_derived_mapping().clone(),
-                    id,
-                )
-                .compat()
-                .await
-                .map_err(MononokeError::from)
+                RootUnodeManifestId::derive(repo.ctx().clone(), repo.blob_repo().clone(), id)
+                    .compat()
+                    .await
+                    .map_err(MononokeError::from)
             }
         };
         let root_unode_manifest_id = root_unode_manifest_id.boxed().shared();

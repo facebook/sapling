@@ -13,7 +13,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
-use derived_data::{BonsaiDerived, RegenerateMapping};
+use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
@@ -22,12 +22,11 @@ use manifest::{Entry, ManifestOps, PathOrPrefix};
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::Logger;
-use std::{collections::BTreeSet, sync::Arc};
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use std::collections::BTreeSet;
+use unodes::RootUnodeManifestId;
 
 const COMMAND_TREE: &'static str = "tree";
 const COMMAND_VERIFY: &'static str = "verify";
-const COMMAND_REGENERATE: &'static str = "regenerate";
 const ARG_CSID: &'static str = "csid";
 const ARG_PATH: &'static str = "path";
 const ARG_LIMIT: &'static str = "limit";
@@ -74,11 +73,6 @@ pub fn subcommand_unodes_build(name: &str) -> App {
                         .takes_value(true)
                         .required(true),
                 ),
-        )
-        .subcommand(
-            SubCommand::with_name(COMMAND_REGENERATE)
-                .help("regenerate unode")
-                .arg(csid_arg.clone()),
         )
 }
 
@@ -128,26 +122,6 @@ pub fn subcommand_unodes(
                 .from_err()
                 .boxify()
         }
-        (COMMAND_REGENERATE, Some(matches)) => {
-            let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            repo.into_future()
-                .and_then({
-                    cloned!(ctx);
-                    move |repo| {
-                        helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                            .map(move |csid| (ctx, repo, csid))
-                    }
-                })
-                .and_then(move |(ctx, repo, csid)| {
-                    let mapping =
-                        RegenerateMapping::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-                    mapping.regenerate(Some(csid));
-                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping, csid)
-                        .map(move |root| println!("{:?} -> {:?}", csid, root))
-                })
-                .from_err()
-                .boxify()
-        }
         _ => future::err(SubcommandError::InvalidArgs).boxify(),
     };
 
@@ -165,8 +139,7 @@ fn subcommand_tree(
     csid: ChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = (), Error = Error> {
-    let mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping, csid).and_then(move |root| {
+    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid).and_then(move |root| {
         println!("ROOT: {:?}", root);
         println!("PATH: {:?}", path);
         root.manifest_unode_id()
@@ -221,9 +194,8 @@ fn single_verify(
             }
         });
 
-    let mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-    let unode_paths = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping, csid)
-        .and_then(move |tree_id| {
+    let unode_paths =
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid).and_then(move |tree_id| {
             tree_id
                 .manifest_unode_id()
                 .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])

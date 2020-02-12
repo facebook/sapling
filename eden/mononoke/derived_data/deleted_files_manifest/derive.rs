@@ -21,9 +21,9 @@ use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManifest};
 use mononoke_types::{BonsaiChangeset, ChangesetId, DeletedManifestId, MPathElement, MononokeId};
 use repo_blobstore::RepoBlobstore;
-use std::{collections::BTreeMap, iter::FromIterator, sync::Arc};
+use std::{collections::BTreeMap, iter::FromIterator};
 use thiserror::Error;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -182,19 +182,18 @@ pub(crate) fn get_changes(
     // Get file/directory changes between the current changeset and its parents
     //
     // get unode manifests first
-    let unode_mapping = Arc::new(RootUnodeManifestMapping::new(blobstore.clone()));
     let bcs_id = bonsai.get_changeset_id();
 
     // get parent unodes
     let parent_cs_ids: Vec<_> = bonsai.parents().collect();
     let parent_unodes = parent_cs_ids.into_iter().map({
-        cloned!(ctx, repo, unode_mapping);
+        cloned!(ctx, repo);
         move |cs_id| {
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unode_mapping.clone(), cs_id)
+            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
         }
     });
-    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unode_mapping.clone(), bcs_id)
+    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
         .join(join_all(parent_unodes))
         // compute diff between changeset's and its parents' manifests
         .and_then({

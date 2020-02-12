@@ -275,7 +275,7 @@ mod tests {
     use blobstore::Storable;
     use bytes::Bytes;
     use derived_data::BonsaiDerived;
-    use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
+    use derived_data_filenodes::FilenodesOnlyPublic;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::Stream;
@@ -302,8 +302,7 @@ mod tests {
             cloned!(ctx, repo);
             async move {
                 let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-                let mapping = FilenodesOnlyPublicMapping::new(repo.clone());
-                FilenodesOnlyPublic::derive(ctx, repo, mapping, master_cs_id)
+                FilenodesOnlyPublic::derive(ctx, repo, master_cs_id)
                     .compat()
                     .await?;
                 let res: Result<(), Error> = Ok(());
