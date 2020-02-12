@@ -8,13 +8,10 @@
 
 use futures::{
     ready,
-    stream::{self, FuturesUnordered},
-    task::Poll,
-    Future, Stream,
+    stream::{self, FuturesUnordered, StreamExt},
+    Stream,
 };
-use std::collections::VecDeque;
-use std::iter::FromIterator;
-use std::pin::Pin;
+use std::{collections::VecDeque, future::Future, iter::FromIterator, task::Poll};
 
 /// `bounded_traversal_stream` traverses implicit asynchronous tree specified by `init`
 /// and `unfold` arguments. All `unfold` operations are executed in parallel if they
@@ -46,9 +43,8 @@ where
     Ins: IntoIterator<Item = In>,
 {
     let mut unscheduled = VecDeque::from_iter(init);
-    let mut scheduled = Pin::new(Box::new(FuturesUnordered::new()));
+    let mut scheduled = FuturesUnordered::new();
     stream::poll_fn(move |cx| loop {
-        let scheduled = scheduled.as_mut();
         if scheduled.is_empty() && unscheduled.is_empty() {
             return Poll::Ready(None);
         }
@@ -59,8 +55,7 @@ where
             scheduled.push(unfold(item))
         }
 
-        let poll = scheduled.poll_next(cx);
-        if let Some((out, children)) = ready!(poll).transpose()? {
+        if let Some((out, children)) = ready!(scheduled.poll_next_unpin(cx)).transpose()? {
             for child in children {
                 unscheduled.push_front(child);
             }
