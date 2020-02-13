@@ -58,6 +58,10 @@ enum Opt {
         /// The mounted path that you wish to unmount
         mount_point: String,
     },
+
+    /// Unmount and delete all APFS volumes created by this utility
+    #[structopt(name = "delete-all")]
+    DeleteAll,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -600,6 +604,38 @@ fn main() -> Result<()> {
 
         Opt::Delete { mount_point } => {
             delete_scratch(&mount_point)?;
+            Ok(())
+        }
+
+        Opt::DeleteAll => {
+            let containers = apfs_list()?;
+            let mounts = MountTable::parse_system_mount_table()?;
+            for container in containers {
+                for vol in container.volumes {
+                    if vol.is_edenfs_managed_volume() {
+                        let mut try_delete = true;
+
+                        if let Some(mount_point) = vol.get_current_mount_point(Some(&mounts)) {
+                            // In the context of deleting all volumes, we want to
+                            // force the unmount--we know it is safe.
+                            let force = true;
+                            if let Err(err) = unmount_scratch(&mount_point, force, &mounts) {
+                                eprintln!("Failed to unmount: {}", err);
+                                try_delete = false;
+                            }
+                        }
+
+                        if try_delete {
+                            let mount_point = vol.preferred_mount_point().unwrap();
+                            if let Err(err) = delete_scratch(&mount_point) {
+                                eprintln!("Failed to delete {:#?}: {}", vol, err);
+                            } else {
+                                println!("Deleted {}", mount_point);
+                            }
+                        }
+                    }
+                }
+            }
             Ok(())
         }
     }
