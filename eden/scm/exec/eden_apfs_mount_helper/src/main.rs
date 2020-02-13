@@ -15,7 +15,7 @@ use anyhow::*;
 use serde::*;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use structopt::StructOpt;
 
@@ -73,8 +73,125 @@ struct ApfsContainer {
 #[serde(rename_all = "PascalCase")]
 struct ApfsVolume {
     device_identifier: String,
-    mount_point: Option<String>,
     name: Option<String>,
+}
+
+impl ApfsVolume {
+    /// Resolve the current mount point for this volume by looking
+    /// at the mount table.  The mount table is optional; if not
+    /// provided by the caller, this function will resolve it for
+    /// itself.
+    /// If you are resolving more than mount point in a loop, then
+    /// it is preferable to pass in the mount table so that it isn't
+    /// recomputed on each call.
+    pub fn get_current_mount_point(&self, table: Option<&MountTable>) -> Option<String> {
+        let table = MountTable::parse_if_needed(table).ok()?;
+        let dev_name = format!("/dev/{}", self.device_identifier);
+        for entry in table.entries {
+            if entry.device == dev_name {
+                return Some(entry.mount_point);
+            }
+        }
+        None
+    }
+
+    /// If this volume was created by this tool, return its preferred
+    /// (rather than current) mount point.
+    pub fn preferred_mount_point(&self) -> Option<String> {
+        if self.is_edenfs_managed_volume() {
+            let name = self.name.as_ref().unwrap();
+            Some(name[7..].to_owned())
+        } else {
+            None
+        }
+    }
+
+    /// Returns true if the volume name matches our "special" edenfs managed
+    /// volume name pattern.
+    pub fn is_edenfs_managed_volume(&self) -> bool {
+        self.name
+            .as_ref()
+            .map(|name| name.starts_with("edenfs:"))
+            .unwrap_or(false)
+    }
+
+    /// Returns true if this is an edenfs managed volume and if the provided
+    /// current mount point path is the preferred location.
+    /// The intent is that current is produced by calling `get_current_mount_point`
+    /// and then passed here.
+    pub fn is_preferred_location(&self, current: &str) -> Result<bool> {
+        let preferred = self
+            .preferred_mount_point()
+            .ok_or_else(|| anyhow!("this volume is not an edenfs managed volume"))?;
+        Ok(preferred == current)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MountEntry {
+    device: String,
+    mount_point: String,
+}
+
+impl MountEntry {
+    fn new(device: &str, mount_point: &str) -> Self {
+        Self {
+            device: device.to_owned(),
+            mount_point: mount_point.to_owned(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MountTable {
+    pub entries: Vec<MountEntry>,
+}
+
+impl MountTable {
+    fn parse_mount_table_text(text: &str) -> Self {
+        let mut entries = vec![];
+        for line in text.lines() {
+            // For entries that have spaces in the mount point name,
+            // the mount command doesn't do any kind of helpful escaping.
+            // The entries that we care about have the form:
+            // <DEVICE><SPACE>on<SPACE><PATH WITH OPTIONAL SPACES>(OPTIONS)
+            // We trim off the options and split around ` on ` so that we just
+            // have two simple fields to work with, and won't need to consider
+            // spaces.
+            let mut iter = line.rsplitn(2, " (");
+            // Discard the options
+            let _options = iter.next();
+            if let Some(lhs) = iter.next() {
+                let mut iter = lhs.split(" on ");
+                match (iter.next(), iter.next()) {
+                    (Some(device), Some(mount_point)) => {
+                        entries.push(MountEntry::new(device, mount_point));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Self { entries }
+    }
+
+    fn parse_system_mount_table() -> Result<Self> {
+        let output = new_cmd_unprivileged("/sbin/mount").output()?;
+        if !output.status.success() {
+            bail!("failed to execute mount: {:#?}", output);
+        }
+        Ok(Self::parse_mount_table_text(&String::from_utf8(
+            output.stdout,
+        )?))
+    }
+
+    fn parse_if_needed(existing: Option<&Self>) -> Result<Self> {
+        if let Some(table) = existing {
+            Ok(table.clone())
+        } else {
+            Self::parse_system_mount_table()
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -228,12 +345,23 @@ fn get_real_uid() -> Result<u32> {
     }
 }
 
-fn mount_scratch_space_on(mount_point: &str) -> Result<()> {
+/// Canonicalize a path and return the canonical path in string form.
+fn canonicalize_mount_point_path(mount_point: &str) -> Result<String> {
+    let canon = std::fs::canonicalize(mount_point)
+        .with_context(|| format!("canonicalizing path {}", mount_point))?;
+    canon
+        .to_str()
+        .ok_or_else(|| anyhow!("path {} somehow isn't unicode on macOS", canon.display()))
+        .map(str::to_owned)
+}
+
+fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
+    let mount_point = canonicalize_mount_point_path(input_mount_point)?;
     println!("want to mount at {:?}", mount_point);
 
     // First, let's ensure that mounting at this location makes sense.
     // Inspect the directory and ensure that it is owned by us.
-    let metadata = std::fs::metadata(mount_point)
+    let metadata = std::fs::metadata(&mount_point)
         .context(format!("Obtaining filesystem metadata for {}", mount_point))?;
     let my_uid = get_real_uid()?;
     if metadata.uid() != my_uid {
@@ -250,20 +378,22 @@ fn mount_scratch_space_on(mount_point: &str) -> Result<()> {
     });
 
     let containers = apfs_list()?;
-    let name = encode_mount_point_as_volume_name(mount_point);
+    let name = encode_mount_point_as_volume_name(&mount_point);
     let volume = match find_existing_volume(&containers, &name) {
         Some(existing) => {
-            if existing.mount_point.is_some()
-                && existing.mount_point != Some(mount_point.to_string())
+            let mount_table = MountTable::parse_system_mount_table()?;
+            if let Some(current_mount_point) = existing.get_current_mount_point(Some(&mount_table))
             {
-                // macOS will automatically mount volumes at system boot,
-                // but mount them under /Volumes.  That will block our attempt
-                // to mount the scratch space below, so if we see that this
-                // volume is mounted and not where we want it, we simply unmount
-                // it here now: this should be fine because we own these volumes
-                // and where they get mounted.  No one else should have a legit
-                // reason for mounting it elsewhere.
-                unmount_scratch(mount_point, true)?;
+                if !existing.is_preferred_location(&current_mount_point)? {
+                    // macOS will automatically mount volumes at system boot,
+                    // but mount them under /Volumes.  That will block our attempt
+                    // to mount the scratch space below, so if we see that this
+                    // volume is mounted and not where we want it, we simply unmount
+                    // it here now: this should be fine because we own these volumes
+                    // and where they get mounted.  No one else should have a legit
+                    // reason for mounting it elsewhere.
+                    unmount_scratch(&mount_point, true, &mount_table)?;
+                }
             }
             existing.clone()
         }
@@ -280,7 +410,7 @@ fn mount_scratch_space_on(mount_point: &str) -> Result<()> {
             "-g",
             &format!("{}", metadata.gid()),
             &format!("/dev/{}", volume.device_identifier),
-            mount_point,
+            &mount_point,
         ])
         .output()?;
     if !output.status.success() {
@@ -295,7 +425,7 @@ fn mount_scratch_space_on(mount_point: &str) -> Result<()> {
 
     // Make sure that we own the mounted directory; the default is mounted
     // with root:wheel ownership, and that isn't desirable
-    chown(mount_point, metadata.uid(), metadata.gid())?;
+    chown(&mount_point, metadata.uid(), metadata.gid())?;
 
     disable_spotlight(&mount_point).ok();
     disable_fsevents(&mount_point).ok();
@@ -374,33 +504,43 @@ fn disable_trashcan(mount_point: &str) -> Result<()> {
 /// they were created by this tool for a specific mount point.
 /// We will only mount volumes that have that encoded name, at the
 /// location encoded by their name and refuse to mount anything else.
-fn encode_mount_point_as_volume_name(mount_point: &str) -> String {
-    format!("edenfs:{}", mount_point)
+fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> String {
+    format!("edenfs:{}", mount_point.as_ref().display())
 }
 
-fn unmount_scratch(mount_point: &str, force: bool) -> Result<()> {
+fn unmount_scratch(mount_point: &str, force: bool, mount_table: &MountTable) -> Result<()> {
     let containers = apfs_list()?;
-    let name = encode_mount_point_as_volume_name(mount_point);
-    if let Some(volume) = find_existing_volume(&containers, &name) {
-        let mut cmd = new_cmd_unprivileged(DISKUTIL);
-        cmd.arg("unmount");
 
-        if force {
-            cmd.arg("force");
+    for container in containers {
+        for volume in &container.volumes {
+            let preferred = match volume.preferred_mount_point() {
+                Some(path) => path,
+                None => continue,
+            };
+
+            if let Some(current_mount) = volume.get_current_mount_point(Some(mount_table)) {
+                if current_mount == mount_point || mount_point == preferred {
+                    let mut cmd = new_cmd_unprivileged(DISKUTIL);
+                    cmd.arg("unmount");
+
+                    if force {
+                        cmd.arg("force");
+                    }
+                    cmd.arg(&volume.device_identifier);
+                    let output = cmd.output()?;
+                    if !output.status.success() {
+                        anyhow::bail!(
+                            "failed to execute diskutil unmount {}: {:?}",
+                            volume.device_identifier,
+                            output
+                        );
+                    }
+                    return Ok(());
+                }
+            }
         }
-        cmd.arg(&volume.device_identifier);
-        let output = cmd.output()?;
-        if !output.status.success() {
-            anyhow::bail!(
-                "failed to execute diskutil unmount {}: {:?}",
-                volume.device_identifier,
-                output
-            );
-        }
-    } else {
-        bail!("Did not find a volume named {}", name);
     }
-    Ok(())
+    bail!("Did not find a volume mounted on {}", mount_point);
 }
 
 fn delete_scratch(mount_point: &str) -> Result<()> {
@@ -431,15 +571,15 @@ fn main() -> Result<()> {
     match opts {
         Opt::List { all } => {
             let containers = apfs_list()?;
-            if all {
-                println!("{:#?}", containers);
-            } else {
-                for container in containers {
-                    for vol in container.volumes {
-                        if let Some(name) = vol.name.as_ref() {
-                            if name.starts_with("edenfs:") {
-                                println!("{:#?}", vol);
-                            }
+            let mounts = MountTable::parse_system_mount_table()?;
+            for container in containers {
+                for vol in container.volumes {
+                    if all || vol.is_edenfs_managed_volume() {
+                        let name = vol.name.as_ref().map(String::as_str).unwrap_or("");
+                        if let Some(mount_point) = vol.get_current_mount_point(Some(&mounts)) {
+                            println!("{}\t{}\t{}", vol.device_identifier, name, mount_point);
+                        } else {
+                            println!("{}\t{}", vol.device_identifier, name);
                         }
                     }
                 }
@@ -450,7 +590,11 @@ fn main() -> Result<()> {
         Opt::Mount { mount_point } => mount_scratch_space_on(&mount_point),
 
         Opt::UnMount { mount_point, force } => {
-            unmount_scratch(&mount_point, force)?;
+            unmount_scratch(
+                &mount_point,
+                force,
+                &MountTable::parse_system_mount_table()?,
+            )?;
             Ok(())
         }
 
@@ -469,6 +613,42 @@ fn main() -> Result<()> {
 mod test {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_mount_parse() {
+        let data = r#"
+/dev/disk1s1 on / (apfs, local, journaled)
+devfs on /dev (devfs, local, nobrowse)
+/dev/disk1s4 on /private/var/vm (apfs, local, noexec, journaled, noatime, nobrowse)
+map -hosts on /net (autofs, nosuid, automounted, nobrowse)
+map auto_home on /home (autofs, automounted, nobrowse)
+eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
+/dev/disk1s5 on /Users/wez/fbsource/buck-out (apfs, local, nodev, nosuid, journaled, nobrowse)
+/dev/disk1s6 on /Users/wez/fbsource/fbcode/buck-out (apfs, local, nodev, nosuid, journaled, nobrowse)
+/dev/disk1s7 on /Users/wez/fbsource/fbobjc/buck-out (apfs, local, nodev, nosuid, journaled, nobrowse)
+/dev/disk1s8 on /private/tmp/wat the/woot (apfs, local, nodev, nosuid, journaled, nobrowse)
+map -fstab on /Network/Servers (autofs, automounted, nobrowse)
+/dev/disk1s9 on /private/tmp/parens (1) (apfs, local, nodev, nosuid, journaled, nobrowse)
+"#;
+        assert_eq!(
+            MountTable::parse_mount_table_text(data).entries,
+            vec![
+                MountEntry::new("/dev/disk1s1", "/"),
+                MountEntry::new("devfs", "/dev"),
+                MountEntry::new("/dev/disk1s4", "/private/var/vm"),
+                MountEntry::new("map -hosts", "/net"),
+                MountEntry::new("map auto_home", "/home"),
+                MountEntry::new("eden@osxfuse0", "/Users/wez/fbsource"),
+                MountEntry::new("/dev/disk1s5", "/Users/wez/fbsource/buck-out"),
+                MountEntry::new("/dev/disk1s6", "/Users/wez/fbsource/fbcode/buck-out"),
+                MountEntry::new("/dev/disk1s7", "/Users/wez/fbsource/fbobjc/buck-out"),
+                // This one has a space in the mount point path!
+                MountEntry::new("/dev/disk1s8", "/private/tmp/wat the/woot"),
+                MountEntry::new("map -fstab", "/Network/Servers"),
+                MountEntry::new("/dev/disk1s9", "/private/tmp/parens (1)"),
+            ]
+        );
+    }
 
     #[test]
     fn test_plist() {
@@ -692,37 +872,30 @@ mod test {
                 volumes: vec![
                     ApfsVolume {
                         device_identifier: "disk1s1".to_owned(),
-                        mount_point: None,
                         name: Some("Macintosh HD".to_owned()),
                     },
                     ApfsVolume {
                         device_identifier: "disk1s2".to_owned(),
-                        mount_point: None,
                         name: Some("Preboot".to_owned()),
                     },
                     ApfsVolume {
                         device_identifier: "disk1s3".to_owned(),
-                        mount_point: None,
                         name: Some("Recovery".to_owned()),
                     },
                     ApfsVolume {
                         device_identifier: "disk1s4".to_owned(),
-                        mount_point: None,
                         name: Some("VM".to_owned()),
                     },
                     ApfsVolume {
                         device_identifier: "disk1s5".to_owned(),
-                        mount_point: None,
                         name: Some("edenfs:/Users/wez/fbsource/buck-out".to_owned()),
                     },
                     ApfsVolume {
                         device_identifier: "disk1s6".to_owned(),
-                        mount_point: None,
                         name: Some("edenfs:/Users/wez/fbsource/fbcode/buck-out".to_owned()),
                     },
                     ApfsVolume {
                         device_identifier: "disk1s7".to_owned(),
-                        mount_point: None,
                         name: Some("edenfs:/Users/wez/fbsource/fbobjc/buck-out".to_owned()),
                     },
                 ],
