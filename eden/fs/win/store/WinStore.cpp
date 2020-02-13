@@ -54,17 +54,6 @@ shared_ptr<const Tree> WinStore::getTree(const std::wstring_view path) const {
   return getTree(relPath);
 }
 
-const TreeEntry* WinStore::getTreeEntry(const std::wstring_view path) const {
-  std::string edenPath = winToEdenPath(path);
-  RelativePathPiece relPath{edenPath};
-  RelativePathPiece parentPath = relPath.dirname();
-  shared_ptr<const Tree> tree = getTree(parentPath);
-  if (tree) {
-    return tree->getEntryPtr(relPath.basename());
-  }
-  return nullptr;
-}
-
 bool WinStore::getAllEntries(
     const std::wstring_view path,
     vector<FileMetadata>& entryList) const {
@@ -118,7 +107,13 @@ bool WinStore::getAllEntries(
 bool WinStore::getFileMetadata(
     const std::wstring_view path,
     FileMetadata& fileMetadata) const {
-  auto entry = getTreeEntry(path);
+  RelativePath relPath{wideCharToEdenRelativePath(path)};
+  shared_ptr<const Tree> tree = getTree(relPath.dirname());
+  if (!tree) {
+    return false;
+  }
+
+  auto entry = tree->getEntryPtr(relPath.basename());
   if (entry) {
     fileMetadata.name = edenToWinName(entry->getName().value().toStdString());
     fileMetadata.isDirectory = entry->isTree();
@@ -140,7 +135,13 @@ bool WinStore::getFileMetadata(
 }
 
 bool WinStore::checkFileName(const std::wstring_view path) const {
-  auto entry = getTreeEntry(path);
+  RelativePath relPath{wideCharToEdenRelativePath(path)};
+  shared_ptr<const Tree> tree = getTree(relPath.dirname());
+  if (!tree) {
+    return false;
+  }
+
+  auto entry = tree->getEntryPtr(relPath.basename());
   if (entry) {
     return true;
   }
@@ -149,11 +150,17 @@ bool WinStore::checkFileName(const std::wstring_view path) const {
 
 std::shared_ptr<const Blob> WinStore::getBlob(
     const std::wstring_view path) const {
-  auto file = getTreeEntry(path);
-  if ((!file) || (file->isTree())) {
+  RelativePath relPath{wideCharToEdenRelativePath(path)};
+  shared_ptr<const Tree> tree = getTree(relPath.dirname());
+  if (!tree) {
     return nullptr;
   }
-  return (getMount().getObjectStore()->getBlob(file->getHash()).get());
+
+  auto file = tree->getEntryPtr(relPath.basename());
+  if ((file) && (!file->isTree())) {
+    return (getMount().getObjectStore()->getBlob(file->getHash()).get());
+  }
+  return nullptr;
 }
 
 } // namespace eden
