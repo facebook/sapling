@@ -244,8 +244,10 @@ Pushbackup also works
   remote: 1
   sending clienttelemetry command
   sending knownnodes command
+  reusing connection from pool
   sending knownnodes command
   backing up stack rooted at 47da8b81097c
+  reusing connection from pool
   3 changesets found
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
@@ -257,6 +259,7 @@ Pushbackup also works
   bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
+  reusing connection from pool
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)

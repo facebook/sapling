@@ -84,6 +84,8 @@ class connectionpool(object):
                 extensions.wrapfunction(peer, "_cleanup", _cleanup)
 
             conn = connection(self._repo.ui, pathpool, peer, path)
+        else:
+            self._repo.ui.debug("reusing connection from pool\n")
 
         self.recordreason(reason, conn.peer)
         return conn

@@ -320,6 +320,7 @@
   > EOF
   $ hg debugshell --command "`cat $TESTTMP/testpool`" --config connectionpool.lifetime=1 --debug | grep 'connection'
   got first connection
+  reusing connection from pool
   got second connection
   not reusing expired connection to ssh://user@dummy/master
   got third connection
