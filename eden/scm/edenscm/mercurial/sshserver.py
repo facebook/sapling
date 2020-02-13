@@ -150,7 +150,7 @@ class sshserver(wireproto.abstractserverproto):
                         self.sendresponse(r)
                 else:
                     self.sendresponse(b"")
-        return cmd != b""
+        return cmd != ""
 
     def _client(self):
         client = encoding.environ.get("SSH_CLIENT", "").split(" ", 1)[0]
