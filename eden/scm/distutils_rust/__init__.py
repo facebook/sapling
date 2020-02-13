@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import time
 
 
 # This manifest is merged with the default .exe manifest to allow
@@ -342,7 +343,20 @@ replace-with = "vendored-sources"
                 "manifest of the binary %s",
                 fname,
             )
-            subprocess.check_output(command)
+            retry = 0
+            while retry < 10:
+                try:
+                    subprocess.check_output(command)
+                    break
+                except subprocess.CalledProcessError as e:
+                    # mt.exe wants exclusive access to the exe. It can fail with
+                    # exit code 31 when Windows Anti-Virus scans the exe. Retry
+                    # a few times.
+                    if e.returncode == 31:
+                        retry += 1
+                        distutils.log.debug("Retry after %d seconds", retry)
+                        time.sleep(retry)
+                        continue
             distutils.log.debug(
                 "LongPathsAware manifest successfully merged into %s", fname
             )
