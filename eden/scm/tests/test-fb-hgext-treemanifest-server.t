@@ -145,6 +145,7 @@ Test pushing only flat fails if forcetreereceive is on
 
 Test pushing flat and tree
   $ cat >> $TESTTMP/myhook.sh <<EOF
+  > #!/bin/bash
   > set -e
   > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'subdir2/z' ]] && exit 1
   > exit 2
