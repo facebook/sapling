@@ -126,7 +126,7 @@
   $ hg push --to master ../master
   pushing to ../master
   searching for changes
-  abort: LFS server error. Remote object for file unknown not found: *u'oid': u'a2fcdb080e9838f6e1476a494c1d553e6ffefb68b0d146a06f34b535b5198442'* (glob)
+  abort: LFS server error. Remote object for file unknown not found: *'oid': 'a2fcdb080e9838f6e1476a494c1d553e6ffefb68b0d146a06f34b535b5198442'* (glob)
   [255]
 
 # But push can succeed if the server is configured to skip verifying blobs.
