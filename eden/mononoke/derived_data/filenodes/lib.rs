@@ -174,7 +174,7 @@ fn classify_filenode(filenode: FilenodeInfo) -> Either<RootFilenodeInfo, Filenod
     }
 }
 
-async fn generate_all_filenodes(
+pub async fn generate_all_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
@@ -184,12 +184,12 @@ async fn generate_all_filenodes(
         .compat()
         .await?;
 
-    // Mercurial commits can have only 2 parents, however bonsai commits can have more
-    // In that case p3, p4, ... are ignored (they are called step parents)
-    let cs_parents: Vec<_> = parents.into_iter().take(2).collect();
     let root_mf = fetch_root_manifest_id(&ctx, &cs_id, &repo);
+    // Bonsai might have > 2 parents, while mercurial supports at most 2.
+    // That's fine for us - we just won't generate filenodes for paths that came from
+    // stepparents. That means that linknode for these filenodes will point to a stepparent
     let parents = try_join_all(
-        cs_parents
+        parents
             .iter()
             .map(|p| fetch_root_manifest_id(&ctx, p, &repo)),
     );
@@ -410,6 +410,7 @@ mod tests {
     use super::*;
     use fbinit::FacebookInit;
     use mononoke_types::FileType;
+    use slog::info;
     use tests_utils::CreateCommitContext;
 
     async fn verify_filenodes(
@@ -540,15 +541,17 @@ mod tests {
             .commit()
             .await?;
 
-        // Root filenode was changed, and all files from p3 were added (because parents beyond
-        // p1 an p2 are ignored when generating filenodes and hg changesets)
+        info!(ctx.logger(), "checking filenodes for {}", p3);
         verify_filenodes(
             &ctx,
             &repo,
-            merge,
+            p3,
             vec![RepoPath::RootPath, RepoPath::file("path3")?],
         )
         .await?;
+
+        info!(ctx.logger(), "checking filenodes for {}", merge);
+        verify_filenodes(&ctx, &repo, merge, vec![RepoPath::RootPath]).await?;
 
         Ok(())
     }
