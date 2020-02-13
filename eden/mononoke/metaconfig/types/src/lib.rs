@@ -421,6 +421,8 @@ pub struct PushrebaseFlags {
     pub forbid_p2_root_rebases: bool,
     /// Whether to do chasefolding check during pushrebase
     pub casefolding_check: bool,
+    /// How many commits are allowed to not have filenodes generated.
+    pub not_generated_filenodes_limit: u64,
 }
 
 impl Default for PushrebaseFlags {
@@ -430,6 +432,7 @@ impl Default for PushrebaseFlags {
             recursion_limit: Some(16384), // this number is fairly arbirary
             forbid_p2_root_rebases: true,
             casefolding_check: true,
+            not_generated_filenodes_limit: 500,
         }
     }
 }

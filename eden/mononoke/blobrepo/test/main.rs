@@ -14,16 +14,11 @@ use ::manifest::{Entry, Manifest, ManifestOps};
 use anyhow::Error;
 use assert_matches::assert_matches;
 use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
-use blobrepo::{
-    compute_changed_files, errors::ErrorKind, BlobRepo, DangerousOverride, UploadEntries,
-};
+use blobrepo::{compute_changed_files, errors::ErrorKind, BlobRepo, UploadEntries};
 use blobstore::{Loadable, Storable};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
-use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
-use filenodes::Filenodes;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -50,8 +45,6 @@ use rand::SeedableRng;
 use rand_distr::Normal;
 use rand_xorshift::XorShiftRng;
 use scuba_ext::ScubaSampleBuilder;
-use sql_ext::SqlConstructors;
-use sqlfilenodes::SqlFilenodes;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     sync::Arc,
@@ -686,7 +679,7 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
         // resolves same content different parents for `branch` file
         {
-            let (ms_hash, _) = run_future(repo.get_manifest_from_bonsai(
+            let ms_hash = run_future(repo.get_manifest_from_bonsai(
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![("base", None)]),
                 vec![ms1, ms2],
@@ -733,7 +726,7 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             let content_expected = &b"some awesome content"[..];
             let fc = run_future(make_file_change(ctx.clone(), content_expected, &repo)).unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
-            let (ms_hash, _) =
+            let ms_hash =
                 run_future(repo.get_manifest_from_bonsai(ctx.clone(), bcs, vec![ms1, ms2]))
                     .expect("adding new file should not produce coflict");
             let entries = run_future(get_entries(ms_hash)).unwrap();
@@ -1981,69 +1974,6 @@ mod octopus_merges {
 
                 let cs = helper.lookup_changeset(commit).await?;
                 assert_eq!(cs.files(), &vec![MPath::new("p3")?, MPath::new("p4")?][..]);
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
-    }
-
-    #[fbinit::test]
-    fn test_incomplete_filenodes_upload(fb: FacebookInit) -> Result<(), Error> {
-        // Check that IncompleteFilenodes upload filenodes if parent commit already have them
-        // uploaded and doesn't upload them otherwise. This is necessary for the transition
-        // for lazily deriving filenodes with FilenodesOnlyPublic
-        let mut rt = Runtime::new()?;
-
-        rt.block_on(
-            async move {
-                let mut helper = TestHelper::new(fb)?;
-
-                let c1 = helper.new_commit().add_file("c1", "c1").commit().await?;
-                let c2 = helper
-                    .new_commit()
-                    .add_file("c2", "c2")
-                    .add_parent(c1)
-                    .commit()
-                    .await?;
-
-                let root = helper.root_manifest(c2).await?;
-                let root_mf_id = HgFileNodeId::new(root.node_id());
-                helper
-                    .repo
-                    .get_linknode(helper.ctx.clone(), &RepoPath::RootPath, root_mf_id)
-                    .compat()
-                    .await?;
-                let filenodes: Arc<dyn Filenodes> =
-                    Arc::new(SqlFilenodes::with_sqlite_in_memory().unwrap());
-                let repo = helper.repo.dangerous_override(move |_| filenodes);
-                helper.repo = repo;
-
-                let c3 = helper
-                    .new_commit()
-                    .add_file("c3", "c3")
-                    .add_parent(c2)
-                    .commit()
-                    .await?;
-                let root = helper.root_manifest(c3).await?;
-                let root_mf_id = HgFileNodeId::new(root.node_id());
-                let maybe_linknode = helper
-                    .repo
-                    .get_linknode_opt(helper.ctx.clone(), &RepoPath::RootPath, root_mf_id)
-                    .compat()
-                    .await?;
-                assert!(maybe_linknode.is_none());
-
-                FilenodesOnlyPublic::derive(helper.ctx.clone(), helper.repo.clone(), c3)
-                    .compat()
-                    .await?;
-                let maybe_linknode = helper
-                    .repo
-                    .get_linknode_opt(helper.ctx.clone(), &RepoPath::RootPath, root_mf_id)
-                    .compat()
-                    .await?;
-                assert!(maybe_linknode.is_some());
 
                 Ok(())
             }

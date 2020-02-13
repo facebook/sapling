@@ -46,13 +46,15 @@
 /// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
 /// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
 /// more information on those;
-use anyhow::{Context, Error, Result};
+use anyhow::{format_err, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
 use futures_preview::{
@@ -245,21 +247,11 @@ pub async fn do_pushrebase_bonsai(
     )
     .await?;
 
-    backfill_filenodes(
-        &ctx,
-        &repo,
-        pushed.into_iter().filter_map({
-            cloned!(client_bcs);
-            move |bcs| {
-                if !client_bcs.contains(&bcs) {
-                    Some(bcs.get_changeset_id())
-                } else {
-                    None
-                }
-            }
-        }),
-    )
-    .await?;
+    // Normally filenodes (and all other types of derived data) are generated on the first
+    // read. However if too many commits are pushed (e.g. when a new repo is merged-in) then
+    // first read might be too slow. To prevent that the function below returns an error if too
+    // many commits are missing filenodes.
+    check_filenodes_backfilled(&ctx, &repo, &head, config.not_generated_filenodes_limit).await?;
 
     let res = rebase_in_loop(
         ctx,
@@ -275,87 +267,27 @@ pub async fn do_pushrebase_bonsai(
     )
     .await?;
 
-    backfill_filenodes(
-        &ctx,
-        &repo,
-        res.rebased_changesets
-            .clone()
-            .into_iter()
-            .filter_map(|pair| {
-                if pair.id_old == pair.id_new {
-                    Some(pair.id_old.clone())
-                } else {
-                    None
-                }
-            }),
-    )
-    .await?;
-
     Ok(res)
 }
 
-// We have a hack that intentionally doesn't generate filenodes for "pushed" set of commits.
-// The reason we have it is the following:
-// 1) "pushed" set of commits are draft commits. If we generate filenodes for them then
-//    linknodes will point to draft commit
-// 2) After the pushrebase new public commits will be created, but they will have the same filenodes
-//    which will point to draft commits.
-//
-// The hack mentioned above solves the problem of having linknodes pointing to draft commits.
-// However it creates a new one - in some case (most notably in merges) some of the commits are
-// not rebased, and they might miss filenodes completely
-//
-//   O <- onto
-//  ...
-//   |  P  <- This commit will be rebased on top of "onto", so new filenodes will be generated
-//   | /
-//   O
-//   | \
-//  ... P <- this commit WILL NOT be rebased on top of "onto". That means that some filenodes
-//           might be missing.
-//
-// The function below can be used to backfill filenodes for these commits.
-async fn backfill_filenodes<'a>(
+async fn check_filenodes_backfilled<'a>(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    to_backfill: impl IntoIterator<Item = ChangesetId>,
+    head: &ChangesetId,
+    limit: u64,
 ) -> Result<(), Error> {
-    let mut futs = vec![];
-
-    for bcs_id in to_backfill {
-        let fut = async move {
-            let hg_cs_id_fut = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat();
-            let bcs_fut = bcs_id
-                .load(ctx.clone(), repo.blobstore())
-                .from_err()
-                .compat();
-            let (hg_cs_id, bcs) = try_join(hg_cs_id_fut, bcs_fut).await?;
-
-            let parents = bcs.parents().map(|p| id_to_manifestid(&ctx, &repo, p));
-
-            let parent_mfs = try_join_all(parents).await?;
-
-            let (_, incomplete_filenodes) = repo
-                .get_manifest_from_bonsai(ctx.clone(), bcs, parent_mfs)
-                .compat()
-                .await?;
-
-            incomplete_filenodes
-                .upload(ctx.clone(), hg_cs_id, &repo)
-                .compat()
-                .await
-        };
-
-        futs.push(fut);
+    let underived = FilenodesOnlyPublic::count_underived(&ctx, &repo, &head, limit)
+        .compat()
+        .await?;
+    if underived >= limit {
+        Err(format_err!(
+            "Too many commits do not have filenodes derived. This usually happens when \
+            merging a new repo or pushing an extremely long stack.
+            Contact source control @ fb if you encounter this issue."
+        ))
+    } else {
+        Ok(())
     }
-
-    try_join_all(futs)
-        .await
-        .context("While backfilling filenodes")?;
-
-    Ok(())
 }
 
 async fn rebase_in_loop(
@@ -1257,7 +1189,7 @@ async fn create_bookmark_update_reason(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::format_err;
+    use anyhow::{format_err, Context};
     use async_trait::async_trait;
     use blobrepo::DangerousOverride;
     use bookmarks::{BookmarkTransactionError, Bookmarks};
