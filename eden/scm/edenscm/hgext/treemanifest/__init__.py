@@ -543,7 +543,9 @@ def wraprepo(repo):
 
             start = util.timer()
             with self.ui.timesection("fetchingtrees"):
-                with self.connectionpool.get(fallbackpath) as conn:
+                with self.connectionpool.get(
+                    fallbackpath, reason="fetchingtrees"
+                ) as conn:
                     remote = conn.peer
                     _gettrees(
                         self,

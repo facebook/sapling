@@ -312,7 +312,9 @@ class getpackclient(object):
         pipeo.flush()
 
     def _connect(self):
-        return self.repo.connectionpool.get(self.repo.fallbackpath)
+        return self.repo.connectionpool.get(
+            self.repo.fallbackpath, reason="prefetchpacks"
+        )
 
     def prefetch(self, datastore, historystore, fileids):
         rcvd = 0

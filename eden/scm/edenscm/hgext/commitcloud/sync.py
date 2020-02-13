@@ -102,7 +102,9 @@ def _sync(
     start = util.timer()
 
     remotepath = ccutil.getremotepath(repo, dest)
-    getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
+    getconnection = lambda: repo.connectionpool.get(
+        remotepath, connect_opts, reason="cloudsync"
+    )
 
     startnode = repo["."].node()
 

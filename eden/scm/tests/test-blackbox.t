@@ -35,6 +35,7 @@ alias expansion is logged
   [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
+  [legacy][connectionpool]
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [tracing] (binary data of * bytes) (glob)
@@ -58,6 +59,7 @@ recursive aliases work correctly
   [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
+  [legacy][connectionpool]
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [tracing] (binary data of * bytes) (glob)

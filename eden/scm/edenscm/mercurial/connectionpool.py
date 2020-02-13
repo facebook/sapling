@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import os
 import time
 
-from . import extensions, pycompat, sshpeer, util
+from . import extensions, json, pycompat, sshpeer, util
 
 
 class connectionpool(object):
@@ -18,8 +18,9 @@ class connectionpool(object):
         self._repo = repo
         self._poolpid = os.getpid()
         self._pool = dict()
+        self._reasons = dict()
 
-    def get(self, path, opts=None):
+    def get(self, path, opts=None, reason="default"):
         # Prevent circular dependency
         from . import hg
 
@@ -31,12 +32,14 @@ class connectionpool(object):
 
         if opts is None:
             opts = {}
+
         if opts.get("ssh") or opts.get("remotecmd"):
             self._repo.ui.debug(
                 "not using connection pool due to ssh or "
                 "remotecmd option being set\n"
             )
             peer = hg.peer(self._repo.ui, opts, path)
+            self.recordreason(reason, peer)
             return standaloneconnection(peer)
 
         pathpool = self._pool.get(path)
@@ -82,9 +85,38 @@ class connectionpool(object):
 
             conn = connection(self._repo.ui, pathpool, peer, path)
 
+        self.recordreason(reason, conn.peer)
         return conn
 
+    def recordreason(self, reason, peer):
+        peersforreason = self._reasons.setdefault(reason, [])
+        if not util.safehasattr(peer, "_realhostname"):
+            # Non-clienttelemetry-capable peer
+            return
+
+        peersforreason.append(peer._realhostname)
+
+    def reportreasons(self):
+        ui = self._repo.ui
+        nondefaultreasons = {}
+        for reason, peersforreason in self._reasons.items():
+            for peername in peersforreason:
+                if reason == "default":
+                    # default reason logged directly, to support
+                    # any existent queries
+                    ui.log("connectionpool", server_realhostname=peername)
+                    break
+
+                nondefaultreasons[reason] = peername
+                # we only ever report a single peer for a given reason
+                # for the ease of querying.
+                break
+
+        nondefaultreasons = json.dumps(nondefaultreasons)
+        ui.log("connectionpool", server_realhostnames_other=nondefaultreasons)
+
     def close(self):
+        self.reportreasons()
         for pathpool in pycompat.itervalues(self._pool):
             for conn in pathpool:
                 conn.close()

@@ -109,7 +109,7 @@ def _peersetup(ui, peer):
         logargs = {name: f(ui) for name, f in _clienttelemetryfuncs.items()}
         logargs.update(_clienttelemetrydata)
         peername = decodeutf8(peer._call("clienttelemetry", **logargs))
-        ui.log("clienttelemetry", server_realhostname=peername)
+        peer._realhostname = peername
         blackbox.log({"clienttelemetry": {"peername": peername}})
         ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
         if ann is None:
