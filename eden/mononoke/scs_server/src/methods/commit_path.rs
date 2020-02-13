@@ -155,7 +155,7 @@ impl SourceControlServiceImpl {
             .zip(blame.lines())
             .enumerate()
             .map(
-                |(line, (contents, (csid, path, _origin_line)))| -> Result<_, thrift::RequestError> {
+                |(line, (contents, (csid, path, origin_line)))| -> Result<_, thrift::RequestError> {
                     let commit_id_index = commit_id_indexes.get(&csid).ok_or_else(|| {
                         errors::commit_not_found(format!("failed to resolve commit: {}", csid))
                     })?;
@@ -169,6 +169,7 @@ impl SourceControlServiceImpl {
                         path_index: paths.insert(&path.to_string()) as i32,
                         author_index: authors.insert(author) as i32,
                         date_index: dates.insert(Cow::Borrowed(date)) as i32,
+                        origin_line: (origin_line + 1) as i32,
                     })
                 },
             )

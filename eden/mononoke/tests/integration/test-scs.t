@@ -325,6 +325,7 @@ blame
       "contents": "b",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 1,
+      "origin_line": 2,
       "path": "b"
     },
     {
@@ -336,6 +337,7 @@ blame
       "contents": "c",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 2,
+      "origin_line": 2,
       "path": "b"
     },
     {
@@ -347,6 +349,7 @@ blame
       "contents": "d",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 3,
+      "origin_line": 3,
       "path": "b"
     },
     {
@@ -358,6 +361,7 @@ blame
       "contents": "e",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 4,
+      "origin_line": 4,
       "path": "b"
     },
     {
@@ -369,6 +373,7 @@ blame
       "contents": "f",
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 5,
+      "origin_line": 5,
       "path": "b"
     }
   ]
