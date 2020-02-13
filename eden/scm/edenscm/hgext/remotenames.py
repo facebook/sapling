@@ -1962,6 +1962,7 @@ def saveremotenames(repo, remotebookmarks, override=True):
 
         journal = []
         nm = repo.unfiltered().changelog.nodemap
+        missingnode = False
         for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
             rmbookmarks = {} if rmbookmarks is None else rmbookmarks
             for name, node in pycompat.iteritems(rmbookmarks):
@@ -1969,6 +1970,7 @@ def saveremotenames(repo, remotebookmarks, override=True):
                 newnode = node
                 if not bin(newnode) in nm:
                     # node is unknown locally, don't change the bookmark
+                    missingnode = True
                     newnode = oldnode
                 if newnode != hex(nullid):
                     _writesingleremotename(f, remote, "bookmarks", name, newnode)
@@ -1976,6 +1978,7 @@ def saveremotenames(repo, remotebookmarks, override=True):
                         journal.append(
                             (joinremotename(remote, name), bin(oldnode), bin(newnode))
                         )
+        repo.ui.log("remotenamesmissingnode", remotenamesmissingnode=str(missingnode))
 
         _recordbookmarksupdate(repo, journal)
         f.close()
