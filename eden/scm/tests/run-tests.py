@@ -1508,7 +1508,7 @@ class Test(unittest.TestCase):
         for k in (
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
-            + "NO_PROXY CHGDEBUG HGDETECTRACE"
+            + "NO_PROXY CHGDEBUG HGDETECTRACE RUST_BACKTRACE RUST_LIB_BACKTRACE "
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
             # LD_LIBRARY_PATH is usually set by buck sh_binary wrapper to import
