@@ -238,14 +238,11 @@ impl Mononoke {
     }
 
     /// Report configured monitoring stats
-    pub async fn report_monitoring_stats(&self, ctx: CoreContext) -> Result<(), MononokeError> {
+    pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         let reporting_futs: Vec<_> = self
             .repos
             .iter()
-            .map(|(_, repo)| {
-                let ctx = &ctx;
-                async move { repo.report_monitoring_stats(&ctx).await }
-            })
+            .map(|(_, repo)| async move { repo.report_monitoring_stats(ctx).await })
             .collect();
         try_join_all(reporting_futs).await.map(|_| ())
     }

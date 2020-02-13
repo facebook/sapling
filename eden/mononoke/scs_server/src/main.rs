@@ -19,8 +19,6 @@ use cmdlib::{args, helpers::serve_forever};
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt as Futures01Ext;
-use futures_preview::{compat::Future01CompatExt, FutureExt};
 use metaconfig_parser::RepoConfigs;
 use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
@@ -162,7 +160,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .expect("failed to start thrift service");
     serve_forever(
         runtime,
-        monitoring_forever.discard().compat().map(|_| ()),
+        monitoring_forever,
         &logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
