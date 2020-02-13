@@ -349,7 +349,14 @@ class PathBase :
 struct PathComponentSanityCheck {
   constexpr void operator()(folly::StringPiece val) const {
     for (auto c : val) {
-      if (c == kDirSeparator) {
+      if (c == kDirSeparator
+#ifdef _WIN32
+          // On Windows we should also check if we have missed a Windows path
+          // separator. We have function to convert from Windows widechar paths
+          // to path component.
+          || (c == '\\')
+#endif
+      ) {
         throw std::domain_error(folly::to<std::string>(
             "attempt to construct a PathComponent from a string containing a "
             "directory separator: ",
