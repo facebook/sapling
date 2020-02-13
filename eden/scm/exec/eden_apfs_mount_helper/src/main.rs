@@ -297,6 +297,10 @@ fn mount_scratch_space_on(mount_point: &str) -> Result<()> {
     // with root:wheel ownership, and that isn't desirable
     chown(mount_point, metadata.uid(), metadata.gid())?;
 
+    disable_spotlight(&mount_point).ok();
+    disable_fsevents(&mount_point).ok();
+    disable_trashcan(&mount_point).ok();
+
     Ok(())
 }
 
@@ -310,6 +314,56 @@ fn chown(path: &str, uid: u32, gid: u32) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+/// Don't bother indexing an artifact dir.  It's just a waste of resources
+/// to build an index for something managed entirely by the machine.
+fn disable_spotlight(mount_point: &str) -> Result<()> {
+    let output = new_cmd_with_root_privs("/usr/bin/mdutil")
+        .args(&["-Ed", "-i", "off", mount_point])
+        .output()?;
+    if !output.status.success() {
+        eprintln!(
+            "failed to disable spotlight on {}: {:#?}",
+            mount_point, output
+        );
+    }
+
+    let spotlight = Path::new(mount_point).join(".Spotlight-V100");
+    std::fs::remove_dir_all(&spotlight).ok();
+
+    Ok(())
+}
+
+/// Disable fsevents logging for the artifact dirs: this is for performance
+/// reasons; we don't need/want fseventsd to run here.
+fn disable_fsevents(mount_point: &str) -> Result<()> {
+    // See https://developer.apple.com/library/archive/documentation/Darwin/Conceptual/FSEvents_ProgGuide/FileSystemEventSecurity/FileSystemEventSecurity.html#//apple_ref/doc/uid/TP40005289-CH6-SW5
+    // Those docs say that we should recreate the directory and touch a control
+    // file to disable logging data, but the presence of the directory can
+    // confuse some tools, so we simply delete it at mount time; that should
+    // be good enough in most cases.
+
+    let fseventsd = Path::new(mount_point).join(".fseventsd");
+    std::fs::remove_dir_all(&fseventsd).ok();
+
+    Ok(())
+}
+
+/// The .Trashes directory has root permissions by default, which makes it
+/// awkward for users to clean up the contents of the mount point when it
+/// is used in place of an artifact directory.
+fn disable_trashcan(mount_point: &str) -> Result<()> {
+    let trashes = Path::new(mount_point).join(".Trashes");
+    std::fs::remove_dir_all(trashes)?;
+
+    // There's some thought that touching a regular file named
+    // `.Trashes` is a good idea to prevent the trash dir from
+    // coming back (which is what happens when using Finder to
+    // send something to the trash).
+    // For now we're just removing it at mount time.
+
+    Ok(())
 }
 
 /// Encode a mount point as a volume name.
