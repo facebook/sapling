@@ -322,6 +322,8 @@ struct BlameRange {
   1: i32 length,
   2: ChangesetId csid,
   3: BlamePath path,
+  // offset of this range in the origin file (file that introduced this change)
+  4: i32 origin_offset,
 }
 
 struct Blame {

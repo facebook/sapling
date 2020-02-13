@@ -155,7 +155,7 @@ impl SourceControlServiceImpl {
             .zip(blame.lines())
             .enumerate()
             .map(
-                |(line, (contents, (csid, path)))| -> Result<_, thrift::RequestError> {
+                |(line, (contents, (csid, path, _origin_line)))| -> Result<_, thrift::RequestError> {
                     let commit_id_index = commit_id_indexes.get(&csid).ok_or_else(|| {
                         errors::commit_not_found(format!("failed to resolve commit: {}", csid))
                     })?;

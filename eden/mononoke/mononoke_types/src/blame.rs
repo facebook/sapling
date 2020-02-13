@@ -182,6 +182,7 @@ pub struct BlameRange {
     pub length: u32,
     pub csid: ChangesetId,
     pub path: MPath,
+    pub origin_offset: u32,
 }
 
 impl BlameRange {
@@ -196,12 +197,14 @@ impl BlameRange {
                 length: offset - self.offset,
                 csid: self.csid,
                 path: self.path.clone(),
+                origin_offset: self.origin_offset,
             };
             let right = BlameRange {
                 offset,
-                length: self.offset + self.length - offset,
+                length: self.length - left.length,
                 csid: self.csid,
                 path: self.path,
+                origin_offset: self.origin_offset + left.length,
             };
             (Some(left), Some(right))
         }
@@ -243,6 +246,7 @@ impl Blame {
                         length,
                         csid: csid_t,
                         path: path_index,
+                        origin_offset,
                     } = range_t;
                     let csid = ChangesetId::from_thrift(csid_t)?;
                     let path = paths
@@ -254,6 +258,7 @@ impl Blame {
                         length: length as u32,
                         csid,
                         path,
+                        origin_offset: origin_offset as u32,
                     });
                     offset += length as u32;
                     Ok((offset, ranges))
@@ -269,7 +274,11 @@ impl Blame {
             .into_iter()
             .map(|range| {
                 let BlameRange {
-                    length, csid, path, ..
+                    length,
+                    csid,
+                    path,
+                    origin_offset,
+                    ..
                 } = range;
                 let index = match paths_indices.get(&path) {
                     Some(&index) => index,
@@ -284,6 +293,7 @@ impl Blame {
                     length: length as i32,
                     csid: csid.into_thrift(),
                     path: thrift::BlamePath(index),
+                    origin_offset: origin_offset as i32,
                 }
             })
             .collect();
@@ -345,6 +355,7 @@ impl Blame {
             length,
             csid,
             path,
+            origin_offset: 0,
         }])
     }
 
@@ -360,12 +371,15 @@ impl Blame {
         // `add` with `remove`. That is why it is safe to just add new range from `add`
         // field after removing range from `remove`. Also note that ranges after transformation
         // below **do not** contain vaild offset.
-        let (mut ranges, rest) = diff_hunks(parent_content, content).into_iter().fold(
-            (Vec::new(), parent_blame.ranges),
-            |(mut output, ranges), Hunk { add, remove }| {
+        let (mut ranges, rest, _) = diff_hunks(parent_content, content).into_iter().fold(
+            (Vec::new(), parent_blame.ranges, 0u32),
+            |(mut output, ranges, mut origin_offset), Hunk { add, remove }| {
                 // add uneffected ranges
                 let (uneffected, mid) = blame_ranges_split_at(ranges, remove.start as u32);
-                output.extend(uneffected);
+                for range in uneffected {
+                    origin_offset += range.length;
+                    output.push(range);
+                }
 
                 // skip removed ranges
                 let right = if remove.end > remove.start {
@@ -377,18 +391,21 @@ impl Blame {
 
                 // add new range
                 if add.end > add.start {
+                    let length = (add.end - add.start) as u32;
                     output.push(BlameRange {
                         // we do not care about offset here since all the ranges at this point
                         // might include incorrect offset. It is fixed lower in the code of this
                         // function.
                         offset: 0,
-                        length: (add.end - add.start) as u32,
+                        length,
                         csid,
                         path: path.clone(),
+                        origin_offset,
                     });
+                    origin_offset += length;
                 }
 
-                (output, right)
+                (output, right, origin_offset)
             },
         );
         ranges.extend(rest);
@@ -399,7 +416,10 @@ impl Blame {
                 .into_iter()
                 .fold((0, Vec::new()), |(mut offset, mut output), range| {
                     match output.last_mut() {
-                        Some(ref mut last) if last.csid == range.csid => {
+                        Some(ref mut last)
+                            if last.csid == range.csid
+                                && last.origin_offset + last.length == range.origin_offset =>
+                        {
                             last.length += range.length;
                         }
                         _ => {
@@ -485,7 +505,7 @@ fn blame_merge(csid: ChangesetId, blames: Vec<Blame>) -> Result<Blame, Error> {
     let iters: Vec<_> = blames.iter().map(|blame| blame.lines()).collect();
     let (_length, ranges) = BlameMergeLines::new(csid, iters).fold(
         (0, Vec::new()),
-        |(mut offset, mut output), (csid, path)| -> (u32, Vec<BlameRange>) {
+        |(mut offset, mut output), (csid, path, origin_offset)| -> (u32, Vec<BlameRange>) {
             match output.last_mut() {
                 Some(ref mut last) if last.csid == csid && &last.path == path => {
                     last.length += 1;
@@ -496,6 +516,7 @@ fn blame_merge(csid: ChangesetId, blames: Vec<Blame>) -> Result<Blame, Error> {
                         length: 1,
                         csid,
                         path: path.clone(),
+                        origin_offset,
                     });
                 }
             }
@@ -525,18 +546,23 @@ impl<'a> BlameLines<'a> {
 }
 
 impl<'a> Iterator for BlameLines<'a> {
-    type Item = (ChangesetId, &'a MPath);
+    type Item = (ChangesetId, &'a MPath, u32);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.ranges.get(self.ranges_index) {
                 None => return None,
-                Some(ref range) if self.index < range.offset + range.length => {
+                Some(ref range) if self.index < range.length => {
                     self.index += 1;
-                    return Some((range.csid, &range.path));
+                    return Some((
+                        range.csid,
+                        &range.path,
+                        range.origin_offset + self.index - 1,
+                    ));
                 }
                 _ => {
                     self.ranges_index += 1;
+                    self.index = 0;
                 }
             }
         }
@@ -557,13 +583,13 @@ impl<'a> BlameMergeLines<'a> {
 }
 
 impl<'a> Iterator for BlameMergeLines<'a> {
-    type Item = (ChangesetId, &'a MPath);
+    type Item = (ChangesetId, &'a MPath, u32);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last, rest) = self.lines.split_last_mut()?;
         let mut rest = rest.iter_mut();
         while let Some(lines) = rest.next() {
-            let (csid, path) = lines.next()?;
+            let (csid, path, origin_offset) = lines.next()?;
             if csid != self.csid {
                 // we need to pull all remaining iterators associated with
                 // lines with the same index.
@@ -571,7 +597,7 @@ impl<'a> Iterator for BlameMergeLines<'a> {
                     lines.next();
                 });
                 last.next();
-                return Some((csid, path));
+                return Some((csid, path, origin_offset));
             }
         }
         last.next()
@@ -599,25 +625,27 @@ mod test {
                 length: 2,
                 csid: ONES_CSID,
                 path: p0.clone(),
+                origin_offset: 3,
             },
             BlameRange {
                 offset: 2,
                 length: 3,
                 csid: TWOS_CSID,
                 path: p1.clone(),
+                origin_offset: 2,
             },
         ])?;
 
         let lines: Vec<_> = blame
             .lines()
-            .map(|(csid, path)| (csid, path.clone()))
+            .map(|(csid, path, origin_offset)| (csid, path.clone(), origin_offset))
             .collect();
         let reference = vec![
-            (ONES_CSID, p0.clone()),
-            (ONES_CSID, p0.clone()),
-            (TWOS_CSID, p1.clone()),
-            (TWOS_CSID, p1.clone()),
-            (TWOS_CSID, p1.clone()),
+            (ONES_CSID, p0.clone(), 3),
+            (ONES_CSID, p0.clone(), 4),
+            (TWOS_CSID, p1.clone(), 2),
+            (TWOS_CSID, p1.clone(), 3),
+            (TWOS_CSID, p1.clone(), 4),
         ];
         assert_eq!(lines, reference);
 
@@ -643,7 +671,7 @@ mod test {
         //  |  4  ||  3  |      |  4  |
 
         let p0 = MPath::new("path/zero")?;
-        let p1 = MPath::new("path/oen")?;
+        let p1 = MPath::new("path/one")?;
 
         let b0 = Blame::new(vec![
             BlameRange {
@@ -651,24 +679,28 @@ mod test {
                 length: 1,
                 csid: TWOS_CSID,
                 path: p0.clone(),
+                origin_offset: 5,
             },
             BlameRange {
                 offset: 1,
                 length: 1,
                 csid: FOURS_CSID,
                 path: p0.clone(),
+                origin_offset: 1,
             },
             BlameRange {
                 offset: 2,
                 length: 3,
                 csid: ONES_CSID,
                 path: p0.clone(),
+                origin_offset: 31,
             },
             BlameRange {
                 offset: 5,
                 length: 1,
                 csid: FOURS_CSID,
                 path: p0.clone(),
+                origin_offset: 5,
             },
         ])?;
 
@@ -678,18 +710,21 @@ mod test {
                 length: 2,
                 csid: FOURS_CSID,
                 path: p0.clone(),
+                origin_offset: 0,
             },
             BlameRange {
                 offset: 2,
                 length: 1,
                 csid: ONES_CSID,
                 path: p0.clone(),
+                origin_offset: 31,
             },
             BlameRange {
                 offset: 3,
                 length: 3,
                 csid: THREES_CSID,
                 path: p1.clone(),
+                origin_offset: 3,
             },
         ])?;
 
@@ -699,30 +734,35 @@ mod test {
                 length: 1,
                 csid: TWOS_CSID,
                 path: p0.clone(),
+                origin_offset: 5,
             },
             BlameRange {
                 offset: 1,
                 length: 1,
                 csid: FOURS_CSID,
                 path: p0.clone(),
+                origin_offset: 1,
             },
             BlameRange {
                 offset: 2,
                 length: 1,
                 csid: ONES_CSID,
                 path: p0.clone(),
+                origin_offset: 31,
             },
             BlameRange {
                 offset: 3,
                 length: 2,
                 csid: THREES_CSID,
                 path: p1.clone(),
+                origin_offset: 3,
             },
             BlameRange {
                 offset: 5,
                 length: 1,
                 csid: FOURS_CSID,
                 path: p0.clone(),
+                origin_offset: 5,
             },
         ])?;
 
@@ -743,30 +783,35 @@ mod test {
                     length: 1,
                     csid: TWOS_CSID,
                     path: p0.clone(),
+                    origin_offset: 5,
                 },
                 BlameRange {
                     offset: 1,
                     length: 1,
                     csid: FOURS_CSID,
                     path: p0.clone(),
+                    origin_offset: 31,
                 },
                 BlameRange {
                     offset: 2,
                     length: 1,
                     csid: ONES_CSID,
                     path: p0.clone(),
+                    origin_offset: 127,
                 },
                 BlameRange {
                     offset: 3,
                     length: 2,
                     csid: THREES_CSID,
                     path: p1.clone(),
+                    origin_offset: 15,
                 },
                 BlameRange {
                     offset: 5,
                     length: 1,
                     csid: FOURS_CSID,
                     path: p0.clone(),
+                    origin_offset: 3,
                 },
             ],
         };
@@ -794,7 +839,62 @@ mod test {
             length: 3,
             csid: THREES_CSID,
             path,
+            origin_offset: 0,
         }])?;
+
+        assert_eq!(b3_reference, b3);
+        Ok(())
+    }
+
+    #[test]
+    fn test_blame_single_parent() -> Result<(), Error> {
+        let path = MPath::new("path")?;
+
+        let c1 = "one\ntwo\nthree\nfour\n";
+        let c2 = "one\nfive\nsix\nfour\n";
+        let c3 = "seven\none\nsix\neight\nfour\n";
+
+        let b1 = Blame::from_parents(ONES_CSID, c1, path.clone(), Vec::new())?;
+        let b2 = Blame::from_parents(TWOS_CSID, c2, path.clone(), vec![(c1, b1)])?;
+        let b3 = Blame::from_parents(THREES_CSID, c3, path.clone(), vec![(c2, b2)])?;
+
+        let b3_reference = Blame::new(vec![
+            BlameRange {
+                offset: 0,
+                length: 1,
+                csid: THREES_CSID,
+                path: path.clone(),
+                origin_offset: 0,
+            },
+            BlameRange {
+                offset: 1,
+                length: 1,
+                csid: ONES_CSID,
+                path: path.clone(),
+                origin_offset: 0,
+            },
+            BlameRange {
+                offset: 2,
+                length: 1,
+                csid: TWOS_CSID,
+                path: path.clone(),
+                origin_offset: 2,
+            },
+            BlameRange {
+                offset: 3,
+                length: 1,
+                csid: THREES_CSID,
+                path: path.clone(),
+                origin_offset: 3,
+            },
+            BlameRange {
+                offset: 4,
+                length: 1,
+                csid: ONES_CSID,
+                path: path.clone(),
+                origin_offset: 3,
+            },
+        ])?;
 
         assert_eq!(b3_reference, b3);
         Ok(())

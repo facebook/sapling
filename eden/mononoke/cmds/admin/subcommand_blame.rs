@@ -28,6 +28,7 @@ use mononoke_types::{
     ChangesetId, FileUnodeId, MPath,
 };
 use slog::Logger;
+use std::fmt::Write;
 use std::{collections::HashMap, sync::Arc};
 use unodes::RootUnodeManifestId;
 
@@ -37,6 +38,7 @@ const COMMAND_DIFF: &'static str = "diff";
 
 const ARG_CSID: &'static str = "csid";
 const ARG_PATH: &'static str = "path";
+const ARG_LINE: &'static str = "line";
 
 pub fn subcommand_blame_build(name: &str) -> App {
     let csid_arg = Arg::with_name(ARG_CSID)
@@ -47,11 +49,18 @@ pub fn subcommand_blame_build(name: &str) -> App {
         .help("path")
         .index(2)
         .required(true);
+    let line_number_arg = Arg::with_name(ARG_LINE)
+        .help("show line number at the first appearance")
+        .short("l")
+        .long("line-number")
+        .takes_value(false)
+        .required(false);
 
     SubCommand::with_name(name)
         .about("fetch/derive blame for specified changeset and path")
         .subcommand(
             SubCommand::with_name(COMMAND_DERIVE)
+                .arg(line_number_arg.clone())
                 .arg(csid_arg.clone())
                 .arg(path_arg.clone()),
         )
@@ -62,6 +71,7 @@ pub fn subcommand_blame_build(name: &str) -> App {
         )
         .subcommand(
             SubCommand::with_name(COMMAND_COMPUTE)
+                .arg(line_number_arg.clone())
                 .arg(csid_arg.clone())
                 .arg(path_arg.clone()),
         )
@@ -80,13 +90,19 @@ pub fn subcommand_blame(
 
     match sub_matches.subcommand() {
         (COMMAND_DERIVE, Some(matches)) => {
-            with_changeset_and_path(ctx, repo, matches, subcommand_show_blame)
+            let line_number = matches.is_present(ARG_LINE);
+            with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
+                subcommand_show_blame(ctx, repo, csid, path, line_number)
+            })
         }
         (COMMAND_DIFF, Some(matches)) => {
             with_changeset_and_path(ctx, repo, matches, subcommand_show_diffs)
         }
         (COMMAND_COMPUTE, Some(matches)) => {
-            with_changeset_and_path(ctx, repo, matches, subcommand_compute_blame)
+            let line_number = matches.is_present(ARG_LINE);
+            with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
+                subcommand_compute_blame(ctx, repo, csid, path, line_number)
+            })
         }
         _ => future::err(SubcommandError::InvalidArgs).boxify(),
     }
@@ -121,11 +137,13 @@ fn subcommand_show_blame(
     repo: BlobRepo,
     csid: ChangesetId,
     path: MPath,
+    line_number: bool,
 ) -> impl Future<Item = (), Error = Error> {
     fetch_blame(ctx.clone(), repo.clone(), csid, path)
         .from_err()
         .and_then(move |(content, blame)| {
-            blame_hg_annotate(ctx, repo, content, blame).map(|annotate| println!("{}", annotate))
+            blame_hg_annotate(ctx, repo, content, blame, line_number)
+                .map(|annotate| println!("{}", annotate))
         })
 }
 
@@ -238,6 +256,7 @@ fn subcommand_compute_blame(
     repo: BlobRepo,
     csid: ChangesetId,
     path: MPath,
+    line_number: bool,
 ) -> impl Future<Item = (), Error = Error> {
     let blobstore = repo.get_blobstore().boxed();
     find_leaf(ctx.clone(), repo.clone(), csid, path.clone())
@@ -325,7 +344,7 @@ fn subcommand_compute_blame(
             Ok(result.ok_or_else(|| Error::msg("cycle found"))??)
         })
         .and_then(move |(content, blame)| {
-            blame_hg_annotate(ctx, repo, content, blame).map(|annotate| println!("{}", annotate))
+            blame_hg_annotate(ctx, repo, content, blame, line_number).map(|annotate| println!("{}", annotate))
         })
 }
 
@@ -335,6 +354,7 @@ fn blame_hg_annotate<C: AsRef<[u8]> + 'static>(
     repo: BlobRepo,
     content: C,
     blame: Blame,
+    show_line_number: bool,
 ) -> impl Future<Item = String, Error = Error> {
     if content.as_ref().is_empty() {
         return future::ok(String::new()).left_future();
@@ -347,25 +367,20 @@ fn blame_hg_annotate<C: AsRef<[u8]> + 'static>(
 
             let content = String::from_utf8_lossy(content.as_ref());
             let mut result = String::new();
-            let mut ranges = blame.ranges().iter();
-            let mut range = ranges
-                .next()
-                .ok_or_else(|| Error::msg("empty blame for non empty content"))?;
-            for (index, line) in content.lines().enumerate() {
-                if index as u32 >= range.offset + range.length {
-                    range = ranges
-                        .next()
-                        .ok_or_else(|| Error::msg("not enough ranges in a blame"))?;
-                }
+            for (line, (csid, _path, line_number)) in content.lines().zip(blame.lines()) {
                 let hg_csid = mapping
-                    .get(&range.csid)
-                    .ok_or_else(|| format_err!("unresolved bonsai csid: {}", range.csid))?;
+                    .get(&csid)
+                    .ok_or_else(|| format_err!("unresolved bonsai csid: {}", csid))?;
                 result.push_str(&hg_csid.to_string()[..12]);
-                result.push_str(": ");
+                result.push_str(":");
+                if show_line_number {
+                    write!(&mut result, "{:>4}:", line_number + 1)?;
+                }
+                result.push_str(" ");
                 result.push_str(line);
                 result.push_str("\n");
             }
-            result.pop();
+
             Ok(result)
         })
         .right_future()

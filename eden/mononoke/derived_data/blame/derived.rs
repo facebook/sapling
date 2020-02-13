@@ -97,7 +97,7 @@ impl BlameRootMapping {
     }
 
     fn format_key(&self, csid: &ChangesetId) -> String {
-        format!("derived_rootblame.{}", csid)
+        format!("derived_rootblame.v1.{}", csid)
     }
 }
 
