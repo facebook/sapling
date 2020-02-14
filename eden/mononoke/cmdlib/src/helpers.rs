@@ -163,7 +163,8 @@ pub fn init_cachelib_from_settings(
                 ignore_untouched_slabs: false,
             },
         })
-        .set_access_config(buckets_power, lock_power);
+        .set_access_config(buckets_power, lock_power)
+        .set_cache_name("mononoke");
 
     if settings.use_tupperware_shrinker {
         if settings.max_process_size_gib.is_some() || settings.min_process_size_gib.is_some() {
@@ -199,7 +200,7 @@ pub fn init_cachelib_from_settings(
     }
 
     cachelib::init_cache_once(fb, cache_config)?;
-    cachelib::init_cacheadmin("mononoke")?;
+    cachelib::init_cacheadmin()?;
 
     // Give each cache 5% of the available space, bar the blob cache which gets everything left
     // over. We can adjust this with data.
