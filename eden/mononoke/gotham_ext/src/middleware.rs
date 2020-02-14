@@ -10,9 +10,13 @@ use std::panic::RefUnwindSafe;
 use gotham::state::State;
 use hyper::{Body, Response};
 
+pub mod client_identity;
 pub mod server_identity;
+pub mod tls_session_data;
 
+pub use client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use server_identity::ServerIdentityMiddleware;
+pub use tls_session_data::TlsSessionDataMiddleware;
 
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {
     fn inbound(&self, _state: &mut State) {

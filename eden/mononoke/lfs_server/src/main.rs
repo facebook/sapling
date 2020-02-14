@@ -25,7 +25,7 @@ use futures_preview::{
 // TODO: When we get rid of old futures, this can come from `futures` (can't while new futures is called `futures_preview`)
 use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_pre_state};
-use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::{handler::MononokeHttpHandler, pre_state_data::TlsPreStateData};
 use hyper::header::HeaderValue;
 use slog::{error, info, warn};
 use std::collections::HashMap;
@@ -51,7 +51,6 @@ use crate::middleware::{
     RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
     TlsSessionDataMiddleware,
 };
-use crate::pre_state_data::TlsPreStateData;
 use crate::service::build_router;
 
 mod acl;
@@ -65,7 +64,6 @@ mod service;
 mod upload;
 #[macro_use]
 mod http;
-mod pre_state_data;
 
 const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";
