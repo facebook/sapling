@@ -35,7 +35,7 @@ pub struct WarmBookmarksCache {
     terminate: Option<sync::oneshot::Sender<()>>,
 }
 
-type WarmerFn =
+pub type WarmerFn =
     dyn Fn(CoreContext, BlobRepo, ChangesetId) -> BoxFuture<(), Error> + Send + Sync + 'static;
 
 impl WarmBookmarksCache {
