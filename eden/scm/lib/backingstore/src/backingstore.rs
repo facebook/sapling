@@ -10,6 +10,7 @@ use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
 use edenapi::{EdenApi, EdenApiCurlClient};
+use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use revisionstore::{
@@ -32,16 +33,19 @@ impl BackingStore {
         config.load_user();
         config.load_hgrc(hg.join("hgrc"), "repository");
 
-        let memcachestore = MemcacheStore::new(&config)?;
-
         let store_path = hg.join("store");
-        let blobstore = ContentStoreBuilder::new(&config)
-            .local_path(&store_path)
-            .memcachestore(memcachestore);
-        // XXX: Add the memcachestore for the treestore.
+        let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
         let treestore = ContentStoreBuilder::new(&config)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
+
+        match MemcacheStore::new(&config) {
+            Ok(memcache) => {
+                // XXX: Add the memcachestore for the treestore.
+                blobstore = blobstore.memcachestore(memcache);
+            }
+            Err(e) => warn!("couldn't initialize Memcache: {}", e),
+        }
 
         let (blobstore, treestore) = if use_edenapi {
             let edenapi_config = edenapi::Config::from_hg_config(&config)?;
