@@ -44,7 +44,7 @@ impl MysqlOptions {
         if self.master_only {
             myrouter::ServiceType::MASTER
         } else {
-            myrouter::ServiceType::ANY
+            myrouter::ServiceType::SLAVE
         }
     }
 
@@ -52,7 +52,7 @@ impl MysqlOptions {
         if self.master_only {
             raw::InstanceRequirement::Master
         } else {
-            raw::InstanceRequirement::ReplicaFirst
+            raw::InstanceRequirement::ReplicaOnly
         }
     }
 }
