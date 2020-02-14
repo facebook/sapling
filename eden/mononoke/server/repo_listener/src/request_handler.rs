@@ -35,7 +35,8 @@ use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 
 use crate::repo_handlers::RepoHandler;
 
-use context::{is_quicksand, LoggingContainer, Metric, SessionContainer};
+use context::{is_quicksand, LoggingContainer, SessionContainer};
+use load_limiter::{LoadLimiter, Metric};
 
 lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
@@ -132,22 +133,19 @@ pub fn request_handler(
         .unwrap_or("".to_string());
 
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
-
-    let load_limiting_config = load_limiting_config.map(|(config, category)| {
+    let load_limiter = load_limiting_config.map(|(config, category)| {
         let (throttle_limits, rate_limits) =
             loadlimiting_configs(config, client_hostname, &ssh_env_vars);
-        (throttle_limits, rate_limits, category)
+        LoadLimiter::new(fb, throttle_limits, rate_limits, category)
     });
-    let session = SessionContainer::new(
-        fb,
-        session_id,
-        trace.clone(),
-        preamble.misc.get("unix_username").cloned(),
-        preamble.misc.get("source_hostname").cloned(),
-        None,
-        ssh_env_vars,
-        load_limiting_config,
-    );
+    let session = SessionContainer::builder(fb)
+        .session_id(session_id)
+        .trace(trace.clone())
+        .user_unix_name(preamble.misc.get("unix_username").cloned())
+        .source_hostname(preamble.misc.get("source_hostname").cloned())
+        .ssh_env_vars(ssh_env_vars)
+        .load_limiter(load_limiter)
+        .build();
 
     let logging = LoggingContainer::new(conn_log.clone(), scuba.clone());
 

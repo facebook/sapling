@@ -23,8 +23,6 @@ use source_control as thrift;
 use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
 use srserver::RequestContext;
-use sshrelay::SshEnvVars;
-use tracing::TraceContext;
 
 use crate::errors;
 use crate::from_request::FromRequest;
@@ -109,16 +107,10 @@ impl SourceControlServiceImpl {
                 .collect::<ScubaValue>(),
         );
 
-        let session = SessionContainer::new(
-            self.fb,
-            session_id,
-            TraceContext::default(),
-            None,
-            None,
-            Some(identities),
-            SshEnvVars::default(),
-            None,
-        );
+        let session = SessionContainer::builder(self.fb)
+            .session_id(session_id)
+            .identities(identities)
+            .build();
 
         let ctx = session.new_context(self.logger.clone(), scuba);
 

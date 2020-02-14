@@ -24,15 +24,13 @@ use apiserver_thrift::types::{
 use apiserver_thrift::MononokeRevision::UnknownField;
 use async_trait::async_trait;
 use cloned::cloned;
-use context::{generate_session_id, CoreContext, SessionContainer};
+use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 use futures_preview::compat::Future01CompatExt;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use sshrelay::SshEnvVars;
-use tracing::TraceContext;
 
 use super::super::actor::{Mononoke, MononokeQuery, MononokeRepoResponse};
 
@@ -119,20 +117,8 @@ impl MononokeAPIServiceImpl {
     }
 
     fn create_ctx(&self, mut scuba: ScubaSampleBuilder) -> CoreContext {
-        let session_id = generate_session_id();
-        scuba.add("session_uuid", session_id.to_string());
-
-        let session = SessionContainer::new(
-            self.fb,
-            session_id,
-            TraceContext::default(),
-            None,
-            None,
-            None,
-            SshEnvVars::default(),
-            None,
-        );
-
+        let session = SessionContainer::new_with_defaults(self.fb);
+        scuba.add("session_uuid", session.session_id().to_string());
         session.new_context(self.logger.clone(), scuba)
     }
 }

@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
-use context::{CoreContext, Metric, PerfCounterType};
+use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{future, stream as old_stream, Future, Stream as OldStream};
@@ -23,6 +23,7 @@ use futures_preview::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_util::try_join;
+use load_limiter::Metric;
 use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};

@@ -14,7 +14,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use anyhow::{format_err, Error};
-use context::{generate_session_id, CoreContext, SessionContainer};
+use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use identity::Identity;
 use json_encoded::get_identities;
@@ -22,9 +22,6 @@ use openssl::x509::X509;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
-use sshrelay::SshEnvVars;
-
-use tracing::TraceContext;
 
 use time_ext::DurationExt;
 
@@ -124,26 +121,14 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             }
         }
 
-        let session_id = generate_session_id();
+        let session = SessionContainer::new_with_defaults(self.fb);
         let repo_name = req.path().split("/").nth(1).unwrap_or("unknown");
-
         scuba
             .add("type", "http")
             .add("method", req.method().to_string())
             .add("path", req.path())
             .add("reponame", repo_name)
-            .add("session_uuid", session_id.to_string());
-
-        let session = SessionContainer::new(
-            self.fb,
-            session_id,
-            TraceContext::default(),
-            None,
-            None,
-            None,
-            SshEnvVars::default(),
-            None,
-        );
+            .add("session_uuid", session.session_id().to_string());
 
         let ctx = session.new_context(self.logger.clone(), scuba);
 
