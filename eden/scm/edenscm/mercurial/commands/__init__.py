@@ -5405,7 +5405,7 @@ def revert(ui, repo, *pats, **opts):
     if opts.get("date"):
         if opts.get("rev"):
             raise error.Abort(_("you can't specify a revision and a date"))
-        opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
+        opts["rev"] = hex(cmdutil.finddate(ui, repo, opts["date"]))
 
     parent, p2 = repo.dirstate.parents()
     if not opts.get("rev") and p2 != nullid:
@@ -6368,7 +6368,7 @@ def update(
         cmdutil.clearunfinished(repo)
 
         if date:
-            rev = cmdutil.finddate(ui, repo, date)
+            rev = hex(cmdutil.finddate(ui, repo, date))
 
         if inactive:
             brev = None
