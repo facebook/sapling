@@ -26,7 +26,7 @@ pub fn get_str_config(config: &ConfigSet, section: &str, name: &str) -> Result<S
     Ok(String::from_utf8(name.to_vec())?)
 }
 
-fn get_repo_name(config: &ConfigSet) -> Result<String> {
+pub fn get_repo_name(config: &ConfigSet) -> Result<String> {
     get_str_config(config, "remotefilelog", "reponame")
 }
 

@@ -371,8 +371,6 @@ class fileserverclient(object):
         if self.cacheprocess:
             self.cacheprocess = util.expandpath(self.cacheprocess)
 
-        self.key = ui.config("remotefilelog", "cachekey", "")
-
         # This option causes remotefilelog to pass the full file path to the
         # cacheprocess instead of a hashed key.
         self.cacheprocesspasspath = ui.configbool(
@@ -395,7 +393,9 @@ class fileserverclient(object):
                 path = shallowutil.getindexedloghistorystorepath(self.repo)
                 options += " --indexedloghistorystore_dir %s" % path
 
-            cmd = " ".join([self.cacheprocess, self.key, cachepath, options])
+            key = ui.config("remotefilelog", "cachekey", "") + repo.name + ":"
+
+            cmd = " ".join([self.cacheprocess, key, cachepath, options])
             self.remotecache = cacheconnection(repo, cmd)
         else:
             self.remotecache = simplecache()
