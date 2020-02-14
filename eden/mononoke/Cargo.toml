@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "common/scuba_ext",
     "server/session_id",
     "sshrelay",
 ]
