@@ -51,7 +51,7 @@ fn derive_data_for_csids(
     let derivations = FuturesUnordered::new();
 
     for data_type in derived_data_types {
-        let derived_utils = derived_data_utils(ctx.clone(), repo.clone(), data_type)?;
+        let derived_utils = derived_data_utils(repo.clone(), data_type)?;
 
         derivations.push(
             derived_utils

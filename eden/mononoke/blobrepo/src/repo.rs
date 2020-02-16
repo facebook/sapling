@@ -2049,3 +2049,16 @@ impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepo {
         }
     }
 }
+
+impl DangerousOverride<DerivedDataConfig> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(DerivedDataConfig) -> DerivedDataConfig,
+    {
+        let derived_data_config = modify(self.derived_data_config.clone());
+        BlobRepo {
+            derived_data_config,
+            ..self.clone()
+        }
+    }
+}

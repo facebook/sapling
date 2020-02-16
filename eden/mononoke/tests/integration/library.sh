@@ -725,6 +725,18 @@ allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 ${namespace}
 CONFIG
 fi
+
+if [[ -v ENABLED_DERIVED_DATA ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[derived_data_config]
+derived_data_types = $ENABLED_DERIVED_DATA
+CONFIG
+else
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[derived_data_config]
+derived_data_types=["blame", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes"]
+CONFIG
+fi
 }
 
 function register_hook {

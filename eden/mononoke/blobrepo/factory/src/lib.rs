@@ -30,6 +30,7 @@ use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::{future::IntoFuture, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
 use metaconfig_types::{self, DerivedDataConfig, FilestoreParams, Redaction, StorageConfig};
@@ -262,12 +263,13 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
     DerivedDataConfig {
         scuba_table: None,
         derived_data_types: btreeset! {
-            RootUnodeManifestId::NAME.to_string(),
+            BlameRoot::NAME.to_string(),
+            FilenodesOnlyPublic::NAME.to_string(),
             RootFastlog::NAME.to_string(),
             RootFsnodeId::NAME.to_string(),
-            BlameRoot::NAME.to_string(),
             RootDeletedManifestId::NAME.to_string(),
-            FilenodesOnlyPublic::NAME.to_string(),
+            RootUnodeManifestId::NAME.to_string(),
+            TreeHandle::NAME.to_string(),
         },
     }
 }

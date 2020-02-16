@@ -21,6 +21,15 @@ use std::{
 
 pub mod derive_impl;
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Mode {
+    /// This mode should almost always be preferred
+    OnlyIfEnabled,
+    /// This mode should rarely be used, perhaps only for backfilling type of derived data
+    /// which is not enabled in this repo yet
+    Unsafe,
+}
+
 /// Trait for the data that can be derived from bonsai changeset.
 /// Examples of that are hg changeset id, unodes root manifest id, git changeset ids etc
 pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
@@ -53,12 +62,35 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// This function is the entrypoint for changeset derivation, it converts
     /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
+    ///
+    /// This function fails immediately if this type of derived data is not enabled for this repo.
     fn derive(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<Self, Error> {
         let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid).boxify()
+        derive_impl::derive_impl::<Self, Self::Mapping>(
+            ctx,
+            repo,
+            mapping,
+            csid,
+            Mode::OnlyIfEnabled,
+        )
+        .boxify()
+    }
+
+    /// Derives derived data even if it's disabled in the config. Should normally
+    /// be used only for backfilling.
+    fn derive_with_mode(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csid: ChangesetId,
+        mode: Mode,
+    ) -> BoxFuture<Self, Error> {
+        let mapping = Self::mapping(&ctx, &repo);
+        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid, mode).boxify()
     }
 
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
+    ///
+    /// This function fails immediately if derived data is not enabled for this repo.
     fn count_underived(
         ctx: &CoreContext,
         repo: &BlobRepo,
@@ -66,9 +98,16 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         limit: u64,
     ) -> BoxFuture<u64, Error> {
         let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::find_underived::<Self, Self::Mapping>(ctx, repo, &mapping, csid, Some(limit))
-            .map(|underived| underived.len() as u64)
-            .boxify()
+        derive_impl::find_underived::<Self, Self::Mapping>(
+            ctx,
+            repo,
+            &mapping,
+            csid,
+            Some(limit),
+            Mode::OnlyIfEnabled,
+        )
+        .map(|underived| underived.len() as u64)
+        .boxify()
     }
 }
 

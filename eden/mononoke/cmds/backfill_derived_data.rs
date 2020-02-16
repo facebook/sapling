@@ -27,7 +27,7 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
-use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
+use derived_data_utils::{derived_data_utils, derived_data_utils_unsafe, POSSIBLE_DERIVED_TYPES};
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
@@ -391,8 +391,7 @@ fn subcommand_backfill<P: AsRef<Path>>(
     regenerate: bool,
     prefetched_commits_path: P,
 ) -> BoxFuture<(), Error> {
-    let derived_utils = try_boxfuture!(derived_data_utils(
-        ctx.clone(),
+    let derived_utils = try_boxfuture!(derived_data_utils_unsafe(
         repo.clone(),
         derived_data_type.clone(),
     ));
@@ -589,7 +588,7 @@ fn subcommand_tail(
             } else {
                 repo.clone()
             };
-            let derive = derived_data_utils(ctx.clone(), repo.clone(), name)?;
+            let derive = derived_data_utils(repo.clone(), name)?;
             let stats = stats_constructor(derive.name());
             Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
         })
@@ -689,7 +688,7 @@ fn subcommand_single(
     derived_data_type: String,
 ) -> impl Future<Item = (), Error = Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
-    let derived_utils = match derived_data_utils(ctx.clone(), repo.clone(), derived_data_type) {
+    let derived_utils = match derived_data_utils(repo.clone(), derived_data_type) {
         Ok(derived_utils) => derived_utils,
         Err(error) => return future::err(error).left_future(),
     };
@@ -806,8 +805,7 @@ mod tests {
         let maybe_bcs_id = runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
         let bcs_id = maybe_bcs_id.unwrap();
 
-        let derived_utils =
-            derived_data_utils(ctx.clone(), repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
         runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]))?;
 
         Ok(())
@@ -832,8 +830,7 @@ mod tests {
             batch.push(maybe_bcs_id.unwrap());
         }
 
-        let derived_utils =
-            derived_data_utils(ctx.clone(), repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
         let pending =
             runtime.block_on(derived_utils.pending(ctx.clone(), repo.clone(), batch.clone()))?;
         assert_eq!(pending.len(), hg_cs_ids.len());
@@ -863,8 +860,7 @@ mod tests {
             runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), first_hg_cs_id))?;
         let bcs_id = maybe_bcs_id.unwrap();
 
-        let derived_utils =
-            derived_data_utils(ctx.clone(), repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
         let res =
             runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]));
         // Deriving should fail because blobstore writes fail

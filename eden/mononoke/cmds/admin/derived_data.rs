@@ -85,7 +85,7 @@ async fn check_derived_data_exists(
     derived_data_type: String,
     hashes_or_bookmarks: Vec<String>,
 ) -> Result<(), SubcommandError> {
-    let derived_utils = derived_data_utils(ctx.clone(), repo.clone(), derived_data_type)?;
+    let derived_utils = derived_data_utils(repo.clone(), derived_data_type)?;
 
     let cs_id_futs: Vec<_> = hashes_or_bookmarks
         .into_iter()

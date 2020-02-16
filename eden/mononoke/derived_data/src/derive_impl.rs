@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::{BonsaiDerived, BonsaiDerivedMapping};
-use anyhow::Error;
+use crate::{BonsaiDerived, BonsaiDerivedMapping, Mode};
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -15,7 +15,7 @@ use futures::{
     future::{self, Loop},
     stream, Future, IntoFuture, Stream,
 };
-use futures_ext::{bounded_traversal, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
@@ -76,8 +76,9 @@ pub fn derive_impl<
     repo: BlobRepo,
     derived_mapping: Mapping,
     start_csid: ChangesetId,
+    mode: Mode,
 ) -> impl Future<Item = Derived, Error = Error> {
-    find_underived(&ctx, &repo, &derived_mapping, &start_csid, None)
+    find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
         .map({
             cloned!(ctx);
             move |commits_not_derived_to_parents| {
@@ -172,14 +173,20 @@ pub fn derive_impl<
         .and_then(move |_| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
 }
 
-fn log_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) {
+fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), Error> {
     if !repo
         .get_derived_data_config()
         .derived_data_types
         .contains(Derived::NAME)
     {
         STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
+        return Err(format_err!(
+            "{} is not enabled for repo {}",
+            Derived::NAME,
+            repo.get_repoid()
+        ));
     }
+    Ok(())
 }
 
 pub(crate) fn find_underived<
@@ -191,8 +198,12 @@ pub(crate) fn find_underived<
     derived_mapping: &Mapping,
     start_csid: &ChangesetId,
     limit: Option<u64>,
+    mode: Mode,
 ) -> impl Future<Item = HashMap<ChangesetId, Vec<ChangesetId>>, Error = Error> {
-    log_if_disabled::<Derived>(repo);
+    if mode == Mode::OnlyIfEnabled {
+        try_boxfuture!(fail_if_disabled::<Derived>(repo));
+    }
+
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
@@ -236,6 +247,7 @@ pub(crate) fn find_underived<
     .traced(&ctx.trace(), "derive::find_dependencies", None)
     .filter_map(|x| x)
     .collect_to()
+    .boxify()
 }
 
 // Panics if any of the parents is not derived yet
@@ -516,6 +528,7 @@ mod test {
     use lock_ext::LockExt;
     use maplit::hashmap;
     use mercurial_types::HgChangesetId;
+    use metaconfig_types::DerivedDataConfig;
     use mononoke_types::BonsaiChangeset;
     use revset::AncestorsNodeStream;
     use std::{
@@ -613,6 +626,13 @@ mod test {
     }
 
     fn derive_for_master(runtime: &mut Runtime, ctx: CoreContext, repo: BlobRepo) {
+        let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+            derived_data_config
+                .derived_data_types
+                .insert(TestGenNum::NAME.to_string());
+            derived_data_config
+        });
+
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = runtime
             .block_on(repo.get_bonsai_bookmark(ctx.clone(), &master_book))
@@ -653,12 +673,21 @@ mod test {
             .unwrap();
     }
 
+    fn init_linear(fb: FacebookInit) -> BlobRepo {
+        linear::getrepo(fb).dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+            derived_data_config
+                .derived_data_types
+                .insert(TestGenNum::NAME.to_string());
+            derived_data_config
+        })
+    }
+
     #[fbinit::test]
     fn test_incomplete_maping(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
-        let repo = linear::getrepo(fb);
+        let repo = init_linear(fb);
         runtime.block_on(
             async move {
                 // This is the parent of the root commit
@@ -700,7 +729,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
-        let repo = linear::getrepo(fb);
+        let repo = init_linear(fb);
         runtime.block_on(
             async move {
                 // This is the parent of the root commit
@@ -782,9 +811,9 @@ mod test {
     #[fbinit::test]
     fn test_leases(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb);
-        let mapping = TestGenNum::mapping(&ctx, &repo);
         let mut runtime = Runtime::new()?;
+        let repo = init_linear(fb);
+        let mapping = TestGenNum::mapping(&ctx, &repo);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime
@@ -878,7 +907,7 @@ mod test {
     fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo =
-            linear::getrepo(fb).dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
+            init_linear(fb).dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
         let mapping = TestGenNum::mapping(&ctx, &repo);
         let mut runtime = Runtime::new()?;
 

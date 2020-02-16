@@ -5,7 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ setup_common_config
+  $ ENABLED_DERIVED_DATA='["git_trees", "filenodes"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
 

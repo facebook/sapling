@@ -14,7 +14,8 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping,
+    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, Mode as DeriveMode,
+    RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -73,12 +74,13 @@ pub trait DerivedUtils: Send + Sync + 'static {
 #[derive(Clone)]
 struct DerivedUtilsFromMapping<M> {
     mapping: RegenerateMapping<M>,
+    mode: DeriveMode,
 }
 
 impl<M> DerivedUtilsFromMapping<M> {
-    fn new(mapping: M) -> Self {
+    fn new(mapping: M, mode: DeriveMode) -> Self {
         let mapping = RegenerateMapping::new(mapping);
-        Self { mapping }
+        Self { mapping, mode }
     }
 }
 
@@ -93,7 +95,7 @@ where
         repo: BlobRepo,
         csid: ChangesetId,
     ) -> BoxFuture<String, Error> {
-        <M::Value as BonsaiDerived>::derive(ctx.clone(), repo, csid)
+        <M::Value as BonsaiDerived>::derive_with_mode(ctx.clone(), repo, csid, self.mode)
             .map(|result| format!("{:?}", result))
             .boxify()
     }
@@ -132,6 +134,7 @@ where
                         repo.clone(),
                         in_memory_mapping.clone(),
                         csid,
+                        DeriveMode::Unsafe,
                     )
                     .map(|_| ())
                 }
@@ -236,38 +239,52 @@ where
 }
 
 pub fn derived_data_utils(
-    _ctx: CoreContext,
     repo: BlobRepo,
     name: impl AsRef<str>,
+) -> Result<Arc<dyn DerivedUtils>, Error> {
+    derived_data_utils_impl(repo, name, DeriveMode::OnlyIfEnabled)
+}
+
+pub fn derived_data_utils_unsafe(
+    repo: BlobRepo,
+    name: impl AsRef<str>,
+) -> Result<Arc<dyn DerivedUtils>, Error> {
+    derived_data_utils_impl(repo, name, DeriveMode::Unsafe)
+}
+
+fn derived_data_utils_impl(
+    repo: BlobRepo,
+    name: impl AsRef<str>,
+    mode: DeriveMode,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     match name.as_ref() {
         RootUnodeManifestId::NAME => {
             let mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootFastlog::NAME => {
             let mapping = RootFastlogMapping::new(repo.get_blobstore().boxed());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         MappedHgChangesetId::NAME => {
             let mapping = HgChangesetIdMapping::new(&repo);
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootFsnodeId::NAME => {
             let mapping = RootFsnodeMapping::new(repo.get_blobstore());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         BlameRoot::NAME => {
             let mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootDeletedManifestId::NAME => {
             let mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         FilenodesOnlyPublic::NAME => {
             let mapping = FilenodesOnlyPublicMapping::new(repo);
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }
