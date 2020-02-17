@@ -11,7 +11,7 @@ import bisect
 import os
 import struct
 
-from edenscm.mercurial import error as hgerror
+from edenscm.mercurial import error as hgerror, pycompat
 from edenscm.mercurial.node import hex
 from edenscm.mercurial.pycompat import range
 
@@ -207,7 +207,8 @@ class revmap(object):
             path = self.rev2path(rev)
             if path is None:
                 raise error.CorruptedFileError("cannot find path for %s" % rev)
-            f.write(path + "\0")
+            path = pycompat.encodeutf8(path)
+            f.write(path + b"\0")
         f.write(hsh)
 
     @staticmethod

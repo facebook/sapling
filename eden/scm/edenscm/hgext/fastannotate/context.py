@@ -63,8 +63,8 @@ def _parents(f, follow=True):
 # so it takes a fctx instead of a pair of text and fctx.
 def _decorate(fctx):
     text = fctx.data()
-    linecount = text.count("\n")
-    if text and not text.endswith("\n"):
+    linecount = text.count(b"\n")
+    if text and not text.endswith(b"\n"):
         linecount += 1
     return ([(fctx, i) for i in range(linecount)], text)
 
@@ -201,13 +201,13 @@ class _annotatecontext(object):
     @property
     def linelog(self):
         if self._linelog is None:
-            self._linelog = linelogmod.linelog(self.linelogpath)
+            self._linelog = linelogmod.linelog(pycompat.encodeutf8(self.linelogpath))
         return self._linelog
 
     @property
     def revmap(self):
         if self._revmap is None:
-            self._revmap = revmapmod.revmap(self.revmappath)
+            self._revmap = revmapmod.revmap(pycompat.encodeutf8(self.revmappath))
         return self._revmap
 
     def close(self):

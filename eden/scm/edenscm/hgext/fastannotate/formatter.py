@@ -6,7 +6,7 @@
 # format: defines the format used to output annotate result
 
 from edenscm.mercurial import encoding, node, templatefilters, util
-from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
 
 
 # imitating mercurial.commands.annotate, not using the vanilla formatter since
@@ -43,12 +43,12 @@ class defaultformatter(object):
 
         # opt name, separator, raw value (for json/plain), encoder (for plain)
         opmap = [
-            ("user", " ", lambda x: getctx(x).user(), ui.shortuser),
-            ("number", " ", lambda x: getctx(x).rev(), revenc),
-            ("changeset", " ", lambda x: hexfunc(x[0]), csetenc),
-            ("date", " ", lambda x: getctx(x).date(), datefunc),
-            ("file", " ", lambda x: x[2], str),
-            ("line_number", ":", lambda x: x[1] + 1, str),
+            ("user", b" ", lambda x: getctx(x).user(), ui.shortuser),
+            ("number", b" ", lambda x: getctx(x).rev(), revenc),
+            ("changeset", b" ", lambda x: hexfunc(x[0]), csetenc),
+            ("date", b" ", lambda x: getctx(x).date(), datefunc),
+            ("file", b" ", lambda x: x[2], str),
+            ("line_number", b":", lambda x: x[1] + 1, str),
         ]
         fieldnamemap = {"number": "rev", "changeset": "node"}
         funcmap = [
@@ -58,20 +58,20 @@ class defaultformatter(object):
         ]
         # no separator for first column
         funcmap[0] = list(funcmap[0])
-        funcmap[0][1] = ""
+        funcmap[0][1] = b""
         self.funcmap = funcmap
 
     def write(self, annotatedresult, lines=None, existinglines=None):
         """(annotateresult, [str], set([rev, linenum])) -> None. write output.
         annotateresult can be [(node, linenum, path)], or [(node, linenum)]
         """
-        pieces = []  # [[str]]
+        pieces = []  # [[bytes]]
         maxwidths = []  # [int]
 
         # calculate padding
         for f, sep, name, enc in self.funcmap:
             l = [enc(f(x)) for x in annotatedresult]
-            pieces.append(l)
+            pieces.append([encodeutf8(x) for x in l])
             if name in ["node", "date"]:  # node and date has fixed size
                 l = l[:1]
             widths = list(map(encoding.colwidth, set(l)))
@@ -79,26 +79,28 @@ class defaultformatter(object):
             maxwidths.append(maxwidth)
 
         # buffered output
-        result = ""
+        result = b""
         for i in range(len(annotatedresult)):
             for j, p in enumerate(pieces):
                 sep = self.funcmap[j][1]
-                padding = " " * (maxwidths[j] - len(p[i]))
+                padding = b" " * (maxwidths[j] - len(p[i]))
                 result += sep + padding + p[i]
             if lines:
                 if existinglines is None:
-                    result += ": " + lines[i]
+                    result += b": " + lines[i]
                 else:  # extra formatting showing whether a line exists
                     key = (annotatedresult[i][0], annotatedresult[i][1])
                     if key in existinglines:
-                        result += ":  " + lines[i]
+                        result += b":  " + lines[i]
                     else:
-                        result += ": " + self.ui.label("-" + lines[i], "diff.deleted")
+                        result += b": " + encodeutf8(
+                            self.ui.label("-" + decodeutf8(lines[i]), "diff.deleted")
+                        )
 
-            if result[-1] != "\n":
-                result += "\n"
+            if result[-1:] != b"\n":
+                result += b"\n"
 
-        self.ui.write(result)
+        self.ui.writebytes(result)
 
     @util.propertycache
     def _hexfunc(self):
