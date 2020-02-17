@@ -40,11 +40,14 @@ class _reader(object):
         self.offset += 4
         return v[0]
 
-    def readstr(self):
+    def readbytes(self):
         l = self.readuint()
         v = self.data[self.offset : self.offset + l]
         self.offset += l
         return v
+
+    def readstr(self):
+        return pycompat.decodeutf8(self.readbytes())
 
 
 class _writer(object):
@@ -54,9 +57,12 @@ class _writer(object):
     def writeuint(self, v):
         self.buffer.write(struct.pack(">L", v))
 
-    def writestr(self, v):
+    def writebytes(self, v):
         self.writeuint(len(v))
         self.buffer.write(v)
+
+    def writestr(self, v):
+        self.writebytes(pycompat.encodeutf8(v))
 
 
 # The treedirstatemap iterator uses the getnext method on the dirstatemap
@@ -234,7 +240,14 @@ class treedirstatemap(object):
         return self.hastrackeddir(dirname) or self.hasremoveddir(dirname)
 
     def addfile(self, f, oldstate, state, mode, size, mtime):
-        self._rmap.addfile(f, oldstate, state, mode, size, mtime)
+        self._rmap.addfile(
+            f,
+            pycompat.encodeutf8(oldstate),
+            pycompat.encodeutf8(state),
+            mode,
+            size,
+            mtime,
+        )
         if self._nonnormalset is not None:
             if state != "n" or mtime == -1:
                 self._nonnormalset.add(f)
@@ -283,7 +296,14 @@ class treedirstatemap(object):
         for f in files:
             e = self.gettracked(f)
             if e is not None and e[0] == "n" and e[3] == now:
-                self._rmap.addfile(f, e[0], e[0], e[1], e[2], -1)
+                self._rmap.addfile(
+                    f,
+                    pycompat.encodeutf8(e[0]),
+                    pycompat.encodeutf8(e[0]),
+                    e[1],
+                    e[2],
+                    -1,
+                )
                 self.nonnormalset.add(f)
 
     def parents(self):
@@ -585,4 +605,4 @@ def gettreeid(opener, dirstatefile):
     version = r.readuint()
     if version != treedirstateversion:
         return None
-    return r.readstr()
+    return r.readbytes()

@@ -1,5 +1,3 @@
-#require py2
-
 #chg-compatible
 
 #testcases treestate-on treestate-off

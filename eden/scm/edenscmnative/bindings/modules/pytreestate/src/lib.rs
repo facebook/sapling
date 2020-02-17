@@ -197,20 +197,20 @@ py_class!(class treedirstatemap |py| {
         Ok(value.is_some())
     }
 
-    def gettracked(&self, filename: PyPathBuf) -> PyResult<Option<(PyBytes, u32, i32, i32)>> {
+    def gettracked(&self, filename: PyPathBuf) -> PyResult<Option<(PyString, u32, i32, i32)>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let value = dirstate
                 .get_tracked(filename.as_utf8_bytes())
                 .map_pyerr(py)?;
-        Ok(value.map(|file| (PyBytes::new(py, &[file.state; 1]), file.mode, file.size, file.mtime)))
+        Ok(value.map(|file| (PyString::new(py, unsafe {std::str::from_utf8_unchecked(&[file.state; 1])}), file.mode, file.size, file.mtime)))
     }
 
-    def getremoved(&self, filename: PyPathBuf, default: Option<(PyBytes, u32, i32, i32)>) -> PyResult<Option<(PyBytes, u32, i32, i32)>> {
+    def getremoved(&self, filename: PyPathBuf, default: Option<(PyString, u32, i32, i32)>) -> PyResult<Option<(PyString, u32, i32, i32)>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let value = dirstate
                 .get_removed(filename.as_utf8_bytes())
                 .map_pyerr(py)?;
-        Ok(value.map_or(default, |file| Some((PyBytes::new(py, &[file.state; 1]), file.mode, file.size, file.mtime))))
+        Ok(value.map_or(default, |file| Some((PyString::new(py, unsafe {std::str::from_utf8_unchecked(&[file.state; 1])}), file.mode, file.size, file.mtime))))
     }
 
     def hastrackeddir(&self, dirname: PyPathBuf) -> PyResult<bool> {
@@ -256,7 +256,7 @@ py_class!(class treedirstatemap |py| {
     // Get the next dirstate object after the provided filename.  If the filename is None,
     // returns the first file in the tree.  If the provided filename is the last file, returns
     // None.
-    def getnext(&self, filename: Option<PyPathBuf>, removed: bool) -> PyResult<Option<(PyBytes, (PyBytes, u32, i32, i32))>> {
+    def getnext(&self, filename: Option<PyPathBuf>, removed: bool) -> PyResult<Option<(PyBytes, (PyString, u32, i32, i32))>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let next = if removed {
             match filename {
@@ -284,7 +284,7 @@ py_class!(class treedirstatemap |py| {
                 }
             }
         };
-        Ok(next.map(|(f, s)| (PyBytes::new(py, &f), (PyBytes::new(py, &[s.state; 1]), s.mode, s.size, s.mtime))))
+        Ok(next.map(|(f, s)| (PyBytes::new(py, &f), (PyString::new(py, unsafe {std::str::from_utf8_unchecked(&[s.state; 1])}), s.mode, s.size, s.mtime))))
     }
 
     def addfile(
@@ -304,7 +304,7 @@ py_class!(class treedirstatemap |py| {
         Ok(PyNone)
     }
 
-    def removefile(&self, filename: PyPathBuf, _old_state: PyBytes, size: i32) -> PyResult<PyNone> {
+    def removefile(&self, filename: PyPathBuf, _old_state: PyString, size: i32) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .remove_file(filename.as_utf8_bytes(), &FileState::new(b'r', 0, size, 0))
