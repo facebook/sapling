@@ -327,6 +327,12 @@ def _makerage(ui, repo, **opts):
             ),
         ),
         (
+            "hg debugmutation -r 'draft() & date(-4)' -t 'since 4d ago'",
+            lambda: hgcmd(
+                "debugmutation", rev=["draft() & date(-4)"], time_range=["since 4d ago"]
+            ),
+        ),
+        (
             'last 100 lines of "hg debugobsolete"',
             lambda: "\n".join(hgcmd("debugobsolete").splitlines()[-100:]),
         ),
