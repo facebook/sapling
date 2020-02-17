@@ -5,9 +5,6 @@ from edenscm.hgext.convert.repo import conversionrevision, gitutil, repo
 from hghave import require
 
 
-require(["py2"])
-
-
 def draft(test_func):
     if os.environ["USER"] not in ("mdevine", "tch"):
 

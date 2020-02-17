@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Verify that pending changesets are seen by pretxn* hooks but not by other

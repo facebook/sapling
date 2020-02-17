@@ -13,9 +13,6 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 def dircontent():
     # generate a simple text view of the directory for easy comparison
     files = os.listdir(".")

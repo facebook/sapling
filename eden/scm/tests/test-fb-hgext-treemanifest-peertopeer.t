@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ CACHEDIR=`pwd`/hgcache

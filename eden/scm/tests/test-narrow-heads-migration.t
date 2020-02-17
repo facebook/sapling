@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test migration between narrow-heads and non-narrow-heads

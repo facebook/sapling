@@ -8,9 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 # hg update --inactive should behave like update except that
 # it should not activate deactivated bookmarks and
 # should not print the related ui.status outputs

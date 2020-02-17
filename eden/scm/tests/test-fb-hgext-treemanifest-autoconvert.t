@@ -1,4 +1,3 @@
-#require py2
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
 

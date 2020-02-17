@@ -1,4 +1,3 @@
-#require py2
   $ enable sparse
   $ newrepo
   $ hg sparse include src
