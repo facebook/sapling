@@ -591,7 +591,7 @@ def binarydecode(stream):
                 raise error.Abort(_("bad bookmark stream"))
         if node == wdirid:
             node = None
-        books.append((bookmark, node))
+        books.append((decodeutf8(bookmark), node))
     return books
 
 

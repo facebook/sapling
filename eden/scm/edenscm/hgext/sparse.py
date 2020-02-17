@@ -1054,7 +1054,7 @@ def _wraprepo(ui, repo):
                 "\n".join(sorted(include)),
                 "\n".join(sorted(exclude)),
             )
-            self.localvfs.write("sparse", raw)
+            self.localvfs.writeutf8("sparse", raw)
             self.invalidatesignaturecache()
 
         def addtemporaryincludes(self, files):
@@ -1072,7 +1072,7 @@ def _wraprepo(ui, repo):
 
         def _writetemporaryincludes(self, includes):
             raw = "\n".join(sorted(includes))
-            self.localvfs.write("tempsparse", raw)
+            self.localvfs.writeutf8("tempsparse", raw)
             self.invalidatesignaturecache()
 
         def prunetemporaryincludes(self):
