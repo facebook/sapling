@@ -256,7 +256,7 @@ py_class!(class treedirstatemap |py| {
     // Get the next dirstate object after the provided filename.  If the filename is None,
     // returns the first file in the tree.  If the provided filename is the last file, returns
     // None.
-    def getnext(&self, filename: Option<PyPathBuf>, removed: bool) -> PyResult<Option<(PyBytes, (PyString, u32, i32, i32))>> {
+    def getnext(&self, filename: Option<PyPathBuf>, removed: bool) -> PyResult<Option<(PyPathBuf, (PyString, u32, i32, i32))>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         let next = if removed {
             match filename {
@@ -284,7 +284,16 @@ py_class!(class treedirstatemap |py| {
                 }
             }
         };
-        Ok(next.map(|(f, s)| (PyBytes::new(py, &f), (PyString::new(py, unsafe {std::str::from_utf8_unchecked(&[s.state; 1])}), s.mode, s.size, s.mtime))))
+
+        Ok(match next {
+            Some((f, s)) => {
+                Some((
+                    PyPathBuf::from_utf8_bytes(f.to_vec()).map_pyerr(py)?,
+                    (PyString::new(py, unsafe {std::str::from_utf8_unchecked(&[s.state; 1])}), s.mode, s.size, s.mtime)
+                ))
+            },
+            None => None,
+        })
     }
 
     def addfile(
