@@ -83,7 +83,9 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
         copies = copiesmod.pathcopies(repo[p1], repo[node])
         for filename, adds, removes, isbinary in diffstat[:filelimit]:
             # use special encoding that allows non-utf8 filenames
-            filename = encoding.jsonescape(filename, paranoid=True)
+            filename = pycompat.decodeutf8(
+                encoding.jsonescape(pycompat.encodeutf8(filename), paranoid=True)
+            )
             changed_files[filename] = {
                 "adds": adds,
                 "removes": removes,
@@ -102,7 +104,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
     with index:
         for node, metadata in pycompat.iteritems(nodesmetadata):
             dumped = json.dumps(metadata, sort_keys=True)
-            index.saveoptionaljsonmetadata(node, dumped)
+            index.saveoptionaljsonmetadata(node, pycompat.encodeutf8(dumped))
 
 
 def _resolvescratchbookmark(ui, scratchbookmarkname):

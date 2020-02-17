@@ -647,7 +647,7 @@ class localrepository(object):
                         if line not in lines:
                             toadd += line
                     with self.svfs.open("phaseroots", "ab") as f:
-                        f.write(toadd)
+                        f.write(pycompat.encodeutf8(toadd))
                     if toadd:
                         self.ui.write_err(
                             _("(added %s draft roots)\n") % toadd.count("\n")

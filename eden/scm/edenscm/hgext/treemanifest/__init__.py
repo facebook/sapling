@@ -1579,7 +1579,7 @@ def _getflatdiff(mfl, mfctx):
         end = len(delta)
         while current < end:
             try:
-                block = ""
+                block = b""
                 # Deltas are of the form:
                 #   <start><end><datalen><data>
                 # Where start and end say what bytes to delete, and data
@@ -1597,10 +1597,10 @@ def _getflatdiff(mfl, mfctx):
 
             # An individual delta block may contain multiple newline
             # delimited entries.
-            for line in block.split("\n"):
+            for line in block.split(b"\n"):
                 if not line:
                     continue
-                fname, rest = line.split("\0")
+                fname, rest = pycompat.decodeutf8(line).split("\0")
                 fnode = rest[:40]
                 fflag = rest[40:]
                 adds.append((fname, bin(fnode), fflag))

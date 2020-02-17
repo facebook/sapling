@@ -234,7 +234,7 @@ class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
             node = self.node(node)
 
         if node in self.fulltextcache:
-            result = "%s" % self.fulltextcache[node]
+            result = b"%s" % self.fulltextcache[node]
         else:
             result = manifest.manifestrevlog.revision(self, nodeorrev, raw=True)
         return result

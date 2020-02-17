@@ -600,6 +600,7 @@ def drawdag(repo, text, **opts):
             visibility.remove(repo, hidenodes - revivenodes)
 
     if opts.get("print"):
+        del committed[None]
         for name, n in sorted(committed.items()):
             if name:
                 repo.ui.write("%s %s\n" % (node.short(n), name))
