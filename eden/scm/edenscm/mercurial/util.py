@@ -1514,6 +1514,24 @@ def checknlink(testfile):
                 pass
 
 
+class stringwriter(object):
+    """Wraps a file-like object that wants bytes, and exposes write(unicode) and
+    writebytes(bytes) functions. This is useful for passing file-like objects to
+    places that expect a ui.write/writebytes like interface.
+    """
+
+    def __init__(self, fp):
+        self.fp = fp
+
+    def write(self, value):
+        # type: (str) -> None
+        self.fp.write(pycompat.encodeutf8(value))
+
+    def writebytes(self, value):
+        # type: (bytes) -> None
+        self.fp.write(value)
+
+
 def endswithsep(path):
     """Check path ends with os.sep or os.altsep."""
     return (

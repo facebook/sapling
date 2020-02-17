@@ -3507,7 +3507,7 @@ def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
             if opts.get("decode"):
                 data = repo.wwritedata(path, data)
             fm.startitem()
-            fm.write("data", "%s", data)
+            fm.writebytes("data", b"%s", data)
             fm.data(abspath=path, path=matcher.rel(path))
 
     # Automation often uses hg cat on single files, so special case it

@@ -269,7 +269,7 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
             ui.write(("(not found)\n"))
             return
         else:
-            ui.write(("%s") % content)
+            ui.writebytes(b"%s" % content)
             return
 
     if opts.get("long"):

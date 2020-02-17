@@ -303,8 +303,8 @@ class plainformatter(baseformatter):
             self._write = ui.write
             self._writebytes = ui.writebytes
         else:
-            self._write = lambda s, **opts: out.write(s)
-            self._writebytes = lambda s, **opts: out.writebytes(s)
+            self._write = out.write
+            self._writebytes = out.writebytes
 
     def startitem(self):
         pass
@@ -392,6 +392,13 @@ class jsonformatter(baseformatter):
             self._out.write('  "%s": %s' % (k, u))
         self._out.write("\n }")
 
+    def writebytes(self, fields, deftext, *fielddata, **opts):
+        """do default text output while assigning data to item"""
+        fieldkeys = fields.split()
+        assert len(fieldkeys) == len(fielddata)
+        fielddata = list(pycompat.decodeutf8(d) for d in fielddata)
+        self._item.update(zip(fieldkeys, fielddata))
+
     def end(self):
         baseformatter.end(self)
         self._out.write("\n]\n")
@@ -473,6 +480,13 @@ class templateformatter(baseformatter):
         props = props
         g = self._t(ref, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
+
+    def writebytes(self, fields, deftext, *fielddata, **opts):
+        """do default text output while assigning data to item"""
+        fieldkeys = fields.split()
+        assert len(fieldkeys) == len(fielddata)
+        fielddata = list(pycompat.decodeutf8(d) for d in fielddata)
+        self._item.update(zip(fieldkeys, fielddata))
 
     def end(self):
         baseformatter.end(self)
@@ -594,6 +608,9 @@ def openformatter(ui, filename, topic, opts):
     Must be invoked using the 'with' statement.
     """
     with util.posixfile(filename, "wb") as out:
+        # Wrap the byte-oriented file in something that exposes ui-like
+        # write() and writebytes().
+        out = util.stringwriter(out)
         with formatter(ui, out, topic, opts) as fm:
             yield fm
 
