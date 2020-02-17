@@ -44,7 +44,7 @@ def extsetup(ui):
 
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
-    patterns = wireproto.decodelist(patterns)
+    patterns = [pycompat.decodeutf8(p) for p in wireproto.decodelist(patterns)]
     d = pycompat.iteritems(repo.listkeys(encoding.tolocal(namespace), patterns))
     return pushkey.encodekeys(d)
 

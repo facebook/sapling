@@ -88,7 +88,8 @@ class fileindex(object):
     def getbundle(self, node):
         """Get the bundleid for a bundle that contains the given node."""
         nodepath = os.path.join(self._nodemap, node)
-        return self._read(nodepath)
+        bundleid = self._read(nodepath)
+        return pycompat.decodeutf8(bundleid) if bundleid is not None else None
 
     def getnodebyprefix(self, hashprefix):
         """Get the node that matches the given hash prefix.
@@ -101,7 +102,7 @@ class fileindex(object):
             return None
 
         files = vfs.listdir(self._nodemap)
-        nodefiles = filter(lambda n: n.startswith(hashprefix), files)
+        nodefiles = list(filter(lambda n: n.startswith(hashprefix), files))
 
         if not nodefiles:
             return None
@@ -120,7 +121,8 @@ class fileindex(object):
     def getnode(self, bookmark):
         """Get the node for the given bookmark."""
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)
-        return self._read(bookmarkpath)
+        value = self._read(bookmarkpath)
+        return pycompat.decodeutf8(value) if value is not None else None
 
     def getbookmarks(self, pattern):
         """Get all bookmarks that match the pattern."""
@@ -141,7 +143,9 @@ class fileindex(object):
                 bookmark = posixpath.join(dirpath, book)[prefixlen:]
                 if not matcher(bookmark):
                     continue
-                yield bookmark, self._read(os.path.join(dirpath, book))
+                yield bookmark, pycompat.decodeutf8(
+                    self._read(os.path.join(dirpath, book))
+                )
 
     def _write(self, path, value):
         vfs = self._repo.localvfs
@@ -150,7 +154,7 @@ class fileindex(object):
         if not vfs.exists(dirname):
             vfs.makedirs(dirname)
 
-        vfs.write(path, value)
+        vfs.writeutf8(path, value)
 
     def _read(self, path):
         vfs = self._repo.localvfs

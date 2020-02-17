@@ -708,7 +708,7 @@ def storebundle(op, params, bundlefile):
         )
         key = None
         if newheadscount:
-            with open(bundlefile, "r") as f:
+            with open(bundlefile, "rb") as f:
                 bundledata = f.read()
                 with logservicecall(log, "bundlestore", bundlesize=len(bundledata)):
                     bundlesizelimitmb = op.repo.ui.configint(

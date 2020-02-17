@@ -577,7 +577,7 @@ def listkeyspatterns(self, namespace, patterns):
     )
     yield {
         "namespace": encoding.fromlocal(namespace),
-        "patterns": wireproto.encodelist(patterns),
+        "patterns": wireproto.encodelist([pycompat.encodeutf8(p) for p in patterns]),
     }, f
     d = f.value
     self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))

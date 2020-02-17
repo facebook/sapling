@@ -73,14 +73,14 @@ class filebundlestore(object):
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
 
-        with open(self._filepath(filename), "w") as f:
+        with open(self._filepath(filename), "wb") as f:
             f.write(data)
 
         return filename
 
     def read(self, key):
         try:
-            f = open(self._filepath(key), "r")
+            f = open(self._filepath(key), "rb")
         except IOError:
             return None
 
