@@ -361,9 +361,9 @@ class sshpeer(wireproto.wirepeer):
         if r:
             # XXX needs to be made better
             raise error.Abort(_("unexpected remote reply: %s") % r)
-        for d in iter(lambda: fp.read(4096), ""):
+        for d in iter(lambda: fp.read(4096), b""):
             self._send(d)
-        self._send("", flush=True)
+        self._send(b"", flush=True)
         return self._pipei
 
     def _getamount(self):
