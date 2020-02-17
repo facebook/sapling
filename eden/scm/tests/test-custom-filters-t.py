@@ -30,7 +30,7 @@ def stripprefix(s, cmd, filename, **kwargs):
     if s[:len(header)] != header:
         raise error.Abort('missing header "%s" in %s' % (cmd, filename))
     return s[len(header):]
-def insertprefix(s, cmd):
+def insertprefix(s, cmd, **kwargs):
     return '%s\n%s' % (cmd, s)
 def reposetup(ui, repo):
     repo.adddatafilter('stripprefix:', stripprefix)

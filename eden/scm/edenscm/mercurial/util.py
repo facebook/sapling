@@ -2414,15 +2414,15 @@ bytecount = unitcountfn(
 # Matches a single EOL which can either be a CRLF where repeated CR
 # are removed or a LF. We do not care about old Macintosh files, so a
 # stray CR is an error.
-_eolre = remod.compile(r"\r*\n")
+_eolre = remod.compile(b"\r*\n")
 
 
 def tolf(s):
-    return _eolre.sub("\n", s)
+    return _eolre.sub(b"\n", s)
 
 
 def tocrlf(s):
-    return _eolre.sub("\r\n", s)
+    return _eolre.sub(b"\r\n", s)
 
 
 if pycompat.oslinesep == "\r\n":

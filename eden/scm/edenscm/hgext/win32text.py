@@ -116,7 +116,7 @@ def cleverdecode(s, cmd, **kwargs):
     return s
 
 
-def cleverencode(s, cmd):
+def cleverencode(s, cmd, **kwargs):
     if not util.binary(s):
         return dumbencode(s, cmd)
     return s

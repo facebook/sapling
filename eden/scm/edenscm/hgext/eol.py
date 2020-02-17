@@ -133,11 +133,11 @@ configitem("eol", "native", default=pycompat.oslinesep)
 configitem("eol", "only-consistent", default=True)
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
-singlelf = re.compile("(^|[^\r])\n")
+singlelf = re.compile(b"(^|[^\r])\n")
 
 
 def inconsistenteol(data):
-    return "\r\n" in data and singlelf.search(data)
+    return b"\r\n" in data and singlelf.search(data)
 
 
 def tolf(s, params, ui, **kwargs):
@@ -146,8 +146,8 @@ def tolf(s, params, ui, **kwargs):
         return s
     if ui.configbool("eol", "only-consistent") and inconsistenteol(s):
         return s
-    if ui.configbool("eol", "fix-trailing-newline") and s and s[-1] != "\n":
-        s = s + "\n"
+    if ui.configbool("eol", "fix-trailing-newline") and s and s[-1] != b"\n":
+        s = s + b"\n"
     return util.tolf(s)
 
 
@@ -157,12 +157,12 @@ def tocrlf(s, params, ui, **kwargs):
         return s
     if ui.configbool("eol", "only-consistent") and inconsistenteol(s):
         return s
-    if ui.configbool("eol", "fix-trailing-newline") and s and s[-1] != "\n":
-        s = s + "\n"
+    if ui.configbool("eol", "fix-trailing-newline") and s and s[-1] != b"\n":
+        s = s + b"\n"
     return util.tocrlf(s)
 
 
-def isbinary(s, params):
+def isbinary(s, params, *args, **kwargs):
     """Filter to do nothing with the file."""
     return s
 
@@ -235,7 +235,7 @@ class eolfile(object):
                 data = ctx[f].data()
                 if (
                     target == "to-lf"
-                    and "\r\n" in data
+                    and b"\r\n" in data
                     or target == "to-crlf"
                     and singlelf.search(data)
                 ):
@@ -254,6 +254,7 @@ def parseeol(ui, repo, nodes):
                     data = repo.wvfs(".hgeol").read()
                 else:
                     data = repo[node][".hgeol"].data()
+                data = pycompat.decodeutf8(data)
                 return eolfile(ui, repo.root, data)
             except (IOError, LookupError):
                 pass
@@ -374,6 +375,7 @@ def reposetup(ui, repo):
             else:
                 olddata = self.localvfs.read("eol.cache")
                 if olddata:
+                    olddata = pycompat.decodeutf8(olddata)
                     oldeol = eolfile(self.ui, self.root, olddata)
 
             try:
@@ -385,6 +387,7 @@ def reposetup(ui, repo):
                 self.ui.debug("eol: detected change in .hgeol\n")
 
                 hgeoldata = self.wvfs.read(".hgeol")
+                hgeoldata = pycompat.decodeutf8(hgeoldata)
                 neweol = eolfile(self.ui, self.root, hgeoldata)
 
                 try:
@@ -411,8 +414,8 @@ def reposetup(ui, repo):
                             # the new .hgeol file specify a different filter
                             self.dirstate.normallookup(f)
                         # Write the cache to update mtime and cache .hgeol
-                        with self.localvfs("eol.cache", "w") as f:
-                            f.write(hgeoldata)
+                        with self.localvfs("eol.cache", "wb") as f:
+                            f.write(pycompat.encodeutf8(hgeoldata))
                 except errormod.LockUnavailable:
                     # If we cannot lock the repository and clear the
                     # dirstate, then a commit might not see all files
