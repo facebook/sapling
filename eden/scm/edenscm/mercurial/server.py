@@ -38,7 +38,7 @@ def runservice(
             else:
                 mode = "wb"
             fp = open(opts["pid_file"], mode)
-            fp.write("%d\n" % pid)
+            fp.write(b"%d\n" % pid)
             fp.close()
 
     if opts["daemon"] and not opts["daemon_postexec"]:

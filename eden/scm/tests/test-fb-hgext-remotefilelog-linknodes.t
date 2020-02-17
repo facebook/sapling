@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -357,6 +356,6 @@ Fastlog fails
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/crash
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
-  linkrevfixup: fastlog failed (No JSON object could be decoded) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
+  linkrevfixup: fastlog failed (*) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   linkrevfixup: remotefilelog prefetching succeeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
