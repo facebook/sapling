@@ -96,7 +96,7 @@ class Client(object):
                 arcrchost = defaultarcrchost
             else:
                 # pick the first credential blob in hosts
-                hostkeys = allhosts.keys()
+                hostkeys = list(allhosts.keys())
                 if len(hostkeys) > 0:
                     arcrchost = hostkeys[0]
                 else:
