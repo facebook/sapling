@@ -168,7 +168,6 @@ Setup another client and update to latest commit from mercurial
   getting a
   getting b
   getting lfs-largefile
-  calling hook update.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ wc -c lfs-largefile
   40 lfs-largefile
@@ -177,7 +176,6 @@ Setup another client and update to latest commit from mercurial
   lfs: downloading 3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80 (30 bytes)
   lfs: processed: 3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80
   getting lfs-largefile
-  calling hook update.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ wc -c lfs-largefile
   30 lfs-largefile
@@ -185,7 +183,6 @@ Setup another client and update to latest commit from mercurial
   resolving manifests
   removing lfs-largefile
   getting lfs-renamed-largefile
-  calling hook update.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ ls
   a

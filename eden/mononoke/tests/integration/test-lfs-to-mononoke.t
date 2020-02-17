@@ -162,7 +162,6 @@ Create a new client repository, using getpack (with its own cachepath)
   getting lfs-largefile
   getting lfs-largefile-renamed
   getting smallfile
-  calling hook update.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ sha256sum lfs-largefile
