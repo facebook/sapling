@@ -1,5 +1,4 @@
 #chg-compatible
-#require py2
 
   $ newrepo
   $ drawdag << 'EOS'

@@ -1,4 +1,3 @@
-#require py2
   $ cat >> fakepager.py <<EOF
   > import sys
   > printed = False
