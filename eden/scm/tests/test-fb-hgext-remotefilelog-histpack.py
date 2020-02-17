@@ -18,10 +18,7 @@ from edenscm.mercurial.node import nullid
 from hghave import require
 
 
-require(["py2"])
-
-
-SMALLFANOUTCUTOFF = 2 ** 16 / 8
+SMALLFANOUTCUTOFF = int(2 ** 16 / 8)
 LARGEFANOUTPREFIX = 2
 
 try:
@@ -51,7 +48,7 @@ class histpacktestsbase(object):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return "".join(chr(random.randint(0, 255)) for _ in range(20))
+        return os.urandom(20)
 
     def createPack(self, revisions=None):
         """Creates and returns a historypack containing the specified revisions.
@@ -212,11 +209,11 @@ class histpacktestsbase(object):
     def testBadVersionThrows(self):
         pack = self.createPack()
         path = pack.path() + ".histpack"
-        with open(path) as f:
+        with open(path, "rb") as f:
             raw = f.read()
         raw = struct.pack("!B", 255) + raw[1:]
         os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
-        with open(path, "w+") as f:
+        with open(path, "wb+") as f:
             f.write(raw)
 
         try:
