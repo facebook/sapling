@@ -2763,7 +2763,12 @@ class nodeinfoserializer(object):
                 "invalid nodeinfo serialization: %s %s %s %s %s"
                 % (hex(p1), hex(p2), hex(linknode), str(copyfromlen), raw[NODEINFOLEN:])
             )
-        return p1, p2, linknode, raw[NODEINFOLEN : NODEINFOLEN + copyfromlen]
+        return (
+            p1,
+            p2,
+            linknode,
+            pycompat.decodeutf8(raw[NODEINFOLEN : NODEINFOLEN + copyfromlen]),
+        )
 
 
 class cachestoreserializer(object):

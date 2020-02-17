@@ -49,7 +49,7 @@ def hgcloneshallow(orig, dest, *args):
         *args
     )
     open(os.path.join(dest, ".hg/hgrc"), "ab").write(
-        r"""
+        b"""
 [remotefilelog]
 reponame=master
 [phases]

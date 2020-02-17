@@ -387,6 +387,10 @@ py_class!(class treemanifest |py| {
     }
 
     def iteritems(&self) -> PyResult<PyObject> {
+        self.items(py)
+    }
+
+    def items(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {

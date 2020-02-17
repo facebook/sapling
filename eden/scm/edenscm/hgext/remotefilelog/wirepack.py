@@ -8,17 +8,7 @@ from __future__ import absolute_import
 
 import struct
 from collections import defaultdict
-from typing import (
-    IO,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import IO, Dict, Generator, Iterable, List, Optional, Sequence, Tuple, cast
 
 from edenscm.mercurial import perftrace, progress, pycompat
 from edenscm.mercurial.i18n import _
@@ -32,7 +22,7 @@ from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, re
 
 
 def sendpackpart(filename, history, data, version=1):
-    # type: (str, Sequence[Tuple[bytes, bytes, bytes, bytes, Optional[bytes]]], Sequence[Tuple[bytes, bytes, bytes, int]], int) -> Iterable[bytes]
+    # type: (str, Sequence[Tuple[bytes, bytes, bytes, bytes, Optional[str]]], Sequence[Tuple[bytes, bytes, bytes, int]], int) -> Iterable[bytes]
     """A wirepack is formatted as follows:
 
     wirepack = <filename len: 2 byte unsigned int><filename>
@@ -58,7 +48,7 @@ def sendpackpart(filename, history, data, version=1):
     historylen = struct.pack("!I", len(history))
     rawhistory = b""
     for entry in history:
-        copyfrom = entry[4] or b""
+        copyfrom = pycompat.encodeutf8(entry[4] or "")
         copyfromlen = len(copyfrom)
         tup = entry[:-1] + (copyfromlen,)
         rawhistory += struct.pack("!20s20s20s20sH", *tup)
@@ -132,7 +122,7 @@ def readhistory(fh):
     for i in range(count):
         entry = readunpack(fh, "!20s20s20s20sH")
         if entry[4] != 0:
-            copyfrom = readexactly(fh, entry[4])
+            copyfrom = pycompat.decodeutf8(readexactly(fh, entry[4]))
         else:
             copyfrom = ""
         entry = entry[:4] + (copyfrom,)
