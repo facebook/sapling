@@ -526,7 +526,7 @@ class changectx(basectx):
                 # we failed on our optimization pass
                 # this can happen when dirstate is broken
                 pass
-            if len(changeid) == 20:
+            if len(changeid) == 20 and isinstance(changeid, bytes):
                 try:
                     self._node = changeid
                     self._rev = repo.changelog.rev(changeid)

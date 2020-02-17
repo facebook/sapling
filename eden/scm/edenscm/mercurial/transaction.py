@@ -62,7 +62,7 @@ def _playback(
         if o or not unlink:
             checkambig = checkambigfiles and (f, "") in checkambigfiles
             try:
-                fp = opener(f, "a", checkambig=checkambig)
+                fp = opener(f, "ab", checkambig=checkambig)
                 util.truncate(fp, o)
                 fp.close()
             except IOError:
@@ -177,7 +177,7 @@ class transaction(util.transactional):
 
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
-        self.file = opener.open(self.journal, "w")
+        self.file = opener.open(self.journal, "wb")
 
         # a list of ('location', 'path', 'backuppath', cache) entries.
         # - if 'backuppath' is empty, no file existed at backup time
@@ -188,7 +188,7 @@ class transaction(util.transactional):
         self._backupentries = []
         self._backupmap = {}
         self._backupjournal = "%s.backupfiles" % self.journal
-        self._backupsfile = opener.open(self._backupjournal, "w")
+        self._backupsfile = opener.open(self._backupjournal, "wb")
         self._backupsfile.write(b"%d\n" % version)
 
         if createmode is not None:
@@ -555,7 +555,7 @@ class transaction(util.transactional):
         """write transaction data for possible future undo call"""
         if self.undoname is None:
             return
-        undobackupfile = self.opener.open("%s.backupfiles" % self.undoname, "w")
+        undobackupfile = self.opener.open("%s.backupfiles" % self.undoname, "wb")
         undobackupfile.write(encodeutf8("%d\n" % version))
         for l, f, b, c in self._backupentries:
             if not f:  # temporary file
@@ -652,7 +652,7 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None):
     entries = []
     backupentries = []
 
-    fp = opener.open(file)
+    fp = opener.open(file, "rb")
     lines = fp.readlines()
     fp.close()
     for l in lines:
@@ -665,15 +665,16 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None):
 
     backupjournal = "%s.backupfiles" % file
     if opener.exists(backupjournal):
-        fp = opener.open(backupjournal)
+        fp = opener.open(backupjournal, "rb")
         lines = fp.readlines()
         if lines:
-            ver = lines[0][:-1]
+            ver = decodeutf8(lines[0][:-1])
             if ver == str(version):
                 for line in lines[1:]:
                     if line:
                         # Shave off the trailing newline
                         line = line[:-1]
+                        line = decodeutf8(line)
                         try:
                             l, f, b, c = line.split("\0")
                         except ValueError:

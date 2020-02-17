@@ -930,9 +930,9 @@ def printbookmarks(ui, repo, **opts):
 
 def preparehookargs(name, old, new):
     if new is None:
-        new = ""
+        new = b""
     if old is None:
-        old = ""
+        old = b""
     return {"bookmark": name, "node": hex(new), "oldnode": hex(old)}
 
 

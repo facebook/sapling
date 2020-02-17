@@ -1558,7 +1558,7 @@ class localrepository(object):
     def _rollback(self, dryrun, force, dsguard):
         ui = self.ui
         try:
-            args = self.localvfs.read("undo.desc").splitlines()
+            args = pycompat.decodeutf8(self.localvfs.read("undo.desc")).splitlines()
             (oldlen, desc, detail) = (int(args[0]), args[1], None)
             if len(args) >= 3:
                 detail = args[2]

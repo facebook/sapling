@@ -570,7 +570,7 @@ def formatblock(block, width):
         term = indent + block["lines"][0]
         hang = len(block["lines"][-1]) - len(block["lines"][-1].lstrip())
         defindent = indent + hang * " "
-        text = " ".join(map(bytes.strip, block["lines"][1:]))
+        text = " ".join(map(str.strip, block["lines"][1:]))
         return "%s\n%s\n" % (
             term,
             util.wrap(text, width=width, initindent=defindent, hangindent=defindent),
