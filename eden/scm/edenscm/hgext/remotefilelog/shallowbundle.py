@@ -327,7 +327,7 @@ class shallowcg1packer(changegroup.cg1packer):
         return results
 
     def nodechunk(self, revlog, node, prevnode, linknode):
-        prefix = ""
+        prefix = b""
         if prevnode is not nullid and not revlog.candelta(prevnode, node):
             basenode = nullid
         else:
@@ -525,7 +525,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
                     raise error.Abort("unexpected deltabase")
                 base = reconstruct(f, deltabase)
             rawtext = mdiff.patch(base, delta)
-            if isinstance(rawtext, buffer):  # noqa
+            if isinstance(rawtext, pycompat.buffer):  # noqa
                 rawtext = bytes(rawtext)
             return rawtext
 

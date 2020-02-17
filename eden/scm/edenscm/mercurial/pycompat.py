@@ -96,6 +96,7 @@ if sys.version_info[0] >= 3:
 
     bytechr = chr
     bytestr = str
+    buffer = memoryview
 
     def raisewithtb(exc, tb):
         """Raise exception with the given traceback"""
@@ -143,6 +144,7 @@ else:
 
     bytechr = chr
     bytestr = str
+    buffer = buffer
     range = xrange  # noqa: F821
     unicode = unicode
 
