@@ -39,7 +39,6 @@
 """
 
 import errno
-import json
 from typing import Optional
 
 import bindings
@@ -50,7 +49,9 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     hg,
+    json,
     localrepo,
+    pycompat,
     registrar,
     util,
     wireproto,
@@ -157,6 +158,7 @@ def _dolookup(repo, key):
     # Flat mapfile - can be very slow.
     hggitmap = open(mapfile, "rb")
     for line in hggitmap:
+        line = pycompat.decodeutf8(line)
         gitsha, hgsha = line.strip().split(" ", 1)
         if direction == "tohg" and sha == gitsha:
             return hgsha
@@ -299,13 +301,13 @@ def _getmissinglines(mapfile, missinghashes):
 
     linelen = 82
     hashestofind = missinghashes.copy()
-    content = mapfile.read()
+    content = pycompat.decodeutf8(mapfile.read())
     if len(content) % linelen != 0:
         raise error.Abort(_("gitmeta: invalid mapfile length (%s)") % len(content))
 
     # Walk backwards through the map file, since recent commits are added at the
     # end.
-    count = len(content) / linelen
+    count = int(len(content) / linelen)
     for i in range(count - 1, -1, -1):
         offset = i * linelen
         line = content[offset : offset + linelen]
@@ -384,7 +386,7 @@ def _exchangesetup():
             missinglines = _getmissinglines(mapfile, missinghashes)
 
             payload = _githgmappayload(needfullsync, newheads, missinglines)
-            serializedpayload = payload.tojson()
+            serializedpayload = pycompat.encodeutf8(payload.tojson())
             part = bundle2.bundlepart(
                 "b2x:fb:gitmeta:githgmap",
                 [("filename", gitmapfile)],
@@ -443,7 +445,7 @@ def _bundlesetup():
         if _validatepartparams(op, params):
             filename = params["filename"]
             with op.repo.wlock():
-                data = _githgmappayload.fromjson(part.read())
+                data = _githgmappayload.fromjson(pycompat.decodeutf8(part.read()))
                 missinglines = data.missinglines
 
                 # No need to update anything if already in sync.
@@ -455,7 +457,9 @@ def _bundlesetup():
                 else:
                     mapfile = _getfile(op.repo, filename)
                     if mapfile:
-                        currentlines = set(mapfile.readlines())
+                        currentlines = set(
+                            pycompat.decodeutf8(l) for l in mapfile.readlines()
+                        )
                         if currentlines & missinglines:
                             msg = "warning: gitmeta: unexpected lines in .hg/%s\n"
                             op.repo.ui.warn(_(msg) % filename)
@@ -467,8 +471,10 @@ def _bundlesetup():
                             _("gitmeta: could not read from .hg/%s") % filename
                         )
 
-                _writefile(op, filename, "".join(newlines))
-                _writefile(op, hgheadsfile, "\n".join(data.newheads))
+                _writefile(op, filename, pycompat.encodeutf8("".join(newlines)))
+                _writefile(
+                    op, hgheadsfile, pycompat.encodeutf8("\n".join(data.newheads))
+                )
 
     @bundle2.parthandler("b2x:fb:gitmeta", ("filename",))
     @bundle2.parthandler("fb:gitmeta", ("filename",))

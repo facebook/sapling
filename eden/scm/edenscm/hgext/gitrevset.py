@@ -21,6 +21,7 @@ import re
 
 from edenscm.mercurial import error, extensions, hg, namespaces, registrar, revset
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 
 namespacepredicate = registrar.namespacepredicate()
@@ -43,7 +44,7 @@ def showgitnode(repo, ctx, templ, **args):
     binnode = _lookup_node(repo, ctx.hex(), from_scm_type="hg")
     # templates are expected to return an empty string when no
     # data exists
-    return binnode.encode("hex") if binnode else ""
+    return hex(binnode) if binnode else ""
 
 
 @revsetpredicate("gitnode(id)")
