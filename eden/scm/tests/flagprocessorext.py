@@ -71,7 +71,7 @@ def noopaddrevision(
     node=None,
     flags=revlog.REVIDX_DEFAULT_FLAGS,
 ):
-    if "[NOOP]" in text:
+    if b"[NOOP]" in text:
         flags |= REVIDX_NOOP
     return orig(
         self,
@@ -98,7 +98,7 @@ def b64addrevision(
     node=None,
     flags=revlog.REVIDX_DEFAULT_FLAGS,
 ):
-    if "[BASE64]" in text:
+    if b"[BASE64]" in text:
         flags |= REVIDX_BASE64
     return orig(
         self,
@@ -125,7 +125,7 @@ def gzipaddrevision(
     node=None,
     flags=revlog.REVIDX_DEFAULT_FLAGS,
 ):
-    if "[GZIP]" in text:
+    if b"[GZIP]" in text:
         flags |= REVIDX_GZIP
     return orig(
         self,
@@ -154,7 +154,7 @@ def failaddrevision(
 ):
     # This addrevision wrapper is meant to add a flag we will not have
     # transforms registered for, ensuring we handle this error case.
-    if "[FAIL]" in text:
+    if b"[FAIL]" in text:
         flags |= REVIDX_FAIL
     return orig(
         self,
