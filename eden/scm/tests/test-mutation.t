@@ -27,7 +27,7 @@ Amend
   >   echo $i >> file
   >   hg amend -m "c1 (amended $i)"
   > done
-  $ hg debugmutation .
+  $ hg debugmutation
    *  cc809964b02448cb4c84c772b9beba99d4159cff amend by test at 1970-01-01T00:00:00 from:
       8b2e1bbf6c0bea98beb5615f7b1c49b8dc38a593 amend by test at 1970-01-01T00:00:00 from:
       4c454f4e96edd98561fa548e4c24acdcd11b4f75 amend by test at 1970-01-01T00:00:00 from:
@@ -36,6 +36,7 @@ Amend
       5aeb3a2d36afb4cb50a6c491bc05584a1da2018d amend by test at 1970-01-01T00:00:00 from:
       6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 amend by test at 1970-01-01T00:00:00 from:
       c5d0fa8770bdde6ef311cc640a78a2f686be28b4
+  
 
 Rebase
 
@@ -46,15 +47,17 @@ Rebase
   $ hg rebase -q -s ".^" -d 0
   $ hg rebase -q -s ".^" -d 1 --hidden
   $ hg rebase -q -s ".^" -d 8 --hidden
-  $ hg debugmutation ".^::."
+  $ hg debugmutation -r ".^::."
    *  33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
       30184ea7dbf74f751464657e167173d1d531e700 rebase by test at 1970-01-01T00:00:00 from:
       dfd7d11783056958dfd2bb5479b3f84c71b698b9 rebase by test at 1970-01-01T00:00:00 from:
       a0d726ccf2422e2cbfe7b06d3dc3f81b064b05aa
+  
    *  054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
       f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
       38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
       d139edd196dd2b5a298932fdd696b96cd8101982
+  
 
 Metaedit
 
@@ -79,12 +82,13 @@ Metaedit
   |
   o  base d20a80d4def3 draft
   
-  $ hg debugmutation .
+  $ hg debugmutation
    *  374724d5279b5992bf6ec2ccb3d326844e36b4ba metaedit by test at 1970-01-01T00:00:00 from:
       054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
       f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
       38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
       d139edd196dd2b5a298932fdd696b96cd8101982
+  
 
 Fold
 
@@ -111,7 +115,7 @@ Fold
   |
   o  base d20a80d4def3 draft
   
-  $ hg debugmutation .
+  $ hg debugmutation
    *  f05234144e37d59b175fa4283563aac4dfe81ec0 fold by test at 1970-01-01T00:00:00 from:
       |-  33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
       |   30184ea7dbf74f751464657e167173d1d531e700 rebase by test at 1970-01-01T00:00:00 from:
@@ -122,6 +126,7 @@ Fold
           f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
           38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
           d139edd196dd2b5a298932fdd696b96cd8101982
+  
 
 Split, leaving some changes left over at the end
 
@@ -151,10 +156,12 @@ Split, leaving some changes left over at the end
   examine changes to 'file3'? [Ynesfdaq?] n
   
   Done splitting? [yN] y
-  $ hg debugmutation ".^::."
+  $ hg debugmutation -r ".^::."
    *  7d383d1b236d896a5adeea8dc390b681e4ccb217
+  
    *  9c2c451b82d046da459d807b11c42992324e4e33 split by test at 1970-01-01T00:00:00 (split into this and: 7d383d1b236d896a5adeea8dc390b681e4ccb217) from:
       07f94070ed0943f8108119a726522ec4879ed36a
+  
 
 Split parent, selecting all changes at the end
 
@@ -204,12 +211,15 @@ Split parent, selecting all changes at the end
 
 Split leaves the checkout at the top of the split commits
 
-  $ hg debugmutation ".^::tip"
+  $ hg debugmutation -r ".^::tip"
    *  36e4e93ec194346c3e5a0afefd426dbc14dcaf4a
+  
    *  aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
       be81d74b508c48b66c74f7c111188be611bb56a7
+  
    *  0623f07d148d6446aeb15deb7ead4cb6f62135ef rebase by test at 1970-01-01T00:00:00 from:
       0529c1ec7df66092602017d0a5f372316d0bc360
+  
 
 Amend with rebase afterwards (split info should not be propagated)
 
@@ -255,13 +265,15 @@ Amend with rebase afterwards (split info should not be propagated)
   |
   o  base d20a80d4def3 draft
   
-  $ hg debugmutation ".::tip"
+  $ hg debugmutation -r ".::tip"
    *  48b076c1640c53afc98cc99922d034e17830a65d amend by test at 1970-01-01T00:00:00 from:
       aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
       be81d74b508c48b66c74f7c111188be611bb56a7
+  
    *  c3b5428c707bb5ec79935064ec9a83084fee1afb rebase by test at 1970-01-01T00:00:00 from:
       0623f07d148d6446aeb15deb7ead4cb6f62135ef rebase by test at 1970-01-01T00:00:00 from:
       0529c1ec7df66092602017d0a5f372316d0bc360
+  
 
 Histedit
 
@@ -331,7 +343,7 @@ Histedit
   |
   o  base d20a80d4def3 draft
   
-  $ hg debugmutation 8::tip
+  $ hg debugmutation -r 8::tip
    *  cc809964b02448cb4c84c772b9beba99d4159cff amend by test at 1970-01-01T00:00:00 from:
       8b2e1bbf6c0bea98beb5615f7b1c49b8dc38a593 amend by test at 1970-01-01T00:00:00 from:
       4c454f4e96edd98561fa548e4c24acdcd11b4f75 amend by test at 1970-01-01T00:00:00 from:
@@ -340,6 +352,7 @@ Histedit
       5aeb3a2d36afb4cb50a6c491bc05584a1da2018d amend by test at 1970-01-01T00:00:00 from:
       6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 amend by test at 1970-01-01T00:00:00 from:
       c5d0fa8770bdde6ef311cc640a78a2f686be28b4
+  
    *  1851fa2d6ef001f121536b4d076e8ec6c01e3b34 histedit by test at 1970-01-01T00:00:00 from:
       |-  76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 from:
       |   |-  5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 from:
@@ -361,6 +374,7 @@ Histedit
       '-  48b076c1640c53afc98cc99922d034e17830a65d amend by test at 1970-01-01T00:00:00 from:
           aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
           be81d74b508c48b66c74f7c111188be611bb56a7
+  
    *  dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8 histedit by test at 1970-01-01T00:00:00 from:
       |-  e1a0d5ae83cecdbf2a65995535ea1a3cd2009ab8 histedit by test at 1970-01-01T00:00:00 from:
       |   |-  e0e94ae5d0b0429f35bb3e14d1532fc861122e32 histedit by test at 1970-01-01T00:00:00 from:
@@ -369,8 +383,10 @@ Histedit
       |   |   0529c1ec7df66092602017d0a5f372316d0bc360
       |   '-  c4484fcb5ac0f15058c6595a56d239d4ed707bee
       '-  64a3bc96c043ea50b808b3ace4a4c6d2ca92b2d2
+  
    *  3c3b86a5a351839b5fe6905587497121b4b05777 histedit by test at 1970-01-01T00:00:00 from:
       b6ea0faadebf4576be2b7cff316c5f9aa9fbc295
+  
 
 Revsets
 
@@ -465,14 +481,15 @@ Unhide some old commits and show their mutations in the log
   o  0: d20a80d4def3 'base'
   
 Debugmutatation looking forward
-  $ hg debugmutation -s c4484fcb5ac0f15058c6595a56d239d4ed707bee --hidden
+  $ hg debugmutation -s -r c4484fcb5ac0f15058c6595a56d239d4ed707bee --hidden
    *  c4484fcb5ac0f15058c6595a56d239d4ed707bee diverges
       :=  histedit by test at 1970-01-01T00:00:00 into:
       :   961157b412e21813bbee86fd1704fb09bd25874b
       '=  histedit by test at 1970-01-01T00:00:00 (folded with: e0e94ae5d0b0429f35bb3e14d1532fc861122e32) into:
           e1a0d5ae83cecdbf2a65995535ea1a3cd2009ab8 histedit by test at 1970-01-01T00:00:00 (folded with: 64a3bc96c043ea50b808b3ace4a4c6d2ca92b2d2) into:
           dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
-  $ hg debugmutation -s 07f94070ed0943f8108119a726522ec4879ed36a
+  
+  $ hg debugmutation -s -r 07f94070ed0943f8108119a726522ec4879ed36a
    *  07f94070ed0943f8108119a726522ec4879ed36a split by test at 1970-01-01T00:00:00 into:
       |-  7d383d1b236d896a5adeea8dc390b681e4ccb217 diverges
       |   :=  histedit by test at 1970-01-01T00:00:00 (folded with: f05234144e37d59b175fa4283563aac4dfe81ec0) into:
@@ -489,6 +506,7 @@ Debugmutatation looking forward
               5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 (folded with: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) into:
               76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 (folded with: 48b076c1640c53afc98cc99922d034e17830a65d) into:
               1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+  
 
 Histedit with exec that amends in between folds
 
@@ -513,28 +531,37 @@ Histedit with exec that amends in between folds
   |  commit 4'
   o  0: c2a29f8b7d7a 'commit 1'
   
-  $ hg debugmutation "all()" --hidden
+  $ hg debugmutation -r "all()" --hidden
    *  c2a29f8b7d7a23d58e698384280df426802a1465
+  
    *  08d8367dafb9bb90c58101707eca32b726ca635a
+  
    *  15a208dbcdc54b4f841ffecf9d13f98675933242
+  
    *  0d4155d128bf7fff3f12582a65b52be84ad44809
+  
    *  f1153a6a5f2db8f8567d7e31efbf8096731ea1ef histedit by test at 1970-01-01T00:00:00 from:
       15a208dbcdc54b4f841ffecf9d13f98675933242
+  
    *  7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
       |-  08d8367dafb9bb90c58101707eca32b726ca635a
       '-  15a208dbcdc54b4f841ffecf9d13f98675933242
+  
    *  cc92d7c90d06d08784aed399397f8cb68eb25325 amend by test at 1970-01-01T00:00:00 from:
       7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
       |-  08d8367dafb9bb90c58101707eca32b726ca635a
       '-  15a208dbcdc54b4f841ffecf9d13f98675933242
+  
    *  9ba93d4b6c80837572711b838b670dde6cf34803 histedit by test at 1970-01-01T00:00:00 from:
       0d4155d128bf7fff3f12582a65b52be84ad44809
+  
    *  a2235e1011a071a02b80aadd371c2fb15308ce15 histedit by test at 1970-01-01T00:00:00 from:
       |-  cc92d7c90d06d08784aed399397f8cb68eb25325 amend by test at 1970-01-01T00:00:00 from:
       |   7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
       |   |-  08d8367dafb9bb90c58101707eca32b726ca635a
       |   '-  15a208dbcdc54b4f841ffecf9d13f98675933242
       '-  0d4155d128bf7fff3f12582a65b52be84ad44809
+  
 
 Histedit with stop, extra commit, and fold
 
@@ -566,19 +593,27 @@ Histedit with stop, extra commit, and fold
   |
   o  0: c2a29f8b7d7a 'commit 1'
   
-  $ hg debugmutation "all()" --hidden
+  $ hg debugmutation -r "all()" --hidden
    *  c2a29f8b7d7a23d58e698384280df426802a1465
+  
    *  08d8367dafb9bb90c58101707eca32b726ca635a
+  
    *  15a208dbcdc54b4f841ffecf9d13f98675933242
+  
    *  0d4155d128bf7fff3f12582a65b52be84ad44809
+  
    *  f8ba6373a87ea735d0ec10f15816ea7121c25257 histedit by test at 1970-01-01T00:00:00 from:
       15a208dbcdc54b4f841ffecf9d13f98675933242
+  
    *  59401578013ab5382082b65eed82d6a465c081a0
+  
    *  4ed766be66c60ad571e4f938b9b786ab1786882a histedit by test at 1970-01-01T00:00:00 from:
       0d4155d128bf7fff3f12582a65b52be84ad44809
+  
    *  d313be93f9b7ee46e11581641241d356c346a001 histedit by test at 1970-01-01T00:00:00 from:
       |-  59401578013ab5382082b65eed82d6a465c081a0
       '-  0d4155d128bf7fff3f12582a65b52be84ad44809
+  
 
 Drawdag
 
@@ -607,20 +642,29 @@ Drawdag
   |/
   o  0: 426bada5c675 'A' A
   
-  $ hg debugmutation "all()" --hidden
+  $ hg debugmutation -r "all()" --hidden
    *  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  
    *  112478962961147124edd43549aedd1a335e44bf
+  
    *  26805aba1e600a82e93661149f2313866a221a7b
+  
    *  7fb047a69f220c21711122dfd94305a9efb60cba
+  
    *  17d61397e601357ae1dd94c787f794ff95aa2d59 rebase by test at 1970-01-01T00:00:00 from:
       26805aba1e600a82e93661149f2313866a221a7b
+  
    *  64a8289d249234b9886244d379f15e6b650b28e3
+  
    *  dd319aacbb516094646b9ee5a24a942e62110121 split by test at 1970-01-01T00:00:00 (split into this and: 7fb047a69f220c21711122dfd94305a9efb60cba, 64a8289d249234b9886244d379f15e6b650b28e3) from:
       112478962961147124edd43549aedd1a335e44bf
+  
    *  a1093b439e1bc272490fd1749b526a3f1463a41e rebase by test at 1970-01-01T00:00:00 from:
       17d61397e601357ae1dd94c787f794ff95aa2d59 rebase by test at 1970-01-01T00:00:00 from:
       26805aba1e600a82e93661149f2313866a221a7b
+  
    *  b2faf047aa50279686b1635bfad505cd51300b3c
+  
 
 Revsets obey visibility rules
 
@@ -634,15 +678,20 @@ Revsets obey visibility rules
   >    A    # revive: C
   > EOS
 
-  $ hg debugmutation "all()" --hidden
+  $ hg debugmutation -r "all()" --hidden
    *  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  
    *  112478962961147124edd43549aedd1a335e44bf
+  
    *  2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
       112478962961147124edd43549aedd1a335e44bf
+  
    *  49cb92066bfd0763fff729c354345650b7428554
+  
    *  82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af amend by test at 1970-01-01T00:00:00 from:
       2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
       112478962961147124edd43549aedd1a335e44bf
+  
   $ hg log -T '{node} {desc}\n' -r "successors(1)"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
@@ -1321,3 +1370,35 @@ Test pullcreatemarkers can do this
   |/
   @  d20a80d4def3 base
   
+Test debugmutation filtering of mutation info by date
+  $ cd ..
+  $ newrepo
+  $ echo "base" > base
+  $ hg commit -Aqm base
+  $ echo "18316800" > file
+  $ hg commit -Aqm c1
+  $ for i in 18403200 18489600 18576000 18662400 18748800
+  > do
+  >   echo $i >> file
+  >   hg amend -m "c1 (amended $i)" --config mutation.date="$i 0"
+  > done
+  $ hg debugmutation
+   *  84e2ff9513ee8590e5041376df1d272b64d4ee08 amend by test at 1970-08-06T00:00:00 from:
+      e035b5c57c88b4faa986496e6e09977a9581897e amend by test at 1970-08-05T00:00:00 from:
+      52a4ae3f992f2c080f8bf1f141da0f6ab9df153d amend by test at 1970-08-04T00:00:00 from:
+      d11277f4e35fa8d09d6dd33e727e33c8c7c2d259 amend by test at 1970-08-03T00:00:00 from:
+      b7e5dd3c4bc4c85e7ef1f5c10e245fd14ad9ba19 amend by test at 1970-08-02T00:00:00 from:
+      315843a7e2114894c0e7345436313f20282907bd
+  
+  $ hg debugmutation -t "1970-08-05 to 1970-08-10"
+   *  84e2ff9513ee8590e5041376df1d272b64d4ee08 amend by test at 1970-08-06T00:00:00 from:
+      e035b5c57c88b4faa986496e6e09977a9581897e amend by test at 1970-08-05T00:00:00 from:
+      52a4ae3f992f2c080f8bf1f141da0f6ab9df153d ...
+  
+  $ hg debugmutation -s -r 315843a -t "1970-08-01 to 1970-08-04" --hidden
+   *  315843a7e2114894c0e7345436313f20282907bd amend by test at 1970-08-02T00:00:00 into:
+      b7e5dd3c4bc4c85e7ef1f5c10e245fd14ad9ba19 amend by test at 1970-08-03T00:00:00 into:
+      d11277f4e35fa8d09d6dd33e727e33c8c7c2d259 amend by test at 1970-08-04T00:00:00 into:
+      52a4ae3f992f2c080f8bf1f141da0f6ab9df153d ...
+  
+

@@ -328,7 +328,7 @@ Show all commands + options
   debugmanifestdirs: rev
   debugmergestate: 
   debugmetalog: time-range
-  debugmutation: successors
+  debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
   debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template

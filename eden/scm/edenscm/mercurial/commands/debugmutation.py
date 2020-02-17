@@ -14,12 +14,23 @@ from .cmdtable import command
 
 @command(
     "debugmutation",
-    [("s", "successors", False, _("show successors instead of predecessors"))],
-    _("[REV]"),
+    [
+        ("r", "rev", [], _("display predecessors of REV")),
+        ("s", "successors", False, _("show successors instead of predecessors")),
+        ("t", "time-range", [], _("select time range"), _("TIME")),
+    ],
 )
-def debugmutation(ui, repo, *revs, **opts):
+def debugmutation(ui, repo, **opts):
     """display the mutation history (or future) of a commit"""
     unfi = repo.unfiltered()
+
+    matchdatefuncs = []
+    for timerange in opts.get("time_range") or []:
+        matchdate = util.matchdate(timerange)
+        matchdatefuncs.append(matchdate)
+
+    def dateinrange(timestamp):
+        return not matchdatefuncs or any(m(timestamp) for m in matchdatefuncs)
 
     def describe(entry, showsplit=False, showfoldwith=None):
         mutop = entry.op()
@@ -50,20 +61,24 @@ def debugmutation(ui, repo, *revs, **opts):
 
     def expandhistory(node):
         entry = mutation.lookup(unfi, node)
-        if entry is not None:
-            desc = describe(entry, showsplit=True) + " from:"
-            preds = util.removeduplicates(entry.preds())
-            return [(desc, preds)]
-        else:
+        if entry is None:
             return []
+        if not dateinrange(entry.time()):
+            return [("...", [])]
+        desc = describe(entry, showsplit=True) + " from:"
+        preds = util.removeduplicates(entry.preds())
+        return [(desc, preds)]
 
     def expandfuture(node):
         succsets = mutation.lookupsuccessors(unfi, node)
         edges = []
         for succset in succsets:
             entry = mutation.lookupsplit(unfi, succset[0])
-            desc = describe(entry, showfoldwith=node) + " into:"
-            edges.append((desc, succset))
+            if dateinrange(entry.time()):
+                desc = describe(entry, showfoldwith=node) + " into:"
+                edges.append((desc, succset))
+            else:
+                edges.append(("...", []))
         return edges
 
     expand = expandfuture if opts.get("successors") else expandhistory
@@ -103,8 +118,9 @@ def debugmutation(ui, repo, *revs, **opts):
                 ui.status(("%s'=  %s\n") % (prefix, desc))
                 rendernodes(prefix + "    ", nextnodes)
 
-    for rev in scmutil.revrange(repo, revs):
+    for rev in scmutil.revrange(repo, opts.get("rev") or ["."]):
         render(" *  ", "    ", repo[rev].node())
+        ui.status(("\n"))
 
     return 0
 

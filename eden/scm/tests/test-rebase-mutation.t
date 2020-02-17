@@ -97,17 +97,24 @@ simple rebase
   |/
   o  0:cd010b8cd998 A
   
-  $ hg debugmutation ::.
+  $ hg debugmutation -r ::.
    *  cd010b8cd998f3981a5a8115f94f8da4ab506089
+  
    *  9520eea781bcca16c1e15acc0ba14335a0e8e5ba
+  
    *  24b6387c8c8cae37178880f3fa95ded3cb1cf785
+  
    *  eea13746799a9e0bfd88f29d3c2e9dc9389f524f
+  
    *  e4e5be0395b2cbd471ed22a26b1b6a1a0658a794 rebase by test at 1970-01-01T00:00:00 from:
       42ccdea3bb16d28e1848c95fe2e44c000f3f21b1
+  
    *  2327fea05063f39961b14cb69435a9898dc9a245 rebase by test at 1970-01-01T00:00:00 from:
       5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
+  
    *  8eeb3c33ad33d452c89e5dcf611c347f978fb42b rebase by test at 1970-01-01T00:00:00 from:
       32af7686d403cf45b5d95f2d70cebea587ac806a
+  
 
   $ cd ..
 
@@ -173,17 +180,19 @@ set.
   |/
   o  0:cd010b8cd998 A
   
-  $ hg debugmutation 10
+  $ hg debugmutation -r 10
    *  5ae4c968c6aca831df823664e706c9d4aa34473d rebase by test at 1970-01-01T00:00:00 from:
       5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
+  
 
 More complex case where part of the rebase set were already rebased
 
   $ hg rebase --rev 'desc(D)' --dest 'desc(H)'
   rebasing 08483444fef9 "D"
-  $ hg debugmutation 11
+  $ hg debugmutation -r 11
    *  4596109a6a4328c398bde3a4a3b6737cfade3003 rebase by test at 1970-01-01T00:00:00 from:
       08483444fef91d6224f6655ee586a65d263ad34c
+  
   $ hg log -G
   @  11:4596109a6a43 D
   |
@@ -207,14 +216,17 @@ More complex case where part of the rebase set were already rebased
   rebasing 8877864f1edb "B"
   note: not rebasing 08483444fef9 "D", already in destination as 4596109a6a43 "D"
   rebasing 5ae4c968c6ac "C"
-  $ hg debugmutation 11::13
+  $ hg debugmutation -r 11::13
    *  4596109a6a4328c398bde3a4a3b6737cfade3003 rebase by test at 1970-01-01T00:00:00 from:
       08483444fef91d6224f6655ee586a65d263ad34c
+  
    *  462a34d07e599b87ea08676a449373fe4e2e1347 rebase by test at 1970-01-01T00:00:00 from:
       8877864f1edb05d0e07dc4ba77b67a80a7b86672
+  
    *  98f6af4ee9539e14da4465128f894c274900b6e5 rebase by test at 1970-01-01T00:00:00 from:
       5ae4c968c6aca831df823664e706c9d4aa34473d rebase by test at 1970-01-01T00:00:00 from:
       5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
+  
   $ hg log -G
   o  13:98f6af4ee953 C
   |
@@ -347,11 +359,12 @@ collapse rebase
   
   $ hg id --debug -r tip
   4dc2197e807bae9817f09905b50ab288be2dbbcf
-  $ hg debugmutation 8
+  $ hg debugmutation -r tip
    *  4dc2197e807bae9817f09905b50ab288be2dbbcf rebase by test at 1970-01-01T00:00:00 from:
       |-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1
       |-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
       '-  32af7686d403cf45b5d95f2d70cebea587ac806a
+  
 
   $ cd ..
 
@@ -444,13 +457,16 @@ be rebased.
   |/
   o  0:cd010b8cd998 A
   
-  $ hg debugmutation 8 9 10
+  $ hg debugmutation -r 8 -r 9 -r 10
    *  e273c5e7d2d29df783dce9f9eaa3ac4adc69c15d rebase by test at 1970-01-01T00:00:00 from:
       5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
+  
    *  cf44d2f5a9f4297a62be94cbdd3dff7c7dc54258 rebase by test at 1970-01-01T00:00:00 from:
       32af7686d403cf45b5d95f2d70cebea587ac806a
+  
    *  7c6027df6a99d93f461868e5433f63bde20b6dfb rebase by test at 1970-01-01T00:00:00 from:
       42ccdea3bb16d28e1848c95fe2e44c000f3f21b1
+  
 
 Test that rewriting leaving instability behind is allowed
 ---------------------------------------------------------------------

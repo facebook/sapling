@@ -76,15 +76,20 @@ Pushrebase some commits from the client
   |
   o  0: a7d6a32ae4ec public 'base'
   
-  $ hg debugmutation ::tip
+  $ hg debugmutation -r ::tip
    *  a7d6a32ae4ecf473d6f934e731f1868dda4d3fc9
+  
    *  06569a64c14156339463c64337f9cb5dc3a25442
+  
    *  1f850c9f0d599261fce148d3d19cdc89d8eb391f
+  
    *  466bbcaf803c40b7121013141b842e654ee07f7f pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       b0c40d8745c83226015263d45e60a0d12722c515
+  
    *  bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       e52ebff2630810cbc8bc0e3a8de78cb662f0865f amend by test at 1970-01-01T00:00:00 from:
       f558c5855324eea33b5f046b45b85db1fb98bca7
+  
 
   $ cd ../server
   $ tglogp
@@ -98,14 +103,19 @@ Pushrebase some commits from the client
   |
   o  0: a7d6a32ae4ec public 'base'
   
-  $ hg debugmutation ::tip
+  $ hg debugmutation -r ::tip
    *  a7d6a32ae4ecf473d6f934e731f1868dda4d3fc9
+  
    *  06569a64c14156339463c64337f9cb5dc3a25442
+  
    *  1f850c9f0d599261fce148d3d19cdc89d8eb391f
+  
    *  466bbcaf803c40b7121013141b842e654ee07f7f pushrebase by test at 1970-01-01T00:00:00 from:
       b0c40d8745c83226015263d45e60a0d12722c515
+  
    *  bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 from:
       e52ebff2630810cbc8bc0e3a8de78cb662f0865f
+  
 
 Test pushing to a server that does not have mutation recording enabled.  Synthetic mutation
 entries will be contructed from the obsmarkers that pushrebase returns.
@@ -129,8 +139,9 @@ Push an original commit to the server.  This doesn't get pushrebased.
   remote:     5cfa12ac15ac  c3
   updating bookmark master
 
-  $ hg debugmutation .
+  $ hg debugmutation
    *  5cfa12ac15aca3668b5f91e5a7b92aa309b320a9
+  
 
 Add commits on the server to pushrebase over.
 
@@ -178,14 +189,19 @@ Push this commit to the server.  We should create local mutation information.
   updating bookmark master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg debugmutation ".~4::."
+  $ hg debugmutation -r ".~4::."
    *  bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       e52ebff2630810cbc8bc0e3a8de78cb662f0865f amend by test at 1970-01-01T00:00:00 from:
       f558c5855324eea33b5f046b45b85db1fb98bca7
+  
    *  5cfa12ac15aca3668b5f91e5a7b92aa309b320a9
+  
    *  34295f2adc0954d129b43d9ad2d785376eacc3b6
+  
    *  b6dffa66e38820804c5eaf4d2c9477718f537ce3
+  
    *  56ff167c1749dc765639745247323a6139cd9514 pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       254a42c0dcef8381419add47e4f0ff6cd50ea8c7 amend by test at 1970-01-01T00:00:00 from:
       3f1b3b3d517fcd3c8cef763476c588fb99343c3d
+  
 
