@@ -52,7 +52,13 @@ impl AddScubaParams for thrift::RepoResolveBookmarkParams {
     }
 }
 
-impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {}
+impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("param_prefix", self.prefix.as_str());
+        scuba.add("param_prefix_scheme", self.prefix_scheme.to_string());
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
 
 impl AddScubaParams for thrift::CommitCompareParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
