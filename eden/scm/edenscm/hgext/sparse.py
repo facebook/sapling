@@ -666,9 +666,9 @@ def _setupdiff(ui):
         relroot,
     ):
         sparsematch = repo.sparsematch()
-        modified = filter(sparsematch, modified)
-        added = filter(sparsematch, added)
-        removed = filter(sparsematch, removed)
+        modified = list(filter(sparsematch, modified))
+        added = list(filter(sparsematch, added))
+        removed = list(filter(sparsematch, removed))
         copy = dict((d, s) for d, s in copy.items() if sparsematch(s))
         return orig(
             repo,
@@ -1066,7 +1066,7 @@ def _wraprepo(ui, repo):
         def gettemporaryincludes(self):
             existingtemp = set()
             if self.localvfs.exists("tempsparse"):
-                raw = self.localvfs.read("tempsparse")
+                raw = pycompat.decodeutf8(self.localvfs.read("tempsparse"))
                 existingtemp.update(raw.split("\n"))
             return existingtemp
 
@@ -1303,7 +1303,7 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
 
         with progress.bar(ui, _("calculating"), total=totalfiles) as prog:
             # only matchers for which there was no cache are processed
-            for file in ctx.walk(unionmatcher(matchers.values())):
+            for file in ctx.walk(unionmatcher(list(matchers.values()))):
                 prog.value += 1
                 for c, matcher in matchers.items():
                     if matcher(file):
@@ -1478,7 +1478,7 @@ def sparse(ui, repo, *pats, **opts):
 
     if count == 0:
         if repo.localvfs.exists("sparse"):
-            ui.status(repo.localvfs.read("sparse") + "\n")
+            ui.status(pycompat.decodeutf8(repo.localvfs.read("sparse")) + "\n")
             temporaryincludes = repo.gettemporaryincludes()
             if temporaryincludes:
                 ui.status(_("Temporarily Included Files (for merge/rebase):\n"))
@@ -1766,9 +1766,9 @@ def _listprofiles(ui, repo, *pats, **opts):
             label = "sparse.profile." + labels[info.active]
             fm.plain(" %-1s " % chars[info.active], label=label)
             fm.data(active=labels[info.active], metadata=dict(info))
-            fm.write(b"path", "%-{}s".format(max_width), info.path, label=label)
+            fm.write("path", "%-{}s".format(max_width), info.path, label=label)
             if "title" in info:
-                fm.plain("  %s" % info.get("title", b""), label=label + ".title")
+                fm.plain("  %s" % info.get("title", ""), label=label + ".title")
             fm.plain("\n")
 
     if not (ui.verbose or "hidden" in filters["with"]):
@@ -1874,7 +1874,7 @@ def _explainprofile(ui, repo, *profiles, **opts):
                         )
                     lines.append("\n")
 
-                other = md.viewkeys() - {"title", "description"}
+                other = set(md.keys()) - {"title", "description"}
                 if other:
                     lines += (
                         minirst.subsection(_("Additional metadata")),
@@ -2217,7 +2217,7 @@ def _import(ui, repo, files, opts, force=False):
         ]
 
         # read current configuration
-        raw = ""
+        raw = b""
         if repo.localvfs.exists("sparse"):
             raw = repo.localvfs.read("sparse")
         oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
@@ -2235,7 +2235,7 @@ def _import(ui, repo, files, opts, force=False):
         # part of the active rules.
         changed = False
         for file in files:
-            with util.posixfile(util.expandpath(file)) as importfile:
+            with util.posixfile(util.expandpath(file), "rb") as importfile:
                 iincludes, iexcludes, iprofiles = repo.readsparseconfig(
                     importfile.read(), filename=file
                 )

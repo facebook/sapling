@@ -153,8 +153,8 @@ def wrappostshare(orig, sourcerepo, destrepo, **kwargs):
     """Mark this shared working copy as sharing journal information"""
     with destrepo.wlock():
         orig(sourcerepo, destrepo, **kwargs)
-        with destrepo.localvfs("shared", "a") as fp:
-            fp.write("journal\n")
+        with destrepo.localvfs("shared", "ab") as fp:
+            fp.write(b"journal\n")
 
 
 def unsharejournal(orig, ui, repo, repopath):

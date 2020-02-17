@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 
 from bindings import tracing
+from edenscm.mercurial import pycompat
 from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
@@ -35,12 +36,12 @@ def collectprefetch(command):
         (sh % command).output
 
     ids = []
-    for span in d.treespans().values()[0]:
-        name = span.get("name")
-        if name == "tree::store::prefetch":
-            ids += span["ids"].split()
-        elif name == "tree::store::get":
-            ids.append(span["id"])
+    for span in list(d.treespans().values())[0]:
+        name = span.get(b"name")
+        if name == b"tree::store::prefetch":
+            ids += pycompat.decodeutf8(span[b"ids"]).split()
+        elif name == b"tree::store::get":
+            ids.append(pycompat.decodeutf8(span[b"id"]))
     idtopath.update(getidtopath())
     paths = set(idtopath[id] for id in set(ids)) - {"/"}
 

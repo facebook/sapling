@@ -3717,7 +3717,7 @@ class _zlibengine(compressionengine):
                 parts.append(z.flush())
 
                 if sum(map(len, parts)) < insize:
-                    return "".join(parts)
+                    return b"".join(parts)
                 return None
 
         def decompress(self, data):
