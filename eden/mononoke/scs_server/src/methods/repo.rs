@@ -17,7 +17,7 @@ use futures_util::stream::FuturesOrdered;
 use futures_util::TryStreamExt;
 use maplit::btreemap;
 use mononoke_api::{
-    ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, CreateChange,
+    ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CreateChange,
     CreateCopyInfo, FileId, FileType, MononokePath,
 };
 use mononoke_types::hash::{Sha1, Sha256};
@@ -65,22 +65,15 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoResolveCommitPrefixParams,
     ) -> Result<thrift::RepoResolveCommitPrefixResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo)?;
-
-        use ChangesetIdPrefix::*;
-        use ChangesetIdPrefixResolution::*;
+        use ChangesetSpecifierPrefixResolution::*;
         type Response = thrift::RepoResolveCommitPrefixResponse;
         type ResponseType = thrift::RepoResolveCommitPrefixResponseType;
 
-        let prefix = match params.prefix_scheme {
-            thrift::CommitIdentityScheme::HG => Ok(HgHexPrefix(&params.prefix)),
-            thrift::CommitIdentityScheme::BONSAI => Ok(BonsaiHexPrefix(&params.prefix)),
-            _ => Err(errors::invalid_request(
-                "the scheme type is currently unsupported for this request",
-            )),
-        }?;
         let same_request_response_schemes = params.identity_schemes.len() == 1
             && params.identity_schemes.contains(&params.prefix_scheme);
+
+        let prefix = ChangesetPrefixSpecifier::from_request(&params)?;
+        let repo = self.repo(ctx, &repo)?;
 
         // If the response requires exactly the same identity scheme as in the request,
         // the general case works but we don't need to pay extra overhead to resolve

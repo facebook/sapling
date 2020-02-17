@@ -8,13 +8,14 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display};
 use std::ops::RangeBounds;
+use std::str::FromStr;
 
 use chrono::{DateTime, FixedOffset, TimeZone};
 use faster_hex::hex_string;
 use mercurial_types::Globalrev;
 use mononoke_api::{
-    ChangesetId, ChangesetSpecifier, CopyInfo, CreateCopyInfo, FileId, FileType, HgChangesetId,
-    MononokePath, TreeId,
+    ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier, CopyInfo,
+    CreateCopyInfo, FileId, FileType, HgChangesetId, HgChangesetIdPrefix, MononokePath, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
@@ -37,7 +38,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
                         commit.to_string(),
-                        e.to_string()
+                        e
                     ))
                 })?;
                 Ok(ChangesetSpecifier::Bonsai(cs_id))
@@ -48,7 +49,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
                         commit.to_string(),
-                        e.to_string()
+                        e
                     ))
                 })?;
                 Ok(ChangesetSpecifier::Hg(hg_cs_id))
@@ -81,6 +82,37 @@ impl FromRequest<thrift::CopyInfo> for CopyInfo {
     }
 }
 
+impl FromRequest<thrift::RepoResolveCommitPrefixParams> for ChangesetPrefixSpecifier {
+    fn from_request(
+        params: &thrift::RepoResolveCommitPrefixParams,
+    ) -> Result<Self, thrift::RequestError> {
+        match params.prefix_scheme {
+            thrift::CommitIdentityScheme::HG => {
+                let prefix = HgChangesetIdPrefix::from_str(&params.prefix).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id prefix (scheme={} {}): {}",
+                        params.prefix_scheme, params.prefix, e
+                    ))
+                })?;
+                Ok(ChangesetPrefixSpecifier::from(prefix))
+            }
+            thrift::CommitIdentityScheme::BONSAI => {
+                let prefix = ChangesetIdPrefix::from_str(&params.prefix).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id prefix (scheme={} {}): {}",
+                        params.prefix_scheme, params.prefix, e
+                    ))
+                })?;
+                Ok(ChangesetPrefixSpecifier::from(prefix))
+            }
+            _ => Err(errors::invalid_request(format!(
+                "unsupported prefix identity scheme ({})",
+                params.prefix_scheme
+            ))),
+        }
+    }
+}
+
 macro_rules! impl_from_request_binary_id(
     ($t:ty, $name:expr) => {
         impl FromRequest<Vec<u8>> for $t {
@@ -90,7 +122,7 @@ macro_rules! impl_from_request_binary_id(
                         "invalid {} ({}): {}",
                         $name,
                         hex_string(&id).expect("hex_string should never fail"),
-                        e.to_string(),
+                        e,
                     ))})
             }
         }

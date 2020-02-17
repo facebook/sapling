@@ -7,7 +7,6 @@
 
 use std::fmt;
 use std::{
-    str::FromStr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -57,7 +56,8 @@ use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
 use crate::repo_write::RepoWriteContext;
 use crate::specifiers::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdPrefixResolution, ChangesetSpecifier, HgChangesetId,
+    ChangesetId, ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution,
+    HgChangesetId,
 };
 use crate::tree::{TreeContext, TreeId};
 
@@ -640,29 +640,29 @@ impl RepoContext {
     /// Resolve a changeset id by its prefix
     pub async fn resolve_changeset_id_prefix(
         &self,
-        prefix: ChangesetIdPrefix<'_>,
-    ) -> Result<ChangesetIdPrefixResolution, MononokeError> {
+        prefix: ChangesetPrefixSpecifier,
+    ) -> Result<ChangesetSpecifierPrefixResolution, MononokeError> {
         const MAX_LIMIT_AMBIGUOUS_IDS: usize = 10;
         let resolved = match prefix {
-            ChangesetIdPrefix::HgHexPrefix(prefix) => ChangesetIdPrefixResolution::from(
+            ChangesetPrefixSpecifier::Hg(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
                     .get_bonsai_hg_mapping()
                     .get_many_hg_by_prefix(
                         self.ctx.clone(),
                         self.blob_repo().get_repoid(),
-                        mercurial_types::HgChangesetIdPrefix::from_str(prefix.as_ref())?,
+                        prefix,
                         MAX_LIMIT_AMBIGUOUS_IDS,
                     )
                     .compat()
                     .await?,
             ),
-            ChangesetIdPrefix::BonsaiHexPrefix(prefix) => ChangesetIdPrefixResolution::from(
+            ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
                     .get_changesets_object()
                     .get_many_by_prefix(
                         self.ctx.clone(),
                         self.blob_repo().get_repoid(),
-                        mononoke_types::ChangesetIdPrefix::from_str(prefix.as_ref())?,
+                        prefix,
                         MAX_LIMIT_AMBIGUOUS_IDS,
                     )
                     .compat()

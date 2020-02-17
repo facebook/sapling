@@ -28,23 +28,43 @@ pub enum ChangesetSpecifier {
     Globalrev(Globalrev),
 }
 
+/// A prefix of canonical ID for a changeset (Bonsai).
+pub type ChangesetIdPrefix = mononoke_types::ChangesetIdPrefix;
+
+/// A prefix of a Mercurial changeset ID.
+pub type HgChangesetIdPrefix = mercurial_types::HgChangesetIdPrefix;
+
 /// This is prefix that may be used to resolve a changeset
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub enum ChangesetIdPrefix<'a> {
-    BonsaiHexPrefix(&'a str),
-    HgHexPrefix(&'a str),
+pub enum ChangesetPrefixSpecifier {
+    Bonsai(ChangesetIdPrefix),
+    Hg(HgChangesetIdPrefix),
+}
+
+impl From<HgChangesetIdPrefix> for ChangesetPrefixSpecifier {
+    fn from(prefix: HgChangesetIdPrefix) -> Self {
+        Self::Hg(prefix)
+    }
+}
+
+impl From<ChangesetIdPrefix> for ChangesetPrefixSpecifier {
+    fn from(prefix: ChangesetIdPrefix) -> Self {
+        Self::Bonsai(prefix)
+    }
 }
 
 /// This is the result of resolving changesets by prefix
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub enum ChangesetIdPrefixResolution {
+pub enum ChangesetSpecifierPrefixResolution {
     NoMatch,
     Single(ChangesetSpecifier),
     Multiple(Vec<ChangesetSpecifier>),
     TooMany(Vec<ChangesetSpecifier>),
 }
 
-impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix> for ChangesetIdPrefixResolution {
+impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
+    for ChangesetSpecifierPrefixResolution
+{
     fn from(resolved: mercurial_types::HgChangesetIdsResolvedFromPrefix) -> Self {
         use mercurial_types::HgChangesetIdsResolvedFromPrefix::*;
         use ChangesetSpecifier::*;
@@ -57,7 +77,7 @@ impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix> for ChangesetIdPref
     }
 }
 
-impl From<mononoke_types::ChangesetIdsResolvedFromPrefix> for ChangesetIdPrefixResolution {
+impl From<mononoke_types::ChangesetIdsResolvedFromPrefix> for ChangesetSpecifierPrefixResolution {
     fn from(resolved: mononoke_types::ChangesetIdsResolvedFromPrefix) -> Self {
         use mononoke_types::ChangesetIdsResolvedFromPrefix::*;
         use ChangesetSpecifier::*;
