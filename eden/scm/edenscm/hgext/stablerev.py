@@ -87,7 +87,7 @@ def _execute(ui, repo, target=None):
         )
         res = p.communicate()
         ui.debug("stable script returns: %r\n" % (res,))
-        return res
+        return (pycompat.decodeutf8(res[0]), pycompat.decodeutf8(res[1]))
     except subprocess.CalledProcessError as e:
         raise error.Abort(_("couldn't fetch stable rev: %s") % e)
 
