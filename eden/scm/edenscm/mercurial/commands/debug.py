@@ -1087,7 +1087,13 @@ def debugfilerevision(ui, repo, *pats, **opts):
                 msg += " %s=%s" % (name, func())
             ui.write(("%s\n") % msg)
             if ui.verbose:
-                ui.write(("  rawdata: %r\n") % fctx.rawdata())
+                # Technically the raw data can contain non-utf8 bytes, but this
+                # function is mainly used for tests, so let's just replace those
+                # bytes so the tests are consistent between py2 and py3.
+                ui.write(
+                    ("  rawdata: %r\n")
+                    % pycompat.decodeutf8(fctx.rawdata(), errors="replace")
+                )
 
 
 @command(

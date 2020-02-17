@@ -218,7 +218,7 @@ long = getattr(builtins, "long", None)
 if long is not None:
     inttype = (int, long)
 else:
-    inttype = int
+    inttype = (int,)
 
 
 _metaitemtypes = {constants.METAKEYFLAG: inttype, constants.METAKEYSIZE: inttype}

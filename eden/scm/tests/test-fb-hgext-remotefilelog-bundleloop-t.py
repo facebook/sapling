@@ -8,9 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "setconfig \"remotefilelog.cachepath=$TESTTMP/cache\" 'extensions.remotefilelog='"
 
 sh % "newrepo"

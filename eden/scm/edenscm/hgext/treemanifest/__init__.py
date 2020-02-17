@@ -2752,7 +2752,7 @@ class nodeinfoserializer(object):
     @staticmethod
     def serialize(value):
         p1, p2, linknode, copyfrom = value
-        copyfrom = copyfrom if copyfrom else ""
+        copyfrom = pycompat.encodeutf8(copyfrom if copyfrom else "")
         return struct.pack(NODEINFOFORMAT, p1, p2, linknode, len(copyfrom)) + copyfrom
 
     @staticmethod
