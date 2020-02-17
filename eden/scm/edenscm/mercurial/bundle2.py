@@ -2162,8 +2162,8 @@ def handlebookmark(op, inpart):
                 hookargs["pushkeycompat"] = "1"
                 hookargs["namespace"] = "bookmark"
                 hookargs["key"] = book
-                hookargs["old"] = nodemod.hex(bookstore.get(book, ""))
-                hookargs["new"] = nodemod.hex(node if node is not None else "")
+                hookargs["old"] = nodemod.hex(bookstore.get(book, b""))
+                hookargs["new"] = nodemod.hex(node if node is not None else b"")
                 allhooks.append(hookargs)
 
             for hookargs in allhooks:
