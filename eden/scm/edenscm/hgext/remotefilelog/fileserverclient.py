@@ -81,7 +81,7 @@ def peersetup(ui, peer):
                 )
             f = wireproto.future()
             yield {"path": path}, f
-            heads = f.value.split("\n") if f.value else []
+            heads = pycompat.decodeutf8(f.value).split("\n") if f.value else []
             yield heads
 
         def _updatecallstreamopts(self, command, opts):

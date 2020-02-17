@@ -3,10 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import json
 import struct
 
-from edenscm.mercurial import error, extensions, node as nodemod, pycompat
+from edenscm.mercurial import error, extensions, json, node as nodemod, pycompat
 from edenscm.mercurial.i18n import _
 
 

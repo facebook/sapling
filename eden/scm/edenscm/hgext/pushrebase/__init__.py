@@ -640,7 +640,7 @@ def _exchangesetup():
             # We are doing an infinitepush: it's not a pushrebase.
             return
 
-        bundler.newpart(commonheadsparttype, data="".join(pushop.outgoing.commonheads))
+        bundler.newpart(commonheadsparttype, data=b"".join(pushop.outgoing.commonheads))
 
     @bundle2.parthandler(commonheadsparttype)
     def commonheadshandler(op, inpart):
