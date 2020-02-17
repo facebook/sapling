@@ -133,20 +133,20 @@ class tarit(object):
             gzip.GzipFile.__init__(self, *args, **kw)
 
         def _write_gzip_header(self):
-            self.fileobj.write("\037\213")  # magic header
-            self.fileobj.write("\010")  # compression method
+            self.fileobj.write(b"\037\213")  # magic header
+            self.fileobj.write(b"\010")  # compression method
             fname = self.name
             if fname and fname.endswith(".gz"):
                 fname = fname[:-3]
             flags = 0
             if fname:
                 flags = gzip.FNAME
-            self.fileobj.write(chr(flags))
-            gzip.write32u(self.fileobj, long(self.timestamp))  # noqa
-            self.fileobj.write("\002")
-            self.fileobj.write("\377")
+            self.fileobj.write(pycompat.encodeutf8(chr(flags)))
+            gzip.write32u(self.fileobj, int(self.timestamp))  # noqa
+            self.fileobj.write(b"\002")
+            self.fileobj.write(b"\377")
             if fname:
-                self.fileobj.write(fname + "\000")
+                self.fileobj.write(pycompat.encodeutf8(fname) + b"\000")
 
     def __init__(self, dest, mtime, kind=""):
         self.mtime = mtime
@@ -177,7 +177,7 @@ class tarit(object):
         if islink:
             i.type = tarfile.SYMTYPE
             i.mode = 0o777
-            i.linkname = data
+            i.linkname = pycompat.decodeutf8(data)
             data = None
             i.size = 0
         else:
