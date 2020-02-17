@@ -34,14 +34,14 @@ def _parse(data):
     # class exactly matches its C counterpart to try and help
     # prevent surprise breakage for anyone that develops against
     # the pure version.
-    if data and data[-1:] != "\n":
+    if data and data[-1:] != b"\n":
         raise ValueError("Manifest did not end in a newline.")
     prev = None
     for l in data.splitlines():
         if prev is not None and prev > l:
             raise ValueError("Manifest lines not in sorted order.")
         prev = l
-        f, n = l.split("\0")
+        f, n = pycompat.decodeutf8(l).split("\0")
         if len(n) > 40:
             yield f, bin(n[:40]), n[40:]
         else:
@@ -61,7 +61,7 @@ def _text(it):
         lines.append("%s\0%s%s\n" % (f, _hex(n), fl))
 
     _checkforbidden(files)
-    return "".join(lines)
+    return pycompat.encodeutf8("".join(lines))
 
 
 def unhexlify(data, extra, pos, length):
