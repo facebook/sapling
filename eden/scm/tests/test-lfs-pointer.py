@@ -1,10 +1,12 @@
 from __future__ import absolute_import, print_function
 
 from edenscm.hgext.lfs import pointer
+from edenscm.mercurial import pycompat
 from hghave import require
 
 
 def tryparse(text):
+    text = pycompat.encodeutf8(text)
     r = {}
     try:
         r = pointer.deserialize(text)

@@ -26,15 +26,21 @@ class gitlfspointer(dict):
 
     @classmethod
     def deserialize(cls, text):
+        # type: (bytes) -> str
         try:
-            return cls(l.split(" ", 1) for l in text.splitlines()).validate()
+            decoded = pycompat.decodeutf8(text)
+            return cls(l.split(" ", 1) for l in decoded.splitlines()).validate()
         except ValueError:  # l.split returns 1 item instead of 2
-            raise InvalidPointer(_("cannot parse git-lfs text: %r") % text)
+            raise InvalidPointer(
+                _("cannot parse git-lfs text: %r")
+                % pycompat.decodeutf8(text, errors="replace")
+            )
 
     def serialize(self):
+        # type: () -> bytes
         sortkeyfunc = lambda x: (x[0] != "version", x)
         items = sorted(pycompat.iteritems(self.validate()), key=sortkeyfunc)
-        return "".join("%s %s\n" % (k, v) for k, v in items)
+        return pycompat.encodeutf8("".join("%s %s\n" % (k, v) for k, v in items))
 
     def oid(self):
         return self["oid"].split(":")[-1]

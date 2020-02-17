@@ -51,7 +51,7 @@ def readfromstore(self, text):
 
     # pack hg filelog metadata
     hgmeta = p.hgmeta()
-    if hgmeta or text.startswith("\1\n"):
+    if hgmeta or text.startswith(b"\1\n"):
         text = filelog.packmeta(hgmeta, text)
 
     return (text, True)
