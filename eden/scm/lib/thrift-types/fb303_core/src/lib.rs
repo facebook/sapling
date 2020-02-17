@@ -105,6 +105,9 @@ pub mod types {
     }
 }
 
+pub mod dependencies {
+}
+
 pub mod services {
     pub mod base_service {
         use fbthrift::{
@@ -1623,11 +1626,17 @@ pub mod client {
     }
 
     impl<P, T> BaseServiceImpl<P, T> {
-        pub fn new(transport: T) -> Self {
+        pub fn new(
+            transport: T,
+        ) -> Self {
             Self {
                 transport,
                 _phantom: PhantomData,
             }
+        }
+
+        pub fn transport(&self) -> &T {
+            &self.transport
         }
     }
 
@@ -1715,7 +1724,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1763,7 +1772,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1811,7 +1820,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1859,7 +1868,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1907,7 +1916,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1959,7 +1968,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2011,7 +2020,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2063,7 +2072,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2111,7 +2120,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2163,7 +2172,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2215,7 +2224,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2267,7 +2276,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2323,7 +2332,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2375,7 +2384,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2423,7 +2432,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2471,7 +2480,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2500,6 +2509,127 @@ pub mod client {
                     }(de)
                 }))
                 .boxed()
+        }
+    }
+
+    impl<'a, T> BaseService for T
+    where
+        T: AsRef<dyn BaseService + 'a>,
+        T: Send,
+    {
+        fn getStatus(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>> {
+            self.as_ref().getStatus(
+            )
+        }
+        fn getName(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getName(
+            )
+        }
+        fn getVersion(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getVersion(
+            )
+        }
+        fn getStatusDetails(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getStatusDetails(
+            )
+        }
+        fn getCounters(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+            self.as_ref().getCounters(
+            )
+        }
+        fn getRegexCounters(
+            &self,
+            arg_regex: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+            self.as_ref().getRegexCounters(
+                arg_regex,
+            )
+        }
+        fn getSelectedCounters(
+            &self,
+            arg_keys: &[String],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+            self.as_ref().getSelectedCounters(
+                arg_keys,
+            )
+        }
+        fn getCounter(
+            &self,
+            arg_key: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().getCounter(
+                arg_key,
+            )
+        }
+        fn getExportedValues(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+            self.as_ref().getExportedValues(
+            )
+        }
+        fn getSelectedExportedValues(
+            &self,
+            arg_keys: &[String],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+            self.as_ref().getSelectedExportedValues(
+                arg_keys,
+            )
+        }
+        fn getRegexExportedValues(
+            &self,
+            arg_regex: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+            self.as_ref().getRegexExportedValues(
+                arg_regex,
+            )
+        }
+        fn getExportedValue(
+            &self,
+            arg_key: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getExportedValue(
+                arg_key,
+            )
+        }
+        fn setOption(
+            &self,
+            arg_key: &str,
+            arg_value: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().setOption(
+                arg_key,
+                arg_value,
+            )
+        }
+        fn getOption(
+            &self,
+            arg_key: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getOption(
+                arg_key,
+            )
+        }
+        fn getOptions(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+            self.as_ref().getOptions(
+            )
+        }
+        fn aliveSince(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().aliveSince(
+            )
         }
     }
 

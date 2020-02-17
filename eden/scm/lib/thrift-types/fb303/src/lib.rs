@@ -274,6 +274,10 @@ pub mod types {
 
 }
 
+pub mod dependencies {
+    pub use fb303_core as fb303_core;
+}
+
 pub mod services {
     pub mod facebook_service {
         use fbthrift::{
@@ -1697,24 +1701,39 @@ pub mod services {
 
 pub mod client {
     use fbthrift::*;
-    use std::marker::PhantomData;
     use std::sync::Arc;
 
     pub struct FacebookServiceImpl<P, T> {
-        transport: T,
-        _phantom: PhantomData<fn() -> P>,
+        parent: fb303_core::client::BaseServiceImpl<P, T>,
     }
 
     impl<P, T> FacebookServiceImpl<P, T> {
-        pub fn new(transport: T) -> Self {
-            Self {
-                transport,
-                _phantom: PhantomData,
-            }
+        pub fn new(
+            transport: T,
+        ) -> Self {
+            let parent = fb303_core::client::BaseServiceImpl::<P, T>::new(transport);
+            Self { parent }
+        }
+
+        pub fn transport(&self) -> &T {
+            self.parent.transport()
         }
     }
 
-    pub trait FacebookService: Send {
+    impl<P, T> AsRef<dyn crate::dependencies::fb303_core::client::BaseService + 'static> for FacebookServiceImpl<P, T>
+    where
+        P: Protocol,
+        T: Transport,
+        P::Frame: Framing<DecBuf = FramingDecoded<T>>,
+        ProtocolEncoded<P>: BufMutExt<Final = FramingEncodedFinal<T>>,
+    {
+        fn as_ref(&self) -> &(dyn crate::dependencies::fb303_core::client::BaseService + 'static)
+        {
+            &self.parent
+        }
+    }
+
+    pub trait FacebookService: fb303_core::client::BaseService + Send {
         fn getRegexCountersCompressed(
             &self,
             arg_regex: &str,
@@ -1797,7 +1816,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1845,7 +1864,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1897,7 +1916,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -1949,7 +1968,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2001,7 +2020,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2053,7 +2072,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2101,7 +2120,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2149,7 +2168,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2197,7 +2216,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2245,7 +2264,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2293,7 +2312,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2341,7 +2360,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2393,7 +2412,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2441,7 +2460,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2493,7 +2512,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -2522,6 +2541,118 @@ pub mod client {
                     }(de)
                 }))
                 .boxed()
+        }
+    }
+
+    impl<'a, T> FacebookService for T
+    where
+        T: AsRef<dyn FacebookService + 'a>,
+        T: crate::dependencies::fb303_core::client::BaseService,
+        T: Send,
+    {
+        fn getRegexCountersCompressed(
+            &self,
+            arg_regex: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+            self.as_ref().getRegexCountersCompressed(
+                arg_regex,
+            )
+        }
+        fn getCountersCompressed(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+            self.as_ref().getCountersCompressed(
+            )
+        }
+        fn getCpuProfile(
+            &self,
+            arg_profileDurationInSec: i32,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getCpuProfile(
+                arg_profileDurationInSec,
+            )
+        }
+        fn getCpuProfileWithOptions(
+            &self,
+            arg_options: &crate::types::CpuProfileOptions,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getCpuProfileWithOptions(
+                arg_options,
+            )
+        }
+        fn getHeapProfile(
+            &self,
+            arg_profileDurationInSec: i32,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getHeapProfile(
+                arg_profileDurationInSec,
+            )
+        }
+        fn getWallTimeProfile(
+            &self,
+            arg_profileDurationInSec: i32,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getWallTimeProfile(
+                arg_profileDurationInSec,
+            )
+        }
+        fn getMemoryUsage(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().getMemoryUsage(
+            )
+        }
+        fn getLoad(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>> {
+            self.as_ref().getLoad(
+            )
+        }
+        fn getPid(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().getPid(
+            )
+        }
+        fn getCommandLine(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+            self.as_ref().getCommandLine(
+            )
+        }
+        fn reinitialize(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().reinitialize(
+            )
+        }
+        fn shutdown(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().shutdown(
+            )
+        }
+        fn translateFrames(
+            &self,
+            arg_pointers: &[i64],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
+            self.as_ref().translateFrames(
+                arg_pointers,
+            )
+        }
+        fn getPcapLoggingConfig(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>> {
+            self.as_ref().getPcapLoggingConfig(
+            )
+        }
+        fn setPcapLoggingConfig(
+            &self,
+            arg_config: &crate::types::PcapLoggingConfig,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().setPcapLoggingConfig(
+                arg_config,
+            )
         }
     }
 
@@ -3694,6 +3825,7 @@ pub mod mock {
     use std::marker::PhantomData;
 
     pub struct FacebookService<'mock> {
+        pub parent: fb303_core::mock::BaseService<'mock>,
         pub getRegexCountersCompressed: facebook_service::getRegexCountersCompressed<'mock>,
         pub getCountersCompressed: facebook_service::getCountersCompressed<'mock>,
         pub getCpuProfile: facebook_service::getCpuProfile<'mock>,
@@ -3715,6 +3847,7 @@ pub mod mock {
     impl dyn super::client::FacebookService {
         pub fn mock<'mock>() -> FacebookService<'mock> {
             FacebookService {
+                parent: fb303_core::client::BaseService::mock(),
                 getRegexCountersCompressed: facebook_service::getRegexCountersCompressed::unimplemented(),
                 getCountersCompressed: facebook_service::getCountersCompressed::unimplemented(),
                 getCpuProfile: facebook_service::getCpuProfile::unimplemented(),
@@ -3893,6 +4026,14 @@ pub mod mock {
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceSetPcapLoggingConfigError(error),
                 ))))
+        }
+    }
+
+    #[async_trait]
+    impl<'mock> AsRef<dyn crate::dependencies::fb303_core::client::BaseService + 'mock> for FacebookService<'mock>
+    {
+        fn as_ref(&self) -> &(dyn crate::dependencies::fb303_core::client::BaseService + 'mock) {
+            self
         }
     }
 

@@ -3467,6 +3467,11 @@ pub mod types {
 
 }
 
+pub mod dependencies {
+    pub use eden_config as eden_config;
+    pub use fb303_core as fb303_core;
+}
+
 pub mod services {
     pub mod eden_service {
         use fbthrift::{
@@ -8876,24 +8881,39 @@ pub mod services {
 
 pub mod client {
     use fbthrift::*;
-    use std::marker::PhantomData;
     use std::sync::Arc;
 
     pub struct EdenServiceImpl<P, T> {
-        transport: T,
-        _phantom: PhantomData<fn() -> P>,
+        parent: fb303_core::client::BaseServiceImpl<P, T>,
     }
 
     impl<P, T> EdenServiceImpl<P, T> {
-        pub fn new(transport: T) -> Self {
-            Self {
-                transport,
-                _phantom: PhantomData,
-            }
+        pub fn new(
+            transport: T,
+        ) -> Self {
+            let parent = fb303_core::client::BaseServiceImpl::<P, T>::new(transport);
+            Self { parent }
+        }
+
+        pub fn transport(&self) -> &T {
+            self.parent.transport()
         }
     }
 
-    pub trait EdenService: Send {
+    impl<P, T> AsRef<dyn crate::dependencies::fb303_core::client::BaseService + 'static> for EdenServiceImpl<P, T>
+    where
+        P: Protocol,
+        T: Transport,
+        P::Frame: Framing<DecBuf = FramingDecoded<T>>,
+        ProtocolEncoded<P>: BufMutExt<Final = FramingEncodedFinal<T>>,
+    {
+        fn as_ref(&self) -> &(dyn crate::dependencies::fb303_core::client::BaseService + 'static)
+        {
+            &self.parent
+        }
+    }
+
+    pub trait EdenService: fb303_core::client::BaseService + Send {
         fn listMounts(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>>;
@@ -9134,7 +9154,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9186,7 +9206,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9238,7 +9258,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9298,7 +9318,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9354,7 +9374,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9410,7 +9430,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9462,7 +9482,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9522,7 +9542,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9578,7 +9598,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9630,7 +9650,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9686,7 +9706,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9742,7 +9762,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9794,7 +9814,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9846,7 +9866,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9898,7 +9918,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -9954,7 +9974,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10010,7 +10030,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10062,7 +10082,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10122,7 +10142,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10174,7 +10194,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10234,7 +10254,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10294,7 +10314,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10350,7 +10370,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10398,7 +10418,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10446,7 +10466,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10498,7 +10518,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10550,7 +10570,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10598,7 +10618,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10658,7 +10678,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10718,7 +10738,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10778,7 +10798,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10834,7 +10854,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10886,7 +10906,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10942,7 +10962,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -10998,7 +11018,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11050,7 +11070,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11098,7 +11118,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11146,7 +11166,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11194,7 +11214,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11254,7 +11274,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11302,7 +11322,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11358,7 +11378,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11406,7 +11426,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11454,7 +11474,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11502,7 +11522,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11550,7 +11570,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11602,7 +11622,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11654,7 +11674,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11706,7 +11726,7 @@ pub mod client {
                     p.write_struct_end();
                 },
             ));
-            self.transport
+            self.transport()
                 .call(request)
                 .and_then(|reply| futures_preview::future::ready({
                     let de = P::deserializer(reply);
@@ -11735,6 +11755,442 @@ pub mod client {
                     }(de)
                 }))
                 .boxed()
+        }
+    }
+
+    impl<'a, T> EdenService for T
+    where
+        T: AsRef<dyn EdenService + 'a>,
+        T: crate::dependencies::fb303_core::client::BaseService,
+        T: Send,
+    {
+        fn listMounts(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>> {
+            self.as_ref().listMounts(
+            )
+        }
+        fn mount(
+            &self,
+            arg_info: &crate::types::MountArgument,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().mount(
+                arg_info,
+            )
+        }
+        fn unmount(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().unmount(
+                arg_mountPoint,
+            )
+        }
+        fn checkOutRevision(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_snapshotHash: &crate::types::BinaryHash,
+            arg_checkoutMode: &crate::types::CheckoutMode,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>> {
+            self.as_ref().checkOutRevision(
+                arg_mountPoint,
+                arg_snapshotHash,
+                arg_checkoutMode,
+            )
+        }
+        fn resetParentCommits(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_parents: &crate::types::WorkingDirectoryParents,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().resetParentCommits(
+                arg_mountPoint,
+                arg_parents,
+            )
+        }
+        fn getSHA1(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_paths: &[crate::types::PathString],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
+            self.as_ref().getSHA1(
+                arg_mountPoint,
+                arg_paths,
+            )
+        }
+        fn getBindMounts(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+            self.as_ref().getBindMounts(
+                arg_mountPoint,
+            )
+        }
+        fn addBindMount(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_repoPath: &crate::types::PathString,
+            arg_targetPath: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().addBindMount(
+                arg_mountPoint,
+                arg_repoPath,
+                arg_targetPath,
+            )
+        }
+        fn removeBindMount(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_repoPath: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().removeBindMount(
+                arg_mountPoint,
+                arg_repoPath,
+            )
+        }
+        fn getCurrentJournalPosition(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>> {
+            self.as_ref().getCurrentJournalPosition(
+                arg_mountPoint,
+            )
+        }
+        fn getFilesChangedSince(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_fromPosition: &crate::types::JournalPosition,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>> {
+            self.as_ref().getFilesChangedSince(
+                arg_mountPoint,
+                arg_fromPosition,
+            )
+        }
+        fn setJournalMemoryLimit(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_limit: i64,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().setJournalMemoryLimit(
+                arg_mountPoint,
+                arg_limit,
+            )
+        }
+        fn getJournalMemoryLimit(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().getJournalMemoryLimit(
+                arg_mountPoint,
+            )
+        }
+        fn flushJournal(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().flushJournal(
+                arg_mountPoint,
+            )
+        }
+        fn debugGetRawJournal(
+            &self,
+            arg_params: &crate::types::DebugGetRawJournalParams,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>> {
+            self.as_ref().debugGetRawJournal(
+                arg_params,
+            )
+        }
+        fn getFileInformation(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_paths: &[crate::types::PathString],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
+            self.as_ref().getFileInformation(
+                arg_mountPoint,
+                arg_paths,
+            )
+        }
+        fn glob(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_globs: &[String],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+            self.as_ref().glob(
+                arg_mountPoint,
+                arg_globs,
+            )
+        }
+        fn globFiles(
+            &self,
+            arg_params: &crate::types::GlobParams,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>> {
+            self.as_ref().globFiles(
+                arg_params,
+            )
+        }
+        fn chown(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_uid: i32,
+            arg_gid: i32,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().chown(
+                arg_mountPoint,
+                arg_uid,
+                arg_gid,
+            )
+        }
+        fn getScmStatusV2(
+            &self,
+            arg_params: &crate::types::GetScmStatusParams,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>> {
+            self.as_ref().getScmStatusV2(
+                arg_params,
+            )
+        }
+        fn getScmStatus(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_listIgnored: bool,
+            arg_commit: &crate::types::BinaryHash,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+            self.as_ref().getScmStatus(
+                arg_mountPoint,
+                arg_listIgnored,
+                arg_commit,
+            )
+        }
+        fn getScmStatusBetweenRevisions(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_oldHash: &crate::types::BinaryHash,
+            arg_newHash: &crate::types::BinaryHash,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+            self.as_ref().getScmStatusBetweenRevisions(
+                arg_mountPoint,
+                arg_oldHash,
+                arg_newHash,
+            )
+        }
+        fn getManifestEntry(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_relativePath: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>> {
+            self.as_ref().getManifestEntry(
+                arg_mountPoint,
+                arg_relativePath,
+            )
+        }
+        fn getDaemonInfo(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>> {
+            self.as_ref().getDaemonInfo(
+            )
+        }
+        fn getPid(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().getPid(
+            )
+        }
+        fn initiateShutdown(
+            &self,
+            arg_reason: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().initiateShutdown(
+                arg_reason,
+            )
+        }
+        fn getConfig(
+            &self,
+            arg_params: &crate::types::GetConfigParams,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>> {
+            self.as_ref().getConfig(
+                arg_params,
+            )
+        }
+        fn reloadConfig(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().reloadConfig(
+            )
+        }
+        fn debugGetScmTree(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_id: &crate::types::BinaryHash,
+            arg_localStoreOnly: bool,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>> {
+            self.as_ref().debugGetScmTree(
+                arg_mountPoint,
+                arg_id,
+                arg_localStoreOnly,
+            )
+        }
+        fn debugGetScmBlob(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_id: &crate::types::BinaryHash,
+            arg_localStoreOnly: bool,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+            self.as_ref().debugGetScmBlob(
+                arg_mountPoint,
+                arg_id,
+                arg_localStoreOnly,
+            )
+        }
+        fn debugGetScmBlobMetadata(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_id: &crate::types::BinaryHash,
+            arg_localStoreOnly: bool,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>> {
+            self.as_ref().debugGetScmBlobMetadata(
+                arg_mountPoint,
+                arg_id,
+                arg_localStoreOnly,
+            )
+        }
+        fn debugInodeStatus(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_path: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>> {
+            self.as_ref().debugInodeStatus(
+                arg_mountPoint,
+                arg_path,
+            )
+        }
+        fn debugOutstandingFuseCalls(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>> {
+            self.as_ref().debugOutstandingFuseCalls(
+                arg_mountPoint,
+            )
+        }
+        fn debugGetInodePath(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_inodeNumber: i64,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>> {
+            self.as_ref().debugGetInodePath(
+                arg_mountPoint,
+                arg_inodeNumber,
+            )
+        }
+        fn debugSetLogLevel(
+            &self,
+            arg_category: &str,
+            arg_level: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>> {
+            self.as_ref().debugSetLogLevel(
+                arg_category,
+                arg_level,
+            )
+        }
+        fn getAccessCounts(
+            &self,
+            arg_duration: i64,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>> {
+            self.as_ref().getAccessCounts(
+                arg_duration,
+            )
+        }
+        fn clearAndCompactLocalStore(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().clearAndCompactLocalStore(
+            )
+        }
+        fn debugClearLocalStoreCaches(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().debugClearLocalStoreCaches(
+            )
+        }
+        fn debugCompactLocalStorage(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().debugCompactLocalStorage(
+            )
+        }
+        fn unloadInodeForPath(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_path: &crate::types::PathString,
+            arg_age: &crate::types::TimeSpec,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().unloadInodeForPath(
+                arg_mountPoint,
+                arg_path,
+                arg_age,
+            )
+        }
+        fn flushStatsNow(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().flushStatsNow(
+            )
+        }
+        fn invalidateKernelInodeCache(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_path: &crate::types::PathString,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().invalidateKernelInodeCache(
+                arg_mountPoint,
+                arg_path,
+            )
+        }
+        fn getStatInfo(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>> {
+            self.as_ref().getStatInfo(
+            )
+        }
+        fn enableTracing(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().enableTracing(
+            )
+        }
+        fn disableTracing(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().disableTracing(
+            )
+        }
+        fn getTracePoints(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>> {
+            self.as_ref().getTracePoints(
+            )
+        }
+        fn injectFault(
+            &self,
+            arg_fault: &crate::types::FaultDefinition,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+            self.as_ref().injectFault(
+                arg_fault,
+            )
+        }
+        fn removeFault(
+            &self,
+            arg_fault: &crate::types::RemoveFaultArg,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>> {
+            self.as_ref().removeFault(
+                arg_fault,
+            )
+        }
+        fn unblockFault(
+            &self,
+            arg_info: &crate::types::UnblockFaultArg,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+            self.as_ref().unblockFault(
+                arg_info,
+            )
         }
     }
 
@@ -15317,6 +15773,7 @@ pub mod mock {
     use std::marker::PhantomData;
 
     pub struct EdenService<'mock> {
+        pub parent: fb303_core::mock::BaseService<'mock>,
         pub listMounts: eden_service::listMounts<'mock>,
         pub mount: eden_service::mount<'mock>,
         pub unmount: eden_service::unmount<'mock>,
@@ -15372,6 +15829,7 @@ pub mod mock {
     impl dyn super::client::EdenService {
         pub fn mock<'mock>() -> EdenService<'mock> {
             EdenService {
+                parent: fb303_core::client::BaseService::mock(),
                 listMounts: eden_service::listMounts::unimplemented(),
                 mount: eden_service::mount::unimplemented(),
                 unmount: eden_service::unmount::unimplemented(),
@@ -15984,6 +16442,14 @@ pub mod mock {
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceUnblockFaultError(error),
                 ))))
+        }
+    }
+
+    #[async_trait]
+    impl<'mock> AsRef<dyn crate::dependencies::fb303_core::client::BaseService + 'mock> for EdenService<'mock>
+    {
+        fn as_ref(&self) -> &(dyn crate::dependencies::fb303_core::client::BaseService + 'mock) {
+            self
         }
     }
 
