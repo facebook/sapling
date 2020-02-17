@@ -32,8 +32,6 @@ from . import (
 from .i18n import _
 
 
-stringio = util.stringio
-
 # from unzip source code:
 _UNX_IFREG = 0x8000
 _UNX_IFLNK = 0xA000
@@ -102,7 +100,7 @@ def buildmetadata(ctx):
 
     opts = {"template": repo.ui.config("experimental", "archivemetatemplate", default)}
 
-    out = util.stringio()
+    out = pycompat.stringutf8io()
 
     fm = formatter.formatter(repo.ui, out, "archive", opts)
     fm.startitem()
@@ -116,7 +114,7 @@ def buildmetadata(ctx):
         fm.data(dirty=dirty)
     fm.end()
 
-    return out.getvalue()
+    return pycompat.encodeutf8(out.getvalue())
 
 
 class tarit(object):
@@ -184,7 +182,7 @@ class tarit(object):
             i.size = 0
         else:
             i.mode = mode
-            data = stringio(data)
+            data = pycompat.stringio(data)
         self.z.addfile(i, data)
 
     def done(self):

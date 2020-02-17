@@ -84,6 +84,7 @@ if sys.version_info[0] >= 3:
     sysexecutable = sys.executable
 
     stringio = io.BytesIO
+    stringutf8io = io.StringIO
     maplist = lambda *args: list(map(*args))
     ziplist = lambda *args: list(zip(*args))
     rawinput = input
@@ -178,6 +179,7 @@ else:
     sysexecutable = sys.executable
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
+    stringutf8io = cStringIO.StringIO
     maplist = map
     ziplist = zip
     rawinput = raw_input  # noqa
