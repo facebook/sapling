@@ -401,9 +401,9 @@ class wirepeer(repository.legacypeer):
         visible to hooks.
         """
 
-        if heads != ["force"] and self.capable("unbundlehash"):
+        if heads != [b"force"] and self.capable("unbundlehash"):
             heads = encodelist(
-                ["hashed", hashlib.sha1(b"".join(sorted(heads))).digest()]
+                [b"hashed", hashlib.sha1(b"".join(sorted(heads))).digest()]
             )
         else:
             heads = encodelist(heads)
@@ -435,9 +435,9 @@ class wirepeer(repository.legacypeer):
             - a `replay.ReplayData` instance with override commit dates
               and expected resulting head hash
         """
-        if heads != ["force"] and self.capable("unbundlehash"):
+        if heads != [b"force"] and self.capable("unbundlehash"):
             heads = encodelist(
-                ["hashed", hashlib.sha1(b"".join(sorted(heads))).digest()]
+                [b"hashed", hashlib.sha1(b"".join(sorted(heads))).digest()]
             )
         else:
             heads = encodelist(heads)

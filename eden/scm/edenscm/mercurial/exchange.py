@@ -178,7 +178,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
 
 def readbundle(ui, fh, fname, vfs=None):
-    header = changegroup.readexactly(fh, 4)
+    header = pycompat.decodeutf8(changegroup.readexactly(fh, 4))
 
     alg = None
     if not fname:
@@ -190,7 +190,7 @@ def readbundle(ui, fh, fname, vfs=None):
     elif vfs:
         fname = vfs.join(fname)
 
-    magic, version = pycompat.decodeutf8(header[0:2]), pycompat.decodeutf8(header[2:4])
+    magic, version = header[0:2], header[2:4]
 
     if magic != "HG":
         raise error.Abort(_("%s: not a Mercurial bundle") % fname)
@@ -1020,7 +1020,7 @@ def _pushbundle2(pushop):
     capsblob = bundle2.encodecaps(
         bundle2.getrepocaps(pushop.repo, allowpushback=pushback)
     )
-    bundler.newpart("replycaps", data=capsblob)
+    bundler.newpart("replycaps", data=pycompat.encodeutf8(capsblob))
     replyhandlers = []
     for partgenname in b2partsgenorder:
         partgen = b2partsgenmapping[partgenname]
@@ -1033,7 +1033,7 @@ def _pushbundle2(pushop):
     stream = util.chunkbuffer(bundler.getchunks())
     try:
         try:
-            reply = pushop.remote.unbundle(stream, ["force"], pushop.remote.url())
+            reply = pushop.remote.unbundle(stream, [b"force"], pushop.remote.url())
         except error.BundleValueError as exc:
             raise error.Abort(_("missing support for %s") % exc)
         try:
@@ -1092,7 +1092,7 @@ def _pushchangeset(pushop):
     # finds it has different heads (someone else won
     # commit/push race), server aborts.
     if pushop.force:
-        remoteheads = ["force"]
+        remoteheads = [b"force"]
     else:
         remoteheads = pushop.remoteheads
     # ssh: return remote's addchangegroup()
@@ -1988,11 +1988,11 @@ def check_heads(repo, their_heads, context):
     Used by peer for unbundling.
     """
     heads = repo.heads()
-    heads_hash = hashlib.sha1("".join(sorted(heads))).digest()
+    heads_hash = hashlib.sha1(b"".join(sorted(heads))).digest()
     if not (
-        their_heads == ["force"]
+        their_heads == [b"force"]
         or their_heads == heads
-        or their_heads == ["hashed", heads_hash]
+        or their_heads == [b"hashed", heads_hash]
     ):
         # someone else committed/pushed/unbundled while we
         # were transferring data

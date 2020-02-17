@@ -63,7 +63,7 @@ class sshserver(wireproto.abstractserverproto):
         return self.getargs(name)[0]
 
     def getfile(self, fpout):
-        self.sendresponse(b"")
+        self.sendresponse("")
         count = int(self.fin.readline())
         while count:
             fpout.write(self.fin.read(count))
@@ -93,7 +93,7 @@ class sshserver(wireproto.abstractserverproto):
         self.fout.flush()
 
     def sendpushresponse(self, rsp):
-        self.sendresponse(b"")
+        self.sendresponse("")
         self.sendresponse(bytes(rsp.res))
 
     def sendpusherror(self, rsp):
@@ -149,7 +149,7 @@ class sshserver(wireproto.abstractserverproto):
                     if r is not None:
                         self.sendresponse(r)
                 else:
-                    self.sendresponse(b"")
+                    self.sendresponse("")
         return cmd != ""
 
     def _client(self):

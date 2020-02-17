@@ -380,7 +380,7 @@ class sshpeer(wireproto.wirepeer):
         return self._pipei.read(self._getamount())
 
     def _send(self, data, flush=False):
-        self._pipeo.write("%d\n" % len(data))
+        self._pipeo.write(b"%d\n" % len(data))
         if data:
             self._pipeo.write(data)
         if flush:

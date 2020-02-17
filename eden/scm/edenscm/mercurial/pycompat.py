@@ -18,6 +18,7 @@ This contains aliases to hide python version-specific details from the core.
 from __future__ import absolute_import
 
 import abc
+import collections
 import errno
 import getopt
 import os
@@ -137,6 +138,9 @@ if sys.version_info[0] >= 3:
         return s
 
     ABC = abc.ABC
+    import collections.abc
+
+    Mapping = collections.abc.Mapping
 
 
 else:
@@ -208,6 +212,8 @@ else:
 
     class ABC(object):
         __metaclass__ = abc.ABCMeta
+
+    Mapping = collections.Mapping
 
 
 isjython = sysplatform.startswith("java")

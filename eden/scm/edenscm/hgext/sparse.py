@@ -1123,7 +1123,7 @@ PROFILE_INACTIVE, PROFILE_ACTIVE, PROFILE_INCLUDED = _profile_flags = range(3)
 
 
 @attr.s(slots=True, frozen=True)
-class ProfileInfo(collections.Mapping):
+class ProfileInfo(pycompat.Mapping):
     path = attr.ib()
     active = attr.ib()
     _metadata = attr.ib(default=attr.Factory(dict))
