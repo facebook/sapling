@@ -796,7 +796,7 @@ def backupdisable(ui, repo, **opts):
         if e.lockinfo.isrunning():
             ui.warn(
                 _(
-                    "'@PROG@ cloud disable' does not affect running backup processes\n"
+                    "'@prog@ cloud disable' does not affect running backup processes\n"
                     "(kill the background process - pid %s on %s - gracefully if needed)\n"
                 )
                 % (e.lockinfo.uniqueid, e.lockinfo.namespace),
