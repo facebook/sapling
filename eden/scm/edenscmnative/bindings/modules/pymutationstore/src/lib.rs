@@ -12,7 +12,7 @@ use std::{cell::RefCell, io::Cursor};
 use anyhow::Error;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
-use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
 use thiserror::Error;
 
 use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore, Repair};
@@ -157,12 +157,12 @@ py_class!(class mutationentry |py| {
         Ok(self.entry(py).split.iter().map(|s| PyBytes::new(py, s.as_ref())).collect())
     }
 
-    def op(&self) -> PyResult<PyString> {
-        Ok(PyString::new(py, self.entry(py).op.as_ref()))
+    def op(&self) -> PyResult<Str> {
+        Ok(self.entry(py).op.clone().into())
     }
 
-    def user(&self) -> PyResult<PyBytes> {
-        Ok(PyBytes::new(py, self.entry(py).user.as_ref()))
+    def user(&self) -> PyResult<Str> {
+        Ok(self.entry(py).user.clone().into())
     }
 
     def time(&self) -> PyResult<f64> {
