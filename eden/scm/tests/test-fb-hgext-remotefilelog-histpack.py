@@ -93,9 +93,9 @@ class histpacktestsbase(object):
         pack = self.createPack(revisions)
 
         actual = pack.getnodeinfo(filename, node)
-        self.assertEquals(p1, actual[0])
-        self.assertEquals(p2, actual[1])
-        self.assertEquals(linknode, actual[2])
+        self.assertEqual(p1, actual[0])
+        self.assertEqual(p2, actual[1])
+        self.assertEqual(linknode, actual[2])
 
     def testAddMultiple(self):
         """Test putting multiple unrelated revisions into a pack and reading
@@ -114,10 +114,10 @@ class histpacktestsbase(object):
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             actual = pack.getnodeinfo(filename, node)
-            self.assertEquals(p1, actual[0])
-            self.assertEquals(p2, actual[1])
-            self.assertEquals(linknode, actual[2])
-            self.assertEquals(copyfrom, actual[3])
+            self.assertEqual(p1, actual[0])
+            self.assertEqual(p2, actual[1])
+            self.assertEqual(linknode, actual[2])
+            self.assertEqual(copyfrom, actual[3])
 
     def testPackMany(self):
         """Pack many related and unrelated ancestors.
@@ -155,10 +155,10 @@ class histpacktestsbase(object):
         for (filename, node), (p1, p2, lastnode) in pycompat.iteritems(allentries):
             ap1, ap2, alinknode, acopyfrom = store.getnodeinfo(filename, node)
             ep1, ep2, elinknode = allentries[(filename, node)]
-            self.assertEquals(ap1, ep1)
-            self.assertEquals(ap2, ep2)
-            self.assertEquals(alinknode, elinknode)
-            self.assertEquals(acopyfrom, None)
+            self.assertEqual(ap1, ep1)
+            self.assertEqual(ap2, ep2)
+            self.assertEqual(alinknode, elinknode)
+            self.assertEqual(acopyfrom, None)
 
     def testGetNodeInfo(self):
         revisions = []
@@ -174,10 +174,10 @@ class histpacktestsbase(object):
         # Test that getnodeinfo returns the expected results
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             ap1, ap2, alinknode, acopyfrom = pack.getnodeinfo(filename, node)
-            self.assertEquals(ap1, p1)
-            self.assertEquals(ap2, p2)
-            self.assertEquals(alinknode, linknode)
-            self.assertEquals(acopyfrom, copyfrom)
+            self.assertEqual(ap1, p1)
+            self.assertEqual(ap2, p2)
+            self.assertEqual(alinknode, linknode)
+            self.assertEqual(acopyfrom, copyfrom)
 
     def testGetMissing(self):
         """Test the getmissing() api.
@@ -203,11 +203,11 @@ class histpacktestsbase(object):
 
         fakenode = self.getFakeHash()
         missing = pack.getmissing([(filename, revisions[0][1]), (filename, fakenode)])
-        self.assertEquals(missing, [(filename, fakenode)])
+        self.assertEqual(missing, [(filename, fakenode)])
 
         # Test getmissing on a non-existant filename
         missing = pack.getmissing([("bar", fakenode)])
-        self.assertEquals(missing, [("bar", fakenode)])
+        self.assertEqual(missing, [("bar", fakenode)])
 
     def testBadVersionThrows(self):
         pack = self.createPack()
@@ -240,14 +240,14 @@ class histpacktestsbase(object):
 
         pack = self.createPack(revisions)
         if util.safehasattr(pack, "params"):
-            self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
+            self.assertEqual(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             actual = pack.getnodeinfo(filename, node)
-            self.assertEquals(p1, actual[0])
-            self.assertEquals(p2, actual[1])
-            self.assertEquals(linknode, actual[2])
-            self.assertEquals(copyfrom, actual[3])
+            self.assertEqual(p1, actual[0])
+            self.assertEqual(p2, actual[1])
+            self.assertEqual(linknode, actual[2])
+            self.assertEqual(copyfrom, actual[3])
 
     def testReadingMutablePack(self):
         """Tests that the data written into a mutablehistorypack can be read out
@@ -277,12 +277,12 @@ class histpacktestsbase(object):
         # Test getnodeinfo()
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             entry = packer.getnodeinfo(filename, node)
-            self.assertEquals(entry, (p1, p2, linknode, copyfrom))
+            self.assertEqual(entry, (p1, p2, linknode, copyfrom))
 
         # Test getmissing()
         missingcheck = [(revisions[0][0], revisions[0][1]), ("foo", self.getFakeHash())]
         missing = packer.getmissing(missingcheck)
-        self.assertEquals(missing, missingcheck[1:])
+        self.assertEqual(missing, missingcheck[1:])
 
 
 class rusthistpacktests(histpacktestsbase, unittest.TestCase):

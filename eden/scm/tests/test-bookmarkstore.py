@@ -35,13 +35,13 @@ class bookmarkstoretests(unittest.TestCase):
         self.assertIsNone(bmstore.lookup_bookmark("not_real"))
 
         bmstore.update("test", node.nullid)
-        self.assertEquals(
+        self.assertEqual(
             "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
             bmstore.lookup_bookmark("test"),
         )
 
         bmstore.update("test", node.bin("1" * 40))
-        self.assertEquals(
+        self.assertEqual(
             "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11",
             bmstore.lookup_bookmark("test"),
         )
@@ -58,10 +58,10 @@ class bookmarkstoretests(unittest.TestCase):
         bmstore.update("test", testnode)
         bmstore.update("test2", testnode)
 
-        self.assertEquals(["test2", "test"], bmstore.lookup_node(testnode))
+        self.assertEqual(["test2", "test"], bmstore.lookup_node(testnode))
 
         bmstore.remove("test2")
-        self.assertEquals(["test"], bmstore.lookup_node(testnode))
+        self.assertEqual(["test"], bmstore.lookup_node(testnode))
 
     def testMalformedBookmarks(self):
         bmdir = self.makeTempDir()
@@ -84,7 +84,7 @@ class bookmarkstoretests(unittest.TestCase):
         bmstore1.flush()
 
         bmstore2 = bookmarkstore.bookmarkstore(bmdir)
-        self.assertEquals(
+        self.assertEqual(
             "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11",
             bmstore2.lookup_bookmark("test"),
         )

@@ -84,7 +84,7 @@ class datapacktestsbase(object):
         pack = self.createPack(revisions)
 
         chain = pack.getdeltachain(filename, node)
-        self.assertEquals(content, chain[0][4])
+        self.assertEqual(content, chain[0][4])
 
     def testAddSingle(self):
         self._testAddSingle("")
@@ -107,10 +107,10 @@ class datapacktestsbase(object):
 
         for filename, node, base, content in revisions:
             entry = pack.getdelta(filename, node)
-            self.assertEquals((content, filename, base, {}), entry)
+            self.assertEqual((content, filename, base, {}), entry)
 
             chain = pack.getdeltachain(filename, node)
-            self.assertEquals(content, chain[0][4])
+            self.assertEqual(content, chain[0][4])
 
     def testAddDeltas(self):
         """Test putting multiple delta blobs into a pack and read the chain.
@@ -128,13 +128,13 @@ class datapacktestsbase(object):
 
         entry = pack.getdelta(filename, revisions[0][1])
         realvalue = (revisions[0][3], filename, revisions[0][2], {})
-        self.assertEquals(entry, realvalue)
+        self.assertEqual(entry, realvalue)
 
         # Test that the chain for the final entry has all the others
         chain = pack.getdeltachain(filename, node)
         for i in range(10):
             content = "abcdef%s" % i
-            self.assertEquals(content, chain[-i - 1][4])
+            self.assertEqual(content, chain[-i - 1][4])
 
     def testPackMany(self):
         """Pack many related and unrelated objects.
@@ -163,7 +163,7 @@ class datapacktestsbase(object):
             chain = pack.getdeltachain(filename, node)
             for entry in chain:
                 expectedcontent = blobs[(entry[0], entry[1], entry[3])]
-                self.assertEquals(entry[4], expectedcontent)
+                self.assertEqual(entry[4], expectedcontent)
 
     def testPackMetadata(self):
         revisions = []
@@ -179,7 +179,7 @@ class datapacktestsbase(object):
             # flag == 0 should be optimized out
             if origmeta[constants.METAKEYFLAG] == 0:
                 del origmeta[constants.METAKEYFLAG]
-            self.assertEquals(parsedmeta, origmeta)
+            self.assertEqual(parsedmeta, origmeta)
 
     def testGetMissing(self):
         """Test the getmissing() api.
@@ -203,7 +203,7 @@ class datapacktestsbase(object):
 
         fakenode = self.getFakeHash()
         missing = pack.getmissing([("foo", revisions[0][1]), ("foo", fakenode)])
-        self.assertEquals(missing, [("foo", fakenode)])
+        self.assertEqual(missing, [("foo", fakenode)])
 
     def testAddThrows(self):
         pack = self.createPack()
@@ -235,7 +235,7 @@ class datapacktestsbase(object):
         revisions = [("filename", fakenode, self.getFakeHash(), "content")]
         pack = self.createPack(revisions)
         chain = pack.getdeltachain("filename", fakenode)
-        self.assertEquals(len(chain), 1)
+        self.assertEqual(len(chain), 1)
 
     def testLargePack(self):
         """Test creating and reading from a large pack with over X entries.
@@ -254,7 +254,7 @@ class datapacktestsbase(object):
 
         for (filename, node), content in pycompat.iteritems(blobs):
             actualcontent = pack.getdeltachain(filename, node)[0][4]
-            self.assertEquals(actualcontent, content)
+            self.assertEqual(actualcontent, content)
 
     def testPacksCache(self):
         """Test that we remember the most recent packs while fetching the delta
@@ -289,11 +289,11 @@ class datapacktestsbase(object):
             chain = store.getdeltachain(revision[0], revision[1])
 
             mostrecentpack = next(iter(store.packs), None)
-            self.assertEquals(
+            self.assertEqual(
                 mostrecentpack.getdeltachain(revision[0], revision[1]), chain
             )
 
-            self.assertEquals(randomchain.index(revision) + 1, len(chain))
+            self.assertEqual(randomchain.index(revision) + 1, len(chain))
 
     def testInlineRepack(self):
         """Verify that when fetchpacks is enabled, and the number of packfiles
@@ -327,20 +327,20 @@ class datapacktestsbase(object):
 
         # The first refresh should populate all the packfiles.
         store.refresh()
-        self.assertEquals(len(store.packs), testdatapackstore.DEFAULTCACHESIZE)
+        self.assertEqual(len(store.packs), testdatapackstore.DEFAULTCACHESIZE)
 
         # Each packfile is made up of 2 files: the data, and the index
-        self.assertEquals(len(os.listdir(packdir)), numpacks * 2)
+        self.assertEqual(len(os.listdir(packdir)), numpacks * 2)
 
         store.markforrefresh()
 
         # The second one should repack all the packfiles into one.
         store.fetchpacksenabled = True
         store.refresh()
-        self.assertEquals(len(store.packs), 1)
+        self.assertEqual(len(store.packs), 1)
 
         # There should only be 2 files: the packfile, and the index
-        self.assertEquals(len(os.listdir(packdir)), 2)
+        self.assertEqual(len(os.listdir(packdir)), 2)
 
     def testCorruptPackHandling(self):
         """Test that the pack store deletes corrupt packs."""
@@ -403,7 +403,7 @@ class datapacktestsbase(object):
         newpackcount = len(os.listdir(packdir))
 
         # Assert the corrupt pack was removed
-        self.assertEquals(origpackcount - 2, newpackcount)
+        self.assertEqual(origpackcount - 2, newpackcount)
 
         # Corrupt the index
         os.chmod(secondindex, 0o644)
@@ -423,7 +423,7 @@ class datapacktestsbase(object):
         newpackcount = len(os.listdir(packdir))
 
         # Assert the corrupt pack was removed
-        self.assertEquals(origpackcount - 2, newpackcount)
+        self.assertEqual(origpackcount - 2, newpackcount)
 
     def testReadingMutablePack(self):
         """Tests that the data written into a mutabledatapack can be read out
@@ -447,19 +447,19 @@ class datapacktestsbase(object):
         # Test getmissing
         missing = ("", self.getFakeHash())
         value = packer.getmissing([missing, (filename, node)])
-        self.assertEquals(value, [missing])
+        self.assertEqual(value, [missing])
 
         # Test getmeta
         value = packer.getmeta(filename, node)
-        self.assertEquals(value, meta)
+        self.assertEqual(value, meta)
 
         # Test getdelta
         value = packer.getdelta(filename, node)
-        self.assertEquals(value, (content, filename, base, meta))
+        self.assertEqual(value, (content, filename, base, meta))
 
         # Test getdeltachain
         value = packer.getdeltachain(filename, node)
-        self.assertEquals(value, [(filename, node, filename, base, content)])
+        self.assertEqual(value, [(filename, node, filename, base, content)])
 
     # perf test off by default since it's slow
     def _testIndexPerf(self):
