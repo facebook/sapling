@@ -163,6 +163,8 @@ coreconfigitem(
     alias=[("experimental", "updatecheck")],
 )
 coreconfigitem("commands", "update.requiredest", default=False)
+coreconfigitem("commit", "description-size-limit", default=None)
+coreconfigitem("commit", "extras-size-limit", default=None)
 coreconfigitem("committemplate", ".*", default=None, generic=True)
 coreconfigitem("connectionpool", "lifetime", default=None)
 coreconfigitem("convert", "git.committeractions", default=lambda: ["messagedifferent"])

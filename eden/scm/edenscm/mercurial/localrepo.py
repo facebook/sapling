@@ -2226,6 +2226,24 @@ class localrepository(object):
         p1, p2 = ctx.p1(), ctx.p2()
         user = ctx.user()
 
+        descriptionlimit = self.ui.configbytes("commit", "description-size-limit")
+        if descriptionlimit:
+            descriptionlen = len(ctx.description())
+            if descriptionlen > descriptionlimit:
+                raise errormod.Abort(
+                    _("commit message length (%s) exceeds configured limit (%s)")
+                    % (descriptionlen, descriptionlimit)
+                )
+
+        extraslimit = self.ui.configbytes("commit", "extras-size-limit")
+        if extraslimit:
+            extraslen = sum(len(k) + len(v) for k, v in pycompat.iteritems(ctx.extra()))
+            if extraslen > extraslimit:
+                raise errormod.Abort(
+                    _("commit extras total size (%s) exceeds configured limit (%s)")
+                    % (extraslen, extraslimit)
+                )
+
         lock = self.lock()
         try:
             tr = self.transaction("commit")

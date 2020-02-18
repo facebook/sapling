@@ -692,6 +692,19 @@ effect and style see :hg:`help color`.
     will be disallowed.
     (default: False)
 
+``commit``
+----------
+
+``description-size-limit``
+    Maximum length (in bytes) of the description for new commits.  Set this
+    to a reasonable value to prevent accidentally creating commits with
+    very large commit messages.
+
+``extras-size-limit``
+    Maximum total size (in bytes) of the commit extras for new commits.
+    Set this to a reasonable value to prevent accidentally creating commits
+    with very large metadata.
+
 ``committemplate``
 ------------------
 
