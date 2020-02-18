@@ -33,6 +33,7 @@ When everything looks okay:
   changelog: looks okay
   metalog: looks okay
   visibleheads: looks okay
+  treestate: looks okay
   allheads: looks okay
   indexedlogdatastore: looks okay
 
@@ -59,6 +60,7 @@ Test that 'hg doctor' can fix them:
   changelog: looks okay
   metalog: repaired
   visibleheads: looks okay
+  treestate: looks okay
   allheads: repaired
   indexedlogdatastore: repaired
 
@@ -107,6 +109,7 @@ Check changelog repiar:
   changelog: repaired
   metalog: looks okay
   visibleheads: removed 1 heads, added tip
+  treestate: looks okay
   allheads: looks okay
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
@@ -115,4 +118,89 @@ Check changelog repiar:
   
 
   $ hg status
+
+Check dirstate pointing to a stripped commit:
+
+  $ newrepo
+  $ drawdag << 'EOS'
+  > C
+  > |
+  > B
+  > |   # A/A2=2
+  > A   # A/A1=1
+  > EOS
+
+  $ hg up -q 'desc(A)'
+  $ hg st
+  $ hg mv A A0
+  $ hg rm A1
+  $ echo 3 > A2
+  $ echo 1 > X
+  $ hg add X
+  $ hg up -q 'desc(B)'
+  $ echo 4 > B
+  $ echo 2 > Y
+  $ hg add Y
+  $ hg up -q 'desc(C)'
+  $ echo 3 > Z
+  $ hg add Z
+
+  $ hg status -C
+  M A2
+  M B
+  A A0
+    A
+  A X
+  A Y
+  A Z
+  R A
+  R A1
+
+ (strip 2 commits while preserving the treestate)
+  >>> with open(".hg/store/00changelog.i", "rb+") as f:
+  ...     f.truncate(64)  # only keep 1 commit: "A"
+
+  $ hg status
+  abort: 00changelog.i@d2653ea8ee94: no node!
+  [255]
+
+ (hg doctor can fix dirstate/treestate)
+  $ hg doctor
+  checking internal storage
+  mutation: looks okay
+  changelog: looks okay
+  metalog: looks okay
+  visibleheads: removed 1 heads, added tip
+  treestate: repaired
+  allheads: looks okay
+
+  $ hg log -r . -T '{desc}\n'
+  A
+
+ (dirstate reverted to a previous state: B, C, X, Y, Z become unknown)
+  $ hg status -C
+  M A2
+  A A0
+    A
+  A X
+  R A
+  R A1
+  ? B
+  ? C
+  ? Y
+  ? Z
+
+Try other kinds of dirstate corruptions:
+
+  >>> with open(".hg/dirstate", "r+") as f:
+  ...     f.seek(0);
+  ...     f.write(b"x" * 1024);
+  $ hg doctor
+  checking internal storage
+  mutation: looks okay
+  changelog: looks okay
+  metalog: looks okay
+  visibleheads: looks okay
+  treestate: repaired
+  allheads: looks okay
 #endif

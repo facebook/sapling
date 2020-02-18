@@ -9,11 +9,18 @@ import contextlib
 import os
 import typing
 
-from bindings import metalog, mutationstore, nodemap, revisionstore, tracing
+from bindings import (
+    metalog,
+    mutationstore,
+    nodemap,
+    revisionstore,
+    tracing,
+    treestate as rawtreestate,
+)
 
-from .. import hg, progress, revlog, util, vfs as vfsmod
+from .. import error, hg, progress, revlog, treestate, util, vfs as vfsmod
 from ..i18n import _
-from ..node import bin, hex, nullid
+from ..node import bin, hex, nullhex, nullid
 from ..pycompat import decodeutf8, encodeutf8
 from .cmdtable import command
 
@@ -53,6 +60,7 @@ def doctor(ui, **opts):
 
     ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
     repairvisibleheads(ui, ml, cl)
+    repairtreestate(ui, vfs, repopath, cl)
 
     if svfs.isdir("allheads"):
         repairsvfs(ui, svfs, "allheads", nodemap.nodeset)
@@ -250,6 +258,89 @@ def repairvisibleheads(ui, metalog, cl):
         metalog.set("visibleheads", encodeutf8(newtext))
         metalog.commit("fix visibleheads")
         ui.write_err(_("visibleheads: removed %s heads, added tip\n") % removedcount)
+
+
+def repairtreestate(ui, vfs, root, cl):
+    """Attempt to fix treestate:
+
+    - Fix the dirstate pointer to a valid treestate root node.
+    - Fix the dirstate node to point to a valid changelog node.
+    """
+    if not vfs.exists("treestate"):
+        return
+    needrebuild = False
+    try:
+        tmap = treestate.treestatemap(ui, vfs, root)
+        p1node = tmap.parents()[0]
+        if p1node not in cl.nodemap:
+            needrebuild = True
+    except Exception:
+        needrebuild = True
+    if not needrebuild:
+        ui.write_err(_("treestate: looks okay\n"))
+        return
+
+    nodemap = cl.nodemap
+
+    def stat(name):
+        return vfs.stat("treestate/%s" % name)
+
+    def rebuild(filename, rootpos, p1hex):
+        meta = {"p1": p1hex, "filename": filename, "rootid": rootpos}
+        p1bin = bin(p1hex)
+        with vfs.open("dirstate", "w", atomictemp=True) as f:
+            # see treestate.py:treestatemap.write
+            f.write(p1bin)
+            f.write(nullid)
+            f.write(treestate.HEADER)
+            f.write(treestate._packmetadata(meta))
+        ui.write_err(_("treestate: repaired\n"))
+
+    # Find a recent treestate (name, root) pair.
+    for filename in sorted(vfs.listdir("treestate"), key=lambda n: -stat(n).st_mtime):
+        data = vfs.read("treestate/%s" % filename)
+        path = vfs.join("treestate/%s" % filename)
+
+        end = len(data)
+        while True:
+            # Find the offset of "p1=".
+            p1pos = data.rfind(b"p1=", 0, end)
+            if p1pos < 0:
+                break
+
+            # Find a near root offset. A root offset has the property:
+            # - It's before a "p1=" offset (if "p1=" is part of the root metadata,
+            #   "p1=" can also be part of a filename or other things).
+            # - It starts with "\0".
+            # See treestate/src/serialization.rs for details.
+            searchrange = 300
+            end = max(p1pos, searchrange) - searchrange
+            for rootpos in range(end, p1pos):
+                # The first byte of the Root entry is "version", b"\0".
+                # No need to try otherwise.
+                if data[rootpos] != b"\0":
+                    continue
+                try:
+                    rawtree = rawtreestate.treestate(path, rootpos)
+                except Exception:
+                    # Root deserialization failed xxhash check. Try next.
+                    continue
+                else:
+                    meta = treestate._unpackmetadata(rawtree.getmetadata())
+                    p1hex = meta.get("p1")
+                    p2hex = meta.get("p2", nullhex)
+                    if p2hex != nullhex:
+                        # Do not restore to a merge commit.
+                        continue
+                    if p1hex is None or bin(p1hex) not in nodemap:
+                        # Try next - p1 not in changelog.
+                        continue
+                    rebuild(filename, rootpos, p1hex)
+                    return
+
+    ui.write_err(
+        _("treestate: cannot fix automatically (consider create a new workdir)\n")
+    )
 
 
 def mtime(path):
