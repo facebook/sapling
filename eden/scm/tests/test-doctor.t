@@ -32,6 +32,7 @@ When everything looks okay:
   mutation: looks okay
   changelog: looks okay
   metalog: looks okay
+  visibleheads: looks okay
   allheads: looks okay
   indexedlogdatastore: looks okay
 
@@ -57,6 +58,7 @@ Test that 'hg doctor' can fix them:
   mutation: repaired
   changelog: looks okay
   metalog: repaired
+  visibleheads: looks okay
   allheads: repaired
   indexedlogdatastore: repaired
 
@@ -104,8 +106,13 @@ Check changelog repiar:
   truncating 00changelog.d from 165 to 110 bytes
   changelog: repaired
   metalog: looks okay
+  visibleheads: removed 1 heads, added tip
   allheads: looks okay
   $ hg log -Gr 'all()' -T '{desc}'
-  abort: RevlogError!
-  [255]
+  o  B
+  |
+  o  A
+  
+
+  $ hg status
 #endif

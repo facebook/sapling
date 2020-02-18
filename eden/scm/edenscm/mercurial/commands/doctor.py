@@ -13,7 +13,8 @@ from bindings import metalog, mutationstore, nodemap, revisionstore, tracing
 
 from .. import hg, progress, revlog, util, vfs as vfsmod
 from ..i18n import _
-from ..node import nullid
+from ..node import bin, hex, nullid
+from ..pycompat import decodeutf8, encodeutf8
 from .cmdtable import command
 
 
@@ -50,8 +51,8 @@ def doctor(ui, **opts):
         ui.write_err(_("changelog: cannot fix automatically (consider reclone)\n"))
         return 1
 
-    if svfs.isdir("metalog"):
-        repairsvfs(ui, svfs, "metalog", metalog.metalog)
+    ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
+    repairvisibleheads(ui, ml, cl)
 
     if svfs.isdir("allheads"):
         repairsvfs(ui, svfs, "allheads", nodemap.nodeset)
@@ -87,7 +88,9 @@ def doctor(ui, **opts):
 def repairsvfs(ui, svfs, name, fixobj):
     # type: (..., ..., str, ...) -> None
     """Attempt to repair path in repo.svfs"""
-    repair(ui, name, svfs.join(name), fixobj.repair)
+    path = svfs.join(name)
+    repair(ui, name, path, fixobj.repair)
+    return fixobj(path)
 
 
 def repair(ui, name, path, fixfunc):
@@ -222,6 +225,31 @@ def repairchangelog(ui, svfs):
     ui.write_err(_("changelog: repaired\n"))
     cl = revlog.revlog(svfs, clname)
     return cl
+
+
+def repairvisibleheads(ui, metalog, cl):
+    """Attempt to fix visibleheads by removing invalid commit hashes"""
+    oldtext = decodeutf8(metalog.get("visibleheads") or b"")
+    oldlines = oldtext.splitlines()
+    assert oldlines[0] == "v1"
+    nodemap = cl.nodemap
+    newlines = [oldlines[0]] + [
+        hexnode
+        for hexnode in oldlines[1:]
+        if len(hexnode) == 40 and bin(hexnode) in nodemap
+    ]
+    removedcount = len(oldlines) - len(newlines)
+    if removedcount == 0:
+        ui.write_err(_("visibleheads: looks okay\n"))
+    else:
+        # Also add the "tip" node.
+        hextip = hex(cl.tip())
+        if hextip not in newlines:
+            newlines.append(hextip)
+        newtext = "".join(l + "\n" for l in newlines)
+        metalog.set("visibleheads", encodeutf8(newtext))
+        metalog.commit("fix visibleheads")
+        ui.write_err(_("visibleheads: removed %s heads, added tip\n") % removedcount)
 
 
 def mtime(path):
