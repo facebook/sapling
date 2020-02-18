@@ -17,8 +17,10 @@ use futures::{
     Future, IntoFuture,
 };
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::future::TryFutureExt;
 use slog::{debug, info, o, Logger};
 use sql_ext::MysqlOptions;
+use tokio_compat::runtime::TaskExecutor;
 
 use metaconfig_parser::RepoConfigs;
 
@@ -37,11 +39,13 @@ pub use self::response::MononokeRepoResponse;
 
 pub struct Mononoke {
     pub(crate) repos: HashMap<String, MononokeRepo>,
+    executor: TaskExecutor,
 }
 
 impl Mononoke {
     pub fn new(
         fb: FacebookInit,
+        executor: TaskExecutor,
         logger: Logger,
         configs: RepoConfigs,
         mysql_options: MysqlOptions,
@@ -87,6 +91,7 @@ impl Mononoke {
         )
         .map(move |repos| Self {
             repos: repos.into_iter().collect(),
+            executor,
         })
     }
 
@@ -96,7 +101,15 @@ impl Mononoke {
         MononokeQuery { repo, kind, .. }: MononokeQuery,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         match self.repos.get(&repo) {
-            Some(repo) => repo.send_query(ctx, kind),
+            Some(repo) => self
+                .executor
+                .spawn_handle(repo.send_query(ctx, kind))
+                .compat()
+                .then(|r| match r {
+                    Ok(r) => r,
+                    Err(join_error) => Err(ErrorKind::InternalError(join_error.into())),
+                })
+                .boxify(),
             None => Err(ErrorKind::NotFound(repo, None)).into_future().boxify(),
         }
     }

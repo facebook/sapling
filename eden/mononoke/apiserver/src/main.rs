@@ -569,6 +569,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let mononoke = runtime.block_on(Mononoke::new(
         fb,
+        runtime.executor(),
         mononoke_logger.clone(),
         repo_configs,
         cmdlib::args::parse_mysql_options(&matches),
