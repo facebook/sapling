@@ -17,6 +17,7 @@ pub mod node;
 pub mod nodeinfo;
 pub mod parents;
 pub mod path;
+pub mod sha;
 
 pub use crate::dataentry::{DataEntry, Validity};
 pub use crate::hgid::HgId;
@@ -26,6 +27,7 @@ pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
 pub use crate::parents::Parents;
 pub use crate::path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+pub use crate::sha::Sha256;
 
 pub type Id20 = HgId;
 

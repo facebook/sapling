@@ -14,6 +14,8 @@ use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::sha::to_hex;
+
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
 
@@ -23,8 +25,6 @@ use std::collections::HashSet;
 #[derive(Debug, Error)]
 #[error("HgId Error: {0:?}")]
 struct HgIdError(String);
-
-const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
@@ -95,13 +95,7 @@ impl HgId {
     }
 
     pub fn to_hex(&self) -> String {
-        let mut v = Vec::with_capacity(HgId::hex_len());
-        for &byte in self.as_ref() {
-            v.push(HEX_CHARS[(byte >> 4) as usize]);
-            v.push(HEX_CHARS[(byte & 0xf) as usize]);
-        }
-
-        unsafe { String::from_utf8_unchecked(v) }
+        to_hex(self.0.as_ref())
     }
 
     #[cfg(any(test, feature = "for-tests"))]
