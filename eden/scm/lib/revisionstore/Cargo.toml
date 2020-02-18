@@ -17,6 +17,7 @@ edenapi = { path = "../edenapi" }
 indexedlog = { path = "../indexedlog" }
 lz4-pyframe = { path = "../lz4-pyframe" }
 memmap = "0.7.0"
+minibytes = { path = "../minibytes" }
 mpatch = { path = "../mpatch" }
 parking_lot = "0.9"
 rust-crypto = "*"

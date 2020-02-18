@@ -16,6 +16,7 @@ mod facebook;
 mod fanouttable;
 mod historyindex;
 mod indexedloghistorystore;
+mod indexedlogutil;
 mod memcache;
 mod metadatastore;
 mod remotestore;
