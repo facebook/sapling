@@ -42,6 +42,7 @@
 #endif
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
+DECLARE_bool(takeover);
 
 namespace cpptoml {
 class table;

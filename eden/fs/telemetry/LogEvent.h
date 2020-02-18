@@ -71,9 +71,13 @@ struct DaemonStart {
   static constexpr const char* type = "daemon_start";
 
   double duration = 0.0;
+  bool is_takeover = false;
+  bool success = false;
 
   void populate(DynamicEvent& event) const {
     event.addDouble("duration", duration);
+    event.addBool("is_takeover", is_takeover);
+    event.addBool("success", success);
   }
 };
 

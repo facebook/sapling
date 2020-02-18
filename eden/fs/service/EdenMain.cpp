@@ -247,6 +247,10 @@ int EdenMain::main(int argc, char** argv) {
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
   } catch (const std::exception& ex) {
+    auto startTimeInSeconds =
+        std::chrono::duration<double>{daemonStart.elapsed()}.count();
+    server->getServerState()->getStructuredLogger()->logEvent(
+        DaemonStart{startTimeInSeconds, FLAGS_takeover, false /*success*/});
     startupLogger->exitUnsuccessfully(
         EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
   }
@@ -268,10 +272,16 @@ int EdenMain::main(int argc, char** argv) {
       })
       .ensure(
           [daemonStart,
-           structuredLogger = server->getServerState()->getStructuredLogger()] {
+           structuredLogger = server->getServerState()->getStructuredLogger(),
+           takeover = FLAGS_takeover] {
             auto startTimeInSeconds =
                 std::chrono::duration<double>{daemonStart.elapsed()}.count();
-            structuredLogger->logEvent(DaemonStart{startTimeInSeconds});
+            // Here we log a success even if we did not successfully remount
+            // all repositories (if prepareFuture had an exception). In the
+            // future it would be helpful to log number of successful vs
+            // unsuccessful remounts
+            structuredLogger->logEvent(
+                DaemonStart{startTimeInSeconds, takeover, true /*success*/});
           });
 
   runServer(server.value());
