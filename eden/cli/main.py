@@ -1637,6 +1637,8 @@ class StopCmd(Subcmd):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
+                sample = instance.build_sample("cli_stop", success=False)
+                instance.log(sample)
                 print_stderr("Terminated edenfs with SIGKILL.")
                 return SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
         except ShutdownError as ex:
